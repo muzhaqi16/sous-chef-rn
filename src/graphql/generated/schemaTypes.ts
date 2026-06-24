@@ -95,7 +95,14 @@ export type AddItemsToShoppingListInput = {
 
 export type AddItemsToShoppingListPayload = {
   __typename: 'AddItemsToShoppingListPayload';
-  result: BatchAddShoppingListItemsResponse;
+  /** Number of items that failed. */
+  failedCount: Scalars['Int']['output'];
+  /** Number of items where an existing item's quantity was incremented. */
+  incrementedCount: Scalars['Int']['output'];
+  /** Per-item results, in input order. */
+  results: Array<BatchAddShoppingListItemResult>;
+  /** Number of items successfully added. */
+  successCount: Scalars['Int']['output'];
 };
 
 export type AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -141,16 +148,6 @@ export type AddRecipeToShoppingListInput = {
 export type AddRecipeToShoppingListPayload = {
   __typename: 'AddRecipeToShoppingListPayload';
   shoppingList: ShoppingList;
-};
-
-export type AddRecipeToShoppingListResult = {
-  __typename: 'AddRecipeToShoppingListResult';
-  addedItems: Array<ShoppingListItem>;
-  skippedItems: Array<RecipeIngredient>;
-  totalAdded: Scalars['Int']['output'];
-  totalSkipped: Scalars['Int']['output'];
-  totalUpdated: Scalars['Int']['output'];
-  updatedItems: Array<ShoppingListItem>;
 };
 
 export type AddRecipeToShoppingListResultUnion = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -301,7 +298,16 @@ export type AdminDeleteImagesInput = {
 
 export type AdminDeleteImagesPayload = {
   __typename: 'AdminDeleteImagesPayload';
-  result: ImageDeletionResult;
+  /** Number of database Item records updated. */
+  databaseUpdated: Scalars['Int']['output'];
+  /** Number of images successfully deleted from storage. */
+  deletedFromStorage: Scalars['Int']['output'];
+  /** Storage deletion failures with error details. */
+  failedStorage: Array<ImageDeletionError>;
+  /** Job ID if the operation was queued for background processing. */
+  jobId: Maybe<Scalars['String']['output']>;
+  /** Total number of images requested for deletion. */
+  totalRequested: Scalars['Int']['output'];
 };
 
 export type AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -628,18 +634,6 @@ export type BatchAddShoppingListItemResult = {
   success: Scalars['Boolean']['output'];
 };
 
-/** Response for batch add operation */
-export type BatchAddShoppingListItemsResponse = {
-  __typename: 'BatchAddShoppingListItemsResponse';
-  /** Number of items that failed */
-  failedCount: Scalars['Int']['output'];
-  /** Number of items where quantity was incremented */
-  incrementedCount: Scalars['Int']['output'];
-  results: Array<BatchAddShoppingListItemResult>;
-  /** Number of items successfully added */
-  successCount: Scalars['Int']['output'];
-};
-
 export type BatchOperationSummary = {
   __typename: 'BatchOperationSummary';
   created: Scalars['Int']['output'];
@@ -679,15 +673,6 @@ export type BatchUpsertItemResult = {
   mapping: Maybe<ExternalSourceMapping>;
   source: ExternalSource;
   success: Scalars['Boolean']['output'];
-};
-
-export type BatchUpsertItemsResponse = {
-  __typename: 'BatchUpsertItemsResponse';
-  code: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  results: Array<BatchUpsertItemResult>;
-  success: Scalars['Boolean']['output'];
-  summary: BatchOperationSummary;
 };
 
 /** Sub-input for behavioral signals */
@@ -899,17 +884,6 @@ export type BulkNotificationInput = {
   userIds: Array<Scalars['ID']['input']>;
 };
 
-export type BulkNotificationResult = {
-  __typename: 'BulkNotificationResult';
-  code: Scalars['String']['output'];
-  failed: Array<Scalars['ID']['output']>;
-  message: Scalars['String']['output'];
-  sent: Array<Notification>;
-  success: Scalars['Boolean']['output'];
-  totalFailed: Scalars['Int']['output'];
-  totalSent: Scalars['Int']['output'];
-};
-
 export type BulkOperationSummary = {
   __typename: 'BulkOperationSummary';
   code: Scalars['String']['output'];
@@ -924,7 +898,12 @@ export type BulkOperationSummary = {
 
 export type BulkSendNotificationsPayload = {
   __typename: 'BulkSendNotificationsPayload';
-  result: BulkNotificationResult;
+  /** User IDs for which delivery failed. */
+  failedIds: Array<Scalars['ID']['output']>;
+  /** Notifications that were successfully sent. */
+  sent: Array<Notification>;
+  totalFailed: Scalars['Int']['output'];
+  totalSent: Scalars['Int']['output'];
 };
 
 export type BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -1002,7 +981,10 @@ export type BulkUpsertItemsByExternalSourceInput = {
 
 export type BulkUpsertItemsByExternalSourcePayload = {
   __typename: 'BulkUpsertItemsByExternalSourcePayload';
-  result: BatchUpsertItemsResponse;
+  /** Per-item upsert results, in input order. */
+  results: Array<BatchUpsertItemResult>;
+  /** Summary counts for the batch. */
+  summary: BatchOperationSummary;
 };
 
 export type BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -1186,15 +1168,6 @@ export type CleanupDevicesPayload = {
 
 export type CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
-/** Response for clearing items from a shopping list */
-export type ClearItemsResponse = {
-  __typename: 'ClearItemsResponse';
-  /** IDs of items that were cleared */
-  clearedItemIds: Array<Scalars['ID']['output']>;
-  /** Summary of the bulk operation */
-  summary: BulkOperationSummary;
-};
-
 export type ClearReminderInput = {
   id: Scalars['ID']['input'];
 };
@@ -1213,7 +1186,10 @@ export type ClearShoppingListItemsInput = {
 
 export type ClearShoppingListItemsPayload = {
   __typename: 'ClearShoppingListItemsPayload';
-  result: ClearItemsResponse;
+  /** IDs of the items that were cleared. */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  /** Summary of the bulk clear operation. */
+  summary: BulkOperationSummary;
 };
 
 export type ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -1310,7 +1286,14 @@ export type ConfirmRecipeConsumptionInput = {
 
 export type ConfirmRecipeConsumptionPayload = {
   __typename: 'ConfirmRecipeConsumptionPayload';
-  result: RecipeConsumptionResult;
+  /** Pantry usages recorded for the consumed ingredients. */
+  consumedItems: Array<PantryItemUsage>;
+  /** The cooking log entry recorded for this consumption, if any. */
+  cookingLog: Maybe<CookingLog>;
+  /** Ingredients that could not be consumed (e.g. insufficient stock). */
+  failedItems: Array<ConsumptionFailure>;
+  totalConsumed: Scalars['Int']['output'];
+  totalFailed: Scalars['Int']['output'];
 };
 
 export type ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -2079,7 +2062,15 @@ export type CreateShoppingListItemsFromRecipeInput = {
 
 export type CreateShoppingListItemsFromRecipePayload = {
   __typename: 'CreateShoppingListItemsFromRecipePayload';
-  result: AddRecipeToShoppingListResult;
+  /** Items newly added to the shopping list. */
+  addedItems: Array<ShoppingListItem>;
+  /** Recipe ingredients skipped (e.g. already stocked). */
+  skippedItems: Array<RecipeIngredient>;
+  totalAdded: Scalars['Int']['output'];
+  totalSkipped: Scalars['Int']['output'];
+  totalUpdated: Scalars['Int']['output'];
+  /** Existing items whose quantity was increased. */
+  updatedItems: Array<ShoppingListItem>;
 };
 
 export type CreateShoppingListItemsFromRecipeResult = ConflictError | CreateShoppingListItemsFromRecipePayload | ForbiddenError | NotFoundError | ValidationError;
@@ -11501,16 +11492,6 @@ export type RecipeConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-export type RecipeConsumptionResult = {
-  __typename: 'RecipeConsumptionResult';
-  consumedItems: Array<PantryItemUsage>;
-  cookingLog: Maybe<CookingLog>;
-  failedItems: Array<ConsumptionFailure>;
-  success: Scalars['Boolean']['output'];
-  totalConsumed: Scalars['Int']['output'];
-  totalFailed: Scalars['Int']['output'];
-};
-
 /** Sub-input for recipe context */
 export type RecipeContextInput = {
   addedContext?: InputMaybe<Scalars['String']['input']>;
@@ -12839,6 +12820,12 @@ export type ShoppingListOwnershipEdge = Edge & {
   __typename: 'ShoppingListOwnershipEdge';
   cursor: Scalars['String']['output'];
   node: ShoppingListOwnership;
+};
+
+/** Order by options for shopping list ownerships */
+export type ShoppingListOwnershipOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  transferredAt?: InputMaybe<SortOrder>;
 };
 
 /** Sub-input for shopping list planning details */
@@ -15027,15 +15014,12 @@ export type UpdateUserSettingsInput = {
   ui?: InputMaybe<UiPreferencesInput>;
 };
 
-export type UpsertExternalRecipeData = {
-  __typename: 'UpsertExternalRecipeData';
-  created: Scalars['Boolean']['output'];
-  recipe: Recipe;
-};
-
 export type UpsertExternalRecipePayload = {
   __typename: 'UpsertExternalRecipePayload';
-  result: UpsertExternalRecipeData;
+  /** True if the recipe was newly created, false if an existing one was updated. */
+  created: Scalars['Boolean']['output'];
+  /** The created or updated recipe. */
+  recipe: Recipe;
 };
 
 export type UpsertExternalRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpsertExternalRecipePayload | ValidationError;
@@ -15050,17 +15034,15 @@ export type UpsertItemByExternalSourceInput = {
 
 export type UpsertItemByExternalSourcePayload = {
   __typename: 'UpsertItemByExternalSourcePayload';
-  result: UpsertItemResult;
+  /** True if the item was newly created, false if an existing one was updated. */
+  created: Scalars['Boolean']['output'];
+  /** The created or updated catalog item. */
+  item: Item;
+  /** The external-source mapping linking the item to its source. */
+  mapping: ExternalSourceMapping;
 };
 
 export type UpsertItemByExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemByExternalSourcePayload | ValidationError;
-
-export type UpsertItemResult = {
-  __typename: 'UpsertItemResult';
-  created: Scalars['Boolean']['output'];
-  item: Item;
-  mapping: ExternalSourceMapping;
-};
 
 /**
  * Input for adding or updating item-specific unit conversion.
@@ -15249,6 +15231,7 @@ export type UserCollaboratedShoppingListsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListOrderBy>;
 };
 
 
@@ -15394,6 +15377,7 @@ export type UserShoppingListOwnershipsConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  orderBy?: InputMaybe<ShoppingListOwnershipOrderBy>;
 };
 
 

@@ -185,20 +185,18 @@ mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
   upsertExternalRecipe(input: $input) {
     __typename
     ... on UpsertExternalRecipePayload {
-      result {
-        recipe {
-          id
-          name
-          imageUrl
-          externalSource
-          externalId
-          servings
-          prepTimeMinutes
-          cookTimeMinutes
-          totalTimeMinutes
-        }
-        created
+      recipe {
+        id
+        name
+        imageUrl
+        externalSource
+        externalId
+        servings
+        prepTimeMinutes
+        cookTimeMinutes
+        totalTimeMinutes
       }
+      created
     }
     ... on Error {
       code
@@ -387,45 +385,43 @@ mutation CreateShoppingListItemsFromRecipe(
   createShoppingListItemsFromRecipe(input: $input) {
     __typename
     ... on CreateShoppingListItemsFromRecipePayload {
-      result {
-        addedItems {
-          id
-          itemName
-          quantity
-          unit {
-            id
-            name
-            symbol
-          }
-          storeInfo {
-            aisle
-          }
-          purchaseInfo {
-            isPurchased
-          }
-        }
-        updatedItems {
-          id
-          itemName
-          quantity
-          unit {
-            id
-            name
-            symbol
-          }
-          purchaseInfo {
-            isPurchased
-          }
-        }
-        skippedItems {
+      addedItems {
+        id
+        itemName
+        quantity
+        unit {
           id
           name
-          quantity
+          symbol
         }
-        totalAdded
-        totalUpdated
-        totalSkipped
+        storeInfo {
+          aisle
+        }
+        purchaseInfo {
+          isPurchased
+        }
       }
+      updatedItems {
+        id
+        itemName
+        quantity
+        unit {
+          id
+          name
+          symbol
+        }
+        purchaseInfo {
+          isPurchased
+        }
+      }
+      skippedItems {
+        id
+        name
+        quantity
+      }
+      totalAdded
+      totalUpdated
+      totalSkipped
     }
     ... on Error {
       code
@@ -514,16 +510,13 @@ mutation ConfirmRecipeConsumption(
   confirmRecipeConsumption(input: $input) {
     __typename
     ... on ConfirmRecipeConsumptionPayload {
-      result {
-        success
-        totalConsumed
-        totalFailed
-        cookingLog {
-          id
-          servingsMade
-          notes
-          cookedAt
-        }
+      totalConsumed
+      totalFailed
+      cookingLog {
+        id
+        servingsMade
+        notes
+        cookedAt
       }
     }
     ... on Error {

@@ -4,38 +4,36 @@ mutation AddItemToShoppingListFromFilteredPantry($input: AddItemsToShoppingListI
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
-      result {
-        results {
-          index
-          clientId
-          success
-          quantityIncremented
-          error
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          itemName
+          quantity
+          quantityInput
+          displayFormat
+          purchaseInfo {
+            isPurchased
+          }
+          version
+          updatedAt
+          category
+          notes
+          unitName
+          unit {
+            id
+            name
+            symbol
+          }
+          sortOrder
           item {
             id
-            itemName
-            quantity
-            quantityInput
-            displayFormat
-            purchaseInfo {
-              isPurchased
-            }
-            version
-            updatedAt
-            category
-            notes
-            unitName
-            unit {
-              id
-              name
-              symbol
-            }
-            sortOrder
-            item {
-              id
-              imageUrl
-              images { url kind }
-            }
+            imageUrl
+            images { url kind }
           }
         }
       }

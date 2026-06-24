@@ -243,7 +243,14 @@ input AddItemsToShoppingListInput {
 }
 
 type AddItemsToShoppingListPayload {
-  result: BatchAddShoppingListItemsResponse!
+  """Number of items that failed."""
+  failedCount: Int!
+  """Number of items where an existing item's quantity was incremented."""
+  incrementedCount: Int!
+  """Per-item results, in input order."""
+  results: [BatchAddShoppingListItemResult!]!
+  """Number of items successfully added."""
+  successCount: Int!
 }
 
 union AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -285,15 +292,6 @@ input AddRecipeToShoppingListInput {
 
 type AddRecipeToShoppingListPayload {
   shoppingList: ShoppingList!
-}
-
-type AddRecipeToShoppingListResult {
-  addedItems: [ShoppingListItem!]!
-  skippedItems: [RecipeIngredient!]!
-  totalAdded: Int!
-  totalSkipped: Int!
-  totalUpdated: Int!
-  updatedItems: [ShoppingListItem!]!
 }
 
 union AddRecipeToShoppingListResultUnion = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -437,7 +435,16 @@ input AdminDeleteImagesInput {
 }
 
 type AdminDeleteImagesPayload {
-  result: ImageDeletionResult!
+  """Number of database Item records updated."""
+  databaseUpdated: Int!
+  """Number of images successfully deleted from storage."""
+  deletedFromStorage: Int!
+  """Storage deletion failures with error details."""
+  failedStorage: [ImageDeletionError!]!
+  """Job ID if the operation was queued for background processing."""
+  jobId: String
+  """Total number of images requested for deletion."""
+  totalRequested: Int!
 }
 
 union AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -754,17 +761,6 @@ type BatchAddShoppingListItemResult {
   success: Boolean!
 }
 
-"""Response for batch add operation"""
-type BatchAddShoppingListItemsResponse {
-  """Number of items that failed"""
-  failedCount: Int!
-  """Number of items where quantity was incremented"""
-  incrementedCount: Int!
-  results: [BatchAddShoppingListItemResult!]!
-  """Number of items successfully added"""
-  successCount: Int!
-}
-
 type BatchOperationSummary {
   created: Int!
   executionTime: Float!
@@ -802,14 +798,6 @@ type BatchUpsertItemResult {
   mapping: ExternalSourceMapping
   source: ExternalSource!
   success: Boolean!
-}
-
-type BatchUpsertItemsResponse {
-  code: String!
-  message: String!
-  results: [BatchUpsertItemResult!]!
-  success: Boolean!
-  summary: BatchOperationSummary!
 }
 
 """Sub-input for behavioral signals"""
@@ -1010,16 +998,6 @@ input BulkNotificationInput {
   userIds: [ID!]!
 }
 
-type BulkNotificationResult {
-  code: String!
-  failed: [ID!]!
-  message: String!
-  sent: [Notification!]!
-  success: Boolean!
-  totalFailed: Int!
-  totalSent: Int!
-}
-
 type BulkOperationSummary {
   code: String!
   executionTime: Float!
@@ -1032,7 +1010,12 @@ type BulkOperationSummary {
 }
 
 type BulkSendNotificationsPayload {
-  result: BulkNotificationResult!
+  """User IDs for which delivery failed."""
+  failedIds: [ID!]!
+  """Notifications that were successfully sent."""
+  sent: [Notification!]!
+  totalFailed: Int!
+  totalSent: Int!
 }
 
 union BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1106,7 +1089,10 @@ input BulkUpsertItemsByExternalSourceInput {
 }
 
 type BulkUpsertItemsByExternalSourcePayload {
-  result: BatchUpsertItemsResponse!
+  """Per-item upsert results, in input order."""
+  results: [BatchUpsertItemResult!]!
+  """Summary counts for the batch."""
+  summary: BatchOperationSummary!
 }
 
 union BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1280,14 +1266,6 @@ type CleanupDevicesPayload {
 
 union CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-"""Response for clearing items from a shopping list"""
-type ClearItemsResponse {
-  """IDs of items that were cleared"""
-  clearedItemIds: [ID!]!
-  """Summary of the bulk operation"""
-  summary: BulkOperationSummary!
-}
-
 input ClearReminderInput {
   id: ID!
 }
@@ -1304,7 +1282,10 @@ input ClearShoppingListItemsInput {
 }
 
 type ClearShoppingListItemsPayload {
-  result: ClearItemsResponse!
+  """IDs of the items that were cleared."""
+  clearedItemIds: [ID!]!
+  """Summary of the bulk clear operation."""
+  summary: BulkOperationSummary!
 }
 
 union ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1397,7 +1378,14 @@ input ConfirmRecipeConsumptionInput {
 }
 
 type ConfirmRecipeConsumptionPayload {
-  result: RecipeConsumptionResult!
+  """Pantry usages recorded for the consumed ingredients."""
+  consumedItems: [PantryItemUsage!]!
+  """The cooking log entry recorded for this consumption, if any."""
+  cookingLog: CookingLog
+  """Ingredients that could not be consumed (e.g. insufficient stock)."""
+  failedItems: [ConsumptionFailure!]!
+  totalConsumed: Int!
+  totalFailed: Int!
 }
 
 union ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -2138,7 +2126,15 @@ input CreateShoppingListItemsFromRecipeInput {
 }
 
 type CreateShoppingListItemsFromRecipePayload {
-  result: AddRecipeToShoppingListResult!
+  """Items newly added to the shopping list."""
+  addedItems: [ShoppingListItem!]!
+  """Recipe ingredients skipped (e.g. already stocked)."""
+  skippedItems: [RecipeIngredient!]!
+  totalAdded: Int!
+  totalSkipped: Int!
+  totalUpdated: Int!
+  """Existing items whose quantity was increased."""
+  updatedItems: [ShoppingListItem!]!
 }
 
 union CreateShoppingListItemsFromRecipeResult = ConflictError | CreateShoppingListItemsFromRecipePayload | ForbiddenError | NotFoundError | ValidationError
@@ -7826,15 +7822,6 @@ type RecipeConnection implements Connection {
   totalCount: Int
 }
 
-type RecipeConsumptionResult {
-  consumedItems: [PantryItemUsage!]!
-  cookingLog: CookingLog
-  failedItems: [ConsumptionFailure!]!
-  success: Boolean!
-  totalConsumed: Int!
-  totalFailed: Int!
-}
-
 """Sub-input for recipe context"""
 input RecipeContextInput {
   addedContext: String
@@ -9026,6 +9013,12 @@ type ShoppingListOwnershipConnection implements Connection {
 type ShoppingListOwnershipEdge implements Edge {
   cursor: String!
   node: ShoppingListOwnership!
+}
+
+"""Order by options for shopping list ownerships"""
+input ShoppingListOwnershipOrderBy {
+  createdAt: SortOrder
+  transferredAt: SortOrder
 }
 
 """Sub-input for shopping list planning details"""
@@ -11022,13 +11015,13 @@ input UpdateUserSettingsInput {
 
 scalar Upload
 
-type UpsertExternalRecipeData {
-  created: Boolean!
-  recipe: Recipe!
-}
-
 type UpsertExternalRecipePayload {
-  result: UpsertExternalRecipeData!
+  """
+  True if the recipe was newly created, false if an existing one was updated.
+  """
+  created: Boolean!
+  """The created or updated recipe."""
+  recipe: Recipe!
 }
 
 union UpsertExternalRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpsertExternalRecipePayload | ValidationError
@@ -11042,16 +11035,17 @@ input UpsertItemByExternalSourceInput {
 }
 
 type UpsertItemByExternalSourcePayload {
-  result: UpsertItemResult!
+  """
+  True if the item was newly created, false if an existing one was updated.
+  """
+  created: Boolean!
+  """The created or updated catalog item."""
+  item: Item!
+  """The external-source mapping linking the item to its source."""
+  mapping: ExternalSourceMapping!
 }
 
 union UpsertItemByExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemByExternalSourcePayload | ValidationError
-
-type UpsertItemResult {
-  created: Boolean!
-  item: Item!
-  mapping: ExternalSourceMapping!
-}
 
 """
 Input for adding or updating item-specific unit conversion.
@@ -11166,7 +11160,7 @@ type User {
   addressesConnection(after: String, before: String, first: Int, last: Int, orderBy: UserAddressOrderBy): UserAddressConnection!
   """Whether this user can access developer tools and internal dashboards"""
   canAccessDevTools: Boolean!
-  collaboratedShoppingListsConnection(after: String, before: String, first: Int, last: Int): ShoppingListConnection!
+  collaboratedShoppingListsConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListOrderBy): ShoppingListConnection!
   cookingLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy): CookingLogConnection!
   cookingStats: CookingStats
   createdAt: DateTime!
@@ -11204,7 +11198,7 @@ type User {
   sentHomeInvites: [HomeInvite!]!
   settings: UserSettings
   shoppingListInvites: [ShoppingListCollaborator!]!
-  shoppingListOwnershipsConnection(after: String, before: String, first: Int, last: Int): ShoppingListOwnershipConnection!
+  shoppingListOwnershipsConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListOwnershipOrderBy): ShoppingListOwnershipConnection!
   statistics: UserStatistics
   suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity!
   timezone: String

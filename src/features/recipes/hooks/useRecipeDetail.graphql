@@ -6,22 +6,20 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
-      result {
-        results {
-          index
-          clientId
-          success
-          item {
-            id
-            ...useRecipeShoppingList_addedItem
-          }
-          quantityIncremented
-          error
+      results {
+        index
+        clientId
+        success
+        item {
+          id
+          ...useRecipeShoppingList_addedItem
         }
-        successCount
-        failedCount
-        incrementedCount
+        quantityIncremented
+        error
       }
+      successCount
+      failedCount
+      incrementedCount
     }
     ... on Error {
       code

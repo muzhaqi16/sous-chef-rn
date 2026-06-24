@@ -23,17 +23,15 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
-      result {
-        results {
-          index
-          clientId
-          success
-          quantityIncremented
-          error
-          item {
-            id
-            ...SearchResults_shoppingListItem
-          }
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          ...SearchResults_shoppingListItem
         }
       }
     }

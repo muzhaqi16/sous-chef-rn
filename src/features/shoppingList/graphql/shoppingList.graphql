@@ -398,45 +398,43 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
-      result {
-        results {
-          index
-          clientId
-          success
-          quantityIncremented
-          error
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
+        item {
+          id
+          itemName
+          quantity
+          quantityInput
+          displayFormat
+          purchaseInfo {
+            isPurchased
+          }
+          version
+          updatedAt
+          category
+          notes
+          unitName
+          unit {
+            id
+            name
+            symbol
+          }
+          sortOrder
           item {
             id
-            itemName
-            quantity
-            quantityInput
-            displayFormat
-            purchaseInfo {
-              isPurchased
-            }
-            version
-            updatedAt
-            category
-            notes
-            unitName
-            unit {
-              id
-              name
-              symbol
-            }
-            sortOrder
-            item {
-              id
-              imageUrl
-              images { url kind }
-            }
-            shoppingList {
-              id
-              totalItems
-              completedItems
-              remainingItems
-              completionRate
-            }
+            imageUrl
+            images { url kind }
+          }
+          shoppingList {
+            id
+            totalItems
+            completedItems
+            remainingItems
+            completionRate
           }
         }
       }
@@ -648,16 +646,14 @@ mutation DeleteShoppingListItems($input: ClearShoppingListItemsInput!) {
   deleteShoppingListItems(input: $input) {
     __typename
     ... on ClearShoppingListItemsPayload {
-      result {
-        summary {
-          total
-          successful
-          failed
-          skipped
-          executionTime
-        }
-        clearedItemIds
+      summary {
+        total
+        successful
+        failed
+        skipped
+        executionTime
       }
+      clearedItemIds
     }
     ... on Error {
       code
@@ -670,22 +666,20 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {
-      result {
-        results {
-          index
-          clientId
-          success
-          item {
-            id
-            ...useRecipeShoppingList_addedItem
-          }
-          quantityIncremented
-          error
+      results {
+        index
+        clientId
+        success
+        item {
+          id
+          ...useRecipeShoppingList_addedItem
         }
-        successCount
-        failedCount
-        incrementedCount
+        quantityIncremented
+        error
       }
+      successCount
+      failedCount
+      incrementedCount
     }
     ... on Error {
       code
