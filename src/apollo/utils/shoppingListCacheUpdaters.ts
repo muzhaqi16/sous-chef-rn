@@ -590,7 +590,7 @@ export function reconcileShoppingCreate(
           data?: {
             addItemsToShoppingList?: {
               __typename?: string;
-              result?: { results?: Array<{ success: boolean }> };
+              results?: Array<{ success: boolean }>;
             };
           };
         }
@@ -599,7 +599,7 @@ export function reconcileShoppingCreate(
   )?.data?.addItemsToShoppingList;
   const itemFailed =
     payload?.__typename === 'AddItemsToShoppingListPayload' &&
-    payload.result?.results?.[0]?.success === false;
+    payload.results?.[0]?.success === false;
   if (outcome === 'rejected' || itemFailed) {
     executeCacheUpdate(
       () => revertOptimisticShoppingListItem(cache, listId, optimisticId),

@@ -125,7 +125,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       }
       // Single add via the batch mutation — the created/merged row is the one
       // entry in `results`. Null when that item failed.
-      const newItem = payload.result.results[0]?.item;
+      const newItem = payload.results[0]?.item;
       if (!newItem) return;
       reconcileShoppingItemCreateUpdate(
         cache,

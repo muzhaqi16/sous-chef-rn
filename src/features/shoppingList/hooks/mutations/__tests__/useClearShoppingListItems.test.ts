@@ -55,18 +55,15 @@ function createClearMock(
       data: {
         deleteShoppingListItems: {
           __typename: 'ClearShoppingListItemsPayload',
-          result: {
-            __typename: 'ClearItemsResponse',
-            summary: {
-              __typename: 'BulkOperationSummary',
-              total: 1,
-              successful: 1,
-              failed: 0,
-              skipped: 0,
-              executionTime: 0,
-            },
-            clearedItemIds: ['item-1'],
+          summary: {
+            __typename: 'BulkOperationSummary',
+            total: 1,
+            successful: 1,
+            failed: 0,
+            skipped: 0,
+            executionTime: 0,
           },
+          clearedItemIds: ['item-1'],
         },
       },
     },

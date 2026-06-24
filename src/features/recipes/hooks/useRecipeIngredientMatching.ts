@@ -203,11 +203,13 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     if (!result) return;
 
     const payload = result.data?.confirmRecipeConsumption;
+    // The success union member no longer carries a `success` flag — reaching it
+    // IS the success case (partial failures surface via `totalFailed`).
     const data =
       payload?.__typename === 'ConfirmRecipeConsumptionPayload'
-        ? payload.result
+        ? payload
         : null;
-    if (data?.success) {
+    if (data) {
       toastService.success(
         data.totalFailed > 0
           ? t('recipes.deductedFromPantryFailed', {

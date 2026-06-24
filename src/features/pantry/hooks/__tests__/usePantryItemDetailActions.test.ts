@@ -240,20 +240,17 @@ describe('usePantryItemDetailActions', () => {
         data: {
           addItemsToShoppingList: {
             __typename: 'AddItemsToShoppingListPayload',
-            result: {
-              __typename: 'BatchAddShoppingListItemsResponse',
-              results: [
-                {
-                  __typename: 'BatchAddShoppingListItemResult',
-                  index: 0,
-                  clientId: null,
-                  success: true,
-                  quantityIncremented: false,
-                  error: null,
-                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
-                },
-              ],
-            },
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                clientId: null,
+                success: true,
+                quantityIncremented: false,
+                error: null,
+                item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+              },
+            ],
           },
         },
       });
@@ -288,20 +285,17 @@ describe('usePantryItemDetailActions', () => {
         data: {
           addItemsToShoppingList: {
             __typename: 'AddItemsToShoppingListPayload',
-            result: {
-              __typename: 'BatchAddShoppingListItemsResponse',
-              results: [
-                {
-                  __typename: 'BatchAddShoppingListItemResult',
-                  index: 0,
-                  clientId: null,
-                  success: true,
-                  quantityIncremented: false,
-                  error: null,
-                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
-                },
-              ],
-            },
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                clientId: null,
+                success: true,
+                quantityIncremented: false,
+                error: null,
+                item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+              },
+            ],
           },
         },
       });
@@ -329,20 +323,17 @@ describe('usePantryItemDetailActions', () => {
         data: {
           addItemsToShoppingList: {
             __typename: 'AddItemsToShoppingListPayload',
-            result: {
-              __typename: 'BatchAddShoppingListItemsResponse',
-              results: [
-                {
-                  __typename: 'BatchAddShoppingListItemResult',
-                  index: 0,
-                  clientId: null,
-                  success: true,
-                  quantityIncremented: false,
-                  error: null,
-                  item: { __typename: 'ShoppingListItem', id: 'sli-1' },
-                },
-              ],
-            },
+            results: [
+              {
+                __typename: 'BatchAddShoppingListItemResult',
+                index: 0,
+                clientId: null,
+                success: true,
+                quantityIncremented: false,
+                error: null,
+                item: { __typename: 'ShoppingListItem', id: 'sli-1' },
+              },
+            ],
           },
         },
       });

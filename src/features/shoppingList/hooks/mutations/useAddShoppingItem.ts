@@ -54,7 +54,7 @@ export function useAddShoppingItem({
       // Single add via the batch mutation — the created/merged row is the one
       // entry in `results`. Null when that item failed (then reconcileShoppingCreate
       // reverts the optimistic row below).
-      const item = payload.result.results[0]?.item;
+      const item = payload.results[0]?.item;
       if (!item) return;
       executeCacheUpdate(
         () =>
@@ -167,7 +167,7 @@ export function useAddShoppingItem({
     }
     const payload = result.data?.addItemsToShoppingList;
     return payload?.__typename === 'AddItemsToShoppingListPayload'
-      ? payload.result.results[0]?.item
+      ? payload.results[0]?.item
       : undefined;
   };
 

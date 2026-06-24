@@ -339,7 +339,7 @@ export const FilteredPantryItems: React.FC<
         }
         // Single add via the batch mutation — the created/merged row is the one
         // entry in `results`. Null when that item failed.
-        const item = payload.result.results[0]?.item;
+        const item = payload.results[0]?.item;
         if (!item) return;
         reconcileShoppingItemCreateUpdate(
           cache,

@@ -73,20 +73,17 @@ const batchPayload = (
   merged: boolean,
 ) => ({
   __typename: 'AddItemsToShoppingListPayload',
-  result: {
-    __typename: 'BatchAddShoppingListItemsResponse',
-    results: [
-      {
-        __typename: 'BatchAddShoppingListItemResult',
-        index: 0,
-        clientId: null,
-        success: true,
-        quantityIncremented: merged,
-        error: null,
-        item,
-      },
-    ],
-  },
+  results: [
+    {
+      __typename: 'BatchAddShoppingListItemResult',
+      index: 0,
+      clientId: null,
+      success: true,
+      quantityIncremented: merged,
+      error: null,
+      item,
+    },
+  ],
 });
 
 // Server echoes back the client-sent id (no catalog merge).

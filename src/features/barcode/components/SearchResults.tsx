@@ -116,7 +116,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         ) {
           // Single add via the batch mutation — the created/merged row is the
           // one entry in `results`. Null when that item failed.
-          const maskedItem = payload.result.results[0]?.item;
+          const maskedItem = payload.results[0]?.item;
           if (!maskedItem) return;
           // Catalog-merge: adopt the server id, evicting the optimistic cuid if
           // the server merged into an existing row.

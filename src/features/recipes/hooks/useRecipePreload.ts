@@ -380,7 +380,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     const payload = result.data?.upsertExternalRecipe;
     if (payload?.__typename === 'UpsertExternalRecipePayload') {
-      const data = payload.result;
+      const data = payload;
       const preloaded: PreloadedRecipe = {
         id: data.recipe.id,
         name: data.recipe.name,

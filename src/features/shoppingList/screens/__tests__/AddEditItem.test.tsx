@@ -258,20 +258,17 @@ function buildAddItemMock(): MockedResponse {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
-          result: {
-            __typename: 'BatchAddShoppingListItemsResponse',
-            results: [
-              {
-                __typename: 'BatchAddShoppingListItemResult',
-                index: 0,
-                clientId: null,
-                success: true,
-                quantityIncremented: false,
-                error: null,
-                item: buildShoppingListItem('new-item'),
-              },
-            ],
-          },
+          results: [
+            {
+              __typename: 'BatchAddShoppingListItemResult',
+              index: 0,
+              clientId: null,
+              success: true,
+              quantityIncremented: false,
+              error: null,
+              item: buildShoppingListItem('new-item'),
+            },
+          ],
         },
       },
     },

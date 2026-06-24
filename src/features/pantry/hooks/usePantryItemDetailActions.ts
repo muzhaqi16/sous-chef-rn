@@ -143,7 +143,7 @@ export function usePantryItemDetailActions({
         }
         // Single add via the batch mutation — the created/merged row is the one
         // entry in `results`. Null when that item failed.
-        const shoppingListItem = payload.result.results[0]?.item;
+        const shoppingListItem = payload.results[0]?.item;
         if (!shoppingListItem) return;
         // Swallows its own errors internally, so no try/catch is needed here
         // (wrapping would bail the React Compiler out of this hook).
