@@ -1,5 +1,6 @@
 - to regenerate the schema run npm run codegen
 - always run npm run typecheck and npm run lint after making code changes to ensure no typescript and linting errors were introduced
+- `npm run lint` also lints every `.graphql` operation against the codegen-pulled schema (`@graphql-eslint` override in `.eslintrc.js`, files `**/*.graphql`): `fields-on-correct-type` (selecting a field/arg the schema lacks) and `no-deprecated` (using an `@deprecated` field/arg/enum value) are both `error`. This surfaces API drift — a renamed/removed field or a freshly-deprecated one — at lint time, one at a time, instead of as a surprise `npm run codegen` batch failure. The guard reads `src/graphql/generated/schema.graphql`, so run `npm run codegen` first if the schema is stale.
 - typecasting \_\_typename: 'Mutation' as any, is never needed
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.

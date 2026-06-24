@@ -163,6 +163,7 @@
     "@graphql-codegen/typed-document-node": "^7.0.0",
     "@graphql-codegen/typescript": "^5.0.0",
     "@graphql-codegen/typescript-operations": "^5.0.0",
+    "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-tools/mock": "^9.1.7",
     "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.83.9",
