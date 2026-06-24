@@ -182,6 +182,23 @@ export class ErrorService {
     'AUTH_TOKEN_EXPIRED',
   ];
 
+  // Expected user-input / business-rule outcomes — normal UX, not system
+  // faults. These are logged at warn level and kept out of app_errors_total so
+  // the error dashboards aren't polluted by routine validation results (e.g. a
+  // user signing up with an email that's already taken). Any VALIDATION_* code
+  // is also treated as expected (see isExpectedUserError).
+  private static readonly EXPECTED_USER_ERRORS = new Set([
+    'EMAIL_ALREADY_EXISTS',
+    'VERSION_CONFLICT',
+    'RESOURCE_ALREADY_EXISTS',
+    'RESOURCE_CONFLICT',
+    'PANTRY_ITEM_ALREADY_EXISTS',
+    'SHOPPING_ITEM_ALREADY_EXISTS',
+    'HOME_MEMBER_ALREADY_EXISTS',
+    'HOME_INVITE_INVALID',
+    'HOME_INVITE_EXPIRED',
+  ]);
+
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
     AUTH_: 'Authentication',
     AUTHZ_: 'Authorization',
@@ -224,6 +241,13 @@ export class ErrorService {
 
   isAuthError(errorCode: string): boolean {
     return errorCode.startsWith('AUTH_') || errorCode.startsWith('AUTHZ_');
+  }
+
+  isExpectedUserError(errorCode: string): boolean {
+    return (
+      errorCode.startsWith('VALIDATION_') ||
+      ErrorService.EXPECTED_USER_ERRORS.has(errorCode)
+    );
   }
 
   /**
@@ -324,21 +348,40 @@ export class ErrorService {
       const userFriendlyMessage =
         customMessage || this.getUserFriendlyMessage(errorCode, errorMessage);
 
+      const isExpectedUserError = this.isExpectedUserError(errorCode);
+
       if (logError) {
-        logger.error(`Error in ${operation}:`, {
-          code: errorCode,
-          message: errorMessage,
-          originalError: serializeError(error),
-        });
+        if (isExpectedUserError) {
+          logger.warn(`Validation error in ${operation}:`, {
+            code: errorCode,
+            message: errorMessage,
+          });
+        } else {
+          logger.error(`Error in ${operation}:`, {
+            code: errorCode,
+            message: errorMessage,
+            originalError: serializeError(error),
+          });
+        }
       }
 
-      // Report to telemetry so errors flow to Loki in production
-      Telemetry.trackError(errorMessage, {
-        component: category,
-        operation,
-        code: errorCode,
-        serialized_error: JSON.stringify(serializeError(error)),
-      });
+      // Report to telemetry so errors flow to Loki in production. Expected
+      // user-input outcomes go to warn level and skip app_errors_total; only
+      // genuine faults are tracked as errors.
+      if (isExpectedUserError) {
+        Telemetry.warn(`Validation: ${errorCode} in ${operation}`, {
+          component: category,
+          operation,
+          code: errorCode,
+        });
+      } else {
+        Telemetry.trackError(errorMessage, {
+          component: category,
+          operation,
+          code: errorCode,
+          serialized_error: JSON.stringify(serializeError(error)),
+        });
+      }
 
       return {
         success: false,

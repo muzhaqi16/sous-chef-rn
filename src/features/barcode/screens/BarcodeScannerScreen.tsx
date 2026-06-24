@@ -79,6 +79,9 @@ export const BarcodeScannerScreen: React.FC<
     return () => {
       setIsActive(false);
       setScanning(false);
+      // Drop the torch on blur so the next focus doesn't carry a stale 'on'
+      // state, and so we never command the torch while the session tears down.
+      setFlashEnabled(false);
     };
   });
 
@@ -200,7 +203,7 @@ export const BarcodeScannerScreen: React.FC<
         device={device}
         isActive={isActive}
         outputs={[barcodeOutput]}
-        torchMode={flashEnabled ? 'on' : 'off'}
+        torchMode={isActive && flashEnabled ? 'on' : 'off'}
         enableNativeZoomGesture
       />
 
