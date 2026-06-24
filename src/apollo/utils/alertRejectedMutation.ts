@@ -12,9 +12,12 @@ import { t } from '#/i18n/t';
  * `onError` never fires — without this the optimistic revert happens silently
  * and the change just snaps back with no explanation.
  *
- * Call only on the `'rejected'` branch, and only from hooks whose `onError`
- * already handles the transport-error case: this alerts solely when there is no
- * `error`, so it never double-alerts.
+ * Call only on the `'rejected'` branch, and ONLY from a hook whose same-mutation
+ * `onError` handles the transport-error case (the `onError` callback DOES fire for
+ * a resolved `result.error` under `errorPolicy:'all'`, per AC4). This alerts solely
+ * when there is no `error`, so the two never double-alert. If the site has NO
+ * mutation `onError`, use {@link alertIfRejected} instead — it surfaces the
+ * `result.error` case too. Mixing the wrong one either double-alerts or goes silent.
  */
 export function alertRejectedMutation(
   result: { error?: unknown } | null | undefined,
