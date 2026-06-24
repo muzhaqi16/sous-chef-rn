@@ -700,23 +700,6 @@ enum AutomatedFlag {
   SUSPICIOUS_BEHAVIOR
 }
 
-"""Result of a backfill run — what would/did get queued."""
-type BackfillEmbeddingsResult {
-  """Whether dryRun was set."""
-  dryRun: Boolean!
-  """How many were enqueued this call (0 if dryRun)."""
-  enqueued: Int!
-  """The limit applied to this run."""
-  limit: Int!
-  """Number of items remaining without embeddings (after this run)."""
-  remaining: Int!
-}
-
-input BackfillItemEmbeddingsInput {
-  dryRun: Boolean = false
-  limit: Int = 1000
-}
-
 input BanUserInput {
   reason: String!
   userId: ID!
@@ -5714,6 +5697,13 @@ type Mutation {
   confirmItemImageUpload(input: ConfirmItemImageUploadInput!): ConfirmItemImageUploadResult!
   """Confirm a profile image upload and associate it with the user."""
   confirmProfileImageUpload(input: ConfirmProfileImageUploadInput!): ConfirmProfileImageUploadResult!
+  """
+  Record consumption of a recipe by deducting the exact pantry items the
+  client specifies per ingredient (recipeIngredientId → pantryItemId +
+  quantity + unit). Use this for the reviewed, item-level flow where the user
+  confirms specific allocations. For the quick "I cooked this" flow with
+  automatic FIFO deduction, use markRecipeAsCooked instead.
+  """
   confirmRecipeConsumption(input: ConfirmRecipeConsumptionInput!): ConfirmRecipeConsumptionResult!
   """
   Convert only expired batches to waste within a pantry item.
@@ -5917,7 +5907,13 @@ type Mutation {
   markPantryAsDefault(input: SetDefaultPantryInput!): SetDefaultPantryResult!
   """Mark a pantry item as expired."""
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
-  """Mark recipe as cooked and optionally deduct from pantry"""
+  """
+  Mark a recipe as cooked, logging it and (optionally) auto-deducting its
+  ingredients from the pantry by FIFO matching. Use this for the quick
+  "I cooked this" flow. For reviewed, item-level deduction where the client
+  supplies the exact pantry items/quantities consumed, use
+  confirmRecipeConsumption instead.
+  """
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
   """Mark a completed shopping list active again."""
   markShoppingListActive(input: UncompleteShoppingListInput!): UncompleteShoppingListResult!

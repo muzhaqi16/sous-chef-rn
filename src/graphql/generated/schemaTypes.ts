@@ -575,24 +575,6 @@ export enum AutomatedFlag {
   SuspiciousBehavior = 'SUSPICIOUS_BEHAVIOR'
 }
 
-/** Result of a backfill run — what would/did get queued. */
-export type BackfillEmbeddingsResult = {
-  __typename: 'BackfillEmbeddingsResult';
-  /** Whether dryRun was set. */
-  dryRun: Scalars['Boolean']['output'];
-  /** How many were enqueued this call (0 if dryRun). */
-  enqueued: Scalars['Int']['output'];
-  /** The limit applied to this run. */
-  limit: Scalars['Int']['output'];
-  /** Number of items remaining without embeddings (after this run). */
-  remaining: Scalars['Int']['output'];
-};
-
-export type BackfillItemEmbeddingsInput = {
-  dryRun?: InputMaybe<Scalars['Boolean']['input']>;
-  limit?: InputMaybe<Scalars['Int']['input']>;
-};
-
 export type BanUserInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
@@ -5927,6 +5909,13 @@ export type Mutation = {
   confirmItemImageUpload: ConfirmItemImageUploadResult;
   /** Confirm a profile image upload and associate it with the user. */
   confirmProfileImageUpload: ConfirmProfileImageUploadResult;
+  /**
+   * Record consumption of a recipe by deducting the exact pantry items the
+   * client specifies per ingredient (recipeIngredientId → pantryItemId +
+   * quantity + unit). Use this for the reviewed, item-level flow where the user
+   * confirms specific allocations. For the quick "I cooked this" flow with
+   * automatic FIFO deduction, use markRecipeAsCooked instead.
+   */
   confirmRecipeConsumption: ConfirmRecipeConsumptionResult;
   /**
    * Convert only expired batches to waste within a pantry item.
@@ -6130,7 +6119,13 @@ export type Mutation = {
   markPantryAsDefault: SetDefaultPantryResult;
   /** Mark a pantry item as expired. */
   markPantryItemExpired: MarkPantryItemExpiredResult;
-  /** Mark recipe as cooked and optionally deduct from pantry */
+  /**
+   * Mark a recipe as cooked, logging it and (optionally) auto-deducting its
+   * ingredients from the pantry by FIFO matching. Use this for the quick
+   * "I cooked this" flow. For reviewed, item-level deduction where the client
+   * supplies the exact pantry items/quantities consumed, use
+   * confirmRecipeConsumption instead.
+   */
   markRecipeAsCooked: MarkRecipeAsCookedResult;
   /** Mark a completed shopping list active again. */
   markShoppingListActive: UncompleteShoppingListResult;
