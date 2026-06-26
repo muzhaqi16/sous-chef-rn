@@ -77,8 +77,8 @@ export const GenerateShoppingListSheet: React.FC<
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}
     >
+      {/* No title; the "Generate" action already names the intent. */}
       <BottomSheetHeader
-        title={t('generateShoppingList.title')}
         onCancel={onClose}
         onConfirm={handleGenerate}
         confirmLabel={

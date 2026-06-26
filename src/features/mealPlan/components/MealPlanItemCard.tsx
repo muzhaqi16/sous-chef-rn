@@ -2,13 +2,14 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { RIPPLE } from '#constants/ripple';
 import { Text } from '#components/atoms/Text';
+import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
+import { ListItem } from '#components/molecules/ListItem';
+import { type SwipeableRef } from '#components/molecules/SwipeableItem/types';
 import {
   MealPlanItemCard_ItemFragmentDoc,
   type MealPlanItemCard_ItemFragment,
@@ -23,6 +24,8 @@ interface MealPlanItemCardProps {
   ) => void;
   onPress?: (id: string) => void;
   onDelete?: (id: string) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
+  onSwipeableClose?: () => void;
 }
 
 export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
@@ -30,6 +33,8 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
   onToggleCompleted,
   onPress,
   onDelete,
+  onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   const { t } = useTranslation();
   // Subscribe to this entity's MealPlanItemCard_item fields. Re-renders happen
@@ -52,72 +57,53 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     Array.isArray(usedPantryItems) &&
     usedPantryItems.length > 0;
 
-  return (
-    <AppPressable
-      style={styles.card}
-      onPress={() => onPress?.(item.id)}
-      android_ripple={RIPPLE.SUBTLE}
+  // Completion toggle. Uses RN's themed Pressable (like AnimatedCheckbox) — RN's
+  // touch-responder system gives the innermost pressable exclusive capture, so a
+  // tap toggles completion without also firing the row's onPress. (An RNGH
+  // Pressable here lives in a separate gesture system and double-fires both.)
+  const checkboxElement = onToggleCompleted ? (
+    <Pressable
+      onPress={() =>
+        onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
+      }
+      hitSlop={8}
     >
-      {/* Checkbox */}
-      {onToggleCompleted ? (
-        <Pressable
-          onPress={() =>
-            onToggleCompleted(item.id, item.isCompleted, !!item.recipe)
-          }
-          style={styles.checkbox}
-          hitSlop={8}
-        >
-          <Icon
-            name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-            size={24}
-            tone={item.isCompleted ? 'success' : 'border'}
-          />
-        </Pressable>
-      ) : (
-        <View style={styles.checkbox}>
-          <Icon
-            name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
-            size={24}
-            tone={item.isCompleted ? 'success' : 'border'}
-          />
-        </View>
-      )}
-      {/* Image */}
-      {!!imageUrl && (
-        <CachedImage uri={imageUrl} style={styles.image} displaySize={44} />
-      )}
-      {/* Content */}
-      <View style={styles.content}>
-        <Text
-          size="md"
-          weight="medium"
-          style={[styles.name, item.isCompleted && styles.nameCompleted]}
-          numberOfLines={1}
-        >
-          {recipeName}
-        </Text>
-        {!!(
-          totalTime != null ||
-          item.servings != null ||
-          (item.calories != null && item.calories > 0)
-        ) && (
-          <View style={styles.meta}>
-            <Text size="sm" tone="secondary">
-              {[
-                totalTime != null &&
-                  t('mealPlanItem.minutes', { count: totalTime }),
-                item.servings != null &&
-                  t('mealPlanItem.servings', { count: item.servings }),
-                item.calories != null &&
-                  item.calories > 0 &&
-                  t('mealPlanItem.calories', {
-                    count: Math.round(item.calories),
-                  }),
-              ]
-                .filter(Boolean)
-                .join(' \u00B7 ')}
-            </Text>
-          </View>
+      <Icon
+        name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+        size={24}
+        tone={item.isCompleted ? 'success' : 'border'}
+      />
+    </Pressable>
+  ) : (
+    <Icon
+      name={item.isCompleted ? 'checkmark-circle' : 'ellipse-outline'}
+      size={24}
+      tone={item.isCompleted ? 'success' : 'border'}
+    />
+  );
+
+  const leftElement = imageUrl ? (
+    <CachedImage uri={imageUrl} style={styles.image} displaySize={48} />
+  ) : undefined;
+
+  const metaText = [
+    totalTime != null && t('mealPlanItem.minutes', { count: totalTime }),
+    item.servings != null &&
+      t('mealPlanItem.servings', { count: item.servings }),
+    item.calories != null &&
+      item.calories > 0 &&
+      t('mealPlanItem.calories', { count: Math.round(item.calories) }),
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  const subtitle =
+    metaText || hasPantryDeductions ? (
+      <>
+        {!!metaText && (
+          <Text size="sm" tone="secondary">
+            {metaText}
+          </Text>
         )}
         {!!hasPantryDeductions && (
           <View style={styles.pantryBadge}>
@@ -127,59 +113,43 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
             </Text>
           </View>
         )}
-      </View>
-      {/* Delete */}
-      {!!onDelete && (
-        <Pressable
-          onPress={() => onDelete(item.id)}
-          style={styles.deleteButton}
-          hitSlop={8}
-        >
-          <Icon name="close-circle-outline" size={20} tone="textTertiary" />
-        </Pressable>
-      )}
-    </AppPressable>
+      </>
+    ) : undefined;
+
+  return (
+    <View style={styles.rowWrapper}>
+      <SwipeableItem
+        itemId={item.id}
+        swipeMode="shopping"
+        onPress={onPress ? () => onPress(item.id) : undefined}
+        onDelete={onDelete ? () => onDelete(item.id) : undefined}
+        onSwipeableWillOpen={onSwipeableWillOpen}
+        onSwipeableClose={onSwipeableClose}
+      >
+        <ListItem
+          checkboxElement={checkboxElement}
+          leftElement={leftElement}
+          title={recipeName}
+          titleNumberOfLines={1}
+          subtitle={subtitle}
+          isPurchased={item.isCompleted}
+          rightIcon={null}
+        />
+      </SwipeableItem>
+    </View>
   );
 };
 
 MealPlanItemCard.displayName = 'MealPlanItemCard';
 
 const styles = StyleSheet.create(theme => ({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    marginBottom: theme.spacing.xs,
-    ...theme.shadows.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  checkbox: {
-    marginRight: theme.spacing.sm,
+  rowWrapper: {
+    marginBottom: theme.spacing['2.5'],
   },
   image: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: theme.radii.sm,
-    marginRight: theme.spacing.sm,
-  },
-  content: {
-    flex: 1,
-  },
-  name: {
-    color: theme.colors.textPrimary,
-  },
-  nameCompleted: {
-    textDecorationLine: 'line-through',
-    color: theme.colors.textTertiary,
-  },
-  meta: {
-    flexDirection: 'row',
-    marginTop: 2,
   },
   pantryBadge: {
     flexDirection: 'row',
@@ -189,8 +159,5 @@ const styles = StyleSheet.create(theme => ({
   },
   pantryBadgeText: {
     color: theme.colors.success,
-  },
-  deleteButton: {
-    padding: theme.spacing.xs,
   },
 }));

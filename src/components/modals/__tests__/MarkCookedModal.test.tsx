@@ -134,9 +134,9 @@ describe('MarkCookedModal', () => {
     jest.clearAllMocks();
   });
 
-  it('renders with the correct title', () => {
+  it('renders the mark cooked action', () => {
     render(<MarkCookedModal {...defaultProps} />);
-    expect(screen.getByText('I Cooked This!')).toBeTruthy();
+    expect(screen.getByText('Mark Cooked')).toBeTruthy();
   });
 
   it('displays the recipe name', () => {

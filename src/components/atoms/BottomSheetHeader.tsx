@@ -6,7 +6,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 
 interface BottomSheetHeaderProps {
-  title: string;
+  /** Optional centered title. Omit when the confirm action already names the
+   *  intent (e.g. a "Mark Cooked" / "Generate" button) to avoid redundancy. */
+  title?: string;
   onCancel: () => void;
   onConfirm: () => void;
   cancelLabel?: string;
@@ -52,15 +54,17 @@ export const BottomSheetHeader: React.FC<BottomSheetHeaderProps> = ({
           </Text>
         </AppPressable>
 
-        <Text
-          size="lg"
-          weight="semibold"
-          align="center"
-          style={styles.title}
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
+        {!!title && (
+          <Text
+            size="lg"
+            weight="semibold"
+            align="center"
+            style={styles.title}
+            numberOfLines={1}
+          >
+            {title}
+          </Text>
+        )}
 
         <AppPressable
           onPress={onConfirm}
