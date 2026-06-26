@@ -11,7 +11,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FlashList } from '@shopify/flash-list';
 import type { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 
 interface ShoppingList {
@@ -22,7 +21,7 @@ interface ShoppingList {
 }
 
 interface ShoppingListPickerSheetProps {
-  sheetRef: React.RefObject<BottomSheetModalRef | null>;
+  visible: boolean;
   shoppingLists: ShoppingList[];
   defaultNewListName: string;
   creatingList: boolean;
@@ -35,7 +34,7 @@ interface ShoppingListPickerSheetProps {
 export const ShoppingListPickerSheet: React.FC<
   ShoppingListPickerSheetProps
 > = ({
-  sheetRef,
+  visible,
   shoppingLists,
   defaultNewListName,
   creatingList,
@@ -74,7 +73,7 @@ export const ShoppingListPickerSheet: React.FC<
 
   return (
     <BottomSheetAction
-      sheetRef={sheetRef}
+      visible={visible}
       sheetTitle={t('recipes.addToShoppingList')}
       snapPoints={['60%']}
       scrollable={false}

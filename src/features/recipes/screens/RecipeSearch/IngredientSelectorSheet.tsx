@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useRef } from 'react';
+import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -24,22 +24,19 @@ import { Text } from '#components/atoms/Text';
 
 // ── Types ──
 
-export interface IngredientSelectorSheetRef {
-  present: () => void;
-  dismiss: () => void;
-}
-
 interface IngredientSelectorSheetProps {
+  /** State-driven presentation — auto-presents/dismisses via the hook's
+   *  guarded `visible` path (see useStandardBottomSheet). */
+  visible: boolean;
   screen: ReturnType<typeof useRecipeScreen>;
   onSheetChange: (open: boolean) => void;
 }
 
 // ── Component ──
 
-export const IngredientSelectorSheet = forwardRef<
-  IngredientSelectorSheetRef,
+export const IngredientSelectorSheet: React.FC<
   IngredientSelectorSheetProps
->(({ screen, onSheetChange }, ref) => {
+> = ({ visible, screen, onSheetChange }) => {
   const { t } = useTranslation();
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
   const ingredientSearchBarRef = useRef<BottomSheetSearchBarRef>(null);
@@ -57,6 +54,7 @@ export const IngredientSelectorSheet = forwardRef<
   };
 
   const { ref: sheetRef, modalProps } = useStandardBottomSheet({
+    visible,
     onDismiss: () => {
       onSheetChange(false);
     },
@@ -64,11 +62,6 @@ export const IngredientSelectorSheet = forwardRef<
     keyboardAware: true,
     onChange: index => handleSheetChange(index),
   });
-
-  useImperativeHandle(ref, () => ({
-    present: () => sheetRef.current?.present(),
-    dismiss: () => sheetRef.current?.dismiss(),
-  }));
 
   const handleSearchAndClose = async () => {
     sheetRef.current?.close();
@@ -170,9 +163,7 @@ export const IngredientSelectorSheet = forwardRef<
       </IngredientSelectionProvider>
     </BottomSheetModal>
   );
-});
-
-IngredientSelectorSheet.displayName = 'IngredientSelectorSheet';
+};
 
 // ── Styles ──
 

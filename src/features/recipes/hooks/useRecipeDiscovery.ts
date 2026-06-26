@@ -198,7 +198,10 @@ async function fetchPantryDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if (error instanceof Error && error.name === 'AbortError') return;
+      // Aborts are expected (screen unmount / dietary-tag change). The error
+      // name varies by fetch polyfill — RN's throws `Error: Aborted`, not a
+      // DOMException named 'AbortError' — so key off the signal, not the shape.
+      if (signal?.aborted) return;
       errorService.reportError(error, {
         operation: 'fetchPantryBasedRecipes',
       });
@@ -243,7 +246,8 @@ async function fetchRandomDiscovery(
     },
     guardedSetLoading,
     (error: unknown) => {
-      if (error instanceof Error && error.name === 'AbortError') return;
+      // See fetchPantryDiscovery: aborts are expected; key off the signal.
+      if (signal?.aborted) return;
       errorService.reportError(error, { operation: 'fetchRandomRecipes' });
     },
   );
@@ -462,13 +466,26 @@ export function useRecipeDiscovery(
     setFetchKey(currentKey);
   }
 
+  // Read pantryItems via a ref inside the fetch effect so the effect can
+  // depend only on the stable `fetchKey` (which already encodes the item
+  // count). Keeping `pantryItems` in the dep array re-ran the effect on every
+  // reference change (cache-and-network re-renders churn the array identity) —
+  // and each re-run's cleanup aborted the in-flight Spoonacular request, so
+  // the first visit's discovery fetch was cancelled over and over. Because the
+  // abort path guards `loading` from being cleared, the skeleton stayed up
+  // until a later visit warmed the cache.
+  const pantryItemsRef = useRef(pantryItems);
+  useEffect(() => {
+    pantryItemsRef.current = pantryItems;
+  });
+
   // Effect depends only on stable values — no function deps
   useEffect(() => {
     if (!fetchKey) return;
 
     const controller = new AbortController();
 
-    const ingredientNames = (pantryItems ?? [])
+    const ingredientNames = (pantryItemsRef.current ?? [])
       .map(item => item.itemName)
       .filter(Boolean)
       .slice(0, 20)
@@ -491,7 +508,7 @@ export function useRecipeDiscovery(
     }
 
     return () => controller.abort();
-  }, [fetchKey, pantryItems, dietaryTags]);
+  }, [fetchKey, dietaryTags]);
 
   // Refresh: re-fetch discovery recipes (bypasses cache)
   const refresh = () => {

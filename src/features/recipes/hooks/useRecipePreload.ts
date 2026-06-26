@@ -18,7 +18,10 @@ import {
   type MySavedRecipesQuery,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  ExternalSource,
+  type CreateRecipeInput,
+} from '#/graphql/generated/schemaTypes';
 import {
   RecipeInformation,
   type RecipePriceBreakdown,
@@ -210,21 +213,30 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       // Basic recipe info
       name: spoonacularRecipe.title,
       description: spoonacularRecipe.summary?.replace(/<[^>]*>/g, ''),
-      servings: spoonacularRecipe.servings,
-      prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
-      cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
+      instructions,
+
+      // Structured attributes — the API rejects flat servings/cuisine/time/
+      // nutrition/image fields; each lives under its typed sub-input.
+      metadata: {
+        servings: spoonacularRecipe.servings,
+        cuisine: spoonacularRecipe.cuisines?.length
+          ? spoonacularRecipe.cuisines.join(', ')
+          : undefined,
+      },
       // Spoonacular usually omits the prep/cook breakdown but always provides
       // readyInMinutes — persist it as the total time so the imported recipe
       // carries a time of its own (otherwise it shows servings only).
-      timing: spoonacularRecipe.readyInMinutes
-        ? { totalTimeMinutes: spoonacularRecipe.readyInMinutes }
-        : undefined,
-      imageUrl: spoonacularRecipe.image,
-      instructions,
-      caloriesPerServing: caloriesPerServing
-        ? Math.round(caloriesPerServing)
-        : undefined,
-      cuisine: spoonacularRecipe.cuisines?.join(', '),
+      timing: {
+        prepTimeMinutes: spoonacularRecipe.preparationMinutes || undefined,
+        cookTimeMinutes: spoonacularRecipe.cookingMinutes || undefined,
+        totalTimeMinutes: spoonacularRecipe.readyInMinutes || undefined,
+      },
+      nutrition: {
+        caloriesPerServing: caloriesPerServing
+          ? Math.round(caloriesPerServing)
+          : undefined,
+      },
+      media: { imageUrl: spoonacularRecipe.image },
 
       // Attribution - original recipe source
       attribution: {
@@ -316,7 +328,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
             ],
           };
         }) || [],
-    };
+    } satisfies CreateRecipeInput;
   };
 
   /**

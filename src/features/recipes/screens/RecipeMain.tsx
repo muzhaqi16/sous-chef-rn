@@ -1,5 +1,4 @@
 import React, {
-  useEffect,
   useState,
   useRef,
   useImperativeHandle,
@@ -10,7 +9,6 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAnimatedReaction } from 'react-native-reanimated';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
@@ -35,10 +33,7 @@ import {
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import { useTranslation } from 'react-i18next';
-import {
-  IngredientSelectorSheet,
-  type IngredientSelectorSheetRef,
-} from './RecipeSearch/IngredientSelectorSheet';
+import { IngredientSelectorSheet } from './RecipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
@@ -203,31 +198,15 @@ const RecipeMainInner: React.FC = () => {
     });
   };
 
-  const filterSheetRef = useRef<BottomSheetModalRef>(null);
-  const ingredientSheetRef = useRef<IngredientSelectorSheetRef>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Per CLAUDE.md: never call present()/dismiss() directly outside of an
-  // effect. We track desired sheet visibility in state and let an effect
-  // imperatively present/dismiss the underlying ref-based sheets.
+  // State-driven sheet presentation. Each sheet receives `visible` and
+  // auto-presents/dismisses via useStandardBottomSheet's guarded `visible`
+  // path — which also dismisses on navigation blur (releasing the global
+  // backdrop) and re-presents on refocus. No manual present/dismiss effects,
+  // and immune to gorhom 5.2.14's dismiss-before-present wedge.
   const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
-
-  useEffect(() => {
-    if (ingredientSheetVisible) {
-      ingredientSheetRef.current?.present();
-    } else {
-      ingredientSheetRef.current?.dismiss();
-    }
-  }, [ingredientSheetVisible]);
-
-  useEffect(() => {
-    if (filterSheetVisible) {
-      filterSheetRef.current?.present();
-    } else {
-      filterSheetRef.current?.dismiss();
-    }
-  }, [filterSheetVisible]);
 
   const tutorial = useTutorialSequence({
     steps: getRecipeTutorialSteps(t),
@@ -545,7 +524,7 @@ const RecipeMainInner: React.FC = () => {
       )}
 
       <IngredientSelectorSheet
-        ref={ingredientSheetRef}
+        visible={ingredientSheetVisible}
         screen={screen}
         onSheetChange={open => {
           setIsSheetOpen(open);
@@ -557,7 +536,8 @@ const RecipeMainInner: React.FC = () => {
 
       {/* Filter Bottom Sheet — lazy-mounted for performance */}
       <RecipeFilterSheet
-        sheetRef={filterSheetRef}
+        visible={filterSheetVisible}
+        onRequestClose={() => setFilterSheetVisible(false)}
         activeFilters={screen.activeFilters}
         setActiveFilters={screen.setActiveFilters}
         onSheetChange={handleSheetChange}
