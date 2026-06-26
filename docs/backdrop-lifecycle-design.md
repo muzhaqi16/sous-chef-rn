@@ -215,6 +215,85 @@ presence that the dim layer, the tab bar, and scroll-hide all derive from. The
 §5 robustness rework and this unification are the **same migration** — both
 collapse coordination onto the declarative claim.
 
+## 12. Validation findings → revised design (v2)
+
+Three independent reviews (validate / refute / docs-and-best-practices) agreed the
+v1 mechanism in §5 is **unsound**. Summary of blockers and the revision.
+
+### Blockers found in v1
+
+- **B1 — `visible` ≠ on-screen state.** `useStandardBottomSheet`'s focus-awareness
+  (`:204-223`) dismisses/re-presents imperatively **without touching `visible`**.
+  So on navigate-away (the headline bug) `active = visible` stays true, the screen
+  stays mounted, the slot stays registered → invisible tap-blocker. `active=visible`
+  does **not** fix the leak. ActionTray works only because its `mounted` *is* torn
+  down on blur; `visible` is not.
+- **B2 — manual sheets get no backdrop, and the close timer can't be tuned.**
+  `active = visible || closing` collapses to `closing` (false on open) for
+  `visible===undefined` sheets (a documented, supported pattern) → strips their dim.
+- **B3 — `d` can't bind to the animation config.** `useSharedBottomSheetConfigs`
+  returns a **spring** (`damping/stiffness`, no duration). A hardcoded `d` removes
+  the slot while the opacity SV is still non-zero on tall snap points → the dim
+  *snaps* off mid-slide, **regressing** today's perfect SV-driven fade.
+- **B1′ — `isOverlayOpen` has 3 consumers, not 1.** Besides the scroll-hide reset,
+  `PantryMain.tsx:349` and `ShoppingListMainContent.tsx:450` gate **tutorial
+  spotlights**. `isVisible` (slot count) is true for *all* overlays; a tutorial
+  step that opens its own sheet (`PantryMain.tsx:358`) would then pause/hide the
+  tutorial driving it. Wholesale `isOverlayOpen → isVisible` regresses tutorials.
+
+### Revised mechanism (v2): drive `active` off the **animatedIndex SV**, not `visible`
+
+The on-screen truth is the SV gorhom already drives (`useSheetBackdropOpacity`'s
+`animatedIndex`). It settles to `-1` when the sheet closes **even when gorhom skips
+`onChange(-1)`** (the animation/SV completes regardless — corroborated by gorhom
+issues #1381/#506). So:
+
+```ts
+const [active, setActive] = useState(false);
+useAnimatedReaction(
+  () => animatedIndex.value > -0.999,          // on screen?
+  (onScreen, prev) => {
+    if (onScreen !== prev) scheduleOnRN(setActive)(onScreen); // boolean only
+  },
+);
+useBackdropClaim(active, { opacity: backdropOpacity, onPress });
+```
+
+Why this clears every blocker:
+- **B1/B1-core:** independent of `visible`/focus/mount — the SV reflects actual
+  on-screen state, so navigate-away release happens when the sheet animates closed.
+- **B2:** manual sheets have an `animatedIndex` too → they get the dim for free.
+- **B3:** no timer, no duration constant. The slot is removed only when the SV
+  crosses `-1` (opacity already 0) → today's perfect fade is **preserved**.
+- **H1/H2:** no `claimIdRef`, no stale-timer race; **drop `onChange(-1)`/`onAnimate`
+  release entirely** (they re-import the imperative coupling). Unmount cleanup
+  (`useBackdropClaim`) stays as the guaranteed backstop.
+- Complies with the `scheduleOnRN` convention (RN-scope `setActive`, primitive arg).
+
+### Revised tab-bar / tutorial coordination (§11 corrected)
+
+Two *distinct* meanings were conflated. Keep them separate:
+- **"Screen is dimmed"** (dim + tab-bar hide + scroll-hide reset) → derive from the
+  provider's `isVisible` (slot count). Tab-bar hide already reads the opacity SV;
+  add the scroll-reset off `isVisible`. **H3:** this makes the reset fire for sheets
+  too (open-any-sheet → bar returns to shown on close even if scroll-hid) — an
+  intentional, documented behavior change, not a silent one.
+- **"A blocking overlay is up for tutorials"** → **keep** `isOverlayOpen` /
+  `setOverlayOpen` for `PantryMain`/`ShoppingListMainContent`, because a tutorial
+  step that opens its own sheet must *not* pause itself. Do **not** delete it; only
+  move the scroll-reset off it.
+
+So §11 becomes a *partial* unification: the backdrop provider owns "screen dimmed";
+the tutorial-pause signal stays explicit. Net: still removes the redundant tab-bar
+hide channel, without regressing tutorials.
+
+### Residual / out of scope
+- FolderPicker manage sub-sheet shares the picker's `animatedIndex`, so v2 treats
+  the pair as one presence (correct). Its dismiss→present **swap flash** is
+  pre-existing (shared SV dips then rises) and is not addressed here.
+- Manual `visible===undefined` sheets must still be enumerated to confirm none rely
+  on the removed `onChange`/`onAnimate` claim for anything other than the dim.
+
 ## 10. Open questions
 
 - Bind `d` to `animationConfigs` duration vs. a single `BACKDROP_CLOSE_MS`
