@@ -194,9 +194,6 @@ jest.mock('#features/mealPlan/components/MealPlanSettingsSheet', () => ({
 jest.mock('#features/mealPlan/components/DuplicatePlanSheet', () => ({
   DuplicatePlanSheet: () => null,
 }));
-jest.mock('#features/mealPlan/components/EditCustomMealSheet', () => ({
-  EditCustomMealSheet: () => null,
-}));
 jest.mock('#features/mealPlan/components/NutritionSummaryCard', () => ({
   NutritionSummaryCard: () => null,
 }));

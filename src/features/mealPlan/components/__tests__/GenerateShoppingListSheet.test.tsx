@@ -169,9 +169,9 @@ describe('GenerateShoppingListSheet', () => {
     jest.clearAllMocks();
   });
 
-  it('renders the header title', () => {
+  it('renders the generate action', () => {
     renderSheet();
-    expect(screen.getByText('Generate Shopping List')).toBeTruthy();
+    expect(screen.getByText('Generate')).toBeTruthy();
   });
 
   it('renders the check pantry toggle', () => {

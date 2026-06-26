@@ -1,15 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import { ScrollView } from 'react-native-gesture-handler';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import Animated, {
-  type useAnimatedScrollHandler,
-} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { MealTypeSection } from './MealTypeSection';
 import { EmptyDayState } from './EmptyDayState';
 import { Text } from '#components/atoms/Text';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import type { MealTypeGroup } from '#features/mealPlan/hooks/useDailyMeals';
 import { type MealType } from '#/graphql/generated/schemaTypes';
 
@@ -25,7 +24,6 @@ interface DayMealListProps {
   onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType?: MealType) => void;
-  onScroll?: ReturnType<typeof useAnimatedScrollHandler>;
   listHeader?: React.ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
@@ -39,18 +37,18 @@ export const DayMealList: React.FC<DayMealListProps> = ({
   onItemPress,
   onDeleteItem,
   onAddMeal,
-  onScroll,
   listHeader,
   refreshing = false,
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  // Ensure only one row's swipe-to-delete is open at a time across all sections.
+  const { handleSwipeableWillOpen, handleSwipeableClose } =
+    useSwipeableCoordinator();
   return (
-    <Animated.ScrollView
+    <ScrollView
       style={styles.container}
       contentContainerStyle={[styles.content, isEmpty && styles.contentEmpty]}
-      onScroll={onScroll}
-      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       refreshControl={
         onRefresh ? (
@@ -76,6 +74,8 @@ export const DayMealList: React.FC<DayMealListProps> = ({
               onAddMeal={
                 onAddMeal ? () => onAddMeal(group.mealType) : undefined
               }
+              onSwipeableWillOpen={handleSwipeableWillOpen}
+              onSwipeableClose={handleSwipeableClose}
             />
           ))}
 
@@ -98,7 +98,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
           )}
         </>
       )}
-    </Animated.ScrollView>
+    </ScrollView>
   );
 };
 

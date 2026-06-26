@@ -66,6 +66,7 @@ import {
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import {
   loadSessionTokens,
+  pickFresherSessionTokens,
   type SessionTokenLoadResult,
 } from '#/storage/keychain';
 import { logger } from '#/utils/environment';
@@ -94,10 +95,18 @@ const hydrateSessionTokensThenFinish = async (
     status: 'absent',
   };
   if (result.status === 'ok') {
-    // setTokens also schedules the proactive refresh for the restored
-    // session; its keychain write-through is skipped as an unchanged pair.
-    state?.setTokens(result.tokens);
-    state?.setSessionTokensInKeychain(true);
+    const fallback =
+      state?.accessToken && state?.refreshToken
+        ? { accessToken: state.accessToken, refreshToken: state.refreshToken }
+        : null;
+    const tokens = pickFresherSessionTokens(result.tokens, fallback);
+    // setTokens schedules the proactive refresh and write-throughs to the
+    // keychain. The keychain pair is confirmed now; the MMKV pair self-heals the
+    // keychain via that write-through, flipping the flag once it confirms.
+    state?.setTokens(tokens);
+    if (tokens === result.tokens) {
+      state?.setSessionTokensInKeychain(true);
+    }
   } else if (state?.accessToken && state?.refreshToken) {
     // MMKV fallback copy ('absent': install predates keychain storage;
     // 'error': keychain unreadable after retries). Running the pair through

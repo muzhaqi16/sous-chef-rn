@@ -7,6 +7,7 @@ import { MealPlanItemCard } from './MealPlanItemCard';
 import { Text } from '#components/atoms/Text';
 import { type MealType } from '#/graphql/generated/schemaTypes';
 import { type MealPlanItemCard_ItemFragment } from './MealPlanItemCard.generated';
+import { type SwipeableRef } from '#components/molecules/SwipeableItem/types';
 
 interface MealTypeSectionProps {
   mealType: MealType;
@@ -20,6 +21,8 @@ interface MealTypeSectionProps {
   onItemPress?: (id: string) => void;
   onDeleteItem?: (id: string) => void;
   onAddMeal?: (mealType: MealType) => void;
+  onSwipeableWillOpen?: (ref: SwipeableRef) => void;
+  onSwipeableClose?: () => void;
 }
 
 export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
@@ -30,6 +33,8 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
   onItemPress,
   onDeleteItem,
   onAddMeal,
+  onSwipeableWillOpen,
+  onSwipeableClose,
 }) => {
   return (
     <View style={styles.section}>
@@ -55,6 +60,8 @@ export const MealTypeSection: React.FC<MealTypeSectionProps> = ({
           onToggleCompleted={onToggleCompleted}
           onPress={onItemPress}
           onDelete={onDeleteItem}
+          onSwipeableWillOpen={onSwipeableWillOpen}
+          onSwipeableClose={onSwipeableClose}
         />
       ))}
     </View>

@@ -11,10 +11,14 @@ import { Text } from '#components/atoms/Text';
 interface ListItemProps {
   children?: React.ReactNode;
   title?: string;
+  /** Max lines for the title before truncating. Defaults to 2. */
+  titleNumberOfLines?: number;
   subtitle?: string | React.ReactNode;
   onPress?: () => void;
   leftIcon?: React.ComponentProps<typeof Icon>['name'];
-  rightIcon?: React.ComponentProps<typeof Icon>['name'];
+  // Pass `null` to suppress the default trailing chevron (e.g. rows whose press
+  // is handled externally by a Swipeable rather than ListItem's own onPress).
+  rightIcon?: React.ComponentProps<typeof Icon>['name'] | null;
   badge?: {
     text: string;
     variant?: 'default' | 'primary' | 'success' | 'warning' | 'danger';
@@ -32,6 +36,7 @@ interface ListItemProps {
 const ListItemComponent: React.FC<ListItemProps> = ({
   children,
   title,
+  titleNumberOfLines = 2,
   subtitle,
   onPress,
   leftIcon,
@@ -78,7 +83,11 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </View>
       )}
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">
+        <Text
+          style={styles.title}
+          numberOfLines={titleNumberOfLines}
+          ellipsizeMode="tail"
+        >
           {title}
         </Text>
         {!!subtitle &&

@@ -88,9 +88,9 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         showsVerticalScrollIndicator={false}
         bottomOffset={16}
       >
-        {/* Header */}
+        {/* Header — no title; the "Mark Cooked" action and the recipe name
+            below already convey intent. */}
         <BottomSheetHeader
-          title={t('markCookedModal.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
           confirmLabel={t('markCookedModal.markCooked')}
@@ -99,7 +99,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
 
         {/* Recipe Info */}
         <View style={styles.recipeInfo}>
-          <Text size="lg" weight="semibold" align="center">
+          <Text size="md" weight="semibold" numberOfLines={2}>
             {recipeName}
           </Text>
         </View>
@@ -175,11 +175,11 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
   },
   recipeInfo: {
-    marginBottom: theme.spacing.xl,
-    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing['3'],
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
-    alignItems: 'center',
   },
   section: {
     marginBottom: theme.spacing.lg,
