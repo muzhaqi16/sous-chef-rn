@@ -133,6 +133,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       payload?: JsonValue | null;
       sentAt?: string;
       expiresAt?: string | null;
+      sourceId?: string | null;
+      sourceType?: string | null;
+      actionUrl?: string | null;
+      readAt?: string | null;
     },
     category: NotificationCategory,
     sourceUserId?: string,
@@ -170,6 +174,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       sentAt: notification.sentAt || new Date().toISOString(),
       expiresAt: notification.expiresAt,
       isRead: false,
+      sourceId: notification.sourceId,
+      sourceType: notification.sourceType,
+      actionUrl: notification.actionUrl,
+      readAt: notification.readAt,
       requiresAction,
       actionType,
       actionData: payload,
@@ -250,6 +258,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
             payload: rawNotification.payload,
             sentAt: rawNotification.sentAt,
             expiresAt: rawNotification.expiresAt,
+            sourceId: rawNotification.sourceId,
+            sourceType: rawNotification.sourceType,
+            actionUrl: rawNotification.actionUrl,
+            readAt: rawNotification.readAt,
           },
           rawNotification.category ?? NotificationCategory.System,
         );

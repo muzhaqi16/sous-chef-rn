@@ -53,7 +53,11 @@ export const NotificationActionHandler: React.FC<
 
       const invitation: InvitationData = {
         type: invitationType,
+        // Prefer the server's source correlation (sourceId is the triggering
+        // HomeInvite / Membership id; sourceType labels which). Fall back to the
+        // JSON payload for notifications minted before the source fields existed.
         id:
+          notification.sourceId ||
           notification.payload.inviteId ||
           notification.payload.membershipId ||
           '',

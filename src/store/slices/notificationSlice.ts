@@ -70,6 +70,14 @@ export interface NotificationItem {
   sentAt: string;
   readAt?: string | null;
   isRead: boolean;
+  // Server source-correlation (see Notification.sourceId/sourceType): sourceId
+  // is the triggering entity's id (e.g. a HomeInvite id); sourceType is its
+  // label (HOME_INVITE / MEMBERSHIP_INVITE / COLLABORATION_INVITE). Preferred
+  // over digging the JSON payload for the entity id.
+  sourceId?: string | null;
+  sourceType?: string | null;
+  // Deep-link / CTA destination supplied by the server.
+  actionUrl?: string | null;
   requiresAction?: boolean;
   actionType?: string;
   // Carries the notification's JSON payload for action handling. Write-only in
