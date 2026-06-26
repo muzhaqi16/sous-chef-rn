@@ -13,7 +13,6 @@ const SuccessActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
   color: theme.colors.success,
 }));
 
-import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
