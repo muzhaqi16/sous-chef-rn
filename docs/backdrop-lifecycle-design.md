@@ -294,6 +294,15 @@ hide channel, without regressing tutorials.
 - Manual `visible===undefined` sheets must still be enumerated to confirm none rely
   on the removed `onChange`/`onAnimate` claim for anything other than the dim.
 
+> **⚠️ Post-ship correction (2026-06-26):** v3's "drop `onChange(-1)`, release only via
+> the SV reaction" was wrong. A `BottomSheetMODAL` dismiss **unmounts the portal and can
+> stop driving `animatedIndex` before it reaches -1**, so the reaction never fires → the
+> slot leaks → an invisible backdrop eats every tap (open once, then the whole screen is
+> dead). Fix shipped: `onChange(-1)` is restored as the **primary, reliable** modal
+> release; the SV reaction is kept **only** as an additive backstop for interrupted
+> closes. The validation missed that a modal unmounts mid-animation (it reasoned about a
+> non-modal BottomSheet, which does settle at -1). See §13.1.
+
 ## 13. v2 re-validation (3 agents) → v3 refinement
 
 Re-validation **CONFIRMED** v2 fixes the leak/close path: gorhom drives

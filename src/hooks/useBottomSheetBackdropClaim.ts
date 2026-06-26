@@ -22,9 +22,11 @@ interface DismissableRef {
  *   UI thread, frame-synced with the sheet — zero JS-thread delay.
  * - Claims the backdrop at the START of the open animation via gorhom's
  *   `onAnimate` callback (synchronous, so the dim ramps in with no pop), and
- *   releases it via a `useAnimatedReaction` watching `animatedIndex` settle at
- *   the closed anchor (-1) — NOT gorhom's `onChange(-1)`, which gorhom skips on
- *   interrupted closes. The SV reaches -1 on every close, so release is reliable.
+ *   releases on the settled-closed `onChange(-1)` — the reliable signal for a
+ *   BottomSheetMODAL, whose dismiss unmounts the portal and can stop driving
+ *   `animatedIndex` before it reaches -1 (stranding it above the SV threshold).
+ *   A `useAnimatedReaction` on `animatedIndex` reaching -1 is kept ONLY as a
+ *   backstop for interrupted closes where gorhom skips `onChange(-1)`.
  *
  * Backdrop-tap dismisses the sheet via the supplied ref.
  *
@@ -87,14 +89,14 @@ export function useBottomSheetBackdropClaim(
     return () => releaseBackdrop();
   }, []);
 
-  // RELEASE is driven off the sheet's own `animatedIndex` settling at the closed
-  // anchor (-1), NOT off gorhom's `onChange(-1)`. Gorhom skips `onChange(-1)`
-  // when a close interrupts an open that never settled, which stranded the dim.
-  // `animatedIndex` is driven by the spring on the UI thread and reaches exactly
-  // -1 on every close (reanimated snaps to `toValue` at rest under
-  // `overshootClamping`), so this fires reliably. A fast reopen — where the SV
-  // turns back before reaching -1 — never fires, so the slot is reused with no
-  // stale-release race. The unmount cleanup above is the final backstop.
+  // BACKSTOP release for interrupted closes (a close that interrupts an open
+  // that never settled), where gorhom skips `onChange(-1)`. This fires only when
+  // `animatedIndex` actually reaches -1 — which a BottomSheetMODAL dismiss does
+  // NOT guarantee (it unmounts the portal and can strand the SV above -0.999),
+  // so it must never be the sole release path. `onChange(-1)` below is the
+  // primary, reliable release; this is purely additive (releaseBackdrop is
+  // idempotent). A fast reopen (the SV turns back before reaching -1) never
+  // fires, so the slot is reused with no stale-release race.
   useAnimatedReaction(
     () => animatedIndex.get() <= -0.999,
     (closed, previous) => {
@@ -114,8 +116,15 @@ export function useBottomSheetBackdropClaim(
     if (toIndex >= 0) claimBackdrop();
   };
 
+  // RELEASE on settled-closed — the reliable signal for a BottomSheetMODAL
+  // (gorhom fires it on a normal dismiss, and `useStandardBottomSheet`'s
+  // `safeOnDismiss` routes `handleBackdrop(-1)` here too, covering the case where
+  // `onChange(-1)` is skipped but `onDismiss` fires). The SV reaction above is the
+  // extra backstop. Without this, a modal dismiss that strands `animatedIndex`
+  // above -0.999 leaves the slot claimed → an invisible backdrop eats every tap.
   const onChange = (index: number) => {
     if (index >= 0) claimBackdrop();
+    else if (index === -1) releaseBackdrop();
   };
 
   return { animatedIndex, onChange, onAnimate };

@@ -249,7 +249,7 @@ describe('useStandardBottomSheet', () => {
           children,
         );
 
-    it('re-presents the sheet on focus when visible is true', () => {
+    it('re-presents the sheet on focus after a blur dismiss when visible is true', () => {
       const { navigation, emit } = createMockNavigation();
       const { result } = renderHook(
         () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
@@ -258,6 +258,9 @@ describe('useStandardBottomSheet', () => {
 
       attachRefMocks(result.current.ref);
 
+      // Blur dismisses (clears the presented flag); focus then re-presents.
+      // Focus while already presented is a no-op — only a prior blur re-arms it.
+      emit('blur');
       emit('focus');
 
       expect(mockPresent).toHaveBeenCalled();

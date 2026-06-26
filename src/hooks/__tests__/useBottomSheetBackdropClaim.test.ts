@@ -78,20 +78,20 @@ describe('useBottomSheetBackdropClaim', () => {
     expect(mockRelease).not.toHaveBeenCalled();
   });
 
-  it('does NOT release on onChange(-1) — release is SV-driven, not callback-driven', () => {
+  it('releases on the settled-closed onChange(-1) — the reliable modal path', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
     result.current.onAnimate(-1, 0); // claim
-    result.current.onChange(-1); // gorhom settled-closed callback no longer releases
+    result.current.onChange(-1); // settled closed → release
 
-    expect(mockRelease).not.toHaveBeenCalled();
+    expect(mockRelease).toHaveBeenCalledWith('claim-id');
   });
 
-  it('releases when animatedIndex settles at the closed anchor (-1)', () => {
+  it('also releases via the animatedIndex backstop (interrupted closes)', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
     result.current.onAnimate(-1, 0); // claim
-    driveClose(); // SV crosses to -1 (reliable even when onChange(-1) is skipped)
+    driveClose(); // SV reaches -1 without an onChange(-1) callback
 
     expect(mockRelease).toHaveBeenCalledWith('claim-id');
   });

@@ -162,20 +162,26 @@ export function useStandardBottomSheet({
 
   // Auto present/dismiss when visible is provided.
   //
-  // `hasPresentedRef` guards against dismissing a sheet that was never
-  // presented. In @gorhom/bottom-sheet 5.2.14, calling `dismiss()` on a modal
-  // still in its INITIAL status flips it to DISMISSING — and `handlePortalRender`
-  // then skips rendering any DISMISSING modal, so every later `present()`
-  // silently no-ops. Always-mounted sheets (rendered with `visible={false}` at
-  // start) would otherwise be permanently stuck closed. Mount-on-open sheets
-  // dodged it only because they never hit the initial dismiss.
-  const hasPresentedRef = useRef(false);
+  // `isPresentedRef` tracks whether the sheet is CURRENTLY on screen. Two
+  // @gorhom/bottom-sheet 5.2.14 hazards make this necessary:
+  //  1. `dismiss()` on a modal still in INITIAL status (never presented) flips
+  //     it to DISMISSING — and `handlePortalRender` then skips every later
+  //     `present()`. So never dismiss before the first present.
+  //  2. When the user closes the sheet itself (swipe / backdrop tap / a confirm
+  //     action), gorhom dismisses it and fires `onDismiss`, which makes the
+  //     parent set `visible=false`. WITHOUT this guard the effect would then call
+  //     `dismiss()` AGAIN on the already-dismissed modal — re-tripping hazard #1,
+  //     so the NEXT `present()` silently no-ops (the "opens once, never reopens"
+  //     bug). `safeOnDismiss` clears `isPresentedRef` the instant gorhom
+  //     dismisses, so this redundant dismiss is skipped.
+  const isPresentedRef = useRef(false);
   useEffect(() => {
     if (visible === undefined) return;
-    if (visible) {
-      hasPresentedRef.current = true;
+    if (visible && !isPresentedRef.current) {
+      isPresentedRef.current = true;
       ref.current?.present();
-    } else if (hasPresentedRef.current) {
+    } else if (!visible && isPresentedRef.current) {
+      isPresentedRef.current = false;
       ref.current?.dismiss();
     }
   }, [visible]);
@@ -205,15 +211,26 @@ export function useStandardBottomSheet({
     if (!navigation) return;
     if (visibleRef.current === undefined) return;
 
-    if (navigation.isFocused() && visibleRef.current) {
+    if (
+      navigation.isFocused() &&
+      visibleRef.current &&
+      !isPresentedRef.current
+    ) {
+      isPresentedRef.current = true;
       ref.current?.present();
     }
 
     const unsubFocus = navigation.addListener('focus', () => {
-      if (visibleRef.current) ref.current?.present();
+      if (visibleRef.current && !isPresentedRef.current) {
+        isPresentedRef.current = true;
+        ref.current?.present();
+      }
     });
     const unsubBlur = navigation.addListener('blur', () => {
-      if (visibleRef.current) ref.current?.dismiss();
+      if (isPresentedRef.current) {
+        isPresentedRef.current = false;
+        ref.current?.dismiss();
+      }
     });
 
     return () => {
@@ -275,6 +292,11 @@ export function useStandardBottomSheet({
   // Defensive release here guarantees the claim is freed; calling
   // `handleBackdrop(-1)` when the claim is already released is a no-op.
   const safeOnDismiss = () => {
+    // The sheet has dismissed (self-close or programmatic) — clear the
+    // presented flag BEFORE `onDismiss` runs (it sets the parent's `visible`
+    // false), so the `visible` effect skips a redundant `dismiss()` that would
+    // wedge gorhom and break the next `present()`.
+    isPresentedRef.current = false;
     handleBackdrop(-1);
     onDismiss();
   };
