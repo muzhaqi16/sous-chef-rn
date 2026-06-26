@@ -7,6 +7,8 @@ import {
   SyncConsumePantryItemDocument,
   SyncOpenPantryItemBatchDocument,
   SyncWastePantryItemBatchDocument,
+  SyncConvertExpiredToWasteDocument,
+  SyncConvertExpiredBatchesToWasteDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   SyncShoppingListItemDocument,
@@ -381,6 +383,12 @@ const SYNC_REGISTRY: Record<string, SyncBuilder> = {
   CreatePantryItemUsage: buildPantryDeltaSync(SyncConsumePantryItemDocument),
   OpenPantryItemBatch: buildPantryDeltaSync(SyncOpenPantryItemBatchDocument),
   WastePantryItemBatch: buildPantryDeltaSync(SyncWastePantryItemBatchDocument),
+  ConvertExpiredToWaste: buildPantryDeltaSync(
+    SyncConvertExpiredToWasteDocument,
+  ),
+  ConvertExpiredBatchesToWaste: buildPantryDeltaSync(
+    SyncConvertExpiredBatchesToWasteDocument,
+  ),
   // ShoppingListItem create / update
   AddItemToShoppingList: buildShoppingItemSync,
   UpdateShoppingListItem: buildShoppingItemSync,

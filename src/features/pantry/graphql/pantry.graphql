@@ -1169,6 +1169,36 @@ mutation SyncWastePantryItemBatch($input: SyncWastePantryItemBatchInput!) {
   }
 }
 
+mutation SyncConvertExpiredToWaste($input: SyncConvertExpiredToWasteInput!) {
+  syncConvertExpiredToWaste(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      id
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
+mutation SyncConvertExpiredBatchesToWaste(
+  $input: SyncConvertExpiredBatchesToWasteInput!
+) {
+  syncConvertExpiredBatchesToWaste(input: $input) {
+    operationId
+    wasApplied
+    pantryItem {
+      id
+      ...queueManager_syncPantryItem
+    }
+    pantry {
+      id
+    }
+  }
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

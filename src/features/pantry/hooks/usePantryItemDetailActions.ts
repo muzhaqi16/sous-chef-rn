@@ -157,7 +157,11 @@ export function usePantryItemDetailActions({
     },
   );
 
-  const { convertExpiredToWaste } = useConvertExpiredToWaste();
+  const { convertExpiredToWaste } = useConvertExpiredToWaste({
+    onSuccess: () => {
+      alertService.alert('Done', 'Expired item has been discarded.');
+    },
+  });
 
   const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
     onSuccess: () => {
@@ -324,23 +328,7 @@ export function usePantryItemDetailActions({
           {
             text: 'Discard',
             style: 'destructive',
-            onPress: () =>
-              executeMutation(
-                async () => {
-                  await convertExpiredToWaste(item.id);
-                  alertService.alert(
-                    'Done',
-                    'Expired item has been discarded.',
-                  );
-                },
-                (error: unknown) =>
-                  alertService.alert(
-                    'Error',
-                    error instanceof Error
-                      ? error.message
-                      : 'Failed to discard expired item',
-                  ),
-              ),
+            onPress: () => convertExpiredToWaste(item.id),
           },
         ],
       );

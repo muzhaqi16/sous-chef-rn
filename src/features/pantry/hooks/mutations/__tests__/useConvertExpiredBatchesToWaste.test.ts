@@ -1,14 +1,12 @@
 import React, { type ReactNode } from 'react';
 import { renderHook, act } from '@testing-library/react-native';
-import { gql, ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
+import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { seedCache } from '#/test-utils/apolloMockProvider';
-import { ConvertExpiredToWasteDocument } from '#features/pantry/graphql/pantry.generated';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
+import { ConvertExpiredBatchesToWasteDocument } from '#features/pantry/graphql/pantry.generated';
 import { alertService } from '#/services/alertService';
-import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
+import { useConvertExpiredBatchesToWaste } from '../useConvertExpiredBatchesToWaste';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -16,92 +14,60 @@ jest.mock('#/services/alertService', () => ({
 
 beforeEach(() => jest.clearAllMocks());
 
-const READ_STATE = gql`
-  fragment _readConvertState on PantryItem {
-    id
-    quantity
-    condition
-  }
-`;
-
-const seedItem = () =>
-  seedCache([
-    {
-      __typename: 'PantryItem',
-      id: 'item-1',
-      quantity: 4,
-      condition: ItemCondition.Good,
-    },
-  ]);
-
-const readState = (cache: InMemoryCache) =>
-  cache.readFragment<{ quantity: number; condition: ItemCondition }>({
-    id: 'PantryItem:item-1',
-    fragment: READ_STATE,
-  });
-
 /**
  * Render the hook against a real link chain so the mutation `context` can be
  * captured off the operation. A leading tap link records `getContext()` for the
  * convert op, then forwards to a `MockLink` serving the supplied responses.
  */
 function renderConvert(
-  cache: InMemoryCache,
   mocks: MockedResponse[],
   capturedContexts: Array<Record<string, unknown>>,
+  onSuccess?: () => void,
 ) {
   const tapLink = new ApolloLink((operation, forward) => {
-    if (operation.operationName === 'ConvertExpiredToWaste') {
+    if (operation.operationName === 'ConvertExpiredBatchesToWaste') {
       capturedContexts.push(operation.getContext());
     }
     return forward(operation);
   });
   const client = new ApolloClient({
-    cache,
+    cache: new InMemoryCache(),
     link: ApolloLink.from([tapLink, new MockLink(mocks)]),
     defaultOptions: { mutate: { errorPolicy: 'all' } },
   });
   const wrapper = ({ children }: { children: ReactNode }) =>
     React.createElement(ApolloProvider, { client, children });
-  return renderHook(() => useConvertExpiredToWaste(), { wrapper });
+  return renderHook(() => useConvertExpiredBatchesToWaste({ onSuccess }), {
+    wrapper,
+  });
 }
 
-describe('useConvertExpiredToWaste (local-first)', () => {
-  it('optimistically sets quantity 0 + SPOILED before settle, fires with localFirst + operationId, and a queued (null) result keeps it', async () => {
-    const cache = seedItem();
+describe('useConvertExpiredBatchesToWaste (local-first)', () => {
+  it('fires with localFirst + operationId and treats a queued (null) result as success', async () => {
     const contexts: Array<Record<string, unknown>> = [];
+    const onSuccess = jest.fn();
     const { result } = renderConvert(
-      cache,
       [
         {
           request: {
-            query: ConvertExpiredToWasteDocument,
+            query: ConvertExpiredBatchesToWasteDocument,
             variables: () => true,
           },
           // Offline-queued signature: top-level field null, no error.
-          result: { data: { convertExpiredToWaste: null } },
+          result: { data: { convertExpiredBatchesToWaste: null } },
         },
       ],
       contexts,
+      onSuccess,
     );
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      const promise = result.current.convertExpiredToWaste('item-1');
-      // Synchronous permanent write — visible before the mutation settles.
-      expect(readState(cache)).toMatchObject({
-        quantity: 0,
-        condition: ItemCondition.Spoiled,
-      });
-      resolved = await promise;
+      resolved = await result.current.convertExpiredBatches('item-1');
     });
 
     expect(resolved).toBe(true);
-    // Queued result keeps the optimistic state for replay.
-    expect(readState(cache)).toMatchObject({
-      quantity: 0,
-      condition: ItemCondition.Spoiled,
-    });
+    expect(onSuccess).toHaveBeenCalledTimes(1);
 
     // Fired with a non-empty operationId in localFirst context.
     expect(contexts).toHaveLength(1);
@@ -110,20 +76,19 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     expect((contexts[0]?.operationId as string).length).toBeGreaterThan(0);
   });
 
-  it('reverts quantity + condition on a rejection (error-union result)', async () => {
-    const cache = seedItem();
+  it('alerts and returns false on a rejection (error-union result)', async () => {
     const contexts: Array<Record<string, unknown>> = [];
+    const onSuccess = jest.fn();
     const { result } = renderConvert(
-      cache,
       [
         {
           request: {
-            query: ConvertExpiredToWasteDocument,
+            query: ConvertExpiredBatchesToWasteDocument,
             variables: () => true,
           },
           result: {
             data: {
-              convertExpiredToWaste: {
+              convertExpiredBatchesToWaste: {
                 __typename: 'NotFoundError',
                 code: 'NOT_FOUND',
                 message: 'Pantry item not found',
@@ -135,20 +100,18 @@ describe('useConvertExpiredToWaste (local-first)', () => {
         },
       ],
       contexts,
+      onSuccess,
     );
 
     let resolved: unknown = 'unset';
     await act(async () => {
-      resolved = await result.current.convertExpiredToWaste('item-1');
+      resolved = await result.current.convertExpiredBatches('item-1');
     });
 
     expect(resolved).toBe(false);
-    expect(readState(cache)).toMatchObject({
-      quantity: 4,
-      condition: ItemCondition.Good,
-    });
+    expect(onSuccess).not.toHaveBeenCalled();
     // A union-error payload carries no transport error, so onError never fires —
-    // the hook must surface its own alert rather than reverting silently.
+    // the hook must surface its own alert.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Failed to remove item',
