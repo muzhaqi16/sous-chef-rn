@@ -1028,6 +1028,12 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "MealPlanEventNode": [
+      "MealPlan",
+      "MealPlanItem",
+      "MealTemplate",
+      "MealTemplateItem"
+    ],
     "MergeItemsResult": [
       "ConflictError",
       "ForbiddenError",

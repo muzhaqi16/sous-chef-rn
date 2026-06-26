@@ -3447,6 +3447,14 @@ export type FailedIpStat = {
 
 export type FavoriteRecipeInput = {
   folder?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID2).
+   * Offline-first clients mint this as the saved-recipe row's permanent primary
+   * key so a re-synced favorite resolves to the same record (idempotent) instead
+   * of duplicating. When omitted, the server generates one via @default(cuid(2)).
+   * Must match the CUID2 format; invalid formats are rejected by ID validation.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId: Scalars['ID']['input'];
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
@@ -3456,6 +3464,12 @@ export type FavoriteRecipePayload = {
   __typename: 'FavoriteRecipePayload';
   recipe: Maybe<Recipe>;
   savedRecipe: SavedRecipe;
+  /**
+   * True when this call created the favorite; false when the recipe was already
+   * favorited and the call converged on the existing record (idempotent replay
+   * or a two-device race). Either way savedRecipe is the canonical server record.
+   */
+  wasCreated: Scalars['Boolean']['output'];
 };
 
 export type FavoriteRecipeResult = ConflictError | FavoriteRecipePayload | ForbiddenError | NotFoundError | ValidationError;
@@ -5332,6 +5346,48 @@ export type MealPlanEdge = Edge & {
   node: MealPlan;
 };
 
+/**
+ * Real-time notification for shared meal-plan and meal-template mutations within
+ * a home. Lets collaborating clients stay in sync via push instead of polling;
+ * discriminate by subtype (and node's __typename) to interpret the payload.
+ * Only home-shared plans/templates (homeId set) are pushed — personal ones need
+ * no collaboration channel.
+ */
+export type MealPlanEvent = {
+  __typename: 'MealPlanEvent';
+  actorUserId: Scalars['ID']['output'];
+  homeId: Scalars['ID']['output'];
+  /** Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events. */
+  mealPlanId: Maybe<Scalars['ID']['output']>;
+  mutation: MutationType;
+  node: Maybe<MealPlanEventNode>;
+  subtype: MealPlanEventSubtype;
+  /** Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events. */
+  templateId: Maybe<Scalars['ID']['output']>;
+  timestamp: Scalars['DateTime']['output'];
+  updatedFields: Array<Scalars['String']['output']>;
+};
+
+export type MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateItem;
+
+/** Subtype discriminator for meal-plan / meal-template collaboration events. */
+export enum MealPlanEventSubtype {
+  /** A shared meal plan was created, updated, or soft-deleted. node is a MealPlan. */
+  MealPlanChanged = 'MEAL_PLAN_CHANGED',
+  /** A meal plan item was created, updated, or deleted. node is a MealPlanItem. */
+  MealPlanItemChanged = 'MEAL_PLAN_ITEM_CHANGED',
+  /**
+   * A shared meal template was created, updated, or soft-deleted. node is a
+   * MealTemplate.
+   */
+  MealTemplateChanged = 'MEAL_TEMPLATE_CHANGED',
+  /**
+   * A meal template item was added, updated, or removed. node is a
+   * MealTemplateItem.
+   */
+  MealTemplateItemChanged = 'MEAL_TEMPLATE_ITEM_CHANGED'
+}
+
 export type MealPlanFilters = {
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
   /** Filter by home ID to see only home-scoped meal plans */
@@ -6230,6 +6286,22 @@ export type Mutation = {
    * quantity twice.
    */
   syncConsumePantryItem: SyncPantryDeltaResult;
+  /**
+   * Offline-sync twin of convertExpiredBatchesToWaste — idempotent by operationId:
+   * replaying returns current state without re-wasting batches.
+   */
+  syncConvertExpiredBatchesToWaste: SyncPantryDeltaResult;
+  /**
+   * Offline-sync twin of convertExpiredToWaste — idempotent by operationId:
+   * replaying returns current state without writing a second waste ledger entry.
+   */
+  syncConvertExpiredToWaste: SyncPantryDeltaResult;
+  /**
+   * Offline-sync twin of adjustPantryItemWeight (weight correction) — idempotent
+   * by operationId: replaying does not re-apply the proportional recalculation or
+   * write a second audit row.
+   */
+  syncCorrectPantryItemWeight: SyncPantryDeltaResult;
   /** Offline-sync twin of deletePantryItem — idempotent by operationId. */
   syncDeletePantryItem: SyncPantryItemResult;
   /** Offline-sync twin of removeItemFromShoppingList — idempotent by operationId. */
@@ -8337,6 +8409,45 @@ export type MutationSyncAdjustPantryItemQuantityArgs = {
  */
 export type MutationSyncConsumePantryItemArgs = {
   input: SyncConsumePantryItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSyncConvertExpiredBatchesToWasteArgs = {
+  input: SyncConvertExpiredBatchesToWasteInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSyncConvertExpiredToWasteArgs = {
+  input: SyncConvertExpiredToWasteInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSyncCorrectPantryItemWeightArgs = {
+  input: SyncCorrectPantryItemWeightInput;
 };
 
 
@@ -13432,6 +13543,13 @@ export type Subscription = {
   /** Subscribe to failed login attempts for a user. */
   loginFailed: LoginFailedPayload;
   /**
+   * Subscribe to all shared meal-plan and meal-template collaboration events for
+   * a home. Discriminate by subtype: MEAL_PLAN_CHANGED, MEAL_PLAN_ITEM_CHANGED,
+   * MEAL_TEMPLATE_CHANGED, MEAL_TEMPLATE_ITEM_CHANGED. Caller must be a member of
+   * the home.
+   */
+  mealPlanEvents: MealPlanEvent;
+  /**
    * Subscribe to all shopping list domain events across all of the current
    * user's shopping lists. One subscription covers every list the user can
    * access.
@@ -13541,6 +13659,11 @@ export type SubscriptionLoginAttemptedArgs = {
 
 export type SubscriptionLoginFailedArgs = {
   userId: Scalars['ID']['input'];
+};
+
+
+export type SubscriptionMealPlanEventsArgs = {
+  homeId: Scalars['ID']['input'];
 };
 
 
@@ -13689,6 +13812,24 @@ export type SyncConflictInfo = {
 export type SyncConsumePantryItemInput = {
   input: RecordPantryItemUsageInput;
   /** Client-minted permanent CUID2 identifying this usage; replay-safe. */
+  operationId: Scalars['ID']['input'];
+};
+
+export type SyncConvertExpiredBatchesToWasteInput = {
+  input: ConvertExpiredBatchesToWasteInput;
+  /** Client-minted permanent CUID2 identifying this expired-batches-to-waste conversion; replay-safe. */
+  operationId: Scalars['ID']['input'];
+};
+
+export type SyncConvertExpiredToWasteInput = {
+  input: ConvertExpiredToWasteInput;
+  /** Client-minted permanent CUID2 identifying this expired-to-waste conversion; replay-safe. */
+  operationId: Scalars['ID']['input'];
+};
+
+export type SyncCorrectPantryItemWeightInput = {
+  input: CorrectPantryItemWeightInput;
+  /** Client-minted permanent CUID2 identifying this weight correction; replay-safe. */
   operationId: Scalars['ID']['input'];
 };
 
@@ -13995,7 +14136,16 @@ export type UnfavoriteRecipeInput = {
 export type UnfavoriteRecipePayload = {
   __typename: 'UnfavoriteRecipePayload';
   recipe: Maybe<Recipe>;
-  savedRecipe: SavedRecipe;
+  /**
+   * The removed favorite, or null when the recipe was already not favorited — an
+   * idempotent replay (or second device) that converged as success. See wasRemoved.
+   */
+  savedRecipe: Maybe<SavedRecipe>;
+  /**
+   * True when this call removed the favorite; false when the recipe was already
+   * not favorited and the unfavorite converged as a no-op success.
+   */
+  wasRemoved: Scalars['Boolean']['output'];
 };
 
 export type UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload | ValidationError;

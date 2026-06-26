@@ -34,10 +34,13 @@ export class ReplayRejectedError extends Error {
  *
  *  - `'applied'`   — success payload (or a scalar/absent field that carries no
  *                    error signal). Dequeue.
- *  - `'converged'` — `ConflictError` on a replayed create: every queued create
- *                    carries its client-minted id, so a duplicate-id conflict
- *                    proves an earlier attempt already committed the row. The
- *                    change is on the server; dequeue as success.
+ *  - `'converged'` — `ConflictError` on a replayed create (or a re-favorite):
+ *                    every queued create carries its client-minted id, so a
+ *                    duplicate-id conflict proves an earlier attempt already
+ *                    committed the row. A re-favorite replay
+ *                    (`AddRecipeToFavorites`, keyed by the client-minted
+ *                    SavedRecipe id) is the same idempotent case. The change is
+ *                    on the server; dequeue as success.
  *  - `'rejected'`  — any other error payload: the server refused the change.
  *                    Route to the permanent-failure pipeline.
  */
@@ -52,6 +55,12 @@ export function classifyReplayResult(
   const typename = (payload as { __typename?: string }).__typename;
   if (!typename || !typename.endsWith('Error')) return 'applied';
 
+  // A duplicate-id ConflictError on an idempotent client-minted-id CREATE replay
+  // means an earlier attempt already committed the row → converged. (Recipe
+  // favorites do NOT need this: per the API offline-sync contract a re-favorite
+  // converges as a SUCCESS payload — `FavoriteRecipePayload` with
+  // `wasCreated: false` — not a ConflictError, so it's already classified
+  // 'applied' above.)
   if (typename === 'ConflictError' && operationName.startsWith('Create')) {
     return 'converged';
   }

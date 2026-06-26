@@ -40,6 +40,23 @@ describe('classifyReplayResult', () => {
     ).toBe('converged');
   });
 
+  it('treats a re-favorite the way the API converges it — success payload, not ConflictError', () => {
+    // Per the API offline-sync contract a re-favorite converges as a SUCCESS
+    // payload (FavoriteRecipePayload, wasCreated:false), NOT a ConflictError —
+    // so AddRecipeToFavorites is NOT in the Create*-conflict converged set.
+    expect(
+      classifyReplayResult('AddRecipeToFavorites', {
+        __typename: 'FavoriteRecipePayload',
+      }),
+    ).toBe('applied');
+    expect(
+      classifyReplayResult('AddRecipeToFavorites', {
+        __typename: 'ConflictError',
+        message: 'x',
+      }),
+    ).toBe('rejected');
+  });
+
   it('returns rejected for a ConflictError on a non-create replay', () => {
     expect(
       classifyReplayResult('UpdateShoppingList', {
