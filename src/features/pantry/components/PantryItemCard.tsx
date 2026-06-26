@@ -233,6 +233,28 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   );
   const activeBatchCount = pantryItem.activeBatchCount;
 
+  // The single "detail" line shown under the quantity on the right — quantity
+  // breakdown, remaining net weight, or batch count (at most one).
+  const detailText =
+    quantityBreakdownText ||
+    packageBreakdownText ||
+    remainingNetWeightText ||
+    (activeBatchCount && activeBatchCount > 1
+      ? `${activeBatchCount} batches`
+      : undefined) ||
+    undefined;
+
+  // Place the storage location in the empty left line-2 slot (under the name,
+  // where the expiry label sits) when there's no expiration — filling otherwise
+  // wasted space instead of stacking a third row on the right. With an
+  // expiration present it rides the right side, but only if the detail line is
+  // free; when both an expiration and a detail line are present, location is
+  // dropped to keep the row at two lines (the Fridge/Freezer filter tabs already
+  // convey location).
+  const locationOnLeft = !isOutOfStock && !expirationText && !!location;
+  const rightSecondary =
+    detailText || (locationOnLeft ? undefined : location || undefined);
+
   // PERFORMANCE: Single object for all item action callbacks
   const itemActions = {
     onPress: () => actions.onItemPress(id),
@@ -274,6 +296,15 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         />
       );
     }
+    // No expiry — surface the storage location here instead of as a third row
+    // on the right.
+    if (locationOnLeft) {
+      return (
+        <Text size="sm" tone="secondary" numberOfLines={1}>
+          {location}
+        </Text>
+      );
+    }
     return undefined;
   };
 
@@ -297,24 +328,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
         <CardRightSlot
           type="meta"
           primary={quantity}
-          secondary={
-            quantityBreakdownText ||
-            packageBreakdownText ||
-            remainingNetWeightText ||
-            (activeBatchCount && activeBatchCount > 1
-              ? `${activeBatchCount} batches`
-              : undefined) ||
-            location ||
-            undefined
-          }
-          tertiary={
-            quantityBreakdownText ||
-            packageBreakdownText ||
-            remainingNetWeightText ||
-            (activeBatchCount && activeBatchCount > 1)
-              ? location || undefined
-              : undefined
-          }
+          secondary={rightSecondary}
         />
       }
     >

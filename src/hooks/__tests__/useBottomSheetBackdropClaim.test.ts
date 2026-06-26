@@ -1,4 +1,5 @@
 import { renderHook } from '@testing-library/react-native';
+import { useAnimatedReaction } from 'react-native-reanimated';
 import { useBottomSheetBackdropClaim } from '../useBottomSheetBackdropClaim';
 
 // The hook reads claim/release off the overlay provider. We mock just that
@@ -16,10 +17,26 @@ jest.mock('#components/providers/OverlayBackdropProvider', () => ({
   }),
 }));
 
+// Capture the release reaction's `react` callback so tests can simulate the
+// sheet's `animatedIndex` settling at the closed anchor (-1) — which is what
+// drives release in v3 (no longer gorhom's `onChange(-1)`). `scheduleOnRN` is
+// auto-mocked to invoke its function synchronously
+// (__mocks__/react-native-worklets.js).
+let reactToClose:
+  | ((closed: boolean, previous: boolean | null) => void)
+  | undefined;
+
 beforeEach(() => {
   mockClaim.mockClear().mockReturnValue('claim-id');
   mockRelease.mockClear();
+  reactToClose = undefined;
+  (useAnimatedReaction as jest.Mock).mockImplementation((_prepare, react) => {
+    reactToClose = react;
+  });
 });
+
+/** Simulate `animatedIndex` settling at the closed anchor (open → closed). */
+const driveClose = () => reactToClose?.(true, false);
 
 describe('useBottomSheetBackdropClaim', () => {
   const makeRef = () => ({ current: { dismiss: jest.fn() } });
@@ -61,11 +78,20 @@ describe('useBottomSheetBackdropClaim', () => {
     expect(mockRelease).not.toHaveBeenCalled();
   });
 
-  it('releases on the authoritative settled-closed signal onChange(-1)', () => {
+  it('releases on the settled-closed onChange(-1) — the reliable modal path', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
-    result.current.onAnimate(-1, 0);
-    result.current.onChange(-1);
+    result.current.onAnimate(-1, 0); // claim
+    result.current.onChange(-1); // settled closed → release
+
+    expect(mockRelease).toHaveBeenCalledWith('claim-id');
+  });
+
+  it('also releases via the animatedIndex backstop (interrupted closes)', () => {
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+
+    result.current.onAnimate(-1, 0); // claim
+    driveClose(); // SV reaches -1 without an onChange(-1) callback
 
     expect(mockRelease).toHaveBeenCalledWith('claim-id');
   });
@@ -84,7 +110,7 @@ describe('useBottomSheetBackdropClaim', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
     result.current.onAnimate(-1, 0);
-    result.current.onChange(-1);
+    driveClose(); // settled closed → release
     expect(mockRelease).toHaveBeenCalledTimes(1);
 
     mockClaim.mockClear();
