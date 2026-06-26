@@ -6296,12 +6296,6 @@ export type Mutation = {
    * replaying returns current state without writing a second waste ledger entry.
    */
   syncConvertExpiredToWaste: SyncPantryDeltaResult;
-  /**
-   * Offline-sync twin of adjustPantryItemWeight (weight correction) — idempotent
-   * by operationId: replaying does not re-apply the proportional recalculation or
-   * write a second audit row.
-   */
-  syncCorrectPantryItemWeight: SyncPantryDeltaResult;
   /** Offline-sync twin of deletePantryItem — idempotent by operationId. */
   syncDeletePantryItem: SyncPantryItemResult;
   /** Offline-sync twin of removeItemFromShoppingList — idempotent by operationId. */
@@ -8435,19 +8429,6 @@ export type MutationSyncConvertExpiredBatchesToWasteArgs = {
  */
 export type MutationSyncConvertExpiredToWasteArgs = {
   input: SyncConvertExpiredToWasteInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncCorrectPantryItemWeightArgs = {
-  input: SyncCorrectPantryItemWeightInput;
 };
 
 
@@ -13824,12 +13805,6 @@ export type SyncConvertExpiredBatchesToWasteInput = {
 export type SyncConvertExpiredToWasteInput = {
   input: ConvertExpiredToWasteInput;
   /** Client-minted permanent CUID2 identifying this expired-to-waste conversion; replay-safe. */
-  operationId: Scalars['ID']['input'];
-};
-
-export type SyncCorrectPantryItemWeightInput = {
-  input: CorrectPantryItemWeightInput;
-  /** Client-minted permanent CUID2 identifying this weight correction; replay-safe. */
   operationId: Scalars['ID']['input'];
 };
 

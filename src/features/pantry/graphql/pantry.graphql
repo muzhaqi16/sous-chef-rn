@@ -952,26 +952,6 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   }
 }
 
-mutation OpenPantryItem($input: OpenPantryItemInput!) {
-  openPantryItem(input: $input) {
-    __typename
-    ... on OpenPantryItemPayload {
-      pantryItem {
-        id
-        ...useOpenPantryItem_pantryItem
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-  }
-}
-
 mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
   convertExpiredToWaste(input: $input) {
     __typename

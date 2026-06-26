@@ -43,23 +43,6 @@ query SearchRecipes(
   }
 }
 
-query SuggestedRecipes($first: Int, $after: String) {
-  recipeSuggestions(first: $first, after: $after) {
-    edges {
-      node {
-        id
-        ...BasicRecipeFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query MyRecipes(
   $cursor: String
   $first: Int = 25

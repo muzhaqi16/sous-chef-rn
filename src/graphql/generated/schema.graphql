@@ -6094,12 +6094,6 @@ type Mutation {
   replaying returns current state without writing a second waste ledger entry.
   """
   syncConvertExpiredToWaste(input: SyncConvertExpiredToWasteInput!): SyncPantryDeltaResult!
-  """
-  Offline-sync twin of adjustPantryItemWeight (weight correction) — idempotent
-  by operationId: replaying does not re-apply the proportional recalculation or
-  write a second audit row.
-  """
-  syncCorrectPantryItemWeight(input: SyncCorrectPantryItemWeightInput!): SyncPantryDeltaResult!
   """Offline-sync twin of deletePantryItem — idempotent by operationId."""
   syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
   """
@@ -9826,14 +9820,6 @@ input SyncConvertExpiredToWasteInput {
   input: ConvertExpiredToWasteInput!
   """
   Client-minted permanent CUID2 identifying this expired-to-waste conversion; replay-safe.
-  """
-  operationId: ID!
-}
-
-input SyncCorrectPantryItemWeightInput {
-  input: CorrectPantryItemWeightInput!
-  """
-  Client-minted permanent CUID2 identifying this weight correction; replay-safe.
   """
   operationId: ID!
 }
