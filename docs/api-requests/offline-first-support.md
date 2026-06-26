@@ -1,7 +1,9 @@
 # Offline-First API Support — Request Guide
 
-> **✅ Delivered.** The API team has since implemented and documented every item
-> below. The **authoritative contract now lives in the API repo** —
+> **Round 1 ✅ Delivered · Round 2 ⏳ Pending.** The API team implemented and
+> documented everything in §1–§3 below (round 1); §4 (recipe cook-logging &
+> consumption) is the new round-2 request. The **authoritative contract for what's
+> delivered lives in the API repo** —
 > `sous-chef-api/docs/api/offline-sync.md` and `sous-chef-api/docs/api/subscriptions.md`
 > — and supersedes this document. This file is kept as the original request record.
 > Notable outcomes: recipe favorites are replayable by a client-minted id
@@ -74,10 +76,30 @@ them offline-capable too — otherwise they stay online-only and that's fine:
   channel for meal-plan/template collaboration would let the client stay in sync
   without polling and match the rest of the app.
 
+## Round 2 — still pending
+
+### 4. Recipe cook-logging & consumption — replayable
+The client wants to log a recipe as **cooked** and **deduct the used ingredients
+from the pantry** while offline. Today `markRecipeAsCooked` and
+`confirmRecipeConsumption` have **no safe replay path** — they take no
+client-provided idempotency key and have no `sync*` twin, so a re-sent
+cook/consume would **create a duplicate cooking log and double-deduct the pantry**.
+
+- We'd like the same **`operationId`-keyed idempotency** the pantry deltas
+  (restock / consume / waste / adjust / convert-expired-to-waste) already use:
+  a client-minted operation id carried on the action so a replay **applies at
+  most once** and a re-send returns the current state.
+- It needs to cover the whole unit — the pantry deductions **and** the cooking-log
+  creation / cooked-count increment — applied together, exactly once.
+- Outcome: the client can mark "cooked" + deduct ingredients optimistically
+  offline and have it converge exactly on reconnect (mirroring how the pantry
+  consume deltas already work). Until then the client gates these online-only.
+
 ## Pattern reference
 
 The shopping-list and pantry **create** flows already implement guarantee #1: the
 client mints the id, the server persists it as the record's primary key, and a
-replay converges on that record. **Favorites are the next feature we'd like to
-follow that same pattern.** Aligning on this contract lets both teams build toward
-the same offline-first behavior.
+replay converges on that record. The pantry **delta** ops (restock/consume/etc.)
+implement the `operationId`-keyed variant of guarantee #2. Recipe favorites
+(round 1) and cook-logging (round 2) follow the same two patterns. Aligning on this
+contract lets both teams build toward the same offline-first behavior.
