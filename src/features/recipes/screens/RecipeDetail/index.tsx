@@ -33,7 +33,6 @@ import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { SavedRecipeMetadataPanel } from './components/SavedRecipeMetadataPanel';
 import { RecipeInstructions } from './components/RecipeInstructions';
-import { IngredientSelectorSheet } from './components/IngredientSelectorSheet';
 import { ShoppingListPickerSheet } from './components/ShoppingListPickerSheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -42,37 +41,6 @@ import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { EmptyState } from '#components/base/EmptyState';
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
-
-function ShoppingListOption({
-  iconName,
-  title,
-  description,
-  onPress,
-  withBorder,
-}: {
-  iconName: string;
-  title: string;
-  description: string;
-  onPress: () => void;
-  withBorder?: boolean;
-}) {
-  styles.useVariants({ withBorder: withBorder ?? false });
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.optionButton,
-        pressed && { opacity: 0.7 },
-      ]}
-      onPress={onPress}
-    >
-      <Icon name={iconName} size={24} tone="primary" />
-      <View style={styles.optionTextContainer}>
-        <Text style={styles.optionTitle}>{title}</Text>
-        <Text style={styles.optionDescription}>{description}</Text>
-      </View>
-    </Pressable>
-  );
-}
 
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -96,18 +64,11 @@ const RecipeDetailScreen: React.FC = () => {
     shoppingLists,
     addingToList,
     addedIngredients,
-    selectedIngredients,
     handleAddSingleIngredient,
     handleAddAll,
-    handleAddAllFromSheet,
-    handleAddSelectedIngredients,
     handleListSelected,
-    toggleIngredient,
-    openIngredientSelector,
     creatingList,
     handleCreateListAndAddIngredients,
-    shoppingListOptionsVisible,
-    ingredientSelectorVisible,
     listPickerVisible,
     handleSheetDismiss,
     cookedModalVisible,
@@ -509,41 +470,6 @@ const RecipeDetailScreen: React.FC = () => {
         )}
       </CollapsingHeroDetail>
 
-      {/* Shopping List Options Bottom Sheet */}
-      <BottomSheetAction
-        visible={shoppingListOptionsVisible}
-        sheetTitle={t('recipes.addToShoppingList')}
-        snapPoints={['30%']}
-        onDismiss={handleSheetDismiss}
-      >
-        <View style={styles.shoppingListOptions}>
-          <ShoppingListOption
-            withBorder
-            iconName="list"
-            title={t('recipes.addAllIngredients')}
-            description={t('recipes.addAllIngredientsDesc')}
-            onPress={handleAddAllFromSheet}
-          />
-          <ShoppingListOption
-            iconName="checkmark-circle-outline"
-            title={t('recipes.selectIngredients')}
-            description={t('recipes.selectIngredientsDesc')}
-            onPress={openIngredientSelector}
-          />
-        </View>
-      </BottomSheetAction>
-
-      <IngredientSelectorSheet
-        visible={ingredientSelectorVisible}
-        ingredients={backendRecipe?.ingredients || []}
-        selectedIngredients={selectedIngredients}
-        toggleIngredient={toggleIngredient}
-        addingToList={addingToList}
-        onAddSelected={handleAddSelectedIngredients}
-        onDismiss={handleSheetDismiss}
-        BottomSheetScrollable={BottomSheetScrollable}
-      />
-
       <ShoppingListPickerSheet
         visible={listPickerVisible}
         shoppingLists={shoppingLists}
@@ -739,35 +665,5 @@ const styles = StyleSheet.create(theme => ({
     fontSize: theme.fonts.size.sm,
     color: theme.colors.primary,
     fontWeight: theme.fonts.weight.medium,
-  },
-  shoppingListOptions: {
-    padding: theme.spacing.md,
-  },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-    variants: {
-      withBorder: {
-        true: {
-          borderBottomWidth: 1,
-          borderBottomColor: theme.colors.border,
-        },
-      },
-    },
-  },
-  optionTextContainer: {
-    flex: 1,
-  },
-  optionTitle: {
-    fontSize: theme.fonts.size.md,
-    fontWeight: theme.fonts.weight.semibold,
-    color: theme.colors.textPrimary,
-    marginBottom: theme.spacing.xs,
-  },
-  optionDescription: {
-    fontSize: theme.fonts.size.sm,
-    color: theme.colors.textSecondary,
   },
 }));

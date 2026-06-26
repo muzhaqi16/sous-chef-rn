@@ -1,0 +1,225 @@
+# Global Backdrop Lifecycle — Design Proposal
+
+**Status:** Proposal (no code yet) · **Owner:** TBD · **Date:** 2026-06-25
+
+## 1. Problem
+
+The dim/blur backdrop behind bottom sheets intermittently **leaks** — it stays
+on screen (or blocks taps invisibly) after the sheet is gone, most often after
+navigating away from a screen with an open sheet and back. It recurs because the
+fix so far has been to keep adding defensive release paths rather than changing
+the model.
+
+Recent work migrated RecipeMain / RecipeDetail sheets to the `visible`-prop path,
+which fixed the **sheet** staying open. It did **not** touch the **backdrop
+claim**, which is a separate mechanism. That is what still leaks.
+
+## 2. Current architecture (two models, one shared curve)
+
+| Concern | File |
+|---|---|
+| Global dim slot registry (max-opacity over claims) | `OverlayBackdropProvider.tsx` |
+| Index→opacity curve (shared) | `useSheetBackdropOpacity.ts` |
+| **Imperative** claim (47 sheets) | `useBottomSheetBackdropClaim.ts` ← via `useStandardBottomSheet` |
+| **Declarative** claim (1 consumer) | `useBackdropClaim()` in provider ← `ActionTray` |
+
+- **Imperative (47 sheets):** claims on gorhom `onAnimate(toIndex≥0)`, releases on
+  `onChange(-1)`, with two extra defensive releases (`safeOnDismiss`, unmount
+  cleanup). Slot identity tracked in a single `claimIdRef`.
+- **Declarative (ActionTray):** `useBackdropClaim(active)` ties the slot to React
+  state; release is a `useEffect` cleanup. Provider docstring: *"There is no
+  manual decrement to leak."*
+
+Both consume the same `interpolate(animatedIndex, [-1,0] → [0, BACKDROP_OPACITY])`
+opacity SV, so the dim and the floating tab bar (`useOverlayBackdropOpacity`)
+never drift. **Only the curve is shared; the lifecycle models differ.**
+
+## 3. Root cause — why the imperative model leaks
+
+1. **Release depends on gorhom events that gorhom documents as skippable.**
+   `ActionTray.tsx:87-96` and `OverlayBackdropProvider.tsx:204-212` both note
+   gorhom **skips `onChange(-1)` when a close interrupts an open that never
+   settled.** Needing three stacked backstops (`onChange(-1)` + `safeOnDismiss` +
+   unmount cleanup) is the smell that the model is wrong.
+2. **Single-`claimIdRef` coalescing → interleaving race on fast navigation.**
+   `claimBackdrop` does `if (claimIdRef.current != null) return`, and release is
+   keyed to that one id. Navigate-away-and-back quickly: claim `5` → re-focus
+   reuses `5` (skip) → the *stale* dismiss's `onChange(-1)` releases `5` while the
+   sheet is open again. The focus-awareness (`present` on focus / `dismiss` on
+   blur) we now rely on makes this **more** frequent, not less.
+3. **Frozen external SV.** The opacity SV is owned by the sheet. If its slot is
+   never released, the provider keeps reading a frozen, non-zero value → permanent
+   dim.
+
+## 4. Best-practice comparison
+
+- **Gorhom built-in (`backdropComponent` + `BottomSheetBackdrop`,
+  `appearsOnIndex/disappearsOnIndex`):** gorhom owns the lifecycle per sheet;
+  leak-proof; simplest. **Rejected** here because a single global backdrop is
+  required so the floating tab bar can read one shared opacity SV. (Could be
+  reconsidered if we solve the tab-bar coupling separately.)
+- **Declarative state-bound claim (senior-dev recommendation):** bind backdrop
+  lifetime to React state via effect cleanup, never to imperative event handlers.
+  This is what `useBackdropClaim` / ActionTray already do and why ActionTray
+  doesn't leak. **This proposal adopts it for all sheets.**
+
+## 5. Proposed design
+
+Make the sheet backdrop **declarative**, driven by an `active` boolean computed
+from `visible` (now the reliable source of truth post-migration) — not from
+gorhom's interleaving events. `useBottomSheetBackdropClaim` becomes a thin wrapper
+over `useBackdropClaim(active, { opacity: backdropOpacity, onPress })`.
+
+### 5a. `active` state machine (per sheet)
+
+```
+visible = true              → active = true            (claim; dim ramps in via SV)
+visible: true → false       → start closeTimer(d); active stays true
+closeTimer(d) elapses       → active = false           (release via effect cleanup)
+visible: false → true       → cancel closeTimer; active = true  (reuse slot, no flicker)
+component unmount           → effect cleanup releases   (GUARANTEED by React)
+onChange(-1) [optional]     → may fire closeTimer early for promptness
+```
+
+- `d` = the sheet's actual close-animation duration (from
+  `useSharedBottomSheetConfigs`), not a hardcoded constant. `BACKDROP_FADE_OUT`
+  (300ms) is the fallback proxy.
+- The **claim** still registers at open start (so the dim ramp is synchronous) —
+  driven by `visible:false→true`, which commits on the same render as `present()`.
+
+### 5b. Close-animation fade (the tricky part)
+
+The visible fade is produced by the **opacity SV** (gorhom drives `animatedIndex`
+0→-1 → SV → 0), *independent of slot lifetime* — as long as the slot stays
+registered while the SV ramps. So on `visible→false` we keep `active=true` for
+`d`, letting the SV fade, then release. The release is **deterministic** (timer +
+unmount cleanup), so it no longer depends on gorhom firing `onChange(-1)`. That
+event becomes an *optimization* (release a few ms sooner), not a *correctness
+requirement*.
+
+### 5c. Why this kills all three failure modes
+
+| Failure mode (§3) | Eliminated by |
+|---|---|
+| Skipped `onChange(-1)` | timer + effect-cleanup release; gorhom event no longer required |
+| `claimIdRef` coalescing race | `useBackdropClaim` manages claim/release by `active` transitions; fast reopen cancels the pending release |
+| Frozen external SV | slot is always released (timer or unmount), never stranded |
+
+## 6. Edge cases
+
+- **Manual-presentation sheets (`visible === undefined`).** A handful don't pass
+  `visible` (e.g. `FolderPicker` manage sub-sheet, which borrows the picker's
+  `modalProps`). For these, derive `active` from a gorhom-index state instead of
+  `visible`, or migrate them to `visible`. Must be enumerated before rollout.
+- **Snap between detents (index 0→1→0).** `active` must not toggle on
+  intra-open snaps — it keys off `visible`/closed, not every index change.
+- **Timer/animation mismatch.** Too short → dim pops before the sheet finishes
+  closing; too long → dim lingers. Bind `d` to the real `animationConfigs`
+  duration. `onChange(-1)`, when it fires, short-circuits the timer.
+- **Keyboard-aware sheets** that snap on keyboard hide must not be treated as a
+  close.
+
+## 7. Migration plan (incremental, low-risk)
+
+1. **Phase 0 — implement behind the existing surface.** Rework
+   `useBottomSheetBackdropClaim` internals to the `active`/timer model and accept
+   `visible` from `useStandardBottomSheet`. The hook's public return
+   (`animatedIndex` / `onChange` / `onAnimate`) stays, so call sites don't change.
+2. **Phase 1 — validate on 2–3 high-traffic sheets** (RecipeMain filter,
+   AddToPantrySheet) plus the navigate-away-and-back repro. ActionTray stays as
+   the untouched declarative reference.
+3. **Phase 2 — automatic rollout.** All 47 sheets route through
+   `useStandardBottomSheet`, so the single hook change covers them at once.
+4. Enumerate and convert/whitelist the `visible === undefined` manual sheets
+   (§6) before declaring done.
+
+## 8. Rollback
+
+Change is localized to `useBottomSheetBackdropClaim.ts` + a one-line `visible`
+hand-off in `useStandardBottomSheet.tsx`. Rollback = `git revert` of those two.
+Optionally gate behind a constant flag during Phase 1 for instant fallback.
+
+## 9. Verification
+
+- Manual repro: open each sheet type → navigate away mid-open and back, rapidly,
+  ×10 → assert no stranded dim and no tap-blocking invisible overlay.
+- Existing suites (`BottomSheetAction`, `RecipeMain`, `RecipeDetailScreen`,
+  ActionTray) stay green.
+- Consider a test that drives `visible` true→false→true within the close window
+  and asserts the provider ends with **zero** slots.
+
+## 11. Central overlay-presence model (backdrop ⇄ tab bar)
+
+Before migrating the 47 sheets, unify the coordination. Today "an overlay is
+covering the screen" is expressed through **three overlapping channels**:
+
+| Channel | Source of truth | Consumed by | Set by |
+|---|---|---|---|
+| **Backdrop opacity SV** | `OverlayBackdropProvider` slots → `useOverlayBackdropOpacity` | dim layer **and** `FloatingTabBar` hide (`FloatingTabBar.tsx:95,121-133`) | every backdrop claim (47 sheets imperatively, ActionTray/selectors declaratively) |
+| **`isOverlayOpen` bool** | `TabBarActionsContext` (`setOverlayOpen`) | `FloatingTabBar` — only to reset `scrollTabBarHidden` on open (`:106-110`) | **only** custom selectors via `useSelectorManagement`; the 47 sheets never set it |
+| **`scrollTabBarHidden` SV** | `TabBarActionsContext` | `FloatingTabBar` scroll-hide spring | per-screen scroll handlers |
+
+### Problems with the split
+
+1. **Redundant presence signal.** The tab bar already hides off the backdrop
+   opacity SV — for sheets *and* selectors (selectors claim via
+   `ActionTray` `enableBackdrop`). So `isOverlayOpen` duplicates information the
+   provider already has (`slots.length > 0`, exposed as `isVisible`).
+2. **Inconsistent coverage.** Only selectors call `setOverlayOpen`, so the
+   "reset scroll-hide when an overlay opens" guarantee **doesn't apply to the 47
+   sheets**. A sheet opened while the bar is scroll-hidden relies on `max()`
+   masking it rather than an explicit reset.
+3. **Imperative timing hacks.** `useShoppingListSelectorModal` calls
+   `setOverlayOpen(false)` *before* navigating (`:365-393`) to force the bar back
+   — a manual workaround for the same race the declarative model removes.
+
+### Target: the backdrop provider IS the overlay-presence registry
+
+One claim → three coordinated effects, automatically:
+
+```
+useBackdropClaim(active, { opacity, onPress, hidesTabBar? })
+   │
+   ├─ contributes opacity SV → global dim (existing)
+   ├─ opacity SV → FloatingTabBar hide   (existing, lockstep)
+   └─ slots.length>0 → "overlay present" → scroll-hide reset   (NEW: derived, not manual)
+```
+
+Concretely:
+- **Delete `setOverlayOpen` / `isOverlayOpen`** from `TabBarActionsContext`.
+  `FloatingTabBar` reads overlay presence from the provider's existing `isVisible`
+  (`OverlayBackdropInternalContext`) instead of `useTabBarState().isOverlayOpen`.
+  The scroll-hide reset (`:106-110`) then fires for **all** overlays, sheets
+  included — fixing problem #2.
+- **Remove the `setOverlayOpen` calls** from `useSelectorManagement` and
+  `useShoppingListSelectorModal`; presence is implied by the claim. The
+  "set false before navigate" hack disappears — `active` flips false when the
+  selector dismisses/blurs and the claim releases via effect cleanup.
+- All overlays (sheets + selectors) end on the **same declarative claim**. Sheets
+  reach it through the §5 `useBottomSheetBackdropClaim` rework; selectors already
+  use `useBackdropClaim` via `ActionTray`.
+
+### Optional refinement
+
+If some overlays should dim but **not** hide the tab bar (or vice-versa), add a
+`hidesTabBar` flag to the claim and have the provider expose a second derived SV
+("tab-bar-hiding coverage") separate from "dim coverage." Not needed today (every
+current overlay both dims and hides the bar), but the seam keeps that decision in
+one place instead of scattered booleans.
+
+### Net effect
+
+`TabBarActionsContext` sheds two fields and a setter; selectors shed their manual
+overlay calls; the provider becomes the single source of truth for overlay
+presence that the dim layer, the tab bar, and scroll-hide all derive from. The
+§5 robustness rework and this unification are the **same migration** — both
+collapse coordination onto the declarative claim.
+
+## 10. Open questions
+
+- Bind `d` to `animationConfigs` duration vs. a single `BACKDROP_CLOSE_MS`
+  constant — which is less brittle?
+- Worth keeping `onChange(-1)` as the early-release optimization, or drop it
+  entirely for a purely time/state-driven model (simpler, marginally less prompt)?
+- Long-term: is the global backdrop still worth its complexity, or should the tab
+  bar derive coverage another way so we can adopt gorhom's per-sheet backdrop?
