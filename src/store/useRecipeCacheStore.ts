@@ -44,7 +44,12 @@ export function ingredientCacheKey(ingredients: string): string {
   return `ingredient:${sorted}`;
 }
 
-/** Build a normalized cache key for text-based searches */
+/** Build a normalized cache key for text-based searches.
+ *
+ * `offset` distinguishes paginated pages of the same query: without it page 2
+ * (offset 25) would collide with page 1 (offset 0) and the cache would serve
+ * the first page's results for every "load more". Defaults to 0 so first-page
+ * callers don't have to pass it. */
 export function textSearchCacheKey(
   query: string,
   filters?: {
@@ -53,6 +58,7 @@ export function textSearchCacheKey(
     mealType?: string | null;
     maxReadyTime?: number | null;
   },
+  offset = 0,
 ): string {
   const parts = [`text:${query.toLowerCase().trim()}`];
   if (filters?.diet?.length)
@@ -61,6 +67,7 @@ export function textSearchCacheKey(
     parts.push(`intol:${filters.intolerances.sort().join(',')}`);
   if (filters?.mealType) parts.push(`type:${filters.mealType}`);
   if (filters?.maxReadyTime) parts.push(`time:${filters.maxReadyTime}`);
+  if (offset > 0) parts.push(`offset:${offset}`);
   return parts.join('|');
 }
 

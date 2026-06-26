@@ -535,7 +535,11 @@ const RecipeMainInner: React.FC = () => {
           ListFooterComponent={
             <PaginationFooter
               hasMore={screen.searchHasMore || screen.discoveryHasMore}
-              isFetchingMore={screen.searchLoading || screen.pantryLoadingMore}
+              isFetchingMore={
+                screen.searchLoading ||
+                screen.searchLoadingMore ||
+                screen.pantryLoadingMore
+              }
               itemCount={screen.items.length}
               SkeletonComponent={RecipeSkeleton}
               skeletonCount={2}
