@@ -1280,6 +1280,13 @@ export type ConfirmProfileImageUploadResult = ConfirmProfileImageUploadPayload |
 /** Input for confirming recipe ingredient consumption from pantry */
 export type ConfirmRecipeConsumptionInput = {
   consumptions: Array<ConfirmedIngredientConsumptionInput>;
+  /**
+   * Optional client-generated permanent ID (CUID2) for the cooking-log record.
+   * Offline-first clients mint this so a re-synced consumption converges on the
+   * same cooking log instead of creating a duplicate AND re-consuming the pantry
+   * items. When omitted, the server generates one. Must match the CUID2 format.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   pantryId: Scalars['ID']['input'];
   recipeId: Scalars['ID']['input'];
 };
@@ -1294,6 +1301,12 @@ export type ConfirmRecipeConsumptionPayload = {
   failedItems: Array<ConsumptionFailure>;
   totalConsumed: Scalars['Int']['output'];
   totalFailed: Scalars['Int']['output'];
+  /**
+   * True when this call recorded the consumption; false when a client-provided
+   * id matched an existing cooking log and the call converged on it without
+   * re-consuming (idempotent replay). On a replay, consumedItems is empty.
+   */
+  wasApplied: Scalars['Boolean']['output'];
 };
 
 export type ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -5270,6 +5283,14 @@ export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkP
 /** Input for marking a recipe as cooked */
 export type MarkRecipeAsCookedInput = {
   deductFromPantry: Scalars['Boolean']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for the cooking-log record.
+   * Offline-first clients mint this so a re-synced "I cooked this" converges on
+   * the same cooking log instead of creating a duplicate AND re-deducting the
+   * pantry. When omitted, the server generates one via @default(cuid(2)). Must
+   * match the CUID2 format; invalid formats are rejected by ID validation.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   ingredientsUsed?: InputMaybe<Array<IngredientUsageInput>>;
   notes?: InputMaybe<Scalars['String']['input']>;
   recipeId: Scalars['ID']['input'];
@@ -5280,6 +5301,12 @@ export type MarkRecipeAsCookedPayload = {
   __typename: 'MarkRecipeAsCookedPayload';
   cookingLog: CookingLog;
   recipe: Maybe<Recipe>;
+  /**
+   * True when this call recorded the cooking log (and deducted the pantry);
+   * false when a client-provided id matched an existing log and the call
+   * converged on it without re-logging or re-deducting (idempotent replay).
+   */
+  wasApplied: Scalars['Boolean']['output'];
 };
 
 export type MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedPayload | NotFoundError | ValidationError;

@@ -5,7 +5,12 @@ import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  executeMutation,
+  executeWithLoadingState,
+} from '#/utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 interface UseRecipeCookingActionsOptions {
   recipeId: string | undefined;
@@ -18,6 +23,13 @@ interface MarkCookedInput {
   notes?: string;
 }
 
+interface FireMarkCookedVars {
+  recipeId: string;
+  servings?: number;
+  deductFromPantry: boolean;
+  notes?: string;
+}
+
 export function useRecipeCookingActions({
   recipeId,
 }: UseRecipeCookingActionsOptions) {
@@ -27,12 +39,37 @@ export function useRecipeCookingActions({
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
 
-  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
-    onError: err => {
-      errorService.reportError(err, { operation: 'markRecipeAsCooked' });
-      toastService.error(err.message || t('recipes.markCookedFailed'));
-    },
-  });
+  const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument);
+
+  /**
+   * Fire the cook-log mutation with a client-minted cooking-log id and queue it
+   * locally when the API is unreachable (`localFirst`). The shared id means a
+   * queued replay converges on the same cooking log instead of creating a
+   * duplicate and re-deducting the pantry. Returns the classified outcome:
+   * `'rejected'` means the server refused it (or the call threw); `'created'` /
+   * `'queued'` both succeed (a queued cook replays later).
+   */
+  const fireMarkCooked = async (vars: FireMarkCookedVars) => {
+    const id = generateEntityId();
+    const result = await executeMutation(
+      () =>
+        markRecipeAsCookedMutation({
+          variables: { input: { ...vars, id } },
+          context: { localFirst: true },
+        }),
+      error => {
+        errorService.reportError(error, { operation: 'markRecipeAsCooked' });
+        toastService.error(t('recipes.markCookedFailed'));
+      },
+    );
+
+    // A falsy result (the call threw) classifies as 'rejected'.
+    return classifyCreateResult(
+      result || undefined,
+      'markRecipeAsCooked',
+      'MarkRecipeAsCookedPayload',
+    );
+  };
 
   const handleMarkAsCooked = (input: MarkCookedInput) => {
     if (!recipeId) {
@@ -46,16 +83,16 @@ export function useRecipeCookingActions({
         const loaded = await ingredientMatching.loadMatches(input.servings);
         if (!loaded) {
           // Fallback to simple deduction if matching fails
-          await markRecipeAsCookedMutation({
-            variables: {
-              input: {
-                recipeId,
-                servings: input.servings,
-                deductFromPantry: input.deductFromPantry,
-                notes: input.notes,
-              },
-            },
+          const outcome = await fireMarkCooked({
+            recipeId,
+            servings: input.servings,
+            deductFromPantry: input.deductFromPantry,
+            notes: input.notes,
           });
+          if (outcome === 'rejected') {
+            toastService.error(t('recipes.markCookedFailed'));
+            return;
+          }
           toastService.success(t('recipes.markedCookedDeducted'));
         }
       }, setMarkingAsCooked);
@@ -64,16 +101,16 @@ export function useRecipeCookingActions({
 
     // Simple deduction path
     executeWithLoadingState(async () => {
-      await markRecipeAsCookedMutation({
-        variables: {
-          input: {
-            recipeId,
-            servings: input.servings,
-            deductFromPantry: input.deductFromPantry,
-            notes: input.notes,
-          },
-        },
+      const outcome = await fireMarkCooked({
+        recipeId,
+        servings: input.servings,
+        deductFromPantry: input.deductFromPantry,
+        notes: input.notes,
       });
+      if (outcome === 'rejected') {
+        toastService.error(t('recipes.markCookedFailed'));
+        return;
+      }
 
       if (input.deductFromPantry) {
         toastService.success(t('recipes.markedCookedDeducted'));
@@ -88,18 +125,16 @@ export function useRecipeCookingActions({
     if (!recipeId) return;
     ingredientMatching.closeSheet();
     executeWithLoadingState(async () => {
-      await markRecipeAsCookedMutation({
-        variables: {
-          input: {
-            recipeId,
-            servings: undefined,
-            deductFromPantry: true,
-          },
-        },
+      const outcome = await fireMarkCooked({
+        recipeId,
+        servings: undefined,
+        deductFromPantry: true,
       });
-      toastService.success(
-        'Recipe marked as cooked! Ingredients deducted from pantry.',
-      );
+      if (outcome === 'rejected') {
+        toastService.error(t('recipes.markCookedFailed'));
+        return;
+      }
+      toastService.success(t('recipes.markedCookedDeducted'));
     }, setMarkingAsCooked);
   };
 

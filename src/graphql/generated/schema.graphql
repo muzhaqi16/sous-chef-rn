@@ -1373,6 +1373,13 @@ union ConfirmProfileImageUploadResult = ConfirmProfileImageUploadPayload | Confl
 """Input for confirming recipe ingredient consumption from pantry"""
 input ConfirmRecipeConsumptionInput {
   consumptions: [ConfirmedIngredientConsumptionInput!]!
+  """
+  Optional client-generated permanent ID (CUID2) for the cooking-log record.
+  Offline-first clients mint this so a re-synced consumption converges on the
+  same cooking log instead of creating a duplicate AND re-consuming the pantry
+  items. When omitted, the server generates one. Must match the CUID2 format.
+  """
+  id: ID
   pantryId: ID!
   recipeId: ID!
 }
@@ -1386,6 +1393,12 @@ type ConfirmRecipeConsumptionPayload {
   failedItems: [ConsumptionFailure!]!
   totalConsumed: Int!
   totalFailed: Int!
+  """
+  True when this call recorded the consumption; false when a client-provided
+  id matched an existing cooking log and the call converged on it without
+  re-consuming (idempotent replay). On a replay, consumedItems is empty.
+  """
+  wasApplied: Boolean!
 }
 
 union ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -5085,6 +5098,14 @@ union MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryI
 """Input for marking a recipe as cooked"""
 input MarkRecipeAsCookedInput {
   deductFromPantry: Boolean!
+  """
+  Optional client-generated permanent ID (CUID2) for the cooking-log record.
+  Offline-first clients mint this so a re-synced "I cooked this" converges on
+  the same cooking log instead of creating a duplicate AND re-deducting the
+  pantry. When omitted, the server generates one via @default(cuid(2)). Must
+  match the CUID2 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
   ingredientsUsed: [IngredientUsageInput!]
   notes: String
   recipeId: ID!
@@ -5094,6 +5115,12 @@ input MarkRecipeAsCookedInput {
 type MarkRecipeAsCookedPayload {
   cookingLog: CookingLog!
   recipe: Recipe
+  """
+  True when this call recorded the cooking log (and deducted the pantry);
+  false when a client-provided id matched an existing log and the call
+  converged on it without re-logging or re-deducting (idempotent replay).
+  """
+  wasApplied: Boolean!
 }
 
 union MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedPayload | NotFoundError | ValidationError
