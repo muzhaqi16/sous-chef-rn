@@ -1,4 +1,4 @@
-import { useRef, useEffect, useContext } from 'react';
+import { useRef, useEffect, useContext, useState } from 'react';
 import { Keyboard } from 'react-native';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
@@ -153,91 +153,62 @@ export function useStandardBottomSheet({
   // can still pass 'extend' or 'fillParent' explicitly when needed.
   const resolvedKeyboardBehavior = keyboardBehavior ?? 'interactive';
 
-  // Track the latest visible value for the focus-aware callback below
-  // without rebuilding the callback each render.
-  const visibleRef = useRef(visible);
-  useEffect(() => {
-    visibleRef.current = visible;
-  });
-
-  // Auto present/dismiss when visible is provided.
+  // ── Auto present/dismiss — single source of truth ──
   //
-  // `isPresentedRef` tracks whether the sheet is CURRENTLY on screen. Two
-  // @gorhom/bottom-sheet 5.2.14 hazards make this necessary:
-  //  1. `dismiss()` on a modal still in INITIAL status (never presented) flips
-  //     it to DISMISSING — and `handlePortalRender` then skips every later
-  //     `present()`. So never dismiss before the first present.
-  //  2. When the user closes the sheet itself (swipe / backdrop tap / a confirm
-  //     action), gorhom dismisses it and fires `onDismiss`, which makes the
-  //     parent set `visible=false`. WITHOUT this guard the effect would then call
-  //     `dismiss()` AGAIN on the already-dismissed modal — re-tripping hazard #1,
-  //     so the NEXT `present()` silently no-ops (the "opens once, never reopens"
-  //     bug). `safeOnDismiss` clears `isPresentedRef` the instant gorhom
-  //     dismisses, so this redundant dismiss is skipped.
-  const isPresentedRef = useRef(false);
-  useEffect(() => {
-    if (visible === undefined) return;
-    if (visible && !isPresentedRef.current) {
-      isPresentedRef.current = true;
-      ref.current?.present();
-    } else if (!visible && isPresentedRef.current) {
-      isPresentedRef.current = false;
-      ref.current?.dismiss();
-    }
-  }, [visible]);
-
-  // Navigation focus awareness — dismiss the sheet when the owning screen
-  // blurs and re-present it on refocus.
+  // The sheet should be on screen when it's both wanted open (`visible`) AND its
+  // owning screen is focused: `active = visible && isFocused`. ONE effect
+  // reconciles that against `isPresentedRef`, so `present()` / `dismiss()` each
+  // have exactly one call site. (This collapses the former separate
+  // visible-effect + focus/blur listeners, which each maintained the flag by
+  // hand and were the source of the redundant-dismiss bug.)
   //
-  // This is REQUIRED because `BottomSheetModal` renders into the
-  // `BottomSheetModalProvider`'s portal at App root, ABOVE the navigation
-  // container. Without this hook, an open sheet stays visually on top of
-  // any newly-pushed screen (e.g. BarcodeScannerScreen pushed from a Scan
-  // button inside the sheet) — the sheet would obscure the new screen
-  // instead of getting out of its way.
+  // The blur-dismiss is REQUIRED: `BottomSheetModal` renders into the app-root
+  // portal ABOVE the navigation container, so an open sheet would otherwise
+  // obscure a newly-pushed screen (e.g. a Scan button inside the sheet pushing
+  // the barcode screen).
   //
-  // The imperative claim/release model makes this safe: `dismiss()` fires
-  // `onChange(-1)` which releases the backdrop slot cleanly, and a subsequent
-  // `present()` on refocus fires `onAnimate(toIndex=0)` which claims a fresh
-  // slot at the start of the re-open animation (so the dim is present for the
-  // whole re-entry).
+  // `isPresentedRef` tracks the CURRENT presented state (not "ever presented"),
+  // which dodges two @gorhom/bottom-sheet 5.2.14 hazards:
+  //  1. `dismiss()` on a never-presented (INITIAL) modal flips it to DISMISSING,
+  //     and `handlePortalRender` then skips every later `present()`. The
+  //     `!active && isPresentedRef` guard never dismisses before the first present.
+  //  2. When the user closes the sheet itself, gorhom fires `onDismiss` → parent
+  //     sets `visible=false`; `safeOnDismiss` clears `isPresentedRef` FIRST, so
+  //     this effect skips a redundant `dismiss()` that would re-trip hazard #1
+  //     (the "opens once, never reopens" bug).
   //
-  // Short-circuits for manual-presentation callers (visible === undefined)
-  // — they own the full lifecycle.
-  //
-  // No-ops when rendered inside a BottomSheet portal (no NavigationContext).
+  // Manual-presentation callers (`visible === undefined`) own their lifecycle —
+  // the effect short-circuits and the focus state is ignored. No-ops without a
+  // NavigationContext.
   const navigation = useContext(NavigationContext);
+  const [isFocused, setIsFocused] = useState(
+    () => navigation?.isFocused() ?? true,
+  );
+
   useEffect(() => {
     if (!navigation) return;
-    if (visibleRef.current === undefined) return;
-
-    if (
-      navigation.isFocused() &&
-      visibleRef.current &&
-      !isPresentedRef.current
-    ) {
-      isPresentedRef.current = true;
-      ref.current?.present();
-    }
-
-    const unsubFocus = navigation.addListener('focus', () => {
-      if (visibleRef.current && !isPresentedRef.current) {
-        isPresentedRef.current = true;
-        ref.current?.present();
-      }
-    });
-    const unsubBlur = navigation.addListener('blur', () => {
-      if (isPresentedRef.current) {
-        isPresentedRef.current = false;
-        ref.current?.dismiss();
-      }
-    });
-
+    const unsubFocus = navigation.addListener('focus', () =>
+      setIsFocused(true),
+    );
+    const unsubBlur = navigation.addListener('blur', () => setIsFocused(false));
     return () => {
       unsubFocus();
       unsubBlur();
     };
   }, [navigation]);
+
+  const isPresentedRef = useRef(false);
+  useEffect(() => {
+    if (visible === undefined) return;
+    const active = visible && isFocused;
+    if (active && !isPresentedRef.current) {
+      isPresentedRef.current = true;
+      ref.current?.present();
+    } else if (!active && isPresentedRef.current) {
+      isPresentedRef.current = false;
+      ref.current?.dismiss();
+    }
+  }, [visible, isFocused]);
 
   // Compose the backdrop claim with the caller's onChange. The current
   // user-supplied onChange is held in a ref so its identity changing across
