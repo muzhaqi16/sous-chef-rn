@@ -139,6 +139,22 @@ export const useOverlayBackdropOpacity = (): SharedValue<number> | null => {
 };
 
 /**
+ * Whether ANY overlay is currently claiming the global backdrop (slot count > 0),
+ * as a plain boolean — the single "screen is dimmed" signal. The floating tab bar
+ * reads it to reset its scroll-hidden state when an overlay opens, so the bar
+ * returns to a known state on close. Returns false when no provider is mounted
+ * (unit-test trees).
+ *
+ * Distinct from `isOverlayOpen` in TabBarActionsContext: that one is set
+ * explicitly by selectors and gates tutorial pausing — a tutorial step may open
+ * its OWN sheet, so it must not treat every backdrop as a blocking overlay.
+ */
+export const useOverlayBackdropPresence = (): boolean => {
+  const internal = useContext(OverlayBackdropInternalContext);
+  return internal?.isVisible ?? false;
+};
+
+/**
  * Declarative backdrop claim. While `active` is true, the overlay is painted;
  * unmounting the consumer (for any reason — conditional render, screen
  * unmount, parent re-render) releases the claim via useEffect cleanup. There

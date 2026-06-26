@@ -294,6 +294,67 @@ hide channel, without regressing tutorials.
 - Manual `visible===undefined` sheets must still be enumerated to confirm none rely
   on the removed `onChange`/`onAnimate` claim for anything other than the dim.
 
+## 13. v2 re-validation (3 agents) → v3 refinement
+
+Re-validation **CONFIRMED** v2 fixes the leak/close path: gorhom drives
+`animatedIndex` via the spring on the UI thread independent of callbacks
+(`BottomSheet.tsx:691`), and reanimated snaps to the exact `toValue` at rest with
+`overshootClamping:true` (`spring.ts:135-137`); `animatedIndex` is `CLAMP`'d so the
+closed anchor maps to exactly `-1`. So on **any** close — including the interrupted
+case where `onChange(-1)` is skipped — the SV reaches `-1` and release fires. All
+four v1 blockers stay closed. Two corrections came out of it:
+
+1. **`scheduleOnRN` call form (runtime bug).** `scheduleOnRN(setActive)(onScreen)` is
+   the old curried `runOnJS` shape; `scheduleOnRN` is **variadic** —
+   `scheduleOnRN(setActive, onScreen)` (matches `OverlayBackdropProvider.tsx:308`,
+   `useAnimatedPresence.ts:74`). Read the SV with `.get()`. Lint won't catch the
+   curry; only runtime would.
+
+2. **Open-claim latency (blocker).** Pure `active = f(SV) → useBackdropClaim`
+   registers the slot only after a multi-stage hop (gorhom index → its reaction
+   copies the SV → v2 reaction → `scheduleOnRN` → re-render → effect → `claim` →
+   `setSlots` → the provider's `useDerivedValue` re-registers, `:241-248`). Until
+   then the global opacity doesn't read the sheet's ramping SV, so the dim **and the
+   tab-bar hide pop in several frames into the open** — regressing the synchronous
+   `onAnimate` claim the current code added on purpose (`useBottomSheetBackdropClaim.ts:77-94`),
+   worse under JS load. v1's "synchronous claim" reasoning doesn't carry to the SV path.
+
+### v3 mechanism (final): synchronous imperative CLAIM, SV-driven RELEASE
+
+Split the two halves — claiming early is never the leak; **release** is the racy
+half. Keep the open claim synchronous; make only the release reliable.
+
+- **CLAIM (open):** unchanged — `onAnimate(toIndex≥0) → claimBackdrop()` synchronously
+  at animation start (no dim pop). `onChange(index≥0)` stays as the idempotent
+  backstop for the `present()`-while-open case.
+- **RELEASE (close):** replace the `onChange(-1)`/`safeOnDismiss` release with
+  ```ts
+  useAnimatedReaction(
+    () => animatedIndex.get() <= -0.999,           // settled closed?
+    (closed, prev) => { if (closed && !prev) scheduleOnRN(releaseBackdrop); },
+  );
+  ```
+  The SV reaching `-1` is reliable even when gorhom skips `onChange(-1)`. Fast-reopen
+  (interrupted close, SV never reaches `-1`) simply never releases → no stale-release
+  race, slot reused. `releaseBackdrop` is RN-scope and arg-free → convention-compliant.
+- **BACKSTOP:** the existing unmount-cleanup release stays.
+
+Net: keeps the `claimIdRef`/imperative claim but **removes the racy release trigger**,
+which is the actual leak source — without the open-path regression of the pure
+declarative form.
+
+### Other re-validation notes (handle-in-impl)
+- **`isVisible` has no public reader** — only `useOverlayBackdropOpacity` is exported.
+  Add `useOverlayBackdropPresence()` (returns `isVisible`) for the tab-bar scroll-reset.
+- **Preserve compositions:** `useStandardBottomSheet` must keep forwarding
+  `userOnChange`/`userOnAnimate` and keep `backHandler`/keyboard-snap/`safeOnDismiss`
+  intact — only the backdrop's *use* of `onChange(-1)`/`onAnimate` for release is dropped.
+- **FolderPicker:** keep the sequential swap gate (`:88-97,400-408`); both modals write
+  the same shared `animatedIndex`, so don't let them overlap.
+- **Cleanup:** `useShoppingListSelectorModal`'s `setOverlayOpen(false)`-before-navigate
+  becomes tab-bar-dead once the bar reads `isVisible`; remove it.
+- **Verify on device:** open-claim timing and the FolderPicker swap flash (pre-existing).
+
 ## 10. Open questions
 
 - Bind `d` to `animationConfigs` duration vs. a single `BACKDROP_CLOSE_MS`

@@ -17,7 +17,10 @@ import {
   useTabBarState,
   useTabBarSetters,
 } from '#context/TabBarActionsContext';
-import { useOverlayBackdropOpacity } from '#components/providers/OverlayBackdropProvider';
+import {
+  useOverlayBackdropOpacity,
+  useOverlayBackdropPresence,
+} from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
@@ -48,8 +51,13 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     addButtonConfig,
     isAddButtonDisabled,
     addButtonDisabledMessage,
-    isOverlayOpen,
   } = useTabBarState();
+
+  // "An overlay is dimming the screen" — true for every backdrop claim (sheets
+  // and selectors alike), derived from the global backdrop's slot count. This
+  // replaces the selector-only `isOverlayOpen` for the scroll-hide reset so the
+  // reset now covers sheets too.
+  const overlayPresent = useOverlayBackdropPresence();
   const { setActiveTab, setAddButtonRect, scrollTabBarHidden } =
     useTabBarSetters();
 
@@ -104,10 +112,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   // Clear any scroll-hidden state when an overlay opens so the bar returns to a
   // known (visible) state once the overlay closes.
   useLayoutEffect(() => {
-    if (isOverlayOpen) {
+    if (overlayPresent) {
       scrollTabBarHidden.set(false);
     }
-  }, [isOverlayOpen, scrollTabBarHidden]);
+  }, [overlayPresent, scrollTabBarHidden]);
 
   // Scroll hide animates with a spring (toggled by scroll direction).
   useAnimatedReaction(

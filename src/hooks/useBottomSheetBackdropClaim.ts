@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { type SharedValue } from 'react-native-reanimated';
+import { useAnimatedReaction, type SharedValue } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 import { useOverlayBackdropOptional } from '#components/providers/OverlayBackdropProvider';
 import { useSheetBackdropOpacity } from '#hooks/useSheetBackdropOpacity';
 
@@ -20,9 +21,10 @@ interface DismissableRef {
  *   claims the global backdrop with it. The dim layer ramps in/out on the
  *   UI thread, frame-synced with the sheet — zero JS-thread delay.
  * - Claims the backdrop at the START of the open animation via gorhom's
- *   `onAnimate` callback, and releases it at the END of the close animation
- *   via `onChange(-1)`. This split is load-bearing — see `onAnimate`/`onChange`
- *   below for why the claim is early but the release is late.
+ *   `onAnimate` callback (synchronous, so the dim ramps in with no pop), and
+ *   releases it via a `useAnimatedReaction` watching `animatedIndex` settle at
+ *   the closed anchor (-1) — NOT gorhom's `onChange(-1)`, which gorhom skips on
+ *   interrupted closes. The SV reaches -1 on every close, so release is reliable.
  *
  * Backdrop-tap dismisses the sheet via the supplied ref.
  *
@@ -69,41 +71,51 @@ export function useBottomSheetBackdropClaim(
     claimIdRef.current = null;
   };
 
-  // Defensive unmount cleanup
+  // Stable, RN-scope wrapper so the worklet boundary (`scheduleOnRN` in the
+  // release reaction below) binds a fixed function identity while still calling
+  // the latest `releaseBackdrop`.
+  const releaseRef = useRef(releaseBackdrop);
+  useEffect(() => {
+    releaseRef.current = releaseBackdrop;
+  });
+  const [stableRelease] = useState<() => void>(
+    () => () => releaseRef.current(),
+  );
+
+  // Defensive unmount cleanup — the guaranteed release backstop.
   useEffect(() => {
     return () => releaseBackdrop();
   }, []);
 
-  // Claim at the START of the open animation. Gorhom fires `onAnimate` one
-  // step before it begins driving `animatedPosition` (BottomSheet.tsx:682),
-  // with `toIndex >= 0` when opening or moving between snap points. Claiming
-  // here registers the slot before the open ramp runs, so the provider's
-  // max-over-slots opacity derivation reads this sheet's
-  // `interpolate(animatedIndex)` SV for the whole ramp and the dim fades in
-  // frame-synced with the sheet.
-  //
-  // `onChange(index)` fires only AFTER the animation settles (from gorhom's
-  // `animateToPositionCompleted`, BottomSheet.tsx:558). Claiming there left
-  // the slot unregistered during the entire open animation, so the dim
-  // popped in at the end instead of tracking the sheet. `onChange(index >= 0)`
-  // is kept as an idempotent backstop for the rare case gorhom skips
-  // `onAnimate` (a `present()` while already open, where `onAnimate`'s
-  // `toIndex === currentIndex` early-return trips — BottomSheet.tsx:485).
+  // RELEASE is driven off the sheet's own `animatedIndex` settling at the closed
+  // anchor (-1), NOT off gorhom's `onChange(-1)`. Gorhom skips `onChange(-1)`
+  // when a close interrupts an open that never settled, which stranded the dim.
+  // `animatedIndex` is driven by the spring on the UI thread and reaches exactly
+  // -1 on every close (reanimated snaps to `toValue` at rest under
+  // `overshootClamping`), so this fires reliably. A fast reopen — where the SV
+  // turns back before reaching -1 — never fires, so the slot is reused with no
+  // stale-release race. The unmount cleanup above is the final backstop.
+  useAnimatedReaction(
+    () => animatedIndex.get() <= -0.999,
+    (closed, previous) => {
+      if (closed && previous === false) scheduleOnRN(stableRelease);
+    },
+  );
+
+  // CLAIM synchronously at the START of the open animation so the dim ramps in
+  // lockstep with the sheet (no pop-in). `onAnimate` fires one step before gorhom
+  // begins driving `animatedPosition` (BottomSheet.tsx:682), with `toIndex >= 0`
+  // when opening or moving between snap points; the provider's max-over-slots
+  // opacity then reads this sheet's `interpolate(animatedIndex)` SV for the whole
+  // ramp. `onChange(index >= 0)` is the idempotent backstop for a `present()`
+  // while already open (where `onAnimate`'s `toIndex === currentIndex`
+  // early-returns — BottomSheet.tsx:485).
   const onAnimate = (_fromIndex: number, toIndex: number) => {
     if (toIndex >= 0) claimBackdrop();
   };
 
-  // Release ONLY on the authoritative settled-closed signal. Release is
-  // deliberately NOT mirrored onto `onAnimate(toIndex === -1)`: `onAnimate`
-  // fires at the START of the close (and on non-completing pan-down gestures
-  // and intermediate snaps), so releasing there would drop the dim mid-gesture
-  // or snap it out before the lockstep ramp-down plays. `useStandardBottomSheet`
-  // adds two more idempotent release paths (a release in its `onDismiss`
-  // wrapper, covering gorhom's `onClose` winning the race against
-  // `onChange(-1)`, plus the defensive unmount cleanup above).
   const onChange = (index: number) => {
     if (index >= 0) claimBackdrop();
-    else if (index === -1) releaseBackdrop();
   };
 
   return { animatedIndex, onChange, onAnimate };

@@ -97,12 +97,17 @@ const styles = StyleSheet.create(theme => ({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
     gap: theme.spacing.sm,
+    padding: theme.spacing['3'],
+    // Match the search bar inset so rows line up with it instead of going
+    // edge-to-edge — same floating-card treatment as BaseItemCard.
+    marginHorizontal: theme.spacing['3'],
+    marginBottom: theme.spacing['2.5'],
+    borderRadius: theme.radii.xl,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    backgroundColor: theme.colors.surface,
+    ...theme.shadows.card,
   },
   body: {
     flex: 1,
