@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@apollo/client/react';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -89,32 +88,17 @@ export function useRecipeShoppingList({
   );
   const [creatingList, setCreatingList] = useState(false);
 
-  // Sheet refs and visibility state. Per CLAUDE.md, control visibility via
-  // state + effect (never call present()/dismiss() directly from event handlers).
-  const shoppingListOptionsRef = useRef<BottomSheetModalRef>(null);
-  const ingredientSelectorRef = useRef<BottomSheetModalRef>(null);
-  const listPickerRef = useRef<BottomSheetModalRef>(null);
+  // Sheet visibility state. Per CLAUDE.md, each sheet is driven by a `visible`
+  // boolean through useStandardBottomSheet's guarded path — no refs, no manual
+  // present/dismiss effects. The three sheets are mutually exclusive; the
+  // cross-sheet handoff (close one → open the next) runs in handleSheetDismiss.
   const pendingDismissActionRef = useRef<(() => void) | null>(null);
 
+  const [shoppingListOptionsVisible, setShoppingListOptionsVisible] =
+    useState(false);
   const [listPickerVisible, setListPickerVisible] = useState(false);
   const [ingredientSelectorVisible, setIngredientSelectorVisible] =
     useState(false);
-
-  useEffect(() => {
-    if (listPickerVisible) {
-      listPickerRef.current?.present();
-    } else {
-      listPickerRef.current?.dismiss();
-    }
-  }, [listPickerVisible]);
-
-  useEffect(() => {
-    if (ingredientSelectorVisible) {
-      ingredientSelectorRef.current?.present();
-    } else {
-      ingredientSelectorRef.current?.dismiss();
-    }
-  }, [ingredientSelectorVisible]);
 
   const openListPicker = (action: PendingAction) => {
     if (shoppingListsLoading) {
@@ -566,12 +550,12 @@ export function useRecipeShoppingList({
       return;
     }
     pendingDismissActionRef.current = () => openListPicker({ type: 'all' });
-    shoppingListOptionsRef.current?.dismiss();
+    setShoppingListOptionsVisible(false);
   };
 
   const openIngredientSelector = () => {
     pendingDismissActionRef.current = () => setIngredientSelectorVisible(true);
-    shoppingListOptionsRef.current?.dismiss();
+    setShoppingListOptionsVisible(false);
   };
 
   const toggleIngredient = (ingredientId: string) => {
@@ -598,8 +582,14 @@ export function useRecipeShoppingList({
     setIngredientSelectorVisible(false);
   };
 
-  // Runs after each sheet's dismiss animation; flushes the queued cross-sheet action.
+  // Runs after each sheet's dismiss animation; flushes the queued cross-sheet
+  // action. Resets all three visibility flags first so a swipe-down dismiss
+  // can't leave a stale `visible=true` that the hook would re-present; the
+  // queued action (if any) then opens exactly one of them.
   const handleSheetDismiss = () => {
+    setShoppingListOptionsVisible(false);
+    setListPickerVisible(false);
+    setIngredientSelectorVisible(false);
     const action = pendingDismissActionRef.current;
     pendingDismissActionRef.current = null;
     action?.();
@@ -622,8 +612,8 @@ export function useRecipeShoppingList({
     toggleIngredient,
     handleSheetDismiss,
 
-    shoppingListOptionsRef,
-    ingredientSelectorRef,
-    listPickerRef,
+    shoppingListOptionsVisible,
+    ingredientSelectorVisible,
+    listPickerVisible,
   };
 }

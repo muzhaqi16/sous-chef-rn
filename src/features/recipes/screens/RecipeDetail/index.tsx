@@ -106,9 +106,9 @@ const RecipeDetailScreen: React.FC = () => {
     openIngredientSelector,
     creatingList,
     handleCreateListAndAddIngredients,
-    shoppingListOptionsRef,
-    ingredientSelectorRef,
-    listPickerRef,
+    shoppingListOptionsVisible,
+    ingredientSelectorVisible,
+    listPickerVisible,
     handleSheetDismiss,
     cookedModalVisible,
     setCookedModalVisible,
@@ -511,7 +511,7 @@ const RecipeDetailScreen: React.FC = () => {
 
       {/* Shopping List Options Bottom Sheet */}
       <BottomSheetAction
-        sheetRef={shoppingListOptionsRef}
+        visible={shoppingListOptionsVisible}
         sheetTitle={t('recipes.addToShoppingList')}
         snapPoints={['30%']}
         onDismiss={handleSheetDismiss}
@@ -534,7 +534,7 @@ const RecipeDetailScreen: React.FC = () => {
       </BottomSheetAction>
 
       <IngredientSelectorSheet
-        sheetRef={ingredientSelectorRef}
+        visible={ingredientSelectorVisible}
         ingredients={backendRecipe?.ingredients || []}
         selectedIngredients={selectedIngredients}
         toggleIngredient={toggleIngredient}
@@ -545,7 +545,7 @@ const RecipeDetailScreen: React.FC = () => {
       />
 
       <ShoppingListPickerSheet
-        sheetRef={listPickerRef}
+        visible={listPickerVisible}
         shoppingLists={shoppingLists}
         defaultNewListName={displayData?.title ?? ''}
         creatingList={creatingList}

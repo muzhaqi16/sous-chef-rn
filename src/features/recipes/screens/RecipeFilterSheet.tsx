@@ -1,8 +1,7 @@
-import React, { useState, type RefObject } from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
@@ -29,7 +28,9 @@ const DEFAULT_FILTERS: RecipeFilters = {
 };
 
 interface RecipeFilterSheetProps {
-  sheetRef: RefObject<BottomSheetModalRef | null>;
+  visible: boolean;
+  /** Close the sheet (parent flips its `visible` state to false). */
+  onRequestClose: () => void;
   activeFilters: RecipeFilters;
   setActiveFilters: React.Dispatch<React.SetStateAction<RecipeFilters>>;
   onSheetChange: (index: number) => void;
@@ -39,7 +40,8 @@ interface RecipeFilterSheetProps {
 // ── Component ──
 
 export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
-  sheetRef,
+  visible,
+  onRequestClose,
   activeFilters,
   setActiveFilters,
   onSheetChange,
@@ -99,7 +101,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
 
   return (
     <BottomSheetAction
-      sheetRef={sheetRef}
+      visible={visible}
       sheetTitle={t('recipeFilters.title')}
       snapPoints={['75%', '90%']}
       onChange={handleChange}
@@ -116,7 +118,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => sheetRef.current?.close()}
+            onPress={onRequestClose}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t('recipeFilters.applyA11y')}

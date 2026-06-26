@@ -10,7 +10,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import type { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import {
@@ -63,7 +62,7 @@ const renderItem = (info: ListRenderItemInfo<SelectableIngredient>) => (
 );
 
 interface IngredientSelectorSheetProps {
-  sheetRef: React.RefObject<BottomSheetModalRef | null>;
+  visible: boolean;
   ingredients: SelectableIngredient[];
   selectedIngredients: Set<string>;
   toggleIngredient: (id: string) => void;
@@ -76,7 +75,7 @@ interface IngredientSelectorSheetProps {
 export const IngredientSelectorSheet: React.FC<
   IngredientSelectorSheetProps
 > = ({
-  sheetRef,
+  visible,
   ingredients,
   selectedIngredients,
   toggleIngredient,
@@ -88,7 +87,7 @@ export const IngredientSelectorSheet: React.FC<
   const { t } = useTranslation();
   return (
     <BottomSheetAction
-      sheetRef={sheetRef}
+      visible={visible}
       sheetTitle={t('recipes.selectIngredients')}
       snapPoints={['50%', '75%', '90%']}
       onDismiss={onDismiss}

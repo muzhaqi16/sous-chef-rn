@@ -13,7 +13,16 @@ interface BottomSheetActionProps {
   children: ReactNode;
   sheetTitle?: string;
   snapPoints?: string[] | number[];
-  /** Optional ref so parent can control this sheet */
+  /**
+   * State-driven presentation: when provided, the sheet auto-presents on
+   * `true` and dismisses on `false` via `useStandardBottomSheet`'s guarded
+   * `visible` path (which also adds navigation focus-awareness). This is the
+   * preferred convention. Mutually exclusive with `sheetRef` — pass one or the
+   * other, not both (a caller-supplied `sheetRef` overrides the hook's internal
+   * ref, which the auto present/dismiss effect drives).
+   */
+  visible?: boolean;
+  /** Manual presentation: parent drives this sheet imperatively via the ref. */
   sheetRef?: Ref<BottomSheetModalRef>;
   /** Whether to wrap content in scrollable view (default: true). Set to false when children contain FlatList/SectionList */
   scrollable?: boolean;
@@ -29,6 +38,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
   children,
   sheetTitle,
   snapPoints = ['25%', '50%', '90%'],
+  visible,
   sheetRef,
   scrollable = true,
   headerRight,
@@ -40,6 +50,7 @@ export const BottomSheetAction: React.FC<BottomSheetActionProps> = ({
     modalProps,
     insets,
   } = useStandardBottomSheet({
+    visible,
     onDismiss: () => {
       Keyboard.dismiss();
       onDismissProp?.();
