@@ -1,21 +1,38 @@
 #!/usr/bin/env bash
-# Test OTLP metrics ingestion to Grafana Cloud
+# Test OTLP metrics ingestion (self-hosted Mimir, or Grafana Cloud).
 #
 # Usage:
-#   # Using env vars directly:
-#   AUTH_PASSWORD=glc_xxx ./infra/grafana/test-otlp.sh
+#   # Self-hosted Mimir, sourced from .env (current setup):
+#   source .env && OTLP_ENDPOINT=$OTLP_METRICS_ENDPOINT \
+#     AUTH_USERNAME=$OTLP_METRICS_AUTH_USERNAME \
+#     AUTH_PASSWORD=$OTLP_METRICS_AUTH_PASSWORD ./infra/grafana/test-otlp.sh
 #
-#   # Or source from .env file:
-#   source .env && AUTH_PASSWORD=$OTLP_METRICS_AUTH_PASSWORD AUTH_USERNAME=$OTLP_METRICS_AUTH_USERNAME ./infra/grafana/test-otlp.sh
+#   # Grafana Cloud, env vars directly:
+#   OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp \
+#     AUTH_USERNAME=1564351 AUTH_PASSWORD=glc_xxx ./infra/grafana/test-otlp.sh
 #
 # After running, query in Grafana Explore (Prometheus datasource):
 #   {__name__="test_otlp_ping_total", service_name="sous-chef-app"}
 
 set -euo pipefail
 
-OTLP_ENDPOINT="${OTLP_ENDPOINT:-https://otlp-gateway-prod-us-east-2.grafana.net/otlp}"
-AUTH_USERNAME="${AUTH_USERNAME:-1564351}"
+# Active config comes from the exported env vars (self-hosted Mimir/Loki via .env).
+# To target Grafana Cloud instead, export these before running:
+#   OTLP_ENDPOINT=https://otlp-gateway-prod-us-east-2.grafana.net/otlp \
+#   AUTH_USERNAME=1564351 AUTH_PASSWORD=glc_xxx ./infra/grafana/test-otlp.sh
+OTLP_ENDPOINT="${OTLP_ENDPOINT:-}"
+AUTH_USERNAME="${AUTH_USERNAME:-}"
 AUTH_PASSWORD="${AUTH_PASSWORD:-}"
+
+if [ -z "$OTLP_ENDPOINT" ]; then
+  echo "ERROR: OTLP_ENDPOINT is required (e.g. https://mimir.souschef.dev/otlp)."
+  echo ""
+  echo "Source from .env:"
+  echo "  source .env && OTLP_ENDPOINT=\$OTLP_METRICS_ENDPOINT \\"
+  echo "    AUTH_USERNAME=\$OTLP_METRICS_AUTH_USERNAME \\"
+  echo "    AUTH_PASSWORD=\$OTLP_METRICS_AUTH_PASSWORD ./infra/grafana/test-otlp.sh"
+  exit 1
+fi
 
 if [ -z "$AUTH_PASSWORD" ]; then
   echo "ERROR: AUTH_PASSWORD is required."

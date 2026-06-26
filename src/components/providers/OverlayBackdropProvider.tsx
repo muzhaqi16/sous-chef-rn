@@ -8,8 +8,9 @@ import React, {
 import Animated, {
   cancelAnimation,
   makeMutable,
+  useAnimatedReaction,
   useAnimatedStyle,
-  useDerivedValue,
+  useSharedValue,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
@@ -203,9 +204,10 @@ interface BackdropHandlers {
 
 /**
  * Tracks backdrop claims — each is a provider-owned SharedValue<number>
- * representing one consumer's opacity contribution. The global opacity is a
- * `useDerivedValue` reading the max across all claim SVs; `isVisible` (which
- * gates pointerEvents) derives from claim count.
+ * representing one consumer's opacity contribution. The global opacity is an
+ * owned SharedValue driven by a `useAnimatedReaction` taking the max across all
+ * claim SVs, with a JS-thread zero-floor when no slot is claimed; `isVisible`
+ * (which gates pointerEvents) derives from claim count.
  *
  * All claim SVs are owned by the provider and animated via `withTiming` on
  * claim and release, so the provider has full control over the SV's
@@ -248,20 +250,39 @@ export const OverlayBackdropProvider: React.FC<
   const onPress =
     slots.length > 0 ? slots[slots.length - 1].onPress ?? null : null;
 
-  // Global opacity = max of all claim SharedValues. Re-registered when
-  // `slots` identity changes (add/remove); Reanimated auto-tracks each
-  // `.value` read inside the worklet as a dep so it re-runs whenever any
-  // contributing SV changes — including external SVs (e.g. a sheet's
-  // animatedIndex-interpolated opacity), which is how the backdrop stays
-  // in lockstep with the sheet's motion on the UI thread.
-  const opacity = useDerivedValue(() => {
-    let max = 0;
-    for (const entry of slots) {
-      const v = entry.sv.value;
-      if (v > max) max = v;
-    }
-    return max;
-  }, [slots]);
+  // Global dim opacity = max across all active claim SharedValues, driven on
+  // the UI thread so the backdrop stays in lockstep with each sheet's motion.
+  // Reanimated's input extraction recurses into the `slots` array, so every
+  // slot's `.sv` is tracked: the reaction re-runs each frame a contributor
+  // animates and whenever a slot is added/removed.
+  const opacity = useSharedValue(0);
+  useAnimatedReaction(
+    () => {
+      let max = 0;
+      for (const entry of slots) {
+        const v = entry.sv.value;
+        if (v > max) max = v;
+      }
+      return max;
+    },
+    next => {
+      opacity.set(next);
+    },
+    [slots],
+  );
+
+  // Deterministic floor: when nothing is claimed, force the dim to 0 from the
+  // JS thread. An empty `slots` set has no contributor SV left to drive the
+  // reaction back down, so without this the opacity SV strands at its last
+  // value — a half-dim screen + a half-hidden floating tab bar (both read this
+  // SV) that clear only on an unrelated re-render. A normal close has already
+  // animated the SV to 0 before the slot is removed, so this only bites on an
+  // interrupted close (the modal portal unmounts mid-animation, stranding the
+  // sheet's animatedIndex). The `useEffect` dependency fires reliably on the
+  // React state change.
+  useEffect(() => {
+    if (slots.length === 0) opacity.set(0);
+  }, [slots, opacity]);
 
   const [{ publicValue }] = useState<BackdropHandlers>(() => {
     const removeSlot = (id: string): void => {
