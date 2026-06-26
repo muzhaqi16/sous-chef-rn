@@ -31,6 +31,7 @@
     "verificationFailed": "Verificación fallida",
     "resetPasswordFailed": "No se pudo restablecer la contraseña",
     "networkError": "Error de red. Revisa tu conexión.",
+    "notAvailableOffline": "No disponible sin conexión",
     "somethingWentWrong": "Algo salió mal. Inténtalo de nuevo.",
     "unknownError": "Ocurrió un error desconocido",
     "boundary": {

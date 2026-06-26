@@ -1,6 +1,8 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { useStore } from '#store';
 import type { CorrectPantryItemWeightInput } from '#/graphql/generated/schemaTypes';
 import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
@@ -219,5 +221,61 @@ describe('useCorrectPantryItemWeight', () => {
     });
 
     expect(success).toBe(false);
+  });
+
+  describe('when the API is unavailable', () => {
+    afterEach(() => {
+      useStore.setState({ apiReachable: true, isOnline: true });
+    });
+
+    it('exposes isApiUnavailable, toasts, and does not fire the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const errorSpy = jest.spyOn(toastService, 'error');
+      // No operation mocks: if the mutation fired it would throw "no matching
+      // mock", so an early return is required for this to pass.
+      const { result } = renderHook(() => useCorrectPantryItemWeight(), {
+        wrapper: createApolloTestWrapper({ operationMocks: [] }),
+      });
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.correctWeight(
+          'item-1',
+          500,
+          'Reason',
+          1,
+        );
+      });
+
+      expect(success).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith('Not available offline');
+    });
+
+    it('fires the mutation normally when online', async () => {
+      const variables = {
+        input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 2 },
+      };
+      const { result } = renderHook(() => useCorrectPantryItemWeight(), {
+        wrapper: createApolloTestWrapper({
+          operationMocks: [successMock(variables)],
+        }),
+      });
+
+      expect(result.current.isApiUnavailable).toBe(false);
+
+      let success: boolean | undefined;
+      await act(async () => {
+        success = await result.current.correctWeight(
+          'item-1',
+          500,
+          'Reason',
+          2,
+        );
+      });
+
+      expect(success).toBe(true);
+    });
   });
 });

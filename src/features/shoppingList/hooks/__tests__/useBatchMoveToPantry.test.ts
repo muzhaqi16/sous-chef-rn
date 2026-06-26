@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
+import { useStore } from '#store';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
 const mockToastSuccess = jest.fn();
@@ -288,5 +289,57 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
+
+  describe('when the API is unavailable', () => {
+    afterEach(() => {
+      useStore.setState({ apiReachable: true, isOnline: true });
+    });
+
+    it('exposes isApiUnavailable, toasts, and does not fire the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const move = moveMock({
+        movedCount: 1,
+        skippedCount: 0,
+        targetPantryName: 'My Pantry',
+        movedItemIds: ['item-1'],
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+      expect(move.fired).toHaveLength(0);
+    });
+
+    it('fires the mutation normally when online', async () => {
+      const move = moveMock({
+        movedCount: 1,
+        skippedCount: 0,
+        targetPantryName: 'My Pantry',
+        movedItemIds: ['item-1'],
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(false);
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(move.fired).toHaveLength(1);
+    });
   });
 });

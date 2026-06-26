@@ -13,6 +13,9 @@ import {
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
 import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;
@@ -24,6 +27,7 @@ export function useCorrectPantryItemWeight({
   const [correctMutation, { loading }] = useMutation(
     AdjustPantryItemWeightDocument,
   );
+  const isApiUnavailable = useIsApiUnavailable();
 
   const correctWeight = async (
     pantryItemId: string,
@@ -32,6 +36,11 @@ export function useCorrectPantryItemWeight({
     version: number,
     netWeightUnitId?: string,
   ): Promise<boolean> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     const result = await correctMutation({
       variables: {
         input: {
@@ -64,5 +73,5 @@ export function useCorrectPantryItemWeight({
     return false;
   };
 
-  return { correctWeight, loading };
+  return { correctWeight, loading, isApiUnavailable };
 }

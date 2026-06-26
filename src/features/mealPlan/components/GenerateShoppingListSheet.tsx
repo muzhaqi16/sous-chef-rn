@@ -25,11 +25,13 @@ interface GenerateShoppingListSheetProps {
   }) => void;
   loading: boolean;
   homeName?: string | null;
+  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
+  disabled?: boolean;
 }
 
 export const GenerateShoppingListSheet: React.FC<
   GenerateShoppingListSheetProps
-> = ({ visible, onClose, onGenerate, loading, homeName }) => {
+> = ({ visible, onClose, onGenerate, loading, homeName, disabled = false }) => {
   const { t } = useTranslation();
 
   const [checkPantry, setCheckPantry] = useState(true);
@@ -86,7 +88,7 @@ export const GenerateShoppingListSheet: React.FC<
             ? t('generateShoppingList.generating')
             : t('generateShoppingList.generate')
         }
-        confirmDisabled={loading || !canGenerate}
+        confirmDisabled={loading || disabled || !canGenerate}
         confirmColor="primary"
       />
 

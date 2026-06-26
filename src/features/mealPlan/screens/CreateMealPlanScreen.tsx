@@ -54,8 +54,11 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
-  const { createPlanFromTemplate, creatingFromTemplate } =
-    useMealTemplateActions();
+  const {
+    createPlanFromTemplate,
+    creatingFromTemplate,
+    isApiUnavailable: templateActionsUnavailable,
+  } = useMealTemplateActions();
   const { homes } = useHomeQuery();
   const selectedHomeId = useSelectedHomeId();
 
@@ -253,6 +256,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
+        disabled={templateActionsUnavailable}
       />
     </FormModal>
   );

@@ -380,6 +380,7 @@ export const PantryItemDetail: React.FC<
             shelfLifeDays={item.item?.shelfLifeDays}
             shelfLifeOpenedDays={item.item?.shelfLifeOpenedDays}
             onCorrectWeight={() => actions.setCorrectWeightVisible(true)}
+            correctWeightDisabled={actions.correctWeightUnavailable}
           />
         </DetailSection>
 

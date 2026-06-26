@@ -34,6 +34,8 @@ export interface UseMoveToPantryModalResult {
   close: () => void;
   /** Confirm move to pantry */
   confirm: (input: MoveToPantryInput) => Promise<void>;
+  /** Server unreachable — the move has no offline replay path, so disable confirm. */
+  isApiUnavailable: boolean;
 }
 
 /**
@@ -65,7 +67,11 @@ export function useMoveToPantryModal(
   } = useLazyHomeData();
 
   // Move to pantry mutation
-  const { moveToPantry, loading: moveLoading } = useMoveToPantry({
+  const {
+    moveToPantry,
+    loading: moveLoading,
+    isApiUnavailable,
+  } = useMoveToPantry({
     currentListId,
     onSuccess: () => {
       setVisible(false);
@@ -122,5 +128,6 @@ export function useMoveToPantryModal(
     openForItem,
     close,
     confirm,
+    isApiUnavailable,
   };
 }

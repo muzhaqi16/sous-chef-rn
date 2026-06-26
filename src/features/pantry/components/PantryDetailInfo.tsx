@@ -33,6 +33,8 @@ interface PantryDetailInfoProps {
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
   onCorrectWeight?: () => void;
+  /** Server unreachable (offline / API down) — disables the correct-weight edit. */
+  correctWeightDisabled?: boolean;
 }
 
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
@@ -45,6 +47,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   shelfLifeDays,
   shelfLifeOpenedDays,
   onCorrectWeight,
+  correctWeightDisabled = false,
 }) => {
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
@@ -89,10 +92,15 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           {!!item.lastUsedAt && !!onCorrectWeight && (
             <AppPressable
               onPress={onCorrectWeight}
+              disabled={correctWeightDisabled}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               style={styles.correctWeightButton}
             >
-              <Icon name="create-outline" size={16} tone="primary" />
+              <Icon
+                name="create-outline"
+                size={16}
+                tone={correctWeightDisabled ? 'textSecondary' : 'primary'}
+              />
             </AppPressable>
           )}
         </InfoRow>

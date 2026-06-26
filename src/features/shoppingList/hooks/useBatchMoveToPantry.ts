@@ -14,6 +14,7 @@ import {
   type ConnectionData,
 } from '#/apollo/utils/cacheUpdaters';
 import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -23,6 +24,7 @@ interface UseBatchMoveToPantryOptions {
 interface UseBatchMoveToPantryReturn {
   batchMoveToPantry: () => Promise<void>;
   loading: boolean;
+  isApiUnavailable: boolean;
 }
 
 export function useBatchMoveToPantry({
@@ -102,7 +104,14 @@ export function useBatchMoveToPantry({
     },
   );
 
+  const isApiUnavailable = useIsApiUnavailable();
+
   const batchMoveToPantry = async () => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     if (!currentListId) {
       toastService.error('No shopping list selected');
       return;
@@ -152,5 +161,6 @@ export function useBatchMoveToPantry({
   return {
     batchMoveToPantry,
     loading,
+    isApiUnavailable,
   };
 }

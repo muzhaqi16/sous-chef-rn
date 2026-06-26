@@ -25,6 +25,8 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { t } from '#/i18n/t';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
   'mealPlans',
@@ -41,6 +43,7 @@ const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
 
 export function useMealTemplateActions() {
   const client = useApolloClient();
+  const isApiUnavailable = useIsApiUnavailable();
 
   const [createFromTemplateMutation, { loading: creatingFromTemplate }] =
     useMutation(CreateMealPlanFromTemplateDocument, {
@@ -103,6 +106,10 @@ export function useMealTemplateActions() {
   const createPlanFromTemplate = async (
     input: CreateMealPlanFromTemplateInput,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
     const result = await executeMutation(
       () => createFromTemplateMutation({ variables: { input } }),
       'Create meal plan from template error:',
@@ -121,6 +128,10 @@ export function useMealTemplateActions() {
   const createTemplateFromPlan = async (
     input: CreateTemplateFromMealPlanInput,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
     const result = await executeMutation(
       () => createTemplateMutation({ variables: { input } }),
       'Create template from meal plan error:',
@@ -193,6 +204,10 @@ export function useMealTemplateActions() {
   };
 
   const duplicateTemplate = async (id: string, newName: string) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
     const result = await executeMutation(
       () =>
         duplicateTemplateMutation({ variables: { input: { id, newName } } }),
@@ -217,5 +232,6 @@ export function useMealTemplateActions() {
     creatingTemplate,
     deleting,
     duplicating,
+    isApiUnavailable,
   };
 }

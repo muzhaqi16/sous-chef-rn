@@ -22,6 +22,8 @@ interface DuplicatePlanSheetProps {
     newEndDate: string;
   }) => void;
   loading: boolean;
+  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
+  disabled?: boolean;
 }
 
 export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
@@ -30,6 +32,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
   onClose,
   onDuplicate,
   loading,
+  disabled = false,
 }) => {
   const { t } = useTranslation();
 
@@ -94,7 +97,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
             ? t('duplicatePlan.duplicating')
             : t('duplicatePlan.duplicate')
         }
-        confirmDisabled={loading || !name.trim()}
+        confirmDisabled={loading || disabled || !name.trim()}
         confirmColor="primary"
       />
 

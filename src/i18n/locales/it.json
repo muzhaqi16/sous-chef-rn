@@ -31,6 +31,7 @@
     "verificationFailed": "Verifica non riuscita",
     "resetPasswordFailed": "Impossibile reimpostare la password",
     "networkError": "Errore di rete. Controlla la tua connessione.",
+    "notAvailableOffline": "Non disponibile offline",
     "somethingWentWrong": "Qualcosa è andato storto. Riprova.",
     "unknownError": "Si è verificato un errore sconosciuto",
     "boundary": {

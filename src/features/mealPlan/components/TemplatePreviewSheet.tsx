@@ -30,6 +30,8 @@ interface TemplatePreviewSheetProps {
     servings?: number;
   }) => void;
   confirmLoading: boolean;
+  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
+  disabled?: boolean;
 }
 
 export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
@@ -38,6 +40,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   onClose,
   onConfirm,
   confirmLoading,
+  disabled = false,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -197,11 +200,11 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
         {/* Confirm button */}
         <Pressable
           onPress={handleConfirm}
-          disabled={confirmLoading || !startDate}
+          disabled={confirmLoading || disabled || !startDate}
           style={({ pressed }) => [
             styles.confirmButton,
             pressed && styles.buttonPressed,
-            (confirmLoading || !startDate) && styles.buttonDisabled,
+            (confirmLoading || disabled || !startDate) && styles.buttonDisabled,
           ]}
         >
           {confirmLoading ? (

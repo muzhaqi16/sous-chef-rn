@@ -31,6 +31,7 @@
     "verificationFailed": "Verifikimi dështoi",
     "resetPasswordFailed": "Nuk u rivendos dot fjalëkalimi",
     "networkError": "Gabim rrjeti. Kontrollo lidhjen tënde.",
+    "notAvailableOffline": "Nuk është i disponueshëm pa internet",
     "somethingWentWrong": "Diçka shkoi keq. Provoje sërish.",
     "unknownError": "Ndodhi një gabim i panjohur",
     "boundary": {

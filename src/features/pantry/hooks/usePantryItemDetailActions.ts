@@ -56,6 +56,8 @@ export interface UsePantryItemDetailActionsResult {
   setAdjustModalVisible: (v: boolean) => void;
   correctWeightVisible: boolean;
   setCorrectWeightVisible: (v: boolean) => void;
+  /** Server unreachable — correcting net weight has no offline replay path. */
+  correctWeightUnavailable: boolean;
   handleDelete: () => void;
   handleAddToShoppingList: () => void;
   handleDiscardExpired: () => void;
@@ -173,7 +175,8 @@ export function usePantryItemDetailActions({
   });
 
   const { adjustQuantity } = useAdjustPantryItemQuantity();
-  const { correctWeight } = useCorrectPantryItemWeight();
+  const { correctWeight, isApiUnavailable: correctWeightUnavailable } =
+    useCorrectPantryItemWeight();
 
   const handleDelete = () => {
     alertService.alert(
@@ -371,6 +374,7 @@ export function usePantryItemDetailActions({
     setAdjustModalVisible,
     correctWeightVisible,
     setCorrectWeightVisible,
+    correctWeightUnavailable,
     handleDelete,
     handleAddToShoppingList,
     handleDiscardExpired,

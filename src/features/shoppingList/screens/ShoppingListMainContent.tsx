@@ -188,8 +188,11 @@ export const ShoppingListMainContent: React.FC<
   };
 
   // --- Batch Move to Pantry Hook ---
-  const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
-    useBatchMoveToPantry({ currentListId });
+  const {
+    batchMoveToPantry,
+    loading: batchMoveToPantryLoading,
+    isApiUnavailable: batchMoveToPantryUnavailable,
+  } = useBatchMoveToPantry({ currentListId });
 
   // --- Reordering Hook ---
   const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -329,6 +332,7 @@ export const ShoppingListMainContent: React.FC<
     disabled: !!searchQuery.trim(),
     isTransitioning,
     batchMoveToPantryLoading,
+    batchMoveToPantryUnavailable,
     // Data
     unpurchasedItems,
     purchasedItems,
