@@ -137,7 +137,7 @@ const createWsClient = () => {
     lazy: true, // only connect on first subscribe
     keepAlive: getKeepAliveInterval(),
     connectionParams: () => {
-      const { accessToken: token, refreshToken } = useStore.getState();
+      const { accessToken: token } = useStore.getState();
       const apiKey = env.API_KEY;
       const deviceId = getDeviceIdSync();
 
@@ -153,11 +153,11 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
-      // Include refresh token so server can auto-refresh expired access tokens
-      // during WebSocket connection without requiring a separate HTTP roundtrip
-      if (refreshToken) {
-        params.refreshToken = refreshToken;
-      }
+      // Refresh-token rotation is single-use and owned solely by the HTTP path
+      // (refreshToken.ts). Sending the refresh token here too would race it: the
+      // server rotates once and 401s the loser, which the HTTP path treats as a
+      // genuine auth failure and logs the user out. The socket carries only the
+      // access token and reconnects with a fresh one after an HTTP refresh.
 
       // Include deviceId for subscription self-echo filtering
       // Server will include this in subscription payloads as originatorClientId
@@ -168,10 +168,7 @@ const createWsClient = () => {
       return params;
     },
     on: {
-      connected: (
-        _socket: unknown,
-        payload: Record<string, unknown> | undefined,
-      ) => {
+      connected: () => {
         isReconnecting = false;
         if (reconnectTimeoutId !== null) {
           clearTimeout(reconnectTimeoutId);
@@ -188,22 +185,6 @@ const createWsClient = () => {
           connectionStableTimeoutId = null;
           reconnectAttempts = 0;
         }, CONNECTION_STABLE_MS);
-
-        // Server auto-refreshed our tokens during connection —
-        // store the new pair via setTokens() (centralized token storage)
-        if (payload?.tokenRefreshed) {
-          const { accessToken, refreshToken } = payload as {
-            tokenRefreshed: boolean;
-            accessToken: string;
-            refreshToken: string;
-          };
-          if (accessToken && refreshToken) {
-            useStore.getState().setTokens({ accessToken, refreshToken });
-            logger.info(
-              '🔌 WebSocket: tokens refreshed by server during connection',
-            );
-          }
-        }
 
         if (__DEV__) {
           logger.info('🔌 WebSocket connected:', {
@@ -273,11 +254,17 @@ const createWsClient = () => {
           'message' in error &&
           typeof error.message === 'string'
             ? error.message
-            : 'Unknown error';
-        logger.warn('❌ WebSocket error:', {
-          error: message,
-          timestamp: new Date().toISOString(),
-        });
+            : '';
+        // RN delivers a contentless error event on routine socket drops; the
+        // `closed` handler carries the actionable code/reason. Only warn when
+        // RN actually gave us a message.
+        if (message) {
+          logger.warn('❌ WebSocket error:', { message });
+        } else {
+          logger.debug(
+            '🔌 WebSocket transient error (no detail; see close event)',
+          );
+        }
       },
       connecting: () => {
         if (__DEV__) {
