@@ -1,8 +1,8 @@
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
-/** True when the server can't be reached (device offline OR reachability breaker open). */
-export const useIsApiUnavailable = (): boolean => {
-  const isOnline = useIsOnline();
-  const apiReachable = useAppStore(state => state.apiReachable);
-  return !isOnline || apiReachable === false;
-};
+/** True when the server can't be reached (device offline OR reachability breaker
+ *  open). Reactive wrapper over the shared `isApiUnavailable` policy selector so
+ *  the offline gate stays in lockstep with offlineModeLink / queueLink / the
+ *  queue manager (which read the same selector). */
+export const useIsApiUnavailable = (): boolean => useAppStore(isApiUnavailable);

@@ -15,6 +15,7 @@ import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
 import {
   executeMutation,
   executeSearchQuery,
+  executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
 import {
   SearchRecipesDocument,
@@ -418,6 +419,15 @@ async function executeRecipeLoadMore(
   );
 
   appendDisplayResults(page.items);
+
+  // A Spoonacular page we asked for that came back empty means we've hit the
+  // plan's paging cap (or a 402) even though `total` still advertises more
+  // results. Freeze `total` at the current offset so `offset < total` flips
+  // false — otherwise the offset can't advance (it grows by the row count,
+  // which is 0 here) and the footer re-fires the same empty page forever.
+  const spoonacularExhausted =
+    spoonacularHasMore && page.spoonacularResultCount === 0;
+
   setPagination({
     ...pagination,
     // Only the queried source's cursor advances; the exhausted one is left as-is.
@@ -429,7 +439,9 @@ async function executeRecipeLoadMore(
       ? pagination.spoonacularOffset + page.spoonacularResultCount
       : pagination.spoonacularOffset,
     // A null total (cache hit on the new page) keeps the prior known total.
-    spoonacularTotal: page.spoonacularTotal ?? pagination.spoonacularTotal,
+    spoonacularTotal: spoonacularExhausted
+      ? pagination.spoonacularOffset
+      : page.spoonacularTotal ?? pagination.spoonacularTotal,
     seen,
   });
 
@@ -630,14 +642,19 @@ export function useRecipeScreen() {
   // (onEndReached can fire repeatedly mid-fetch).
   const loadMoreSearch = async () => {
     if (!searchHasMore || searchLoadingMore) return;
-    setSearchLoadingMore(true);
-    await executeRecipeLoadMore(
-      searchPagination,
-      client,
-      appendDisplayResults,
-      setSearchPagination,
+    // executeWithLoadingState guarantees searchLoadingMore is cleared even if
+    // the map/dedup step throws synchronously — otherwise a single throw would
+    // leave the guard stuck and disable load-more permanently.
+    await executeWithLoadingState(
+      () =>
+        executeRecipeLoadMore(
+          searchPagination,
+          client,
+          appendDisplayResults,
+          setSearchPagination,
+        ),
+      setSearchLoadingMore,
     );
-    setSearchLoadingMore(false);
   };
 
   // DiscoveryItem already satisfies DisplayItem — no mapping needed

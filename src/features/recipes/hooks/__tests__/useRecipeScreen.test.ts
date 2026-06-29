@@ -963,6 +963,59 @@ describe('useRecipeScreen', () => {
       expect(result.current.searchHasMore).toBe(false);
     });
 
+    it('stops Spoonacular load-more when a requested page returns no rows (paging cap)', async () => {
+      // Local source has just one page, so Spoonacular alone drives "load more".
+      const localMock = searchRecipesPageMock({
+        matchAfter: null,
+        nodes: [makeLocalRecipeNode({ id: 'r1', name: 'Local Only' })],
+        hasNextPage: false,
+        endCursor: null,
+      });
+
+      // Page 1 returns 2 rows but advertises a far larger total (100), so
+      // offset(2) < total(100) and more is offered. The next offset returns no
+      // rows even though the total still says 100 — the plan's paging cap.
+      mockSearchRecipes.mockImplementation((params: { offset?: number }) => {
+        const offset = params.offset ?? 0;
+        if (offset === 0) {
+          return Promise.resolve({
+            results: sampleTextSearchResponse.results,
+            offset: 0,
+            number: 2,
+            totalResults: 100,
+          });
+        }
+        return Promise.resolve({
+          results: [],
+          offset,
+          number: 0,
+          totalResults: 100,
+        });
+      });
+
+      const { result } = renderRecipeScreen([localMock]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('pasta');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+      // Spoonacular advertised more than it returned → load-more is offered.
+      expect(result.current.searchHasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+
+      // The empty page freezes the Spoonacular total at the current offset, so
+      // there's nothing more to load — the footer hides instead of re-firing the
+      // same empty page forever (the pre-fix infinite-loop regression).
+      await waitFor(() => {
+        expect(result.current.searchHasMore).toBe(false);
+      });
+    });
+
     it('paginates the Spoonacular source by offset when more results remain', async () => {
       // totalResults (3) > page size (1 here) so a second Spoonacular page
       // exists. The mock returns a distinct recipe per offset.

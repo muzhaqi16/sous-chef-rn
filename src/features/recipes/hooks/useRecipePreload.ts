@@ -527,8 +527,8 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
 
     // Mint the SavedRecipe row's permanent PK client-side (sent as `input.id`),
     // so an online create and a queued offline replay converge on one row — a
-    // duplicate-id replay surfaces a ConflictError, which the queue treats as
-    // converged.
+    // duplicate-id replay resolves to the existing SavedRecipe as a success
+    // payload, which the queue drains as applied (no duplicate row).
     const savedRecipeId = generateEntityId();
 
     // Write the favorite to the cache BEFORE firing, so the heart fills and the
@@ -552,9 +552,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
               notes: saveOptions?.notes,
             },
           },
-          // Local-first: queue + replay (idempotent — a ConflictError on a
-          // re-favorite means an earlier attempt already saved it) when the API
-          // is unreachable, instead of failing the save.
+          // Local-first: queue + replay (idempotent via the client-minted id —
+          // a re-favorite resolves to the already-saved row) when the API is
+          // unreachable, instead of failing the save.
           context: { localFirst: true },
         }),
       (error: unknown) => {

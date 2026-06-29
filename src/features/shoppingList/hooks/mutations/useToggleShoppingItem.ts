@@ -181,6 +181,21 @@ export function useToggleShoppingItem({
     );
     if (!result) return false;
 
+    // A resolved error-union member (ValidationError/ConflictError/…) doesn't
+    // fire the mutation `onError`, so revert here — same post-result guard
+    // recordPurchase uses. 'queued' (null payload, offline) keeps the optimistic
+    // flip; only 'rejected' rolls back.
+    if (
+      classifyCreateResult(
+        result,
+        'toggleShoppingListItemPurchased',
+        'ToggleShoppingListItemPurchasedPayload',
+      ) === 'rejected'
+    ) {
+      revert();
+      return false;
+    }
+
     const payload = result.data?.toggleShoppingListItemPurchased;
     return isSuccessPayload(payload, 'ToggleShoppingListItemPurchasedPayload')
       ? payload.shoppingListItem

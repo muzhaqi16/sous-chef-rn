@@ -34,13 +34,13 @@ export class ReplayRejectedError extends Error {
  *
  *  - `'applied'`   — success payload (or a scalar/absent field that carries no
  *                    error signal). Dequeue.
- *  - `'converged'` — `ConflictError` on a replayed create (or a re-favorite):
- *                    every queued create carries its client-minted id, so a
- *                    duplicate-id conflict proves an earlier attempt already
- *                    committed the row. A re-favorite replay
- *                    (`AddRecipeToFavorites`, keyed by the client-minted
- *                    SavedRecipe id) is the same idempotent case. The change is
- *                    on the server; dequeue as success.
+ *  - `'converged'` — `ConflictError` on a replayed create: every queued create
+ *                    carries its client-minted id, so a duplicate-id conflict
+ *                    proves an earlier attempt already committed the row. The
+ *                    change is on the server; dequeue as success. (Re-favorite /
+ *                    re-delete replays converge differently — the server resolves
+ *                    them to the existing entity as a SUCCESS payload, already
+ *                    classified `'applied'` above — so they never reach here.)
  *  - `'rejected'`  — any other error payload: the server refused the change.
  *                    Route to the permanent-failure pipeline.
  */
