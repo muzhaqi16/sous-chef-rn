@@ -32,6 +32,8 @@ interface TemplatePreviewSheetProps {
   confirmLoading: boolean;
   /** Server unreachable (offline / API down) — disables confirm (no replay path). */
   disabled?: boolean;
+  /** When provided, shows an "Edit template" link that opens the builder. */
+  onEdit?: (templateId: string) => void;
 }
 
 export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
@@ -41,6 +43,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
   onConfirm,
   confirmLoading,
   disabled = false,
+  onEdit,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -218,6 +221,26 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             </>
           )}
         </Pressable>
+
+        {!!onEdit && !!template && (
+          <Pressable
+            onPress={() => onEdit(template.id)}
+            style={({ pressed }) => [
+              styles.editButton,
+              pressed && styles.buttonPressed,
+            ]}
+          >
+            <Icon name="create-outline" size={18} tone="accent" />
+            <Text
+              size="base"
+              weight="medium"
+              tone="accent"
+              style={styles.editText}
+            >
+              {t('templatePreview.editTemplate')}
+            </Text>
+          </Pressable>
+        )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -290,6 +313,16 @@ const styles = StyleSheet.create(theme => ({
   },
   confirmText: {
     color: theme.colors.white,
+  },
+  editButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+  },
+  editText: {
+    marginLeft: theme.spacing.xs,
   },
   buttonPressed: {
     opacity: theme.opacity.pressed,

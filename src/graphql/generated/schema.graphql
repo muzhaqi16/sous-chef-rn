@@ -237,6 +237,19 @@ type AddIngredientResult {
   wasUpdated: Boolean!
 }
 
+"""Input for categorizing an item"""
+input AddItemToCategoryInput {
+  categoryId: ID!
+  isPrimary: Boolean
+  itemId: ID!
+}
+
+type AddItemToCategoryPayload {
+  itemCategory: ItemCategory!
+}
+
+union AddItemToCategoryResult = AddItemToCategoryPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 input AddItemsToShoppingListInput {
   items: [BatchAddShoppingListItemInput!]!
   shoppingListId: ID!
@@ -282,6 +295,34 @@ type AddPantryItemToShoppingListResult {
 
 union AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+input AddRecipeToFavoritesInput {
+  folder: String
+  """
+  Optional client-generated permanent ID (CUID2).
+  Offline-first clients mint this as the saved-recipe row's permanent primary
+  key so a re-synced favorite resolves to the same record (idempotent) instead
+  of duplicating. When omitted, the server generates one via @default(cuid(2)).
+  Must match the CUID2 format; invalid formats are rejected by ID validation.
+  """
+  id: ID
+  notes: String
+  recipeId: ID!
+  tags: [String!]
+}
+
+type AddRecipeToFavoritesPayload {
+  """
+  True when this call CONVERGED on a pre-existing favorite (the recipe was
+  already favorited) — it did NOT create one. Either way savedRecipe is the
+  canonical server record. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
+  recipe: Recipe
+  savedRecipe: SavedRecipe!
+}
+
+union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 """Input for adding recipe ingredients to a shopping list"""
 input AddRecipeToShoppingListInput {
   checkPantry: Boolean
@@ -294,7 +335,7 @@ type AddRecipeToShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
-union AddRecipeToShoppingListResultUnion = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+union AddRecipeToShoppingListResult = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AddRestrictionInput {
   appliesToHomeId: ID
@@ -385,6 +426,7 @@ Creates an ADJUSTMENT usage record for audit trail.
 """
 input AdjustPantryItemQuantityInput {
   id: ID!
+  idempotencyKey: ID
   """The actual quantity from physical count"""
   newQuantity: Float!
   """Why the adjustment was made (required for audit trail)"""
@@ -403,6 +445,31 @@ type AdjustPantryItemQuantityPayload {
 }
 
 union AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+"""
+Input for correcting the net weight of a dual-tracked pantry item.
+Recalculates remainingNetWeight proportionally and derives new quantity.
+"""
+input AdjustPantryItemWeightInput {
+  id: ID!
+  """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
+  netWeight: Float!
+  """
+  Unit for the net weight (optional — only provide to also change the unit)
+  """
+  netWeightUnitId: ID
+  """Why the correction is needed (required for audit trail)"""
+  reason: String!
+  """Optimistic concurrency control"""
+  version: Int!
+}
+
+type AdjustPantryItemWeightPayload {
+  pantry: Pantry
+  pantryItem: PantryItem!
+}
+
+union AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AdminBulkDeleteItemsInput {
   ids: [ID!]!
@@ -1122,19 +1189,6 @@ type CancelRecurringPayload {
 
 union CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-"""Input for categorizing an item"""
-input CategorizeItemInput {
-  categoryId: ID!
-  isPrimary: Boolean
-  itemId: ID!
-}
-
-type CategorizeItemPayload {
-  itemCategory: ItemCategory!
-}
-
-union CategorizeItemResult = CategorizeItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 """
 Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
@@ -1260,36 +1314,6 @@ enum ChangeType {
   WEIGHT_CORRECTED
 }
 
-type CleanupDevicesPayload {
-  result: DeviceCleanupResult!
-}
-
-union CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input ClearReminderInput {
-  id: ID!
-}
-
-type ClearReminderPayload {
-  shoppingList: ShoppingList!
-}
-
-union ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input ClearShoppingListItemsInput {
-  purchased: Boolean!
-  shoppingListId: ID!
-}
-
-type ClearShoppingListItemsPayload {
-  """IDs of the items that were cleared."""
-  clearedItemIds: [ID!]!
-  """Summary of the bulk clear operation."""
-  summary: BulkOperationSummary!
-}
-
-union ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 """Order by options for collaborators"""
 input CollaboratorOrderBy {
   invitedAt: SortOrder
@@ -1387,18 +1411,18 @@ input ConfirmRecipeConsumptionInput {
 type ConfirmRecipeConsumptionPayload {
   """Pantry usages recorded for the consumed ingredients."""
   consumedItems: [PantryItemUsage!]!
+  """
+  True when this call CONVERGED on a pre-existing cooking log (a client-provided
+  id matched an existing log) — it did NOT re-consume. On a converge,
+  consumedItems is empty. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The cooking log entry recorded for this consumption, if any."""
   cookingLog: CookingLog
   """Ingredients that could not be consumed (e.g. insufficient stock)."""
   failedItems: [ConsumptionFailure!]!
   totalConsumed: Int!
   totalFailed: Int!
-  """
-  True when this call recorded the consumption; false when a client-provided
-  id matched an existing cooking log and the call converged on it without
-  re-consuming (idempotent replay). On a replay, consumedItems is empty.
-  """
-  wasApplied: Boolean!
 }
 
 union ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1504,6 +1528,7 @@ enum ConversionType {
 }
 
 input ConvertExpiredBatchesToWasteInput {
+  idempotencyKey: ID
   pantryItemId: ID!
 }
 
@@ -1515,6 +1540,7 @@ type ConvertExpiredBatchesToWastePayload {
 union ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError
 
 input ConvertExpiredToWasteInput {
+  idempotencyKey: ID
   pantryItemId: ID!
 }
 
@@ -1594,31 +1620,6 @@ type CookingStats {
   totalCookingSessions: Int!
   totalRecipesCooked: Int!
 }
-
-"""
-Input for correcting the net weight of a dual-tracked pantry item.
-Recalculates remainingNetWeight proportionally and derives new quantity.
-"""
-input CorrectPantryItemWeightInput {
-  id: ID!
-  """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
-  netWeight: Float!
-  """
-  Unit for the net weight (optional — only provide to also change the unit)
-  """
-  netWeightUnitId: ID
-  """Why the correction is needed (required for audit trail)"""
-  reason: String!
-  """Optimistic concurrency control"""
-  version: Int!
-}
-
-type CorrectPantryItemWeightPayload {
-  pantry: Pantry
-  pantryItem: PantryItem!
-}
-
-union CorrectPantryItemWeightResult = ConflictError | CorrectPantryItemWeightPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateBrandInput {
   description: String
@@ -2073,6 +2074,19 @@ type CreateRecipeReviewPayload {
 
 union CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError
 
+input CreateRecurringShoppingListInput {
+  id: ID!
+  nextRecurringDate: DateTime
+  recurringInterval: Int!
+  recurringPattern: RecurringPattern!
+}
+
+type CreateRecurringShoppingListPayload {
+  shoppingList: ShoppingList!
+}
+
+union CreateRecurringShoppingListResult = ConflictError | CreateRecurringShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateShoppingListInput {
   budgetAmount: Float
   description: String
@@ -2229,6 +2243,18 @@ type CreateTemplateFromMealPlanPayload {
 }
 
 union CreateTemplateFromMealPlanResult = ConflictError | CreateTemplateFromMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateUnitConversionInput {
+  baseUnitId: ID!
+  conversionFactor: Float!
+  unitId: ID!
+}
+
+type CreateUnitConversionPayload {
+  unit: Unit!
+}
+
+union CreateUnitConversionResult = ConflictError | CreateUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateUnitInput {
   baseUnitId: ID
@@ -2496,6 +2522,17 @@ input DeleteHomeInput {
   id: ID!
 }
 
+input DeleteHomeInviteInput {
+  id: ID!
+}
+
+type DeleteHomeInvitePayload {
+  home: Home
+  homeInvite: HomeInvite!
+}
+
+union DeleteHomeInviteResult = ConflictError | DeleteHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError
+
 type DeleteHomePayload {
   home: Home!
 }
@@ -2646,11 +2683,49 @@ input DeleteShoppingListInput {
   id: ID!
 }
 
+input DeleteShoppingListItemsInput {
+  purchased: Boolean!
+  shoppingListId: ID!
+}
+
+type DeleteShoppingListItemsPayload {
+  """IDs of the items that were cleared."""
+  clearedItemIds: [ID!]!
+  """Summary of the bulk clear operation."""
+  summary: BulkOperationSummary!
+}
+
+union DeleteShoppingListItemsResult = ConflictError | DeleteShoppingListItemsPayload | ForbiddenError | NotFoundError | ValidationError
+
 type DeleteShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
+input DeleteShoppingListReminderInput {
+  id: ID!
+}
+
+type DeleteShoppingListReminderPayload {
+  shoppingList: ShoppingList!
+}
+
+union DeleteShoppingListReminderResult = ConflictError | DeleteShoppingListReminderPayload | ForbiddenError | NotFoundError | ValidationError
+
 union DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
+
+"""Input for device cleanup operations"""
+input DeleteStaleDevicesInput {
+  """Clean up soft-deleted devices older than X days"""
+  deletedDevices: DeletedDeviceCleanupInput
+  """Clean up stale devices (not seen for X days)"""
+  staleDevices: StaleDeviceCleanupInput
+}
+
+type DeleteStaleDevicesPayload {
+  result: DeviceCleanupResult!
+}
+
+union DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteStorageLocationInput {
   id: ID!
@@ -2806,14 +2881,6 @@ input DeviceCharacteristicsInput {
   hasNotch: Boolean
   isEmulator: Boolean
   isTablet: Boolean
-}
-
-"""Input for device cleanup operations"""
-input DeviceCleanupInput {
-  """Clean up soft-deleted devices older than X days"""
-  deletedDevices: DeletedDeviceCleanupInput
-  """Clean up stale devices (not seen for X days)"""
-  staleDevices: StaleDeviceCleanupInput
 }
 
 """Result of device cleanup operation"""
@@ -3138,38 +3205,6 @@ enum Difficulty {
   VERY_EASY
 }
 
-type DismissExpirationNotificationPayload {
-  expirationNotification: ExpirationNotification!
-  pantryItem: PantryItem
-}
-
-union DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError | ValidationError
-
-input DismissNotificationInput {
-  notificationId: ID!
-}
-
-"""
-Input to hide a catalog item from a user's suggestions on a given surface.
-"""
-input DismissSuggestionInput {
-  """Catalog item to stop suggesting."""
-  itemId: ID!
-  """Which surface to hide it from (pantry vs shopping)."""
-  surface: SuggestionSurface!
-}
-
-type DismissSuggestionPayload {
-  """Always true — the item is now dismissed on this surface."""
-  dismissed: Boolean!
-  """The item the dismissal applies to."""
-  itemId: ID!
-  """Surface the dismissal applies to."""
-  surface: SuggestionSurface!
-}
-
-union DismissSuggestionResult = ConflictError | DismissSuggestionPayload | ForbiddenError | NotFoundError | ValidationError
-
 """Display format for quantities"""
 enum DisplayFormat {
   AUTO
@@ -3274,6 +3309,10 @@ enum ErrorCode {
   EMAIL_ALREADY_VERIFIED
   FORBIDDEN
   HOME_ACCESS_DENIED
+  """
+  An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure.
+  """
+  IDEMPOTENT_REPLAY
   INTERNAL_ERROR
   NOT_FOUND
   PANTRY_ITEM_ALREADY_EXISTS
@@ -3473,34 +3512,6 @@ type FailedIPStat {
   ipAddress: String
 }
 
-input FavoriteRecipeInput {
-  folder: String
-  """
-  Optional client-generated permanent ID (CUID2).
-  Offline-first clients mint this as the saved-recipe row's permanent primary
-  key so a re-synced favorite resolves to the same record (idempotent) instead
-  of duplicating. When omitted, the server generates one via @default(cuid(2)).
-  Must match the CUID2 format; invalid formats are rejected by ID validation.
-  """
-  id: ID
-  notes: String
-  recipeId: ID!
-  tags: [String!]
-}
-
-type FavoriteRecipePayload {
-  recipe: Recipe
-  savedRecipe: SavedRecipe!
-  """
-  True when this call created the favorite; false when the recipe was already
-  favorited and the call converged on the existing record (idempotent replay
-  or a two-device race). Either way savedRecipe is the canonical server record.
-  """
-  wasCreated: Boolean!
-}
-
-union FavoriteRecipeResult = ConflictError | FavoriteRecipePayload | ForbiddenError | NotFoundError | ValidationError
-
 """Sub-input for feature-specific notifications"""
 input FeatureNotificationsInput {
   collaborationInvites: Boolean
@@ -3521,17 +3532,6 @@ input FeatureTogglesInput {
   betaFeatures: [String!]
   enabledFeatures: [String!]
 }
-
-input FlagItemForReviewInput {
-  itemId: ID!
-  reason: String
-}
-
-type FlagItemForReviewPayload {
-  item: Item!
-}
-
-union FlagItemForReviewResult = ConflictError | FlagItemForReviewPayload | ForbiddenError | NotFoundError | ValidationError
 
 """
 Quantity input that accepts both strings and numbers. Strings can be fractions like "1/3" or "1 1/4".
@@ -3975,28 +3975,6 @@ enum ImageUploadPurpose {
   PROFILE_AVATAR
   PROFILE_COVER
 }
-
-input IncrementItemPopularityInput {
-  amount: Int
-  id: ID!
-}
-
-type IncrementItemPopularityPayload {
-  item: Item!
-}
-
-union IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError | ValidationError
-
-input IncrementRecipeCookedCountInput {
-  recipeId: ID!
-}
-
-type IncrementRecipeCookedCountPayload {
-  recipe: Recipe
-  savedRecipe: SavedRecipe!
-}
-
-union IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError | ValidationError
 
 input IngredientInput {
   isActive: Boolean
@@ -4985,47 +4963,6 @@ type LowStockToShoppingListResult {
   skippedItems: [SkippedLowStockItem!]!
 }
 
-"""Input for managing appeals (submit or review)."""
-input ManageAppealInput {
-  """For submitting: appeal notes from the user"""
-  appealNotes: String
-  """
-  For reviewing: whether the appeal is approved (null = submitting, true/false = reviewing)
-  """
-  approved: Boolean
-  """For reviewing: reviewer's notes"""
-  reviewNotes: String
-  userId: ID!
-}
-
-type ManageAppealPayload {
-  userModeration: UserModeration
-}
-
-union ManageAppealResult = ConflictError | ForbiddenError | ManageAppealPayload | NotFoundError | ValidationError
-
-"""Input for managing restrictions (add and/or remove in one call)."""
-input ManageRestrictionsInput {
-  """Restrictions to add"""
-  add: [ModerationRestriction!]
-  reason: String
-  """Restrictions to remove"""
-  remove: [ModerationRestriction!]
-  restrictedUntil: DateTime
-  userId: ID!
-}
-
-type ManageRestrictionsPayload {
-  userModeration: UserModeration
-}
-
-union ManageRestrictionsResult = ConflictError | ForbiddenError | ManageRestrictionsPayload | NotFoundError | ValidationError
-
-input MarkActionInput {
-  action: ExpirationAction!
-  notificationId: ID!
-}
-
 type MarkAllNotificationsAsReadPayload {
   count: Int!
   notifications: [Notification!]!
@@ -5045,6 +4982,11 @@ type MarkAsTemplatePayload {
 
 union MarkAsTemplateResult = ConflictError | ForbiddenError | MarkAsTemplatePayload | NotFoundError | ValidationError
 
+input MarkExpirationActionInput {
+  action: ExpirationAction!
+  notificationId: ID!
+}
+
 type MarkExpirationActionPayload {
   expirationNotification: ExpirationNotification!
   pantryItem: PantryItem
@@ -5062,6 +5004,39 @@ type MarkExpirationNotificationAsReadPayload {
 }
 
 union MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError
+
+input MarkExpirationNotificationDismissedInput {
+  notificationId: ID!
+}
+
+type MarkExpirationNotificationDismissedPayload {
+  expirationNotification: ExpirationNotification!
+  pantryItem: PantryItem
+}
+
+union MarkExpirationNotificationDismissedResult = ConflictError | ForbiddenError | MarkExpirationNotificationDismissedPayload | NotFoundError | ValidationError
+
+input MarkHomeAsDefaultInput {
+  homeId: ID!
+}
+
+type MarkHomeAsDefaultPayload {
+  defaultPantry: Pantry
+  settings: UserSettings!
+}
+
+union MarkHomeAsDefaultResult = ConflictError | ForbiddenError | MarkHomeAsDefaultPayload | NotFoundError | ValidationError
+
+input MarkItemForReviewInput {
+  itemId: ID!
+  reason: String
+}
+
+type MarkItemForReviewPayload {
+  item: Item!
+}
+
+union MarkItemForReviewResult = ConflictError | ForbiddenError | MarkItemForReviewPayload | NotFoundError | ValidationError
 
 input MarkNotificationAsReadInput {
   id: ID!
@@ -5082,6 +5057,17 @@ type MarkNotificationUnreadPayload {
 }
 
 union MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError
+
+input MarkPantryAsDefaultInput {
+  id: ID!
+}
+
+type MarkPantryAsDefaultPayload {
+  home: Home
+  pantry: Pantry!
+}
+
+union MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsDefaultPayload | NotFoundError | ValidationError
 
 input MarkPantryItemExpiredInput {
   id: ID!
@@ -5113,17 +5099,90 @@ input MarkRecipeAsCookedInput {
 }
 
 type MarkRecipeAsCookedPayload {
+  """
+  True when this call CONVERGED on a pre-existing cooking log (a client-provided
+  id matched an existing log) — it did NOT re-log or re-deduct the pantry. The
+  canonical, API-wide replay flag; clients treat converged=true as already-synced.
+  """
+  converged: Boolean!
   cookingLog: CookingLog!
   recipe: Recipe
-  """
-  True when this call recorded the cooking log (and deducted the pantry);
-  false when a client-provided id matched an existing log and the call
-  converged on it without re-logging or re-deducting (idempotent replay).
-  """
-  wasApplied: Boolean!
 }
 
 union MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedPayload | NotFoundError | ValidationError
+
+input MarkShoppingListActiveInput {
+  id: ID!
+}
+
+type MarkShoppingListActivePayload {
+  shoppingList: ShoppingList!
+}
+
+union MarkShoppingListActiveResult = ConflictError | ForbiddenError | MarkShoppingListActivePayload | NotFoundError | ValidationError
+
+input MarkShoppingListAsDefaultInput {
+  id: ID!
+}
+
+type MarkShoppingListAsDefaultPayload {
+  shoppingList: ShoppingList!
+}
+
+union MarkShoppingListAsDefaultResult = ConflictError | ForbiddenError | MarkShoppingListAsDefaultPayload | NotFoundError | ValidationError
+
+input MarkStorageLocationAsDefaultInput {
+  id: ID!
+}
+
+type MarkStorageLocationAsDefaultPayload {
+  home: Home
+  storageLocation: StorageLocation!
+}
+
+union MarkStorageLocationAsDefaultResult = ConflictError | ForbiddenError | MarkStorageLocationAsDefaultPayload | NotFoundError | ValidationError
+
+"""
+Input to restore a previously-dismissed item so it can be suggested again.
+"""
+input MarkSuggestionActiveInput {
+  """Catalog item to start suggesting again."""
+  itemId: ID!
+  """Which surface to restore it on (pantry vs shopping)."""
+  surface: SuggestionSurface!
+}
+
+type MarkSuggestionActivePayload {
+  """Always false — the item can be suggested again on this surface."""
+  dismissed: Boolean!
+  """The item the dismissal was removed for."""
+  itemId: ID!
+  """Surface the item was restored on."""
+  surface: SuggestionSurface!
+}
+
+union MarkSuggestionActiveResult = ConflictError | ForbiddenError | MarkSuggestionActivePayload | NotFoundError | ValidationError
+
+"""
+Input to hide a catalog item from a user's suggestions on a given surface.
+"""
+input MarkSuggestionDismissedInput {
+  """Catalog item to stop suggesting."""
+  itemId: ID!
+  """Which surface to hide it from (pantry vs shopping)."""
+  surface: SuggestionSurface!
+}
+
+type MarkSuggestionDismissedPayload {
+  """Always true — the item is now dismissed on this surface."""
+  dismissed: Boolean!
+  """The item the dismissal applies to."""
+  itemId: ID!
+  """Surface the dismissal applies to."""
+  surface: SuggestionSurface!
+}
+
+union MarkSuggestionDismissedResult = ConflictError | ForbiddenError | MarkSuggestionDismissedPayload | NotFoundError | ValidationError
 
 enum MatchType {
   CATEGORY
@@ -5701,7 +5760,7 @@ type Mutation {
   """Accept an invitation to collaborate on a shopping list."""
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
   """Add an item to a category."""
-  addItemToCategory(input: CategorizeItemInput!): CategorizeItemResult!
+  addItemToCategory(input: AddItemToCategoryInput!): AddItemToCategoryResult!
   """
   Batch add multiple items to a shopping list.
   More efficient than calling addItemToShoppingList multiple times.
@@ -5722,12 +5781,15 @@ type Mutation {
   Add a recipe to the user's favorites (creates a saved recipe with optional
   folder/tags/notes).
   """
-  addRecipeToFavorites(input: FavoriteRecipeInput!): FavoriteRecipeResult!
+  addRecipeToFavorites(input: AddRecipeToFavoritesInput!): AddRecipeToFavoritesResult!
   """
-  Add recipe ingredients to shopping list with smart unit handling
-  Checks pantry for available items and only adds deficit
+  Add a recipe's ingredients to a shopping list, pantry-deficit-aware: checks
+  the pantry and adds only the shortfall (with smart unit handling). Use
+  createShoppingListItemsFromRecipe instead to add every ingredient in full
+  regardless of pantry stock — the two are intentional variants (§5), not
+  duplicates.
   """
-  addRecipeToShoppingList(input: AddRecipeToShoppingListInput!): AddRecipeToShoppingListResultUnion!
+  addRecipeToShoppingList(input: AddRecipeToShoppingListInput!): AddRecipeToShoppingListResult!
   """Add a dietary restriction to the user's profile."""
   addRestriction(input: AddRestrictionInput!): AddRestrictionResult!
   """Add an item to a template"""
@@ -5745,7 +5807,7 @@ type Mutation {
   Recalculates remainingNetWeight proportionally and derives new quantity.
   Use this when the original net weight was entered incorrectly.
   """
-  adjustPantryItemWeight(input: CorrectPantryItemWeightInput!): CorrectPantryItemWeightResult!
+  adjustPantryItemWeight(input: AdjustPantryItemWeightInput!): AdjustPantryItemWeightResult!
   """Create multiple items at once"""
   bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResult!
   """Create multiple purchase records at once."""
@@ -5845,10 +5907,17 @@ type Mutation {
   """Create a review for a published recipe."""
   createRecipeReview(input: CreateRecipeReviewInput!): CreateRecipeReviewResult!
   """Create recurring generation for a shopping list."""
-  createRecurringShoppingList(input: SetupRecurringInput!): SetupRecurringResult!
+  createRecurringShoppingList(input: CreateRecurringShoppingListInput!): CreateRecurringShoppingListResult!
   """Create a new shopping list."""
   createShoppingList(input: CreateShoppingListInput!): CreateShoppingListResult!
   createShoppingListItemFromRecipeIngredient(input: CreateShoppingListItemFromRecipeIngredientInput!): CreateShoppingListItemFromRecipeIngredientResult!
+  """
+  Add every ingredient of a recipe to a shopping list in full (scaling
+  quantities when servings differ), without checking the pantry. Use
+  addRecipeToShoppingList instead for the pantry-deficit-aware variant that
+  adds only the shortfall — the two are intentional variants (§5), not
+  duplicates.
+  """
   createShoppingListItemsFromRecipe(input: CreateShoppingListItemsFromRecipeInput!): CreateShoppingListItemsFromRecipeResult!
   """
   Create a new storage location
@@ -5865,7 +5934,7 @@ type Mutation {
   """Create a new unit of measurement."""
   createUnit(input: CreateUnitInput!): CreateUnitResult!
   """Create a conversion factor between a unit and its base unit."""
-  createUnitConversion(input: SetupUnitConversionInput!): SetupUnitConversionResult!
+  createUnitConversion(input: CreateUnitConversionInput!): CreateUnitConversionResult!
   """Decline a home invitation using its token."""
   declineHomeInvite(input: DeclineHomeInviteInput!): DeclineHomeInviteResult!
   """Decline an invitation to collaborate on a shopping list."""
@@ -5892,7 +5961,7 @@ type Mutation {
   """Delete a home (owner only)."""
   deleteHome(input: DeleteHomeInput!): DeleteHomeResult!
   """Delete a pending home invitation."""
-  deleteHomeInvite(input: RevokeHomeInviteInput!): RevokeHomeInviteResult!
+  deleteHomeInvite(input: DeleteHomeInviteInput!): DeleteHomeInviteResult!
   """Delete an item (soft delete by default, permanent if specified)"""
   deleteItem(input: DeleteItemInput!): DeleteItemResult!
   """Delete a meal plan."""
@@ -5924,9 +5993,9 @@ type Mutation {
   Use purchased=true to delete purchased items, purchased=false to delete unpurchased items.
   Returns summary with count of deleted items.
   """
-  deleteShoppingListItems(input: ClearShoppingListItemsInput!): ClearShoppingListItemsResult!
+  deleteShoppingListItems(input: DeleteShoppingListItemsInput!): DeleteShoppingListItemsResult!
   """Delete the reminder from a shopping list."""
-  deleteShoppingListReminder(input: ClearReminderInput!): ClearReminderResult!
+  deleteShoppingListReminder(input: DeleteShoppingListReminderInput!): DeleteShoppingListReminderResult!
   """
   Delete a storage location (soft delete)
   Fails if location has child locations or items
@@ -5974,21 +6043,21 @@ type Mutation {
   """Mark a shopping list as a reusable template."""
   markAsTemplate(input: MarkAsTemplateInput!): MarkAsTemplateResult!
   """Record an action taken on an expiring item."""
-  markExpirationAction(input: MarkActionInput!): MarkExpirationActionResult!
+  markExpirationAction(input: MarkExpirationActionInput!): MarkExpirationActionResult!
   """Mark an expiration notification as read."""
   markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
   """Mark an expiration notification dismissed so it no longer appears."""
-  markExpirationNotificationDismissed(input: DismissNotificationInput!): DismissExpirationNotificationResult!
+  markExpirationNotificationDismissed(input: MarkExpirationNotificationDismissedInput!): MarkExpirationNotificationDismissedResult!
   """Mark a home as the default for the current user."""
-  markHomeAsDefault(input: SetDefaultHomeInput!): SetDefaultHomeResult!
+  markHomeAsDefault(input: MarkHomeAsDefaultInput!): MarkHomeAsDefaultResult!
   """Mark an item for review"""
-  markItemForReview(input: FlagItemForReviewInput!): FlagItemForReviewResult!
+  markItemForReview(input: MarkItemForReviewInput!): MarkItemForReviewResult!
   """Mark a notification as read."""
   markNotificationAsRead(input: MarkNotificationAsReadInput!): MarkNotificationAsReadResult!
   """Mark a notification as unread."""
   markNotificationUnread(input: MarkNotificationUnreadInput!): MarkNotificationUnreadResult!
   """Mark a pantry as the default for its home."""
-  markPantryAsDefault(input: SetDefaultPantryInput!): SetDefaultPantryResult!
+  markPantryAsDefault(input: MarkPantryAsDefaultInput!): MarkPantryAsDefaultResult!
   """Mark a pantry item as expired."""
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """
@@ -6000,20 +6069,20 @@ type Mutation {
   """
   markRecipeAsCooked(input: MarkRecipeAsCookedInput!): MarkRecipeAsCookedResult!
   """Mark a completed shopping list active again."""
-  markShoppingListActive(input: UncompleteShoppingListInput!): UncompleteShoppingListResult!
+  markShoppingListActive(input: MarkShoppingListActiveInput!): MarkShoppingListActiveResult!
   """Mark a shopping list as the default."""
-  markShoppingListAsDefault(input: SetDefaultShoppingListInput!): SetDefaultShoppingListResult!
+  markShoppingListAsDefault(input: MarkShoppingListAsDefaultInput!): MarkShoppingListAsDefaultResult!
   """
   Mark a storage location as the default for its home.
   Automatically unsets the previous default location.
   Requires user to have edit permissions in the home.
   """
-  markStorageLocationAsDefault(input: SetDefaultStorageLocationInput!): SetDefaultStorageLocationResult!
+  markStorageLocationAsDefault(input: MarkStorageLocationAsDefaultInput!): MarkStorageLocationAsDefaultResult!
   """
   Mark a previously-dismissed item active again so it can appear in your
   suggestions on the given surface.
   """
-  markSuggestionActive(input: UndismissSuggestionInput!): UndismissSuggestionResult!
+  markSuggestionActive(input: MarkSuggestionActiveInput!): MarkSuggestionActiveResult!
   """
   Mark a catalog item dismissed from your pantry or shopping suggestions
   ("stop suggesting this"). Non-destructive and reversible via
@@ -6023,7 +6092,7 @@ type Mutation {
   Dismissals are per-user, so on shared lists/homes only your own
   suggestions are affected.
   """
-  markSuggestionDismissed(input: DismissSuggestionInput!): DismissSuggestionResult!
+  markSuggestionDismissed(input: MarkSuggestionDismissedInput!): MarkSuggestionDismissedResult!
   """
   Move all purchased items from a shopping list to the home's default pantry.
   Only available for shopping lists linked to a home.
@@ -6044,9 +6113,9 @@ type Mutation {
   Mark a specific batch as opened.
   Sets isOpened=true and openedAt to current time on the targeted batch.
   """
-  openPantryItemBatch(input: OpenBatchInput!): OpenPantryItemBatchResult!
+  openPantryItemBatch(input: OpenPantryItemBatchInput!): OpenPantryItemBatchResult!
   """Record an increment to an item's popularity counter."""
-  recordItemPopularity(input: IncrementItemPopularityInput!): IncrementItemPopularityResult!
+  recordItemPopularity(input: RecordItemPopularityInput!): RecordItemPopularityResult!
   """
   Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
   Use for all login recording — both high-level attempts and direct history creation.
@@ -6057,7 +6126,7 @@ type Mutation {
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """Record that a saved recipe was cooked (increments the cooked count)."""
-  recordRecipeCooked(input: IncrementRecipeCookedCountInput!): IncrementRecipeCookedCountResult!
+  recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
   refresh(input: RefreshTokenInput!): RefreshTokenPayload!
   """Register a new user account and return tokens."""
@@ -6068,7 +6137,7 @@ type Mutation {
   """
   registerDevice(input: DeviceRegistrationInput!): RegisterDeviceResult!
   """Remove an item from a category."""
-  removeItemFromCategory(input: UncategorizeItemInput!): UncategorizeItemResult!
+  removeItemFromCategory(input: RemoveItemFromCategoryInput!): RemoveItemFromCategoryResult!
   """Remove an item from a shopping list."""
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """Remove the primary image from an item (deletes from S3)"""
@@ -6076,7 +6145,7 @@ type Mutation {
   """Remove a member from a home (owner/admin only)."""
   removeMember(input: RemoveMemberInput!): RemoveMemberResult!
   """Remove a recipe from the user's favorites."""
-  removeRecipeFromFavorites(input: UnfavoriteRecipeInput!): UnfavoriteRecipeResult!
+  removeRecipeFromFavorites(input: RemoveRecipeFromFavoritesInput!): RemoveRecipeFromFavoritesResult!
   """Remove a dietary restriction from the user's profile."""
   removeRestriction(input: RemoveRestrictionInput!): RemoveRestrictionResult!
   """Remove a collaborator from a shopping list."""
@@ -6101,66 +6170,33 @@ type Mutation {
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """
-  Offline-sync twin of adjustPantryItemQuantity — idempotent by operationId:
-  replaying does not re-scale batches or pollute the ledger.
+  Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
   """
-  syncAdjustPantryItemQuantity(input: SyncAdjustPantryItemQuantityInput!): SyncPantryDeltaResult!
-  """
-  Offline-sync twin of the canonical pantry-consumption mutation — idempotent
-  by operationId (incl. waste-via-usage): replaying does not decrement
-  quantity twice.
-  """
-  syncConsumePantryItem(input: SyncConsumePantryItemInput!): SyncPantryDeltaResult!
-  """
-  Offline-sync twin of convertExpiredBatchesToWaste — idempotent by operationId:
-  replaying returns current state without re-wasting batches.
-  """
-  syncConvertExpiredBatchesToWaste(input: SyncConvertExpiredBatchesToWasteInput!): SyncPantryDeltaResult!
-  """
-  Offline-sync twin of convertExpiredToWaste — idempotent by operationId:
-  replaying returns current state without writing a second waste ledger entry.
-  """
-  syncConvertExpiredToWaste(input: SyncConvertExpiredToWasteInput!): SyncPantryDeltaResult!
-  """Offline-sync twin of deletePantryItem — idempotent by operationId."""
   syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
   """
-  Offline-sync twin of removeItemFromShoppingList — idempotent by operationId.
+  Offline-sync twin of removeItemFromShoppingList — idempotent by a
+  client-minted id.
   """
   syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncShoppingListItemResult!
   """
-  Offline-sync twin of moveShoppingListItem (reorder) — idempotent by operationId.
+  Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
+  client-minted id.
   """
   syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncShoppingListItemResult!
   """
-  Offline-sync twin of openPantryItemBatch — idempotent by operationId.
-  Naturally idempotent: replaying (or opening an already-open batch) returns
-  current state as a no-op.
-  """
-  syncOpenPantryItemBatch(input: SyncOpenPantryItemBatchInput!): SyncPantryDeltaResult!
-  """
-  Offline-sync twin of createPantryItem/updatePantryItem — idempotent by
-  operationId. Use the online mutations directly when not syncing offline
-  edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+  Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
+  client-minted id (the primary key for creates, idempotencyKey for
+  cumulative deltas). Use the online mutations directly when not syncing
+  offline edits. See docs/api/graphql-operation-conventions.md (§5 variants).
   """
   syncPantryItem(input: SyncPantryItemInput!): SyncPantryItemResult!
   """
-  Offline-sync twin of restockPantryItem — idempotent by operationId:
-  replaying the same operationId returns current state without adding
-  inventory again (no double-count). Authorization is enforced at the
-  service layer.
-  """
-  syncRestockPantryItem(input: SyncRestockPantryItemInput!): SyncPantryDeltaResult!
-  """
   Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
-  idempotent by operationId. Use the online mutations directly when not
-  syncing offline edits. See docs/api/graphql-operation-conventions.md (§5).
+  idempotent by a client-minted id (the primary key or idempotencyKey). Use
+  the online mutations directly when not syncing offline edits. See
+  docs/api/graphql-operation-conventions.md (§5).
   """
   syncShoppingListItem(input: SyncShoppingListItemFullInput!): SyncShoppingListItemResult!
-  """
-  Offline-sync twin of wastePantryItemBatch — idempotent by operationId:
-  replaying returns current state without writing a phantom waste ledger entry.
-  """
-  syncWastePantryItemBatch(input: SyncWastePantryItemBatchInput!): SyncPantryDeltaResult!
   """Toggle a helpful vote on a recipe review."""
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Toggle the purchased state of a shopping list item."""
@@ -6201,7 +6237,7 @@ type Mutation {
   """
   Rotate (update) a home's join code, invalidating any previously shared join link.
   """
-  updateHomeJoinCode(input: RegenerateHomeJoinCodeInput!): UpdateHomeResult!
+  updateHomeJoinCode(input: UpdateHomeJoinCodeInput!): UpdateHomeResult!
   """
   Update an item. Consolidated mutation that handles:
   - Basic fields (name, description, type, etc.)
@@ -6263,7 +6299,7 @@ type Mutation {
   """Update shopping list item quantity (supports fractions)"""
   updateShoppingListItemQuantity(input: UpdateShoppingListItemQuantityInput!): UpdateShoppingListItemQuantityResult!
   """Update the reminder for a shopping list."""
-  updateShoppingListReminder(input: SetReminderInput!): SetReminderResult!
+  updateShoppingListReminder(input: UpdateShoppingListReminderInput!): UpdateShoppingListReminderResult!
   """
   Update an existing storage location
   Validates parent-child relationships and prevents circular references
@@ -6275,7 +6311,7 @@ type Mutation {
   All locations must belong to the same home
   Requires user to have edit permissions in the home
   """
-  updateStorageLocationOrder(input: ReorderStorageLocationsInput!): ReorderStorageLocationsResult!
+  updateStorageLocationOrder(input: UpdateStorageLocationOrderInput!): UpdateStorageLocationOrderResult!
   updateStore(input: UpdateStoreInput!): UpdateStoreResult!
   updateStoreInfo(input: UpdateStoreInfoInput!): UpdateStoreInfoResult!
   """Update a template item"""
@@ -6290,7 +6326,7 @@ type Mutation {
   Update appeals (submit or review).
   Consolidates: submitAppeal, reviewAppeal.
   """
-  updateUserAppeal(input: ManageAppealInput!): ManageAppealResult!
+  updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   upsertExternalRecipe(input: CreateRecipeInput!): UpsertExternalRecipeResult!
   """Create or update an item based on its external source ID."""
   upsertItemByExternalSource(input: UpsertItemByExternalSourceInput!): UpsertItemByExternalSourceResult!
@@ -6309,7 +6345,7 @@ type Mutation {
   Waste a specific batch within a pantry item.
   Only the targeted batch is zeroed out; other batches remain active.
   """
-  wastePantryItemBatch(input: WasteBatchInput!): WastePantryItemBatchResult!
+  wastePantryItemBatch(input: WastePantryItemBatchInput!): WastePantryItemBatchResult!
 }
 
 """
@@ -6718,8 +6754,9 @@ type OfferSummary {
 }
 
 """Input for opening a specific batch"""
-input OpenBatchInput {
+input OpenPantryItemBatchInput {
   batchId: ID!
+  idempotencyKey: ID
 }
 
 type OpenPantryItemBatchPayload {
@@ -8106,6 +8143,17 @@ enum RecipeStatus {
   PUBLISHED
 }
 
+input RecordItemPopularityInput {
+  amount: Int
+  id: ID!
+}
+
+type RecordItemPopularityPayload {
+  item: Item!
+}
+
+union RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | RecordItemPopularityPayload | ValidationError
+
 """
 Consolidated input for recording a login event.
 Replaces both LoginAttemptInput (high-level) and CreateLoginHistoryInput (detailed).
@@ -8142,6 +8190,7 @@ union RecordLoginResult = ConflictError | ForbiddenError | NotFoundError | Recor
 
 input RecordPantryItemUsageInput {
   cookingLogId: ID
+  idempotencyKey: ID
   isComposted: Boolean
   isRecycled: Boolean
   mealPlanItemId: ID
@@ -8157,6 +8206,7 @@ input RecordPantryItemUsageInput {
 
 """Input for recording pantry item usage"""
 input RecordPantryUsageInput {
+  idempotencyKey: ID
   notes: String
   pantryItemId: ID!
   purpose: UsagePurpose
@@ -8188,6 +8238,18 @@ type RecordPriceObservationPayload {
 
 union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError
 
+input RecordRecipeCookedInput {
+  idempotencyKey: ID
+  recipeId: ID!
+}
+
+type RecordRecipeCookedPayload {
+  recipe: Recipe
+  savedRecipe: SavedRecipe!
+}
+
+union RecordRecipeCookedResult = ConflictError | ForbiddenError | NotFoundError | RecordRecipeCookedPayload | ValidationError
+
 enum RecurringPattern {
   BIWEEKLY
   CUSTOM
@@ -8204,11 +8266,6 @@ input RefreshTokenInput {
 type RefreshTokenPayload {
   accessToken: String!
   refreshToken: String!
-}
-
-input RegenerateHomeJoinCodeInput {
-  """ID of the home whose join code to rotate."""
-  id: ID!
 }
 
 """Sub-input for regional/locale settings"""
@@ -8260,6 +8317,17 @@ input RemoveCollaboratorInput {
   shoppingListId: ID!
 }
 
+input RemoveItemFromCategoryInput {
+  categoryId: ID!
+  itemId: ID!
+}
+
+type RemoveItemFromCategoryPayload {
+  itemCategory: ItemCategory!
+}
+
+union RemoveItemFromCategoryResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromCategoryPayload | ValidationError
+
 input RemoveItemFromShoppingListInput {
   id: ID!
 }
@@ -8291,6 +8359,26 @@ type RemoveMemberPayload {
 }
 
 union RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload | ValidationError
+
+input RemoveRecipeFromFavoritesInput {
+  recipeId: ID!
+}
+
+type RemoveRecipeFromFavoritesPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the recipe was already
+  not favorited) — a no-op success. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
+  recipe: Recipe
+  """
+  The removed favorite, or null when the recipe was already not favorited — an
+  idempotent replay (or second device) that converged as success. See converged.
+  """
+  savedRecipe: SavedRecipe
+}
+
+union RemoveRecipeFromFavoritesResult = ConflictError | ForbiddenError | NotFoundError | RemoveRecipeFromFavoritesPayload | ValidationError
 
 input RemoveRestrictionInput {
   id: ID!
@@ -8339,24 +8427,6 @@ type RemoveUnitConversionPayload {
 }
 
 union RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError
-
-"""
-Input for reordering multiple storage locations
-Arrays must be the same length
-"""
-input ReorderStorageLocationsInput {
-  """Array of location IDs to reorder"""
-  locationIds: [ID!]!
-  """Array of new sort orders (must match locationIds length)"""
-  sortOrders: [Int!]!
-}
-
-type ReorderStorageLocationsPayload {
-  home: Home
-  storageLocation: StorageLocation!
-}
-
-union ReorderStorageLocationsResult = ConflictError | ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError
 
 input ResendVerificationEmailInput {
   email: String!
@@ -8422,6 +8492,7 @@ input RestockPantryItemInput {
   costPerUnit: Float
   expiresAt: DateTime
   id: ID!
+  idempotencyKey: ID
   notes: String
   quantity: Float!
   restockedAt: DateTime
@@ -8478,17 +8549,6 @@ type ReviewHelpful {
   review: RecipeReview!
   user: User!
 }
-
-input RevokeHomeInviteInput {
-  id: ID!
-}
-
-type RevokeHomeInvitePayload {
-  home: Home
-  homeInvite: HomeInvite!
-}
-
-union RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload | ValidationError
 
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
@@ -8597,86 +8657,6 @@ input SessionInfoInput {
   sessionDuration: Int
   sessionId: String
 }
-
-input SetDefaultHomeInput {
-  homeId: ID!
-}
-
-type SetDefaultHomePayload {
-  defaultPantry: Pantry
-  settings: UserSettings!
-}
-
-union SetDefaultHomeResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultHomePayload | ValidationError
-
-input SetDefaultPantryInput {
-  id: ID!
-}
-
-type SetDefaultPantryPayload {
-  home: Home
-  pantry: Pantry!
-}
-
-union SetDefaultPantryResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultPantryPayload | ValidationError
-
-input SetDefaultShoppingListInput {
-  id: ID!
-}
-
-type SetDefaultShoppingListPayload {
-  shoppingList: ShoppingList!
-}
-
-union SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload | ValidationError
-
-input SetDefaultStorageLocationInput {
-  id: ID!
-}
-
-type SetDefaultStorageLocationPayload {
-  home: Home
-  storageLocation: StorageLocation!
-}
-
-union SetDefaultStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload | ValidationError
-
-input SetReminderInput {
-  id: ID!
-  reminderDate: DateTime!
-  reminderEnabled: Boolean
-}
-
-type SetReminderPayload {
-  shoppingList: ShoppingList!
-}
-
-union SetReminderResult = ConflictError | ForbiddenError | NotFoundError | SetReminderPayload | ValidationError
-
-input SetupRecurringInput {
-  id: ID!
-  nextRecurringDate: DateTime
-  recurringInterval: Int!
-  recurringPattern: RecurringPattern!
-}
-
-type SetupRecurringPayload {
-  shoppingList: ShoppingList!
-}
-
-union SetupRecurringResult = ConflictError | ForbiddenError | NotFoundError | SetupRecurringPayload | ValidationError
-
-input SetupUnitConversionInput {
-  baseUnitId: ID!
-  conversionFactor: Float!
-  unitId: ID!
-}
-
-type SetupUnitConversionPayload {
-  unit: Unit!
-}
-
-union SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError
 
 """
 A shareable deep link expressed in both forms so clients can choose:
@@ -9809,14 +9789,6 @@ type SuspiciousInviteActivity {
   summary: SuspiciousActivitySummary!
 }
 
-input SyncAdjustPantryItemQuantityInput {
-  input: AdjustPantryItemQuantityInput!
-  """
-  Client-minted permanent CUID2 identifying this adjustment; replay-safe.
-  """
-  operationId: ID!
-}
-
 """Information about a sync conflict"""
 type SyncConflictInfo {
   """The version the client had"""
@@ -9827,28 +9799,6 @@ type SyncConflictInfo {
   serverItem: ShoppingListItem!
   """The current version on the server"""
   serverVersion: Int!
-}
-
-input SyncConsumePantryItemInput {
-  input: RecordPantryItemUsageInput!
-  """Client-minted permanent CUID2 identifying this usage; replay-safe."""
-  operationId: ID!
-}
-
-input SyncConvertExpiredBatchesToWasteInput {
-  input: ConvertExpiredBatchesToWasteInput!
-  """
-  Client-minted permanent CUID2 identifying this expired-batches-to-waste conversion; replay-safe.
-  """
-  operationId: ID!
-}
-
-input SyncConvertExpiredToWasteInput {
-  input: ConvertExpiredToWasteInput!
-  """
-  Client-minted permanent CUID2 identifying this expired-to-waste conversion; replay-safe.
-  """
-  operationId: ID!
 }
 
 input SyncDeletePantryItemInput {
@@ -9868,34 +9818,11 @@ input SyncMoveShoppingListItemInput {
   version: Int
 }
 
-input SyncOpenPantryItemBatchInput {
-  input: OpenBatchInput!
-  """
-  Client-minted permanent CUID2 for client-queue uniformity. openBatch writes
-  no ledger row and is naturally idempotent (re-opening is a no-op), so dedup
-  is by batch state rather than operationId.
-  """
-  operationId: ID!
-}
-
 enum SyncOperation {
   CREATE
   DELETE
   MOVE
   UPDATE
-}
-
-"""
-Result of an idempotent offline-sync pantry delta (restock / consume / waste /
-adjust / open-batch). wasApplied is false when the operationId was already
-processed (replay) — the delta is applied at most once regardless of retries,
-and pantryItem reflects the current server state either way.
-"""
-type SyncPantryDeltaResult {
-  operationId: ID!
-  pantry: Pantry
-  pantryItem: PantryItem
-  wasApplied: Boolean!
 }
 
 input SyncPantryItemInput {
@@ -9925,16 +9852,15 @@ input SyncPantryItemInput {
 type SyncPantryItemResult {
   clientId: ID!
   conflict: SyncConflictInfo
+  """
+  True when this sync CONVERGED on a pre-existing row (the client id matched,
+  so it was an update/replay rather than a fresh create). The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
   item: PantryItem
   operation: SyncOperation!
   serverId: ID
-  wasCreated: Boolean!
-}
-
-input SyncRestockPantryItemInput {
-  input: RestockPantryItemInput!
-  """Client-minted permanent CUID2 identifying this restock; replay-safe."""
-  operationId: ID!
 }
 
 """Sub-input for sync settings"""
@@ -9983,6 +9909,12 @@ type SyncShoppingListItemResult {
   clientId: ID!
   """Conflict information if version mismatch occurred"""
   conflict: SyncConflictInfo
+  """
+  True when this sync CONVERGED on a pre-existing row (the client id matched,
+  so it was an update/replay rather than a fresh create). The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
   """The synced shopping list item (null for delete operations)"""
   item: ShoppingListItem
   """The operation that was performed"""
@@ -9991,16 +9923,6 @@ type SyncShoppingListItemResult {
   The server-assigned database ID (equals clientId; null if item was deleted before reaching server)
   """
   serverId: ID
-  """Whether this was a create (true) or update (false) operation"""
-  wasCreated: Boolean!
-}
-
-input SyncWastePantryItemBatchInput {
-  input: WasteBatchInput!
-  """
-  Client-minted permanent CUID2 identifying this batch waste; replay-safe.
-  """
-  operationId: ID!
 }
 
 """Sub-input for tag-based filters"""
@@ -10100,68 +10022,6 @@ input UiPreferencesInput {
   showTutorials: Boolean
   theme: AppTheme
 }
-
-input UncategorizeItemInput {
-  categoryId: ID!
-  itemId: ID!
-}
-
-type UncategorizeItemPayload {
-  itemCategory: ItemCategory!
-}
-
-union UncategorizeItemResult = ConflictError | ForbiddenError | NotFoundError | UncategorizeItemPayload | ValidationError
-
-input UncompleteShoppingListInput {
-  id: ID!
-}
-
-type UncompleteShoppingListPayload {
-  shoppingList: ShoppingList!
-}
-
-union UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError
-
-"""
-Input to restore a previously-dismissed item so it can be suggested again.
-"""
-input UndismissSuggestionInput {
-  """Catalog item to start suggesting again."""
-  itemId: ID!
-  """Which surface to restore it on (pantry vs shopping)."""
-  surface: SuggestionSurface!
-}
-
-type UndismissSuggestionPayload {
-  """Always false — the item can be suggested again on this surface."""
-  dismissed: Boolean!
-  """The item the dismissal was removed for."""
-  itemId: ID!
-  """Surface the item was restored on."""
-  surface: SuggestionSurface!
-}
-
-union UndismissSuggestionResult = ConflictError | ForbiddenError | NotFoundError | UndismissSuggestionPayload | ValidationError
-
-input UnfavoriteRecipeInput {
-  recipeId: ID!
-}
-
-type UnfavoriteRecipePayload {
-  recipe: Recipe
-  """
-  The removed favorite, or null when the recipe was already not favorited — an
-  idempotent replay (or second device) that converged as success. See wasRemoved.
-  """
-  savedRecipe: SavedRecipe
-  """
-  True when this call removed the favorite; false when the recipe was already
-  not favorited and the unfavorite converged as a no-op success.
-  """
-  wasRemoved: Boolean!
-}
-
-union UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload | ValidationError
 
 """
 Unit of measurement type
@@ -10505,6 +10365,11 @@ input UpdateHomeInput {
   tags: [String!]
   timezone: String
   version: Int
+}
+
+input UpdateHomeJoinCodeInput {
+  """ID of the home whose join code to rotate."""
+  id: ID!
 }
 
 type UpdateHomePayload {
@@ -10958,6 +10823,18 @@ type UpdateShoppingListPayload {
   shoppingList: ShoppingList!
 }
 
+input UpdateShoppingListReminderInput {
+  id: ID!
+  reminderDate: DateTime!
+  reminderEnabled: Boolean
+}
+
+type UpdateShoppingListReminderPayload {
+  shoppingList: ShoppingList!
+}
+
+union UpdateShoppingListReminderResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListReminderPayload | ValidationError
+
 union UpdateShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListPayload | ValidationError
 
 """
@@ -10993,6 +10870,24 @@ input UpdateStorageLocationInput {
   """New storage type"""
   type: StorageType
 }
+
+"""
+Input for reordering multiple storage locations
+Arrays must be the same length
+"""
+input UpdateStorageLocationOrderInput {
+  """Array of location IDs to reorder"""
+  locationIds: [ID!]!
+  """Array of new sort orders (must match locationIds length)"""
+  sortOrders: [Int!]!
+}
+
+type UpdateStorageLocationOrderPayload {
+  home: Home
+  storageLocation: StorageLocation!
+}
+
+union UpdateStorageLocationOrderResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorageLocationOrderPayload | ValidationError
 
 type UpdateStorageLocationPayload {
   home: Home
@@ -11089,6 +10984,25 @@ type UpdateUserAddressPayload {
 
 union UpdateUserAddressResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAddressPayload | ValidationError
 
+"""Input for managing appeals (submit or review)."""
+input UpdateUserAppealInput {
+  """For submitting: appeal notes from the user"""
+  appealNotes: String
+  """
+  For reviewing: whether the appeal is approved (null = submitting, true/false = reviewing)
+  """
+  approved: Boolean
+  """For reviewing: reviewer's notes"""
+  reviewNotes: String
+  userId: ID!
+}
+
+type UpdateUserAppealPayload {
+  userModeration: UserModeration
+}
+
+union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
+
 input UpdateUserInput {
   deletedAt: DateTime
   email: String
@@ -11130,6 +11044,23 @@ input UpdateUserProfileInput {
   showPhone: Boolean
   website: String
 }
+
+"""Input for managing restrictions (add and/or remove in one call)."""
+input UpdateUserRestrictionsInput {
+  """Restrictions to add"""
+  add: [ModerationRestriction!]
+  reason: String
+  """Restrictions to remove"""
+  remove: [ModerationRestriction!]
+  restrictedUntil: DateTime
+  userId: ID!
+}
+
+type UpdateUserRestrictionsPayload {
+  userModeration: UserModeration
+}
+
+union UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError
 
 union UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserPayload | ValidationError
 
@@ -11745,15 +11676,6 @@ type WasteAnalytics {
   wasteTrend: [TimeSeriesDataPoint!]!
 }
 
-"""Input for wasting a specific batch"""
-input WasteBatchInput {
-  batchId: ID!
-  isComposted: Boolean
-  isRecycled: Boolean
-  notes: String
-  wasteReason: WasteReason
-}
-
 """Waste breakdown by item - most wasted items"""
 type WasteByItem {
   count: Int!
@@ -11772,6 +11694,16 @@ type WasteByReason {
   percentage: Float!
   reason: WasteReason!
   totalQuantity: Float!
+}
+
+"""Input for wasting a specific batch"""
+input WastePantryItemBatchInput {
+  batchId: ID!
+  idempotencyKey: ID
+  isComposted: Boolean
+  isRecycled: Boolean
+  notes: String
+  wasteReason: WasteReason
 }
 
 type WastePantryItemBatchPayload {

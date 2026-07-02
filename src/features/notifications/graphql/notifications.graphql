@@ -27,6 +27,11 @@ subscription NotificationEvents {
 query GetUnreadNotifications {
   me {
     id
+    # Server-authoritative counts — the badge seeds from these so it stays
+    # correct even when there are more unread than the page below loads, or
+    # after a cache clear (the local list-recompute alone under-counts both).
+    unreadNotificationCount
+    hasUrgentNotifications
     notificationsConnection(
       filter: { unreadOnly: true }
       first: 50
@@ -42,6 +47,38 @@ query GetUnreadNotifications {
         hasNextPage
         endCursor
       }
+    }
+  }
+}
+
+# Paginated notification history for the feed. Unlike GetUnreadNotifications
+# this does NOT filter to unread, so read notifications are fetched too and the
+# feed survives a cache clear. `filter` moves category/type/priority selection
+# server-side; `after` + endCursor drive load-more.
+query GetNotifications(
+  $filter: NotificationFilters
+  $first: Int = 30
+  $after: String
+) {
+  me {
+    id
+    notificationsConnection(
+      filter: $filter
+      first: $first
+      after: $after
+      orderBy: SENT_AT_DESC
+    ) {
+      edges {
+        node {
+          id
+          ...useNotificationsOnLaunch_notification
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
     }
   }
 }

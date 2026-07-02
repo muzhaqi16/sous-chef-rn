@@ -220,21 +220,19 @@ function enqueueAndComplete(
 }
 
 /**
- * The only context keys a replay reads: `operationId` (idempotency key for
- * granular pantry-delta syncs, read by `convertToSyncMutation`) and
- * `localFirst` (marks the entry as an opt-in). The full Apollo operation
- * context also carries client internals that don't survive persistence —
- * functions are silently dropped by JSON serialization, and a circular value
- * would make the MMKV write throw inside `saveQueue`, silently losing the
- * enqueue. Persist only the fixed, serializable subset.
+ * The only context key a replay reads is `localFirst` (marks the entry as an
+ * opt-in). Idempotency for granular pantry deltas now rides on
+ * `input.idempotencyKey` inside the persisted variables, not on the context, so
+ * there's nothing else to carry here. The full Apollo operation context also
+ * carries client internals that don't survive persistence — functions are
+ * silently dropped by JSON serialization, and a circular value would make the
+ * MMKV write throw inside `saveQueue`, silently losing the enqueue. Persist only
+ * the fixed, serializable subset.
  */
 function pickPersistedContext(context: DefaultContext): DefaultContext {
   const persisted: DefaultContext = {};
   if (context.localFirst !== undefined) {
     persisted.localFirst = context.localFirst;
-  }
-  if (context.operationId !== undefined) {
-    persisted.operationId = context.operationId;
   }
   return persisted;
 }

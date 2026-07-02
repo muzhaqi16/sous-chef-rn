@@ -337,14 +337,13 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                     ...(expirationDate && {
                       expiresAt: expirationDate.toISOString(),
                     }),
+                    // idempotencyKey dedups the restock ledger row on replay.
+                    idempotencyKey: generateEntityId(),
                   },
                 },
-                // Local-first: replay-safe via syncRestockPantryItem (operationId
-                // dedups the restock ledger row if the request is queued).
-                context: {
-                  localFirst: true,
-                  operationId: generateEntityId(),
-                },
+                // Local-first: queued offline, replayed as the canonical
+                // mutation (deduped by its idempotencyKey).
+                context: { localFirst: true },
               }),
             'Restock pantry item error:',
           );

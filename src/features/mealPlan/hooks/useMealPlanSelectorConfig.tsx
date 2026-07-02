@@ -20,6 +20,9 @@ interface UseMealPlanSelectorConfigOptions {
   selectorRef: RefObject<ItemSelectorRef | null>;
   toCreateMealPlan: () => void;
   onCreateFromTemplate: () => void;
+  onCreateTemplate: () => void;
+  // Filter UI rendered above the plan list (search + type/active chips).
+  listHeader?: React.ReactNode;
 }
 
 function formatDateRange(startDate: string, endDate: string): string {
@@ -44,6 +47,8 @@ export function useMealPlanSelectorConfig(
     selectorRef,
     toCreateMealPlan,
     onCreateFromTemplate,
+    onCreateTemplate,
+    listHeader,
   } = options;
   const personalLabel = t('mealPlanSelector.personalSubtitle');
 
@@ -83,6 +88,7 @@ export function useMealPlanSelectorConfig(
     displayProperty: 'name',
     loading,
     emptyMessage: t('mealPlanSelector.emptyMessage'),
+    listHeader,
     renderCustomItem: renderMealPlanItem,
     actions: [
       {
@@ -99,6 +105,14 @@ export function useMealPlanSelectorConfig(
         onPress: () => {
           selectorRef.current?.close();
           onCreateFromTemplate();
+        },
+      },
+      {
+        icon: 'construct-outline',
+        label: t('mealPlanSelector.createTemplate'),
+        onPress: () => {
+          selectorRef.current?.close();
+          onCreateTemplate();
         },
       },
     ],

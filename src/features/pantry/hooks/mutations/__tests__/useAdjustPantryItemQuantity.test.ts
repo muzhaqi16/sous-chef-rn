@@ -30,7 +30,10 @@ jest.mock('#/services/alertService', () => ({
 const successMock = (variables: {
   input: AdjustPantryItemQuantityInput;
 }): MockedResponse => ({
-  request: { query: AdjustPantryItemQuantityDocument, variables },
+  // variables: () => true — the input carries a generated idempotencyKey, so
+  // match on the operation, not an exact deep-equal (MockLink can't match the
+  // generated value).
+  request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   result: {
     data: {
       adjustPantryItemQuantity: {
@@ -50,17 +53,16 @@ const successMock = (variables: {
   },
 });
 
-const errorMock = (variables: {
-  input: AdjustPantryItemQuantityInput;
-}): MockedResponse => ({
-  request: { query: AdjustPantryItemQuantityDocument, variables },
+// variables: () => true — the input carries a generated idempotencyKey, so match
+// on the operation, not an exact deep-equal (MockLink can't match the generated
+// value). These two builders ignore the input entirely (error / static payload).
+const errorMock = (): MockedResponse => ({
+  request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (variables: {
-  input: AdjustPantryItemQuantityInput;
-}): MockedResponse => ({
-  request: { query: AdjustPantryItemQuantityDocument, variables },
+const validationErrorMock = (): MockedResponse => ({
+  request: { query: AdjustPantryItemQuantityDocument, variables: () => true },
   result: {
     data: {
       adjustPantryItemQuantity: {
@@ -184,12 +186,9 @@ describe('useAdjustPantryItemQuantity', () => {
 
   it('shows version conflict alert on version error', async () => {
     mockHandleVersionConflict = true;
-    const variables = {
-      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
-    };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock(variables)],
+        operationMocks: [errorMock()],
       }),
     });
 
@@ -212,12 +211,9 @@ describe('useAdjustPantryItemQuantity', () => {
   });
 
   it('shows generic error alert on non-conflict error', async () => {
-    const variables = {
-      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
-    };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock(variables)],
+        operationMocks: [errorMock()],
       }),
     });
 
@@ -233,12 +229,9 @@ describe('useAdjustPantryItemQuantity', () => {
   });
 
   it('returns false when response is a ValidationError', async () => {
-    const variables = {
-      input: { id: 'item-1', newQuantity: 5, reason: 'Count' },
-    };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [validationErrorMock(variables)],
+        operationMocks: [validationErrorMock()],
       }),
     });
 

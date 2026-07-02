@@ -59,3 +59,22 @@ require('./src/i18n/config');
 // `(Environment.x as jest.Mock).mockReturnValue(...)`.
 // ---------------------------------------------------------------------------
 jest.mock('#/utils/environment');
+
+// ---------------------------------------------------------------------------
+// @react-native-firebase/messaging (FCM) — native module, absent under jest.
+// Provide a minimal mock so anything importing the native push provider (App.tsx
+// → nativePushProvider) loads. Suites that assert on push can override.
+// ---------------------------------------------------------------------------
+jest.mock('@react-native-firebase/messaging', () => ({
+  __esModule: true,
+  getMessaging: jest.fn(() => ({})),
+  getToken: jest.fn().mockResolvedValue('mock-fcm-token'),
+  requestPermission: jest.fn().mockResolvedValue(1),
+  onTokenRefresh: jest.fn(() => jest.fn()),
+  AuthorizationStatus: {
+    NOT_DETERMINED: -1,
+    DENIED: 0,
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+  },
+}));

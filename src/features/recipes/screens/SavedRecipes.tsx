@@ -103,7 +103,7 @@ export const SavedRecipes: React.FC = () => {
       update: (cache, { data }, { variables }) => {
         if (
           data?.removeRecipeFromFavorites?.__typename !==
-            'UnfavoriteRecipePayload' ||
+            'RemoveRecipeFromFavoritesPayload' ||
           !variables?.input?.recipeId
         ) {
           return;

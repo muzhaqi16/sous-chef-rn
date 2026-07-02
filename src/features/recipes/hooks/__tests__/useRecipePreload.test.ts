@@ -560,7 +560,7 @@ const favoriteMock = (
           ? null
           : outcome.kind === 'created'
           ? {
-              __typename: 'FavoriteRecipePayload',
+              __typename: 'AddRecipeToFavoritesPayload',
               savedRecipe: {
                 __typename: 'SavedRecipe',
                 id: SAVED_RECIPE_ID,

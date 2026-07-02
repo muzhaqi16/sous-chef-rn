@@ -172,3 +172,10 @@ dependencies {
     androidTestImplementation('com.wix:detox:+')
     androidTestImplementation 'junit:junit:4.13.2'
 }
+// FCM (push): apply the google-services plugin ONLY when google-services.json is
+// present, so the build keeps working before the file is added. Drop the file
+// (from the Firebase console, package dev.souschef.app) into android/app/ then
+// rebuild — see docs/push-setup-checklist.md.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+}

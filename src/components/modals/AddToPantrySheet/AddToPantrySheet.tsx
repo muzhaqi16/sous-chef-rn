@@ -246,11 +246,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               input: {
                 id: duplicateInfo.existingPantryItemId,
                 quantity: 1,
+                // idempotencyKey dedups the restock ledger row on replay.
+                idempotencyKey: generateEntityId(),
               },
             },
-            // Local-first: replay-safe via syncRestockPantryItem (operationId
-            // dedups the restock ledger row if the request is queued).
-            context: { localFirst: true, operationId: generateEntityId() },
+            // Local-first: queued offline, replayed as the canonical mutation
+            // (deduped by its idempotencyKey).
+            context: { localFirst: true },
           })
             .then(() => onItemAdded?.())
             .catch(() => toastService.error(t('addToPantry.restockFailed')))
@@ -339,11 +341,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
               input: {
                 id: duplicateInfo.existingPantryItemId,
                 quantity: 1,
+                // idempotencyKey dedups the restock ledger row on replay.
+                idempotencyKey: generateEntityId(),
               },
             },
-            // Local-first: replay-safe via syncRestockPantryItem (operationId
-            // dedups the restock ledger row if the request is queued).
-            context: { localFirst: true, operationId: generateEntityId() },
+            // Local-first: queued offline, replayed as the canonical mutation
+            // (deduped by its idempotencyKey).
+            context: { localFirst: true },
           })
             .then(() => onItemAdded?.())
             .catch(() => toastService.error(t('addToPantry.restockFailed')))

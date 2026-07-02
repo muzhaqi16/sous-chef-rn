@@ -141,17 +141,16 @@ export const ShoppingListItemDetail: React.FC<
   const hasHero =
     showShoppingListImages && (showImages || !!largeImageUrl) && !heroFailed;
 
-  // Purchase History - extract purchases from paginated connection
-  const purchases =
-    item.purchasesConnection?.edges?.map(edge => edge.node) || [];
-  const purchaseCount = item.purchasesConnection?.totalCount || 0;
-  const hasPurchases = purchaseCount > 0;
+  // Purchase History — the lightweight summary (count / last date); the full
+  // list is fetched on demand by the PurchaseHistory screen.
+  const purchaseHistory = item.purchaseHistory;
+  const purchaseCount = purchaseHistory?.purchaseCount ?? 0;
+  const hasPurchases = purchaseHistory?.previouslyPurchased ?? false;
 
   const handleViewHistory = () => {
     toPurchaseHistory({
       itemId: item.id,
       itemName: item.itemName ?? '',
-      purchases: purchases,
     });
   };
 
@@ -163,7 +162,9 @@ export const ShoppingListItemDetail: React.FC<
         },
         {
           label: t('shoppingListScreens.mostRecentPurchase'),
-          value: purchases[0] ? formatDate(purchases[0].purchaseDate) : 'N/A',
+          value: purchaseHistory?.lastPurchaseDate
+            ? formatDate(purchaseHistory.lastPurchaseDate)
+            : 'N/A',
         },
       ]
     : [];
@@ -256,6 +257,30 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
+        {item.priceEstimate?.lastKnown != null && (
+          <DetailRow label={t('shoppingListScreens.lastPaidPrice')}>
+            <Text size="sm" weight="medium">
+              {`$${item.priceEstimate.lastKnown.toFixed(2)}`}
+            </Text>
+          </DetailRow>
+        )}
+        {item.priceEstimate?.average != null && (
+          <DetailRow label={t('shoppingListScreens.averagePrice')}>
+            <Text size="sm" weight="medium">
+              {`$${item.priceEstimate.average.toFixed(2)}`}
+            </Text>
+          </DetailRow>
+        )}
+        {item.priceEstimate?.lowest != null &&
+          item.priceEstimate?.highest != null && (
+            <DetailRow label={t('shoppingListScreens.priceRange')}>
+              <Text size="sm" weight="medium">
+                {`$${item.priceEstimate.lowest.toFixed(
+                  2,
+                )} – $${item.priceEstimate.highest.toFixed(2)}`}
+              </Text>
+            </DetailRow>
+          )}
         {!!item.purchaseInfo?.isPurchased &&
           item.purchaseInfo.purchasedQuantity != null && (
             <DetailRow label={t('shoppingListScreens.purchased')}>

@@ -6,6 +6,7 @@ import { HomeMemberCard } from './HomeMemberCard';
 import { HomeInviteCard } from './HomeInviteCard';
 import { Text } from '#components/atoms/Text';
 import { InviteStatus } from '#/graphql/generated/schemaTypes';
+import type { MembershipPermissionKey } from '#hooks/home/useHomeDetailManagement';
 import type { HomeDetailScreen_HomeFragment } from '#/screens/home/HomeDetailScreen.generated';
 
 type MemberNode =
@@ -17,6 +18,8 @@ interface HomeMembersSectionProps {
   members: ReadonlyArray<MemberNode>;
   invites: ReadonlyArray<InviteNode>;
   canManageHome?: boolean;
+  /** Current user is the home OWNER — gates the transfer-ownership action. */
+  isOwner?: boolean;
   /** Resolve a member's label (display name + isCurrentUser flag). The screen
    *  owns the user-store dependency so this component stays presentational. */
   resolveMemberLabel: (member: MemberNode) => {
@@ -26,6 +29,12 @@ interface HomeMembersSectionProps {
   resolveInviteLabel: (invite: InviteNode) => string;
   onChangeRole: (membershipId: string, role: string, name: string) => void;
   onRemove: (membershipId: string, name: string) => void;
+  onTransferOwnership: (memberUserId: string, name: string) => void;
+  onUpdatePermission: (
+    membershipId: string,
+    permission: MembershipPermissionKey,
+    value: boolean,
+  ) => void;
   onRevokeInvite: (inviteId: string, email: string) => void;
 }
 
@@ -39,10 +48,13 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   members,
   invites,
   canManageHome,
+  isOwner,
   resolveMemberLabel,
   resolveInviteLabel,
   onChangeRole,
   onRemove,
+  onTransferOwnership,
+  onUpdatePermission,
   onRevokeInvite,
 }) => {
   const pendingInvites = invites.filter(
@@ -63,10 +75,17 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               displayName={displayName}
               isCurrentUser={isCurrentUser}
               canManageHome={canManageHome}
+              isOwner={isOwner}
               onChangeRole={() =>
                 onChangeRole(member.id, member.role, displayName)
               }
               onRemove={() => onRemove(member.id, displayName)}
+              onTransferOwnership={() =>
+                onTransferOwnership(member.userId, displayName)
+              }
+              onUpdatePermission={(permission, value) =>
+                onUpdatePermission(member.id, permission, value)
+              }
             />
           );
         })

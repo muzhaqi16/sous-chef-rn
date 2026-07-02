@@ -37,7 +37,7 @@ const readSavedDetails = (cache: ReturnType<typeof seedCache>) =>
 /** Mock the unfavorite resolving as the success payload or a rejected member. */
 const unfavoriteMock = (
   member:
-    | { __typename: 'UnfavoriteRecipePayload' }
+    | { __typename: 'RemoveRecipeFromFavoritesPayload' }
     | { __typename: 'ForbiddenError' },
 ): MockedResponse => ({
   request: {
@@ -47,9 +47,9 @@ const unfavoriteMock = (
   result: {
     data: {
       removeRecipeFromFavorites:
-        member.__typename === 'UnfavoriteRecipePayload'
+        member.__typename === 'RemoveRecipeFromFavoritesPayload'
           ? {
-              __typename: 'UnfavoriteRecipePayload',
+              __typename: 'RemoveRecipeFromFavoritesPayload',
               savedRecipe: { __typename: 'SavedRecipe', id: 'sr1' },
             }
           : { __typename: 'ForbiddenError', code: 'FORBIDDEN', message: 'no' },
@@ -71,7 +71,7 @@ describe('useRecipeSavedMetadata — offline unfavorite', () => {
       {
         cache,
         operationMocks: [
-          unfavoriteMock({ __typename: 'UnfavoriteRecipePayload' }),
+          unfavoriteMock({ __typename: 'RemoveRecipeFromFavoritesPayload' }),
         ],
       },
     );

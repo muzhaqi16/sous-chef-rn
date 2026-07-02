@@ -30,9 +30,15 @@ import { SubscriptionProvider } from '#/components/providers/SubscriptionProvide
 import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
+import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
+import { nativePushProvider } from '#/services/push/nativePushProvider';
 
 // Install global JS exception and promise rejection handlers before any component renders
 setupGlobalErrorHandler();
+
+// Install the native push-token provider (FCM on Android, APNs on iOS once set
+// up). Defensive — degrades to no token if the native module isn't present.
+setPushTokenProvider(nativePushProvider);
 
 /**
  * Module-level handler for permanently failed queued mutations.

@@ -182,7 +182,9 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
     update: (cache, { data }) => {
-      if (data?.addRecipeToFavorites?.__typename !== 'FavoriteRecipePayload')
+      if (
+        data?.addRecipeToFavorites?.__typename !== 'AddRecipeToFavoritesPayload'
+      )
         return;
 
       const savedRecipe = data.addRecipeToFavorites.savedRecipe;
@@ -582,7 +584,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     const outcome = classifyCreateResult(
       result,
       'addRecipeToFavorites',
-      'FavoriteRecipePayload',
+      'AddRecipeToFavoritesPayload',
     );
     if (outcome === 'rejected') {
       revert();

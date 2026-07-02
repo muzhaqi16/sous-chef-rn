@@ -1,0 +1,12 @@
+# Snapshot/write shape for useMealTemplateEditor's optimistic updateMealTemplate
+# write: the metadata fields the builder edits plus updatedAt for the revert.
+# Every field must be selected by GetMealTemplate so the snapshot reads complete.
+fragment useMealTemplateEditor_template on MealTemplate {
+  id
+  name
+  description
+  category
+  defaultServings
+  tags
+  updatedAt
+}

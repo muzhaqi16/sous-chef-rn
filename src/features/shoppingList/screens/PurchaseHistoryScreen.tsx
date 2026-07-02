@@ -1,8 +1,11 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -21,25 +24,26 @@ const keyExtractor = (item: { id: string }) => item.id;
 type RouteParams = {
   itemId: string;
   itemName: string;
-  purchases: Array<{
-    id: string;
-    purchaseDate: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    currencySymbol: string;
-    unitSymbol: string;
-    user?: {
-      id: string;
-      email: string;
-      profile?: {
-        displayName?: string;
-      };
-    };
-  }>;
 };
 
-type PurchaseItem = RouteParams['purchases'][0];
+type PurchaseItem = {
+  id: string;
+  purchaseDate: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  currencySymbol: string;
+  unitSymbol: string;
+  // Not selected by GetItemPurchaseHistory today, but kept optional so the row's
+  // "purchased by" line degrades gracefully if the query starts returning it.
+  user?: {
+    id: string;
+    email: string;
+    profile?: {
+      displayName?: string;
+    };
+  };
+};
 
 // Pure function at module scope
 const formatDate = (dateString: string) => {
@@ -200,7 +204,17 @@ export const PurchaseHistoryScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { itemName, purchases } = route.params;
+  const { itemId, itemName } = route.params;
+
+  // Fetch the full history on demand — ItemDetail only carries the summary.
+  const { data, loading } = useQuery(GetItemPurchaseHistoryDocument, {
+    variables: { itemId, first: 50 },
+  });
+
+  const connection = data?.shoppingListItem?.purchasesConnection;
+  const purchases: PurchaseItem[] =
+    connection?.edges?.map(edge => edge.node) ?? [];
+  const totalCount = connection?.totalCount ?? purchases.length;
 
   // Summary stats over purchases that actually carry a price. Auto-recorded
   // purchases with no price are excluded so the average isn't dragged toward 0.
@@ -229,29 +243,35 @@ export const PurchaseHistoryScreen: React.FC<
       </View>
 
       {/* Purchase List */}
-      <PurchaseHistoryProvider value={{ totalCount: purchases.length }}>
-        <FlashList
-          data={purchases}
-          keyExtractor={keyExtractor}
-          renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
-            <PurchaseHistoryItem {...info} />
-          )}
-          getItemType={getPurchaseItemType}
-          {...FLASHLIST_DEFAULTS.fullScreen}
-          ListHeaderComponent={
-            purchases.length > 0 ? (
-              <PurchaseHistoryHeader
-                totalCount={purchases.length}
-                totalSpent={totalSpent}
-                averageSpent={averageSpent}
-              />
-            ) : null
-          }
-          ListEmptyComponent={PurchaseHistoryEmpty}
-          contentContainerStyle={styles.content}
-          style={styles.scrollView}
-        />
-      </PurchaseHistoryProvider>
+      {loading && purchases.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ThemedActivityIndicator />
+        </View>
+      ) : (
+        <PurchaseHistoryProvider value={{ totalCount }}>
+          <FlashList
+            data={purchases}
+            keyExtractor={keyExtractor}
+            renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
+              <PurchaseHistoryItem {...info} />
+            )}
+            getItemType={getPurchaseItemType}
+            {...FLASHLIST_DEFAULTS.fullScreen}
+            ListHeaderComponent={
+              purchases.length > 0 ? (
+                <PurchaseHistoryHeader
+                  totalCount={totalCount}
+                  totalSpent={totalSpent}
+                  averageSpent={averageSpent}
+                />
+              ) : null
+            }
+            ListEmptyComponent={PurchaseHistoryEmpty}
+            contentContainerStyle={styles.content}
+            style={styles.scrollView}
+          />
+        </PurchaseHistoryProvider>
+      )}
     </View>
   );
 };
@@ -260,6 +280,11 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',

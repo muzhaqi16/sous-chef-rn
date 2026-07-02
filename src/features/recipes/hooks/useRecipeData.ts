@@ -69,6 +69,17 @@ export interface RecipeDisplayData {
   dairyFree?: boolean;
   sourceName?: string;
   sourceUrl?: string;
+  // Backend-recipe enrichment (Phase 5).
+  caloriesPerServing?: number;
+  nutritionData?: unknown;
+  isPublished?: boolean;
+  publishedAt?: string;
+  forkedFromId?: string;
+  forkedFromName?: string;
+  originalAuthor?: string;
+  tips?: string;
+  videoUrl?: string;
+  tags?: string[];
 }
 
 export interface UseRecipeDataParams {
@@ -160,6 +171,16 @@ function buildBackendDisplayData(
     instructions: recipe.instructions,
     sourceName: recipe.source ?? undefined,
     sourceUrl: recipe.sourceUrl ?? undefined,
+    caloriesPerServing: recipe.caloriesPerServing ?? undefined,
+    nutritionData: recipe.nutritionData ?? undefined,
+    isPublished: recipe.isPublished,
+    publishedAt: recipe.publishedAt ?? undefined,
+    forkedFromId: recipe.forkedFromId ?? undefined,
+    forkedFromName: recipe.forkedFrom?.name ?? undefined,
+    originalAuthor: recipe.originalAuthor ?? undefined,
+    tips: recipe.tips ?? undefined,
+    videoUrl: recipe.videoUrl ?? undefined,
+    tags: recipe.tags ?? undefined,
   };
 }
 

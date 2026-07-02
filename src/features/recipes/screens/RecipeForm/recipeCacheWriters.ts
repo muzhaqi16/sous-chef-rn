@@ -23,6 +23,7 @@ import {
 import {
   Difficulty,
   RecipeCategory,
+  RecipeStatus,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -105,6 +106,17 @@ function buildOptimisticRecipeEntity(
     imageUrl: input.media?.imageUrl ?? null,
     servings: input.metadata?.servings ?? 4,
     totalTimeMinutes: totalTime(prep, cook),
+    caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
+    nutritionData: (input.nutrition?.nutritionData as JsonValue) ?? null,
+    status: input.status ?? RecipeStatus.Draft,
+    isPublished: input.status === RecipeStatus.Published,
+    publishedAt: null,
+    forkedFromId: null,
+    forkedFrom: null,
+    originalAuthor: input.attribution?.originalAuthor ?? null,
+    tips: input.tips ?? null,
+    videoUrl: null,
+    tags: input.tags ?? [],
     source: null,
     sourceUrl: null,
     // The create input's JSON (write type) is the same runtime instructions

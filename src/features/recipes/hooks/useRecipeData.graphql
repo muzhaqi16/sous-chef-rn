@@ -9,6 +9,20 @@ fragment useRecipeData_recipe on Recipe {
   imageUrl
   servings
   totalTimeMinutes
+  caloriesPerServing
+  nutritionData
+  status
+  isPublished
+  publishedAt
+  forkedFromId
+  forkedFrom {
+    id
+    name
+  }
+  originalAuthor
+  tips
+  videoUrl
+  tags
   source
   sourceUrl
   instructions

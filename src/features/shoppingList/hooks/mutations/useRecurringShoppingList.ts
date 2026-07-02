@@ -1,0 +1,222 @@
+/**
+ * useRecurringShoppingList — turn a list's recurrence on/off and generate the
+ * next occurrence.
+ *
+ * setRecurring / cancelRecurring are local-first: the recurrence fields are
+ * absolute sets keyed by the list id, so we write them to the cache before
+ * firing and a queued replay re-applies the same state idempotently. A real
+ * rejection restores the pre-change snapshot and alerts.
+ *
+ * generateNext is ONLINE-ONLY: it creates a brand-new list whose id the server
+ * mints, so there's no client id to key idempotency on — a queued replay would
+ * spawn duplicates. It adds the created list to the overview connection (same
+ * updater createShoppingList uses) and returns its id for navigation.
+ */
+
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
+import {
+  CreateRecurringShoppingListDocument,
+  CancelRecurringDocument,
+  GenerateNextRecurringListDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  UseRecurringShoppingList_ListFragmentDoc,
+  type UseRecurringShoppingList_ListFragment,
+} from './useRecurringShoppingList.generated';
+import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
+import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import {
+  executeCacheUpdate,
+  executeMutation,
+} from '#/utils/compilerSafeWrappers';
+
+export function useRecurringShoppingList() {
+  const { t } = useTranslation();
+  const client = useApolloClient();
+  const [setupMutation, { loading: settingUp }] = useMutation(
+    CreateRecurringShoppingListDocument,
+  );
+  const [cancelMutation, { loading: cancelling }] = useMutation(
+    CancelRecurringDocument,
+  );
+  const [generateMutation, { loading: generating }] = useMutation(
+    GenerateNextRecurringListDocument,
+    {
+      update(cache, { data }) {
+        if (
+          data?.generateNextRecurringList?.__typename ===
+          'GenerateNextRecurringListPayload'
+        ) {
+          addShoppingListToQueryCache(
+            cache,
+            data.generateNextRecurringList.shoppingList,
+          );
+        }
+      },
+    },
+  );
+
+  const applyOptimistic = (
+    id: string,
+    patch: Partial<UseRecurringShoppingList_ListFragment>,
+    label: string,
+  ): (() => void) => {
+    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
+    const snapshot = cacheId
+      ? client.cache.readFragment<UseRecurringShoppingList_ListFragment>({
+          id: cacheId,
+          fragment: UseRecurringShoppingList_ListFragmentDoc,
+          fragmentName: 'useRecurringShoppingList_list',
+        })
+      : null;
+
+    if (snapshot) {
+      executeCacheUpdate(
+        () =>
+          client.cache.writeFragment({
+            id: cacheId,
+            fragment: UseRecurringShoppingList_ListFragmentDoc,
+            fragmentName: 'useRecurringShoppingList_list',
+            data: {
+              ...snapshot,
+              ...patch,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+        `${label} (optimistic)`,
+      );
+    }
+
+    return () => {
+      if (snapshot) {
+        executeCacheUpdate(
+          () =>
+            client.cache.writeFragment({
+              id: cacheId,
+              fragment: UseRecurringShoppingList_ListFragmentDoc,
+              fragmentName: 'useRecurringShoppingList_list',
+              data: snapshot,
+            }),
+          `Revert ${label}`,
+        );
+      }
+    };
+  };
+
+  const setRecurring = async (
+    id: string,
+    pattern: RecurringPattern,
+    interval: number,
+  ): Promise<boolean> => {
+    const revert = applyOptimistic(
+      id,
+      {
+        isRecurring: true,
+        recurringPattern: pattern,
+        recurringInterval: interval,
+      },
+      'Set Recurring',
+    );
+
+    const result = await executeMutation(
+      () =>
+        setupMutation({
+          variables: {
+            input: {
+              id,
+              recurringPattern: pattern,
+              recurringInterval: interval,
+            },
+          },
+          context: { localFirst: true },
+        }),
+      'Set Recurring error:',
+    );
+
+    if (!result) {
+      revert();
+      return false;
+    }
+    if (
+      alertIfRejected(
+        result,
+        'createRecurringShoppingList',
+        'CreateRecurringShoppingListPayload',
+        t('shoppingListScreens.failedToSetRecurring'),
+      )
+    ) {
+      revert();
+      return false;
+    }
+    return true;
+  };
+
+  const cancelRecurring = async (id: string): Promise<boolean> => {
+    const revert = applyOptimistic(
+      id,
+      { isRecurring: false },
+      'Cancel Recurring',
+    );
+
+    const result = await executeMutation(
+      () =>
+        cancelMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        }),
+      'Cancel Recurring error:',
+    );
+
+    if (!result) {
+      revert();
+      return false;
+    }
+    if (
+      alertIfRejected(
+        result,
+        'cancelRecurring',
+        'CancelRecurringPayload',
+        t('shoppingListScreens.failedToCancelRecurring'),
+      )
+    ) {
+      revert();
+      return false;
+    }
+    return true;
+  };
+
+  // Returns the created list's id (for navigation) or null on failure.
+  const generateNext = async (id: string): Promise<string | null> => {
+    const result = await executeMutation(
+      () => generateMutation({ variables: { input: { id } } }),
+      'Generate Next Recurring List error:',
+    );
+
+    if (!result) return null;
+    if (
+      alertIfRejected(
+        result,
+        'generateNextRecurringList',
+        'GenerateNextRecurringListPayload',
+        t('shoppingListScreens.failedToGenerateNext'),
+      )
+    ) {
+      return null;
+    }
+    const payload = result.data?.generateNextRecurringList;
+    return payload?.__typename === 'GenerateNextRecurringListPayload'
+      ? payload.shoppingList.id
+      : null;
+  };
+
+  return {
+    setRecurring,
+    cancelRecurring,
+    generateNext,
+    settingUp,
+    cancelling,
+    generating,
+  };
+}

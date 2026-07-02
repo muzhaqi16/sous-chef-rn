@@ -479,7 +479,7 @@ describe('QueueManager', () => {
     it('marks mutation as processing, then success on completion', async () => {
       const mutation = makeMutation({ id: 'proc-1' });
       client.mutate.mockResolvedValue({
-        data: { syncPantryItem: { item: {}, wasCreated: false } },
+        data: { syncPantryItem: { item: {}, converged: false } },
       });
 
       jest.useRealTimers();
@@ -515,7 +515,7 @@ describe('QueueManager', () => {
     // member instead of throwing — the replay path must classify resolved
     // payloads the same way the foreground path does (classifyCreateResult).
     describe('resolved error payloads on replay', () => {
-      it('treats a ConflictError on a replayed create as converged (success)', async () => {
+      it('treats a ConflictError(code: IDEMPOTENT_REPLAY) as converged (success)', async () => {
         const mutation = makeMutation({
           id: 'proc-converged',
           operationName: 'CreateShoppingList',
@@ -525,6 +525,7 @@ describe('QueueManager', () => {
           data: {
             createShoppingList: {
               __typename: 'ConflictError',
+              code: 'IDEMPOTENT_REPLAY',
               message: 'A shopping list with this id already exists',
             },
           },
@@ -795,36 +796,27 @@ describe('QueueManager', () => {
       );
     });
 
-    // Granular deltas (adjust/restock/consume/open/waste) wrap the original
-    // input verbatim under `input.input` and add the client-minted operationId
-    // (carried on context) so the server dedups the replay.
-    it('converts AdjustPantryItemQuantity → SyncAdjustPantryItemQuantity (wraps input + operationId from context)', () => {
+    // Granular deltas (adjust/restock/consume/open/waste/convert-expired) no
+    // longer convert to a sync* twin — they replay as the original canonical
+    // mutation, made at-most-once by the client-minted `input.idempotencyKey`
+    // the server dedups on (returning ConflictError(IDEMPOTENT_REPLAY)).
+    it('replays a granular delta as the original canonical mutation (no sync conversion)', () => {
       const mutation = makeMutation({
         operationName: 'AdjustPantryItemQuantity',
         variables: {
-          input: { id: 'item-1', newQuantity: 3, reason: 'recount' },
+          input: {
+            id: 'item-1',
+            newQuantity: 3,
+            reason: 'recount',
+            idempotencyKey: 'op-cuid-1',
+          },
         },
-        context: { localFirst: true, operationId: 'op-cuid-1' },
-      });
-      const { syncVariables } = convertToSyncMutation(mutation);
-      const input = wrapper(syncVariables);
-      expect(input.operationId).toBe('op-cuid-1');
-      expect(input.input).toEqual({
-        id: 'item-1',
-        newQuantity: 3,
-        reason: 'recount',
-      });
-    });
-
-    it('throws when a granular delta is queued without an operationId', () => {
-      const mutation = makeMutation({
-        operationName: 'RestockPantryItem',
-        variables: { input: { id: 'item-1', quantity: 5 } },
         context: { localFirst: true },
       });
-      expect(() => convertToSyncMutation(mutation)).toThrow(
-        'Cannot sync RestockPantryItem: missing operationId',
-      );
+      const { syncMutation, syncVariables } = convertToSyncMutation(mutation);
+      // Falls through to the default: same document + variables, key intact.
+      expect(syncMutation).toBe(mutation.mutation);
+      expect(syncVariables).toEqual(mutation.variables);
     });
 
     // UpdatePantryItemQuantityInput carries the item id as `pantryItemId`, the
@@ -1138,7 +1130,7 @@ describe('QueueManager', () => {
         data: {
           syncPantryItem: {
             item: { id: 'server-1' },
-            wasCreated: false,
+            converged: false,
             conflict: { message: 'Version mismatch' },
           },
         },
@@ -1270,7 +1262,7 @@ describe('QueueManager', () => {
         data: {
           syncPantryItem: {
             item: { id: 'item-1' },
-            wasCreated: true,
+            converged: true,
             serverId: 'srv-1',
             clientId: 'item-1',
           },
@@ -1373,7 +1365,7 @@ describe('QueueManager', () => {
       const { client: mockClient } = require('../../client');
       (proactiveTokenRefresh as jest.Mock).mockResolvedValue('new-token');
       mockClient.mutate.mockResolvedValue({
-        data: { syncPantryItem: { item: {}, wasCreated: false } },
+        data: { syncPantryItem: { item: {}, converged: false } },
       });
 
       jest.useRealTimers();

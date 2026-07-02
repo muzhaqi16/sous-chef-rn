@@ -212,6 +212,29 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
   }
 }
 
+mutation ForkRecipe($input: ForkRecipeInput!) {
+  forkRecipe(input: $input) {
+    __typename
+    ... on ForkRecipePayload {
+      recipe {
+        id
+        ...BasicRecipeFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
 mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
   updateRecipeIngredients(input: $input) {
     __typename
@@ -259,10 +282,10 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
   }
 }
 
-mutation AddRecipeToFavorites($input: FavoriteRecipeInput!) {
+mutation AddRecipeToFavorites($input: AddRecipeToFavoritesInput!) {
   addRecipeToFavorites(input: $input) {
     __typename
-    ... on FavoriteRecipePayload {
+    ... on AddRecipeToFavoritesPayload {
       savedRecipe {
         id
         recipeId
@@ -295,10 +318,10 @@ mutation AddRecipeToFavorites($input: FavoriteRecipeInput!) {
   }
 }
 
-mutation RemoveRecipeFromFavorites($input: UnfavoriteRecipeInput!) {
+mutation RemoveRecipeFromFavorites($input: RemoveRecipeFromFavoritesInput!) {
   removeRecipeFromFavorites(input: $input) {
     __typename
-    ... on UnfavoriteRecipePayload {
+    ... on RemoveRecipeFromFavoritesPayload {
       savedRecipe {
         id
       }

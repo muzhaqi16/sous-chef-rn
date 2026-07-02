@@ -141,7 +141,7 @@ export function useRecipeShoppingList({
     },
   });
 
-  const [addRecipeToShoppingListMutation] = useMutation(
+  const [createShoppingListItemsFromRecipeMutation] = useMutation(
     CreateShoppingListItemsFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
@@ -318,7 +318,7 @@ export function useRecipeShoppingList({
     executeWithLoadingState(
       async () => {
         if (isBackendRecipe && backendRecipe && recipeId) {
-          const result = await addRecipeToShoppingListMutation({
+          const result = await createShoppingListItemsFromRecipeMutation({
             variables: {
               input: {
                 recipeId,

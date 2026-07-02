@@ -17,6 +17,10 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   updatedAt
   priceEstimate {
     estimated
+    lastKnown
+    average
+    lowest
+    highest
   }
   storeInfo {
     preferredStore {
@@ -71,18 +75,9 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       symbol
     }
   }
-  purchasesConnection(first: 10) {
-    edges {
-      node {
-        id
-        purchaseDate
-        quantity
-        unitPrice
-        totalPrice
-        currencySymbol
-        unitSymbol
-      }
-    }
-    totalCount
+  purchaseHistory {
+    previouslyPurchased
+    purchaseCount
+    lastPurchaseDate
   }
 }

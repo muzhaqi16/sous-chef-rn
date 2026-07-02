@@ -170,6 +170,89 @@ mutation UpdateHome($input: UpdateHomeInput!) {
   }
 }
 
+mutation EnableHomeJoinLink($input: EnableHomeJoinLinkInput!) {
+  enableHomeJoinLink(input: $input) {
+    __typename
+    ... on UpdateHomePayload {
+      home {
+        id
+        allowJoinCode
+        joinCode
+        joinLink {
+          universal
+          scheme
+        }
+        version
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
+  updateHomeJoinCode(input: $input) {
+    __typename
+    ... on UpdateHomePayload {
+      home {
+        id
+        allowJoinCode
+        joinCode
+        joinLink {
+          universal
+          scheme
+        }
+        version
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
+  transferHomeOwnership(input: $input) {
+    __typename
+    ... on TransferHomeOwnershipPayload {
+      home {
+        id
+        ...HomeDetailScreen_home
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
 mutation DeleteHome($input: DeleteHomeInput!) {
   deleteHome(input: $input) {
     __typename
@@ -329,10 +412,10 @@ mutation RemoveMember($input: RemoveMemberInput!) {
   }
 }
 
-mutation DeleteHomeInvite($input: RevokeHomeInviteInput!) {
+mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
   deleteHomeInvite(input: $input) {
     __typename
-    ... on RevokeHomeInvitePayload {
+    ... on DeleteHomeInvitePayload {
       homeInvite {
         id
       }

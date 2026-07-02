@@ -19,6 +19,8 @@ import {
   type MealPlanSettingsSheet_MealPlanFragment,
 } from './MealPlanSettingsSheet.generated';
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
+import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
+import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
@@ -104,6 +106,22 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
 
   const [showNutrition, setShowNutrition] = useState(false);
 
+  // Nutrition-goal tracking = linking the user's (single) dietary profile to the
+  // plan. Linking populates nutritionGoalProgress server-side; the toggle only
+  // shows when the user actually has a profile to link.
+  const { profile: dietaryProfile } = useDietaryProfile();
+  const { updateMealPlan } = useMealPlanActions();
+  const isDietaryLinked = !!mealPlan?.dietaryProfile?.id;
+
+  const handleToggleDietary = () => {
+    if (!mealPlan || !dietaryProfile) return;
+    const nextLinked = !isDietaryLinked;
+    updateMealPlan(mealPlan.id, {
+      dietaryProfileId: nextLinked ? dietaryProfile.id : null,
+    });
+    if (nextLinked) setShowNutrition(true);
+  };
+
   const handleDelete = () => {
     if (!mealPlan) return;
     alertService.alert(
@@ -174,6 +192,20 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               })}
             </Text>
           )}
+          {mealPlan.budgetAmount != null ? (
+            <Text size="sm" tone="tertiary" style={styles.planDate}>
+              {t('mealPlanSettings.budgetSpent', {
+                spent: mealPlan.actualCost.toFixed(2),
+                budget: mealPlan.budgetAmount.toFixed(2),
+              })}
+            </Text>
+          ) : mealPlan.actualCost > 0 ? (
+            <Text size="sm" tone="tertiary" style={styles.planDate}>
+              {t('mealPlanSettings.spentAmount', {
+                spent: mealPlan.actualCost.toFixed(2),
+              })}
+            </Text>
+          ) : null}
         </View>
 
         {/* Actions */}
@@ -221,6 +253,21 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               description={t('mealPlanSettings.viewNutritionDesc')}
               onPress={() => setShowNutrition(prev => !prev)}
             />
+            {!!dietaryProfile && (
+              <>
+                <View style={styles.divider} />
+                <ActionItem
+                  icon="fitness-outline"
+                  label={
+                    isDietaryLinked
+                      ? t('mealPlanSettings.nutritionTrackingOn')
+                      : t('mealPlanSettings.trackNutrition')
+                  }
+                  description={t('mealPlanSettings.trackNutritionDesc')}
+                  onPress={handleToggleDietary}
+                />
+              </>
+            )}
           </View>
         </View>
 

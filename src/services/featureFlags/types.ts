@@ -83,7 +83,8 @@ export enum FeatureFlagKey {
 
   // Shopping list features
   SHOPPING_SMART_CATEGORIZATION = 'shopping.smartCategorization',
-  SHOPPING_PRICE_TRACKING = 'shopping.priceTracking',
+  // Price tracking is now a real per-list server setting (ShoppingList.priceTracking,
+  // toggled in ListSettings) — the old app-wide flag was unused and was removed.
   SHOPPING_SHARED_LISTS = 'shopping.sharedLists',
 
   // Pantry features

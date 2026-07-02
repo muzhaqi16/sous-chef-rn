@@ -37,7 +37,7 @@ export function useSuggestionDismissal(
         // rejected undo surfaces an error instead of silently doing nothing.
         if (
           result.data?.markSuggestionActive?.__typename ===
-          'UndismissSuggestionPayload'
+          'MarkSuggestionActivePayload'
         ) {
           refetch();
         } else {
@@ -59,7 +59,7 @@ export function useSuggestionDismissal(
         // anything that isn't the success payload. Success needs no refetch: the
         // caller's optimistic removal already hid it, and the server-side
         // dismissal keeps it hidden on the next cache-and-network load.
-        if (payload?.__typename !== 'DismissSuggestionPayload') {
+        if (payload?.__typename !== 'MarkSuggestionDismissedPayload') {
           refetch();
           toastService.error(t('addItemSheet.dismissFailed'));
         }

@@ -14,6 +14,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "AddItemToCategoryResult": [
+      "AddItemToCategoryPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "AddItemsToShoppingListResult": [
       "AddItemsToShoppingListPayload",
       "ConflictError",
@@ -35,7 +42,14 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "AddRecipeToShoppingListResultUnion": [
+    "AddRecipeToFavoritesResult": [
+      "AddRecipeToFavoritesPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "AddRecipeToShoppingListResult": [
       "AddRecipeToShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
@@ -72,6 +86,13 @@
     ],
     "AdjustPantryItemQuantityResult": [
       "AdjustPantryItemQuantityPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "AdjustPantryItemWeightResult": [
+      "AdjustPantryItemWeightPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -245,36 +266,8 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "CategorizeItemResult": [
-      "CategorizeItemPayload",
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
     "ChangePasswordResult": [
       "ChangePasswordPayload",
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "CleanupDevicesResult": [
-      "CleanupDevicesPayload",
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "ClearReminderResult": [
-      "ClearReminderPayload",
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "ClearShoppingListItemsResult": [
-      "ClearShoppingListItemsPayload",
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
@@ -364,13 +357,6 @@
     "ConvertExpiredToWasteResult": [
       "ConflictError",
       "ConvertExpiredToWastePayload",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "CorrectPantryItemWeightResult": [
-      "ConflictError",
-      "CorrectPantryItemWeightPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -523,6 +509,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "CreateRecurringShoppingListResult": [
+      "ConflictError",
+      "CreateRecurringShoppingListPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CreateShoppingListItemFromRecipeIngredientResult": [
       "ConflictError",
       "CreateShoppingListItemFromRecipeIngredientPayload",
@@ -561,6 +554,13 @@
     "CreateTemplateFromMealPlanResult": [
       "ConflictError",
       "CreateTemplateFromMealPlanPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "CreateUnitConversionResult": [
+      "ConflictError",
+      "CreateUnitConversionPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -645,6 +645,13 @@
     "DeleteExternalSourceResult": [
       "ConflictError",
       "DeleteExternalSourcePayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "DeleteHomeInviteResult": [
+      "ConflictError",
+      "DeleteHomeInvitePayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -747,9 +754,30 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "DeleteShoppingListItemsResult": [
+      "ConflictError",
+      "DeleteShoppingListItemsPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "DeleteShoppingListReminderResult": [
+      "ConflictError",
+      "DeleteShoppingListReminderPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "DeleteShoppingListResult": [
       "ConflictError",
       "DeleteShoppingListPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "DeleteStaleDevicesResult": [
+      "ConflictError",
+      "DeleteStaleDevicesPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -778,20 +806,6 @@
     "DeleteUserAddressResult": [
       "ConflictError",
       "DeleteUserAddressPayload",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "DismissExpirationNotificationResult": [
-      "ConflictError",
-      "DismissExpirationNotificationPayload",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "DismissSuggestionResult": [
-      "ConflictError",
-      "DismissSuggestionPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -856,20 +870,6 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "FavoriteRecipeResult": [
-      "ConflictError",
-      "FavoriteRecipePayload",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "FlagItemForReviewResult": [
-      "ConflictError",
-      "FlagItemForReviewPayload",
-      "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
     "ForgotPasswordResult": [
       "ConflictError",
       "ForbiddenError",
@@ -901,20 +901,6 @@
     "HomeEventNode": [
       "HomeInvite",
       "Membership"
-    ],
-    "IncrementItemPopularityResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "IncrementItemPopularityPayload",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "IncrementRecipeCookedCountResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "IncrementRecipeCookedCountPayload",
-      "NotFoundError",
-      "ValidationError"
     ],
     "InviteToHomeResult": [
       "ConflictError",
@@ -958,20 +944,6 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "ManageAppealResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "ManageAppealPayload",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "ManageRestrictionsResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "ManageRestrictionsPayload",
-      "NotFoundError",
-      "ValidationError"
-    ],
     "MarkAllNotificationsAsReadResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1000,6 +972,27 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "MarkExpirationNotificationDismissedResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkExpirationNotificationDismissedPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkHomeAsDefaultResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkHomeAsDefaultPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkItemForReviewResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkItemForReviewPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "MarkNotificationAsReadResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1014,6 +1007,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "MarkPantryAsDefaultResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkPantryAsDefaultPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "MarkPantryItemExpiredResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1025,6 +1025,41 @@
       "ConflictError",
       "ForbiddenError",
       "MarkRecipeAsCookedPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkShoppingListActiveResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkShoppingListActivePayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkShoppingListAsDefaultResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkShoppingListAsDefaultPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkStorageLocationAsDefaultResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkStorageLocationAsDefaultPayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkSuggestionActiveResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkSuggestionActivePayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "MarkSuggestionDismissedResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkSuggestionDismissedPayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -1082,6 +1117,13 @@
       "PantryItem",
       "PantryItemUsage"
     ],
+    "RecordItemPopularityResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RecordItemPopularityPayload",
+      "ValidationError"
+    ],
     "RecordLoginResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1103,6 +1145,13 @@
       "RecordPriceObservationPayload",
       "ValidationError"
     ],
+    "RecordRecipeCookedResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RecordRecipeCookedPayload",
+      "ValidationError"
+    ],
     "RegisterDeviceResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1115,6 +1164,13 @@
       "ForbiddenError",
       "NotFoundError",
       "RejectItemPayload",
+      "ValidationError"
+    ],
+    "RemoveItemFromCategoryResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RemoveItemFromCategoryPayload",
       "ValidationError"
     ],
     "RemoveItemFromShoppingListResult": [
@@ -1136,6 +1192,13 @@
       "ForbiddenError",
       "NotFoundError",
       "RemoveMemberPayload",
+      "ValidationError"
+    ],
+    "RemoveRecipeFromFavoritesResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RemoveRecipeFromFavoritesPayload",
       "ValidationError"
     ],
     "RemoveRestrictionResult": [
@@ -1166,13 +1229,6 @@
       "RemoveUnitConversionPayload",
       "ValidationError"
     ],
-    "ReorderStorageLocationsResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "ReorderStorageLocationsPayload",
-      "ValidationError"
-    ],
     "ResendVerificationEmailResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1201,67 +1257,11 @@
       "RestoreItemPayload",
       "ValidationError"
     ],
-    "RevokeHomeInviteResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "RevokeHomeInvitePayload",
-      "ValidationError"
-    ],
     "SendTestNotificationResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "SendTestNotificationPayload",
-      "ValidationError"
-    ],
-    "SetDefaultHomeResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetDefaultHomePayload",
-      "ValidationError"
-    ],
-    "SetDefaultPantryResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetDefaultPantryPayload",
-      "ValidationError"
-    ],
-    "SetDefaultShoppingListResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetDefaultShoppingListPayload",
-      "ValidationError"
-    ],
-    "SetDefaultStorageLocationResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetDefaultStorageLocationPayload",
-      "ValidationError"
-    ],
-    "SetReminderResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetReminderPayload",
-      "ValidationError"
-    ],
-    "SetupRecurringResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetupRecurringPayload",
-      "ValidationError"
-    ],
-    "SetupUnitConversionResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetupUnitConversionPayload",
       "ValidationError"
     ],
     "ShareShoppingListResult": [
@@ -1298,34 +1298,6 @@
       "ForbiddenError",
       "NotFoundError",
       "TransferHomeOwnershipPayload",
-      "ValidationError"
-    ],
-    "UncategorizeItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "UncategorizeItemPayload",
-      "ValidationError"
-    ],
-    "UncompleteShoppingListResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "UncompleteShoppingListPayload",
-      "ValidationError"
-    ],
-    "UndismissSuggestionResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "UndismissSuggestionPayload",
-      "ValidationError"
-    ],
-    "UnfavoriteRecipeResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "UnfavoriteRecipePayload",
       "ValidationError"
     ],
     "UpdateBrandResult": [
@@ -1559,11 +1531,25 @@
       "UpdateShoppingListItemPayload",
       "ValidationError"
     ],
+    "UpdateShoppingListReminderResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateShoppingListReminderPayload",
+      "ValidationError"
+    ],
     "UpdateShoppingListResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "UpdateShoppingListPayload",
+      "ValidationError"
+    ],
+    "UpdateStorageLocationOrderResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateStorageLocationOrderPayload",
       "ValidationError"
     ],
     "UpdateStorageLocationResult": [
@@ -1606,6 +1592,20 @@
       "ForbiddenError",
       "NotFoundError",
       "UpdateUserAddressPayload",
+      "ValidationError"
+    ],
+    "UpdateUserAppealResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateUserAppealPayload",
+      "ValidationError"
+    ],
+    "UpdateUserRestrictionsResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateUserRestrictionsPayload",
       "ValidationError"
     ],
     "UpdateUserResult": [

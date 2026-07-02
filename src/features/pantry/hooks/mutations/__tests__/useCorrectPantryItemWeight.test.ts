@@ -3,7 +3,7 @@ import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
-import type { CorrectPantryItemWeightInput } from '#/graphql/generated/schemaTypes';
+import type { AdjustPantryItemWeightInput } from '#/graphql/generated/schemaTypes';
 import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useCorrectPantryItemWeight } from '../useCorrectPantryItemWeight';
@@ -24,13 +24,13 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 const successMock = (variables: {
-  input: CorrectPantryItemWeightInput;
+  input: AdjustPantryItemWeightInput;
 }): MockedResponse => ({
   request: { query: AdjustPantryItemWeightDocument, variables },
   result: {
     data: {
       adjustPantryItemWeight: {
-        __typename: 'CorrectPantryItemWeightPayload',
+        __typename: 'AdjustPantryItemWeightPayload',
         pantryItem: {
           __typename: 'PantryItem',
           id: variables.input.id,
@@ -54,14 +54,14 @@ const successMock = (variables: {
 });
 
 const errorMock = (variables: {
-  input: CorrectPantryItemWeightInput;
+  input: AdjustPantryItemWeightInput;
 }): MockedResponse => ({
   request: { query: AdjustPantryItemWeightDocument, variables },
   error: new Error('Network error'),
 });
 
 const validationErrorMock = (variables: {
-  input: CorrectPantryItemWeightInput;
+  input: AdjustPantryItemWeightInput;
 }): MockedResponse => ({
   request: { query: AdjustPantryItemWeightDocument, variables },
   result: {

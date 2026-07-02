@@ -219,7 +219,7 @@ export function useStorageLocationManagement(
     );
     if (!result) return false;
     const payload = result.data?.markStorageLocationAsDefault;
-    if (payload?.__typename === 'SetDefaultStorageLocationPayload') {
+    if (payload?.__typename === 'MarkStorageLocationAsDefaultPayload') {
       return payload.storageLocation;
     }
     toastResolvedError(payload);

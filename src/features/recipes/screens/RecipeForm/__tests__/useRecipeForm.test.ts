@@ -239,6 +239,23 @@ describe('useRecipeForm', () => {
     expect(input.instructions).toHaveLength(1);
   });
 
+  it('buildUpdateInput carries tips, tags, and attribution', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.updateField('name', 'R');
+      result.current.updateField('tips', 'Chill the dough.');
+      result.current.updateField('tags', 'quick, vegan , ');
+      result.current.updateField('originalAuthor', 'Grandma');
+    });
+
+    const input = result.current.buildUpdateInput();
+    expect(input.tips).toBe('Chill the dough.');
+    // Comma field is split, trimmed, and empties dropped.
+    expect(input.tags).toEqual(['quick', 'vegan']);
+    expect(input.attribution).toEqual({ originalAuthor: 'Grandma' });
+  });
+
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 
@@ -259,6 +276,9 @@ describe('useRecipeForm', () => {
       diets: [Diet.Keto],
       healthGoals: [HealthGoal.HighProtein],
       intolerances: [Intolerance.Dairy],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [
@@ -321,6 +341,9 @@ describe('useRecipeForm', () => {
       diets: [],
       healthGoals: [],
       intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
         edges: [],

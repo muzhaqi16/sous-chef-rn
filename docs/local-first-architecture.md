@@ -138,10 +138,11 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
   errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
 - **`queueStore`** persists the queue — including each mutation `DocumentNode` and variables — to MMKV,
-  user-scoped. Survives restart. The persisted `context` is an **allowlisted subset** (`localFirst`,
-  `operationId`) — the live Apollo operation context carries client internals that don't survive JSON
+  user-scoped. Survives restart. The persisted `context` is an **allowlisted subset** (`localFirst`
+  only) — the live Apollo operation context carries client internals that don't survive JSON
   serialization (functions silently drop; a circular value would make the MMKV write throw and lose the
-  enqueue). The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
+  enqueue). Cumulative-op idempotency rides on `input.idempotencyKey` inside the persisted variables, not
+  on the context. The store also exposes `subscribe()` + `getPendingCount()` (`useSyncExternalStore`-compatible)
   so UI — the offline banner's pending-changes count — reads live queue state without polling.
 - **`queueManager`** replays **strictly in insertion order** — the queue is append-only from one
   user's actions, so insertion order IS causal order: a parent create (offline-created
@@ -165,9 +166,12 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   throwing; without classification a rejected replay would be marked SUCCESS and dequeued while the
   optimistic cache write lingers. A rejected payload routes through the permanent-failure pipeline
   (revert + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A
-  `ConflictError` on a replayed **create** is **converged** — every queued create carries its
-  client-minted id, so a duplicate-id conflict proves an earlier attempt already committed; dequeue as
-  success.
+  `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged** — the API-wide signal that this
+  exact op already committed once (a client-PK create keyed by the row id, or an idempotency-keyed
+  cumulative delta keyed by `input.idempotencyKey`); dequeue as success. Matched on the **code**, never
+  the message; a generic `ConflictError` is a real version/uniqueness conflict → rejected. A converged
+  SUCCESS payload (`converged: true` on favorites, cooking logs, and the `Sync*` resource ops) never
+  reaches the converged branch here — it doesn't end in `Error`, so it's already treated as applied.
 - **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
   gauges, `offline_queue_conflicts_total` (server-wins version conflicts) and
   `offline_queue_permanent_failures_total` counters.
@@ -180,16 +184,18 @@ for qty/move). Replay is single-arg with `clientId` **inside** `input` (the 1-ar
 | Tier | Ops | Replay |
 |---|---|---|
 | **Sync-mapped (fast path)** | `CreatePantryItem`, `UpdatePantryItem`, `DeletePantryItem`, `AddItemToShoppingList`, `UpdateShoppingListItem`, `UpdateShoppingListItemQuantity`, `ToggleShoppingListItemPurchased`, `RemoveItemFromShoppingList`, `MoveShoppingListItem` — **plus the specialized single-item creates** `BarcodeCreatePantryItem` (→ `SyncPantryItem`) and `BarcodeAddItemToShoppingList` / `AddItemToShoppingListFromFilteredPantry` / `AddItemToShoppingListFromPantryItem` (→ `SyncShoppingListItem`) | dedicated `Sync*` mutation, idempotent by `clientId` |
-| **Sync-mapped pantry deltas** | `AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage` (consume), `OpenPantryItemBatch`, `WastePantryItemBatch` | dedicated `Sync*` delta mutation, idempotent by per-operation `operationId` (from `context.operationId`, persisted with the queue entry) — NOT by entity id, since deltas are relative |
+| **Idempotency-keyed pantry deltas (replay original)** | `AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage` (consume), `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`, `ConvertExpiredBatchesToWaste` | re-sends the **original** canonical mutation (no `Sync*` twin — those were removed); at-most-once via a client-minted `input.idempotencyKey` the server records in the same transaction as the delta, so a replay returns `ConflictError(code: IDEMPOTENT_REPLAY)` (converged) — NOT by entity id, since deltas are relative |
 | **Fallback (replay original)** | `AddItemToShoppingListFromRecipe`, `CreateShoppingListItemFromRecipeIngredient`, `AddItemsToShoppingList` (batch) | re-sends the **original** mutation; relies on the server's direct-create idempotency (find-by-id → update, by the client-supplied `id` / per-item `id`) |
 
-Both tiers are duplicate-safe because the row's PK is the client cuid. The specialized single-item
-creates produce the same entity (`PantryItem` / `ShoppingListItem`) from the same input fields as their
-canonical counterparts, so they map onto the same `Sync*` mutation — the shopping item-builder carries
-`brand` / `netWeight` / `storePrefs` / `pricing` through so the barcode add loses nothing on replay. The
-remaining fallback ops genuinely have no clean `Sync*` shape: the recipe-ingredient input is a
-*resolution request* (a `recipeIngredientId`, not a materialized item), and the batch is N items; their
-server create path is itself id-idempotent, so re-sending the original is safe.
+The entity-create/update tiers are duplicate-safe because the row's PK is the client cuid; the pantry-delta
+tier is duplicate-safe because the server dedups its `idempotencyKey` (a delta appends a ledger row, so PK
+idempotency can't dedupe it — the key can). The specialized single-item creates produce the same entity
+(`PantryItem` / `ShoppingListItem`) from the same input fields as their canonical counterparts, so they map
+onto the same `Sync*` mutation — the shopping item-builder carries `brand` / `netWeight` / `storePrefs` /
+`pricing` through so the barcode add loses nothing on replay. The remaining fallback ops genuinely have no
+clean `Sync*` shape: the recipe-ingredient input is a *resolution request* (a `recipeIngredientId`, not a
+materialized item), and the batch is N items; their server create path is itself id-idempotent, so
+re-sending the original is safe.
 
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`) — passed
 through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`. `convertToSyncMutation`
@@ -317,10 +323,13 @@ query-blocking, orthogonal to connectivity.
 - **Storage location create** (`useCreateStorageLocation`) — permanent write before firing +
   `context.localFirst`; plain-create tier keyed by the client-minted id.
 - **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
-  `OpenPantryItemBatch`, `WastePantryItemBatch`) — now **sync-mapped** via dedicated `Sync*` delta
-  mutations, idempotent by a per-operation `operationId` carried in `context.operationId` (deltas are
-  relative, so entity-id idempotency can't dedupe them; the operation id can). The `operationId` is on
-  the persisted-context allowlist, so it survives an app kill between enqueue and replay.
+  `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`, `ConvertExpiredBatchesToWaste`)
+  — replay as the **original canonical mutation**, made at-most-once by a client-minted
+  `input.idempotencyKey` the server records in the same transaction as the delta (deltas are relative, so
+  entity-id idempotency can't dedupe them; the key can). A replay returns
+  `ConflictError(code: IDEMPOTENT_REPLAY)`, which the queue converges. The key rides in the persisted
+  variables, so it survives an app kill between enqueue and replay. (The previous `Sync*` delta twins
+  were removed by the API in favor of this canonical-mutation idempotency.)
 
 **Online-only (degrade, not queued):** auth, invites/share-codes/collaboration/membership, image upload,
 barcode/smart-search lookup, recipe discovery/AI, recipe reviews, recipe favorite/saved-metadata/folders,
@@ -393,8 +402,10 @@ parent exists — ordering is correct by construction, no special-casing.
   (no references remain in the codebase).
 - **Offline-UX shipped** (planned Phase 4): the `OfflineBanner` covers device-offline, API-down, and
   offline mode, with a live pending-changes count (§9).
-- **Granular pantry deltas** were initially deferred (no idempotent Sync mapping); since shipped via
-  `operationId`-keyed `Sync*` delta mutations (§5, §10).
+- **Granular pantry deltas** were initially deferred (no idempotent Sync mapping); shipped first via
+  `operationId`-keyed `Sync*` delta mutations, then migrated when the API replaced those twins with an
+  `input.idempotencyKey` on the canonical mutation (replay → `ConflictError(code: IDEMPOTENT_REPLAY)`,
+  converged). Deltas now replay as the original mutation (§5, §10).
 
 ## 14. Key files
 

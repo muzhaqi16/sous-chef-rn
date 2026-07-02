@@ -198,9 +198,9 @@ function shouldPreservePageInfo(
  * {@link itemsConnectionFieldPolicy} instead — its dedup strategy preserves
  * existing edge positions and bounds the window via MAX_WINDOW_EDGES.
  */
-function mergeConnectionByNodeId() {
+function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
   return {
-    keyArgs: ['filters'] as string[],
+    keyArgs,
     // Same self-healing read as itemsConnectionFieldPolicy — drop dangling
     // `edge.node` refs (post-eviction) and decrement totalCount accordingly.
     // See the read() comment in itemsConnectionFieldPolicy for context.
@@ -655,6 +655,13 @@ export function makeCache(): InMemoryCache {
             },
           },
           savedRecipesConnection: mergeConnectionByNodeId(),
+          // Keyed on filter + orderBy so the unread-badge query and the filtered
+          // history feed keep separate paginated lists; edges merge by node id
+          // so fetchMore appends pages.
+          notificationsConnection: mergeConnectionByNodeId([
+            'filter',
+            'orderBy',
+          ]),
         },
       },
       Query: {

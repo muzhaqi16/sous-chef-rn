@@ -51,6 +51,7 @@ import {
   disposeWebSocket,
   getWebSocketState,
   resumeWebSocketAfterOnline,
+  onWebSocketReconnected,
 } from '../wsLink';
 
 describe('wsLink', () => {
@@ -58,6 +59,26 @@ describe('wsLink', () => {
     jest.clearAllMocks();
     // Re-enable auto reconnect for each test
     enableAutoReconnect();
+  });
+
+  describe('onWebSocketReconnected', () => {
+    it('fires listeners on a reconnect (not the first connect) and unsubscribes', () => {
+      const listener = jest.fn();
+      const unsubscribe = onWebSocketReconnected(listener);
+
+      // First connect is the initial connection — must NOT fire.
+      onHandlers.connected({}, undefined);
+      expect(listener).not.toHaveBeenCalled();
+
+      // A subsequent connect is a reconnect — fires the backfill listener.
+      onHandlers.connected({}, undefined);
+      expect(listener).toHaveBeenCalledTimes(1);
+
+      // After unsubscribe, further reconnects don't call it.
+      unsubscribe();
+      onHandlers.connected({}, undefined);
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('isWebSocketReconnecting', () => {

@@ -272,7 +272,7 @@ export function useRecipeSavedMetadata({
         classifyCreateResult(
           result,
           'removeRecipeFromFavorites',
-          'UnfavoriteRecipePayload',
+          'RemoveRecipeFromFavoritesPayload',
         ) === 'rejected'
       ) {
         revert();

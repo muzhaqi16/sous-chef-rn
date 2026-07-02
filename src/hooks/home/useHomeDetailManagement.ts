@@ -6,6 +6,9 @@ import { HomeDetailScreen_HomeFragmentDoc } from '#/screens/home/HomeDetailScree
 import {
   GetHomeDocument,
   UpdateHomeDocument,
+  EnableHomeJoinLinkDocument,
+  UpdateHomeJoinCodeDocument,
+  TransferHomeOwnershipDocument,
   UpdateMembershipDocument,
   RemoveMemberDocument,
   DeleteHomeInviteDocument,
@@ -14,6 +17,15 @@ import {
 } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+
+/** The per-member permission overrides `updateMembership` accepts. */
+export type MembershipPermissionKey =
+  | 'canAddItems'
+  | 'canRemoveItems'
+  | 'canEditPantry'
+  | 'canViewPantry'
+  | 'canInviteOthers'
+  | 'canManageHome';
 import { t } from '#/i18n/t';
 import {
   createRemoveFromParentConnectionUpdater,
@@ -94,6 +106,12 @@ export function useHomeDetailManagement(homeId: string) {
       },
     },
   );
+  const [enableJoinLinkMutation] = useMutation(EnableHomeJoinLinkDocument);
+  const [rotateJoinCodeMutation, { loading: rotatingJoinCode }] = useMutation(
+    UpdateHomeJoinCodeDocument,
+  );
+  const [transferOwnershipMutation, { loading: transferringOwnership }] =
+    useMutation(TransferHomeOwnershipDocument);
 
   const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
     // Use cache.modify to update the membership role field
@@ -153,7 +171,7 @@ export function useHomeDetailManagement(homeId: string) {
   const [revokeInviteMutation] = useMutation(DeleteHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (
-        data?.deleteHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
+        data?.deleteHomeInvite?.__typename !== 'DeleteHomeInvitePayload' ||
         !variables
       ) {
         return;
@@ -301,6 +319,30 @@ export function useHomeDetailManagement(homeId: string) {
     );
   };
 
+  // Toggle a single membership permission override. updateMembership returns the
+  // updated member (HomeMemberCard_member), so Apollo normalizes it and the
+  // toggle reflects the server state.
+  const updateMemberPermission = async (
+    membershipId: string,
+    permission: MembershipPermissionKey,
+    value: boolean,
+  ) => {
+    const result = await executeMutation(
+      () =>
+        updateMembershipMutation({
+          variables: { input: { id: membershipId, [permission]: value } },
+        }),
+      error =>
+        handleMutationError(error, { operation: 'Update Member Permission' }),
+    );
+    return !alertIfRejected(
+      result,
+      'updateMembership',
+      'UpdateMembershipPayload',
+      t('errors.updateMemberRoleFailed'),
+    );
+  };
+
   const removeMember = (membershipId: string, memberName: string) => {
     const operation = createRemoveOperation({
       mutation: removeMemberMutation,
@@ -363,11 +405,57 @@ export function useHomeDetailManagement(homeId: string) {
   };
 
   const toggleJoinCode = async (enabled: boolean) => {
+    if (enabled) {
+      // Dedicated mutation: mints a joinCode + join link server-side.
+      const result = await executeMutation(
+        () => enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
+        error => handleMutationError(error, { operation: 'Enable Join Link' }),
+      );
+      alertIfRejected(
+        result,
+        'enableHomeJoinLink',
+        'UpdateHomePayload',
+        t('errors.updateHomeFailed'),
+      );
+      return;
+    }
+    // No disableHomeJoinLink mutation — clear the flag via updateHome.
     await updateHomeMutation({
-      variables: {
-        input: { id: homeId, allowJoinCode: enabled },
-      },
+      variables: { input: { id: homeId, allowJoinCode: false } },
     });
+  };
+
+  // Hand the home off to another member. The server flips the OWNER role; the
+  // response carries the refreshed membersConnection so roles update in-place.
+  const transferOwnership = async (newOwnerId: string) => {
+    const result = await executeMutation(
+      () =>
+        transferOwnershipMutation({
+          variables: { input: { homeId, newOwnerId } },
+        }),
+      error =>
+        handleMutationError(error, { operation: 'Transfer Home Ownership' }),
+    );
+    return !alertIfRejected(
+      result,
+      'transferHomeOwnership',
+      'TransferHomeOwnershipPayload',
+      t('errors.updateHomeFailed'),
+    );
+  };
+
+  // Rotate the join code to invalidate a leaked link.
+  const rotateJoinCode = async () => {
+    const result = await executeMutation(
+      () => rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
+      error => handleMutationError(error, { operation: 'Rotate Join Code' }),
+    );
+    return !alertIfRejected(
+      result,
+      'updateHomeJoinCode',
+      'UpdateHomePayload',
+      t('errors.updateHomeFailed'),
+    );
   };
 
   return {
@@ -391,5 +479,10 @@ export function useHomeDetailManagement(homeId: string) {
     revokeInvite,
     leaveHome,
     toggleJoinCode,
+    rotateJoinCode,
+    rotatingJoinCode,
+    transferOwnership,
+    transferringOwnership,
+    updateMemberPermission,
   };
 }

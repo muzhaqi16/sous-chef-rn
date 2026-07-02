@@ -101,6 +101,17 @@ jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
   })),
 }));
 
+jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
+  useForkRecipe: jest.fn(() => ({ forkRecipe: jest.fn(), forking: false })),
+}));
+
+jest.mock('#features/recipes/hooks/usePublishRecipe', () => ({
+  usePublishRecipe: jest.fn(() => ({
+    setPublished: jest.fn(),
+    publishing: false,
+  })),
+}));
+
 jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
   RecipeDetailErrorBoundary: ({ children }: { children: React.ReactNode }) =>
     children,

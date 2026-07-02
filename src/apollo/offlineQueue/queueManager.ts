@@ -262,6 +262,7 @@ export class QueueManager {
     const payload = Object.values(result.data || {})[0] as
       | {
           __typename?: string;
+          code?: string;
           message?: string;
           conflict?: { message?: string };
         }
@@ -271,10 +272,11 @@ export class QueueManager {
     // member instead of throwing — same trap the foreground path closes with
     // classifyCreateResult. Without this, a rejected replay would be marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
-    const outcome = classifyReplayResult(mutation.operationName, payload);
+    const outcome = classifyReplayResult(payload);
     if (outcome === 'converged') {
-      // Duplicate-id conflict on a create: an earlier attempt already
-      // committed this row — the change is on the server. Dequeue as success.
+      // IDEMPOTENT_REPLAY conflict: an earlier attempt already committed this
+      // op (a client-PK create, or an idempotency-keyed cumulative delta) — the
+      // change is on the server. Dequeue as success.
       logger.info(
         `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
       );

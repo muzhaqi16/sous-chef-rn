@@ -20,6 +20,26 @@ mutation RegisterDevice($input: DeviceRegistrationInput!) {
   }
 }
 
+# Update an existing device — used to push a rotated push token to the server
+# (onTokenRefresh) so notifications keep reaching this device.
+mutation UpdateDevice($input: UpdateDeviceInput!) {
+  updateDevice(input: $input) {
+    __typename
+    ... on UpdateDevicePayload {
+      device {
+        id
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
 # ============================================
 # SUBSCRIPTIONS
 # ============================================

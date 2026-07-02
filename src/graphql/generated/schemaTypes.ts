@@ -88,6 +88,20 @@ export type AddIngredientResult = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
+/** Input for categorizing an item */
+export type AddItemToCategoryInput = {
+  categoryId: Scalars['ID']['input'];
+  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  itemId: Scalars['ID']['input'];
+};
+
+export type AddItemToCategoryPayload = {
+  __typename: 'AddItemToCategoryPayload';
+  itemCategory: ItemCategory;
+};
+
+export type AddItemToCategoryResult = AddItemToCategoryPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type AddItemsToShoppingListInput = {
   items: Array<BatchAddShoppingListItemInput>;
   shoppingListId: Scalars['ID']['input'];
@@ -137,6 +151,35 @@ export type AddPantryItemToShoppingListResult = {
 
 export type AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export type AddRecipeToFavoritesInput = {
+  folder?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID2).
+   * Offline-first clients mint this as the saved-recipe row's permanent primary
+   * key so a re-synced favorite resolves to the same record (idempotent) instead
+   * of duplicating. When omitted, the server generates one via @default(cuid(2)).
+   * Must match the CUID2 format; invalid formats are rejected by ID validation.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  recipeId: Scalars['ID']['input'];
+  tags?: InputMaybe<Array<Scalars['String']['input']>>;
+};
+
+export type AddRecipeToFavoritesPayload = {
+  __typename: 'AddRecipeToFavoritesPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing favorite (the recipe was
+   * already favorited) — it did NOT create one. Either way savedRecipe is the
+   * canonical server record. The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
+};
+
+export type AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 /** Input for adding recipe ingredients to a shopping list */
 export type AddRecipeToShoppingListInput = {
   checkPantry?: InputMaybe<Scalars['Boolean']['input']>;
@@ -150,7 +193,7 @@ export type AddRecipeToShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
-export type AddRecipeToShoppingListResultUnion = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+export type AddRecipeToShoppingListResult = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddRestrictionInput = {
   appliesToHomeId?: InputMaybe<Scalars['ID']['input']>;
@@ -247,6 +290,7 @@ export type AdditionCostAnalytics = {
  */
 export type AdjustPantryItemQuantityInput = {
   id: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** The actual quantity from physical count */
   newQuantity: Scalars['Float']['input'];
   /** Why the adjustment was made (required for audit trail) */
@@ -264,6 +308,30 @@ export type AdjustPantryItemQuantityPayload = {
 };
 
 export type AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
+/**
+ * Input for correcting the net weight of a dual-tracked pantry item.
+ * Recalculates remainingNetWeight proportionally and derives new quantity.
+ */
+export type AdjustPantryItemWeightInput = {
+  id: Scalars['ID']['input'];
+  /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
+  netWeight: Scalars['Float']['input'];
+  /** Unit for the net weight (optional — only provide to also change the unit) */
+  netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
+  /** Why the correction is needed (required for audit trail) */
+  reason: Scalars['String']['input'];
+  /** Optimistic concurrency control */
+  version: Scalars['Int']['input'];
+};
+
+export type AdjustPantryItemWeightPayload = {
+  __typename: 'AdjustPantryItemWeightPayload';
+  pantry: Maybe<Pantry>;
+  pantryItem: PantryItem;
+};
+
+export type AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminBulkDeleteItemsInput = {
   ids: Array<Scalars['ID']['input']>;
@@ -1016,20 +1084,6 @@ export type CancelRecurringPayload = {
 
 export type CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
-/** Input for categorizing an item */
-export type CategorizeItemInput = {
-  categoryId: Scalars['ID']['input'];
-  isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
-  itemId: Scalars['ID']['input'];
-};
-
-export type CategorizeItemPayload = {
-  __typename: 'CategorizeItemPayload';
-  itemCategory: ItemCategory;
-};
-
-export type CategorizeItemResult = CategorizeItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
 /**
  * Category type for organizing items
  * Cache: 2 hours - reference data that changes very rarely
@@ -1161,39 +1215,6 @@ export enum ChangeType {
   WeightCorrected = 'WEIGHT_CORRECTED'
 }
 
-export type CleanupDevicesPayload = {
-  __typename: 'CleanupDevicesPayload';
-  result: DeviceCleanupResult;
-};
-
-export type CleanupDevicesResult = CleanupDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type ClearReminderInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type ClearReminderPayload = {
-  __typename: 'ClearReminderPayload';
-  shoppingList: ShoppingList;
-};
-
-export type ClearReminderResult = ClearReminderPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type ClearShoppingListItemsInput = {
-  purchased: Scalars['Boolean']['input'];
-  shoppingListId: Scalars['ID']['input'];
-};
-
-export type ClearShoppingListItemsPayload = {
-  __typename: 'ClearShoppingListItemsPayload';
-  /** IDs of the items that were cleared. */
-  clearedItemIds: Array<Scalars['ID']['output']>;
-  /** Summary of the bulk clear operation. */
-  summary: BulkOperationSummary;
-};
-
-export type ClearShoppingListItemsResult = ClearShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
 /** Order by options for collaborators */
 export type CollaboratorOrderBy = {
   invitedAt?: InputMaybe<SortOrder>;
@@ -1295,18 +1316,18 @@ export type ConfirmRecipeConsumptionPayload = {
   __typename: 'ConfirmRecipeConsumptionPayload';
   /** Pantry usages recorded for the consumed ingredients. */
   consumedItems: Array<PantryItemUsage>;
+  /**
+   * True when this call CONVERGED on a pre-existing cooking log (a client-provided
+   * id matched an existing log) — it did NOT re-consume. On a converge,
+   * consumedItems is empty. The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   /** The cooking log entry recorded for this consumption, if any. */
   cookingLog: Maybe<CookingLog>;
   /** Ingredients that could not be consumed (e.g. insufficient stock). */
   failedItems: Array<ConsumptionFailure>;
   totalConsumed: Scalars['Int']['output'];
   totalFailed: Scalars['Int']['output'];
-  /**
-   * True when this call recorded the consumption; false when a client-provided
-   * id matched an existing cooking log and the call converged on it without
-   * re-consuming (idempotent replay). On a replay, consumedItems is empty.
-   */
-  wasApplied: Scalars['Boolean']['output'];
 };
 
 export type ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -1419,6 +1440,7 @@ export enum ConversionType {
 }
 
 export type ConvertExpiredBatchesToWasteInput = {
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   pantryItemId: Scalars['ID']['input'];
 };
 
@@ -1431,6 +1453,7 @@ export type ConvertExpiredBatchesToWastePayload = {
 export type ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConvertExpiredToWasteInput = {
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   pantryItemId: Scalars['ID']['input'];
 };
 
@@ -1518,30 +1541,6 @@ export type CookingStats = {
   totalCookingSessions: Scalars['Int']['output'];
   totalRecipesCooked: Scalars['Int']['output'];
 };
-
-/**
- * Input for correcting the net weight of a dual-tracked pantry item.
- * Recalculates remainingNetWeight proportionally and derives new quantity.
- */
-export type CorrectPantryItemWeightInput = {
-  id: Scalars['ID']['input'];
-  /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
-  netWeight: Scalars['Float']['input'];
-  /** Unit for the net weight (optional — only provide to also change the unit) */
-  netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
-  /** Why the correction is needed (required for audit trail) */
-  reason: Scalars['String']['input'];
-  /** Optimistic concurrency control */
-  version: Scalars['Int']['input'];
-};
-
-export type CorrectPantryItemWeightPayload = {
-  __typename: 'CorrectPantryItemWeightPayload';
-  pantry: Maybe<Pantry>;
-  pantryItem: PantryItem;
-};
-
-export type CorrectPantryItemWeightResult = ConflictError | CorrectPantryItemWeightPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -2007,6 +2006,20 @@ export type CreateRecipeReviewPayload = {
 
 export type CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
+export type CreateRecurringShoppingListInput = {
+  id: Scalars['ID']['input'];
+  nextRecurringDate?: InputMaybe<Scalars['DateTime']['input']>;
+  recurringInterval: Scalars['Int']['input'];
+  recurringPattern: RecurringPattern;
+};
+
+export type CreateRecurringShoppingListPayload = {
+  __typename: 'CreateRecurringShoppingListPayload';
+  shoppingList: ShoppingList;
+};
+
+export type CreateRecurringShoppingListResult = ConflictError | CreateRecurringShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type CreateShoppingListInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
@@ -2167,6 +2180,19 @@ export type CreateTemplateFromMealPlanPayload = {
 };
 
 export type CreateTemplateFromMealPlanResult = ConflictError | CreateTemplateFromMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateUnitConversionInput = {
+  baseUnitId: Scalars['ID']['input'];
+  conversionFactor: Scalars['Float']['input'];
+  unitId: Scalars['ID']['input'];
+};
+
+export type CreateUnitConversionPayload = {
+  __typename: 'CreateUnitConversionPayload';
+  unit: Unit;
+};
+
+export type CreateUnitConversionResult = ConflictError | CreateUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateUnitInput = {
   baseUnitId?: InputMaybe<Scalars['ID']['input']>;
@@ -2442,6 +2468,18 @@ export type DeleteHomeInput = {
   id: Scalars['ID']['input'];
 };
 
+export type DeleteHomeInviteInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteHomeInvitePayload = {
+  __typename: 'DeleteHomeInvitePayload';
+  home: Maybe<Home>;
+  homeInvite: HomeInvite;
+};
+
+export type DeleteHomeInviteResult = ConflictError | DeleteHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type DeleteHomePayload = {
   __typename: 'DeleteHomePayload';
   home: Home;
@@ -2606,12 +2644,53 @@ export type DeleteShoppingListInput = {
   id: Scalars['ID']['input'];
 };
 
+export type DeleteShoppingListItemsInput = {
+  purchased: Scalars['Boolean']['input'];
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type DeleteShoppingListItemsPayload = {
+  __typename: 'DeleteShoppingListItemsPayload';
+  /** IDs of the items that were cleared. */
+  clearedItemIds: Array<Scalars['ID']['output']>;
+  /** Summary of the bulk clear operation. */
+  summary: BulkOperationSummary;
+};
+
+export type DeleteShoppingListItemsResult = ConflictError | DeleteShoppingListItemsPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type DeleteShoppingListPayload = {
   __typename: 'DeleteShoppingListPayload';
   shoppingList: ShoppingList;
 };
 
+export type DeleteShoppingListReminderInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteShoppingListReminderPayload = {
+  __typename: 'DeleteShoppingListReminderPayload';
+  shoppingList: ShoppingList;
+};
+
+export type DeleteShoppingListReminderResult = ConflictError | DeleteShoppingListReminderPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
+
+/** Input for device cleanup operations */
+export type DeleteStaleDevicesInput = {
+  /** Clean up soft-deleted devices older than X days */
+  deletedDevices?: InputMaybe<DeletedDeviceCleanupInput>;
+  /** Clean up stale devices (not seen for X days) */
+  staleDevices?: InputMaybe<StaleDeviceCleanupInput>;
+};
+
+export type DeleteStaleDevicesPayload = {
+  __typename: 'DeleteStaleDevicesPayload';
+  result: DeviceCleanupResult;
+};
+
+export type DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteStorageLocationInput = {
   id: Scalars['ID']['input'];
@@ -2774,14 +2853,6 @@ export type DeviceCharacteristicsInput = {
   hasNotch?: InputMaybe<Scalars['Boolean']['input']>;
   isEmulator?: InputMaybe<Scalars['Boolean']['input']>;
   isTablet?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-/** Input for device cleanup operations */
-export type DeviceCleanupInput = {
-  /** Clean up soft-deleted devices older than X days */
-  deletedDevices?: InputMaybe<DeletedDeviceCleanupInput>;
-  /** Clean up stale devices (not seen for X days) */
-  staleDevices?: InputMaybe<StaleDeviceCleanupInput>;
 };
 
 /** Result of device cleanup operation */
@@ -3110,38 +3181,6 @@ export enum Difficulty {
   VeryEasy = 'VERY_EASY'
 }
 
-export type DismissExpirationNotificationPayload = {
-  __typename: 'DismissExpirationNotificationPayload';
-  expirationNotification: ExpirationNotification;
-  pantryItem: Maybe<PantryItem>;
-};
-
-export type DismissExpirationNotificationResult = ConflictError | DismissExpirationNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
-
-export type DismissNotificationInput = {
-  notificationId: Scalars['ID']['input'];
-};
-
-/** Input to hide a catalog item from a user's suggestions on a given surface. */
-export type DismissSuggestionInput = {
-  /** Catalog item to stop suggesting. */
-  itemId: Scalars['ID']['input'];
-  /** Which surface to hide it from (pantry vs shopping). */
-  surface: SuggestionSurface;
-};
-
-export type DismissSuggestionPayload = {
-  __typename: 'DismissSuggestionPayload';
-  /** Always true — the item is now dismissed on this surface. */
-  dismissed: Scalars['Boolean']['output'];
-  /** The item the dismissal applies to. */
-  itemId: Scalars['ID']['output'];
-  /** Surface the dismissal applies to. */
-  surface: SuggestionSurface;
-};
-
-export type DismissSuggestionResult = ConflictError | DismissSuggestionPayload | ForbiddenError | NotFoundError | ValidationError;
-
 /** Display format for quantities */
 export enum DisplayFormat {
   Auto = 'AUTO',
@@ -3249,6 +3288,8 @@ export enum ErrorCode {
   EmailAlreadyVerified = 'EMAIL_ALREADY_VERIFIED',
   Forbidden = 'FORBIDDEN',
   HomeAccessDenied = 'HOME_ACCESS_DENIED',
+  /** An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure. */
+  IdempotentReplay = 'IDEMPOTENT_REPLAY',
   InternalError = 'INTERNAL_ERROR',
   NotFound = 'NOT_FOUND',
   PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
@@ -3458,35 +3499,6 @@ export type FailedIpStat = {
   ipAddress: Maybe<Scalars['String']['output']>;
 };
 
-export type FavoriteRecipeInput = {
-  folder?: InputMaybe<Scalars['String']['input']>;
-  /**
-   * Optional client-generated permanent ID (CUID2).
-   * Offline-first clients mint this as the saved-recipe row's permanent primary
-   * key so a re-synced favorite resolves to the same record (idempotent) instead
-   * of duplicating. When omitted, the server generates one via @default(cuid(2)).
-   * Must match the CUID2 format; invalid formats are rejected by ID validation.
-   */
-  id?: InputMaybe<Scalars['ID']['input']>;
-  notes?: InputMaybe<Scalars['String']['input']>;
-  recipeId: Scalars['ID']['input'];
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-};
-
-export type FavoriteRecipePayload = {
-  __typename: 'FavoriteRecipePayload';
-  recipe: Maybe<Recipe>;
-  savedRecipe: SavedRecipe;
-  /**
-   * True when this call created the favorite; false when the recipe was already
-   * favorited and the call converged on the existing record (idempotent replay
-   * or a two-device race). Either way savedRecipe is the canonical server record.
-   */
-  wasCreated: Scalars['Boolean']['output'];
-};
-
-export type FavoriteRecipeResult = ConflictError | FavoriteRecipePayload | ForbiddenError | NotFoundError | ValidationError;
-
 /** Sub-input for feature-specific notifications */
 export type FeatureNotificationsInput = {
   collaborationInvites?: InputMaybe<Scalars['Boolean']['input']>;
@@ -3507,18 +3519,6 @@ export type FeatureTogglesInput = {
   betaFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
   enabledFeatures?: InputMaybe<Array<Scalars['String']['input']>>;
 };
-
-export type FlagItemForReviewInput = {
-  itemId: Scalars['ID']['input'];
-  reason?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type FlagItemForReviewPayload = {
-  __typename: 'FlagItemForReviewPayload';
-  item: Item;
-};
-
-export type FlagItemForReviewResult = ConflictError | FlagItemForReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
  * Caller is authenticated but not authorized for this operation. (Pure
@@ -4068,30 +4068,6 @@ export enum ImageUploadPurpose {
   ProfileAvatar = 'PROFILE_AVATAR',
   ProfileCover = 'PROFILE_COVER'
 }
-
-export type IncrementItemPopularityInput = {
-  amount?: InputMaybe<Scalars['Int']['input']>;
-  id: Scalars['ID']['input'];
-};
-
-export type IncrementItemPopularityPayload = {
-  __typename: 'IncrementItemPopularityPayload';
-  item: Item;
-};
-
-export type IncrementItemPopularityResult = ConflictError | ForbiddenError | IncrementItemPopularityPayload | NotFoundError | ValidationError;
-
-export type IncrementRecipeCookedCountInput = {
-  recipeId: Scalars['ID']['input'];
-};
-
-export type IncrementRecipeCookedCountPayload = {
-  __typename: 'IncrementRecipeCookedCountPayload';
-  recipe: Maybe<Recipe>;
-  savedRecipe: SavedRecipe;
-};
-
-export type IncrementRecipeCookedCountResult = ConflictError | ForbiddenError | IncrementRecipeCookedCountPayload | NotFoundError | ValidationError;
 
 export type IngredientInput = {
   isActive?: InputMaybe<Scalars['Boolean']['input']>;
@@ -5163,47 +5139,6 @@ export type LowStockToShoppingListResult = {
   skippedItems: Array<SkippedLowStockItem>;
 };
 
-/** Input for managing appeals (submit or review). */
-export type ManageAppealInput = {
-  /** For submitting: appeal notes from the user */
-  appealNotes?: InputMaybe<Scalars['String']['input']>;
-  /** For reviewing: whether the appeal is approved (null = submitting, true/false = reviewing) */
-  approved?: InputMaybe<Scalars['Boolean']['input']>;
-  /** For reviewing: reviewer's notes */
-  reviewNotes?: InputMaybe<Scalars['String']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
-export type ManageAppealPayload = {
-  __typename: 'ManageAppealPayload';
-  userModeration: Maybe<UserModeration>;
-};
-
-export type ManageAppealResult = ConflictError | ForbiddenError | ManageAppealPayload | NotFoundError | ValidationError;
-
-/** Input for managing restrictions (add and/or remove in one call). */
-export type ManageRestrictionsInput = {
-  /** Restrictions to add */
-  add?: InputMaybe<Array<ModerationRestriction>>;
-  reason?: InputMaybe<Scalars['String']['input']>;
-  /** Restrictions to remove */
-  remove?: InputMaybe<Array<ModerationRestriction>>;
-  restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
-export type ManageRestrictionsPayload = {
-  __typename: 'ManageRestrictionsPayload';
-  userModeration: Maybe<UserModeration>;
-};
-
-export type ManageRestrictionsResult = ConflictError | ForbiddenError | ManageRestrictionsPayload | NotFoundError | ValidationError;
-
-export type MarkActionInput = {
-  action: ExpirationAction;
-  notificationId: Scalars['ID']['input'];
-};
-
 export type MarkAllNotificationsAsReadPayload = {
   __typename: 'MarkAllNotificationsAsReadPayload';
   count: Scalars['Int']['output'];
@@ -5225,6 +5160,11 @@ export type MarkAsTemplatePayload = {
 
 export type MarkAsTemplateResult = ConflictError | ForbiddenError | MarkAsTemplatePayload | NotFoundError | ValidationError;
 
+export type MarkExpirationActionInput = {
+  action: ExpirationAction;
+  notificationId: Scalars['ID']['input'];
+};
+
 export type MarkExpirationActionPayload = {
   __typename: 'MarkExpirationActionPayload';
   expirationNotification: ExpirationNotification;
@@ -5244,6 +5184,42 @@ export type MarkExpirationNotificationAsReadPayload = {
 };
 
 export type MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError;
+
+export type MarkExpirationNotificationDismissedInput = {
+  notificationId: Scalars['ID']['input'];
+};
+
+export type MarkExpirationNotificationDismissedPayload = {
+  __typename: 'MarkExpirationNotificationDismissedPayload';
+  expirationNotification: ExpirationNotification;
+  pantryItem: Maybe<PantryItem>;
+};
+
+export type MarkExpirationNotificationDismissedResult = ConflictError | ForbiddenError | MarkExpirationNotificationDismissedPayload | NotFoundError | ValidationError;
+
+export type MarkHomeAsDefaultInput = {
+  homeId: Scalars['ID']['input'];
+};
+
+export type MarkHomeAsDefaultPayload = {
+  __typename: 'MarkHomeAsDefaultPayload';
+  defaultPantry: Maybe<Pantry>;
+  settings: UserSettings;
+};
+
+export type MarkHomeAsDefaultResult = ConflictError | ForbiddenError | MarkHomeAsDefaultPayload | NotFoundError | ValidationError;
+
+export type MarkItemForReviewInput = {
+  itemId: Scalars['ID']['input'];
+  reason?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type MarkItemForReviewPayload = {
+  __typename: 'MarkItemForReviewPayload';
+  item: Item;
+};
+
+export type MarkItemForReviewResult = ConflictError | ForbiddenError | MarkItemForReviewPayload | NotFoundError | ValidationError;
 
 export type MarkNotificationAsReadInput = {
   id: Scalars['ID']['input'];
@@ -5266,6 +5242,18 @@ export type MarkNotificationUnreadPayload = {
 };
 
 export type MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError;
+
+export type MarkPantryAsDefaultInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type MarkPantryAsDefaultPayload = {
+  __typename: 'MarkPantryAsDefaultPayload';
+  home: Maybe<Home>;
+  pantry: Pantry;
+};
+
+export type MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsDefaultPayload | NotFoundError | ValidationError;
 
 export type MarkPantryItemExpiredInput = {
   id: Scalars['ID']['input'];
@@ -5299,17 +5287,91 @@ export type MarkRecipeAsCookedInput = {
 
 export type MarkRecipeAsCookedPayload = {
   __typename: 'MarkRecipeAsCookedPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing cooking log (a client-provided
+   * id matched an existing log) — it did NOT re-log or re-deduct the pantry. The
+   * canonical, API-wide replay flag; clients treat converged=true as already-synced.
+   */
+  converged: Scalars['Boolean']['output'];
   cookingLog: CookingLog;
   recipe: Maybe<Recipe>;
-  /**
-   * True when this call recorded the cooking log (and deducted the pantry);
-   * false when a client-provided id matched an existing log and the call
-   * converged on it without re-logging or re-deducting (idempotent replay).
-   */
-  wasApplied: Scalars['Boolean']['output'];
 };
 
 export type MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedPayload | NotFoundError | ValidationError;
+
+export type MarkShoppingListActiveInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type MarkShoppingListActivePayload = {
+  __typename: 'MarkShoppingListActivePayload';
+  shoppingList: ShoppingList;
+};
+
+export type MarkShoppingListActiveResult = ConflictError | ForbiddenError | MarkShoppingListActivePayload | NotFoundError | ValidationError;
+
+export type MarkShoppingListAsDefaultInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type MarkShoppingListAsDefaultPayload = {
+  __typename: 'MarkShoppingListAsDefaultPayload';
+  shoppingList: ShoppingList;
+};
+
+export type MarkShoppingListAsDefaultResult = ConflictError | ForbiddenError | MarkShoppingListAsDefaultPayload | NotFoundError | ValidationError;
+
+export type MarkStorageLocationAsDefaultInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type MarkStorageLocationAsDefaultPayload = {
+  __typename: 'MarkStorageLocationAsDefaultPayload';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
+export type MarkStorageLocationAsDefaultResult = ConflictError | ForbiddenError | MarkStorageLocationAsDefaultPayload | NotFoundError | ValidationError;
+
+/** Input to restore a previously-dismissed item so it can be suggested again. */
+export type MarkSuggestionActiveInput = {
+  /** Catalog item to start suggesting again. */
+  itemId: Scalars['ID']['input'];
+  /** Which surface to restore it on (pantry vs shopping). */
+  surface: SuggestionSurface;
+};
+
+export type MarkSuggestionActivePayload = {
+  __typename: 'MarkSuggestionActivePayload';
+  /** Always false — the item can be suggested again on this surface. */
+  dismissed: Scalars['Boolean']['output'];
+  /** The item the dismissal was removed for. */
+  itemId: Scalars['ID']['output'];
+  /** Surface the item was restored on. */
+  surface: SuggestionSurface;
+};
+
+export type MarkSuggestionActiveResult = ConflictError | ForbiddenError | MarkSuggestionActivePayload | NotFoundError | ValidationError;
+
+/** Input to hide a catalog item from a user's suggestions on a given surface. */
+export type MarkSuggestionDismissedInput = {
+  /** Catalog item to stop suggesting. */
+  itemId: Scalars['ID']['input'];
+  /** Which surface to hide it from (pantry vs shopping). */
+  surface: SuggestionSurface;
+};
+
+export type MarkSuggestionDismissedPayload = {
+  __typename: 'MarkSuggestionDismissedPayload';
+  /** Always true — the item is now dismissed on this surface. */
+  dismissed: Scalars['Boolean']['output'];
+  /** The item the dismissal applies to. */
+  itemId: Scalars['ID']['output'];
+  /** Surface the dismissal applies to. */
+  surface: SuggestionSurface;
+};
+
+export type MarkSuggestionDismissedResult = ConflictError | ForbiddenError | MarkSuggestionDismissedPayload | NotFoundError | ValidationError;
 
 export enum MatchType {
   Category = 'CATEGORY',
@@ -5905,7 +5967,7 @@ export type Mutation = {
   /** Accept an invitation to collaborate on a shopping list. */
   acceptShoppingListInvite: AcceptShoppingListInviteResult;
   /** Add an item to a category. */
-  addItemToCategory: CategorizeItemResult;
+  addItemToCategory: AddItemToCategoryResult;
   /**
    * Batch add multiple items to a shopping list.
    * More efficient than calling addItemToShoppingList multiple times.
@@ -5926,12 +5988,15 @@ export type Mutation = {
    * Add a recipe to the user's favorites (creates a saved recipe with optional
    * folder/tags/notes).
    */
-  addRecipeToFavorites: FavoriteRecipeResult;
+  addRecipeToFavorites: AddRecipeToFavoritesResult;
   /**
-   * Add recipe ingredients to shopping list with smart unit handling
-   * Checks pantry for available items and only adds deficit
+   * Add a recipe's ingredients to a shopping list, pantry-deficit-aware: checks
+   * the pantry and adds only the shortfall (with smart unit handling). Use
+   * createShoppingListItemsFromRecipe instead to add every ingredient in full
+   * regardless of pantry stock — the two are intentional variants (§5), not
+   * duplicates.
    */
-  addRecipeToShoppingList: AddRecipeToShoppingListResultUnion;
+  addRecipeToShoppingList: AddRecipeToShoppingListResult;
   /** Add a dietary restriction to the user's profile. */
   addRestriction: AddRestrictionResult;
   /** Add an item to a template */
@@ -5949,7 +6014,7 @@ export type Mutation = {
    * Recalculates remainingNetWeight proportionally and derives new quantity.
    * Use this when the original net weight was entered incorrectly.
    */
-  adjustPantryItemWeight: CorrectPantryItemWeightResult;
+  adjustPantryItemWeight: AdjustPantryItemWeightResult;
   /** Create multiple items at once */
   bulkCreateItems: BulkCreateItemsResult;
   /** Create multiple purchase records at once. */
@@ -6047,10 +6112,17 @@ export type Mutation = {
   /** Create a review for a published recipe. */
   createRecipeReview: CreateRecipeReviewResult;
   /** Create recurring generation for a shopping list. */
-  createRecurringShoppingList: SetupRecurringResult;
+  createRecurringShoppingList: CreateRecurringShoppingListResult;
   /** Create a new shopping list. */
   createShoppingList: CreateShoppingListResult;
   createShoppingListItemFromRecipeIngredient: CreateShoppingListItemFromRecipeIngredientResult;
+  /**
+   * Add every ingredient of a recipe to a shopping list in full (scaling
+   * quantities when servings differ), without checking the pantry. Use
+   * addRecipeToShoppingList instead for the pantry-deficit-aware variant that
+   * adds only the shortfall — the two are intentional variants (§5), not
+   * duplicates.
+   */
   createShoppingListItemsFromRecipe: CreateShoppingListItemsFromRecipeResult;
   /**
    * Create a new storage location
@@ -6067,7 +6139,7 @@ export type Mutation = {
   /** Create a new unit of measurement. */
   createUnit: CreateUnitResult;
   /** Create a conversion factor between a unit and its base unit. */
-  createUnitConversion: SetupUnitConversionResult;
+  createUnitConversion: CreateUnitConversionResult;
   /** Decline a home invitation using its token. */
   declineHomeInvite: DeclineHomeInviteResult;
   /** Decline an invitation to collaborate on a shopping list. */
@@ -6094,7 +6166,7 @@ export type Mutation = {
   /** Delete a home (owner only). */
   deleteHome: DeleteHomeResult;
   /** Delete a pending home invitation. */
-  deleteHomeInvite: RevokeHomeInviteResult;
+  deleteHomeInvite: DeleteHomeInviteResult;
   /** Delete an item (soft delete by default, permanent if specified) */
   deleteItem: DeleteItemResult;
   /** Delete a meal plan. */
@@ -6126,9 +6198,9 @@ export type Mutation = {
    * Use purchased=true to delete purchased items, purchased=false to delete unpurchased items.
    * Returns summary with count of deleted items.
    */
-  deleteShoppingListItems: ClearShoppingListItemsResult;
+  deleteShoppingListItems: DeleteShoppingListItemsResult;
   /** Delete the reminder from a shopping list. */
-  deleteShoppingListReminder: ClearReminderResult;
+  deleteShoppingListReminder: DeleteShoppingListReminderResult;
   /**
    * Delete a storage location (soft delete)
    * Fails if location has child locations or items
@@ -6180,17 +6252,17 @@ export type Mutation = {
   /** Mark an expiration notification as read. */
   markExpirationNotificationAsRead: MarkExpirationNotificationAsReadResult;
   /** Mark an expiration notification dismissed so it no longer appears. */
-  markExpirationNotificationDismissed: DismissExpirationNotificationResult;
+  markExpirationNotificationDismissed: MarkExpirationNotificationDismissedResult;
   /** Mark a home as the default for the current user. */
-  markHomeAsDefault: SetDefaultHomeResult;
+  markHomeAsDefault: MarkHomeAsDefaultResult;
   /** Mark an item for review */
-  markItemForReview: FlagItemForReviewResult;
+  markItemForReview: MarkItemForReviewResult;
   /** Mark a notification as read. */
   markNotificationAsRead: MarkNotificationAsReadResult;
   /** Mark a notification as unread. */
   markNotificationUnread: MarkNotificationUnreadResult;
   /** Mark a pantry as the default for its home. */
-  markPantryAsDefault: SetDefaultPantryResult;
+  markPantryAsDefault: MarkPantryAsDefaultResult;
   /** Mark a pantry item as expired. */
   markPantryItemExpired: MarkPantryItemExpiredResult;
   /**
@@ -6202,20 +6274,20 @@ export type Mutation = {
    */
   markRecipeAsCooked: MarkRecipeAsCookedResult;
   /** Mark a completed shopping list active again. */
-  markShoppingListActive: UncompleteShoppingListResult;
+  markShoppingListActive: MarkShoppingListActiveResult;
   /** Mark a shopping list as the default. */
-  markShoppingListAsDefault: SetDefaultShoppingListResult;
+  markShoppingListAsDefault: MarkShoppingListAsDefaultResult;
   /**
    * Mark a storage location as the default for its home.
    * Automatically unsets the previous default location.
    * Requires user to have edit permissions in the home.
    */
-  markStorageLocationAsDefault: SetDefaultStorageLocationResult;
+  markStorageLocationAsDefault: MarkStorageLocationAsDefaultResult;
   /**
    * Mark a previously-dismissed item active again so it can appear in your
    * suggestions on the given surface.
    */
-  markSuggestionActive: UndismissSuggestionResult;
+  markSuggestionActive: MarkSuggestionActiveResult;
   /**
    * Mark a catalog item dismissed from your pantry or shopping suggestions
    * ("stop suggesting this"). Non-destructive and reversible via
@@ -6225,7 +6297,7 @@ export type Mutation = {
    * Dismissals are per-user, so on shared lists/homes only your own
    * suggestions are affected.
    */
-  markSuggestionDismissed: DismissSuggestionResult;
+  markSuggestionDismissed: MarkSuggestionDismissedResult;
   /**
    * Move all purchased items from a shopping list to the home's default pantry.
    * Only available for shopping lists linked to a home.
@@ -6248,7 +6320,7 @@ export type Mutation = {
    */
   openPantryItemBatch: OpenPantryItemBatchResult;
   /** Record an increment to an item's popularity counter. */
-  recordItemPopularity: IncrementItemPopularityResult;
+  recordItemPopularity: RecordItemPopularityResult;
   /**
    * Record a login event. Consolidates recordLoginAttempt and createLoginHistory.
    * Use for all login recording — both high-level attempts and direct history creation.
@@ -6259,7 +6331,7 @@ export type Mutation = {
   /** Record a price observation for historical tracking */
   recordPriceObservation: RecordPriceObservationResult;
   /** Record that a saved recipe was cooked (increments the cooked count). */
-  recordRecipeCooked: IncrementRecipeCookedCountResult;
+  recordRecipeCooked: RecordRecipeCookedResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
   /** Register a new user account and return tokens. */
@@ -6270,7 +6342,7 @@ export type Mutation = {
    */
   registerDevice: RegisterDeviceResult;
   /** Remove an item from a category. */
-  removeItemFromCategory: UncategorizeItemResult;
+  removeItemFromCategory: RemoveItemFromCategoryResult;
   /** Remove an item from a shopping list. */
   removeItemFromShoppingList: RemoveItemFromShoppingListResult;
   /** Remove the primary image from an item (deletes from S3) */
@@ -6278,7 +6350,7 @@ export type Mutation = {
   /** Remove a member from a home (owner/admin only). */
   removeMember: RemoveMemberResult;
   /** Remove a recipe from the user's favorites. */
-  removeRecipeFromFavorites: UnfavoriteRecipeResult;
+  removeRecipeFromFavorites: RemoveRecipeFromFavoritesResult;
   /** Remove a dietary restriction from the user's profile. */
   removeRestriction: RemoveRestrictionResult;
   /** Remove a collaborator from a shopping list. */
@@ -6302,63 +6374,32 @@ export type Mutation = {
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
-  /**
-   * Offline-sync twin of adjustPantryItemQuantity — idempotent by operationId:
-   * replaying does not re-scale batches or pollute the ledger.
-   */
-  syncAdjustPantryItemQuantity: SyncPantryDeltaResult;
-  /**
-   * Offline-sync twin of the canonical pantry-consumption mutation — idempotent
-   * by operationId (incl. waste-via-usage): replaying does not decrement
-   * quantity twice.
-   */
-  syncConsumePantryItem: SyncPantryDeltaResult;
-  /**
-   * Offline-sync twin of convertExpiredBatchesToWaste — idempotent by operationId:
-   * replaying returns current state without re-wasting batches.
-   */
-  syncConvertExpiredBatchesToWaste: SyncPantryDeltaResult;
-  /**
-   * Offline-sync twin of convertExpiredToWaste — idempotent by operationId:
-   * replaying returns current state without writing a second waste ledger entry.
-   */
-  syncConvertExpiredToWaste: SyncPantryDeltaResult;
-  /** Offline-sync twin of deletePantryItem — idempotent by operationId. */
+  /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
   syncDeletePantryItem: SyncPantryItemResult;
-  /** Offline-sync twin of removeItemFromShoppingList — idempotent by operationId. */
+  /**
+   * Offline-sync twin of removeItemFromShoppingList — idempotent by a
+   * client-minted id.
+   */
   syncDeleteShoppingListItem: SyncShoppingListItemResult;
-  /** Offline-sync twin of moveShoppingListItem (reorder) — idempotent by operationId. */
+  /**
+   * Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
+   * client-minted id.
+   */
   syncMoveShoppingListItem: SyncShoppingListItemResult;
   /**
-   * Offline-sync twin of openPantryItemBatch — idempotent by operationId.
-   * Naturally idempotent: replaying (or opening an already-open batch) returns
-   * current state as a no-op.
-   */
-  syncOpenPantryItemBatch: SyncPantryDeltaResult;
-  /**
-   * Offline-sync twin of createPantryItem/updatePantryItem — idempotent by
-   * operationId. Use the online mutations directly when not syncing offline
-   * edits. See docs/api/graphql-operation-conventions.md (§5 variants).
+   * Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
+   * client-minted id (the primary key for creates, idempotencyKey for
+   * cumulative deltas). Use the online mutations directly when not syncing
+   * offline edits. See docs/api/graphql-operation-conventions.md (§5 variants).
    */
   syncPantryItem: SyncPantryItemResult;
   /**
-   * Offline-sync twin of restockPantryItem — idempotent by operationId:
-   * replaying the same operationId returns current state without adding
-   * inventory again (no double-count). Authorization is enforced at the
-   * service layer.
-   */
-  syncRestockPantryItem: SyncPantryDeltaResult;
-  /**
    * Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
-   * idempotent by operationId. Use the online mutations directly when not
-   * syncing offline edits. See docs/api/graphql-operation-conventions.md (§5).
+   * idempotent by a client-minted id (the primary key or idempotencyKey). Use
+   * the online mutations directly when not syncing offline edits. See
+   * docs/api/graphql-operation-conventions.md (§5).
    */
   syncShoppingListItem: SyncShoppingListItemResult;
-  /**
-   * Offline-sync twin of wastePantryItemBatch — idempotent by operationId:
-   * replaying returns current state without writing a phantom waste ledger entry.
-   */
-  syncWastePantryItemBatch: SyncPantryDeltaResult;
   /** Toggle a helpful vote on a recipe review. */
   toggleReviewHelpful: ToggleReviewHelpfulResult;
   /** Toggle the purchased state of a shopping list item. */
@@ -6459,7 +6500,7 @@ export type Mutation = {
   /** Update shopping list item quantity (supports fractions) */
   updateShoppingListItemQuantity: UpdateShoppingListItemQuantityResult;
   /** Update the reminder for a shopping list. */
-  updateShoppingListReminder: SetReminderResult;
+  updateShoppingListReminder: UpdateShoppingListReminderResult;
   /**
    * Update an existing storage location
    * Validates parent-child relationships and prevents circular references
@@ -6471,7 +6512,7 @@ export type Mutation = {
    * All locations must belong to the same home
    * Requires user to have edit permissions in the home
    */
-  updateStorageLocationOrder: ReorderStorageLocationsResult;
+  updateStorageLocationOrder: UpdateStorageLocationOrderResult;
   updateStore: UpdateStoreResult;
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
@@ -6486,7 +6527,7 @@ export type Mutation = {
    * Update appeals (submit or review).
    * Consolidates: submitAppeal, reviewAppeal.
    */
-  updateUserAppeal: ManageAppealResult;
+  updateUserAppeal: UpdateUserAppealResult;
   upsertExternalRecipe: UpsertExternalRecipeResult;
   /** Create or update an item based on its external source ID. */
   upsertItemByExternalSource: UpsertItemByExternalSourceResult;
@@ -6544,7 +6585,7 @@ export type MutationAcceptShoppingListInviteArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAddItemToCategoryArgs = {
-  input: CategorizeItemInput;
+  input: AddItemToCategoryInput;
 };
 
 
@@ -6596,7 +6637,7 @@ export type MutationAddPantryItemToShoppingListArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAddRecipeToFavoritesArgs = {
-  input: FavoriteRecipeInput;
+  input: AddRecipeToFavoritesInput;
 };
 
 
@@ -6674,7 +6715,7 @@ export type MutationAdjustPantryItemQuantityArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationAdjustPantryItemWeightArgs = {
-  input: CorrectPantryItemWeightInput;
+  input: AdjustPantryItemWeightInput;
 };
 
 
@@ -7168,7 +7209,7 @@ export type MutationCreateRecipeReviewArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationCreateRecurringShoppingListArgs = {
-  input: SetupRecurringInput;
+  input: CreateRecurringShoppingListInput;
 };
 
 
@@ -7272,7 +7313,7 @@ export type MutationCreateUnitArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationCreateUnitConversionArgs = {
-  input: SetupUnitConversionInput;
+  input: CreateUnitConversionInput;
 };
 
 
@@ -7402,7 +7443,7 @@ export type MutationDeleteHomeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationDeleteHomeInviteArgs = {
-  input: RevokeHomeInviteInput;
+  input: DeleteHomeInviteInput;
 };
 
 
@@ -7584,7 +7625,7 @@ export type MutationDeleteShoppingListArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationDeleteShoppingListItemsArgs = {
-  input: ClearShoppingListItemsInput;
+  input: DeleteShoppingListItemsInput;
 };
 
 
@@ -7597,7 +7638,7 @@ export type MutationDeleteShoppingListItemsArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationDeleteShoppingListReminderArgs = {
-  input: ClearReminderInput;
+  input: DeleteShoppingListReminderInput;
 };
 
 
@@ -7857,7 +7898,7 @@ export type MutationMarkAsTemplateArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkExpirationActionArgs = {
-  input: MarkActionInput;
+  input: MarkExpirationActionInput;
 };
 
 
@@ -7883,7 +7924,7 @@ export type MutationMarkExpirationNotificationAsReadArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkExpirationNotificationDismissedArgs = {
-  input: DismissNotificationInput;
+  input: MarkExpirationNotificationDismissedInput;
 };
 
 
@@ -7896,7 +7937,7 @@ export type MutationMarkExpirationNotificationDismissedArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkHomeAsDefaultArgs = {
-  input: SetDefaultHomeInput;
+  input: MarkHomeAsDefaultInput;
 };
 
 
@@ -7909,7 +7950,7 @@ export type MutationMarkHomeAsDefaultArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkItemForReviewArgs = {
-  input: FlagItemForReviewInput;
+  input: MarkItemForReviewInput;
 };
 
 
@@ -7948,7 +7989,7 @@ export type MutationMarkNotificationUnreadArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkPantryAsDefaultArgs = {
-  input: SetDefaultPantryInput;
+  input: MarkPantryAsDefaultInput;
 };
 
 
@@ -7987,7 +8028,7 @@ export type MutationMarkRecipeAsCookedArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkShoppingListActiveArgs = {
-  input: UncompleteShoppingListInput;
+  input: MarkShoppingListActiveInput;
 };
 
 
@@ -8000,7 +8041,7 @@ export type MutationMarkShoppingListActiveArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkShoppingListAsDefaultArgs = {
-  input: SetDefaultShoppingListInput;
+  input: MarkShoppingListAsDefaultInput;
 };
 
 
@@ -8013,7 +8054,7 @@ export type MutationMarkShoppingListAsDefaultArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkStorageLocationAsDefaultArgs = {
-  input: SetDefaultStorageLocationInput;
+  input: MarkStorageLocationAsDefaultInput;
 };
 
 
@@ -8026,7 +8067,7 @@ export type MutationMarkStorageLocationAsDefaultArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkSuggestionActiveArgs = {
-  input: UndismissSuggestionInput;
+  input: MarkSuggestionActiveInput;
 };
 
 
@@ -8039,7 +8080,7 @@ export type MutationMarkSuggestionActiveArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationMarkSuggestionDismissedArgs = {
-  input: DismissSuggestionInput;
+  input: MarkSuggestionDismissedInput;
 };
 
 
@@ -8104,7 +8145,7 @@ export type MutationOpenPantryItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationOpenPantryItemBatchArgs = {
-  input: OpenBatchInput;
+  input: OpenPantryItemBatchInput;
 };
 
 
@@ -8117,7 +8158,7 @@ export type MutationOpenPantryItemBatchArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRecordItemPopularityArgs = {
-  input: IncrementItemPopularityInput;
+  input: RecordItemPopularityInput;
 };
 
 
@@ -8169,7 +8210,7 @@ export type MutationRecordPriceObservationArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRecordRecipeCookedArgs = {
-  input: IncrementRecipeCookedCountInput;
+  input: RecordRecipeCookedInput;
 };
 
 
@@ -8221,7 +8262,7 @@ export type MutationRegisterDeviceArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRemoveItemFromCategoryArgs = {
-  input: UncategorizeItemInput;
+  input: RemoveItemFromCategoryInput;
 };
 
 
@@ -8273,7 +8314,7 @@ export type MutationRemoveMemberArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRemoveRecipeFromFavoritesArgs = {
-  input: UnfavoriteRecipeInput;
+  input: RemoveRecipeFromFavoritesInput;
 };
 
 
@@ -8415,58 +8456,6 @@ export type MutationShareShoppingListArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncAdjustPantryItemQuantityArgs = {
-  input: SyncAdjustPantryItemQuantityInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncConsumePantryItemArgs = {
-  input: SyncConsumePantryItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncConvertExpiredBatchesToWasteArgs = {
-  input: SyncConvertExpiredBatchesToWasteInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncConvertExpiredToWasteArgs = {
-  input: SyncConvertExpiredToWasteInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationSyncDeletePantryItemArgs = {
   input: SyncDeletePantryItemInput;
 };
@@ -8506,19 +8495,6 @@ export type MutationSyncMoveShoppingListItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncOpenPantryItemBatchArgs = {
-  input: SyncOpenPantryItemBatchInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationSyncPantryItemArgs = {
   input: SyncPantryItemInput;
 };
@@ -8532,34 +8508,8 @@ export type MutationSyncPantryItemArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncRestockPantryItemArgs = {
-  input: SyncRestockPantryItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationSyncShoppingListItemArgs = {
   input: SyncShoppingListItemFullInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncWastePantryItemBatchArgs = {
-  input: SyncWastePantryItemBatchInput;
 };
 
 
@@ -8754,7 +8704,7 @@ export type MutationUpdateHomeArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateHomeJoinCodeArgs = {
-  input: RegenerateHomeJoinCodeInput;
+  input: UpdateHomeJoinCodeInput;
 };
 
 
@@ -9053,7 +9003,7 @@ export type MutationUpdateShoppingListItemQuantityArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateShoppingListReminderArgs = {
-  input: SetReminderInput;
+  input: UpdateShoppingListReminderInput;
 };
 
 
@@ -9079,7 +9029,7 @@ export type MutationUpdateStorageLocationArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateStorageLocationOrderArgs = {
-  input: ReorderStorageLocationsInput;
+  input: UpdateStorageLocationOrderInput;
 };
 
 
@@ -9170,7 +9120,7 @@ export type MutationUpdateUserAddressArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateUserAppealArgs = {
-  input: ManageAppealInput;
+  input: UpdateUserAppealInput;
 };
 
 
@@ -9261,7 +9211,7 @@ export type MutationVerifyUserEmailArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationWastePantryItemBatchArgs = {
-  input: WasteBatchInput;
+  input: WastePantryItemBatchInput;
 };
 
 /** Describes the type of mutation that triggered a real-time subscription event */
@@ -9675,8 +9625,9 @@ export type OfferSummary = {
 };
 
 /** Input for opening a specific batch */
-export type OpenBatchInput = {
+export type OpenPantryItemBatchInput = {
   batchId: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type OpenPantryItemBatchPayload = {
@@ -11809,6 +11760,18 @@ export enum RecipeStatus {
   Published = 'PUBLISHED'
 }
 
+export type RecordItemPopularityInput = {
+  amount?: InputMaybe<Scalars['Int']['input']>;
+  id: Scalars['ID']['input'];
+};
+
+export type RecordItemPopularityPayload = {
+  __typename: 'RecordItemPopularityPayload';
+  item: Item;
+};
+
+export type RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | RecordItemPopularityPayload | ValidationError;
+
 /**
  * Consolidated input for recording a login event.
  * Replaces both LoginAttemptInput (high-level) and CreateLoginHistoryInput (detailed).
@@ -11846,6 +11809,7 @@ export type RecordLoginResult = ConflictError | ForbiddenError | NotFoundError |
 
 export type RecordPantryItemUsageInput = {
   cookingLogId?: InputMaybe<Scalars['ID']['input']>;
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
   mealPlanItemId?: InputMaybe<Scalars['ID']['input']>;
@@ -11861,6 +11825,7 @@ export type RecordPantryItemUsageInput = {
 
 /** Input for recording pantry item usage */
 export type RecordPantryUsageInput = {
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pantryItemId: Scalars['ID']['input'];
   purpose?: InputMaybe<UsagePurpose>;
@@ -11894,6 +11859,19 @@ export type RecordPriceObservationPayload = {
 
 export type RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError;
 
+export type RecordRecipeCookedInput = {
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
+  recipeId: Scalars['ID']['input'];
+};
+
+export type RecordRecipeCookedPayload = {
+  __typename: 'RecordRecipeCookedPayload';
+  recipe: Maybe<Recipe>;
+  savedRecipe: SavedRecipe;
+};
+
+export type RecordRecipeCookedResult = ConflictError | ForbiddenError | NotFoundError | RecordRecipeCookedPayload | ValidationError;
+
 export enum RecurringPattern {
   Biweekly = 'BIWEEKLY',
   Custom = 'CUSTOM',
@@ -11911,11 +11889,6 @@ export type RefreshTokenPayload = {
   __typename: 'RefreshTokenPayload';
   accessToken: Scalars['String']['output'];
   refreshToken: Scalars['String']['output'];
-};
-
-export type RegenerateHomeJoinCodeInput = {
-  /** ID of the home whose join code to rotate. */
-  id: Scalars['ID']['input'];
 };
 
 /** Sub-input for regional/locale settings */
@@ -11970,6 +11943,18 @@ export type RemoveCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
+export type RemoveItemFromCategoryInput = {
+  categoryId: Scalars['ID']['input'];
+  itemId: Scalars['ID']['input'];
+};
+
+export type RemoveItemFromCategoryPayload = {
+  __typename: 'RemoveItemFromCategoryPayload';
+  itemCategory: ItemCategory;
+};
+
+export type RemoveItemFromCategoryResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromCategoryPayload | ValidationError;
+
 export type RemoveItemFromShoppingListInput = {
   id: Scalars['ID']['input'];
 };
@@ -12004,6 +11989,27 @@ export type RemoveMemberPayload = {
 };
 
 export type RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload | ValidationError;
+
+export type RemoveRecipeFromFavoritesInput = {
+  recipeId: Scalars['ID']['input'];
+};
+
+export type RemoveRecipeFromFavoritesPayload = {
+  __typename: 'RemoveRecipeFromFavoritesPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the recipe was already
+   * not favorited) — a no-op success. The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
+  recipe: Maybe<Recipe>;
+  /**
+   * The removed favorite, or null when the recipe was already not favorited — an
+   * idempotent replay (or second device) that converged as success. See converged.
+   */
+  savedRecipe: Maybe<SavedRecipe>;
+};
+
+export type RemoveRecipeFromFavoritesResult = ConflictError | ForbiddenError | NotFoundError | RemoveRecipeFromFavoritesPayload | ValidationError;
 
 export type RemoveRestrictionInput = {
   id: Scalars['ID']['input'];
@@ -12056,25 +12062,6 @@ export type RemoveUnitConversionPayload = {
 };
 
 export type RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError;
-
-/**
- * Input for reordering multiple storage locations
- * Arrays must be the same length
- */
-export type ReorderStorageLocationsInput = {
-  /** Array of location IDs to reorder */
-  locationIds: Array<Scalars['ID']['input']>;
-  /** Array of new sort orders (must match locationIds length) */
-  sortOrders: Array<Scalars['Int']['input']>;
-};
-
-export type ReorderStorageLocationsPayload = {
-  __typename: 'ReorderStorageLocationsPayload';
-  home: Maybe<Home>;
-  storageLocation: StorageLocation;
-};
-
-export type ReorderStorageLocationsResult = ConflictError | ForbiddenError | NotFoundError | ReorderStorageLocationsPayload | ValidationError;
 
 export type ResendVerificationEmailInput = {
   email: Scalars['String']['input'];
@@ -12140,6 +12127,7 @@ export type RestockPantryItemInput = {
   costPerUnit?: InputMaybe<Scalars['Float']['input']>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   id: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   quantity: Scalars['Float']['input'];
   restockedAt?: InputMaybe<Scalars['DateTime']['input']>;
@@ -12200,18 +12188,6 @@ export type ReviewHelpful = {
   review: RecipeReview;
   user: User;
 };
-
-export type RevokeHomeInviteInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type RevokeHomeInvitePayload = {
-  __typename: 'RevokeHomeInvitePayload';
-  home: Maybe<Home>;
-  homeInvite: HomeInvite;
-};
-
-export type RevokeHomeInviteResult = ConflictError | ForbiddenError | NotFoundError | RevokeHomeInvitePayload | ValidationError;
 
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
@@ -12326,93 +12302,6 @@ export type SessionInfoInput = {
   sessionDuration?: InputMaybe<Scalars['Int']['input']>;
   sessionId?: InputMaybe<Scalars['String']['input']>;
 };
-
-export type SetDefaultHomeInput = {
-  homeId: Scalars['ID']['input'];
-};
-
-export type SetDefaultHomePayload = {
-  __typename: 'SetDefaultHomePayload';
-  defaultPantry: Maybe<Pantry>;
-  settings: UserSettings;
-};
-
-export type SetDefaultHomeResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultHomePayload | ValidationError;
-
-export type SetDefaultPantryInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type SetDefaultPantryPayload = {
-  __typename: 'SetDefaultPantryPayload';
-  home: Maybe<Home>;
-  pantry: Pantry;
-};
-
-export type SetDefaultPantryResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultPantryPayload | ValidationError;
-
-export type SetDefaultShoppingListInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type SetDefaultShoppingListPayload = {
-  __typename: 'SetDefaultShoppingListPayload';
-  shoppingList: ShoppingList;
-};
-
-export type SetDefaultShoppingListResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultShoppingListPayload | ValidationError;
-
-export type SetDefaultStorageLocationInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type SetDefaultStorageLocationPayload = {
-  __typename: 'SetDefaultStorageLocationPayload';
-  home: Maybe<Home>;
-  storageLocation: StorageLocation;
-};
-
-export type SetDefaultStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | SetDefaultStorageLocationPayload | ValidationError;
-
-export type SetReminderInput = {
-  id: Scalars['ID']['input'];
-  reminderDate: Scalars['DateTime']['input'];
-  reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type SetReminderPayload = {
-  __typename: 'SetReminderPayload';
-  shoppingList: ShoppingList;
-};
-
-export type SetReminderResult = ConflictError | ForbiddenError | NotFoundError | SetReminderPayload | ValidationError;
-
-export type SetupRecurringInput = {
-  id: Scalars['ID']['input'];
-  nextRecurringDate?: InputMaybe<Scalars['DateTime']['input']>;
-  recurringInterval: Scalars['Int']['input'];
-  recurringPattern: RecurringPattern;
-};
-
-export type SetupRecurringPayload = {
-  __typename: 'SetupRecurringPayload';
-  shoppingList: ShoppingList;
-};
-
-export type SetupRecurringResult = ConflictError | ForbiddenError | NotFoundError | SetupRecurringPayload | ValidationError;
-
-export type SetupUnitConversionInput = {
-  baseUnitId: Scalars['ID']['input'];
-  conversionFactor: Scalars['Float']['input'];
-  unitId: Scalars['ID']['input'];
-};
-
-export type SetupUnitConversionPayload = {
-  __typename: 'SetupUnitConversionPayload';
-  unit: Unit;
-};
-
-export type SetupUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | SetupUnitConversionPayload | ValidationError;
 
 /**
  * A shareable deep link expressed in both forms so clients can choose:
@@ -13798,12 +13687,6 @@ export type SuspiciousInviteActivity = {
   summary: SuspiciousActivitySummary;
 };
 
-export type SyncAdjustPantryItemQuantityInput = {
-  input: AdjustPantryItemQuantityInput;
-  /** Client-minted permanent CUID2 identifying this adjustment; replay-safe. */
-  operationId: Scalars['ID']['input'];
-};
-
 /** Information about a sync conflict */
 export type SyncConflictInfo = {
   __typename: 'SyncConflictInfo';
@@ -13815,24 +13698,6 @@ export type SyncConflictInfo = {
   serverItem: ShoppingListItem;
   /** The current version on the server */
   serverVersion: Scalars['Int']['output'];
-};
-
-export type SyncConsumePantryItemInput = {
-  input: RecordPantryItemUsageInput;
-  /** Client-minted permanent CUID2 identifying this usage; replay-safe. */
-  operationId: Scalars['ID']['input'];
-};
-
-export type SyncConvertExpiredBatchesToWasteInput = {
-  input: ConvertExpiredBatchesToWasteInput;
-  /** Client-minted permanent CUID2 identifying this expired-batches-to-waste conversion; replay-safe. */
-  operationId: Scalars['ID']['input'];
-};
-
-export type SyncConvertExpiredToWasteInput = {
-  input: ConvertExpiredToWasteInput;
-  /** Client-minted permanent CUID2 identifying this expired-to-waste conversion; replay-safe. */
-  operationId: Scalars['ID']['input'];
 };
 
 export type SyncDeletePantryItemInput = {
@@ -13852,36 +13717,12 @@ export type SyncMoveShoppingListItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
-export type SyncOpenPantryItemBatchInput = {
-  input: OpenBatchInput;
-  /**
-   * Client-minted permanent CUID2 for client-queue uniformity. openBatch writes
-   * no ledger row and is naturally idempotent (re-opening is a no-op), so dedup
-   * is by batch state rather than operationId.
-   */
-  operationId: Scalars['ID']['input'];
-};
-
 export enum SyncOperation {
   Create = 'CREATE',
   Delete = 'DELETE',
   Move = 'MOVE',
   Update = 'UPDATE'
 }
-
-/**
- * Result of an idempotent offline-sync pantry delta (restock / consume / waste /
- * adjust / open-batch). wasApplied is false when the operationId was already
- * processed (replay) — the delta is applied at most once regardless of retries,
- * and pantryItem reflects the current server state either way.
- */
-export type SyncPantryDeltaResult = {
-  __typename: 'SyncPantryDeltaResult';
-  operationId: Scalars['ID']['output'];
-  pantry: Maybe<Pantry>;
-  pantryItem: Maybe<PantryItem>;
-  wasApplied: Scalars['Boolean']['output'];
-};
 
 export type SyncPantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
@@ -13911,16 +13752,15 @@ export type SyncPantryItemResult = {
   __typename: 'SyncPantryItemResult';
   clientId: Scalars['ID']['output'];
   conflict: Maybe<SyncConflictInfo>;
+  /**
+   * True when this sync CONVERGED on a pre-existing row (the client id matched,
+   * so it was an update/replay rather than a fresh create). The canonical,
+   * API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   item: Maybe<PantryItem>;
   operation: SyncOperation;
   serverId: Maybe<Scalars['ID']['output']>;
-  wasCreated: Scalars['Boolean']['output'];
-};
-
-export type SyncRestockPantryItemInput = {
-  input: RestockPantryItemInput;
-  /** Client-minted permanent CUID2 identifying this restock; replay-safe. */
-  operationId: Scalars['ID']['input'];
 };
 
 /** Sub-input for sync settings */
@@ -13970,20 +13810,18 @@ export type SyncShoppingListItemResult = {
   clientId: Scalars['ID']['output'];
   /** Conflict information if version mismatch occurred */
   conflict: Maybe<SyncConflictInfo>;
+  /**
+   * True when this sync CONVERGED on a pre-existing row (the client id matched,
+   * so it was an update/replay rather than a fresh create). The canonical,
+   * API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   /** The synced shopping list item (null for delete operations) */
   item: Maybe<ShoppingListItem>;
   /** The operation that was performed */
   operation: SyncOperation;
   /** The server-assigned database ID (equals clientId; null if item was deleted before reaching server) */
   serverId: Maybe<Scalars['ID']['output']>;
-  /** Whether this was a create (true) or update (false) operation */
-  wasCreated: Scalars['Boolean']['output'];
-};
-
-export type SyncWastePantryItemBatchInput = {
-  input: WasteBatchInput;
-  /** Client-minted permanent CUID2 identifying this batch waste; replay-safe. */
-  operationId: Scalars['ID']['input'];
 };
 
 /** Sub-input for tag-based filters */
@@ -14087,70 +13925,6 @@ export type UiPreferencesInput = {
   showTutorials?: InputMaybe<Scalars['Boolean']['input']>;
   theme?: InputMaybe<AppTheme>;
 };
-
-export type UncategorizeItemInput = {
-  categoryId: Scalars['ID']['input'];
-  itemId: Scalars['ID']['input'];
-};
-
-export type UncategorizeItemPayload = {
-  __typename: 'UncategorizeItemPayload';
-  itemCategory: ItemCategory;
-};
-
-export type UncategorizeItemResult = ConflictError | ForbiddenError | NotFoundError | UncategorizeItemPayload | ValidationError;
-
-export type UncompleteShoppingListInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type UncompleteShoppingListPayload = {
-  __typename: 'UncompleteShoppingListPayload';
-  shoppingList: ShoppingList;
-};
-
-export type UncompleteShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UncompleteShoppingListPayload | ValidationError;
-
-/** Input to restore a previously-dismissed item so it can be suggested again. */
-export type UndismissSuggestionInput = {
-  /** Catalog item to start suggesting again. */
-  itemId: Scalars['ID']['input'];
-  /** Which surface to restore it on (pantry vs shopping). */
-  surface: SuggestionSurface;
-};
-
-export type UndismissSuggestionPayload = {
-  __typename: 'UndismissSuggestionPayload';
-  /** Always false — the item can be suggested again on this surface. */
-  dismissed: Scalars['Boolean']['output'];
-  /** The item the dismissal was removed for. */
-  itemId: Scalars['ID']['output'];
-  /** Surface the item was restored on. */
-  surface: SuggestionSurface;
-};
-
-export type UndismissSuggestionResult = ConflictError | ForbiddenError | NotFoundError | UndismissSuggestionPayload | ValidationError;
-
-export type UnfavoriteRecipeInput = {
-  recipeId: Scalars['ID']['input'];
-};
-
-export type UnfavoriteRecipePayload = {
-  __typename: 'UnfavoriteRecipePayload';
-  recipe: Maybe<Recipe>;
-  /**
-   * The removed favorite, or null when the recipe was already not favorited — an
-   * idempotent replay (or second device) that converged as success. See wasRemoved.
-   */
-  savedRecipe: Maybe<SavedRecipe>;
-  /**
-   * True when this call removed the favorite; false when the recipe was already
-   * not favorited and the unfavorite converged as a no-op success.
-   */
-  wasRemoved: Scalars['Boolean']['output'];
-};
-
-export type UnfavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UnfavoriteRecipePayload | ValidationError;
 
 /**
  * Unit of measurement type
@@ -14501,6 +14275,11 @@ export type UpdateHomeInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateHomeJoinCodeInput = {
+  /** ID of the home whose join code to rotate. */
+  id: Scalars['ID']['input'];
 };
 
 export type UpdateHomePayload = {
@@ -14974,6 +14753,19 @@ export type UpdateShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+export type UpdateShoppingListReminderInput = {
+  id: Scalars['ID']['input'];
+  reminderDate: Scalars['DateTime']['input'];
+  reminderEnabled?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type UpdateShoppingListReminderPayload = {
+  __typename: 'UpdateShoppingListReminderPayload';
+  shoppingList: ShoppingList;
+};
+
+export type UpdateShoppingListReminderResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListReminderPayload | ValidationError;
+
 export type UpdateShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListPayload | ValidationError;
 
 /**
@@ -15009,6 +14801,25 @@ export type UpdateStorageLocationInput = {
   /** New storage type */
   type?: InputMaybe<StorageType>;
 };
+
+/**
+ * Input for reordering multiple storage locations
+ * Arrays must be the same length
+ */
+export type UpdateStorageLocationOrderInput = {
+  /** Array of location IDs to reorder */
+  locationIds: Array<Scalars['ID']['input']>;
+  /** Array of new sort orders (must match locationIds length) */
+  sortOrders: Array<Scalars['Int']['input']>;
+};
+
+export type UpdateStorageLocationOrderPayload = {
+  __typename: 'UpdateStorageLocationOrderPayload';
+  home: Maybe<Home>;
+  storageLocation: StorageLocation;
+};
+
+export type UpdateStorageLocationOrderResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorageLocationOrderPayload | ValidationError;
 
 export type UpdateStorageLocationPayload = {
   __typename: 'UpdateStorageLocationPayload';
@@ -15111,6 +14922,24 @@ export type UpdateUserAddressPayload = {
 
 export type UpdateUserAddressResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAddressPayload | ValidationError;
 
+/** Input for managing appeals (submit or review). */
+export type UpdateUserAppealInput = {
+  /** For submitting: appeal notes from the user */
+  appealNotes?: InputMaybe<Scalars['String']['input']>;
+  /** For reviewing: whether the appeal is approved (null = submitting, true/false = reviewing) */
+  approved?: InputMaybe<Scalars['Boolean']['input']>;
+  /** For reviewing: reviewer's notes */
+  reviewNotes?: InputMaybe<Scalars['String']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type UpdateUserAppealPayload = {
+  __typename: 'UpdateUserAppealPayload';
+  userModeration: Maybe<UserModeration>;
+};
+
+export type UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError;
+
 export type UpdateUserInput = {
   deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
   email?: InputMaybe<Scalars['String']['input']>;
@@ -15153,6 +14982,24 @@ export type UpdateUserProfileInput = {
   showPhone?: InputMaybe<Scalars['Boolean']['input']>;
   website?: InputMaybe<Scalars['String']['input']>;
 };
+
+/** Input for managing restrictions (add and/or remove in one call). */
+export type UpdateUserRestrictionsInput = {
+  /** Restrictions to add */
+  add?: InputMaybe<Array<ModerationRestriction>>;
+  reason?: InputMaybe<Scalars['String']['input']>;
+  /** Restrictions to remove */
+  remove?: InputMaybe<Array<ModerationRestriction>>;
+  restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
+  userId: Scalars['ID']['input'];
+};
+
+export type UpdateUserRestrictionsPayload = {
+  __typename: 'UpdateUserRestrictionsPayload';
+  userModeration: Maybe<UserModeration>;
+};
+
+export type UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError;
 
 export type UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserPayload | ValidationError;
 
@@ -15977,15 +15824,6 @@ export type WasteAnalytics = {
   wasteTrend: Array<TimeSeriesDataPoint>;
 };
 
-/** Input for wasting a specific batch */
-export type WasteBatchInput = {
-  batchId: Scalars['ID']['input'];
-  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
-  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
-  notes?: InputMaybe<Scalars['String']['input']>;
-  wasteReason?: InputMaybe<WasteReason>;
-};
-
 /** Waste breakdown by item - most wasted items */
 export type WasteByItem = {
   __typename: 'WasteByItem';
@@ -16006,6 +15844,16 @@ export type WasteByReason = {
   percentage: Scalars['Float']['output'];
   reason: WasteReason;
   totalQuantity: Scalars['Float']['output'];
+};
+
+/** Input for wasting a specific batch */
+export type WastePantryItemBatchInput = {
+  batchId: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
+  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
+  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
+  notes?: InputMaybe<Scalars['String']['input']>;
+  wasteReason?: InputMaybe<WasteReason>;
 };
 
 export type WastePantryItemBatchPayload = {

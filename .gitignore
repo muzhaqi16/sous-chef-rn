@@ -36,6 +36,11 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# FCM push config — injected in CI from the GOOGLE_SERVICES_JSON_BASE64 secret
+# (see .github/workflows/build-android.yml). Each dev keeps their own local copy.
+android/app/google-services.json
+ios/GoogleService-Info.plist
+
 # node.js
 #
 node_modules/

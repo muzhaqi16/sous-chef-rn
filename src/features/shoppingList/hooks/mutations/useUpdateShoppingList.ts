@@ -22,10 +22,13 @@ import {
   unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
+import type { ListStatus } from '#/graphql/generated/schemaTypes';
 
 interface ShoppingListSettingsUpdate {
   name?: string;
   isDefault?: boolean;
+  // Absolute status set — drives archive via updateShoppingList(status: ARCHIVED).
+  status?: ListStatus;
 }
 
 export function useUpdateShoppingList(fallbackErrorMessage: string) {
@@ -64,6 +67,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
             ...(updates.isDefault !== undefined && {
               isDefault: updates.isDefault,
             }),
+            ...(updates.status !== undefined && { status: updates.status }),
             updatedAt: new Date().toISOString(),
           }),
         'Update Shopping List (optimistic)',

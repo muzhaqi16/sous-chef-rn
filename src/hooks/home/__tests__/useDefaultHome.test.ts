@@ -192,7 +192,7 @@ function buildSetDefaultHomeMock(homeId: string): MockedResponse {
     result: {
       data: {
         markHomeAsDefault: {
-          __typename: 'SetDefaultHomePayload',
+          __typename: 'MarkHomeAsDefaultPayload',
           success: true,
           message: 'OK',
           code: 'OK',

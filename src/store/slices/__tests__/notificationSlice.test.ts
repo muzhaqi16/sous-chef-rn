@@ -495,6 +495,32 @@ describe('notificationSlice', () => {
     });
   });
 
+  describe('setServerNotificationCounts', () => {
+    it('overrides the badge total with the server count (even beyond the loaded list)', () => {
+      const store = createAuthenticatedStore();
+      // Only one notification is loaded locally...
+      store.getState().addNotification(createNotification({ id: 'sc-1' }));
+      // ...but the server reports 42 unread total. The badge should trust it.
+      store.getState().setServerNotificationCounts(42, true);
+      expect(store.getState().unreadCount).toBe(42);
+      expect(store.getState().urgentCount).toBeGreaterThan(0);
+    });
+
+    it('clears the urgent count when the server reports none outstanding', () => {
+      const store = createAuthenticatedStore();
+      store.getState().addNotification(
+        createNotification({
+          id: 'sc-2',
+          priority: NotificationPriority.URGENT,
+        }),
+      );
+      expect(store.getState().urgentCount).toBe(1);
+      store.getState().setServerNotificationCounts(3, false);
+      expect(store.getState().unreadCount).toBe(3);
+      expect(store.getState().urgentCount).toBe(0);
+    });
+  });
+
   describe('setLastFetchedAt', () => {
     it('sets the lastFetchedAt timestamp', () => {
       const store = createAuthenticatedStore();

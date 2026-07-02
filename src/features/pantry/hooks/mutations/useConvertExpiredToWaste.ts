@@ -6,11 +6,12 @@
  * SPOILED, creates a WASTE usage record with wasteReason=EXPIRED, and sets
  * `quantity` to 0. The cached item is set to quantity 0 + SPOILED PERMANENTLY
  * before firing so it reads as discarded instantly and survives an
- * offline/queued conversion. Because the server writes a waste ledger row, the
- * original mutation isn't replay-safe — the queue replays it through
- * `syncConvertExpiredToWaste` keyed by a client-minted `operationId`, so a replay
- * applies the conversion exactly once. A real rejection restores the pre-convert
- * quantity + condition.
+ * offline/queued conversion. Because the server writes a waste ledger row, a
+ * naive replay would double-count — so the canonical mutation carries a
+ * client-minted `input.idempotencyKey`; the server records it in the same
+ * transaction as the conversion, so a queued replay applies it exactly once (it
+ * returns ConflictError(IDEMPOTENT_REPLAY), which the queue converges). A real
+ * rejection restores the pre-convert quantity + condition.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -94,10 +95,11 @@ export function useConvertExpiredToWaste({
       'Convert Expired To Waste (optimistic)',
     );
 
-    const operationId = generateEntityId();
     const result = await convertMutation({
-      variables: { input: { pantryItemId } },
-      context: { localFirst: true, operationId },
+      variables: {
+        input: { pantryItemId, idempotencyKey: generateEntityId() },
+      },
+      context: { localFirst: true },
     });
 
     const outcome = classifyCreateResult(
@@ -121,8 +123,8 @@ export function useConvertExpiredToWaste({
       return false;
     }
 
-    // created (response normalized the authoritative item) or queued
-    // (replays via syncConvertExpiredToWaste).
+    // created (response normalized the authoritative item) or queued (replays
+    // the canonical mutation, deduped by its idempotencyKey).
     if (outcome === 'created') {
       clearPersistence();
     }

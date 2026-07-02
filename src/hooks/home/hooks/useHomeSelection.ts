@@ -85,7 +85,7 @@ export function useHomeSelection({
     optimisticResponse: (variables): MarkHomeAsDefaultMutation => ({
       __typename: 'Mutation',
       markHomeAsDefault: {
-        __typename: 'SetDefaultHomePayload',
+        __typename: 'MarkHomeAsDefaultPayload',
         settings: {
           __typename: 'UserSettings',
           id: variables.input.homeId,
@@ -222,7 +222,7 @@ export function useHomeSelection({
     if (!result) return false;
 
     if (
-      result.data?.markHomeAsDefault?.__typename === 'SetDefaultHomePayload'
+      result.data?.markHomeAsDefault?.__typename === 'MarkHomeAsDefaultPayload'
     ) {
       // Update pantry from server response (server is source of truth)
       const serverPantry = result.data.markHomeAsDefault.defaultPantry;

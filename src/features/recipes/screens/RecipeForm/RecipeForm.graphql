@@ -17,6 +17,9 @@ fragment RecipeForm_recipe on Recipe {
   healthGoals
   intolerances
   notes
+  tips
+  originalAuthor
+  tags
   instructions
   ingredientsConnection {
     edges {

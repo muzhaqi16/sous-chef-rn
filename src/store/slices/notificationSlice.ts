@@ -124,6 +124,15 @@ export interface NotificationState {
   removeNotification: (notificationId: string) => void;
   clearAll: () => void;
   updateUnreadCount: () => void;
+  /**
+   * Seed the badge counts from the server's authoritative totals (`me`).
+   * Overrides the list-derived recompute so the badge is correct even when
+   * more unread exist than the feed page loads, or after a cache clear.
+   */
+  setServerNotificationCounts: (
+    unreadCount: number,
+    hasUrgent: boolean,
+  ) => void;
   setLastFetchedAt: (timestamp: string) => void;
   cleanupOrphanedSubscriptions: () => void;
   // Expiration actions
@@ -189,6 +198,7 @@ const initialNotificationState: Omit<
   | 'removeNotification'
   | 'clearAll'
   | 'updateUnreadCount'
+  | 'setServerNotificationCounts'
   | 'setLastFetchedAt'
   | 'setExpirationAction'
   | 'linkExpirationData'
@@ -483,6 +493,16 @@ export const createNotificationSlice: StateCreator<
   updateUnreadCount: () => {
     set(state => {
       recomputeCounts(state);
+    });
+  },
+
+  setServerNotificationCounts: (unreadCount, hasUrgent) => {
+    set(state => {
+      // Server truth wins for the badge total. `hasUrgentNotifications` is a
+      // boolean, so keep any list-derived urgent count when it's true and clear
+      // it when the server reports none outstanding.
+      state.unreadCount = unreadCount;
+      state.urgentCount = hasUrgent ? Math.max(state.urgentCount, 1) : 0;
     });
   },
 

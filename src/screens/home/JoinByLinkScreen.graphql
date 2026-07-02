@@ -8,5 +8,13 @@ query ResolveShareLink($code: String!) {
     listId
     name
     alreadyMember
+    # Home-join preview (memberCount) / list-join preview (itemCount) + the deep
+    # link to follow, incl. the custom scheme for direct-open on-device.
+    memberCount
+    itemCount
+    link {
+      universal
+      scheme
+    }
   }
 }

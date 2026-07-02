@@ -220,14 +220,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         input: {
                           id: duplicateInfo.existingPantryItemId,
                           quantity,
+                          // idempotencyKey dedups the restock ledger row on replay.
+                          idempotencyKey: generateEntityId(),
                         },
                       },
-                      // Local-first: replay-safe via syncRestockPantryItem
-                      // (operationId dedups the restock ledger row if queued).
-                      context: {
-                        localFirst: true,
-                        operationId: generateEntityId(),
-                      },
+                      // Local-first: queued offline, replayed as the canonical
+                      // mutation (deduped by its idempotencyKey).
+                      context: { localFirst: true },
                     });
                     setIsAdded(true);
                     setPendingPantryScrollToTop(true);

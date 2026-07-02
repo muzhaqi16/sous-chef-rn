@@ -41,9 +41,11 @@ const readState = (cache: InMemoryCache) =>
   });
 
 /**
- * Render the hook against a real link chain so the mutation `context` can be
- * captured off the operation. A leading tap link records `getContext()` for the
- * convert op, then forwards to a `MockLink` serving the supplied responses.
+ * Render the hook against a real link chain so the mutation `context` and
+ * `variables` can be captured off the operation. A leading tap link records
+ * `getContext()` (plus the operation `variables`, where the idempotencyKey now
+ * lives) for the convert op, then forwards to a `MockLink` serving the supplied
+ * responses.
  */
 function renderConvert(
   cache: InMemoryCache,
@@ -52,7 +54,10 @@ function renderConvert(
 ) {
   const tapLink = new ApolloLink((operation, forward) => {
     if (operation.operationName === 'ConvertExpiredToWaste') {
-      capturedContexts.push(operation.getContext());
+      capturedContexts.push({
+        ...operation.getContext(),
+        variables: operation.variables,
+      });
     }
     return forward(operation);
   });
@@ -67,7 +72,7 @@ function renderConvert(
 }
 
 describe('useConvertExpiredToWaste (local-first)', () => {
-  it('optimistically sets quantity 0 + SPOILED before settle, fires with localFirst + operationId, and a queued (null) result keeps it', async () => {
+  it('optimistically sets quantity 0 + SPOILED before settle, fires with localFirst + input.idempotencyKey, and a queued (null) result keeps it', async () => {
     const cache = seedItem();
     const contexts: Array<Record<string, unknown>> = [];
     const { result } = renderConvert(
@@ -103,11 +108,16 @@ describe('useConvertExpiredToWaste (local-first)', () => {
       condition: ItemCondition.Spoiled,
     });
 
-    // Fired with a non-empty operationId in localFirst context.
+    // Fired with localFirst + a non-empty input.idempotencyKey (the server
+    // dedups the replay on it; operationId is no longer used).
     expect(contexts).toHaveLength(1);
     expect(contexts[0]?.localFirst).toBe(true);
-    expect(typeof contexts[0]?.operationId).toBe('string');
-    expect((contexts[0]?.operationId as string).length).toBeGreaterThan(0);
+    expect(contexts[0]?.operationId).toBeUndefined();
+    const vars = contexts[0]?.variables as {
+      input?: { idempotencyKey?: string };
+    };
+    expect(typeof vars.input?.idempotencyKey).toBe('string');
+    expect((vars.input?.idempotencyKey as string).length).toBeGreaterThan(0);
   });
 
   it('reverts quantity + condition on a rejection (error-union result)', async () => {

@@ -56,7 +56,7 @@ export function useCorrectPantryItemWeight({
     if (
       isSuccessPayload(
         result.data?.adjustPantryItemWeight,
-        'CorrectPantryItemWeightPayload',
+        'AdjustPantryItemWeightPayload',
       )
     ) {
       onSuccess?.();

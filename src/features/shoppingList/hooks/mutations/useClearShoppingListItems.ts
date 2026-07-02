@@ -95,7 +95,7 @@ async function executeClearItems(
   const outcome = classifyCreateResult(
     result as { data?: unknown; error?: unknown },
     'deleteShoppingListItems',
-    'ClearShoppingListItemsPayload',
+    'DeleteShoppingListItemsPayload',
   );
   if (outcome === 'rejected') {
     await refetch();

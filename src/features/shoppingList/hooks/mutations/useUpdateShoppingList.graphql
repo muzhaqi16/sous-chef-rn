@@ -1,10 +1,15 @@
 # Snapshot/write shape for useUpdateShoppingList's permanent local-first
-# write: the settings the screen edits plus the version/updatedAt pair the
-# revert restores.
+# write: the settings the screen edits (name, default, status — status drives
+# archive via updateShoppingList(status: ARCHIVED)) plus the version/updatedAt
+# pair the revert restores. status/isCompleted/completedShopDate must be present
+# so the snapshot reads complete and the revert restores them intact.
 fragment useUpdateShoppingList_list on ShoppingList {
   id
   name
   isDefault
+  status
+  isCompleted
+  completedShopDate
   version
   updatedAt
 }

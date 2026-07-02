@@ -557,10 +557,10 @@ mutation DeletePantry($input: DeletePantryInput!) {
   }
 }
 
-mutation MarkPantryAsDefault($input: SetDefaultPantryInput!) {
+mutation MarkPantryAsDefault($input: MarkPantryAsDefaultInput!) {
   markPantryAsDefault(input: $input) {
     __typename
-    ... on SetDefaultPantryPayload {
+    ... on MarkPantryAsDefaultPayload {
       pantry {
         id
         name
@@ -866,10 +866,10 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
   }
 }
 
-mutation AdjustPantryItemWeight($input: CorrectPantryItemWeightInput!) {
+mutation AdjustPantryItemWeight($input: AdjustPantryItemWeightInput!) {
   adjustPantryItemWeight(input: $input) {
     __typename
-    ... on CorrectPantryItemWeightPayload {
+    ... on AdjustPantryItemWeightPayload {
       pantryItem {
         id
         ...useCorrectPantryItemWeight_pantryItem
@@ -983,7 +983,7 @@ query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
   }
 }
 
-mutation OpenPantryItemBatch($input: OpenBatchInput!) {
+mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {
   openPantryItemBatch(input: $input) {
     __typename
     ... on OpenPantryItemBatchPayload {
@@ -1006,7 +1006,7 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
   }
 }
 
-mutation WastePantryItemBatch($input: WasteBatchInput!) {
+mutation WastePantryItemBatch($input: WastePantryItemBatchInput!) {
   wastePantryItemBatch(input: $input) {
     __typename
     ... on WastePantryItemBatchPayload {
@@ -1058,7 +1058,7 @@ mutation SyncPantryItem($input: SyncPantryItemInput!) {
     clientId
     serverId
     operation
-    wasCreated
+    converged
     item {
       id
       ...queueManager_syncPantryItem
@@ -1080,7 +1080,7 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
     clientId
     serverId
     operation
-    wasCreated
+    converged
     item {
       id
       itemName
@@ -1093,111 +1093,12 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
   }
 }
 
-# Offline-replay (sync) mutations for granular pantry deltas. Each wraps the
-# original delta input + a client-minted operationId; the server dedups by
-# operationId so a queued replay applies the delta exactly once (no
-# double-count). Replayed by the offline queue via convertToSyncMutation.
-mutation SyncAdjustPantryItemQuantity(
-  $input: SyncAdjustPantryItemQuantityInput!
-) {
-  syncAdjustPantryItemQuantity(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncRestockPantryItem($input: SyncRestockPantryItemInput!) {
-  syncRestockPantryItem(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncConsumePantryItem($input: SyncConsumePantryItemInput!) {
-  syncConsumePantryItem(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncOpenPantryItemBatch($input: SyncOpenPantryItemBatchInput!) {
-  syncOpenPantryItemBatch(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncWastePantryItemBatch($input: SyncWastePantryItemBatchInput!) {
-  syncWastePantryItemBatch(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncConvertExpiredToWaste($input: SyncConvertExpiredToWasteInput!) {
-  syncConvertExpiredToWaste(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncConvertExpiredBatchesToWaste(
-  $input: SyncConvertExpiredBatchesToWasteInput!
-) {
-  syncConvertExpiredBatchesToWaste(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
+# NOTE: The granular pantry deltas (adjust / restock / consume / open-batch /
+# waste / convert-expired) no longer have `sync*` twins. They are made
+# replay-safe by passing a client-minted `idempotencyKey` on the CANONICAL
+# mutation's input — the server records the key in the same transaction as the
+# delta, so a queued replay applies it at most once and returns a
+# `ConflictError(code: IDEMPOTENT_REPLAY)`. See docs/api/offline-sync.md.
 
 # ============================================
 # SUBSCRIPTIONS

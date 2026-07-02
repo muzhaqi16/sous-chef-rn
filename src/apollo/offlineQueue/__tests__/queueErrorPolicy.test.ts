@@ -7,59 +7,64 @@ import {
 describe('classifyReplayResult', () => {
   it('returns applied for a success payload', () => {
     expect(
-      classifyReplayResult('CreateShoppingList', {
+      classifyReplayResult({
         __typename: 'CreateShoppingListPayload',
         shoppingList: { id: 'list-1' },
       }),
     ).toBe('applied');
   });
 
-  it('returns applied for sync result payloads', () => {
+  it('returns applied for a converged success payload (favorites / cooking logs / sync ops)', () => {
+    // A re-favorite / re-cook / sync replay converges as a SUCCESS payload with
+    // converged:true — it doesn't end in `Error`, so it's already applied.
     expect(
-      classifyReplayResult('SyncPantryItem', {
+      classifyReplayResult({
+        __typename: 'AddRecipeToFavoritesPayload',
+        converged: true,
+      }),
+    ).toBe('applied');
+    expect(
+      classifyReplayResult({
         __typename: 'SyncPantryItemResult',
         clientId: 'c1',
-        wasCreated: true,
+        converged: true,
       }),
     ).toBe('applied');
   });
 
   it('returns applied for scalar, null, and absent payloads', () => {
-    expect(classifyReplayResult('DeleteThing', true)).toBe('applied');
-    expect(classifyReplayResult('DeleteThing', null)).toBe('applied');
-    expect(classifyReplayResult('DeleteThing', undefined)).toBe('applied');
-    expect(classifyReplayResult('DeleteThing', {})).toBe('applied');
+    expect(classifyReplayResult(true)).toBe('applied');
+    expect(classifyReplayResult(null)).toBe('applied');
+    expect(classifyReplayResult(undefined)).toBe('applied');
+    expect(classifyReplayResult({})).toBe('applied');
   });
 
-  it('returns converged for a ConflictError on a Create* replay', () => {
+  it('converges a ConflictError whose code is IDEMPOTENT_REPLAY (any op)', () => {
+    // Both an idempotency-keyed cumulative delta and a client-PK create surface
+    // a replay as ConflictError(code: IDEMPOTENT_REPLAY) — the effect already
+    // committed once, so dequeue as success regardless of operation.
     expect(
-      classifyReplayResult('CreateMealPlan', {
+      classifyReplayResult({
         __typename: 'ConflictError',
-        message: 'already exists',
+        code: 'IDEMPOTENT_REPLAY',
+        message: 'already applied',
       }),
     ).toBe('converged');
   });
 
-  it('treats a re-favorite the way the API converges it — success payload, not ConflictError', () => {
-    // Per the API offline-sync contract a re-favorite converges as a SUCCESS
-    // payload (FavoriteRecipePayload, wasCreated:false), NOT a ConflictError —
-    // so AddRecipeToFavorites is NOT in the Create*-conflict converged set.
+  it('rejects a generic ConflictError (a real version/uniqueness conflict)', () => {
+    // Same typename, different code — a genuine conflict must NOT be swallowed
+    // as converged. Matched on the code, never the message.
     expect(
-      classifyReplayResult('AddRecipeToFavorites', {
-        __typename: 'FavoriteRecipePayload',
-      }),
-    ).toBe('applied');
-    expect(
-      classifyReplayResult('AddRecipeToFavorites', {
+      classifyReplayResult({
         __typename: 'ConflictError',
-        message: 'x',
+        code: 'CONFLICT',
+        message: 'version conflict',
       }),
     ).toBe('rejected');
-  });
-
-  it('returns rejected for a ConflictError on a non-create replay', () => {
+    // No code at all → also rejected.
     expect(
-      classifyReplayResult('UpdateShoppingList', {
+      classifyReplayResult({
         __typename: 'ConflictError',
         message: 'version conflict',
       }),
@@ -73,7 +78,7 @@ describe('classifyReplayResult', () => {
       'NotFoundError',
     ]) {
       expect(
-        classifyReplayResult('CreateRecipe', {
+        classifyReplayResult({
           __typename: typename,
           message: 'refused',
         }),

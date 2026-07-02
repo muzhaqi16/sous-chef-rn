@@ -23,6 +23,28 @@ let isReconnecting = false;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 
+// Reconnect listeners — fired when the socket reconnects after a prior drop, so
+// data that may have changed while disconnected (e.g. notifications) can be
+// backfilled. First connect does NOT fire (it's not a reconnect).
+let hasConnectedBefore = false;
+const reconnectListeners = new Set<() => void>();
+
+/** Subscribe to WebSocket reconnects. Returns an unsubscribe fn. */
+export function onWebSocketReconnected(listener: () => void): () => void {
+  reconnectListeners.add(listener);
+  return () => reconnectListeners.delete(listener);
+}
+
+function notifyReconnectListeners(): void {
+  reconnectListeners.forEach(listener => {
+    try {
+      listener();
+    } catch {
+      // A listener throwing must not break others or the socket lifecycle.
+    }
+  });
+}
+
 // Auto-reconnection state
 let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
@@ -177,6 +199,13 @@ const createWsClient = () => {
           clearTimeout(reconnectTimeoutId);
           reconnectTimeoutId = null;
         }
+
+        // A connect that follows a previous connection is a reconnect — backfill
+        // listeners (notifications, etc.) catch anything missed while dropped.
+        if (hasConnectedBefore) {
+          notifyReconnectListeners();
+        }
+        hasConnectedBefore = true;
 
         // Defer the backoff reset until the connection proves stable. If the
         // server closes the socket before this fires (e.g. concurrent-

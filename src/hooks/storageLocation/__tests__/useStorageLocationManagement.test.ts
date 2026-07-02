@@ -215,7 +215,7 @@ function buildSetDefaultMock(): MockedResponse {
     result: {
       data: {
         markStorageLocationAsDefault: {
-          __typename: 'SetDefaultStorageLocationPayload',
+          __typename: 'MarkStorageLocationAsDefaultPayload',
           home: null,
           storageLocation: {
             __typename: 'StorageLocation',

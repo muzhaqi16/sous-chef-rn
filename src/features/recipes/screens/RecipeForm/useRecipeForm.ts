@@ -57,11 +57,24 @@ export interface RecipeFormState {
   steps: StepFormState[];
   // Meta
   notes: string;
+  tips: string;
+  originalAuthor: string;
+  // Comma-separated recipe tags (freeform), split into a string[] on save.
+  tags: string;
 }
 
 let nextTempId = 1;
 function generateTempId(): string {
   return `temp-${nextTempId++}`;
+}
+
+/** Split a comma-separated tag field into a clean list (undefined when empty). */
+function parseCommaTags(raw: string): string[] | undefined {
+  const tags = raw
+    .split(',')
+    .map(tag => tag.trim())
+    .filter(Boolean);
+  return tags.length > 0 ? tags : undefined;
 }
 
 export function useRecipeForm() {
@@ -84,6 +97,9 @@ export function useRecipeForm() {
     ingredients: [],
     steps: [],
     notes: '',
+    tips: '',
+    originalAuthor: '',
+    tags: '',
   });
 
   const [initialState, setInitialState] = useState<RecipeFormState | null>(
@@ -242,6 +258,11 @@ export function useRecipeForm() {
       description: state.description.trim() || undefined,
       status: state.status,
       notes: state.notes.trim() || undefined,
+      tips: state.tips.trim() || undefined,
+      tags: parseCommaTags(state.tags),
+      attribution: state.originalAuthor.trim()
+        ? { originalAuthor: state.originalAuthor.trim() }
+        : undefined,
       ingredients,
       instructions,
       media: {
@@ -277,6 +298,11 @@ export function useRecipeForm() {
       description: state.description.trim() || undefined,
       status: state.status,
       notes: state.notes.trim() || undefined,
+      tips: state.tips.trim() || undefined,
+      tags: parseCommaTags(state.tags),
+      attribution: state.originalAuthor.trim()
+        ? { originalAuthor: state.originalAuthor.trim() }
+        : undefined,
       instructions: state.steps.map((step, index) => ({
         step: index + 1,
         text: step.instruction.trim(),
@@ -356,6 +382,9 @@ export function useRecipeForm() {
           )
         : [],
       notes: recipe.notes ?? '',
+      tips: recipe.tips ?? '',
+      originalAuthor: recipe.originalAuthor ?? '',
+      tags: (recipe.tags ?? []).join(', '),
     };
     setState(formState);
     setInitialState(formState);

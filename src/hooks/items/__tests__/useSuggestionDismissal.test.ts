@@ -29,7 +29,7 @@ describe('useSuggestionDismissal', () => {
     const { fired, mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: {
         markSuggestionDismissed: {
-          __typename: 'DismissSuggestionPayload',
+          __typename: 'MarkSuggestionDismissedPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Shopping,
           dismissed: true,
@@ -89,7 +89,7 @@ describe('useSuggestionDismissal', () => {
     const dismiss = recordMock(MarkSuggestionDismissedDocument, {
       data: {
         markSuggestionDismissed: {
-          __typename: 'DismissSuggestionPayload',
+          __typename: 'MarkSuggestionDismissedPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Pantry,
           dismissed: true,
@@ -99,7 +99,7 @@ describe('useSuggestionDismissal', () => {
     const undismiss = recordMock(MarkSuggestionActiveDocument, {
       data: {
         markSuggestionActive: {
-          __typename: 'UndismissSuggestionPayload',
+          __typename: 'MarkSuggestionActivePayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Pantry,
           dismissed: false,
@@ -136,7 +136,7 @@ describe('useSuggestionDismissal', () => {
     const dismiss = recordMock(MarkSuggestionDismissedDocument, {
       data: {
         markSuggestionDismissed: {
-          __typename: 'DismissSuggestionPayload',
+          __typename: 'MarkSuggestionDismissedPayload',
           itemId: 'item-1',
           surface: SuggestionSurface.Pantry,
           dismissed: true,

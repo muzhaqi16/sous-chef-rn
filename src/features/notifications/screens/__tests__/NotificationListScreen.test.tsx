@@ -21,6 +21,15 @@ jest.mock('#features/notifications/hooks/useNotifications', () => ({
   })),
 }));
 
+jest.mock('#features/notifications/hooks/useNotificationHistory', () => ({
+  useNotificationHistory: jest.fn(() => ({
+    loadMore: jest.fn(),
+    hasMore: false,
+    loadingMore: false,
+    loading: false,
+  })),
+}));
+
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#features/notifications/components/NotificationItem', () => ({
@@ -101,6 +110,9 @@ jest.mock('#utils/notificationGrouping', () => ({
 
 jest.mock('#store/slices/notificationSlice', () => ({
   NOTIFICATION_CATEGORIES: ['HOME', 'PANTRY', 'RECIPE', 'SHOPPING', 'SYSTEM'],
+  // The footer loader pulls themedComponents → IconButton → the real store,
+  // whose index calls createNotificationSlice; provide a no-op so it builds.
+  createNotificationSlice: () => ({}),
 }));
 
 beforeEach(() => {
