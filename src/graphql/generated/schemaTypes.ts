@@ -9640,6 +9640,7 @@ export type OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoun
 
 export type OpenPantryItemInput = {
   id: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 

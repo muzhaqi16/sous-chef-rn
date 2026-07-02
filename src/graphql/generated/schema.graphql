@@ -6768,6 +6768,7 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 
 input OpenPantryItemInput {
   id: ID!
+  idempotencyKey: ID
   version: Int
 }
 
