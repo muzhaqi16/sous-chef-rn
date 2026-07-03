@@ -356,11 +356,13 @@ input AddRestrictionsInput {
 }
 
 input AddTemplateItemInput {
-  customMealName: String
   dayOffset: Int!
+  """
+  Meal reference: exactly one of a recipe id or a custom meal name (@oneOf).
+  """
+  meal: MealRefInput!
   mealType: MealType!
   notes: String
-  recipeId: ID
   servings: Int
   templateId: ID!
 }
@@ -814,8 +816,7 @@ input BatchAddShoppingListItemInput {
   Distinct from clientId below, which is only a response-matching token.
   """
   id: ID
-  itemId: ID
-  itemName: String
+  item: ItemRefInput!
   netWeight: NetWeightInput
   notes: String
   pricing: PricingEstimatesInput
@@ -1819,7 +1820,6 @@ input CreateMealPlanItemInput {
   """
   calories: Float
   carbs: Float
-  customMealName: String
   date: DateTime!
   estimatedCost: Float
   fat: Float
@@ -1829,11 +1829,14 @@ input CreateMealPlanItemInput {
   key, the existing row is returned (its original id wins).
   """
   id: ID
+  """
+  Meal reference: exactly one of a recipe id or a custom meal name (@oneOf).
+  """
+  meal: MealRefInput!
   mealPlanId: ID!
   mealType: MealType!
   notes: String
   protein: Float
-  recipeId: ID
   servings: Int
 }
 
@@ -2171,8 +2174,7 @@ input CreateShoppingListItemInput {
   CUID2 format; invalid formats are rejected by ID validation.
   """
   id: ID
-  itemId: ID
-  itemName: String
+  item: ItemRefInput!
   netWeight: NetWeightInput
   notes: String
   pricing: PricingEstimatesInput
@@ -4378,6 +4380,16 @@ input ItemPriceHistoryOrderBy {
 }
 
 """
+Mutually-exclusive item reference: supply exactly one of an existing catalog
+item id or a free-text name. Enforced by the GraphQL executor (@oneOf) — the
+request is rejected before any resolver runs if zero or both are provided.
+"""
+input ItemRefInput {
+  itemId: ID
+  itemName: String
+}
+
+"""
 Number of records that reference an item, used to gauge the impact of a merge.
 """
 type ItemReferenceCounts {
@@ -5301,6 +5313,16 @@ enum MealPlanType {
 }
 
 """
+Mutually-exclusive meal reference: supply exactly one of a recipe id or a
+free-text custom meal name. Enforced by the GraphQL executor (@oneOf) — the
+request is rejected before any resolver runs if zero or both are provided.
+"""
+input MealRefInput {
+  customMealName: String
+  recipeId: ID
+}
+
+"""
 Reusable meal template for quick meal plan creation.
 Templates store meal patterns that can be applied to create meal plans.
 Cache: 5 minutes - templates change occasionally
@@ -5359,11 +5381,13 @@ type MealTemplateItem {
 }
 
 input MealTemplateItemInput {
-  customMealName: String
   dayOffset: Int!
+  """
+  Meal reference: exactly one of a recipe id or a custom meal name (@oneOf).
+  """
+  meal: MealRefInput!
   mealType: MealType!
   notes: String
-  recipeId: ID
   servings: Int
 }
 
@@ -9795,10 +9819,10 @@ input SyncShoppingListItemFullInput {
 input SyncShoppingListItemInput {
   brand: BrandReferenceInput
   category: String
-  """Item reference (if linking to catalog item)"""
-  itemId: ID
-  """Item details (for items not in catalog)"""
-  itemName: String
+  """
+  Item reference: exactly one of a catalog item id or a free-text name (@oneOf).
+  """
+  item: ItemRefInput!
   netWeight: NetWeightInput
   """User-provided information"""
   notes: String
@@ -10388,7 +10412,6 @@ input UpdateMealPlanItemInput {
   calories: Float
   carbs: Float
   completedAt: DateTime
-  customMealName: String
   date: DateTime
   """
   Whether to auto-deduct recipe ingredients from pantry on completion (default: true)
@@ -10398,10 +10421,14 @@ input UpdateMealPlanItemInput {
   fat: Float
   id: ID!
   isCompleted: Boolean
+  """
+  Meal reference: omit to leave unchanged; if provided, exactly one of a recipe
+  id or a custom meal name (@oneOf).
+  """
+  meal: MealRefInput
   mealType: MealType
   notes: String
   protein: Float
-  recipeId: ID
   servings: Int
   """Pantry items used for this meal: [{pantryItemId, quantityUsed}]"""
   usedPantryItems: JSON
@@ -10874,12 +10901,15 @@ type UpdateStorePayload {
 union UpdateStoreResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorePayload | ValidationError
 
 input UpdateTemplateItemInput {
-  customMealName: String
   dayOffset: Int
   id: ID!
+  """
+  Meal reference: omit to leave unchanged; if provided, exactly one of a recipe
+  id or a custom meal name (@oneOf).
+  """
+  meal: MealRefInput
   mealType: MealType
   notes: String
-  recipeId: ID
   servings: Int
 }
 

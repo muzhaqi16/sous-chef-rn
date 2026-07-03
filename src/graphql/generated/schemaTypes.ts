@@ -214,11 +214,11 @@ export type AddRestrictionsInput = {
 };
 
 export type AddTemplateItemInput = {
-  customMealName?: InputMaybe<Scalars['String']['input']>;
   dayOffset: Scalars['Int']['input'];
+  /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
+  meal: MealRefInput;
   mealType: MealType;
   notes?: InputMaybe<Scalars['String']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
   templateId: Scalars['ID']['input'];
 };
@@ -686,8 +686,7 @@ export type BatchAddShoppingListItemInput = {
    * Distinct from clientId below, which is only a response-matching token.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
+  item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
@@ -1736,7 +1735,6 @@ export type CreateMealPlanItemInput = {
   /** Manual nutrition override - if not provided, will be pulled from recipe */
   calories?: InputMaybe<Scalars['Float']['input']>;
   carbs?: InputMaybe<Scalars['Float']['input']>;
-  customMealName?: InputMaybe<Scalars['String']['input']>;
   date: Scalars['DateTime']['input'];
   estimatedCost?: InputMaybe<Scalars['Float']['input']>;
   fat?: InputMaybe<Scalars['Float']['input']>;
@@ -1746,11 +1744,12 @@ export type CreateMealPlanItemInput = {
    * key, the existing row is returned (its original id wins).
    */
   id?: InputMaybe<Scalars['ID']['input']>;
+  /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
+  meal: MealRefInput;
   mealPlanId: Scalars['ID']['input'];
   mealType: MealType;
   notes?: InputMaybe<Scalars['String']['input']>;
   protein?: InputMaybe<Scalars['Float']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -2099,8 +2098,7 @@ export type CreateShoppingListItemInput = {
    * CUID2 format; invalid formats are rejected by ID validation.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-  itemName?: InputMaybe<Scalars['String']['input']>;
+  item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
@@ -4511,6 +4509,16 @@ export type ItemPriceHistoryOrderBy = {
   price?: InputMaybe<SortOrder>;
 };
 
+/**
+ * Mutually-exclusive item reference: supply exactly one of an existing catalog
+ * item id or a free-text name. Enforced by the GraphQL executor (@oneOf) — the
+ * request is rejected before any resolver runs if zero or both are provided.
+ */
+export type ItemRefInput = {
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  itemName?: InputMaybe<Scalars['String']['input']>;
+};
+
 /** Number of records that reference an item, used to gauge the impact of a merge. */
 export type ItemReferenceCounts = {
   __typename: 'ItemReferenceCounts';
@@ -5472,6 +5480,16 @@ export enum MealPlanType {
 }
 
 /**
+ * Mutually-exclusive meal reference: supply exactly one of a recipe id or a
+ * free-text custom meal name. Enforced by the GraphQL executor (@oneOf) — the
+ * request is rejected before any resolver runs if zero or both are provided.
+ */
+export type MealRefInput = {
+  customMealName?: InputMaybe<Scalars['String']['input']>;
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+/**
  * Reusable meal template for quick meal plan creation.
  * Templates store meal patterns that can be applied to create meal plans.
  * Cache: 5 minutes - templates change occasionally
@@ -5534,11 +5552,11 @@ export type MealTemplateItem = {
 };
 
 export type MealTemplateItemInput = {
-  customMealName?: InputMaybe<Scalars['String']['input']>;
   dayOffset: Scalars['Int']['input'];
+  /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
+  meal: MealRefInput;
   mealType: MealType;
   notes?: InputMaybe<Scalars['String']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -13586,10 +13604,8 @@ export type SyncShoppingListItemFullInput = {
 export type SyncShoppingListItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
-  /** Item reference (if linking to catalog item) */
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-  /** Item details (for items not in catalog) */
-  itemName?: InputMaybe<Scalars['String']['input']>;
+  /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
+  item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
   /** User-provided information */
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -14192,7 +14208,6 @@ export type UpdateMealPlanItemInput = {
   calories?: InputMaybe<Scalars['Float']['input']>;
   carbs?: InputMaybe<Scalars['Float']['input']>;
   completedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  customMealName?: InputMaybe<Scalars['String']['input']>;
   date?: InputMaybe<Scalars['DateTime']['input']>;
   /** Whether to auto-deduct recipe ingredients from pantry on completion (default: true) */
   deductFromPantry?: InputMaybe<Scalars['Boolean']['input']>;
@@ -14200,10 +14215,14 @@ export type UpdateMealPlanItemInput = {
   fat?: InputMaybe<Scalars['Float']['input']>;
   id: Scalars['ID']['input'];
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
+  /**
+   * Meal reference: omit to leave unchanged; if provided, exactly one of a recipe
+   * id or a custom meal name (@oneOf).
+   */
+  meal?: InputMaybe<MealRefInput>;
   mealType?: InputMaybe<MealType>;
   notes?: InputMaybe<Scalars['String']['input']>;
   protein?: InputMaybe<Scalars['Float']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
   /** Pantry items used for this meal: [{pantryItemId, quantityUsed}] */
   usedPantryItems?: InputMaybe<Scalars['JSON']['input']>;
@@ -14700,12 +14719,15 @@ export type UpdateStorePayload = {
 export type UpdateStoreResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorePayload | ValidationError;
 
 export type UpdateTemplateItemInput = {
-  customMealName?: InputMaybe<Scalars['String']['input']>;
   dayOffset?: InputMaybe<Scalars['Int']['input']>;
   id: Scalars['ID']['input'];
+  /**
+   * Meal reference: omit to leave unchanged; if provided, exactly one of a recipe
+   * id or a custom meal name (@oneOf).
+   */
+  meal?: InputMaybe<MealRefInput>;
   mealType?: InputMaybe<MealType>;
   notes?: InputMaybe<Scalars['String']['input']>;
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
 };
 
