@@ -46,15 +46,19 @@ function moveMock(payload: {
     data: {
       movePurchasedItemsToPantry: {
         __typename: 'MovePurchasedItemsToPantryPayload',
-        result: {
-          __typename: 'MovePurchasedItemsResult',
-          movedCount: payload.movedCount,
-          skippedCount: payload.skippedCount,
-          targetPantryName: payload.targetPantryName,
-          movedItems: payload.movedItemIds.map(id => ({
-            __typename: 'MovedItemInfo',
-            shoppingListItemId: id,
-          })),
+        movedItems: payload.movedItemIds.map(id => ({
+          __typename: 'MovedItemInfo',
+          shoppingListItemId: id,
+          pantryItemId: `pantry-${id}`,
+          itemName: id,
+          quantity: 1,
+        })),
+        summary: {
+          __typename: 'BulkSummary',
+          total: payload.movedCount + payload.skippedCount,
+          succeeded: payload.movedCount,
+          failed: 0,
+          skipped: payload.skippedCount,
         },
       },
     },
@@ -120,7 +124,7 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to My Pantry');
+    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to pantry');
   });
 
   it('shows success toast with singular item text', async () => {
@@ -140,7 +144,7 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to My Pantry');
+    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
   });
 
   it('includes skipped count in toast when items were skipped', async () => {
@@ -161,7 +165,7 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Moved 2 items to My Pantry (1 skipped)',
+      'Moved 2 items to pantry (1 skipped)',
     );
   });
 

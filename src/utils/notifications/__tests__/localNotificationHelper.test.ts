@@ -2,11 +2,27 @@
 
 import { Platform } from 'react-native';
 
-// Mock notifee
+type NotifeeEvent = {
+  type: number;
+  detail: { notification?: { data?: Record<string, unknown> } };
+};
+
+// Mock notifee — capture the registered handlers so tests can invoke them.
 const mockDisplayNotification = jest.fn().mockResolvedValue(undefined);
 const mockCreateChannel = jest.fn().mockResolvedValue('default');
-const mockOnForegroundEvent = jest.fn(() => jest.fn());
-const mockOnBackgroundEvent = jest.fn();
+let foregroundHandler: ((event: NotifeeEvent) => void) | undefined;
+let backgroundHandler: ((event: NotifeeEvent) => Promise<void>) | undefined;
+const mockOnForegroundEvent = jest.fn(
+  (handler: (event: NotifeeEvent) => void) => {
+    foregroundHandler = handler;
+    return jest.fn();
+  },
+);
+const mockOnBackgroundEvent = jest.fn(
+  (handler: (event: NotifeeEvent) => Promise<void>) => {
+    backgroundHandler = handler;
+  },
+);
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
@@ -18,6 +34,7 @@ jest.mock('@notifee/react-native', () => ({
   },
   EventType: {
     DISMISSED: 2,
+    PRESS: 1,
   },
   AndroidImportance: {
     HIGH: 4,
@@ -28,11 +45,20 @@ jest.mock('@notifee/react-native', () => ({
   },
 }));
 
+// Isolate the tray helper from the deep-link router — assert it's invoked with
+// the tapped notification's data, not that navigation actually happens.
+const mockRouteNotificationTap = jest.fn();
+jest.mock('#/services/push/pushNotificationRouting', () => ({
+  routeNotificationTap: (...args: unknown[]) =>
+    mockRouteNotificationTap(...args),
+}));
+
 describe('localNotificationHelper', () => {
   let showLocalNotification: (params: {
-    id: string;
+    id?: string;
     title: string;
     body: string;
+    data?: Record<string, string>;
   }) => Promise<void>;
   let setupNotificationHandlers: () => () => void;
 
@@ -58,6 +84,21 @@ describe('localNotificationHelper', () => {
           id: 'test-1',
           title: 'Test Title',
           body: 'Test body content',
+        }),
+      );
+    });
+
+    it('forwards the data payload to the tray entry for tap routing', async () => {
+      await showLocalNotification({
+        id: 'test-2',
+        title: 'Test Title',
+        body: 'Test body',
+        data: { category: 'SHOPPING', notificationId: 'test-2' },
+      });
+
+      expect(mockDisplayNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { category: 'SHOPPING', notificationId: 'test-2' },
         }),
       );
     });
@@ -251,6 +292,43 @@ describe('localNotificationHelper', () => {
       expect(mockOnForegroundEvent).toHaveBeenCalled();
       expect(mockOnBackgroundEvent).toHaveBeenCalled();
       expect(typeof unsubscribe).toBe('function');
+    });
+
+    it('routes a foreground PRESS to the tapped notification data', () => {
+      setupNotificationHandlers();
+
+      foregroundHandler?.({
+        type: 1, // EventType.PRESS
+        detail: { notification: { data: { category: 'PANTRY' } } },
+      });
+
+      expect(mockRouteNotificationTap).toHaveBeenCalledWith({
+        category: 'PANTRY',
+      });
+    });
+
+    it('routes a background PRESS to the tapped notification data', async () => {
+      setupNotificationHandlers();
+
+      await backgroundHandler?.({
+        type: 1, // EventType.PRESS
+        detail: { notification: { data: { category: 'SHOPPING' } } },
+      });
+
+      expect(mockRouteNotificationTap).toHaveBeenCalledWith({
+        category: 'SHOPPING',
+      });
+    });
+
+    it('ignores non-PRESS events', () => {
+      setupNotificationHandlers();
+
+      foregroundHandler?.({
+        type: 2, // EventType.DISMISSED
+        detail: { notification: { data: { category: 'PANTRY' } } },
+      });
+
+      expect(mockRouteNotificationTap).not.toHaveBeenCalled();
     });
   });
 });

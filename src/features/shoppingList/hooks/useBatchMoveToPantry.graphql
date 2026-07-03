@@ -2,22 +2,17 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   movePurchasedItemsToPantry(input: $input) {
     __typename
     ... on MovePurchasedItemsToPantryPayload {
-      result {
-        movedCount
-        movedItems {
-          shoppingListItemId
-          pantryItemId
-          itemName
-          quantity
-        }
-        skippedCount
-        skippedItems {
-          shoppingListItemId
-          itemName
-          reason
-        }
-        targetPantryId
-        targetPantryName
+      movedItems {
+        shoppingListItemId
+        pantryItemId
+        itemName
+        quantity
+      }
+      summary {
+        total
+        succeeded
+        failed
+        skipped
       }
     }
     ... on Error {

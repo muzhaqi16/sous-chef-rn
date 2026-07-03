@@ -41,14 +41,14 @@ export function useBatchMoveToPantry({
           !currentListId
         )
           return;
-        const result = payload.result;
+        const { movedItems } = payload;
 
         executeCacheUpdate(() => {
-          const movedCount = result.movedItems.length;
+          const movedCount = movedItems.length;
           if (movedCount === 0) return;
 
           const movedIds = new Set(
-            result.movedItems.map(item => item.shoppingListItemId),
+            movedItems.map(item => item.shoppingListItemId),
           );
 
           const parentCacheId = cache.identify({
@@ -91,7 +91,7 @@ export function useBatchMoveToPantry({
           // Evict all moved items from cache
           safeEvictMany(
             cache,
-            result.movedItems.map(item => ({
+            movedItems.map(item => ({
               typename: 'ShoppingListItem',
               id: item.shoppingListItemId,
             })),
@@ -136,14 +136,15 @@ export function useBatchMoveToPantry({
       return;
     }
 
-    const { movedCount, skippedCount, targetPantryName } = payload.result;
+    const movedCount = payload.summary.succeeded;
+    const skippedCount = payload.summary.skipped;
 
     if (movedCount > 0) {
       const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
       toastService.success(
         `Moved ${movedCount} item${
           movedCount !== 1 ? 's' : ''
-        } to ${targetPantryName}${skippedText}`,
+        } to pantry${skippedText}`,
       );
     } else {
       toastService.info('No items could be moved to pantry');

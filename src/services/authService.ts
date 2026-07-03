@@ -43,7 +43,7 @@ import {
 import {
   type LoginInput,
   type RegisterInput,
-  type DeviceRegistrationInput,
+  type RegisterDeviceInput,
 } from '#/graphql/generated/schemaTypes';
 import {
   acquirePushToken,
@@ -156,7 +156,7 @@ async function loadStoredCredentials(
 function buildDeviceInput(
   deviceInfo: Awaited<ReturnType<typeof collectDeviceInformation>>,
   pushToken: string | null,
-): DeviceRegistrationInput {
+): RegisterDeviceInput {
   return {
     deviceId: deviceInfo.deviceId,
     deviceName: deviceInfo.deviceName,

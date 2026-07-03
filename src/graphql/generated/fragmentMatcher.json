@@ -35,7 +35,7 @@
       "NotFoundError",
       "ValidationError"
     ],
-    "AddPantryItemToShoppingListResultUnion": [
+    "AddPantryItemToShoppingListResult": [
       "AddPantryItemToShoppingListPayload",
       "ConflictError",
       "ForbiddenError",
@@ -327,6 +327,7 @@
       "MembershipConnection",
       "NotificationConnection",
       "PantryConnection",
+      "PantryItemBatchConnection",
       "PantryItemChangeConnection",
       "PantryItemConnection",
       "PantryItemUsageConnection",
@@ -843,6 +844,7 @@
       "MembershipEdge",
       "NotificationEdge",
       "PantryEdge",
+      "PantryItemBatchEdge",
       "PantryItemChangeEdge",
       "PantryItemEdge",
       "PantryItemUsageEdge",
@@ -969,13 +971,6 @@
       "ConflictError",
       "ForbiddenError",
       "MarkExpirationNotificationAsReadPayload",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "MarkExpirationNotificationDismissedResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "MarkExpirationNotificationDismissedPayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -1129,13 +1124,6 @@
       "ForbiddenError",
       "NotFoundError",
       "RecordLoginPayload",
-      "ValidationError"
-    ],
-    "RecordPantryUsageResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "RecordPantryUsagePayload",
       "ValidationError"
     ],
     "RecordPriceObservationResult": [

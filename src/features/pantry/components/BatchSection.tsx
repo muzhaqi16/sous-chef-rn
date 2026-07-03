@@ -47,12 +47,12 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   );
 
   const allBatches: PantryItemBatchFragment[] =
-    allBatchesData?.pantryItemBatches
-      ?.map(ref =>
+    allBatchesData?.pantryItemBatchesConnection?.edges
+      ?.map(edge =>
         client.cache.readFragment<PantryItemBatchFragment>({
           fragment: PantryItemBatchFragmentDoc,
           fragmentName: 'PantryItemBatchFragment',
-          from: ref,
+          from: edge.node,
         }),
       )
       .filter((b): b is PantryItemBatchFragment => b !== null) ?? [];

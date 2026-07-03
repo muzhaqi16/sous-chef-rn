@@ -14,9 +14,11 @@ query SearchRecipes(
     query: $query
     first: $first
     after: $after
-    diets: $diets
-    intolerances: $intolerances
-    maxReadyTime: $maxReadyTime
+    filters: {
+      diets: $diets
+      intolerances: $intolerances
+      maxReadyTime: $maxReadyTime
+    }
   ) {
     edges {
       node {
@@ -52,8 +54,7 @@ query MyRecipes(
   recipes(
     after: $cursor
     first: $first
-    category: $category
-    difficulty: $difficulty
+    filters: { category: $category, difficulty: $difficulty }
   ) {
     edges {
       node {
@@ -269,7 +270,9 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
   deleteRecipe(input: $input) {
     __typename
     ... on DeleteRecipePayload {
-      success
+      recipe {
+        id
+      }
     }
     ... on Error {
       code
@@ -341,7 +344,8 @@ mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
   deleteRecipeFolder(input: $input) {
     __typename
     ... on DeleteRecipeFolderPayload {
-      success
+      folder
+      movedCount
     }
     ... on Error {
       code

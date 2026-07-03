@@ -399,14 +399,14 @@ export function useRecipeShoppingList({
               return next;
             });
             toastService.success(
-              data.incrementedCount > 0
+              data.summary.skipped > 0
                 ? t('recipes.addedItemsToListUpdated', {
-                    count: data.successCount,
+                    count: data.summary.succeeded,
                     listName: resolvedName,
-                    updated: data.incrementedCount,
+                    updated: data.summary.skipped,
                   })
                 : t('recipes.addedItemsToList', {
-                    count: data.successCount,
+                    count: data.summary.succeeded,
                     listName: resolvedName,
                   }),
             );

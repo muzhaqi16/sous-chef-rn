@@ -17,6 +17,7 @@ import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
+import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
 import {
   getNotificationAction,
   getNotificationDisplayMessage,
@@ -195,6 +196,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         id: processedNotification.id,
         title: processedNotification.title,
         body: getNotificationDisplayMessage(processedNotification, t),
+        data: {
+          category: processedNotification.category,
+          notificationId: processedNotification.id,
+        },
       });
     }
   };
@@ -286,6 +291,13 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       appStateRef.current = nextAppState;
     });
     return () => subscription.remove();
+  }, []);
+
+  // Route taps on OS-auto-displayed FCM pushes (background tap + cold-launch).
+  // Taps on data-only pushes we drew ourselves route through Notifee's handlers.
+  useEffect(() => {
+    const unsubscribe = registerFcmTapHandlers();
+    return unsubscribe;
   }, []);
 
   // Cleanup on logout

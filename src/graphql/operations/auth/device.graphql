@@ -2,7 +2,7 @@
 # MUTATIONS
 # ============================================
 
-mutation RegisterDevice($input: DeviceRegistrationInput!) {
+mutation RegisterDevice($input: RegisterDeviceInput!) {
   registerDevice(input: $input) {
     __typename
     ... on RegisterDevicePayload {

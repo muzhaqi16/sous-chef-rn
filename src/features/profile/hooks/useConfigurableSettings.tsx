@@ -18,8 +18,8 @@ import {
 } from '#operations/auth/user.generated';
 import {
   ProfileVisibility,
-  type UpdateUserProfileInput,
-  type UpdateUserSettingsInput,
+  type UpdateProfileInput,
+  type UpdateSettingsInput,
 } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
@@ -154,7 +154,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     }
   };
 
-  const updateProfile = async (input: UpdateUserProfileInput) => {
+  const updateProfile = async (input: UpdateProfileInput) => {
     const cacheId = profile
       ? client.cache.identify({ __typename: 'UserProfile', id: profile.id })
       : undefined;
@@ -194,7 +194,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     }
   };
 
-  const updateUserPreferences = async (input: UpdateUserSettingsInput) => {
+  const updateUserPreferences = async (input: UpdateSettingsInput) => {
     // No optimisticResponse here (UserSettings input is nested and doesn't map
     // 1:1 onto the flat cached entity), so there's nothing to tear down —
     // queueing it offline is safe and the change applies on replay (idempotent,

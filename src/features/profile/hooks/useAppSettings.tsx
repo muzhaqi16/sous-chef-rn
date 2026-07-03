@@ -9,7 +9,7 @@ import {
 import {
   AppTheme,
   UnitSystem,
-  type UpdateUserSettingsInput,
+  type UpdateSettingsInput,
 } from '#/graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
@@ -51,8 +51,8 @@ export const useAppSettings = () => {
 
   const toSettingsInput = (
     updates: Partial<AppSettings>,
-  ): UpdateUserSettingsInput => {
-    const input: UpdateUserSettingsInput = {};
+  ): UpdateSettingsInput => {
+    const input: UpdateSettingsInput = {};
     if (
       'theme' in updates ||
       'compactMode' in updates ||

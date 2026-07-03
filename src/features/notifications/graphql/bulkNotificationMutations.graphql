@@ -6,7 +6,9 @@ mutation MarkAllNotificationsAsRead {
   markAllNotificationsAsRead {
     __typename
     ... on MarkAllNotificationsAsReadPayload {
-      count
+      summary {
+        total
+      }
     }
     ... on Error {
       code
@@ -21,7 +23,9 @@ mutation DeleteMultipleNotifications($input: DeleteMultipleNotificationsInput!) 
   deleteMultipleNotifications(input: $input) {
     __typename
     ... on DeleteMultipleNotificationsPayload {
-      count
+      summary {
+        total
+      }
       notifications {
         id
       }

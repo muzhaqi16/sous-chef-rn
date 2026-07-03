@@ -108,7 +108,7 @@ mutation UpdateUser($input: UpdateUserInput!) {
   }
 }
 
-mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
+mutation UpdateUserProfile($input: UpdateProfileInput!) {
   updateProfile(input: $input) {
     __typename
     ... on UpdateProfilePayload {
@@ -146,7 +146,7 @@ mutation UpdateUserProfile($input: UpdateUserProfileInput!) {
   }
 }
 
-mutation UpdateUserPreferences($input: UpdateUserSettingsInput!) {
+mutation UpdateUserPreferences($input: UpdateSettingsInput!) {
   updateSettings(input: $input) {
     __typename
     ... on UpdateSettingsPayload {

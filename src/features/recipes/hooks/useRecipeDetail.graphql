@@ -17,9 +17,11 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
         quantityIncremented
         error
       }
-      successCount
-      failedCount
-      incrementedCount
+      summary {
+        succeeded
+        failed
+        skipped
+      }
     }
     ... on Error {
       code

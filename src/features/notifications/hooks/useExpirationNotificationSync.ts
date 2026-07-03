@@ -17,7 +17,6 @@
 import { useMutation } from '@apollo/client/react';
 import {
   MarkExpirationActionDocument,
-  MarkExpirationNotificationDismissedDocument,
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
@@ -38,8 +37,10 @@ const ACTION_LABELS: Record<ExpirationAction, string> = {
 
 export function useExpirationNotificationSync() {
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
+  // The server merged the former `markExpirationNotificationDismissed` into
+  // `markExpirationNotificationAsRead`; dismiss now routes to the same mutation.
   const [dismissMutation] = useMutation(
-    MarkExpirationNotificationDismissedDocument,
+    MarkExpirationNotificationAsReadDocument,
   );
   const [markReadMutation] = useMutation(
     MarkExpirationNotificationAsReadDocument,

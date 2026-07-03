@@ -256,14 +256,13 @@ input AddItemsToShoppingListInput {
 }
 
 type AddItemsToShoppingListPayload {
-  """Number of items that failed."""
-  failedCount: Int!
-  """Number of items where an existing item's quantity was incremented."""
-  incrementedCount: Int!
-  """Per-item results, in input order."""
+  """
+  Per-item results, in input order. Each element carries its own
+  success/error and quantityIncremented flag (add-vs-increment split lives
+  here; increments are counted under summary.skipped).
+  """
   results: [BatchAddShoppingListItemResult!]!
-  """Number of items successfully added."""
-  successCount: Int!
+  summary: BulkSummary!
 }
 
 union AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -286,14 +285,10 @@ input AddPantryItemToShoppingListInput {
 }
 
 type AddPantryItemToShoppingListPayload {
-  shoppingListItem: AddPantryItemToShoppingListResult!
-}
-
-type AddPantryItemToShoppingListResult {
   shoppingListItemId: ID!
 }
 
-union AddPantryItemToShoppingListResultUnion = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+union AddPantryItemToShoppingListResult = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input AddRecipeToFavoritesInput {
   folder: String
@@ -376,6 +371,18 @@ type AddTemplateItemPayload {
 }
 
 union AddTemplateItemResult = AddTemplateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+input AddUserAddressInput {
+  city: String!
+  country: String!
+  isDefault: Boolean
+  label: String
+  lat: Float
+  lng: Float
+  postalCode: String!
+  state: String!
+  street: String!
+}
 
 type AddUserAddressPayload {
   userAddress: UserAddress!
@@ -477,7 +484,9 @@ input AdminBulkDeleteItemsInput {
 }
 
 type AdminBulkDeleteItemsPayload {
-  result: BulkOperationSummary!
+  """Items that were deleted by the batch."""
+  items: [Item!]!
+  summary: BulkSummary!
 }
 
 union AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -580,7 +589,9 @@ input AdminPurgeHomesInput {
 }
 
 type AdminPurgeHomesPayload {
-  result: BulkOperationSummary!
+  """Homes that were purged by the batch."""
+  homes: [Home!]!
+  summary: BulkSummary!
 }
 
 union AdminPurgeHomesResult = AdminPurgeHomesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -600,7 +611,9 @@ input AdminPurgePantryItemsInput {
 }
 
 type AdminPurgePantryItemsPayload {
-  result: BulkOperationSummary!
+  """Pantry items that were purged by the batch."""
+  pantryItems: [PantryItem!]!
+  summary: BulkSummary!
 }
 
 union AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -620,7 +633,9 @@ input AdminPurgeShoppingListItemsInput {
 }
 
 type AdminPurgeShoppingListItemsPayload {
-  result: BulkOperationSummary!
+  """Shopping list items that were purged by the batch."""
+  shoppingListItems: [ShoppingListItem!]!
+  summary: BulkSummary!
 }
 
 union AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -828,15 +843,6 @@ type BatchAddShoppingListItemResult {
   success: Boolean!
 }
 
-type BatchOperationSummary {
-  created: Int!
-  executionTime: Float!
-  failed: Int!
-  successful: Int!
-  total: Int!
-  updated: Int!
-}
-
 """Lifecycle status of a pantry item batch"""
 enum BatchStatus {
   """Batch has remaining quantity available for consumption"""
@@ -965,18 +971,9 @@ input BulkCreateItemInput {
 }
 
 type BulkCreateItemsPayload {
-  result: BulkCreateItemsResponse!
-}
-
-type BulkCreateItemsResponse {
-  code: String!
-  created: [Item!]!
-  errors: [ItemError!]!
-  message: String!
-  skipped: [SkippedItem!]!
-  success: Boolean!
-  summary: BulkOperationSummary!
-  updated: [Item!]!
+  """Items that were created or updated by the batch."""
+  items: [Item!]!
+  summary: BulkSummary!
 }
 
 union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -986,8 +983,8 @@ input BulkCreatePurchasesInput {
 }
 
 type BulkCreatePurchasesPayload {
-  count: Int!
   purchases: [Purchase!]!
+  summary: BulkSummary!
 }
 
 union BulkCreatePurchasesResult = BulkCreatePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -997,8 +994,8 @@ input BulkCreateStoresInput {
 }
 
 type BulkCreateStoresPayload {
-  count: Int!
   stores: [Store!]!
+  summary: BulkSummary!
 }
 
 union BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1008,7 +1005,9 @@ input BulkDeleteItemsInput {
 }
 
 type BulkDeleteItemsPayload {
-  result: BulkOperationSummary!
+  """Items that were deleted by the batch."""
+  items: [Item!]!
+  summary: BulkSummary!
 }
 
 union BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1018,27 +1017,15 @@ input BulkDeletePurchasesInput {
 }
 
 type BulkDeletePurchasesPayload {
-  count: Int!
+  """
+  Purchases removed by the batch. Empty for hard deletes where the removed
+  rows are no longer retrievable — the counts live in the summary.
+  """
   purchases: [Purchase!]!
+  summary: BulkSummary!
 }
 
 union BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""Error detail for bulk device operations"""
-type BulkDeviceError {
-  deviceId: ID!
-  message: String!
-}
-
-"""Result of bulk device update"""
-type BulkDeviceResult {
-  code: String!
-  devices: [Device!]!
-  errors: [BulkDeviceError!]!
-  message: String!
-  success: Boolean!
-  updatedCount: Int!
-}
 
 """
 Input for bulk device updates.
@@ -1065,27 +1052,33 @@ input BulkNotificationInput {
   userIds: [ID!]!
 }
 
-type BulkOperationSummary {
-  code: String!
-  executionTime: Float!
-  failed: Int!
-  message: String!
-  skipped: Int!
-  success: Boolean!
-  successful: Int!
-  total: Int!
-}
-
 type BulkSendNotificationsPayload {
-  """User IDs for which delivery failed."""
-  failedIds: [ID!]!
   """Notifications that were successfully sent."""
   sent: [Notification!]!
-  totalFailed: Int!
-  totalSent: Int!
+  summary: BulkSummary!
 }
 
 union BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+"""
+The single canonical summary for every bulk / batch / admin-purge mutation
+(bulk-operation-standard). Replaces the retired BulkOperationSummary and
+BatchOperationSummary. Operation-level failure is the result union's error
+members; per-element outcome is a per-item result type — never a
+success/code/message triple here.
+"""
+type BulkSummary {
+  """Wall-clock execution time in milliseconds."""
+  executionTime: Float!
+  """Elements that failed."""
+  failed: Int!
+  """Elements skipped (e.g. no-op, already in target state)."""
+  skipped: Int!
+  """Elements that succeeded."""
+  succeeded: Int!
+  """Total elements the operation attempted."""
+  total: Int!
+}
 
 input BulkUpdateDevicesInput {
   ids: [ID!]!
@@ -1093,7 +1086,9 @@ input BulkUpdateDevicesInput {
 }
 
 type BulkUpdateDevicesPayload {
-  result: BulkDeviceResult!
+  """Devices that were successfully updated by the batch."""
+  devices: [Device!]!
+  summary: BulkSummary!
 }
 
 union BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1134,7 +1129,9 @@ input BulkUpdateItemsInput {
 }
 
 type BulkUpdateItemsPayload {
-  result: BulkOperationSummary!
+  """Items that were updated by the batch."""
+  items: [Item!]!
+  summary: BulkSummary!
 }
 
 union BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1145,8 +1142,8 @@ input BulkUpdateLoginHistoriesInput {
 }
 
 type BulkUpdateLoginHistoriesPayload {
-  count: Int!
   loginHistories: [LoginHistory!]!
+  summary: BulkSummary!
 }
 
 union BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1156,10 +1153,13 @@ input BulkUpsertItemsByExternalSourceInput {
 }
 
 type BulkUpsertItemsByExternalSourcePayload {
-  """Per-item upsert results, in input order."""
+  """
+  Per-item upsert results, in input order. Each element carries its own
+  success/error and created flag (create-vs-update split lives here, not in
+  the summary).
+  """
   results: [BatchUpsertItemResult!]!
-  """Summary counts for the batch."""
-  summary: BatchOperationSummary!
+  summary: BulkSummary!
 }
 
 union BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -1279,16 +1279,11 @@ input ChangePasswordInput {
 }
 
 type ChangePasswordPayload {
-  status: ChangePasswordStatus!
+  message: String
+  status: PasswordActionStatus!
 }
 
 union ChangePasswordResult = ChangePasswordPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-type ChangePasswordStatus {
-  code: String!
-  message: String!
-  success: Boolean!
-}
 
 """Source of the change for audit purposes"""
 enum ChangeSource {
@@ -1596,21 +1591,30 @@ type CookingLogEdge implements Edge {
 }
 
 """
-Real-time payload for cooking log mutations (create / update / delete).
-Delivered via the cookingLogUpdated subscription.
+Consolidated real-time event envelope for a single cooking log
+(create / update / delete). Subscribe via cookingLogEvents(cookingLogId)
+and branch on mutation. Subscribers can only watch logs they own.
 """
-type CookingLogMutationPayload {
+type CookingLogEvent {
+  """The user who caused the change."""
+  actorUserId: ID!
   mutation: MutationType!
   node: CookingLog!
+  subtype: CookingLogSubtype!
   timestamp: DateTime!
   updatedFields: [String!]!
-  userId: ID!
 }
 
 """Order by options for cooking logs"""
 input CookingLogOrderBy {
   cookedAt: SortOrder
   createdAt: SortOrder
+}
+
+"""Subtype discriminator for cooking-log domain events."""
+enum CookingLogSubtype {
+  """A cooking log was created, updated, or deleted."""
+  COOKING_LOG_CHANGED
 }
 
 type CookingStats {
@@ -1984,6 +1988,22 @@ type CreatePantryItemPayload {
 
 union CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError
 
+input CreatePantryItemUsageInput {
+  cookingLogId: ID
+  idempotencyKey: ID
+  isComposted: Boolean
+  isRecycled: Boolean
+  mealPlanItemId: ID
+  notes: String
+  pantryItemId: ID!
+  purpose: UsagePurpose!
+  quantityUsed: Float!
+  recipeId: ID
+  targetBatchId: ID
+  usageUnitId: ID
+  wasteReason: WasteReason
+}
+
 type CreatePantryItemUsagePayload {
   pantry: Pantry
   pantryItem: PantryItem
@@ -1998,6 +2018,26 @@ type CreatePantryPayload {
 }
 
 union CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateProfileInput {
+  bio: String
+  dateOfBirth: String
+  displayName: String
+  firstName: String
+  gender: String
+  """
+  Optional client-generated permanent ID (CUID2). Note: a profile is 1:1 with
+  the user (userId is unique), so creation is already idempotent per user; this
+  is accepted for consistency with other offline-first creates.
+  """
+  id: ID
+  lastName: String
+  phone: String
+  profileVisibility: ProfileVisibility
+  showEmail: Boolean
+  showPhone: Boolean
+  website: String
+}
 
 type CreateProfilePayload {
   userProfile: UserProfile!
@@ -2274,44 +2314,12 @@ type CreateUnitPayload {
 
 union CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError
 
-input CreateUserAddressInput {
-  city: String!
-  country: String!
-  isDefault: Boolean
-  label: String
-  lat: Float
-  lng: Float
-  postalCode: String!
-  state: String!
-  street: String!
-}
-
 input CreateUserModerationInput {
   moderatorNotes: String
   riskScore: Float
   status: ModerationStatus
   trustLevel: TrustLevel
   userId: ID!
-}
-
-input CreateUserProfileInput {
-  bio: String
-  dateOfBirth: String
-  displayName: String
-  firstName: String
-  gender: String
-  """
-  Optional client-generated permanent ID (CUID2). Note: a profile is 1:1 with
-  the user (userId is unique), so creation is already idempotent per user; this
-  is accepted for consistency with other offline-first creates.
-  """
-  id: ID
-  lastName: String
-  phone: String
-  profileVisibility: ProfileVisibility
-  showEmail: Boolean
-  showPhone: Boolean
-  website: String
 }
 
 enum Cuisine {
@@ -2442,8 +2450,8 @@ type DeleteAccountPayload {
 union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteAllReadNotificationsPayload {
-  count: Int!
   notifications: [Notification!]!
+  summary: BulkSummary!
 }
 
 union DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2502,8 +2510,8 @@ type DeleteDevicePayload {
 union DeleteDeviceResult = ConflictError | DeleteDevicePayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeleteExpiredNotificationsPayload {
-  count: Int!
   notifications: [Notification!]!
+  summary: BulkSummary!
 }
 
 union DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2598,8 +2606,8 @@ input DeleteMultipleNotificationsInput {
 }
 
 type DeleteMultipleNotificationsPayload {
-  count: Int!
   notifications: [Notification!]!
+  summary: BulkSummary!
 }
 
 union DeleteMultipleNotificationsResult = ConflictError | DeleteMultipleNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2653,7 +2661,10 @@ input DeleteRecipeFolderInput {
 }
 
 type DeleteRecipeFolderPayload {
-  success: Boolean!
+  """The deleted folder label (folders are string labels, not entities)."""
+  folder: String!
+  """How many saved recipes were moved out of the folder."""
+  movedCount: Int!
 }
 
 union DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2663,7 +2674,7 @@ input DeleteRecipeInput {
 }
 
 type DeleteRecipePayload {
-  success: Boolean!
+  recipe: Recipe!
 }
 
 union DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError | ValidationError
@@ -2689,10 +2700,9 @@ input DeleteShoppingListItemsInput {
 }
 
 type DeleteShoppingListItemsPayload {
-  """IDs of the items that were cleared."""
-  clearedItemIds: [ID!]!
-  """Summary of the bulk clear operation."""
-  summary: BulkOperationSummary!
+  """Shopping list items that were cleared (soft-deleted) by the batch."""
+  shoppingListItems: [ShoppingListItem!]!
+  summary: BulkSummary!
 }
 
 union DeleteShoppingListItemsResult = ConflictError | DeleteShoppingListItemsPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2722,7 +2732,12 @@ input DeleteStaleDevicesInput {
 }
 
 type DeleteStaleDevicesPayload {
-  result: DeviceCleanupResult!
+  """
+  Devices removed by the cleanup. Empty for hard-delete cleanups where the
+  removed rows are no longer retrievable — the counts live in the summary.
+  """
+  devices: [Device!]!
+  summary: BulkSummary!
 }
 
 union DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError
@@ -2858,16 +2873,6 @@ type DeviceActivity {
   loginCount: Int!
 }
 
-"""
-Emitted when a device's activity is updated (last-seen, location,
-login-count increments, etc.).
-"""
-type DeviceActivityPayload {
-  device: Device!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 type DeviceBreakdown {
   browsers: [BrowserStat!]!
   deviceTypes: [DeviceTypeStat!]!
@@ -2883,41 +2888,10 @@ input DeviceCharacteristicsInput {
   isTablet: Boolean
 }
 
-"""Result of device cleanup operation"""
-type DeviceCleanupResult {
-  code: String!
-  deletedDevicesRemoved: Int
-  message: String!
-  staleDevicesRemoved: Int
-  success: Boolean!
-  totalRemoved: Int!
-}
-
 type DeviceConnection implements Connection {
   edges: [DeviceEdge!]!
   pageInfo: PageInfo!
   totalCount: Int
-}
-
-"""Filter input for device count query"""
-input DeviceCountFilters {
-  deviceType: DeviceType
-  isActive: Boolean
-  isTrusted: Boolean
-  isVerified: Boolean
-  platform: MobilePlatform
-  userId: ID
-}
-
-"""
-Emitted when a device is deleted. The full device row is not returned
-(the row may be soft-deleted or removed by the time subscribers receive
-the event) — clients should evict by deviceId from cache.
-"""
-type DeviceDeletedPayload {
-  deviceId: ID!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """Composite sub-input for all device details"""
@@ -2938,6 +2912,22 @@ input DeviceDetailsInput {
 type DeviceEdge implements Edge {
   cursor: String!
   node: Device!
+}
+
+"""
+Consolidated real-time event envelope for a single user's devices.
+Subscribe once via deviceEvents(userId) and branch on subtype. For DELETED
+the node is the (soft-deleted) row snapshot so clients can evict by node.id.
+"""
+type DeviceEvent {
+  """The user who caused the change (self-service: same as userId)."""
+  actorUserId: ID
+  mutation: MutationType!
+  node: Device!
+  subtype: DeviceSubtype!
+  timestamp: DateTime!
+  """The user the device belongs to (subscription scope)."""
+  userId: ID!
 }
 
 """
@@ -3005,7 +2995,9 @@ input DeviceLocationInput {
 
 input DeviceOrderBy {
   createdAt: SortOrder
-  lastActiveAt: SortOrder
+  deviceName: SortOrder
+  lastLoginAt: SortOrder
+  lastSeenAt: SortOrder
 }
 
 """Sub-input for device peripherals (automation detection)"""
@@ -3025,32 +3017,6 @@ input DevicePeripheralsInput {
   isWiredHeadphonesConnected: Boolean
 }
 
-"""Emitted when a new device is registered for a user."""
-type DeviceRegisteredPayload {
-  device: Device!
-  timestamp: DateTime!
-  userId: ID!
-}
-
-input DeviceRegistrationInput {
-  appVersion: String
-  details: DeviceDetailsInput
-  deviceId: String!
-  deviceName: String
-  deviceType: DeviceType = UNKNOWN
-  location: NetworkLocationInput
-  platform: MobilePlatform
-  pushToken: String
-}
-
-"""Sort field options for devices"""
-enum DeviceSortField {
-  CREATED_AT
-  DEVICE_NAME
-  LAST_LOGIN_AT
-  LAST_SEEN_AT
-}
-
 type DeviceStat {
   count: Int!
   userAgent: String!
@@ -3062,12 +3028,20 @@ type DeviceStats {
   summary: DeviceSummary!
 }
 
-"""Emitted when a device's active-status flips (activated / deactivated)."""
-type DeviceStatusChangedPayload {
-  device: Device!
-  isActive: Boolean!
-  timestamp: DateTime!
-  userId: ID!
+"""Subtype discriminator for device domain events."""
+enum DeviceSubtype {
+  """Device activity updated (last-seen, location, login count)."""
+  ACTIVITY
+  """Device was deleted."""
+  DELETED
+  """A new device was registered for the user."""
+  REGISTERED
+  """Device active-status flipped (activated / deactivated)."""
+  STATUS_CHANGED
+  """Device trust flipped (trusted / untrusted)."""
+  TRUST_CHANGED
+  """Device was marked verified."""
+  VERIFIED
 }
 
 type DeviceSummary {
@@ -3077,14 +3051,6 @@ type DeviceSummary {
   totalDevices: Int!
   trustedDevices: Int!
   verifiedDevices: Int!
-}
-
-"""Emitted when a device's trust status flips (trusted / untrusted)."""
-type DeviceTrustChangedPayload {
-  device: Device!
-  isTrusted: Boolean!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 enum DeviceType {
@@ -3099,13 +3065,6 @@ enum DeviceType {
 type DeviceTypeStat {
   count: Int!
   deviceType: DeviceType!
-}
-
-"""Emitted when a device is marked verified."""
-type DeviceVerifiedPayload {
-  device: Device!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """
@@ -3376,14 +3335,6 @@ type ExpirationNotificationConnection implements Connection {
   totalCount: Int
 }
 
-"""Emitted when the user dismisses an expiration notification."""
-type ExpirationNotificationDismissedPayload {
-  notification: ExpirationNotification!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 """Expiration notification connection for pagination"""
 type ExpirationNotificationEdge implements Edge {
   cursor: String!
@@ -3394,14 +3345,6 @@ type ExpirationNotificationEdge implements Edge {
 input ExpirationNotificationOrderBy {
   createdAt: SortOrder
   expiresAt: SortOrder
-}
-
-"""Emitted when the user marks an expiration notification as read."""
-type ExpirationNotificationReadPayload {
-  notification: ExpirationNotification!
-  pantryId: ID!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 enum ExpirationNotificationType {
@@ -3553,16 +3496,11 @@ input ForgotPasswordInput {
 }
 
 type ForgotPasswordPayload {
-  status: ForgotPasswordStatus!
+  message: String
+  status: PasswordActionStatus!
 }
 
 union ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError
-
-type ForgotPasswordStatus {
-  code: String!
-  message: String!
-  success: Boolean!
-}
 
 input ForkRecipeInput {
   id: ID!
@@ -4325,14 +4263,6 @@ type ItemEdit {
   user: User!
 }
 
-type ItemError {
-  code: String
-  error: String!
-  field: String
-  identifier: String
-  name: String
-}
-
 input ItemFilters {
   brandFilter: BrandFilterInput
   categories: [String!]
@@ -4405,6 +4335,21 @@ input ItemNetWeightInput {
   value: Float!
 }
 
+"""
+Sort options for item lists (items, searchItems). Object-map convention:
+set the field(s) to sort by to ASC or DESC.
+"""
+input ItemOrderBy {
+  createdAt: SortOrder
+  imageCount: SortOrder
+  name: SortOrder
+  popularity: SortOrder
+  price: SortOrder
+  shelfLife: SortOrder
+  unitPrice: SortOrder
+  updatedAt: SortOrder
+}
+
 """Price history for items - may contain user-specific pricing data"""
 type ItemPriceHistory {
   createdAt: DateTime!
@@ -4440,22 +4385,6 @@ type ItemReferenceCounts {
   purchases: Int!
   recipeIngredients: Int!
   shoppingListItems: Int!
-}
-
-enum ItemSortField {
-  CREATED_AT
-  IMAGE_COUNT
-  NAME
-  POPULARITY
-  PRICE
-  SHELF_LIFE
-  UNIT_PRICE
-  UPDATED_AT
-}
-
-input ItemSortInput {
-  field: ItemSortField!
-  order: SortOrder!
 }
 
 enum ItemStatus {
@@ -4764,18 +4693,29 @@ type LocationStat {
   ipCountry: String
 }
 
-"""Emitted when a successful login attempt is recorded."""
-type LoginAttemptedPayload {
-  loginHistory: LoginHistory!
-  timestamp: DateTime!
-  userId: ID!
-}
-
-"""Emitted when a failed login attempt is recorded."""
-type LoginFailedPayload {
+"""
+Consolidated real-time event envelope for a single user's login history.
+Subscribe once via loginEvents(userId) and branch on subtype. Detection
+criteria (riskFactors) are redacted on delivery so attackers cannot adapt.
+"""
+type LoginEvent {
+  """The user who caused the change (self-service: same as userId)."""
+  actorUserId: ID
+  """Failure reason (FAILED)."""
   failureReason: String
-  loginHistory: LoginHistory!
+  mutation: MutationType!
+  node: LoginHistory!
+  """Whether the login requires MFA (RISKY)."""
+  requiresMfa: Boolean
+  """Redacted on delivery — always empty."""
+  riskFactors: [String!]
+  """Authoritative risk score (RISKY / SUSPICIOUS)."""
+  riskScore: Float
+  subtype: LoginSubtype!
   timestamp: DateTime!
+  """What triggered the suspicion classification (SUSPICIOUS)."""
+  triggerEvent: String
+  """The user whose login history this is (subscription scope)."""
   userId: ID!
 }
 
@@ -4941,6 +4881,18 @@ type LoginMethodStat {
   method: LoginMethod!
 }
 
+"""Subtype discriminator for login domain events."""
+enum LoginSubtype {
+  """A successful login was recorded."""
+  ATTEMPTED
+  """A failed login attempt was recorded."""
+  FAILED
+  """An individual login was classified as high-risk."""
+  RISKY
+  """An aggregate pattern of activity crossed a suspicion threshold."""
+  SUSPICIOUS
+}
+
 """A pantry item that is running low on stock"""
 type LowStockItem {
   currentQuantity: Float!
@@ -4964,8 +4916,8 @@ type LowStockToShoppingListResult {
 }
 
 type MarkAllNotificationsAsReadPayload {
-  count: Int!
   notifications: [Notification!]!
+  summary: BulkSummary!
 }
 
 union MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAllNotificationsAsReadPayload | NotFoundError | ValidationError
@@ -5004,17 +4956,6 @@ type MarkExpirationNotificationAsReadPayload {
 }
 
 union MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError
-
-input MarkExpirationNotificationDismissedInput {
-  notificationId: ID!
-}
-
-type MarkExpirationNotificationDismissedPayload {
-  expirationNotification: ExpirationNotification!
-  pantryItem: PantryItem
-}
-
-union MarkExpirationNotificationDismissedResult = ConflictError | ForbiddenError | MarkExpirationNotificationDismissedPayload | NotFoundError | ValidationError
 
 input MarkHomeAsDefaultInput {
   homeId: ID!
@@ -5651,28 +5592,16 @@ enum ModerationStatus {
   WARNED
 }
 
-"""Result of moving all purchased items to pantry"""
-type MovePurchasedItemsResult {
-  """Number of items successfully moved to pantry"""
-  movedCount: Int!
-  """Details of successfully moved items"""
-  movedItems: [MovedItemInfo!]!
-  """Number of items skipped (no itemId, already moved, or error)"""
-  skippedCount: Int!
-  """Details of skipped items with reasons"""
-  skippedItems: [SkippedItemInfo!]!
-  """ID of the pantry items were moved to"""
-  targetPantryId: ID!
-  """Name of the pantry items were moved to"""
-  targetPantryName: String!
-}
-
 input MovePurchasedItemsToPantryInput {
   shoppingListId: ID!
 }
 
 type MovePurchasedItemsToPantryPayload {
-  result: MovePurchasedItemsResult!
+  """
+  Items that were successfully moved from the shopping list into the pantry.
+  """
+  movedItems: [MovedItemInfo!]!
+  summary: BulkSummary!
 }
 
 union MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePurchasedItemsToPantryPayload | NotFoundError | ValidationError
@@ -5730,7 +5659,10 @@ type MoveShoppingListItemPayload {
 
 union MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemPayload | NotFoundError | ValidationError
 
-"""Info about a successfully moved item"""
+"""
+Info about a successfully moved item (the per-element entity of
+movePurchasedItemsToPantry).
+"""
 type MovedItemInfo {
   itemName: String!
   pantryItemId: ID!
@@ -5776,7 +5708,7 @@ type Mutation {
   Add a specific pantry item to a shopping list.
   Useful for manually adding items when running low.
   """
-  addPantryItemToShoppingList(input: AddPantryItemToShoppingListInput!): AddPantryItemToShoppingListResultUnion!
+  addPantryItemToShoppingList(input: AddPantryItemToShoppingListInput!): AddPantryItemToShoppingListResult!
   """
   Add a recipe to the user's favorites (creates a saved recipe with optional
   folder/tags/notes).
@@ -5795,7 +5727,7 @@ type Mutation {
   """Add an item to a template"""
   addTemplateItem(input: AddTemplateItemInput!): AddTemplateItemResult!
   """Add a new address to the current user's account."""
-  addUserAddress(input: CreateUserAddressInput!): AddUserAddressResult!
+  addUserAddress(input: AddUserAddressInput!): AddUserAddressResult!
   """
   Adjust pantry item quantity to match a physical count.
   Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
@@ -5898,9 +5830,9 @@ type Mutation {
   """Create a new pantry item in a pantry."""
   createPantryItem(input: CreatePantryItemInput!): CreatePantryItemResult!
   """Record a usage event for a pantry item."""
-  createPantryItemUsage(input: RecordPantryItemUsageInput!): CreatePantryItemUsageResult!
+  createPantryItemUsage(input: CreatePantryItemUsageInput!): CreatePantryItemUsageResult!
   """Create a user profile for the current user."""
-  createProfile(input: CreateUserProfileInput!): CreateProfileResult!
+  createProfile(input: CreateProfileInput!): CreateProfileResult!
   """Create a new purchase record."""
   createPurchase(input: CreatePurchaseInput!): CreatePurchaseResult!
   createRecipe(input: CreateRecipeInput!): CreateRecipeResult!
@@ -6044,10 +5976,12 @@ type Mutation {
   markAsTemplate(input: MarkAsTemplateInput!): MarkAsTemplateResult!
   """Record an action taken on an expiring item."""
   markExpirationAction(input: MarkExpirationActionInput!): MarkExpirationActionResult!
-  """Mark an expiration notification as read."""
+  """
+  Mark an expiration notification as read (the canonical read/dismiss op —
+  the former markExpirationNotificationDismissed was merged into this in the
+  2026 cutover; read is the single acknowledged state).
+  """
   markExpirationNotificationAsRead(input: MarkExpirationNotificationAsReadInput!): MarkExpirationNotificationAsReadResult!
-  """Mark an expiration notification dismissed so it no longer appears."""
-  markExpirationNotificationDismissed(input: MarkExpirationNotificationDismissedInput!): MarkExpirationNotificationDismissedResult!
   """Mark a home as the default for the current user."""
   markHomeAsDefault(input: MarkHomeAsDefaultInput!): MarkHomeAsDefaultResult!
   """Mark an item for review"""
@@ -6121,8 +6055,6 @@ type Mutation {
   Use for all login recording — both high-level attempts and direct history creation.
   """
   recordLogin(input: RecordLoginInput!): RecordLoginResult!
-  """Manually record pantry item usage"""
-  recordPantryUsage(input: RecordPantryUsageInput!): RecordPantryUsageResult!
   """Record a price observation for historical tracking"""
   recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
   """Record that a saved recipe was cooked (increments the cooked count)."""
@@ -6135,7 +6067,7 @@ type Mutation {
   Register a new device for the current user.
   This is the primary way to add a device from mobile apps.
   """
-  registerDevice(input: DeviceRegistrationInput!): RegisterDeviceResult!
+  registerDevice(input: RegisterDeviceInput!): RegisterDeviceResult!
   """Remove an item from a category."""
   removeItemFromCategory(input: RemoveItemFromCategoryInput!): RemoveItemFromCategoryResult!
   """Remove an item from a shopping list."""
@@ -6281,7 +6213,7 @@ type Mutation {
   Update user profile. Handles all profile fields including avatar and cover image.
   Set avatarUrl/coverImageUrl to null to remove them.
   """
-  updateProfile(input: UpdateUserProfileInput!): UpdateProfileResult!
+  updateProfile(input: UpdateProfileInput!): UpdateProfileResult!
   """Update an existing purchase record."""
   updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
   updateRecipe(input: UpdateRecipeInput!): UpdateRecipeResult!
@@ -6291,7 +6223,7 @@ type Mutation {
   """Update an existing dietary restriction."""
   updateRestriction(input: UpdateRestrictionInput!): UpdateRestrictionResult!
   """Update settings for the current user."""
-  updateSettings(input: UpdateUserSettingsInput!): UpdateSettingsResult!
+  updateSettings(input: UpdateSettingsInput!): UpdateSettingsResult!
   """Update an existing shopping list."""
   updateShoppingList(input: UpdateShoppingListInput!): UpdateShoppingListResult!
   """Update a shopping list item."""
@@ -6933,6 +6865,11 @@ enum PantryEventSubtype {
   expiration-check job. node is an ExpirationNotification.
   """
   EXPIRATION_NOTIFICATION_CREATED
+  """
+  An expiration notification was marked as read by the user.
+  node is an ExpirationNotification.
+  """
+  EXPIRATION_NOTIFICATION_READ
   """Pantry item created, updated, or soft-deleted"""
   ITEM_CHANGED
   """Item quantity fell below minimum threshold"""
@@ -7043,6 +6980,28 @@ type PantryItemBatch {
   totalCost: Float
   updatedAt: DateTime!
   wasteReason: WasteReason
+}
+
+"""Relay connection of pantry item batches for a single pantry item."""
+type PantryItemBatchConnection implements Connection {
+  edges: [PantryItemBatchEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+"""Relay edge for a pantry item batch."""
+type PantryItemBatchEdge implements Edge {
+  cursor: String!
+  node: PantryItemBatch!
+}
+
+"""
+Sort options for the pantry item batches connection. Object-map convention:
+set a field to ASC or DESC.
+"""
+input PantryItemBatchOrderBy {
+  batchNumber: SortOrder
+  createdAt: SortOrder
 }
 
 """Audit record of a change to a pantry item"""
@@ -7268,6 +7227,25 @@ type ParentCategorySuggestion {
   name: String!
   slug: String
   type: CategoryType!
+}
+
+"""
+Outcome of a password-flow action (bulk-operation-standard sibling: replaces
+the flat {success,code,message} status types). Anti-enumeration is preserved
+by the resolver — e.g. forgotPassword always resolves to SENT regardless of
+whether the email exists.
+"""
+enum PasswordActionStatus {
+  """The action completed (changePassword / resetPassword)."""
+  COMPLETED
+  """The token was missing, invalid, or expired."""
+  INVALID_OR_EXPIRED
+  """
+  A reset email was sent (forgotPassword — always this, existence-blind).
+  """
+  SENT
+  """The token was valid (validatePasswordResetToken)."""
+  VALIDATED
 }
 
 """Period granularity for ledger analytics"""
@@ -7646,15 +7624,13 @@ type Query {
   device(id: ID!): Device
   """Get a single device by device identifier string"""
   deviceByDeviceId(deviceId: String!): Device
-  """Get device count with filters"""
-  deviceCount(filters: DeviceCountFilters): Int!
   """
   Consolidated device query with comprehensive filtering.
   Replaces: userDevices, myDevices, activeDevices, trustedDevices, verifiedDevices,
   mobileDevices, tabletDevices, emulatedDevices, suspiciousDevices, devicesByPlatform,
   devicesByManufacturer, devicesWithPeripherals, lowBatteryDevices, staleDevices
   """
-  devices(after: String, before: String, filters: DeviceFilters, first: Int, last: Int, orderBy: DeviceSortField, orderDirection: SortOrder): DeviceConnection!
+  devices(after: String, before: String, filters: DeviceFilters, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   """Fetch a single expiration notification by its ID."""
   expirationNotification(id: ID!): ExpirationNotification
   """Fetch a single home by its ID."""
@@ -7682,12 +7658,12 @@ type Query {
   - items(filters: { sku, skuStoreId }) - SKU lookup
   - items(filters: { externalId, externalProvider }) - External ID lookup
   """
-  items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, sort: ItemSortInput): ItemConnection!
+  items(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy): ItemConnection!
   """
   Get login history for the current user.
   Supports filtering by date range, device, success/failure, and method.
   """
-  loginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy, orderDirection: SortOrder): LoginHistoryConnection!
+  loginHistories(after: String, before: String, filters: LoginHistoryQueryFilters, first: Int, last: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
   matchRecipeIngredientsToPantry(pantryId: ID!, recipeId: ID!, servings: Int): [RecipeIngredientMatch!]!
   """Fetch the currently authenticated user."""
   me: User
@@ -7717,8 +7693,11 @@ type Query {
   pantry(id: ID!): Pantry
   """Fetch a single pantry item by its ID."""
   pantryItem(id: ID!): PantryItem
-  """Get batches for a pantry item, optionally filtered by status"""
-  pantryItemBatches(pantryItemId: ID!, status: BatchStatus): [PantryItemBatch!]!
+  """
+  Get batches for a pantry item, optionally filtered by status, with
+  cursor-based pagination (Relay spec).
+  """
+  pantryItemBatchesConnection(after: String, before: String, first: Int, last: Int, orderBy: PantryItemBatchOrderBy, pantryItemId: ID!, status: BatchStatus): PantryItemBatchConnection!
   """
   Parse fractional input string to decimal
   Handles "1/4", "1 1/4", "0.25" formats
@@ -7732,7 +7711,7 @@ type Query {
   """List cooking logs for a specific recipe with cursor-based pagination."""
   recipeCookingLogs(after: String, before: String, first: Int, last: Int, orderBy: CookingLogOrderBy, recipeId: ID!): CookingLogConnection!
   recipeSuggestions(after: String, before: String, first: Int, last: Int): RecipeConnection!
-  recipes(after: String, before: String, category: RecipeCategory, difficulty: Difficulty, first: Int, includeDeleted: Boolean, last: Int): RecipeConnection!
+  recipes(after: String, before: String, filters: RecipeFilters, first: Int, last: Int): RecipeConnection!
   """Fetch personalized item recommendations for a user."""
   recommendedItems(limit: Int, userId: ID): [ItemSuggestion!]!
   """
@@ -7751,7 +7730,7 @@ type Query {
   """List all folder names the user has organized saved recipes into."""
   savedRecipeFolders: [String!]!
   """Search items with cursor-based pagination (Relay spec)."""
-  searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, query: String!, sort: ItemSortInput): ItemConnection!
+  searchItems(after: String, before: String, filters: ItemFilters, first: Int, last: Int, orderBy: ItemOrderBy, query: String!): ItemConnection!
   """
   Semantic (vector) search over the catalog. The prompt is embedded
   server-side and compared against Item.embedding via pgvector cosine
@@ -7763,7 +7742,7 @@ type Query {
   ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
   """
   searchItemsSemantic(after: String, before: String, filters: ItemFilters, first: Int, last: Int, maxDistance: Float, prompt: String!): ItemConnection!
-  searchRecipes(after: String, before: String, category: RecipeCategory, cuisine: [String!], diets: [Diet!], first: Int, intolerances: [Intolerance!], last: Int, maxReadyTime: Int, query: String!): RecipeConnection!
+  searchRecipes(after: String, before: String, filters: RecipeFilters, first: Int, last: Int, query: String!): RecipeConnection!
   """
   Search units by name or symbol.
   Set prioritizeCommon to true for autocomplete behavior (common units first).
@@ -7969,6 +7948,33 @@ input RecipeContextInput {
 type RecipeEdge implements Edge {
   cursor: String!
   node: Recipe!
+}
+
+"""
+Filter criteria for recipe list queries (recipes, adminRecipes, searchRecipes).
+Each query honors the subset of fields relevant to it. The searchRecipes
+filters mirror the Spoonacular complexSearch parameters:
+  - diets         -> recipe must match ALL selected
+  - intolerances  -> exclude recipes containing ANY selected intolerance
+  - category      -> meal type
+  - cuisine       -> match ANY of the selected
+  - maxReadyTime  -> total time, in minutes
+"""
+input RecipeFilters {
+  """Filter by meal-type category"""
+  category: RecipeCategory
+  """Cuisines to match any of (searchRecipes)"""
+  cuisine: [String!]
+  """Dietary restrictions the recipe must match (searchRecipes)"""
+  diets: [Diet!]
+  """Filter by difficulty (recipes/adminRecipes)"""
+  difficulty: Difficulty
+  """Include soft-deleted recipes (recipes/adminRecipes)"""
+  includeDeleted: Boolean
+  """Intolerances to exclude (searchRecipes)"""
+  intolerances: [Intolerance!]
+  """Maximum total ready time in minutes (searchRecipes)"""
+  maxReadyTime: Int
 }
 
 type RecipeForkConnection implements Connection {
@@ -8189,40 +8195,6 @@ type RecordLoginPayload {
 
 union RecordLoginResult = ConflictError | ForbiddenError | NotFoundError | RecordLoginPayload | ValidationError
 
-input RecordPantryItemUsageInput {
-  cookingLogId: ID
-  idempotencyKey: ID
-  isComposted: Boolean
-  isRecycled: Boolean
-  mealPlanItemId: ID
-  notes: String
-  pantryItemId: ID!
-  purpose: UsagePurpose!
-  quantityUsed: Float!
-  recipeId: ID
-  targetBatchId: ID
-  usageUnitId: ID
-  wasteReason: WasteReason
-}
-
-"""Input for recording pantry item usage"""
-input RecordPantryUsageInput {
-  idempotencyKey: ID
-  notes: String
-  pantryItemId: ID!
-  purpose: UsagePurpose
-  quantity: Float!
-  unitId: ID!
-}
-
-type RecordPantryUsagePayload {
-  pantry: Pantry
-  pantryItem: PantryItem
-  pantryItemUsage: PantryItemUsage!
-}
-
-union RecordPantryUsageResult = ConflictError | ForbiddenError | NotFoundError | RecordPantryUsagePayload | ValidationError
-
 """Input for recording a price observation (historical tracking)"""
 input RecordPriceObservationInput {
   itemId: ID!
@@ -8275,6 +8247,17 @@ input RegionalSettingsInput {
   preferredCurrency: String
   preferredUnitSystem: UnitSystem
   timezone: String
+}
+
+input RegisterDeviceInput {
+  appVersion: String
+  details: DeviceDetailsInput
+  deviceId: String!
+  deviceName: String
+  deviceType: DeviceType = UNKNOWN
+  location: NetworkLocationInput
+  platform: MobilePlatform
+  pushToken: String
 }
 
 type RegisterDevicePayload {
@@ -8445,16 +8428,11 @@ input ResetPasswordInput {
 }
 
 type ResetPasswordPayload {
-  status: ResetPasswordStatus!
+  message: String
+  status: PasswordActionStatus!
 }
 
 union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
-
-type ResetPasswordStatus {
-  code: String!
-  message: String!
-  success: Boolean!
-}
 
 input ResetPasswordWithTokenInput {
   newPassword: String!
@@ -8576,19 +8554,6 @@ enum RiskFactor {
   VPN_DETECTED
 }
 
-"""
-Emitted when an individual login is classified as high-risk
-(either by the fast-path heuristic or the background risk job).
-"""
-type RiskyLoginDetectedPayload {
-  loginHistory: LoginHistory!
-  requiresMfa: Boolean!
-  riskFactors: [String!]!
-  riskScore: Float!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 type SavedRecipe {
   cookedCount: Int!
   createdAt: DateTime!
@@ -8631,14 +8596,6 @@ type SearchFacets {
   stores: [FacetValue!]!
   tags: [FacetValue!]!
   types: [FacetValue!]!
-}
-
-input SearchItemsInput {
-  filters: ItemFilters
-  first: Int
-  query: String!
-  skip: Int
-  sort: ItemSortInput
 }
 
 input SendTestNotificationInput {
@@ -9177,19 +9134,6 @@ type ShoppingListUsageStats {
   viewCount: Int!
 }
 
-type SkippedItem {
-  identifier: String
-  name: String!
-  reason: String!
-}
-
-"""Info about a skipped item"""
-type SkippedItemInfo {
-  itemName: String!
-  reason: String!
-  shoppingListItemId: ID!
-}
-
 """Item that was skipped when adding to shopping list"""
 type SkippedLowStockItem {
   itemName: String!
@@ -9451,16 +9395,6 @@ type Store {
   updatedAt: DateTime!
 }
 
-type StoreChangeEvent {
-  changeType: StoreChangeType!
-  store: Store!
-  timestamp: DateTime!
-}
-
-enum StoreChangeType {
-  UPDATED
-}
-
 type StoreConnection implements Connection {
   edges: [StoreEdge!]!
   pageInfo: PageInfo!
@@ -9480,6 +9414,22 @@ type StoreCostBreakdown {
 type StoreEdge implements Edge {
   cursor: String!
   node: Store!
+}
+
+"""
+Consolidated real-time event envelope for store changes. Subscribe via
+storeEvents(storeId) (omit storeId for all stores) and branch on
+mutation (CREATED / UPDATED).
+"""
+type StoreEvent {
+  """The user who caused the change."""
+  actorUserId: ID
+  mutation: MutationType!
+  node: Store!
+  """The affected store's id (subscription scope)."""
+  storeId: ID
+  subtype: StoreSubtype!
+  timestamp: DateTime!
 }
 
 """Sub-input for store-related filters"""
@@ -9547,11 +9497,14 @@ input StoreLocationInput {
   radius: Float
 }
 
-enum StoreOrderBy {
-  CREATED_AT_DESC
-  NAME_ASC
-  NAME_DESC
-  POPULARITY_DESC
+"""
+Sort options for the stores list. Object-map convention: set a field to
+ASC or DESC. Setting `popularity` routes to the popular-stores ranking.
+"""
+input StoreOrderBy {
+  createdAt: SortOrder
+  name: SortOrder
+  popularity: SortOrder
 }
 
 """Sub-input for store preferences"""
@@ -9597,6 +9550,12 @@ type StoreStats {
   uniqueCustomers: Int!
 }
 
+"""Subtype discriminator for store domain events."""
+enum StoreSubtype {
+  """A store (or its store-info) was created or updated."""
+  STORE_CHANGED
+}
+
 type StoreTopItem {
   count: Int!
   itemName: String!
@@ -9613,41 +9572,23 @@ type Subscription {
   Subscribe to create / update / delete events for a single cooking log.
   Subscribers can only watch logs they own.
   """
-  cookingLogUpdated(cookingLogId: ID!): CookingLogMutationPayload!
+  cookingLogEvents(cookingLogId: ID!): CookingLogEvent!
   """
-  Subscribe to device activity updates (last-seen, location, login count).
+  Subscribe to all device events for a user. Discriminate by subtype:
+  REGISTERED, ACTIVITY, STATUS_CHANGED, TRUST_CHANGED, VERIFIED, DELETED.
   """
-  deviceActivity(userId: ID!): DeviceActivityPayload!
-  """Subscribe to device deletion events."""
-  deviceDeleted(userId: ID!): DeviceDeletedPayload!
-  """Subscribe to new device registrations for a user."""
-  deviceRegistered(userId: ID!): DeviceRegisteredPayload!
-  """Subscribe to device active-status changes (activated / deactivated)."""
-  deviceStatusChanged(userId: ID!): DeviceStatusChangedPayload!
-  """Subscribe to device trust changes (trusted / untrusted)."""
-  deviceTrustChanged(userId: ID!): DeviceTrustChangedPayload!
-  """Subscribe to device verification events."""
-  deviceVerified(userId: ID!): DeviceVerifiedPayload!
-  """
-  Subscribe to user-initiated dismissal of expiration notifications.
-  
-  Note: creation and action-taken events are delivered via the consolidated
-  pantryEvents(pantryId) stream (subtypes EXPIRATION_NOTIFICATION_CREATED /
-  EXPIRATION_ACTION_TAKEN).
-  """
-  expirationNotificationDismissed(pantryId: ID!): ExpirationNotificationDismissedPayload!
-  """Subscribe to read-state changes on expiration notifications."""
-  expirationNotificationRead(pantryId: ID!): ExpirationNotificationReadPayload!
+  deviceEvents(userId: ID!): DeviceEvent!
   """
   Consolidated per-home event stream (membership changes + home-invite
   changes). Subscribe once per home and branch on subtype, then on node's
   __typename (Membership vs HomeInvite).
   """
   homeEvents(homeId: ID!): HomeEvent!
-  """Subscribe to successful login attempts for a user."""
-  loginAttempted(userId: ID!): LoginAttemptedPayload!
-  """Subscribe to failed login attempts for a user."""
-  loginFailed(userId: ID!): LoginFailedPayload!
+  """
+  Subscribe to all login events for a user. Discriminate by subtype:
+  ATTEMPTED, FAILED, RISKY, SUSPICIOUS.
+  """
+  loginEvents(userId: ID!): LoginEvent!
   """
   Subscribe to all shared meal-plan and meal-template collaboration events for
   a home. Discriminate by subtype: MEAL_PLAN_CHANGED, MEAL_PLAN_ITEM_CHANGED,
@@ -9679,24 +9620,13 @@ type Subscription {
   """
   pantryEvents(pantryId: ID!): PantryEvent!
   """
-  Subscribe to individual logins flagged as high-risk for a user.
-  Re-emitted by the background risk-assessment job with the authoritative
-  score after the fast-path heuristic fires.
-  """
-  riskyLoginDetected(userId: ID!): RiskyLoginDetectedPayload!
-  """
   Subscribe to all shopping list domain events for a single list.
   Discriminate by subtype: LIST_UPDATED, STATUS_CHANGED, ITEMS_CHANGED,
   ITEMS_BATCH_CLEARED, COLLABORATION_CHANGED.
   """
   shoppingListEvents(listId: ID!): ShoppingListEvent!
-  """Subscribe to store changes"""
-  storeChanged(storeId: ID): StoreChangeEvent!
-  """
-  Subscribe to aggregate suspicious-activity events for a user (e.g.,
-  high-confidence risky logins or rapid repeated failures).
-  """
-  suspiciousActivityDetected(userId: ID!): SuspiciousActivityDetectedPayload!
+  """Subscribe to store changes. Omit storeId to watch all stores."""
+  storeEvents(storeId: ID): StoreEvent!
   """
   Consolidated per-user event stream (account update, profile change, and
   home/shopping-list membership + moderation lifecycle transitions).
@@ -9764,19 +9694,6 @@ type SuspiciousActivity {
   riskyLogins: [LoginHistory!]!
   suspiciousActivity: Boolean!
   unusualTimeLogins: [LoginHistory!]!
-}
-
-"""
-Emitted when an aggregate pattern of activity crosses a suspicion threshold
-(e.g., rapid repeated failures, login from a new geography).
-"""
-type SuspiciousActivityDetectedPayload {
-  loginHistory: LoginHistory!
-  riskFactors: [String!]!
-  riskScore: Float!
-  timestamp: DateTime!
-  triggerEvent: String!
-  userId: ID!
 }
 
 type SuspiciousActivitySummary {
@@ -10674,6 +10591,22 @@ type UpdatePantryPayload {
 
 union UpdatePantryResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryPayload | ValidationError
 
+input UpdateProfileInput {
+  avatar: String
+  bio: String
+  coverImage: String
+  dateOfBirth: String
+  displayName: String
+  firstName: String
+  gender: String
+  lastName: String
+  phone: String
+  profileVisibility: ProfileVisibility
+  showEmail: Boolean
+  showPhone: Boolean
+  website: String
+}
+
 type UpdateProfilePayload {
   userProfile: UserProfile!
 }
@@ -10761,6 +10694,16 @@ type UpdateRestrictionPayload {
 }
 
 union UpdateRestrictionResult = ConflictError | ForbiddenError | NotFoundError | UpdateRestrictionPayload | ValidationError
+
+input UpdateSettingsInput {
+  features: FeatureTogglesInput
+  notifications: UserNotificationSettingsInput
+  privacy: PrivacySettingsInput
+  quantityDisplay: QuantityDisplayInput
+  regional: RegionalSettingsInput
+  sync: SyncSettingsInput
+  ui: UiPreferencesInput
+}
 
 type UpdateSettingsPayload {
   userSettings: UserSettings!
@@ -11030,22 +10973,6 @@ type UpdateUserPayload {
   user: User!
 }
 
-input UpdateUserProfileInput {
-  avatar: String
-  bio: String
-  coverImage: String
-  dateOfBirth: String
-  displayName: String
-  firstName: String
-  gender: String
-  lastName: String
-  phone: String
-  profileVisibility: ProfileVisibility
-  showEmail: Boolean
-  showPhone: Boolean
-  website: String
-}
-
 """Input for managing restrictions (add and/or remove in one call)."""
 input UpdateUserRestrictionsInput {
   """Restrictions to add"""
@@ -11064,16 +10991,6 @@ type UpdateUserRestrictionsPayload {
 union UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError
 
 union UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserPayload | ValidationError
-
-input UpdateUserSettingsInput {
-  features: FeatureTogglesInput
-  notifications: UserNotificationSettingsInput
-  privacy: PrivacySettingsInput
-  quantityDisplay: QuantityDisplayInput
-  regional: RegionalSettingsInput
-  sync: SyncSettingsInput
-  ui: UiPreferencesInput
-}
 
 scalar Upload
 
@@ -11385,6 +11302,12 @@ enum UserEventSubtype {
   WARNED
 }
 
+"""Filter criteria for the admin users list query."""
+input UserFilters {
+  """Free-text search across username / email"""
+  search: String
+}
+
 """Subtype discriminator for important per-user lifecycle events."""
 enum UserLifecycleEventSubtype {
   ADDED_TO_HOME
@@ -11572,17 +11495,12 @@ input ValidatePasswordResetTokenInput {
 }
 
 type ValidatePasswordResetTokenPayload {
-  status: ValidatePasswordResetTokenStatus!
+  message: String
+  status: PasswordActionStatus!
+  userId: ID
 }
 
 union ValidatePasswordResetTokenResult = ConflictError | ForbiddenError | NotFoundError | ValidatePasswordResetTokenPayload | ValidationError
-
-type ValidatePasswordResetTokenStatus {
-  code: String!
-  message: String!
-  success: Boolean!
-  userId: ID
-}
 
 """
 Input validation failure. Either a top-level rule was violated or a

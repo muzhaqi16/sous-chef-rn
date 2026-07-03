@@ -5,11 +5,15 @@ import notifee, {
 } from '@notifee/react-native';
 import { Platform } from 'react-native';
 import { errorService } from '#/services/errorService';
+import { routeNotificationTap } from '#/services/push/pushNotificationRouting';
 
 interface LocalNotificationParams {
-  id: string;
+  id?: string;
   title: string;
   body: string;
+  // Carried through to the tray entry so a tap can be routed to the right
+  // screen. FCM/Notifee payloads are flat string maps.
+  data?: Record<string, string>;
 }
 
 const BIGTEXT_THRESHOLD = 50;
@@ -37,6 +41,7 @@ export const showLocalNotification = async ({
   id,
   title,
   body,
+  data,
 }: LocalNotificationParams) => {
   try {
     await ensureDefaultChannel();
@@ -45,6 +50,7 @@ export const showLocalNotification = async ({
       id,
       title,
       body,
+      data,
       ios: {
         sound: 'default',
         categoryId: 'default',
@@ -94,16 +100,23 @@ export const showLocalNotification = async ({
 /**
  * Registers Notifee foreground and background event handlers.
  * Must be called at app entry (index.js) before AppRegistry.registerComponent.
+ *
+ * A PRESS event on a notification we drew (data-only FCM / local) routes to the
+ * matching screen: onForegroundEvent covers a tap while the app is open,
+ * onBackgroundEvent covers a tap that brings it from background or cold-launches
+ * it from a killed state.
  */
 export const setupNotificationHandlers = () => {
-  const unsubscribe = notifee.onForegroundEvent(({ type }) => {
-    if (type === EventType.DISMISSED) {
-      // No-op: dismissals don't require action
+  const unsubscribe = notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      routeNotificationTap(detail.notification?.data);
     }
   });
 
-  notifee.onBackgroundEvent(async () => {
-    // Required by Notifee — must register a handler even if it's a no-op
+  notifee.onBackgroundEvent(async ({ type, detail }) => {
+    if (type === EventType.PRESS) {
+      routeNotificationTap(detail.notification?.data);
+    }
   });
 
   return unsubscribe;

@@ -746,7 +746,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
   }
 }
 
-mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
+mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
     __typename
     ... on CreatePantryItemUsagePayload {
@@ -923,35 +923,6 @@ mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListIn
   }
 }
 
-mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
-  movePurchasedItemsToPantry(input: $input) {
-    __typename
-    ... on MovePurchasedItemsToPantryPayload {
-      result {
-        movedCount
-        movedItems {
-          shoppingListItemId
-          pantryItemId
-          itemName
-          quantity
-        }
-        skippedCount
-        skippedItems {
-          shoppingListItemId
-          itemName
-          reason
-        }
-        targetPantryId
-        targetPantryName
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-  }
-}
-
 mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
   convertExpiredToWaste(input: $input) {
     __typename
@@ -977,9 +948,13 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
 # ============================================
 
 query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
-  pantryItemBatches(pantryItemId: $pantryItemId, status: $status) {
-    id
-    ...PantryItemBatchFragment
+  pantryItemBatchesConnection(pantryItemId: $pantryItemId, status: $status) {
+    edges {
+      node {
+        id
+        ...PantryItemBatchFragment
+      }
+    }
   }
 }
 

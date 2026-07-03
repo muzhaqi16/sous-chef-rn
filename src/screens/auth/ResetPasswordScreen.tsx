@@ -17,6 +17,7 @@ import {
   type ResetPasswordMutation,
   type ResetPasswordMutationVariables,
 } from '#operations/auth/auth.generated';
+import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { errorMessageOr } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -54,7 +55,7 @@ async function performPasswordReset(
 
   if (
     payload?.__typename === 'ResetPasswordPayload' &&
-    payload.status.success
+    payload.status === PasswordActionStatus.Completed
   ) {
     logger.info('Password reset successful');
 
@@ -67,7 +68,7 @@ async function performPasswordReset(
       navigateToLogin();
     }, 1500);
   } else if (payload?.__typename === 'ResetPasswordPayload') {
-    throw new Error(payload.status.message || defaultErrorMessage);
+    throw new Error(defaultErrorMessage);
   } else {
     throw new Error(payload?.message || defaultErrorMessage);
   }

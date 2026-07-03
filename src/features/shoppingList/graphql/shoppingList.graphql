@@ -1022,12 +1022,14 @@ mutation DeleteShoppingListItems($input: DeleteShoppingListItemsInput!) {
     ... on DeleteShoppingListItemsPayload {
       summary {
         total
-        successful
+        succeeded
         failed
         skipped
         executionTime
       }
-      clearedItemIds
+      shoppingListItems {
+        id
+      }
     }
     ... on Error {
       code
@@ -1051,9 +1053,11 @@ mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
         quantityIncremented
         error
       }
-      successCount
-      failedCount
-      incrementedCount
+      summary {
+        succeeded
+        failed
+        skipped
+      }
     }
     ... on Error {
       code

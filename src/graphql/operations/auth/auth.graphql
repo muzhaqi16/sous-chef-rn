@@ -58,11 +58,7 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
   forgotPassword(input: $input) {
     __typename
     ... on ForgotPasswordPayload {
-      status {
-        success
-        code
-        message
-      }
+      status
     }
     ... on Error {
       code
@@ -75,11 +71,7 @@ mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
   resetPassword(input: $input) {
     __typename
     ... on ResetPasswordPayload {
-      status {
-        success
-        message
-        code
-      }
+      status
     }
     ... on Error {
       code
@@ -113,11 +105,7 @@ mutation ChangePassword($input: ChangePasswordInput!) {
   changePassword(input: $input) {
     __typename
     ... on ChangePasswordPayload {
-      status {
-        success
-        message
-        code
-      }
+      status
     }
     ... on Error {
       code
