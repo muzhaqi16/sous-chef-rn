@@ -327,9 +327,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 items: [
                   {
                     id,
-                    itemId: item.id,
+                    item: { itemId: item.id },
                     quantity: 1,
-                    itemName: item.name,
                     unit: {
                       unitId: item.displayUnit?.id ?? item.unitId,
                       unitName: item.displayUnit?.name,

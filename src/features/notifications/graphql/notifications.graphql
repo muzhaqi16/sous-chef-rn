@@ -33,7 +33,7 @@ query GetUnreadNotifications {
     unreadNotificationCount
     hasUrgentNotifications
     notificationsConnection(
-      filter: { unreadOnly: true }
+      filters: { unreadOnly: true }
       first: 50
       orderBy: SENT_AT_DESC
     ) {
@@ -63,7 +63,7 @@ query GetNotifications(
   me {
     id
     notificationsConnection(
-      filter: $filter
+      filters: $filter
       first: $first
       after: $after
       orderBy: SENT_AT_DESC

@@ -310,7 +310,7 @@ const MealPlanMainInner: React.FC = () => {
     if (!activePlanId) return;
     const result = await createItem({
       mealPlanId: activePlanId,
-      recipeId,
+      meal: { recipeId },
       mealType,
       date: calendar.selectedDate.toISOString(),
     });
@@ -323,7 +323,7 @@ const MealPlanMainInner: React.FC = () => {
     if (!activePlanId) return;
     const result = await createItem({
       mealPlanId: activePlanId,
-      customMealName: name,
+      meal: { customMealName: name },
       mealType,
       date: calendar.selectedDate.toISOString(),
     });

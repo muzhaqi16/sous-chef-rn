@@ -258,8 +258,12 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
 
   const item: SyncShoppingListItemInput = {
     shoppingListId,
-    ...(input.itemName != null && { itemName: input.itemName }),
-    ...(input.itemId != null && { itemId: input.itemId }),
+    // Item reference moved into a nested @oneOf `item` (exactly one of
+    // itemId/itemName); preserve whichever the original mutation carried.
+    item: {
+      ...(input.itemName != null && { itemName: input.itemName }),
+      ...(input.itemId != null && { itemId: input.itemId }),
+    },
     ...(input.category != null && { category: input.category }),
     ...(input.notes != null && { notes: input.notes }),
     ...(unit && { unit: unit as SyncShoppingListItemInput['unit'] }),

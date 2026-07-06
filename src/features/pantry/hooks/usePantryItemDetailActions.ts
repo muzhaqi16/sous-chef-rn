@@ -257,10 +257,11 @@ export function usePantryItemDetailActions({
               items: [
                 {
                   id,
-                  itemId: catalogItemId,
+                  item: catalogItemId
+                    ? { itemId: catalogItemId }
+                    : { itemName },
                   quantity,
                   unit: unitInput,
-                  itemName,
                 },
               ],
             },

@@ -279,7 +279,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               items: [
                 {
                   id,
-                  itemName,
+                  item: { itemName },
                   // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
                   quantity: quantityInput,
                   ...unitData,

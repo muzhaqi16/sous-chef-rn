@@ -132,10 +132,6 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       }
     }
   }
-  batches {
-    id
-    ...PantryItemBatchFragment
-  }
 }
 
 # Local copy of AddItemToShoppingList per the Feature API Boundary Convention.

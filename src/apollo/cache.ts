@@ -565,9 +565,6 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
-          batches: {
-            merge: false, // Always replace batches array with incoming data
-          },
         },
       },
       PantryItemBatch: {
@@ -655,11 +652,11 @@ export function makeCache(): InMemoryCache {
             },
           },
           savedRecipesConnection: mergeConnectionByNodeId(),
-          // Keyed on filter + orderBy so the unread-badge query and the filtered
+          // Keyed on filters + orderBy so the unread-badge query and the filtered
           // history feed keep separate paginated lists; edges merge by node id
           // so fetchMore appends pages.
           notificationsConnection: mergeConnectionByNodeId([
-            'filter',
+            'filters',
             'orderBy',
           ]),
         },
@@ -747,6 +744,13 @@ export function makeCache(): InMemoryCache {
             },
           },
           homes: mergeConnectionByNodeId(),
+          // Batches for a pantry item are a Relay connection keyed by the item
+          // (and optional status filter), so each item — and each active/all
+          // view — keeps its own cached edge list; edges merge by node id.
+          pantryItemBatchesConnection: mergeConnectionByNodeId([
+            'pantryItemId',
+            'status',
+          ]),
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],

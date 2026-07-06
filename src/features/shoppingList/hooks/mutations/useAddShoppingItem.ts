@@ -94,7 +94,7 @@ export function useAddShoppingItem({
     // rides on the batch input, not the item.
     const itemInput = {
       id,
-      itemName: input.itemName,
+      item: { itemName: input.itemName },
       quantity: input.quantityInput ?? input.quantity ?? 1,
       ...((input.unitName || input.unitId) && {
         unit: {

@@ -162,14 +162,14 @@ export const MealTemplateBuilderScreen: React.FC<
             id: editingServerId,
             dayOffset,
             mealType: itemMealType,
-            customMealName,
+            meal: { customMealName },
             servings,
           })
         : await addItem({
             templateId,
             dayOffset,
             mealType: itemMealType,
-            customMealName,
+            meal: { customMealName },
             servings,
           });
       if (ok) resetItemForm();
@@ -237,7 +237,7 @@ export const MealTemplateBuilderScreen: React.FC<
       items: draftItems.map(item => ({
         dayOffset: item.dayOffset,
         mealType: item.mealType,
-        customMealName: item.customMealName,
+        meal: { customMealName: item.customMealName },
         servings: item.servings,
       })),
     });

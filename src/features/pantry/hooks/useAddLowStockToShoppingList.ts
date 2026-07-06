@@ -48,7 +48,10 @@ export function useAddLowStockToShoppingList({
     );
     if (!result) return;
 
-    const { addedCount, skippedCount } = result.result;
+    // The payload inlines the item lists (the old `result.addedCount` /
+    // `skippedCount` counters were dropped); the row counts are the lengths.
+    const addedCount = result.addedItems.length;
+    const skippedCount = result.skippedItems.length;
 
     if (addedCount === 0 && skippedCount === 0) {
       toastService.info('No low stock items found');

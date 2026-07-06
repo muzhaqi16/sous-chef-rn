@@ -214,8 +214,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           items: [
             {
               id,
-              itemId: item.id,
-              itemName: item.name,
+              item: { itemId: item.id },
               quantity: null,
               unit: item.defaultUnit?.id
                 ? { unitId: item.defaultUnit.id }
@@ -298,8 +297,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           items: [
             {
               id,
-              itemId: shoppingItem.itemId,
-              itemName: shoppingItem.name,
+              item: { itemId: shoppingItem.itemId },
               quantity: null,
               unit: unitId ? { unitId } : undefined,
             },

@@ -229,14 +229,6 @@ input AddCollaboratorInput {
   shoppingListId: ID!
 }
 
-type AddIngredientResult {
-  previousQuantity: Float
-  quantityAdded: Float!
-  shoppingListItem: ShoppingListItem!
-  unitConversionApplied: Boolean!
-  wasUpdated: Boolean!
-}
-
 """Input for categorizing an item"""
 input AddItemToCategoryInput {
   categoryId: ID!
@@ -273,7 +265,9 @@ input AddLowStockItemsToShoppingListInput {
 }
 
 type AddLowStockItemsToShoppingListPayload {
-  result: LowStockToShoppingListResult!
+  addedItems: [AddedLowStockItem!]!
+  skippedItems: [SkippedLowStockItem!]!
+  summary: BulkSummary!
 }
 
 union AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
@@ -764,6 +758,12 @@ input AutocompleteCategoryInput {
   type: CategoryType
 }
 
+"""
+Sanctioned exception to the "no ad-hoc *Response list envelope" convention
+(graphql-operation-conventions), mirroring AutocompleteResponse: a bounded,
+ranked top-N suggestion set where `totalCount` is meaningful, retained
+deliberately rather than converted to a connection or a bare list.
+"""
 type AutocompleteCategoryResponse {
   suggestions: [CategorySuggestion!]!
   totalCount: Int!
@@ -776,6 +776,13 @@ input AutocompleteInput {
   storeId: ID
 }
 
+"""
+Sanctioned exception to the "no ad-hoc *Response list envelope" convention
+(graphql-operation-conventions). Autocomplete returns a bounded, ranked top-N
+suggestion set, not a growable Relay list; `totalCount` (how many items matched
+beyond the returned suggestions) is meaningful here, so the envelope is retained
+deliberately rather than converted to a connection or a bare list.
+"""
 type AutocompleteResponse {
   suggestions: [ItemSuggestion!]!
   totalCount: Int!
@@ -1598,7 +1605,7 @@ and branch on mutation. Subscribers can only watch logs they own.
 """
 type CookingLogEvent {
   """The user who caused the change."""
-  actorUserId: ID!
+  actorUserId: ID
   mutation: MutationType!
   node: CookingLog!
   subtype: CookingLogSubtype!
@@ -1961,7 +1968,7 @@ input CreatePantryInput {
 
 input CreatePantryItemInput {
   brand: BrandReferenceInput
-  expiresAt: String
+  expiresAt: DateTime
   forceAdd: Boolean
   """
   Optional client-generated permanent ID (CUID2).
@@ -2158,7 +2165,11 @@ input CreateShoppingListItemFromRecipeIngredientInput {
 }
 
 type CreateShoppingListItemFromRecipeIngredientPayload {
-  result: AddIngredientResult!
+  previousQuantity: Float
+  quantityAdded: Float!
+  shoppingListItem: ShoppingListItem!
+  unitConversionApplied: Boolean!
+  wasUpdated: Boolean!
 }
 
 union CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError
@@ -3343,6 +3354,12 @@ type ExpirationNotificationEdge implements Edge {
   node: ExpirationNotification!
 }
 
+"""Filter criteria for User.expirationNotificationsConnection."""
+input ExpirationNotificationFilters {
+  pantryItemId: ID
+  status: NotificationDeliveryStatus
+}
+
 """Order by options for expiration notifications"""
 input ExpirationNotificationOrderBy {
   createdAt: SortOrder
@@ -3540,11 +3557,6 @@ type GenerateShoppingListFromMealPlanPayload {
 
 union GenerateShoppingListFromMealPlanResult = ConflictError | ForbiddenError | GenerateShoppingListFromMealPlanPayload | NotFoundError | ValidationError
 
-input GetExpirationNotificationsInput {
-  pantryItemId: ID
-  status: NotificationDeliveryStatus
-}
-
 """Progress toward a single nutrition goal"""
 type GoalProgress {
   current: Float!
@@ -3676,11 +3688,11 @@ type HomeEvent {
   """Originator of the change, for self-echo suppression."""
   actorUserId: ID
   homeId: ID!
-  mutation: MutationType
+  mutation: MutationType!
   newRole: MembershipRole
   node: HomeEventNode!
   previousRole: MembershipRole
-  subtype: HomeEventSubtype!
+  subtype: HomeSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
 }
@@ -3690,18 +3702,6 @@ The changed entity for a homeEvents payload: a Membership for the
 MEMBERSHIP_* subtypes, a HomeInvite for the INVITE_* subtypes.
 """
 union HomeEventNode = HomeInvite | Membership
-
-"""Subtype discriminator for the consolidated homeEvents stream."""
-enum HomeEventSubtype {
-  INVITE_ACCEPTED
-  INVITE_CREATED
-  INVITE_DECLINED
-  INVITE_REVOKED
-  MEMBERSHIP_JOINED
-  MEMBERSHIP_LEFT
-  MEMBERSHIP_ROLE_CHANGED
-  MEMBERSHIP_UPDATED
-}
 
 """
 Filters for querying homes.
@@ -3794,6 +3794,18 @@ type HomePermissions {
   canManageHome: Boolean
   canRemoveItems: Boolean
   canViewPantry: Boolean
+}
+
+"""Subtype discriminator for the consolidated homeEvents stream."""
+enum HomeSubtype {
+  INVITE_ACCEPTED
+  INVITE_CREATED
+  INVITE_DECLINED
+  INVITE_REVOKED
+  MEMBERSHIP_JOINED
+  MEMBERSHIP_LEFT
+  MEMBERSHIP_ROLE_CHANGED
+  MEMBERSHIP_UPDATED
 }
 
 enum HomeType {
@@ -4575,12 +4587,6 @@ type ItemValidationError {
   message: String!
 }
 
-type ItemsResponse {
-  hasMore: Boolean!
-  items: [Item!]!
-  totalCount: Int!
-}
-
 """
 The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
 """
@@ -4919,14 +4925,6 @@ type LowStockItem {
   unitName: String!
 }
 
-"""Result of adding low stock items to a shopping list"""
-type LowStockToShoppingListResult {
-  addedCount: Int!
-  addedItems: [AddedLowStockItem!]!
-  skippedCount: Int!
-  skippedItems: [SkippedLowStockItem!]!
-}
-
 type MarkAllNotificationsAsReadPayload {
   notifications: [Notification!]!
   summary: BulkSummary!
@@ -5204,13 +5202,13 @@ Only home-shared plans/templates (homeId set) are pushed — personal ones need
 no collaboration channel.
 """
 type MealPlanEvent {
-  actorUserId: ID!
+  actorUserId: ID
   homeId: ID!
   """Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events."""
   mealPlanId: ID
   mutation: MutationType!
   node: MealPlanEventNode
-  subtype: MealPlanEventSubtype!
+  subtype: MealPlanSubtype!
   """Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events."""
   templateId: ID
   timestamp: DateTime!
@@ -5218,30 +5216,6 @@ type MealPlanEvent {
 }
 
 union MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateItem
-
-"""
-Subtype discriminator for meal-plan / meal-template collaboration events.
-"""
-enum MealPlanEventSubtype {
-  """
-  A shared meal plan was created, updated, or soft-deleted. node is a MealPlan.
-  """
-  MEAL_PLAN_CHANGED
-  """
-  A meal plan item was created, updated, or deleted. node is a MealPlanItem.
-  """
-  MEAL_PLAN_ITEM_CHANGED
-  """
-  A shared meal template was created, updated, or soft-deleted. node is a
-  MealTemplate.
-  """
-  MEAL_TEMPLATE_CHANGED
-  """
-  A meal template item was added, updated, or removed. node is a
-  MealTemplateItem.
-  """
-  MEAL_TEMPLATE_ITEM_CHANGED
-}
 
 input MealPlanFilters {
   endDate: DateTime
@@ -5303,6 +5277,30 @@ type MealPlanNutritionSummary {
 input MealPlanOrderBy {
   createdAt: SortOrder
   startDate: SortOrder
+}
+
+"""
+Subtype discriminator for meal-plan / meal-template collaboration events.
+"""
+enum MealPlanSubtype {
+  """
+  A shared meal plan was created, updated, or soft-deleted. node is a MealPlan.
+  """
+  MEAL_PLAN_CHANGED
+  """
+  A meal plan item was created, updated, or deleted. node is a MealPlanItem.
+  """
+  MEAL_PLAN_ITEM_CHANGED
+  """
+  A shared meal template was created, updated, or soft-deleted. node is a
+  MealTemplate.
+  """
+  MEAL_TEMPLATE_CHANGED
+  """
+  A meal template item was added, updated, or removed. node is a
+  MealTemplateItem.
+  """
+  MEAL_TEMPLATE_ITEM_CHANGED
 }
 
 enum MealPlanType {
@@ -6085,8 +6083,13 @@ type Mutation {
   recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
   refresh(input: RefreshTokenInput!): RefreshTokenPayload!
-  """Register a new user account and return tokens."""
-  register(input: RegisterInput!): AuthPayload!
+  """
+  Register a new user account. Existence-blind and verification-first: always
+  returns the same result and (for an available email) sends a verification
+  link. It never returns tokens — the user activates via the emailed link,
+  then signs in with `login`.
+  """
+  register(input: RegisterInput!): RegisterResult!
   """
   Register a new device for the current user.
   This is the primary way to add a device from mobile apps.
@@ -6427,17 +6430,6 @@ type Notification implements Timestamped {
   userId: ID!
 }
 
-"""
-Emitted for lightweight notification state transitions where only the id
-is needed (read / dismissed). Clients can refetch the notification by id
-if they need its updated state.
-"""
-type NotificationActionPayload {
-  notificationId: ID!
-  timestamp: DateTime!
-  userId: ID!
-}
-
 enum NotificationCategory {
   HOME
   PANTRY
@@ -6482,34 +6474,18 @@ type NotificationEdge implements Edge {
 
 """
 Consolidated notification event envelope. Replaces notificationCreated +
-notificationUpdated — subscribe once and branch on subtype. For UPDATED,
-branch on node.status (READ / CLICKED -> mark read; DISMISSED / EXPIRED ->
-remove).
+notificationUpdated (and the former lightweight notificationRead /
+notificationDismissed streams) — subscribe once and branch on subtype.
+READ / DISMISSED are derived from the notification's status on update, so
+read-state and dismissal transitions arrive on this stream too.
 """
 type NotificationEvent {
+  actorUserId: ID
   mutation: MutationType!
   node: Notification!
-  subtype: NotificationEventSubtype!
+  subtype: NotificationSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
-  userId: ID!
-}
-
-"""
-Legacy generic notification event payload. Retained for unknown external
-consumers; new subscriptions use the typed payloads below.
-"""
-type NotificationEventPayload {
-  mutation: MutationType
-  notification: Notification
-  timestamp: String
-  userId: ID
-}
-
-"""Subtype discriminator for the consolidated notificationEvents stream."""
-enum NotificationEventSubtype {
-  CREATED
-  UPDATED
 }
 
 input NotificationFilters {
@@ -6599,6 +6575,14 @@ enum NotificationStatus {
   PENDING
   READ
   SENT
+}
+
+"""Subtype discriminator for the consolidated notificationEvents stream."""
+enum NotificationSubtype {
+  CREATED
+  DISMISSED
+  READ
+  UPDATED
 }
 
 """Identifies the category of a notification sent to a user"""
@@ -6782,7 +6766,7 @@ type Pantry {
   isDefault: Boolean!
   """Paginated list of items in this pantry"""
   itemsConnection(after: String, before: String, filters: PantryItemFilters, first: Int, last: Int, orderBy: PantryItemOrderBy): PantryItemConnection!
-  ledgerAnalytics(filter: AnalyticsFilters, granularity: PeriodGranularity, itemId: ID): LedgerAnalytics!
+  ledgerAnalytics(filters: AnalyticsFilters, granularity: PeriodGranularity, itemId: ID): LedgerAnalytics!
   location: String
   metadata: JSON
   name: String!
@@ -6793,14 +6777,14 @@ type Pantry {
   tags: [String!]!
   temperature: String
   updatedAt: DateTime!
-  usageAnalytics(filter: AnalyticsFilters): UsageAnalytics!
+  usageAnalytics(filters: AnalyticsFilters): UsageAnalytics!
   """
   Usage statistics for this pantry.
   Available for all users but primarily used by admin views.
   """
   usageStats: PantryUsageStats
   version: Int!
-  wasteAnalytics(filter: AnalyticsFilters): WasteAnalytics!
+  wasteAnalytics(filters: AnalyticsFilters): WasteAnalytics!
 }
 
 type PantryActivity {
@@ -6859,12 +6843,12 @@ Real-time notification for pantry domain mutations.
 Clients subscribe once per pantry; the subtype field routes payload interpretation.
 """
 type PantryEvent {
-  actorUserId: ID!
+  actorUserId: ID
   mutation: MutationType!
   node: PantryEventNode!
   pantryId: ID!
   parents: PantryEventParents!
-  subtype: PantryEventSubtype!
+  subtype: PantrySubtype!
   timestamp: DateTime!
 }
 
@@ -6873,37 +6857,6 @@ union PantryEventNode = ExpirationNotification | Pantry | PantryItem | PantryIte
 """Parent resource IDs for cache updates without refetch."""
 type PantryEventParents {
   homeId: ID!
-}
-
-"""Subtype discriminator for pantry domain events."""
-enum PantryEventSubtype {
-  """
-  An action was taken on an expiration notification (waste, restock,
-  mark-consumed, etc.). node is an ExpirationNotification.
-  """
-  EXPIRATION_ACTION_TAKEN
-  """Item expiration date approaching"""
-  EXPIRATION_ALERT
-  """
-  A new expiration notification was created by the background
-  expiration-check job. node is an ExpirationNotification.
-  """
-  EXPIRATION_NOTIFICATION_CREATED
-  """
-  An expiration notification was marked as read by the user.
-  node is an ExpirationNotification.
-  """
-  EXPIRATION_NOTIFICATION_READ
-  """Pantry item created, updated, or soft-deleted"""
-  ITEM_CHANGED
-  """Item quantity fell below minimum threshold"""
-  LOW_STOCK_ALERT
-  """Pantry metadata changed (name, description, settings)"""
-  PANTRY_UPDATED
-  """Pantry item usage recorded (consume, restock, adjust)"""
-  USAGE_CHANGED
-  """Item marked as waste or discarded"""
-  WASTE_ALERT
 }
 
 """
@@ -6927,7 +6880,6 @@ type PantryItem {
   activeBatchCount: Int!
   addedAt: DateTime!
   addedBy: User
-  batches: [PantryItemBatch!]!
   brand: Brand
   brandId: ID
   changeHistory(after: String, before: String, first: Int, last: Int): PantryItemChangeConnection!
@@ -6947,7 +6899,7 @@ type PantryItem {
   itemUpc: String
   lastModifiedBy: User
   lastUsedAt: DateTime
-  ledger(filter: AnalyticsFilters): LedgerSummary!
+  ledger(filters: AnalyticsFilters): LedgerSummary!
   lowStockAlert: Boolean!
   minQuantity: Float
   netWeight: Float
@@ -7213,6 +7165,37 @@ type PantryStats {
   storageStateCounts: StorageStateCounts
   totalItems: Int!
   totalValue: Float!
+}
+
+"""Subtype discriminator for pantry domain events."""
+enum PantrySubtype {
+  """
+  An action was taken on an expiration notification (waste, restock,
+  mark-consumed, etc.). node is an ExpirationNotification.
+  """
+  EXPIRATION_ACTION_TAKEN
+  """Item expiration date approaching"""
+  EXPIRATION_ALERT
+  """
+  A new expiration notification was created by the background
+  expiration-check job. node is an ExpirationNotification.
+  """
+  EXPIRATION_NOTIFICATION_CREATED
+  """
+  An expiration notification was marked as read by the user.
+  node is an ExpirationNotification.
+  """
+  EXPIRATION_NOTIFICATION_READ
+  """Pantry item created, updated, or soft-deleted"""
+  ITEM_CHANGED
+  """Item quantity fell below minimum threshold"""
+  LOW_STOCK_ALERT
+  """Pantry metadata changed (name, description, settings)"""
+  PANTRY_UPDATED
+  """Pantry item usage recorded (consume, restock, adjust)"""
+  USAGE_CHANGED
+  """Item marked as waste or discarded"""
+  WASTE_ALERT
 }
 
 """Source of a pantry item suggestion"""
@@ -7597,7 +7580,7 @@ type Query {
   Calculate pantry deficit for recipe ingredients
   Compares recipe needs against available pantry items
   """
-  calculateRecipePantryDeficit(householdId: ID!, recipeId: ID!, servings: Float): [PantryDeficit!]!
+  calculateRecipePantryDeficit(pantryId: ID!, recipeId: ID!, servings: Float): [PantryDeficit!]!
   """
   Check if conversion is possible between two units
   Returns availability and confidence level
@@ -8296,6 +8279,29 @@ input RegisterInput {
   password: String!
 }
 
+type RegisterPayload {
+  """
+  Existence-blind confirmation to show the user; always present (String! so it merges with ValidationError.message when both are selected).
+  """
+  message: String!
+  status: RegistrationStatus!
+}
+
+union RegisterResult = ConflictError | ForbiddenError | NotFoundError | RegisterPayload | ValidationError
+
+"""
+Outcome of a registration request. Registration is existence-blind: the same
+status is returned whether or not the email is already registered, and no
+tokens are issued — the account is activated via the emailed verification
+link, then the user logs in (audit M11).
+"""
+enum RegistrationStatus {
+  """
+  A verification link was sent (or would have been, for an available email).
+  """
+  VERIFICATION_SENT
+}
+
 """Input for rejecting a user-created item"""
 input RejectItemInput {
   itemId: ID!
@@ -8308,12 +8314,6 @@ type RejectItemPayload {
 }
 
 union RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError
-
-type RelatedItemsResponse {
-  complementaryItems: [ItemSuggestion!]!
-  frequentlyBoughtTogether: [ItemSuggestion!]!
-  similarItems: [ItemSuggestion!]!
-}
 
 enum ReligiousDiet {
   HALAL
@@ -8864,7 +8864,7 @@ myShoppingListsEvents); the subtype field routes payload interpretation.
 """
 type ShoppingListEvent {
   """User who made the change."""
-  actorUserId: ID!
+  actorUserId: ID
   """Count of items cleared (ITEMS_BATCH_CLEARED only)."""
   clearedCount: Int
   """IDs of items that were cleared (ITEMS_BATCH_CLEARED only)."""
@@ -8880,7 +8880,7 @@ type ShoppingListEvent {
   node: ShoppingListEventNode
   """Device/client that triggered the change (for echo suppression)."""
   originatorClientId: ID
-  subtype: ShoppingListEventSubtype!
+  subtype: ShoppingListSubtype!
   timestamp: DateTime!
   """
   Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
@@ -8890,26 +8890,6 @@ type ShoppingListEvent {
 }
 
 union ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem
-
-"""
-Subtype discriminator for shopping list domain events.
-Values match the client-side changeType contract.
-"""
-enum ShoppingListEventSubtype {
-  """
-  A collaborator on the list was added, updated, or removed.
-  node is a ShoppingListCollaborator; branch on collaborator.status.
-  """
-  COLLABORATION_CHANGED
-  """Multiple items cleared from the list in one operation"""
-  ITEMS_BATCH_CLEARED
-  """Shopping list item created, updated, or deleted"""
-  ITEMS_CHANGED
-  """Shopping list metadata changed (name, settings, etc.)"""
-  LIST_UPDATED
-  """Shopping list status changed (ACTIVE / COMPLETED / etc.)"""
-  STATUS_CHANGED
-}
 
 input ShoppingListFilters {
   homeId: ID
@@ -9098,6 +9078,26 @@ input ShoppingListSettingsInput {
   priceTracking: Boolean
   priority: Int
   smartSorting: Boolean
+}
+
+"""
+Subtype discriminator for shopping list domain events.
+Values match the client-side changeType contract.
+"""
+enum ShoppingListSubtype {
+  """
+  A collaborator on the list was added, updated, or removed.
+  node is a ShoppingListCollaborator; branch on collaborator.status.
+  """
+  COLLABORATION_CHANGED
+  """Multiple items cleared from the list in one operation"""
+  ITEMS_BATCH_CLEARED
+  """Shopping list item created, updated, or deleted"""
+  ITEMS_CHANGED
+  """Shopping list metadata changed (name, settings, etc.)"""
+  LIST_UPDATED
+  """Shopping list status changed (ACTIVE / COMPLETED / etc.)"""
+  STATUS_CHANGED
 }
 
 """
@@ -9626,16 +9626,12 @@ type Subscription {
   access.
   """
   myShoppingListsEvents: ShoppingListEvent!
-  """Subscribe to dismissal events (lightweight payload — id only)."""
-  notificationDismissed: NotificationActionPayload!
   """
-  Consolidated notification event stream for the current user (created +
-  updated). Subscribe once and branch on subtype; for UPDATED, branch on
-  node.status. Always scoped to the authenticated user.
+  Consolidated notification event stream for the current user (created,
+  updated, read, dismissed). Subscribe once and branch on subtype. Always
+  scoped to the authenticated user.
   """
   notificationEvents: NotificationEvent!
-  """Subscribe to read-state changes (lightweight payload — id only)."""
-  notificationRead: NotificationActionPayload!
   """
   Subscribe to all pantry domain events for a single pantry.
   Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
@@ -9657,8 +9653,6 @@ type Subscription {
   Subscribe once and branch on subtype.
   """
   userEvents(userId: ID!): UserEvent!
-  """Subscribe to user moderation changes (ban / suspend / warn)."""
-  userModerationChanged(userId: ID): UserModerationChangedPayload!
 }
 
 """
@@ -9771,7 +9765,7 @@ input SyncPantryItemInput {
   brand: BrandReferenceInput
   clientId: ID!
   expirationAlert: Boolean
-  expiresAt: String
+  expiresAt: DateTime
   forceAdd: Boolean
   isComposted: Boolean
   isRecycled: Boolean
@@ -10559,7 +10553,7 @@ input UpdatePantryInput {
 input UpdatePantryItemInput {
   brand: BrandReferenceInput
   expirationAlert: Boolean
-  expiresAt: String
+  expiresAt: DateTime
   id: ID!
   isComposted: Boolean
   isRecycled: Boolean
@@ -11181,7 +11175,7 @@ type User {
   dietaryProfile: DietaryProfile
   email: String!
   emailVerified: Boolean!
-  expirationNotificationsConnection(after: String, before: String, first: Int, input: GetExpirationNotificationsInput, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
+  expirationNotificationsConnection(after: String, before: String, filters: ExpirationNotificationFilters, first: Int, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
   hasUrgentNotifications: Boolean!
   homeOwnerships: [HomeOwnership!]!
   id: ID!
@@ -11194,14 +11188,14 @@ type User {
   memberships(after: String, first: Int, orderBy: MembershipOrderBy): MembershipConnection!
   moderation: UserModeration
   notificationPreferences: NotificationPreferences
-  notificationsConnection(after: String, before: String, filter: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
+  notificationsConnection(after: String, before: String, filters: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
   onBoarded: Boolean!
   pendingCollaborationInvites: [ShoppingListCollaborator!]!
   pendingHomeInvites: [HomeInvite!]!
   preferredCurrency: String
   profile: UserProfile
   purchaseStats: PurchaseStats!
-  purchasesConnection(after: String, before: String, filter: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
+  purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   role: UserRole!
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
   sentHomeInvites: [HomeInvite!]!
@@ -11281,14 +11275,15 @@ type UserEvent {
   """
   actorUserId: ID
   """
-  Mutation kind for ACCOUNT_UPDATED / PROFILE_CHANGED (always UPDATED).
-  Null for lifecycle subtypes.
+  Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
+  and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
+  WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
   """
-  mutation: MutationType
+  mutation: MutationType!
   node: UserEventNode
   parents: UserEventParents
   reason: String
-  subtype: UserEventSubtype!
+  subtype: UserSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
   userId: ID!
@@ -11303,52 +11298,18 @@ which carry their context on the envelope (parents / reason / warningCount).
 union UserEventNode = User | UserProfile
 
 """
-Parent resource IDs for lifecycle subtypes, mirroring
-UserLifecycleEventParents. Null for ACCOUNT_UPDATED / PROFILE_CHANGED.
+Parent resource IDs for lifecycle subtypes. Null for ACCOUNT_UPDATED /
+PROFILE_CHANGED.
 """
 type UserEventParents {
   homeId: ID
   shoppingListId: ID
 }
 
-"""
-Subtype discriminator for the consolidated userEvents stream.
-Carries the account/profile mutation subtypes plus every
-UserLifecycleEventSubtype value (membership + moderation transitions),
-so a single subscription replaces userUpdated + userProfileChanged +
-userLifecycleEvents.
-"""
-enum UserEventSubtype {
-  ACCOUNT_UPDATED
-  ADDED_TO_HOME
-  ADDED_TO_SHOPPING_LIST
-  BANNED
-  PROFILE_CHANGED
-  REMOVED_FROM_HOME
-  REMOVED_FROM_SHOPPING_LIST
-  SUSPENDED
-  UNBANNED
-  UNSUSPENDED
-  WARNED
-}
-
 """Filter criteria for the admin users list query."""
 input UserFilters {
   """Free-text search across username / email"""
   search: String
-}
-
-"""Subtype discriminator for important per-user lifecycle events."""
-enum UserLifecycleEventSubtype {
-  ADDED_TO_HOME
-  ADDED_TO_SHOPPING_LIST
-  BANNED
-  REMOVED_FROM_HOME
-  REMOVED_FROM_SHOPPING_LIST
-  SUSPENDED
-  UNBANNED
-  UNSUSPENDED
-  WARNED
 }
 
 type UserModeration {
@@ -11389,15 +11350,6 @@ type UserModeration {
   version: Int!
   violationCount: Int!
   warningCount: Int!
-}
-
-type UserModerationChangedPayload {
-  moderatedBy: String!
-  moderationStatus: String!
-  moderationType: String!
-  reason: String
-  timestamp: DateTime!
-  userId: ID!
 }
 
 type UserModerationConnection implements Connection {
@@ -11518,6 +11470,26 @@ type UserStatistics {
   totalWasteReduced: Float!
   user: User!
   userId: ID!
+}
+
+"""
+Subtype discriminator for the consolidated userEvents stream.
+Carries the account/profile mutation subtypes plus every per-user
+lifecycle transition (home/shopping-list membership + moderation), so a
+single subscription replaces userUpdated + userProfileChanged.
+"""
+enum UserSubtype {
+  ACCOUNT_UPDATED
+  ADDED_TO_HOME
+  ADDED_TO_SHOPPING_LIST
+  BANNED
+  PROFILE_CHANGED
+  REMOVED_FROM_HOME
+  REMOVED_FROM_SHOPPING_LIST
+  SUSPENDED
+  UNBANNED
+  UNSUSPENDED
+  WARNED
 }
 
 input ValidatePasswordResetTokenInput {

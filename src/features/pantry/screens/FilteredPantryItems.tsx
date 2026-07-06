@@ -420,7 +420,7 @@ export const FilteredPantryItems: React.FC<
           variables: {
             input: {
               shoppingListId: selectedShoppingListId,
-              items: [{ id, itemId }],
+              items: [{ id, item: { itemId } }],
             },
           },
           context: { localFirst: true },

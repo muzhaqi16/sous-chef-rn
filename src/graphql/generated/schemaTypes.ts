@@ -79,15 +79,6 @@ export type AddCollaboratorInput = {
   shoppingListId: Scalars['ID']['input'];
 };
 
-export type AddIngredientResult = {
-  __typename: 'AddIngredientResult';
-  previousQuantity: Maybe<Scalars['Float']['output']>;
-  quantityAdded: Scalars['Float']['output'];
-  shoppingListItem: ShoppingListItem;
-  unitConversionApplied: Scalars['Boolean']['output'];
-  wasUpdated: Scalars['Boolean']['output'];
-};
-
 /** Input for categorizing an item */
 export type AddItemToCategoryInput = {
   categoryId: Scalars['ID']['input'];
@@ -127,7 +118,9 @@ export type AddLowStockItemsToShoppingListInput = {
 
 export type AddLowStockItemsToShoppingListPayload = {
   __typename: 'AddLowStockItemsToShoppingListPayload';
-  result: LowStockToShoppingListResult;
+  addedItems: Array<AddedLowStockItem>;
+  skippedItems: Array<SkippedLowStockItem>;
+  summary: BulkSummary;
 };
 
 export type AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
@@ -634,6 +627,12 @@ export type AutocompleteCategoryInput = {
   type?: InputMaybe<CategoryType>;
 };
 
+/**
+ * Sanctioned exception to the "no ad-hoc *Response list envelope" convention
+ * (graphql-operation-conventions), mirroring AutocompleteResponse: a bounded,
+ * ranked top-N suggestion set where `totalCount` is meaningful, retained
+ * deliberately rather than converted to a connection or a bare list.
+ */
 export type AutocompleteCategoryResponse = {
   __typename: 'AutocompleteCategoryResponse';
   suggestions: Array<CategorySuggestion>;
@@ -647,6 +646,13 @@ export type AutocompleteInput = {
   storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+/**
+ * Sanctioned exception to the "no ad-hoc *Response list envelope" convention
+ * (graphql-operation-conventions). Autocomplete returns a bounded, ranked top-N
+ * suggestion set, not a growable Relay list; `totalCount` (how many items matched
+ * beyond the returned suggestions) is meaningful here, so the envelope is retained
+ * deliberately rather than converted to a connection or a bare list.
+ */
 export type AutocompleteResponse = {
   __typename: 'AutocompleteResponse';
   suggestions: Array<ItemSuggestion>;
@@ -1510,7 +1516,7 @@ export type CookingLogEdge = Edge & {
 export type CookingLogEvent = {
   __typename: 'CookingLogEvent';
   /** The user who caused the change. */
-  actorUserId: Scalars['ID']['output'];
+  actorUserId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: CookingLog;
   subtype: CookingLogSubtype;
@@ -1878,7 +1884,7 @@ export type CreatePantryInput = {
 
 export type CreatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   /**
    * Optional client-generated permanent ID (CUID2).
@@ -2082,7 +2088,11 @@ export type CreateShoppingListItemFromRecipeIngredientInput = {
 
 export type CreateShoppingListItemFromRecipeIngredientPayload = {
   __typename: 'CreateShoppingListItemFromRecipeIngredientPayload';
-  result: AddIngredientResult;
+  previousQuantity: Maybe<Scalars['Float']['output']>;
+  quantityAdded: Scalars['Float']['output'];
+  shoppingListItem: ShoppingListItem;
+  unitConversionApplied: Scalars['Boolean']['output'];
+  wasUpdated: Scalars['Boolean']['output'];
 };
 
 export type CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError;
@@ -3307,6 +3317,12 @@ export type ExpirationNotificationEdge = Edge & {
   node: ExpirationNotification;
 };
 
+/** Filter criteria for User.expirationNotificationsConnection. */
+export type ExpirationNotificationFilters = {
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<NotificationDeliveryStatus>;
+};
+
 /** Order by options for expiration notifications */
 export type ExpirationNotificationOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
@@ -3508,11 +3524,6 @@ export type GenerateShoppingListFromMealPlanPayload = {
 };
 
 export type GenerateShoppingListFromMealPlanResult = ConflictError | ForbiddenError | GenerateShoppingListFromMealPlanPayload | NotFoundError | ValidationError;
-
-export type GetExpirationNotificationsInput = {
-  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
-  status?: InputMaybe<NotificationDeliveryStatus>;
-};
 
 /** Progress toward a single nutrition goal */
 export type GoalProgress = {
@@ -3736,11 +3747,11 @@ export type HomeEvent = {
   /** Originator of the change, for self-echo suppression. */
   actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
-  mutation: Maybe<MutationType>;
+  mutation: MutationType;
   newRole: Maybe<MembershipRole>;
   node: HomeEventNode;
   previousRole: Maybe<MembershipRole>;
-  subtype: HomeEventSubtype;
+  subtype: HomeSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
 };
@@ -3750,18 +3761,6 @@ export type HomeEvent = {
  * MEMBERSHIP_* subtypes, a HomeInvite for the INVITE_* subtypes.
  */
 export type HomeEventNode = HomeInvite | Membership;
-
-/** Subtype discriminator for the consolidated homeEvents stream. */
-export enum HomeEventSubtype {
-  InviteAccepted = 'INVITE_ACCEPTED',
-  InviteCreated = 'INVITE_CREATED',
-  InviteDeclined = 'INVITE_DECLINED',
-  InviteRevoked = 'INVITE_REVOKED',
-  MembershipJoined = 'MEMBERSHIP_JOINED',
-  MembershipLeft = 'MEMBERSHIP_LEFT',
-  MembershipRoleChanged = 'MEMBERSHIP_ROLE_CHANGED',
-  MembershipUpdated = 'MEMBERSHIP_UPDATED'
-}
 
 /**
  * Filters for querying homes.
@@ -3866,6 +3865,18 @@ export type HomePermissions = {
   canRemoveItems: Maybe<Scalars['Boolean']['output']>;
   canViewPantry: Maybe<Scalars['Boolean']['output']>;
 };
+
+/** Subtype discriminator for the consolidated homeEvents stream. */
+export enum HomeSubtype {
+  InviteAccepted = 'INVITE_ACCEPTED',
+  InviteCreated = 'INVITE_CREATED',
+  InviteDeclined = 'INVITE_DECLINED',
+  InviteRevoked = 'INVITE_REVOKED',
+  MembershipJoined = 'MEMBERSHIP_JOINED',
+  MembershipLeft = 'MEMBERSHIP_LEFT',
+  MembershipRoleChanged = 'MEMBERSHIP_ROLE_CHANGED',
+  MembershipUpdated = 'MEMBERSHIP_UPDATED'
+}
 
 export enum HomeType {
   Boat = 'BOAT',
@@ -4714,13 +4725,6 @@ export type ItemValidationError = {
   message: Scalars['String']['output'];
 };
 
-export type ItemsResponse = {
-  __typename: 'ItemsResponse';
-  hasMore: Scalars['Boolean']['output'];
-  items: Array<Item>;
-  totalCount: Scalars['Int']['output'];
-};
-
 export type JoinHomeByCodeInput = {
   joinCode: Scalars['String']['input'];
 };
@@ -5073,15 +5077,6 @@ export type LowStockItem = {
   unitName: Scalars['String']['output'];
 };
 
-/** Result of adding low stock items to a shopping list */
-export type LowStockToShoppingListResult = {
-  __typename: 'LowStockToShoppingListResult';
-  addedCount: Scalars['Int']['output'];
-  addedItems: Array<AddedLowStockItem>;
-  skippedCount: Scalars['Int']['output'];
-  skippedItems: Array<SkippedLowStockItem>;
-};
-
 export type MarkAllNotificationsAsReadPayload = {
   __typename: 'MarkAllNotificationsAsReadPayload';
   notifications: Array<Notification>;
@@ -5375,13 +5370,13 @@ export type MealPlanEdge = Edge & {
  */
 export type MealPlanEvent = {
   __typename: 'MealPlanEvent';
-  actorUserId: Scalars['ID']['output'];
+  actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
   /** Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events. */
   mealPlanId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: Maybe<MealPlanEventNode>;
-  subtype: MealPlanEventSubtype;
+  subtype: MealPlanSubtype;
   /** Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events. */
   templateId: Maybe<Scalars['ID']['output']>;
   timestamp: Scalars['DateTime']['output'];
@@ -5389,24 +5384,6 @@ export type MealPlanEvent = {
 };
 
 export type MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateItem;
-
-/** Subtype discriminator for meal-plan / meal-template collaboration events. */
-export enum MealPlanEventSubtype {
-  /** A shared meal plan was created, updated, or soft-deleted. node is a MealPlan. */
-  MealPlanChanged = 'MEAL_PLAN_CHANGED',
-  /** A meal plan item was created, updated, or deleted. node is a MealPlanItem. */
-  MealPlanItemChanged = 'MEAL_PLAN_ITEM_CHANGED',
-  /**
-   * A shared meal template was created, updated, or soft-deleted. node is a
-   * MealTemplate.
-   */
-  MealTemplateChanged = 'MEAL_TEMPLATE_CHANGED',
-  /**
-   * A meal template item was added, updated, or removed. node is a
-   * MealTemplateItem.
-   */
-  MealTemplateItemChanged = 'MEAL_TEMPLATE_ITEM_CHANGED'
-}
 
 export type MealPlanFilters = {
   endDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -5471,6 +5448,24 @@ export type MealPlanOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   startDate?: InputMaybe<SortOrder>;
 };
+
+/** Subtype discriminator for meal-plan / meal-template collaboration events. */
+export enum MealPlanSubtype {
+  /** A shared meal plan was created, updated, or soft-deleted. node is a MealPlan. */
+  MealPlanChanged = 'MEAL_PLAN_CHANGED',
+  /** A meal plan item was created, updated, or deleted. node is a MealPlanItem. */
+  MealPlanItemChanged = 'MEAL_PLAN_ITEM_CHANGED',
+  /**
+   * A shared meal template was created, updated, or soft-deleted. node is a
+   * MealTemplate.
+   */
+  MealTemplateChanged = 'MEAL_TEMPLATE_CHANGED',
+  /**
+   * A meal template item was added, updated, or removed. node is a
+   * MealTemplateItem.
+   */
+  MealTemplateItemChanged = 'MEAL_TEMPLATE_ITEM_CHANGED'
+}
 
 export enum MealPlanType {
   Custom = 'CUSTOM',
@@ -6263,8 +6258,13 @@ export type Mutation = {
   recordRecipeCooked: RecordRecipeCookedResult;
   /** Refresh an expired access token using a refresh token. */
   refresh: RefreshTokenPayload;
-  /** Register a new user account and return tokens. */
-  register: AuthPayload;
+  /**
+   * Register a new user account. Existence-blind and verification-first: always
+   * returns the same result and (for an available email) sends a verification
+   * link. It never returns tokens — the user activates via the emailed link,
+   * then signs in with `login`.
+   */
+  register: RegisterResult;
   /**
    * Register a new device for the current user.
    * This is the primary way to add a device from mobile apps.
@@ -9237,18 +9237,6 @@ export type Notification = Timestamped & {
   userId: Scalars['ID']['output'];
 };
 
-/**
- * Emitted for lightweight notification state transitions where only the id
- * is needed (read / dismissed). Clients can refetch the notification by id
- * if they need its updated state.
- */
-export type NotificationActionPayload = {
-  __typename: 'NotificationActionPayload';
-  notificationId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
 export enum NotificationCategory {
   Home = 'HOME',
   Pantry = 'PANTRY',
@@ -9296,37 +9284,20 @@ export type NotificationEdge = Edge & {
 
 /**
  * Consolidated notification event envelope. Replaces notificationCreated +
- * notificationUpdated — subscribe once and branch on subtype. For UPDATED,
- * branch on node.status (READ / CLICKED -> mark read; DISMISSED / EXPIRED ->
- * remove).
+ * notificationUpdated (and the former lightweight notificationRead /
+ * notificationDismissed streams) — subscribe once and branch on subtype.
+ * READ / DISMISSED are derived from the notification's status on update, so
+ * read-state and dismissal transitions arrive on this stream too.
  */
 export type NotificationEvent = {
   __typename: 'NotificationEvent';
+  actorUserId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: Notification;
-  subtype: NotificationEventSubtype;
+  subtype: NotificationSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
-  userId: Scalars['ID']['output'];
 };
-
-/**
- * Legacy generic notification event payload. Retained for unknown external
- * consumers; new subscriptions use the typed payloads below.
- */
-export type NotificationEventPayload = {
-  __typename: 'NotificationEventPayload';
-  mutation: Maybe<MutationType>;
-  notification: Maybe<Notification>;
-  timestamp: Maybe<Scalars['String']['output']>;
-  userId: Maybe<Scalars['ID']['output']>;
-};
-
-/** Subtype discriminator for the consolidated notificationEvents stream. */
-export enum NotificationEventSubtype {
-  Created = 'CREATED',
-  Updated = 'UPDATED'
-}
 
 export type NotificationFilters = {
   batchId?: InputMaybe<Scalars['String']['input']>;
@@ -9418,6 +9389,14 @@ export enum NotificationStatus {
   Pending = 'PENDING',
   Read = 'READ',
   Sent = 'SENT'
+}
+
+/** Subtype discriminator for the consolidated notificationEvents stream. */
+export enum NotificationSubtype {
+  Created = 'CREATED',
+  Dismissed = 'DISMISSED',
+  Read = 'READ',
+  Updated = 'UPDATED'
 }
 
 /** Identifies the category of a notification sent to a user */
@@ -9651,7 +9630,7 @@ export type PantryItemsConnectionArgs = {
  * via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
  */
 export type PantryLedgerAnalyticsArgs = {
-  filter?: InputMaybe<AnalyticsFilters>;
+  filters?: InputMaybe<AnalyticsFilters>;
   granularity?: InputMaybe<PeriodGranularity>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -9703,7 +9682,7 @@ export type PantrySuggestionsArgs = {
  * via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
  */
 export type PantryUsageAnalyticsArgs = {
-  filter?: InputMaybe<AnalyticsFilters>;
+  filters?: InputMaybe<AnalyticsFilters>;
 };
 
 
@@ -9714,7 +9693,7 @@ export type PantryUsageAnalyticsArgs = {
  * via DataLoader + Redis invalidation in resolvers (invalidatePantryItemCache).
  */
 export type PantryWasteAnalyticsArgs = {
-  filter?: InputMaybe<AnalyticsFilters>;
+  filters?: InputMaybe<AnalyticsFilters>;
 };
 
 export type PantryActivity = {
@@ -9778,12 +9757,12 @@ export type PantryEdge = Edge & {
  */
 export type PantryEvent = {
   __typename: 'PantryEvent';
-  actorUserId: Scalars['ID']['output'];
+  actorUserId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: PantryEventNode;
   pantryId: Scalars['ID']['output'];
   parents: PantryEventParents;
-  subtype: PantryEventSubtype;
+  subtype: PantrySubtype;
   timestamp: Scalars['DateTime']['output'];
 };
 
@@ -9794,37 +9773,6 @@ export type PantryEventParents = {
   __typename: 'PantryEventParents';
   homeId: Scalars['ID']['output'];
 };
-
-/** Subtype discriminator for pantry domain events. */
-export enum PantryEventSubtype {
-  /**
-   * An action was taken on an expiration notification (waste, restock,
-   * mark-consumed, etc.). node is an ExpirationNotification.
-   */
-  ExpirationActionTaken = 'EXPIRATION_ACTION_TAKEN',
-  /** Item expiration date approaching */
-  ExpirationAlert = 'EXPIRATION_ALERT',
-  /**
-   * A new expiration notification was created by the background
-   * expiration-check job. node is an ExpirationNotification.
-   */
-  ExpirationNotificationCreated = 'EXPIRATION_NOTIFICATION_CREATED',
-  /**
-   * An expiration notification was marked as read by the user.
-   * node is an ExpirationNotification.
-   */
-  ExpirationNotificationRead = 'EXPIRATION_NOTIFICATION_READ',
-  /** Pantry item created, updated, or soft-deleted */
-  ItemChanged = 'ITEM_CHANGED',
-  /** Item quantity fell below minimum threshold */
-  LowStockAlert = 'LOW_STOCK_ALERT',
-  /** Pantry metadata changed (name, description, settings) */
-  PantryUpdated = 'PANTRY_UPDATED',
-  /** Pantry item usage recorded (consume, restock, adjust) */
-  UsageChanged = 'USAGE_CHANGED',
-  /** Item marked as waste or discarded */
-  WasteAlert = 'WASTE_ALERT'
-}
 
 /**
  * Filters for querying pantries.
@@ -9848,7 +9796,6 @@ export type PantryItem = {
   activeBatchCount: Scalars['Int']['output'];
   addedAt: Scalars['DateTime']['output'];
   addedBy: Maybe<User>;
-  batches: Array<PantryItemBatch>;
   brand: Maybe<Brand>;
   brandId: Maybe<Scalars['ID']['output']>;
   changeHistory: PantryItemChangeConnection;
@@ -9912,7 +9859,7 @@ export type PantryItemChangeHistoryArgs = {
 
 /** Real-time collaborative type - never cache */
 export type PantryItemLedgerArgs = {
-  filter?: InputMaybe<AnalyticsFilters>;
+  filters?: InputMaybe<AnalyticsFilters>;
 };
 
 
@@ -10168,6 +10115,37 @@ export type PantryStats = {
   totalItems: Scalars['Int']['output'];
   totalValue: Scalars['Float']['output'];
 };
+
+/** Subtype discriminator for pantry domain events. */
+export enum PantrySubtype {
+  /**
+   * An action was taken on an expiration notification (waste, restock,
+   * mark-consumed, etc.). node is an ExpirationNotification.
+   */
+  ExpirationActionTaken = 'EXPIRATION_ACTION_TAKEN',
+  /** Item expiration date approaching */
+  ExpirationAlert = 'EXPIRATION_ALERT',
+  /**
+   * A new expiration notification was created by the background
+   * expiration-check job. node is an ExpirationNotification.
+   */
+  ExpirationNotificationCreated = 'EXPIRATION_NOTIFICATION_CREATED',
+  /**
+   * An expiration notification was marked as read by the user.
+   * node is an ExpirationNotification.
+   */
+  ExpirationNotificationRead = 'EXPIRATION_NOTIFICATION_READ',
+  /** Pantry item created, updated, or soft-deleted */
+  ItemChanged = 'ITEM_CHANGED',
+  /** Item quantity fell below minimum threshold */
+  LowStockAlert = 'LOW_STOCK_ALERT',
+  /** Pantry metadata changed (name, description, settings) */
+  PantryUpdated = 'PANTRY_UPDATED',
+  /** Pantry item usage recorded (consume, restock, adjust) */
+  UsageChanged = 'USAGE_CHANGED',
+  /** Item marked as waste or discarded */
+  WasteAlert = 'WASTE_ALERT'
+}
 
 /** Source of a pantry item suggestion */
 export enum PantrySuggestionSource {
@@ -10846,7 +10824,7 @@ export type QueryBrandsArgs = {
 
 
 export type QueryCalculateRecipePantryDeficitArgs = {
-  householdId: Scalars['ID']['input'];
+  pantryId: Scalars['ID']['input'];
   recipeId: Scalars['ID']['input'];
   servings?: InputMaybe<Scalars['Float']['input']>;
 };
@@ -11858,6 +11836,26 @@ export type RegisterInput = {
   password: Scalars['String']['input'];
 };
 
+export type RegisterPayload = {
+  __typename: 'RegisterPayload';
+  /** Existence-blind confirmation to show the user; always present (String! so it merges with ValidationError.message when both are selected). */
+  message: Scalars['String']['output'];
+  status: RegistrationStatus;
+};
+
+export type RegisterResult = ConflictError | ForbiddenError | NotFoundError | RegisterPayload | ValidationError;
+
+/**
+ * Outcome of a registration request. Registration is existence-blind: the same
+ * status is returned whether or not the email is already registered, and no
+ * tokens are issued — the account is activated via the emailed verification
+ * link, then the user logs in (audit M11).
+ */
+export enum RegistrationStatus {
+  /** A verification link was sent (or would have been, for an available email). */
+  VerificationSent = 'VERIFICATION_SENT'
+}
+
 /** Input for rejecting a user-created item */
 export type RejectItemInput = {
   itemId: Scalars['ID']['input'];
@@ -11871,13 +11869,6 @@ export type RejectItemPayload = {
 };
 
 export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError;
-
-export type RelatedItemsResponse = {
-  __typename: 'RelatedItemsResponse';
-  complementaryItems: Array<ItemSuggestion>;
-  frequentlyBoughtTogether: Array<ItemSuggestion>;
-  similarItems: Array<ItemSuggestion>;
-};
 
 export enum ReligiousDiet {
   Halal = 'HALAL',
@@ -12515,7 +12506,7 @@ export type ShoppingListEdge = Edge & {
 export type ShoppingListEvent = {
   __typename: 'ShoppingListEvent';
   /** User who made the change. */
-  actorUserId: Scalars['ID']['output'];
+  actorUserId: Maybe<Scalars['ID']['output']>;
   /** Count of items cleared (ITEMS_BATCH_CLEARED only). */
   clearedCount: Maybe<Scalars['Int']['output']>;
   /** IDs of items that were cleared (ITEMS_BATCH_CLEARED only). */
@@ -12531,7 +12522,7 @@ export type ShoppingListEvent = {
   node: Maybe<ShoppingListEventNode>;
   /** Device/client that triggered the change (for echo suppression). */
   originatorClientId: Maybe<Scalars['ID']['output']>;
-  subtype: ShoppingListEventSubtype;
+  subtype: ShoppingListSubtype;
   timestamp: Scalars['DateTime']['output'];
   /**
    * Names of the fields that changed (LIST_UPDATED / STATUS_CHANGED /
@@ -12541,26 +12532,6 @@ export type ShoppingListEvent = {
 };
 
 export type ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem;
-
-/**
- * Subtype discriminator for shopping list domain events.
- * Values match the client-side changeType contract.
- */
-export enum ShoppingListEventSubtype {
-  /**
-   * A collaborator on the list was added, updated, or removed.
-   * node is a ShoppingListCollaborator; branch on collaborator.status.
-   */
-  CollaborationChanged = 'COLLABORATION_CHANGED',
-  /** Multiple items cleared from the list in one operation */
-  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
-  /** Shopping list item created, updated, or deleted */
-  ItemsChanged = 'ITEMS_CHANGED',
-  /** Shopping list metadata changed (name, settings, etc.) */
-  ListUpdated = 'LIST_UPDATED',
-  /** Shopping list status changed (ACTIVE / COMPLETED / etc.) */
-  StatusChanged = 'STATUS_CHANGED'
-}
 
 export type ShoppingListFilters = {
   homeId?: InputMaybe<Scalars['ID']['input']>;
@@ -12772,6 +12743,26 @@ export type ShoppingListSettingsInput = {
   priority?: InputMaybe<Scalars['Int']['input']>;
   smartSorting?: InputMaybe<Scalars['Boolean']['input']>;
 };
+
+/**
+ * Subtype discriminator for shopping list domain events.
+ * Values match the client-side changeType contract.
+ */
+export enum ShoppingListSubtype {
+  /**
+   * A collaborator on the list was added, updated, or removed.
+   * node is a ShoppingListCollaborator; branch on collaborator.status.
+   */
+  CollaborationChanged = 'COLLABORATION_CHANGED',
+  /** Multiple items cleared from the list in one operation */
+  ItemsBatchCleared = 'ITEMS_BATCH_CLEARED',
+  /** Shopping list item created, updated, or deleted */
+  ItemsChanged = 'ITEMS_CHANGED',
+  /** Shopping list metadata changed (name, settings, etc.) */
+  ListUpdated = 'LIST_UPDATED',
+  /** Shopping list status changed (ACTIVE / COMPLETED / etc.) */
+  StatusChanged = 'STATUS_CHANGED'
+}
 
 /**
  * A suggestion for adding an item to a shopping list.
@@ -13354,16 +13345,12 @@ export type Subscription = {
    * access.
    */
   myShoppingListsEvents: ShoppingListEvent;
-  /** Subscribe to dismissal events (lightweight payload — id only). */
-  notificationDismissed: NotificationActionPayload;
   /**
-   * Consolidated notification event stream for the current user (created +
-   * updated). Subscribe once and branch on subtype; for UPDATED, branch on
-   * node.status. Always scoped to the authenticated user.
+   * Consolidated notification event stream for the current user (created,
+   * updated, read, dismissed). Subscribe once and branch on subtype. Always
+   * scoped to the authenticated user.
    */
   notificationEvents: NotificationEvent;
-  /** Subscribe to read-state changes (lightweight payload — id only). */
-  notificationRead: NotificationActionPayload;
   /**
    * Subscribe to all pantry domain events for a single pantry.
    * Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
@@ -13385,8 +13372,6 @@ export type Subscription = {
    * Subscribe once and branch on subtype.
    */
   userEvents: UserEvent;
-  /** Subscribe to user moderation changes (ban / suspend / warn). */
-  userModerationChanged: UserModerationChangedPayload;
 };
 
 
@@ -13432,11 +13417,6 @@ export type SubscriptionStoreEventsArgs = {
 
 export type SubscriptionUserEventsArgs = {
   userId: Scalars['ID']['input'];
-};
-
-
-export type SubscriptionUserModerationChangedArgs = {
-  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 /**
@@ -13555,7 +13535,7 @@ export type SyncPantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   clientId: Scalars['ID']['input'];
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -14358,7 +14338,7 @@ export type UpdatePantryInput = {
 export type UpdatePantryItemInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  expiresAt?: InputMaybe<Scalars['String']['input']>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   id: Scalars['ID']['input'];
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
   isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
@@ -15096,8 +15076,8 @@ export type UserDevicesArgs = {
 export type UserExpirationNotificationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ExpirationNotificationFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
-  input?: InputMaybe<GetExpirationNotificationsInput>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ExpirationNotificationOrderBy>;
 };
@@ -15163,7 +15143,7 @@ export type UserMembershipsArgs = {
 export type UserNotificationsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
-  filter?: InputMaybe<NotificationFilters>;
+  filters?: InputMaybe<NotificationFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<NotificationOrderBy>;
@@ -15177,7 +15157,7 @@ export type UserNotificationsConnectionArgs = {
 export type UserPurchasesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
-  filter?: InputMaybe<PurchaseFilters>;
+  filters?: InputMaybe<PurchaseFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PurchaseOrderBy>;
@@ -15292,14 +15272,15 @@ export type UserEvent = {
    */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /**
-   * Mutation kind for ACCOUNT_UPDATED / PROFILE_CHANGED (always UPDATED).
-   * Null for lifecycle subtypes.
+   * Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
+   * and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
+   * WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
    */
-  mutation: Maybe<MutationType>;
+  mutation: MutationType;
   node: Maybe<UserEventNode>;
   parents: Maybe<UserEventParents>;
   reason: Maybe<Scalars['String']['output']>;
-  subtype: UserEventSubtype;
+  subtype: UserSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
   userId: Scalars['ID']['output'];
@@ -15314,8 +15295,8 @@ export type UserEvent = {
 export type UserEventNode = User | UserProfile;
 
 /**
- * Parent resource IDs for lifecycle subtypes, mirroring
- * UserLifecycleEventParents. Null for ACCOUNT_UPDATED / PROFILE_CHANGED.
+ * Parent resource IDs for lifecycle subtypes. Null for ACCOUNT_UPDATED /
+ * PROFILE_CHANGED.
  */
 export type UserEventParents = {
   __typename: 'UserEventParents';
@@ -15323,45 +15304,11 @@ export type UserEventParents = {
   shoppingListId: Maybe<Scalars['ID']['output']>;
 };
 
-/**
- * Subtype discriminator for the consolidated userEvents stream.
- * Carries the account/profile mutation subtypes plus every
- * UserLifecycleEventSubtype value (membership + moderation transitions),
- * so a single subscription replaces userUpdated + userProfileChanged +
- * userLifecycleEvents.
- */
-export enum UserEventSubtype {
-  AccountUpdated = 'ACCOUNT_UPDATED',
-  AddedToHome = 'ADDED_TO_HOME',
-  AddedToShoppingList = 'ADDED_TO_SHOPPING_LIST',
-  Banned = 'BANNED',
-  ProfileChanged = 'PROFILE_CHANGED',
-  RemovedFromHome = 'REMOVED_FROM_HOME',
-  RemovedFromShoppingList = 'REMOVED_FROM_SHOPPING_LIST',
-  Suspended = 'SUSPENDED',
-  Unbanned = 'UNBANNED',
-  Unsuspended = 'UNSUSPENDED',
-  Warned = 'WARNED'
-}
-
 /** Filter criteria for the admin users list query. */
 export type UserFilters = {
   /** Free-text search across username / email */
   search?: InputMaybe<Scalars['String']['input']>;
 };
-
-/** Subtype discriminator for important per-user lifecycle events. */
-export enum UserLifecycleEventSubtype {
-  AddedToHome = 'ADDED_TO_HOME',
-  AddedToShoppingList = 'ADDED_TO_SHOPPING_LIST',
-  Banned = 'BANNED',
-  RemovedFromHome = 'REMOVED_FROM_HOME',
-  RemovedFromShoppingList = 'REMOVED_FROM_SHOPPING_LIST',
-  Suspended = 'SUSPENDED',
-  Unbanned = 'UNBANNED',
-  Unsuspended = 'UNSUSPENDED',
-  Warned = 'WARNED'
-}
 
 export type UserModeration = {
   __typename: 'UserModeration';
@@ -15402,16 +15349,6 @@ export type UserModeration = {
   version: Scalars['Int']['output'];
   violationCount: Scalars['Int']['output'];
   warningCount: Scalars['Int']['output'];
-};
-
-export type UserModerationChangedPayload = {
-  __typename: 'UserModerationChangedPayload';
-  moderatedBy: Scalars['String']['output'];
-  moderationStatus: Scalars['String']['output'];
-  moderationType: Scalars['String']['output'];
-  reason: Maybe<Scalars['String']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
 };
 
 export type UserModerationConnection = Connection & {
@@ -15539,6 +15476,26 @@ export type UserStatistics = {
   user: User;
   userId: Scalars['ID']['output'];
 };
+
+/**
+ * Subtype discriminator for the consolidated userEvents stream.
+ * Carries the account/profile mutation subtypes plus every per-user
+ * lifecycle transition (home/shopping-list membership + moderation), so a
+ * single subscription replaces userUpdated + userProfileChanged.
+ */
+export enum UserSubtype {
+  AccountUpdated = 'ACCOUNT_UPDATED',
+  AddedToHome = 'ADDED_TO_HOME',
+  AddedToShoppingList = 'ADDED_TO_SHOPPING_LIST',
+  Banned = 'BANNED',
+  ProfileChanged = 'PROFILE_CHANGED',
+  RemovedFromHome = 'REMOVED_FROM_HOME',
+  RemovedFromShoppingList = 'REMOVED_FROM_SHOPPING_LIST',
+  Suspended = 'SUSPENDED',
+  Unbanned = 'UNBANNED',
+  Unsuspended = 'UNSUSPENDED',
+  Warned = 'WARNED'
+}
 
 export type ValidatePasswordResetTokenInput = {
   token: Scalars['String']['input'];

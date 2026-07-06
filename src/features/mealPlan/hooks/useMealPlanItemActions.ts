@@ -87,8 +87,8 @@ function buildOptimisticMealPlanItem(
   id: string,
   input: CreateMealPlanItemInput,
 ): OptimisticMealPlanItem {
-  const recipeCacheId = input.recipeId
-    ? cache.identify({ __typename: 'Recipe', id: input.recipeId })
+  const recipeCacheId = input.meal.recipeId
+    ? cache.identify({ __typename: 'Recipe', id: input.meal.recipeId })
     : undefined;
   const recipe = recipeCacheId
     ? cache.readFragment<MealPlanItemActions_RecipeRefFragment>({
@@ -103,7 +103,7 @@ function buildOptimisticMealPlanItem(
     id,
     date: input.date,
     mealType: input.mealType,
-    customMealName: input.customMealName ?? null,
+    customMealName: input.meal.customMealName ?? null,
     servings: input.servings ?? null,
     calories: input.calories ?? null,
     usedPantryItems: [],
@@ -220,8 +220,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         () =>
           writeItem({
             ...snapshot,
-            ...(input.customMealName !== undefined && {
-              customMealName: input.customMealName,
+            ...(input.meal?.customMealName !== undefined && {
+              customMealName: input.meal.customMealName,
             }),
             ...(input.servings !== undefined && { servings: input.servings }),
             ...(input.notes !== undefined && { notes: input.notes }),

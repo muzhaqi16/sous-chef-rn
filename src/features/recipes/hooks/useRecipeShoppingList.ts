@@ -181,13 +181,12 @@ export function useRecipeShoppingList({
         )
           return;
         executeCacheUpdate(() => {
-          const ingredientResult = response.result;
           const shoppingListId = variables.input.shoppingListId;
-          if (!ingredientResult.wasUpdated) {
+          if (!response.wasUpdated) {
             addNewItemToShoppingListCache(
               cache,
               shoppingListId,
-              ingredientResult.shoppingListItem,
+              response.shoppingListItem,
             );
           }
         }, 'Cache update failed for addRecipeIngredient:');
@@ -259,11 +258,13 @@ export function useRecipeShoppingList({
                 items: [
                   {
                     id: generateEntityId(),
-                    itemName: stripPriceFromName(
-                      ingredient.name ||
-                        ingredient.original ||
-                        'Unknown ingredient',
-                    ),
+                    item: {
+                      itemName: stripPriceFromName(
+                        ingredient.name ||
+                          ingredient.original ||
+                          'Unknown ingredient',
+                      ),
+                    },
                     quantity: ingredient.amount || 0,
                     unit: {
                       unitName:
@@ -362,9 +363,13 @@ export function useRecipeShoppingList({
               // to match each result back to its ingredient.
               id: generateEntityId(),
               clientId: String(ingredient.id || index),
-              itemName: stripPriceFromName(
-                ingredient.name || ingredient.original || 'Unknown ingredient',
-              ),
+              item: {
+                itemName: stripPriceFromName(
+                  ingredient.name ||
+                    ingredient.original ||
+                    'Unknown ingredient',
+                ),
+              },
               quantity: ingredient.amount || 0,
               unit: {
                 unitName:
@@ -473,7 +478,7 @@ export function useRecipeShoppingList({
             response?.__typename ===
             'CreateShoppingListItemFromRecipeIngredientPayload'
           ) {
-            if (response.result.wasUpdated) {
+            if (response.wasUpdated) {
               updatedCount++;
             } else {
               addedCount++;

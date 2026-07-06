@@ -179,7 +179,7 @@ describe('useMealTemplateEditor', () => {
         templateId: 'tpl-1',
         dayOffset: 0,
         mealType: MealType.Breakfast,
-        customMealName: 'Oats',
+        meal: { customMealName: 'Oats' },
         servings: 1,
       });
     });

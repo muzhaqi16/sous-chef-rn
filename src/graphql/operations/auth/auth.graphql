@@ -15,11 +15,17 @@ mutation Login($input: LoginInput!) {
 
 mutation Register($input: RegisterInput!) {
   register(input: $input) {
-    accessToken
-    refreshToken
-    user {
-      id
-      ...LoginUser
+    __typename
+    ... on RegisterPayload {
+      status
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }

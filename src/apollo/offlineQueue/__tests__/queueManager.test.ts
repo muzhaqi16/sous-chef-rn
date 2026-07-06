@@ -900,7 +900,7 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-1');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect(item.itemName).toBe('Bread');
+      expect((item.item as Record<string, unknown>).itemName).toBe('Bread');
       // FlexibleQuantity scalar — passed through, no unitId needed.
       expect(item.quantity).toBe(2);
     });
@@ -1071,7 +1071,7 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-9');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect(item.itemName).toBe('Cereal');
+      expect((item.item as Record<string, unknown>).itemName).toBe('Cereal');
       // Not dropped on sync replay (would be lost if it fell back to replay-original).
       expect(item.brand).toEqual({ brandId: 'b1' });
       expect(item.netWeight).toEqual({ netWeight: 500 });
@@ -1091,7 +1091,7 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-10');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect(item.itemId).toBe('cat-2');
+      expect((item.item as Record<string, unknown>).itemId).toBe('cat-2');
     });
 
     it('converts AddItemToShoppingListFromPantryItem → SyncShoppingListItem', () => {
@@ -1109,7 +1109,7 @@ describe('QueueManager', () => {
       const input = wrapper(convertToSyncMutation(mutation).syncVariables);
       expect(input.clientId).toBe('sl-11');
       const item = input.item as Record<string, unknown>;
-      expect(item.itemName).toBe('Rice');
+      expect((item.item as Record<string, unknown>).itemName).toBe('Rice');
       expect(item.quantity).toBe(3);
     });
   });

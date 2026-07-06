@@ -288,7 +288,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
 query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
     id
-    usageAnalytics(filter: $filter) {
+    usageAnalytics(filters: $filter) {
       totalUsageCount
       totalQuantityUsed
       averageUsagePerDay
@@ -326,7 +326,7 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
 query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
     id
-    wasteAnalytics(filter: $filter) {
+    wasteAnalytics(filters: $filter) {
       totalWasteCount
       totalWasteQuantity
       totalWasteValue
@@ -368,7 +368,7 @@ query GetPantryLedgerAnalytics(
 ) {
   pantry(id: $pantryId) {
     id
-    ledgerAnalytics(filter: $filter, granularity: $granularity) {
+    ledgerAnalytics(filters: $filter, granularity: $granularity) {
       granularity
       periodStart
       periodEnd
@@ -893,20 +893,22 @@ mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListIn
   addLowStockItemsToShoppingList(input: $input) {
     __typename
     ... on AddLowStockItemsToShoppingListPayload {
-      result {
-        addedCount
-        addedItems {
-          pantryItemId
-          shoppingListItemId
-          itemName
-          quantity
-        }
-        skippedCount
-        skippedItems {
-          pantryItemId
-          itemName
-          reason
-        }
+      addedItems {
+        pantryItemId
+        shoppingListItemId
+        itemName
+        quantity
+      }
+      skippedItems {
+        pantryItemId
+        itemName
+        reason
+      }
+      summary {
+        succeeded
+        skipped
+        total
+        failed
       }
     }
     ... on Error {
@@ -954,6 +956,10 @@ query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
         id
         ...PantryItemBatchFragment
       }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
     }
   }
 }

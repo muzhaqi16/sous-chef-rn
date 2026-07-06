@@ -270,10 +270,9 @@ describe('usePantryItemDetailActions', () => {
               id: expect.stringMatching(
                 /^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/,
               ),
-              itemId: 'catalog-1',
+              item: { itemId: 'catalog-1' },
               quantity: 3,
               unit: { unitId: 'unit-1' },
-              itemName: 'Milk',
             },
           ],
         },

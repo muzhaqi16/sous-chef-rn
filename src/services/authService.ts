@@ -548,44 +548,6 @@ async function handleLogin(
   return false;
 }
 
-async function handleRegistration(
-  registerResponse: ResolvedAuthPayload,
-  shouldRemember?: boolean,
-): Promise<void> {
-  if (!registerResponse?.user) return;
-
-  const { user, accessToken, refreshToken } = registerResponse;
-  const store = useStore.getState();
-
-  store.setAuth(user, accessToken, refreshToken);
-  bootstrapUserStore(user);
-
-  if (shouldRemember !== undefined) {
-    store.setRememberMe(shouldRemember);
-  }
-
-  if (user.id) {
-    store.setUserNavigationState(user.id, {
-      lastLoginTimestamp: Date.now(),
-      rememberMeChoice: shouldRemember,
-      isNewUser: true,
-    });
-  }
-
-  logger.info('Auth success: Registration successful');
-  requestIdleCallback(() => registerDeviceInBackground());
-
-  if (!user.emailVerified) {
-    store.setNavigationState('verification');
-    return;
-  }
-  if (!user.onBoarded) {
-    store.setNavigationState('onboarding');
-    return;
-  }
-  store.setNavigationState('main_app');
-}
-
 // --- Biometric prompting (moved from useBiometricPrompting, only the check logic) ---
 
 async function shouldShowPostLoginBiometricPrompt(targetUser: {
@@ -700,7 +662,13 @@ async function register(
       variables: { input },
     });
 
-    if (result.data?.register) {
+    const payload = result.data?.register;
+
+    if (payload?.__typename === 'RegisterPayload') {
+      // Registration is verification-first and existence-blind: the API sends
+      // an activation email and issues NO tokens. Do NOT set auth here — the
+      // user activates via the emailed link, then logs in. Persist the
+      // just-entered credentials so the post-verification login can prefill.
       store.setRegistrationPassword(input.password);
 
       // Persist to keychain (non-fatal)
@@ -711,17 +679,23 @@ async function register(
         logger.warn('Non-fatal: failed to persist registration password');
       }
 
-      if (result.data.register.user?.id) {
-        const prefs = getUserPreferences(result.data.register.user.id);
-        prefs?.clearRegistrationPreferences();
+      if (shouldRemember !== undefined) {
+        store.setRememberMe(shouldRemember);
       }
 
-      const unmaskedRegister = unmaskAuthPayload(result.data.register);
-      if (unmaskedRegister) {
-        await handleRegistration(unmaskedRegister, shouldRemember);
-      }
+      logger.info('Registration successful: verification email sent');
       store.setAuthIsLoading(false);
       return true;
+    }
+
+    if (payload) {
+      // Non-success union member (ValidationError / ConflictError /
+      // ForbiddenError / NotFoundError). It resolves 200 with no transport
+      // error, so surface its message the way handleAuthError surfaces
+      // transport failures — a toast — and stay on the sign-up screen.
+      toastService.error(payload.message);
+      store.setAuthIsLoading(false);
+      return false;
     }
 
     if (result.error) {
@@ -844,7 +818,6 @@ export const authService = {
 
   // Post-auth flow handlers
   handleLogin,
-  handleRegistration,
   handleAuthError,
 
   // Credential management

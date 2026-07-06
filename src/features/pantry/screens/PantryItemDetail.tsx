@@ -17,7 +17,10 @@ import {
   type PantryItemDetail_PantryItemFragment,
 } from '#features/pantry/screens/PantryItemDetail.generated';
 import { useTranslation } from 'react-i18next';
-import { GetPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  GetPantryItemDocument,
+  GetPantryItemBatchesDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import {
   useSelectedShoppingListId,
   useSelectedPantryId,
@@ -95,6 +98,16 @@ export const PantryItemDetail: React.FC<
   });
   const client = useApolloClient();
 
+  // Batches are no longer an inline field on PantryItem — they're a Relay
+  // connection. Fetch all of them (no status filter) so the active list AND the
+  // "show all inactive" affordance in BatchSection both have their data.
+  // `cache-and-network` paints from the persisted cache on cold start and
+  // refreshes after a batch is opened/wasted.
+  const { data: batchesData } = useQuery(GetPantryItemBatchesDocument, {
+    variables: { pantryItemId: itemId },
+    fetchPolicy: 'cache-and-network',
+  });
+
   const handleRefresh = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
@@ -134,6 +147,20 @@ export const PantryItemDetail: React.FC<
           from: data.pantryItem,
         })
       : null;
+
+  // Connection edges arrive as masked refs — materialize each into the full
+  // PantryItemBatchFragment via cache.readFragment so status/expiresAt reads and
+  // BatchSection's sort/filter work directly.
+  const batches: PantryItemBatchFragment[] =
+    batchesData?.pantryItemBatchesConnection?.edges
+      ?.map(edge =>
+        client.cache.readFragment<PantryItemBatchFragment>({
+          fragment: PantryItemBatchFragmentDoc,
+          fragmentName: 'PantryItemBatchFragment',
+          from: edge.node,
+        }),
+      )
+      .filter((b): b is PantryItemBatchFragment => b != null) ?? [];
 
   const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
     item?.itemName ?? undefined,
@@ -210,22 +237,16 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  // batches are masked fragment refs — materialize each via cache.readFragment
-  // to inspect status/expiresAt for the discard-expired affordance.
+  // `batches` are already materialized above — inspect status/expiresAt for the
+  // discard-expired affordance.
   const hasExpiredBatches =
     (item.condition === 'EXPIRED' && item.quantity > 0) ||
-    item.batches?.some(batchRef => {
-      const batch = client.cache.readFragment<PantryItemBatchFragment>({
-        fragment: PantryItemBatchFragmentDoc,
-        fragmentName: 'PantryItemBatchFragment',
-        from: batchRef,
-      });
-      return (
-        batch?.status === 'ACTIVE' &&
+    batches.some(
+      batch =>
+        batch.status === 'ACTIVE' &&
         !!batch.expiresAt &&
-        new Date(batch.expiresAt) < new Date()
-      );
-    });
+        new Date(batch.expiresAt) < new Date(),
+    );
 
   const discardActions: HeaderAction[] =
     hasExpiredBatches && permissions.canEditItems
@@ -384,10 +405,10 @@ export const PantryItemDetail: React.FC<
           />
         </DetailSection>
 
-        {!!item.batches && item.batches.length > 1 && (
+        {batches.length > 1 && (
           <DetailSection flush>
             <BatchSection
-              batches={item.batches}
+              batches={batches}
               pantryItemId={item.id}
               unitSymbol={item.unit?.symbol ?? undefined}
             />

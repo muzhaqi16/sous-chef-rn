@@ -446,22 +446,20 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   createShoppingListItemFromRecipeIngredient(input: $input) {
     __typename
     ... on CreateShoppingListItemFromRecipeIngredientPayload {
-      result {
-        shoppingListItem {
+      shoppingListItem {
+        id
+        itemName
+        quantity
+        unit {
           id
-          itemName
-          quantity
-          unit {
-            id
-            name
-            symbol
-          }
+          name
+          symbol
         }
-        previousQuantity
-        quantityAdded
-        wasUpdated
-        unitConversionApplied
       }
+      previousQuantity
+      quantityAdded
+      wasUpdated
+      unitConversionApplied
     }
     ... on Error {
       code

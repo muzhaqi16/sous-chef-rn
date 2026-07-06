@@ -10,7 +10,7 @@ import {
 import {
   NotificationType,
   NotificationCategory,
-  NotificationEventSubtype,
+  NotificationSubtype,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
@@ -239,7 +239,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         });
       if (!rawNotification) return;
 
-      if (event.subtype === NotificationEventSubtype.Created) {
+      if (event.subtype === NotificationSubtype.Created) {
         // New notification (RECEIVED equivalent)
         const sp = rawNotification.priority;
         const mappedPriority =
@@ -270,7 +270,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
           },
           rawNotification.category ?? NotificationCategory.System,
         );
-      } else if (event.subtype === NotificationEventSubtype.Updated) {
+      } else if (event.subtype === NotificationSubtype.Updated) {
         // Status changes — read, dismissed, expired
         const status = rawNotification.status;
         if (status === 'READ' || status === 'CLICKED') {

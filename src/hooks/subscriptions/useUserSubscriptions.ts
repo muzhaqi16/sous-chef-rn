@@ -30,7 +30,7 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { UserEventSubtype } from '#/graphql/generated/schemaTypes';
+import { UserSubtype } from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -101,9 +101,9 @@ function handleAddedToShoppingList() {
 
 function handleBannedOrSuspended(
   payload: UserEventPayload,
-  subtype: UserEventSubtype,
+  subtype: UserSubtype,
 ) {
-  const label = subtype === UserEventSubtype.Banned ? 'banned' : 'suspended';
+  const label = subtype === UserSubtype.Banned ? 'banned' : 'suspended';
   const reason = payload.reason ? `: ${payload.reason}` : '';
   toastService.error(`Your account has been ${label}${reason}`);
   authService.logout();
@@ -133,39 +133,39 @@ export function useUserSubscriptions(userId?: string) {
         // Apollo auto-normalizes the User / UserProfile node by id; no manual
         // cache work needed (mirrors the former userUpdated / userProfileChanged
         // subscriptions, which had no handler).
-        case UserEventSubtype.AccountUpdated:
-        case UserEventSubtype.ProfileChanged:
+        case UserSubtype.AccountUpdated:
+        case UserSubtype.ProfileChanged:
           break;
 
-        case UserEventSubtype.RemovedFromHome:
+        case UserSubtype.RemovedFromHome:
           handleRemovedFromHome(payload, client, selectedHomeId);
           break;
 
-        case UserEventSubtype.AddedToHome:
+        case UserSubtype.AddedToHome:
           handleAddedToHome(client);
           break;
 
-        case UserEventSubtype.RemovedFromShoppingList:
+        case UserSubtype.RemovedFromShoppingList:
           handleRemovedFromShoppingList(payload, client);
           break;
 
-        case UserEventSubtype.AddedToShoppingList:
+        case UserSubtype.AddedToShoppingList:
           handleAddedToShoppingList();
           break;
 
-        case UserEventSubtype.Banned:
-        case UserEventSubtype.Suspended:
+        case UserSubtype.Banned:
+        case UserSubtype.Suspended:
           handleBannedOrSuspended(payload, payload.subtype);
           break;
 
-        case UserEventSubtype.Warned:
+        case UserSubtype.Warned:
           toastService.error(
             payload.reason || 'You received a warning from a moderator',
           );
           break;
 
-        case UserEventSubtype.Unbanned:
-        case UserEventSubtype.Unsuspended:
+        case UserSubtype.Unbanned:
+        case UserSubtype.Unsuspended:
           break;
       }
     },
