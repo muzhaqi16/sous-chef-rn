@@ -1179,7 +1179,7 @@ export type ChangePasswordInput = {
 
 export type ChangePasswordPayload = {
   __typename: 'ChangePasswordPayload';
-  message: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
   status: PasswordActionStatus;
 };
 
@@ -3480,7 +3480,7 @@ export type ForgotPasswordInput = {
 
 export type ForgotPasswordPayload = {
   __typename: 'ForgotPasswordPayload';
-  message: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
   status: PasswordActionStatus;
 };
 
@@ -12018,7 +12018,7 @@ export type ResetPasswordInput = {
 
 export type ResetPasswordPayload = {
   __typename: 'ResetPasswordPayload';
-  message: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
   status: PasswordActionStatus;
 };
 
@@ -15503,7 +15503,7 @@ export type ValidatePasswordResetTokenInput = {
 
 export type ValidatePasswordResetTokenPayload = {
   __typename: 'ValidatePasswordResetTokenPayload';
-  message: Maybe<Scalars['String']['output']>;
+  message: Scalars['String']['output'];
   status: PasswordActionStatus;
   userId: Maybe<Scalars['ID']['output']>;
 };

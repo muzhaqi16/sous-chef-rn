@@ -1287,7 +1287,7 @@ input ChangePasswordInput {
 }
 
 type ChangePasswordPayload {
-  message: String
+  message: String!
   status: PasswordActionStatus!
 }
 
@@ -3515,7 +3515,7 @@ input ForgotPasswordInput {
 }
 
 type ForgotPasswordPayload {
-  message: String
+  message: String!
   status: PasswordActionStatus!
 }
 
@@ -8452,7 +8452,7 @@ input ResetPasswordInput {
 }
 
 type ResetPasswordPayload {
-  message: String
+  message: String!
   status: PasswordActionStatus!
 }
 
@@ -11497,7 +11497,7 @@ input ValidatePasswordResetTokenInput {
 }
 
 type ValidatePasswordResetTokenPayload {
-  message: String
+  message: String!
   status: PasswordActionStatus!
   userId: ID
 }
