@@ -5,35 +5,39 @@
 query MyShoppingListInvites {
   me {
     id
-    pendingCollaborationInvites {
-      id
-      token
-      shoppingListId
-      collaboratorId
-      email
-      role
-      status
-      canEdit
-      canAddItems
-      canRemoveItems
-      canMarkPurchased
-      canInviteOthers
-      invitedAt
-      expiresAt
-      shoppingList {
-        id
-        name
-        description
-      }
-      collaborator {
-        id
-        email
-        profile { id displayName avatar }
-      }
-      invitedBy {
-        id
-        email
-        profile { id displayName avatar }
+    pendingCollaborationInvitesConnection {
+      edges {
+        node {
+          id
+          token
+          shoppingListId
+          collaboratorId
+          email
+          role
+          status
+          canEdit
+          canAddItems
+          canRemoveItems
+          canMarkPurchased
+          canInviteOthers
+          invitedAt
+          expiresAt
+          shoppingList {
+            id
+            name
+            description
+          }
+          collaborator {
+            id
+            email
+            profile { id displayName avatar }
+          }
+          invitedBy {
+            id
+            email
+            profile { id displayName avatar }
+          }
+        }
       }
     }
   }

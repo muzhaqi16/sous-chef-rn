@@ -175,6 +175,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "AdminUpdateUserResult": [
+      "AdminUpdateUserPayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ApproveAndMergeResult": [
       "ApproveAndMergePayload",
       "ConflictError",
@@ -316,6 +323,7 @@
       "ExpirationNotificationConnection",
       "HomeConnection",
       "HomeInviteConnection",
+      "HomeOwnershipConnection",
       "InviteLogConnection",
       "ItemConnection",
       "ItemPriceHistoryConnection",
@@ -833,6 +841,7 @@
       "ExpirationNotificationEdge",
       "HomeEdge",
       "HomeInviteEdge",
+      "HomeOwnershipEdge",
       "InviteLogEdge",
       "ItemEdge",
       "ItemPriceHistoryEdge",
@@ -1295,6 +1304,13 @@
       "TransferHomeOwnershipPayload",
       "ValidationError"
     ],
+    "UpdateAccountResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateAccountPayload",
+      "ValidationError"
+    ],
     "UpdateBrandResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1601,13 +1617,6 @@
       "ForbiddenError",
       "NotFoundError",
       "UpdateUserRestrictionsPayload",
-      "ValidationError"
-    ],
-    "UpdateUserResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "UpdateUserPayload",
       "ValidationError"
     ],
     "UpsertExternalRecipeResult": [

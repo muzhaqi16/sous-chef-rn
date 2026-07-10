@@ -12,7 +12,7 @@
  * - Membership changes (join/leave, role/permission updates) — Apollo
  *   auto-normalizes the Membership entity by id.
  * - Invite lifecycle (created/accepted/declined/revoked) — maintains
- *   me.pendingHomeInvites.
+ *   me.pendingHomeInvitesConnection.
  */
 
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
@@ -29,20 +29,21 @@ import {
 } from '#/services/subscriptions/types';
 import { logger } from '#/utils/environment';
 import {
-  createAddToParentArrayUpdater,
-  createRemoveFromParentArrayUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
-// Invite array updaters — module scope (constant config, no closure deps).
-const addInviteToCache = createAddToParentArrayUpdater<{ id: string }>(
+// Invite connection updaters — module scope (constant config, no closure deps).
+const addInviteToCache = createAddToParentConnectionUpdater<{ id: string }>(
   'User',
-  'pendingHomeInvites',
+  'pendingHomeInvitesConnection',
+  'HomeInvite',
 );
-const removeInviteFromCache = createRemoveFromParentArrayUpdater(
+const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
   'User',
-  'pendingHomeInvites',
+  'pendingHomeInvitesConnection',
   'HomeInvite',
 );
 
@@ -90,15 +91,15 @@ export function useHomeSubscriptions(userId?: string) {
         case HomeSubtype.MembershipRoleChanged:
           break;
 
-        // New invite sent → add to me.pendingHomeInvites.
+        // New invite sent → add to me.pendingHomeInvitesConnection.
         case HomeSubtype.InviteCreated:
           if (userId && payload.node.__typename === 'HomeInvite') {
             addInviteToCache(client.cache, userId, payload.node);
           }
           break;
 
-        // Invite accepted/declined/revoked → remove from me.pendingHomeInvites
-        // and evict the entity.
+        // Invite accepted/declined/revoked → remove from
+        // me.pendingHomeInvitesConnection and evict the entity.
         case HomeSubtype.InviteAccepted:
         case HomeSubtype.InviteDeclined:
         case HomeSubtype.InviteRevoked:

@@ -98,7 +98,7 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentArrayUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
 }));
 
@@ -154,7 +154,10 @@ function pendingInvitesRefetchMock(): MockedResponse {
         me: {
           __typename: 'User',
           id: 'u1',
-          pendingHomeInvites: [],
+          pendingHomeInvitesConnection: {
+            __typename: 'HomeInviteConnection',
+            edges: [],
+          },
         },
       },
     },
@@ -167,7 +170,10 @@ function myShoppingListInvitesRefetchMock(): MockedResponse {
       me: {
         __typename: 'User',
         id: 'u1',
-        pendingCollaborationInvites: [],
+        pendingCollaborationInvitesConnection: {
+          __typename: 'ShoppingListCollaboratorConnection',
+          edges: [],
+        },
       },
     },
   }).mock;
@@ -351,7 +357,10 @@ function noTokenLookupMock(): MockedResponse {
       me: {
         __typename: 'User',
         id: 'u1',
-        pendingCollaborationInvites: [],
+        pendingCollaborationInvitesConnection: {
+          __typename: 'ShoppingListCollaboratorConnection',
+          edges: [],
+        },
       },
     },
   }).mock;

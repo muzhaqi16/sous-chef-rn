@@ -74,10 +74,10 @@ query CanDeleteAccount {
 # MUTATIONS
 # ============================================
 
-mutation UpdateUser($input: UpdateUserInput!) {
-  updateUser(input: $input) {
+mutation UpdateAccount($input: UpdateAccountInput!) {
+  updateAccount(input: $input) {
     __typename
-    ... on UpdateUserPayload {
+    ... on UpdateAccountPayload {
       user {
         id
         email

@@ -512,6 +512,29 @@ export type AdminUpdateRecipePayload = {
 
 export type AdminUpdateRecipeResult = AdminUpdateRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Admin-authority twin of updateAccount — updates any user's User row,
+ * including privileged fields. Gated by @requireSystemRole(role: ADMIN); the
+ * SUPER_ADMIN role ceiling is enforced in the service.
+ */
+export type AdminUpdateUserInput = {
+  deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
+  email?: InputMaybe<Scalars['String']['input']>;
+  emailVerified?: InputMaybe<Scalars['Boolean']['input']>;
+  id: Scalars['ID']['input'];
+  onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
+  preferredCurrency?: InputMaybe<Scalars['String']['input']>;
+  role?: InputMaybe<UserRole>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type AdminUpdateUserPayload = {
+  __typename: 'AdminUpdateUserPayload';
+  user: User;
+};
+
+export type AdminUpdateUserResult = AdminUpdateUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 /** Result of quantity aggregation (add/subtract) */
 export type AggregationResult = {
   __typename: 'AggregationResult';
@@ -628,13 +651,12 @@ export type AutocompleteCategoryInput = {
 };
 
 /**
- * Sanctioned exception to the "no ad-hoc *Response list envelope" convention
- * (graphql-operation-conventions), mirroring AutocompleteResponse: a bounded,
- * ranked top-N suggestion set where `totalCount` is meaningful, retained
- * deliberately rather than converted to a connection or a bare list.
+ * Mirrors AutocompleteResult: a bounded, ranked top-N suggestion set where
+ * `totalCount` is meaningful, retained as an envelope rather than a connection
+ * or bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
  */
-export type AutocompleteCategoryResponse = {
-  __typename: 'AutocompleteCategoryResponse';
+export type AutocompleteCategoryResult = {
+  __typename: 'AutocompleteCategoryResult';
   suggestions: Array<CategorySuggestion>;
   totalCount: Scalars['Int']['output'];
 };
@@ -647,14 +669,13 @@ export type AutocompleteInput = {
 };
 
 /**
- * Sanctioned exception to the "no ad-hoc *Response list envelope" convention
- * (graphql-operation-conventions). Autocomplete returns a bounded, ranked top-N
- * suggestion set, not a growable Relay list; `totalCount` (how many items matched
- * beyond the returned suggestions) is meaningful here, so the envelope is retained
- * deliberately rather than converted to a connection or a bare list.
+ * Autocomplete returns a bounded, ranked top-N suggestion set (not a growable
+ * Relay list); `totalCount` (how many items matched beyond the returned
+ * suggestions) is meaningful, so it stays an envelope rather than a connection or
+ * bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
  */
-export type AutocompleteResponse = {
-  __typename: 'AutocompleteResponse';
+export type AutocompleteResult = {
+  __typename: 'AutocompleteResult';
   suggestions: Array<ItemSuggestion>;
   totalCount: Scalars['Int']['output'];
 };
@@ -785,7 +806,6 @@ export type BrandConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Brand connection for pagination */
 export type BrandEdge = Edge & {
   __typename: 'BrandEdge';
   cursor: Scalars['String']['output'];
@@ -1118,7 +1138,6 @@ export type CategoryConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Category connection for pagination (Relay spec) */
 export type CategoryEdge = Edge & {
   __typename: 'CategoryEdge';
   cursor: Scalars['String']['output'];
@@ -1501,7 +1520,6 @@ export type CookingLogConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Cooking log connection for pagination */
 export type CookingLogEdge = Edge & {
   __typename: 'CookingLogEdge';
   cursor: Scalars['String']['output'];
@@ -1671,6 +1689,7 @@ export type CreateImageUploadUrlInput = {
 
 export type CreateImageUploadUrlPayload = {
   __typename: 'CreateImageUploadUrlPayload';
+  fields: Array<UploadFormField>;
   key: Scalars['String']['output'];
   url: Scalars['String']['output'];
 };
@@ -2882,7 +2901,6 @@ export type DeviceDetailsInput = {
   supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
 };
 
-/** Device connection for pagination */
 export type DeviceEdge = Edge & {
   __typename: 'DeviceEdge';
   cursor: Scalars['String']['output'];
@@ -3310,7 +3328,6 @@ export type ExpirationNotificationConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Expiration notification connection for pagination */
 export type ExpirationNotificationEdge = Edge & {
   __typename: 'ExpirationNotificationEdge';
   cursor: Scalars['String']['output'];
@@ -3730,7 +3747,6 @@ export type HomeConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Home connection for pagination */
 export type HomeEdge = Edge & {
   __typename: 'HomeEdge';
   cursor: Scalars['String']['output'];
@@ -3817,7 +3833,6 @@ export type HomeInviteConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Home invite connection for pagination */
 export type HomeInviteEdge = Edge & {
   __typename: 'HomeInviteEdge';
   cursor: Scalars['String']['output'];
@@ -3853,6 +3868,19 @@ export type HomeOwnership = {
   transferredFrom: Maybe<Scalars['String']['output']>;
   user: User;
   userId: Scalars['ID']['output'];
+};
+
+export type HomeOwnershipConnection = Connection & {
+  __typename: 'HomeOwnershipConnection';
+  edges: Array<HomeOwnershipEdge>;
+  pageInfo: PageInfo;
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+export type HomeOwnershipEdge = Edge & {
+  __typename: 'HomeOwnershipEdge';
+  cursor: Scalars['String']['output'];
+  node: HomeOwnership;
 };
 
 /** Custom permissions that can override default role permissions */
@@ -4120,7 +4148,6 @@ export type InviteLogConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Invite log connection for pagination */
 export type InviteLogEdge = Edge & {
   __typename: 'InviteLogEdge';
   cursor: Scalars['String']['output'];
@@ -4387,7 +4414,6 @@ export type ItemDuplicateClusterPage = {
   totalCount: Scalars['Int']['output'];
 };
 
-/** Item connection for pagination (Relay spec) */
 export type ItemEdge = Edge & {
   __typename: 'ItemEdge';
   cursor: Scalars['String']['output'];
@@ -4508,7 +4534,6 @@ export type ItemPriceHistoryConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Item price history connection for pagination */
 export type ItemPriceHistoryEdge = Edge & {
   __typename: 'ItemPriceHistoryEdge';
   cursor: Scalars['String']['output'];
@@ -4570,7 +4595,6 @@ export type ItemStoreSkuConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Item store SKU connection for pagination */
 export type ItemStoreSkuEdge = Edge & {
   __typename: 'ItemStoreSkuEdge';
   cursor: Scalars['String']['output'];
@@ -4680,7 +4704,6 @@ export type ItemUnitConversionConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Item unit conversion connection for pagination */
 export type ItemUnitConversionEdge = Edge & {
   __typename: 'ItemUnitConversionEdge';
   cursor: Scalars['String']['output'];
@@ -4976,7 +4999,6 @@ export type LoginHistoryConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Login history connection for pagination */
 export type LoginHistoryEdge = Edge & {
   __typename: 'LoginHistoryEdge';
   cursor: Scalars['String']['output'];
@@ -5354,7 +5376,6 @@ export type MealPlanConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Meal plan connection for pagination */
 export type MealPlanEdge = Edge & {
   __typename: 'MealPlanEdge';
   cursor: Scalars['String']['output'];
@@ -5515,7 +5536,6 @@ export type MealTemplateConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Meal template connection for pagination */
 export type MealTemplateEdge = Edge & {
   __typename: 'MealTemplateEdge';
   cursor: Scalars['String']['output'];
@@ -5627,7 +5647,6 @@ export type MembershipConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Membership connection for pagination */
 export type MembershipEdge = Edge & {
   __typename: 'MembershipEdge';
   cursor: Scalars['String']['output'];
@@ -5928,9 +5947,11 @@ export type Mutation = {
   /** Add a new address to the current user's account. */
   addUserAddress: AddUserAddressResult;
   /**
-   * Adjust pantry item quantity to match a physical count.
-   * Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
-   * The delta (positive or negative) is calculated automatically.
+   * Adjust pantry item quantity to match a physical count. Creates an ADJUSTMENT
+   * usage record with a mandatory reason for the audit trail; the delta
+   * (positive or negative) is computed automatically. For a plain quantity set
+   * with no audit record, use updatePantryItemQuantity — the two are intentional
+   * §5 variants: audited adjust vs. quick set.
    */
   adjustPantryItemQuantity: AdjustPantryItemQuantityResult;
   /**
@@ -6039,6 +6060,13 @@ export type Mutation = {
   createRecurringShoppingList: CreateRecurringShoppingListResult;
   /** Create a new shopping list. */
   createShoppingList: CreateShoppingListResult;
+  /**
+   * Add a SINGLE recipe ingredient to a shopping list (smart-merge: if the item
+   * already exists, quantities are added with unit conversion). This is the
+   * per-ingredient variant of createShoppingListItemsFromRecipe (which adds the
+   * whole recipe at once) — the two are intentional §5 variants, not duplicates:
+   * use this to add one ingredient, the plural op to add them all.
+   */
   createShoppingListItemFromRecipeIngredient: CreateShoppingListItemFromRecipeIngredientResult;
   /**
    * Add every ingredient of a recipe to a shopping list in full (scaling
@@ -6335,6 +6363,11 @@ export type Mutation = {
   toggleShoppingListItemPurchased: ToggleShoppingListItemPurchasedResult;
   /** Transfer ownership of a home to another member. */
   transferHomeOwnership: TransferHomeOwnershipResult;
+  /**
+   * Update the current user's own account (non-privileged, self-editable
+   * fields only). Privileged changes go through adminUpdateUser.
+   */
+  updateAccount: UpdateAccountResult;
   /** Update an existing brand. */
   updateBrand: UpdateBrandResult;
   /** Update an existing category. */
@@ -6405,7 +6438,13 @@ export type Mutation = {
   updatePantryItem: UpdatePantryItemResult;
   /** Move a pantry item to a different storage location. */
   updatePantryItemLocation: UpdatePantryItemLocationResult;
-  /** Update pantry item quantity (supports fractions) */
+  /**
+   * Set a pantry item's quantity directly (supports fractions). A plain setter
+   * with no audit record. When reconciling to a physical count and you want an
+   * auditable ADJUSTMENT usage record (mandatory reason, auto-computed delta),
+   * use adjustPantryItemQuantity instead — the two are intentional §5 variants:
+   * quick set vs. audited adjust.
+   */
   updatePantryItemQuantity: UpdatePantryItemQuantityResult;
   /**
    * Update user profile. Handles all profile fields including avatar and cover image.
@@ -6442,14 +6481,27 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   updateStorageLocationOrder: UpdateStorageLocationOrderResult;
+  /**
+   * Admin-managed canonical store fields (name, address, pricing/quality
+   * metadata). Distinct from updateStoreInfo, which lets any authed user
+   * contribute contact/location/hours details — the two are intentional §5
+   * variants by audience and field set, not duplicates. NOTE (F25): their id
+   * argument names differ (this input uses `id`, UpdateStoreInfoInput uses
+   * `storeId`); unify to `id` in the next coordinated breaking cutover.
+   */
   updateStore: UpdateStoreResult;
+  /**
+   * User-contributed store details (phone, email, website, lat/lng, hours).
+   * Distinct from the admin-managed updateStore (canonical name/address/pricing)
+   * — the two are intentional §5 variants by audience and field set. NOTE (F25):
+   * this input's id argument is `storeId` while UpdateStoreInput uses `id`;
+   * unify to `id` in the next coordinated breaking cutover.
+   */
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
   updateTemplateItem: UpdateTemplateItemResult;
   /** Update an existing unit of measurement. */
   updateUnit: UpdateUnitResult;
-  /** Update a user's account details. */
-  updateUser: UpdateUserResult;
   /** Update an existing user address. */
   updateUserAddress: UpdateUserAddressResult;
   /**
@@ -6469,8 +6521,6 @@ export type Mutation = {
   validatePasswordResetToken: ValidatePasswordResetTokenResult;
   /** Verify a user's email address using a verification code. */
   verifyEmail: VerifyEmailResult;
-  /** Manually verify a user's email address (admin use). */
-  verifyUserEmail: VerifyUserEmailResult;
   /**
    * Waste a specific batch within a pantry item.
    * Only the targeted batch is zeroed out; other batches remain active.
@@ -8463,6 +8513,19 @@ export type MutationTransferHomeOwnershipArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationUpdateAccountArgs = {
+  input: UpdateAccountInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationUpdateBrandArgs = {
   input: UpdateBrandInput;
 };
@@ -8996,19 +9059,6 @@ export type MutationUpdateUnitArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationUpdateUserArgs = {
-  input: UpdateUserInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationUpdateUserAddressArgs = {
   input: UpdateUserAddressInput;
 };
@@ -9089,19 +9139,6 @@ export type MutationValidatePasswordResetTokenArgs = {
  */
 export type MutationVerifyEmailArgs = {
   input: VerifyEmailInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationVerifyUserEmailArgs = {
-  input: VerifyUserEmailInput;
 };
 
 
@@ -9264,7 +9301,6 @@ export type NotificationConnection = Connection & {
   edges: Array<NotificationEdge>;
   pageInfo: PageInfo;
   totalCount: Maybe<Scalars['Int']['output']>;
-  unreadCount: Scalars['Int']['output'];
 };
 
 export enum NotificationDeliveryStatus {
@@ -9287,13 +9323,24 @@ export type NotificationEdge = Edge & {
  * notificationUpdated (and the former lightweight notificationRead /
  * notificationDismissed streams) — subscribe once and branch on subtype.
  * READ / DISMISSED are derived from the notification's status on update, so
- * read-state and dismissal transitions arrive on this stream too.
+ * read-state and dismissal transitions arrive on this stream too. Bulk
+ * operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
  */
 export type NotificationEvent = {
   __typename: 'NotificationEvent';
   actorUserId: Maybe<Scalars['ID']['output']>;
+  /**
+   * Number of notifications affected by an aggregate subtype (BULK_READ /
+   * BULK_CLEARED / BULK_EXPIRED). Null for per-entity subtypes.
+   */
+  affectedCount: Maybe<Scalars['Int']['output']>;
   mutation: MutationType;
-  node: Notification;
+  /**
+   * The changed notification for per-entity subtypes. Null for the aggregate
+   * subtypes (BULK_READ / BULK_CLEARED / BULK_EXPIRED), which describe a
+   * set-based mutation with no single node — read affectedCount instead.
+   */
+  node: Maybe<Notification>;
   subtype: NotificationSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
@@ -9391,8 +9438,18 @@ export enum NotificationStatus {
   Sent = 'SENT'
 }
 
-/** Subtype discriminator for the consolidated notificationEvents stream. */
+/**
+ * Subtype discriminator for the consolidated notificationEvents stream.
+ * BULK_READ / BULK_CLEARED / BULK_EXPIRED are aggregate subtypes emitted once
+ * per set-based operation (markAllAsRead / deleteAllRead / the system-driven
+ * expiry cleanup) — they carry affectedCount and a null node instead of a
+ * single changed notification. BULK_EXPIRED is the system-expiry counterpart to
+ * the user-initiated BULK_CLEARED.
+ */
 export enum NotificationSubtype {
+  BulkCleared = 'BULK_CLEARED',
+  BulkExpired = 'BULK_EXPIRED',
+  BulkRead = 'BULK_READ',
   Created = 'CREATED',
   Dismissed = 'DISMISSED',
   Read = 'READ',
@@ -9744,7 +9801,6 @@ export type PantryDeficit = {
   unit: Unit;
 };
 
-/** Pantry connection for pagination */
 export type PantryEdge = Edge & {
   __typename: 'PantryEdge';
   cursor: Scalars['String']['output'];
@@ -9898,7 +9954,6 @@ export type PantryItemBatch = {
   wasteReason: Maybe<WasteReason>;
 };
 
-/** Relay connection of pantry item batches for a single pantry item. */
 export type PantryItemBatchConnection = Connection & {
   __typename: 'PantryItemBatchConnection';
   edges: Array<PantryItemBatchEdge>;
@@ -9906,7 +9961,6 @@ export type PantryItemBatchConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Relay edge for a pantry item batch. */
 export type PantryItemBatchEdge = Edge & {
   __typename: 'PantryItemBatchEdge';
   cursor: Scalars['String']['output'];
@@ -9940,7 +9994,6 @@ export type PantryItemChange = {
   source: ChangeSource;
 };
 
-/** Connection type for paginated PantryItemChange results */
 export type PantryItemChangeConnection = Connection & {
   __typename: 'PantryItemChangeConnection';
   edges: Array<PantryItemChangeEdge>;
@@ -9948,7 +10001,6 @@ export type PantryItemChangeConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Edge type for PantryItemChange pagination */
 export type PantryItemChangeEdge = Edge & {
   __typename: 'PantryItemChangeEdge';
   cursor: Scalars['String']['output'];
@@ -9962,7 +10014,6 @@ export type PantryItemConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Pantry item connection for pagination */
 export type PantryItemEdge = Edge & {
   __typename: 'PantryItemEdge';
   cursor: Scalars['String']['output'];
@@ -10086,7 +10137,6 @@ export type PantryItemUsageConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Pantry item usage connection for pagination */
 export type PantryItemUsageEdge = Edge & {
   __typename: 'PantryItemUsageEdge';
   cursor: Scalars['String']['output'];
@@ -10389,7 +10439,6 @@ export type PurchaseConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Purchase connection for pagination */
 export type PurchaseEdge = Edge & {
   __typename: 'PurchaseEdge';
   cursor: Scalars['String']['output'];
@@ -10519,9 +10568,9 @@ export type Query = {
    */
   aggregateQuantities: AggregationResult;
   /** Autocomplete category names for faster item categorization. */
-  autocompleteCategories: AutocompleteCategoryResponse;
+  autocompleteCategories: AutocompleteCategoryResult;
   /** Autocomplete item names for quick search suggestions. */
-  autocompleteItems: AutocompleteResponse;
+  autocompleteItems: AutocompleteResult;
   /**
    * Get best display unit for a quantity
    * Auto-converts to more readable units (1000mL → 1L)
@@ -11490,7 +11539,6 @@ export type RecipeContextInput = {
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-/** Recipe connection for pagination */
 export type RecipeEdge = Edge & {
   __typename: 'RecipeEdge';
   cursor: Scalars['String']['output'];
@@ -11531,7 +11579,6 @@ export type RecipeForkConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Recipe fork connection for pagination */
 export type RecipeForkEdge = Edge & {
   __typename: 'RecipeForkEdge';
   cursor: Scalars['String']['output'];
@@ -11564,7 +11611,6 @@ export type RecipeIngredientConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Recipe ingredient connection for pagination */
 export type RecipeIngredientEdge = Edge & {
   __typename: 'RecipeIngredientEdge';
   cursor: Scalars['String']['output'];
@@ -11677,7 +11723,6 @@ export type RecipeReviewConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Recipe review connection for pagination */
 export type RecipeReviewEdge = Edge & {
   __typename: 'RecipeReviewEdge';
   cursor: Scalars['String']['output'];
@@ -12169,7 +12214,6 @@ export type SavedRecipeConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Saved recipe connection for pagination */
 export type SavedRecipeEdge = Edge & {
   __typename: 'SavedRecipeEdge';
   cursor: Scalars['String']['output'];
@@ -12297,7 +12341,11 @@ export type ShoppingList = {
   plannedShopDate: Maybe<Scalars['DateTime']['output']>;
   priceTracking: Scalars['Boolean']['output'];
   priority: Scalars['Int']['output'];
-  /** Recently deleted items for quick re-adding suggestions. */
+  /**
+   * Recently deleted items for quick re-adding suggestions.
+   * Bounded field: limit defaults to 10 and is clamped server-side to a
+   * maximum of 50.
+   */
   recentlyDeletedItems: Array<ShoppingListItem>;
   recurringInterval: Maybe<Scalars['Int']['output']>;
   recurringPattern: Maybe<RecurringPattern>;
@@ -12314,7 +12362,11 @@ export type ShoppingList = {
   smartSorting: Scalars['Boolean']['output'];
   sortOrder: Scalars['Int']['output'];
   status: ListStatus;
-  /** Smart suggestions for adding items to this shopping list. */
+  /**
+   * Smart suggestions for adding items to this shopping list.
+   * Bounded field: limit defaults to 10 and is clamped server-side to a
+   * maximum of 50.
+   */
   suggestions: Array<ShoppingListSuggestion>;
   tags: Array<Scalars['String']['output']>;
   targetStore: Maybe<Store>;
@@ -12416,7 +12468,6 @@ export type ShoppingListActivityConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Shopping list activity connection for pagination */
 export type ShoppingListActivityEdge = Edge & {
   __typename: 'ShoppingListActivityEdge';
   cursor: Scalars['String']['output'];
@@ -12477,7 +12528,6 @@ export type ShoppingListCollaboratorConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Shopping list collaborator connection for pagination */
 export type ShoppingListCollaboratorEdge = Edge & {
   __typename: 'ShoppingListCollaboratorEdge';
   cursor: Scalars['String']['output'];
@@ -12491,7 +12541,6 @@ export type ShoppingListConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Shopping list connection for pagination */
 export type ShoppingListEdge = Edge & {
   __typename: 'ShoppingListEdge';
   cursor: Scalars['String']['output'];
@@ -12610,7 +12659,6 @@ export type ShoppingListItemConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Shopping list item connection for pagination */
 export type ShoppingListItemEdge = Edge & {
   __typename: 'ShoppingListItemEdge';
   cursor: Scalars['String']['output'];
@@ -12712,7 +12760,6 @@ export type ShoppingListOwnershipConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** Shopping list ownership connection for pagination */
 export type ShoppingListOwnershipEdge = Edge & {
   __typename: 'ShoppingListOwnershipEdge';
   cursor: Scalars['String']['output'];
@@ -12991,7 +13038,6 @@ export type StorageLocationCount = {
   type: StorageType;
 };
 
-/** Storage location connection for pagination */
 export type StorageLocationEdge = Edge & {
   __typename: 'StorageLocationEdge';
   cursor: Scalars['String']['output'];
@@ -13145,7 +13191,6 @@ export type StoreCostBreakdown = {
   totalSpent: Scalars['Float']['output'];
 };
 
-/** Store connection for Relay-style pagination */
 export type StoreEdge = Edge & {
   __typename: 'StoreEdge';
   cursor: Scalars['String']['output'];
@@ -13867,6 +13912,27 @@ export type UpcValidation = {
   isValid: Scalars['Boolean']['output'];
   item: Maybe<Item>;
 };
+
+/**
+ * Self-service account update: the caller updating their own User row. Exposes
+ * ONLY non-privileged, self-editable fields — privileged fields (email, role,
+ * emailVerified, deletedAt) are deliberately absent so a caller cannot submit
+ * them at all (schema-surface mass-assignment prevention, finding C1). Admin
+ * changes go through adminUpdateUser. Profile (name/bio/avatar) lives on
+ * updateProfile; app settings on updateSettings.
+ */
+export type UpdateAccountInput = {
+  onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
+  preferredCurrency?: InputMaybe<Scalars['String']['input']>;
+  timezone?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type UpdateAccountPayload = {
+  __typename: 'UpdateAccountPayload';
+  user: User;
+};
+
+export type UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError;
 
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -14777,18 +14843,6 @@ export type UpdateUserAppealPayload = {
 
 export type UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError;
 
-export type UpdateUserInput = {
-  deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  email?: InputMaybe<Scalars['String']['input']>;
-  emailVerified?: InputMaybe<Scalars['Boolean']['input']>;
-  id: Scalars['ID']['input'];
-  lastLoginAt?: InputMaybe<Scalars['DateTime']['input']>;
-  onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
-  preferredCurrency?: InputMaybe<Scalars['String']['input']>;
-  role?: InputMaybe<UserRole>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type UpdateUserModerationInput = {
   moderatorNotes?: InputMaybe<Scalars['String']['input']>;
   restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
@@ -14797,11 +14851,6 @@ export type UpdateUserModerationInput = {
   riskScore?: InputMaybe<Scalars['Float']['input']>;
   status?: InputMaybe<ModerationStatus>;
   trustLevel?: InputMaybe<TrustLevel>;
-};
-
-export type UpdateUserPayload = {
-  __typename: 'UpdateUserPayload';
-  user: User;
 };
 
 /** Input for managing restrictions (add and/or remove in one call). */
@@ -14822,7 +14871,11 @@ export type UpdateUserRestrictionsPayload = {
 
 export type UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError;
 
-export type UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserPayload | ValidationError;
+export type UploadFormField = {
+  __typename: 'UploadFormField';
+  name: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
 
 export type UpsertExternalRecipePayload = {
   __typename: 'UpsertExternalRecipePayload';
@@ -14980,36 +15033,36 @@ export type User = {
   defaultHomeId: Maybe<Scalars['ID']['output']>;
   defaultShoppingListId: Maybe<Scalars['ID']['output']>;
   deviceStats: DeviceStats;
-  devices: DeviceConnection;
+  devicesConnection: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   email: Scalars['String']['output'];
   emailVerified: Scalars['Boolean']['output'];
   expirationNotificationsConnection: ExpirationNotificationConnection;
   hasUrgentNotifications: Scalars['Boolean']['output'];
-  homeOwnerships: Array<HomeOwnership>;
+  homeOwnershipsConnection: HomeOwnershipConnection;
   id: Scalars['ID']['output'];
   inviteLogsConnection: InviteLogConnection;
   language: Maybe<Scalars['String']['output']>;
   lastActiveAt: Maybe<Scalars['DateTime']['output']>;
-  loginHistory: LoginHistoryConnection;
+  loginHistoryConnection: LoginHistoryConnection;
   loginHistoryStats: LoginHistoryStats;
   membershipInHome: Maybe<Membership>;
-  memberships: MembershipConnection;
+  membershipsConnection: MembershipConnection;
   moderation: Maybe<UserModeration>;
   notificationPreferences: Maybe<NotificationPreferences>;
   notificationsConnection: NotificationConnection;
   onBoarded: Scalars['Boolean']['output'];
-  pendingCollaborationInvites: Array<ShoppingListCollaborator>;
-  pendingHomeInvites: Array<HomeInvite>;
+  pendingCollaborationInvitesConnection: ShoppingListCollaboratorConnection;
+  pendingHomeInvitesConnection: HomeInviteConnection;
   preferredCurrency: Maybe<Scalars['String']['output']>;
   profile: Maybe<UserProfile>;
   purchaseStats: PurchaseStats;
   purchasesConnection: PurchaseConnection;
   role: UserRole;
   savedRecipesConnection: SavedRecipeConnection;
-  sentHomeInvites: Array<HomeInvite>;
+  sentHomeInvitesConnection: HomeInviteConnection;
   settings: Maybe<UserSettings>;
-  shoppingListInvites: Array<ShoppingListCollaborator>;
+  shoppingListInvitesConnection: ShoppingListCollaboratorConnection;
   shoppingListOwnershipsConnection: ShoppingListOwnershipConnection;
   statistics: Maybe<UserStatistics>;
   suspiciousLoginActivity: SuspiciousActivity;
@@ -15062,7 +15115,7 @@ export type UserCookingLogsConnectionArgs = {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
-export type UserDevicesArgs = {
+export type UserDevicesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<DeviceOrderBy>;
@@ -15087,6 +15140,18 @@ export type UserExpirationNotificationsConnectionArgs = {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
+export type UserHomeOwnershipsConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
 export type UserInviteLogsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
@@ -15100,7 +15165,7 @@ export type UserInviteLogsConnectionArgs = {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
-export type UserLoginHistoryArgs = {
+export type UserLoginHistoryConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<LoginHistoryOrderBy>;
@@ -15129,7 +15194,7 @@ export type UserMembershipInHomeArgs = {
  * User account type
  * Cache: 5 minutes - user data changes occasionally, always private
  */
-export type UserMembershipsArgs = {
+export type UserMembershipsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<MembershipOrderBy>;
@@ -15147,6 +15212,30 @@ export type UserNotificationsConnectionArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<NotificationOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserPendingCollaborationInvitesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserPendingHomeInvitesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -15175,6 +15264,30 @@ export type UserSavedRecipesConnectionArgs = {
   folder?: InputMaybe<Scalars['String']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<SavedRecipeOrderBy>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserSentHomeInvitesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/**
+ * User account type
+ * Cache: 5 minutes - user data changes occasionally, always private
+ */
+export type UserShoppingListInvitesConnectionArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -15224,7 +15337,6 @@ export type UserAddressConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** User address connection for pagination */
 export type UserAddressEdge = Edge & {
   __typename: 'UserAddressEdge';
   cursor: Scalars['String']['output'];
@@ -15251,7 +15363,6 @@ export type UserConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-/** User connection for pagination (admin only) */
 export type UserEdge = Edge & {
   __typename: 'UserEdge';
   cursor: Scalars['String']['output'];

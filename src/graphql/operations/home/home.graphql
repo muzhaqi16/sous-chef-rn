@@ -68,10 +68,14 @@ query GetHomes($first: Int, $after: String) {
 query GetMyPendingInvites {
   me {
     id
-    pendingHomeInvites {
-      id
-      role
-      ...InviteCard_invite
+    pendingHomeInvitesConnection {
+      edges {
+        node {
+          id
+          role
+          ...InviteCard_invite
+        }
+      }
     }
   }
 }

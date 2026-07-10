@@ -5,6 +5,37 @@ schema {
 }
 
 """
+Mark a root Query/Mutation field as intentionally reachable on the ADMIN
+schema (`:4100`, private network) even though it is not `@requireSystemRole`.
+
+This is a BUILD-TIME SPLIT MARKER ONLY — it has no runtime behavior. No
+directive transformer reads it; the sole consumer is `keepOnlyAdminRootFields`
+in `splitSchema.ts`, which keeps a field on `adminSchema` when it is
+`@requireSystemRole` OR `@adminSurface`. The public schema is unaffected
+(`removeAdminRootFields` still keys on `@requireSystemRole` alone), so a
+`@adminSurface` field stays on the public API too.
+
+It is NOT an authorization posture and never substitutes for one: a field
+tagged `@adminSurface` MUST still carry `@auth`/`@optionalAuth`/`@public`/
+`@requireAccess`/`@requireMembershipRole`/`@ownerOnly`, and the default-deny
+audit (`assertRootFieldsHaveAuthPosture`) rejects a field whose only directive
+is `@adminSurface`. Its only effect is to include an already-authorized,
+already-existing operation in the admin view.
+
+Why it exists: the admin panel runs against the admin port only and needs a
+set of non-privileged operations (entity reads, reference-data CRUD, the auth
+path) that the `@requireSystemRole`-driven split would otherwise leave on the
+public API alone. Tagging is explicit and greppable so the admin surface is
+auditable field-by-field.
+
+Example:
+  type Query {
+    item(id: ID!): Item @auth @adminSurface
+  }
+"""
+directive @adminSurface on FIELD_DEFINITION
+
+"""
 Require user authentication for this field or type.
 
 When applied to a FIELD_DEFINITION, the auth check runs for that single
@@ -648,6 +679,28 @@ type AdminUpdateRecipePayload {
 
 union AdminUpdateRecipeResult = AdminUpdateRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+"""
+Admin-authority twin of updateAccount — updates any user's User row,
+including privileged fields. Gated by @requireSystemRole(role: ADMIN); the
+SUPER_ADMIN role ceiling is enforced in the service.
+"""
+input AdminUpdateUserInput {
+  deletedAt: DateTime
+  email: String
+  emailVerified: Boolean
+  id: ID!
+  onBoarded: Boolean
+  preferredCurrency: String
+  role: UserRole
+  timezone: String
+}
+
+type AdminUpdateUserPayload {
+  user: User!
+}
+
+union AdminUpdateUserResult = AdminUpdateUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 """Result of quantity aggregation (add/subtract)"""
 type AggregationResult {
   displayText: String!
@@ -759,12 +812,11 @@ input AutocompleteCategoryInput {
 }
 
 """
-Sanctioned exception to the "no ad-hoc *Response list envelope" convention
-(graphql-operation-conventions), mirroring AutocompleteResponse: a bounded,
-ranked top-N suggestion set where `totalCount` is meaningful, retained
-deliberately rather than converted to a connection or a bare list.
+Mirrors AutocompleteResult: a bounded, ranked top-N suggestion set where
+`totalCount` is meaningful, retained as an envelope rather than a connection
+or bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
 """
-type AutocompleteCategoryResponse {
+type AutocompleteCategoryResult {
   suggestions: [CategorySuggestion!]!
   totalCount: Int!
 }
@@ -777,13 +829,12 @@ input AutocompleteInput {
 }
 
 """
-Sanctioned exception to the "no ad-hoc *Response list envelope" convention
-(graphql-operation-conventions). Autocomplete returns a bounded, ranked top-N
-suggestion set, not a growable Relay list; `totalCount` (how many items matched
-beyond the returned suggestions) is meaningful here, so the envelope is retained
-deliberately rather than converted to a connection or a bare list.
+Autocomplete returns a bounded, ranked top-N suggestion set (not a growable
+Relay list); `totalCount` (how many items matched beyond the returned
+suggestions) is meaningful, so it stays an envelope rather than a connection or
+bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
 """
-type AutocompleteResponse {
+type AutocompleteResult {
   suggestions: [ItemSuggestion!]!
   totalCount: Int!
 }
@@ -912,7 +963,6 @@ type BrandConnection implements Connection {
   totalCount: Int
 }
 
-"""Brand connection for pagination"""
 type BrandEdge implements Edge {
   cursor: String!
   node: Brand!
@@ -1229,7 +1279,6 @@ type CategoryConnection implements Connection {
   totalCount: Int
 }
 
-"""Category connection for pagination (Relay spec)"""
 type CategoryEdge implements Edge {
   cursor: String!
   node: Category!
@@ -1592,7 +1641,6 @@ type CookingLogConnection implements Connection {
   totalCount: Int
 }
 
-"""Cooking log connection for pagination"""
 type CookingLogEdge implements Edge {
   cursor: String!
   node: CookingLog!
@@ -1754,6 +1802,7 @@ input CreateImageUploadUrlInput {
 }
 
 type CreateImageUploadUrlPayload {
+  fields: [UploadFormField!]!
   key: String!
   url: String!
 }
@@ -2921,7 +2970,6 @@ input DeviceDetailsInput {
   supportedMediaTypes: JSON
 }
 
-"""Device connection for pagination"""
 type DeviceEdge implements Edge {
   cursor: String!
   node: Device!
@@ -3348,7 +3396,6 @@ type ExpirationNotificationConnection implements Connection {
   totalCount: Int
 }
 
-"""Expiration notification connection for pagination"""
 type ExpirationNotificationEdge implements Edge {
   cursor: String!
   node: ExpirationNotification!
@@ -3673,7 +3720,6 @@ type HomeConnection implements Connection {
   totalCount: Int
 }
 
-"""Home connection for pagination"""
 type HomeEdge implements Edge {
   cursor: String!
   node: Home!
@@ -3751,7 +3797,6 @@ type HomeInviteConnection implements Connection {
   totalCount: Int
 }
 
-"""Home invite connection for pagination"""
 type HomeInviteEdge implements Edge {
   cursor: String!
   node: HomeInvite!
@@ -3784,6 +3829,17 @@ type HomeOwnership {
   transferredFrom: String
   user: User!
   userId: ID!
+}
+
+type HomeOwnershipConnection implements Connection {
+  edges: [HomeOwnershipEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type HomeOwnershipEdge implements Edge {
+  cursor: String!
+  node: HomeOwnership!
 }
 
 """Custom permissions that can override default role permissions"""
@@ -4051,7 +4107,6 @@ type InviteLogConnection implements Connection {
   totalCount: Int
 }
 
-"""Invite log connection for pagination"""
 type InviteLogEdge implements Edge {
   cursor: String!
   node: InviteLog!
@@ -4260,7 +4315,6 @@ type ItemDuplicateClusterPage {
   totalCount: Int!
 }
 
-"""Item connection for pagination (Relay spec)"""
 type ItemEdge implements Edge {
   cursor: String!
   node: Item!
@@ -4380,7 +4434,6 @@ type ItemPriceHistoryConnection implements Connection {
   totalCount: Int
 }
 
-"""Item price history connection for pagination"""
 type ItemPriceHistoryEdge implements Edge {
   cursor: String!
   node: ItemPriceHistory!
@@ -4440,7 +4493,6 @@ type ItemStoreSkuConnection implements Connection {
   totalCount: Int
 }
 
-"""Item store SKU connection for pagination"""
 type ItemStoreSkuEdge implements Edge {
   cursor: String!
   node: ItemStoreSku!
@@ -4545,7 +4597,6 @@ type ItemUnitConversionConnection implements Connection {
   totalCount: Int
 }
 
-"""Item unit conversion connection for pagination"""
 type ItemUnitConversionEdge implements Edge {
   cursor: String!
   node: ItemUnitConversion!
@@ -4830,7 +4881,6 @@ type LoginHistoryConnection implements Connection {
   totalCount: Int
 }
 
-"""Login history connection for pagination"""
 type LoginHistoryEdge implements Edge {
   cursor: String!
   node: LoginHistory!
@@ -5188,7 +5238,6 @@ type MealPlanConnection implements Connection {
   totalCount: Int
 }
 
-"""Meal plan connection for pagination"""
 type MealPlanEdge implements Edge {
   cursor: String!
   node: MealPlan!
@@ -5349,7 +5398,6 @@ type MealTemplateConnection implements Connection {
   totalCount: Int
 }
 
-"""Meal template connection for pagination"""
 type MealTemplateEdge implements Edge {
   cursor: String!
   node: MealTemplate!
@@ -5460,7 +5508,6 @@ type MembershipConnection implements Connection {
   totalCount: Int
 }
 
-"""Membership connection for pagination"""
 type MembershipEdge implements Edge {
   cursor: String!
   node: Membership!
@@ -5751,9 +5798,11 @@ type Mutation {
   """Add a new address to the current user's account."""
   addUserAddress(input: AddUserAddressInput!): AddUserAddressResult!
   """
-  Adjust pantry item quantity to match a physical count.
-  Creates an ADJUSTMENT usage record with mandatory reason for audit trail.
-  The delta (positive or negative) is calculated automatically.
+  Adjust pantry item quantity to match a physical count. Creates an ADJUSTMENT
+  usage record with a mandatory reason for the audit trail; the delta
+  (positive or negative) is computed automatically. For a plain quantity set
+  with no audit record, use updatePantryItemQuantity — the two are intentional
+  §5 variants: audited adjust vs. quick set.
   """
   adjustPantryItemQuantity(input: AdjustPantryItemQuantityInput!): AdjustPantryItemQuantityResult!
   """
@@ -5864,6 +5913,13 @@ type Mutation {
   createRecurringShoppingList(input: CreateRecurringShoppingListInput!): CreateRecurringShoppingListResult!
   """Create a new shopping list."""
   createShoppingList(input: CreateShoppingListInput!): CreateShoppingListResult!
+  """
+  Add a SINGLE recipe ingredient to a shopping list (smart-merge: if the item
+  already exists, quantities are added with unit conversion). This is the
+  per-ingredient variant of createShoppingListItemsFromRecipe (which adds the
+  whole recipe at once) — the two are intentional §5 variants, not duplicates:
+  use this to add one ingredient, the plural op to add them all.
+  """
   createShoppingListItemFromRecipeIngredient(input: CreateShoppingListItemFromRecipeIngredientInput!): CreateShoppingListItemFromRecipeIngredientResult!
   """
   Add every ingredient of a recipe to a shopping list in full (scaling
@@ -6162,6 +6218,11 @@ type Mutation {
   toggleShoppingListItemPurchased(input: ToggleShoppingListItemPurchasedInput!): ToggleShoppingListItemPurchasedResult!
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
+  """
+  Update the current user's own account (non-privileged, self-editable
+  fields only). Privileged changes go through adminUpdateUser.
+  """
+  updateAccount(input: UpdateAccountInput!): UpdateAccountResult!
   """Update an existing brand."""
   updateBrand(input: UpdateBrandInput!): UpdateBrandResult!
   """Update an existing category."""
@@ -6234,7 +6295,13 @@ type Mutation {
   updatePantryItem(input: UpdatePantryItemInput!): UpdatePantryItemResult!
   """Move a pantry item to a different storage location."""
   updatePantryItemLocation(input: UpdatePantryItemLocationInput!): UpdatePantryItemLocationResult!
-  """Update pantry item quantity (supports fractions)"""
+  """
+  Set a pantry item's quantity directly (supports fractions). A plain setter
+  with no audit record. When reconciling to a physical count and you want an
+  auditable ADJUSTMENT usage record (mandatory reason, auto-computed delta),
+  use adjustPantryItemQuantity instead — the two are intentional §5 variants:
+  quick set vs. audited adjust.
+  """
   updatePantryItemQuantity(input: UpdatePantryItemQuantityInput!): UpdatePantryItemQuantityResult!
   """
   Update user profile. Handles all profile fields including avatar and cover image.
@@ -6271,14 +6338,27 @@ type Mutation {
   Requires user to have edit permissions in the home
   """
   updateStorageLocationOrder(input: UpdateStorageLocationOrderInput!): UpdateStorageLocationOrderResult!
+  """
+  Admin-managed canonical store fields (name, address, pricing/quality
+  metadata). Distinct from updateStoreInfo, which lets any authed user
+  contribute contact/location/hours details — the two are intentional §5
+  variants by audience and field set, not duplicates. NOTE (F25): their id
+  argument names differ (this input uses `id`, UpdateStoreInfoInput uses
+  `storeId`); unify to `id` in the next coordinated breaking cutover.
+  """
   updateStore(input: UpdateStoreInput!): UpdateStoreResult!
+  """
+  User-contributed store details (phone, email, website, lat/lng, hours).
+  Distinct from the admin-managed updateStore (canonical name/address/pricing)
+  — the two are intentional §5 variants by audience and field set. NOTE (F25):
+  this input's id argument is `storeId` while UpdateStoreInput uses `id`;
+  unify to `id` in the next coordinated breaking cutover.
+  """
   updateStoreInfo(input: UpdateStoreInfoInput!): UpdateStoreInfoResult!
   """Update a template item"""
   updateTemplateItem(input: UpdateTemplateItemInput!): UpdateTemplateItemResult!
   """Update an existing unit of measurement."""
   updateUnit(input: UpdateUnitInput!): UpdateUnitResult!
-  """Update a user's account details."""
-  updateUser(input: UpdateUserInput!): UpdateUserResult!
   """Update an existing user address."""
   updateUserAddress(input: UpdateUserAddressInput!): UpdateUserAddressResult!
   """
@@ -6298,8 +6378,6 @@ type Mutation {
   validatePasswordResetToken(input: ValidatePasswordResetTokenInput!): ValidatePasswordResetTokenResult!
   """Verify a user's email address using a verification code."""
   verifyEmail(input: VerifyEmailInput!): VerifyEmailResult!
-  """Manually verify a user's email address (admin use)."""
-  verifyUserEmail(input: VerifyUserEmailInput!): VerifyUserEmailResult!
   """
   Waste a specific batch within a pantry item.
   Only the targeted batch is zeroed out; other batches remain active.
@@ -6455,7 +6533,6 @@ type NotificationConnection implements Connection {
   edges: [NotificationEdge!]!
   pageInfo: PageInfo!
   totalCount: Int
-  unreadCount: Int!
 }
 
 enum NotificationDeliveryStatus {
@@ -6477,12 +6554,23 @@ Consolidated notification event envelope. Replaces notificationCreated +
 notificationUpdated (and the former lightweight notificationRead /
 notificationDismissed streams) — subscribe once and branch on subtype.
 READ / DISMISSED are derived from the notification's status on update, so
-read-state and dismissal transitions arrive on this stream too.
+read-state and dismissal transitions arrive on this stream too. Bulk
+operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
 """
 type NotificationEvent {
   actorUserId: ID
+  """
+  Number of notifications affected by an aggregate subtype (BULK_READ /
+  BULK_CLEARED / BULK_EXPIRED). Null for per-entity subtypes.
+  """
+  affectedCount: Int
   mutation: MutationType!
-  node: Notification!
+  """
+  The changed notification for per-entity subtypes. Null for the aggregate
+  subtypes (BULK_READ / BULK_CLEARED / BULK_EXPIRED), which describe a
+  set-based mutation with no single node — read affectedCount instead.
+  """
+  node: Notification
   subtype: NotificationSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
@@ -6577,8 +6665,18 @@ enum NotificationStatus {
   SENT
 }
 
-"""Subtype discriminator for the consolidated notificationEvents stream."""
+"""
+Subtype discriminator for the consolidated notificationEvents stream.
+BULK_READ / BULK_CLEARED / BULK_EXPIRED are aggregate subtypes emitted once
+per set-based operation (markAllAsRead / deleteAllRead / the system-driven
+expiry cleanup) — they carry affectedCount and a null node instead of a
+single changed notification. BULK_EXPIRED is the system-expiry counterpart to
+the user-initiated BULK_CLEARED.
+"""
 enum NotificationSubtype {
+  BULK_CLEARED
+  BULK_EXPIRED
+  BULK_READ
   CREATED
   DISMISSED
   READ
@@ -6832,7 +6930,6 @@ type PantryDeficit {
   unit: Unit!
 }
 
-"""Pantry connection for pagination"""
 type PantryEdge implements Edge {
   cursor: String!
   node: Pantry!
@@ -6958,14 +7055,12 @@ type PantryItemBatch {
   wasteReason: WasteReason
 }
 
-"""Relay connection of pantry item batches for a single pantry item."""
 type PantryItemBatchConnection implements Connection {
   edges: [PantryItemBatchEdge!]!
   pageInfo: PageInfo!
   totalCount: Int
 }
 
-"""Relay edge for a pantry item batch."""
 type PantryItemBatchEdge implements Edge {
   cursor: String!
   node: PantryItemBatch!
@@ -6997,14 +7092,12 @@ type PantryItemChange {
   source: ChangeSource!
 }
 
-"""Connection type for paginated PantryItemChange results"""
 type PantryItemChangeConnection implements Connection {
   edges: [PantryItemChangeEdge!]!
   pageInfo: PageInfo!
   totalCount: Int
 }
 
-"""Edge type for PantryItemChange pagination"""
 type PantryItemChangeEdge implements Edge {
   cursor: String!
   node: PantryItemChange!
@@ -7016,7 +7109,6 @@ type PantryItemConnection implements Connection {
   totalCount: Int
 }
 
-"""Pantry item connection for pagination"""
 type PantryItemEdge implements Edge {
   cursor: String!
   node: PantryItem!
@@ -7139,7 +7231,6 @@ type PantryItemUsageConnection implements Connection {
   totalCount: Int
 }
 
-"""Pantry item usage connection for pagination"""
 type PantryItemUsageEdge implements Edge {
   cursor: String!
   node: PantryItemUsage!
@@ -7436,7 +7527,6 @@ type PurchaseConnection implements Connection {
   totalCount: Int
 }
 
-"""Purchase connection for pagination"""
 type PurchaseEdge implements Edge {
   cursor: String!
   node: Purchase!
@@ -7560,9 +7650,9 @@ type Query {
   """
   aggregateQuantities(itemId: ID!, quantities: [QuantityInput!]!): AggregationResult!
   """Autocomplete category names for faster item categorization."""
-  autocompleteCategories(input: AutocompleteCategoryInput!): AutocompleteCategoryResponse!
+  autocompleteCategories(input: AutocompleteCategoryInput!): AutocompleteCategoryResult!
   """Autocomplete item names for quick search suggestions."""
-  autocompleteItems(input: AutocompleteInput!): AutocompleteResponse!
+  autocompleteItems(input: AutocompleteInput!): AutocompleteResult!
   """
   Get best display unit for a quantity
   Auto-converts to more readable units (1000mL → 1L)
@@ -7951,7 +8041,6 @@ input RecipeContextInput {
   recipeIngredientId: ID
 }
 
-"""Recipe connection for pagination"""
 type RecipeEdge implements Edge {
   cursor: String!
   node: Recipe!
@@ -7990,7 +8079,6 @@ type RecipeForkConnection implements Connection {
   totalCount: Int
 }
 
-"""Recipe fork connection for pagination"""
 type RecipeForkEdge implements Edge {
   cursor: String!
   node: Recipe!
@@ -8020,7 +8108,6 @@ type RecipeIngredientConnection implements Connection {
   totalCount: Int
 }
 
-"""Recipe ingredient connection for pagination"""
 type RecipeIngredientEdge implements Edge {
   cursor: String!
   node: RecipeIngredient!
@@ -8128,7 +8215,6 @@ type RecipeReviewConnection implements Connection {
   totalCount: Int
 }
 
-"""Recipe review connection for pagination"""
 type RecipeReviewEdge implements Edge {
   cursor: String!
   node: RecipeReview!
@@ -8600,7 +8686,6 @@ type SavedRecipeConnection implements Connection {
   totalCount: Int
 }
 
-"""Saved recipe connection for pagination"""
 type SavedRecipeEdge implements Edge {
   cursor: String!
   node: SavedRecipe!
@@ -8724,7 +8809,11 @@ type ShoppingList {
   plannedShopDate: DateTime
   priceTracking: Boolean!
   priority: Int!
-  """Recently deleted items for quick re-adding suggestions."""
+  """
+  Recently deleted items for quick re-adding suggestions.
+  Bounded field: limit defaults to 10 and is clamped server-side to a
+  maximum of 50.
+  """
   recentlyDeletedItems(limit: Int = 10): [ShoppingListItem!]!
   recurringInterval: Int
   recurringPattern: RecurringPattern
@@ -8741,7 +8830,11 @@ type ShoppingList {
   smartSorting: Boolean!
   sortOrder: Int!
   status: ListStatus!
-  """Smart suggestions for adding items to this shopping list."""
+  """
+  Smart suggestions for adding items to this shopping list.
+  Bounded field: limit defaults to 10 and is clamped server-side to a
+  maximum of 50.
+  """
   suggestions(limit: Int = 10, sources: [SuggestionSource!]): [ShoppingListSuggestion!]!
   tags: [String!]!
   targetStore: Store
@@ -8782,7 +8875,6 @@ type ShoppingListActivityConnection implements Connection {
   totalCount: Int
 }
 
-"""Shopping list activity connection for pagination"""
 type ShoppingListActivityEdge implements Edge {
   cursor: String!
   node: ShoppingListActivity!
@@ -8839,7 +8931,6 @@ type ShoppingListCollaboratorConnection implements Connection {
   totalCount: Int
 }
 
-"""Shopping list collaborator connection for pagination"""
 type ShoppingListCollaboratorEdge implements Edge {
   cursor: String!
   node: ShoppingListCollaborator!
@@ -8851,7 +8942,6 @@ type ShoppingListConnection implements Connection {
   totalCount: Int
 }
 
-"""Shopping list connection for pagination"""
 type ShoppingListEdge implements Edge {
   cursor: String!
   node: ShoppingList!
@@ -8953,7 +9043,6 @@ type ShoppingListItemConnection implements Connection {
   totalCount: Int
 }
 
-"""Shopping list item connection for pagination"""
 type ShoppingListItemEdge implements Edge {
   cursor: String!
   node: ShoppingListItem!
@@ -9049,7 +9138,6 @@ type ShoppingListOwnershipConnection implements Connection {
   totalCount: Int
 }
 
-"""Shopping list ownership connection for pagination"""
 type ShoppingListOwnershipEdge implements Edge {
   cursor: String!
   node: ShoppingListOwnership!
@@ -9329,7 +9417,6 @@ type StorageLocationCount {
   type: StorageType!
 }
 
-"""Storage location connection for pagination"""
 type StorageLocationEdge implements Edge {
   cursor: String!
   node: StorageLocation!
@@ -9434,7 +9521,6 @@ type StoreCostBreakdown {
   totalSpent: Float!
 }
 
-"""Store connection for Relay-style pagination"""
 type StoreEdge implements Edge {
   cursor: String!
   node: Store!
@@ -10096,6 +10182,26 @@ type UpcValidation {
   isValid: Boolean!
   item: Item
 }
+
+"""
+Self-service account update: the caller updating their own User row. Exposes
+ONLY non-privileged, self-editable fields — privileged fields (email, role,
+emailVerified, deletedAt) are deliberately absent so a caller cannot submit
+them at all (schema-surface mass-assignment prevention, finding C1). Admin
+changes go through adminUpdateUser. Profile (name/bio/avatar) lives on
+updateProfile; app settings on updateSettings.
+"""
+input UpdateAccountInput {
+  onBoarded: Boolean
+  preferredCurrency: String
+  timezone: String
+}
+
+type UpdateAccountPayload {
+  user: User!
+}
+
+union UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError
 
 input UpdateBrandInput {
   description: String
@@ -10971,18 +11077,6 @@ type UpdateUserAppealPayload {
 
 union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
 
-input UpdateUserInput {
-  deletedAt: DateTime
-  email: String
-  emailVerified: Boolean
-  id: ID!
-  lastLoginAt: DateTime
-  onBoarded: Boolean
-  preferredCurrency: String
-  role: UserRole
-  timezone: String
-}
-
 input UpdateUserModerationInput {
   moderatorNotes: String
   restrictedUntil: DateTime
@@ -10991,10 +11085,6 @@ input UpdateUserModerationInput {
   riskScore: Float
   status: ModerationStatus
   trustLevel: TrustLevel
-}
-
-type UpdateUserPayload {
-  user: User!
 }
 
 """Input for managing restrictions (add and/or remove in one call)."""
@@ -11014,9 +11104,12 @@ type UpdateUserRestrictionsPayload {
 
 union UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError
 
-union UpdateUserResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserPayload | ValidationError
-
 scalar Upload
+
+type UploadFormField {
+  name: String!
+  value: String!
+}
 
 type UpsertExternalRecipePayload {
   """
@@ -11171,36 +11264,36 @@ type User {
   defaultHomeId: ID
   defaultShoppingListId: ID
   deviceStats: DeviceStats!
-  devices(after: String, first: Int, orderBy: DeviceOrderBy): DeviceConnection!
+  devicesConnection(after: String, first: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
   email: String!
   emailVerified: Boolean!
   expirationNotificationsConnection(after: String, before: String, filters: ExpirationNotificationFilters, first: Int, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
   hasUrgentNotifications: Boolean!
-  homeOwnerships: [HomeOwnership!]!
+  homeOwnershipsConnection(after: String, before: String, first: Int, last: Int): HomeOwnershipConnection!
   id: ID!
   inviteLogsConnection(after: String, before: String, first: Int, last: Int, orderBy: InviteLogOrderBy): InviteLogConnection!
   language: String
   lastActiveAt: DateTime
-  loginHistory(after: String, first: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
+  loginHistoryConnection(after: String, first: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
   loginHistoryStats(days: Int = 30): LoginHistoryStats!
   membershipInHome(homeId: ID!): Membership
-  memberships(after: String, first: Int, orderBy: MembershipOrderBy): MembershipConnection!
+  membershipsConnection(after: String, first: Int, orderBy: MembershipOrderBy): MembershipConnection!
   moderation: UserModeration
   notificationPreferences: NotificationPreferences
   notificationsConnection(after: String, before: String, filters: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
   onBoarded: Boolean!
-  pendingCollaborationInvites: [ShoppingListCollaborator!]!
-  pendingHomeInvites: [HomeInvite!]!
+  pendingCollaborationInvitesConnection(after: String, before: String, first: Int, last: Int): ShoppingListCollaboratorConnection!
+  pendingHomeInvitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
   preferredCurrency: String
   profile: UserProfile
   purchaseStats: PurchaseStats!
   purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   role: UserRole!
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
-  sentHomeInvites: [HomeInvite!]!
+  sentHomeInvitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
   settings: UserSettings
-  shoppingListInvites: [ShoppingListCollaborator!]!
+  shoppingListInvitesConnection(after: String, before: String, first: Int, last: Int): ShoppingListCollaboratorConnection!
   shoppingListOwnershipsConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListOwnershipOrderBy): ShoppingListOwnershipConnection!
   statistics: UserStatistics
   suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity!
@@ -11232,7 +11325,6 @@ type UserAddressConnection implements Connection {
   totalCount: Int
 }
 
-"""User address connection for pagination"""
 type UserAddressEdge implements Edge {
   cursor: String!
   node: UserAddress!
@@ -11256,7 +11348,6 @@ type UserConnection implements Connection {
   totalCount: Int
 }
 
-"""User connection for pagination (admin only)"""
 type UserEdge implements Edge {
   cursor: String!
   node: User!

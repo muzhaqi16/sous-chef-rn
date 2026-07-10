@@ -8,17 +8,14 @@ import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#/services/alertService';
 import {
   CollaboratorRole,
-  CollaboratorStatus,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { AcceptInvite } from '../AcceptInvite';
 import {
-  MyShoppingListInvitesDocument,
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
 } from '#features/shoppingList/graphql/collaboration.generated';
 import {
-  GetMyPendingInvitesDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
@@ -26,6 +23,11 @@ import {
   GetHomeInviteByTokenDocument,
   GetShoppingListInviteByTokenDocument,
 } from '../AcceptInvite.generated';
+
+// The screen resolves the invite straight from the deep-link token, so every
+// test drives it through a route `token` and the *ByToken queries. In-app
+// acceptance lives in InvitationAcceptanceModal and is tested there.
+const TOKEN = 'invite-token';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -37,7 +39,7 @@ jest.mock('@react-navigation/native', () => ({
     goBack: mockGoBack,
   })),
   useRoute: jest.fn(() => ({
-    params: { inviteId: 'invite-1' },
+    params: { token: 'invite-token' },
   })),
 }));
 
@@ -71,8 +73,9 @@ interface ShoppingListInviteInput {
   shoppingListDescription?: string | null;
 }
 
+// Shapes exactly what GetShoppingListInviteByToken selects (id, role, invitedBy,
+// shoppingList) so useFragment reports `complete`.
 function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
-  const id = input.id ?? 'invite-1';
   const invitedBy =
     input.invitedByEmail === null
       ? null
@@ -90,20 +93,9 @@ function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
         };
   return {
     __typename: 'ShoppingListCollaborator',
-    id,
-    token: id,
-    shoppingListId: 'list-1',
-    collaboratorId: null,
-    email: 'me@test.com',
+    id: input.id ?? 'invite-1',
     role: input.role ?? CollaboratorRole.Editor,
-    status: CollaboratorStatus.Pending,
-    canEdit: true,
-    canAddItems: true,
-    canRemoveItems: true,
-    canMarkPurchased: true,
-    canInviteOthers: false,
-    invitedAt: '2025-01-01T00:00:00.000Z',
-    expiresAt: null,
+    invitedBy,
     shoppingList:
       input.shoppingListName === null
         ? null
@@ -113,8 +105,6 @@ function buildShoppingListInvite(input: ShoppingListInviteInput = {}) {
             name: input.shoppingListName ?? 'My List',
             description: input.shoppingListDescription ?? null,
           },
-    collaborator: null,
-    invitedBy,
   };
 }
 
@@ -126,12 +116,11 @@ interface HomeInviteInput {
   homeName?: string | null;
 }
 
+// Shapes exactly what GetHomeInviteByToken selects.
 function buildHomeInvite(input: HomeInviteInput = {}) {
-  const id = input.id ?? 'invite-1';
   return {
     __typename: 'HomeInvite',
-    id,
-    token: id,
+    id: input.id ?? 'invite-1',
     role: input.role ?? MembershipRole.Member,
     home:
       input.homeName === null
@@ -156,106 +145,27 @@ function buildHomeInvite(input: HomeInviteInput = {}) {
   };
 }
 
-function buildShoppingListInvitesMock(
-  invites: ReturnType<typeof buildShoppingListInvite>[],
-): MockedResponse {
-  return {
-    request: { query: MyShoppingListInvitesDocument },
-    result: {
-      data: {
-        me: {
-          __typename: 'User',
-          id: 'me-1',
-          pendingCollaborationInvites: invites,
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-function buildHomeInvitesMock(
-  invites: ReturnType<typeof buildHomeInvite>[],
-): MockedResponse {
-  return {
-    request: { query: GetMyPendingInvitesDocument },
-    result: {
-      data: {
-        me: {
-          __typename: 'User',
-          id: 'me-1',
-          pendingHomeInvites: invites,
-        },
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-const buildEmptyShoppingListInvitesMock = () =>
-  buildShoppingListInvitesMock([]);
-const buildEmptyHomeInvitesMock = () => buildHomeInvitesMock([]);
-
-function buildHomeInviteByTokenMock(
-  token: string,
-  homeName: string | null,
-): MockedResponse {
-  return {
-    request: { query: GetHomeInviteByTokenDocument, variables: { token } },
-    result: {
-      data: {
-        homeInviteByToken: homeName
-          ? {
-              __typename: 'HomeInvite',
-              id: 'home-invite-9',
-              role: MembershipRole.Member,
-              home: { __typename: 'Home', id: 'home-9', name: homeName },
-              inviter: {
-                __typename: 'User',
-                id: 'inviter-9',
-                email: 'owner@test.com',
-                profile: null,
-              },
-            }
-          : null,
-      },
-    },
-    maxUsageCount: 10,
-  };
-}
-
-function buildShoppingListInviteByTokenMock(
-  token: string,
-  listName: string | null,
+function shoppingTokenMock(
+  invite: ReturnType<typeof buildShoppingListInvite> | null,
+  token: string = TOKEN,
 ): MockedResponse {
   return {
     request: {
       query: GetShoppingListInviteByTokenDocument,
       variables: { token },
     },
-    result: {
-      data: {
-        shoppingListInviteByToken: listName
-          ? {
-              __typename: 'ShoppingListCollaborator',
-              id: 'list-invite-9',
-              role: CollaboratorRole.Editor,
-              invitedBy: {
-                __typename: 'User',
-                id: 'inviter-9',
-                email: 'host@test.com',
-                profile: null,
-              },
-              shoppingList: {
-                __typename: 'ShoppingList',
-                id: 'list-9',
-                name: listName,
-                description: null,
-              },
-            }
-          : null,
-      },
-    },
+    result: { data: { shoppingListInviteByToken: invite } },
+    maxUsageCount: 10,
+  };
+}
+
+function homeTokenMock(
+  invite: ReturnType<typeof buildHomeInvite> | null,
+  token: string = TOKEN,
+): MockedResponse {
+  return {
+    request: { query: GetHomeInviteByTokenDocument, variables: { token } },
+    result: { data: { homeInviteByToken: invite } },
     maxUsageCount: 10,
   };
 }
@@ -378,7 +288,7 @@ describe('AcceptInvite', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     const nav = jest.requireMock('@react-navigation/native');
-    nav.useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
+    nav.useRoute.mockReturnValue({ params: { token: TOKEN } });
     const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
     executeWithLoadingState.mockImplementation(
       makeExecuteWithLoadingStateImpl(),
@@ -387,10 +297,7 @@ describe('AcceptInvite', () => {
 
   it('shows "not found" when no invite matches', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-      ],
+      operationMocks: [shoppingTokenMock(null), homeTokenMock(null)],
     });
     await waitFor(() =>
       expect(tree.getByText(/Invitation not found or expired/)).toBeTruthy(),
@@ -405,10 +312,10 @@ describe('AcceptInvite', () => {
   it('renders shopping list invite details', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'Weekly Groceries' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() =>
@@ -421,8 +328,8 @@ describe('AcceptInvite', () => {
   it('renders home invite details', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
       ],
     });
     await waitFor(() =>
@@ -432,10 +339,7 @@ describe('AcceptInvite', () => {
 
   it('shows Go Back button on not found state', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-      ],
+      operationMocks: [shoppingTokenMock(null), homeTokenMock(null)],
     });
     await waitFor(() => expect(tree.getByText('Go Back')).toBeTruthy());
   });
@@ -443,13 +347,13 @@ describe('AcceptInvite', () => {
   it('shows shopping list invite with inviter email fallback', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({
             invitedByEmail: 'host@test.com',
             shoppingListName: 'My List',
           }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText(/host@test.com/)).toBeTruthy());
@@ -458,13 +362,13 @@ describe('AcceptInvite', () => {
   it('shows "Someone" when inviter is missing for shopping list invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({
             invitedByEmail: null,
             shoppingListName: 'My List',
           }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText(/Someone/)).toBeTruthy());
@@ -473,13 +377,13 @@ describe('AcceptInvite', () => {
   it('shows role for shopping list invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({
             role: CollaboratorRole.Editor,
             shoppingListName: 'My List',
           }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText(/EDITOR/)).toBeTruthy());
@@ -488,10 +392,10 @@ describe('AcceptInvite', () => {
   it('shows "Shopping List" as invite type for shopping list invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText('Shopping List')).toBeTruthy());
@@ -500,8 +404,8 @@ describe('AcceptInvite', () => {
   it('renders invite details when home invite exists', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
       ],
     });
     await waitFor(() =>
@@ -514,13 +418,13 @@ describe('AcceptInvite', () => {
   it('shows role for home invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([
+        shoppingTokenMock(null),
+        homeTokenMock(
           buildHomeInvite({
             role: MembershipRole.Admin,
             homeName: 'Family Home',
           }),
-        ]),
+        ),
       ],
     });
     await waitFor(() =>
@@ -531,10 +435,8 @@ describe('AcceptInvite', () => {
   it('shows "Shopping List" fallback when shopping list name is missing', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
-          buildShoppingListInvite({ shoppingListName: null }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        shoppingTokenMock(buildShoppingListInvite({ shoppingListName: null })),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() =>
@@ -547,13 +449,13 @@ describe('AcceptInvite', () => {
   it('shows description when shopping list has description', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({
             shoppingListName: 'My List',
             shoppingListDescription: 'Weekly shopping',
           }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText('Description:')).toBeTruthy());
@@ -563,10 +465,10 @@ describe('AcceptInvite', () => {
   it('shows accept and decline buttons for invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
@@ -577,11 +479,11 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
-        buildAcceptShoppingListInviteMock('invite-1'),
+        ),
+        homeTokenMock(null),
+        buildAcceptShoppingListInviteMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
@@ -599,9 +501,9 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
-        buildAcceptHomeInviteMock('invite-1'),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
+        buildAcceptHomeInviteMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
@@ -619,10 +521,10 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
@@ -638,11 +540,11 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
-        buildDeclineShoppingListInviteMock('invite-1'),
+        ),
+        homeTokenMock(null),
+        buildDeclineShoppingListInviteMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());
@@ -658,9 +560,9 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
-        buildDeclineHomeInviteMock('invite-1'),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
+        buildDeclineHomeInviteMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
@@ -686,11 +588,11 @@ describe('AcceptInvite', () => {
     );
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
-        buildAcceptShoppingListInviteErrorMock('invite-1'),
+        ),
+        homeTokenMock(null),
+        buildAcceptShoppingListInviteErrorMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText('Accept')).toBeTruthy());
@@ -706,23 +608,18 @@ describe('AcceptInvite', () => {
   it('shows error alert for invalid invitation when no token', async () => {
     const { useRoute } = jest.requireMock('@react-navigation/native');
     useRoute.mockReturnValue({ params: {} });
-    const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-      ],
-    });
+    const tree = renderWithApollo(<AcceptInvite />, { operationMocks: [] });
     await waitFor(() =>
       expect(tree.getByText(/Invitation not found/)).toBeTruthy(),
     );
-    useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
+    useRoute.mockReturnValue({ params: { token: TOKEN } });
   });
 
   it('shows "Home" invite type label for home invite', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
       ],
     });
     await waitFor(() =>
@@ -733,8 +630,8 @@ describe('AcceptInvite', () => {
   it('shows "Home" fallback when home invite has no home name', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: null })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: null })),
       ],
     });
     await waitFor(() =>
@@ -745,8 +642,8 @@ describe('AcceptInvite', () => {
   it('shows inviter email for home invite when no displayName', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
       ],
     });
     await waitFor(() => expect(tree.getByText(/owner@test.com/)).toBeTruthy());
@@ -755,10 +652,7 @@ describe('AcceptInvite', () => {
   it('navigates back when Go Back is pressed on not found screen', async () => {
     const user = userEvent.setup();
     const tree = renderWithApollo(<AcceptInvite />, {
-      operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-      ],
+      operationMocks: [shoppingTokenMock(null), homeTokenMock(null)],
     });
     await waitFor(() => expect(tree.getByText('Go Back')).toBeTruthy());
     await user.press(tree.getByText('Go Back'));
@@ -768,10 +662,10 @@ describe('AcceptInvite', () => {
   it('shows "Someone" when home inviter has no displayName or email', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([
+        shoppingTokenMock(null),
+        homeTokenMock(
           buildHomeInvite({ inviterEmail: '', homeName: 'Family Home' }),
-        ]),
+        ),
       ],
     });
     await waitFor(() => expect(tree.getByText(/Someone/)).toBeTruthy());
@@ -780,13 +674,13 @@ describe('AcceptInvite', () => {
   it('shows inviter displayName for home invite when available', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([
+        shoppingTokenMock(null),
+        homeTokenMock(
           buildHomeInvite({
             inviterDisplayName: 'HomeOwner',
             homeName: 'Family Home',
           }),
-        ]),
+        ),
       ],
     });
     await waitFor(() => expect(tree.getByText(/HomeOwner/)).toBeTruthy());
@@ -795,35 +689,34 @@ describe('AcceptInvite', () => {
   it('shows inviter displayName for shopping list invite when available', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({
             invitedByDisplayName: 'ListOwner',
             shoppingListName: 'My List',
           }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+        ),
+        homeTokenMock(null),
       ],
     });
     await waitFor(() => expect(tree.getByText(/ListOwner/)).toBeTruthy());
   });
 
-  it('shows loading state when home invites are still loading', () => {
+  it('shows loading state when invites are still loading', () => {
     const tree = renderWithApollo(<AcceptInvite />, { operationMocks: [] });
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('uses token from route params when available', async () => {
+  it('uses a custom token from route params', async () => {
     const user = userEvent.setup();
     const { useRoute } = jest.requireMock('@react-navigation/native');
-    useRoute.mockReturnValue({
-      params: { token: 'deep-link-token', inviteId: 'invite-1' },
-    });
+    useRoute.mockReturnValue({ params: { token: 'deep-link-token' } });
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
+          'deep-link-token',
+        ),
+        homeTokenMock(null, 'deep-link-token'),
         buildAcceptShoppingListInviteMock('deep-link-token'),
       ],
     });
@@ -836,35 +729,38 @@ describe('AcceptInvite', () => {
         expect.any(Array),
       ),
     );
+    useRoute.mockReturnValue({ params: { token: TOKEN } });
   });
 
-  it('resolves a home invite from a token deep link with no inviteId', async () => {
+  it('resolves a home invite from a token deep link', async () => {
     const { useRoute } = jest.requireMock('@react-navigation/native');
     useRoute.mockReturnValue({ params: { token: 'home-token' } });
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-        buildHomeInviteByTokenMock('home-token', 'Beach House'),
-        buildShoppingListInviteByTokenMock('home-token', null),
+        shoppingTokenMock(null, 'home-token'),
+        homeTokenMock(
+          buildHomeInvite({ homeName: 'Beach House' }),
+          'home-token',
+        ),
       ],
     });
     await waitFor(() =>
       expect(tree.getByText("You've been invited!")).toBeTruthy(),
     );
     expect(tree.getByText('Beach House')).toBeTruthy();
-    useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
+    useRoute.mockReturnValue({ params: { token: TOKEN } });
   });
 
-  it('resolves a shopping-list invite from a token deep link with no inviteId', async () => {
+  it('resolves a shopping-list invite from a token deep link', async () => {
     const { useRoute } = jest.requireMock('@react-navigation/native');
     useRoute.mockReturnValue({ params: { token: 'list-token' } });
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildEmptyHomeInvitesMock(),
-        buildHomeInviteByTokenMock('list-token', null),
-        buildShoppingListInviteByTokenMock('list-token', 'Camping Trip'),
+        shoppingTokenMock(
+          buildShoppingListInvite({ shoppingListName: 'Camping Trip' }),
+          'list-token',
+        ),
+        homeTokenMock(null, 'list-token'),
       ],
     });
     await waitFor(() =>
@@ -872,14 +768,14 @@ describe('AcceptInvite', () => {
     );
     expect(tree.getByText('Camping Trip')).toBeTruthy();
     expect(tree.getByText(/collaborate on/)).toBeTruthy();
-    useRoute.mockReturnValue({ params: { inviteId: 'invite-1' } });
+    useRoute.mockReturnValue({ params: { token: TOKEN } });
   });
 
   it('shows "join" text for home invite and "collaborate on" for shopping list', async () => {
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildEmptyShoppingListInvitesMock(),
-        buildHomeInvitesMock([buildHomeInvite({ homeName: 'Family Home' })]),
+        shoppingTokenMock(null),
+        homeTokenMock(buildHomeInvite({ homeName: 'Family Home' })),
       ],
     });
     await waitFor(() => expect(tree.getByText(/join/)).toBeTruthy());
@@ -900,11 +796,11 @@ describe('AcceptInvite', () => {
     );
     const tree = renderWithApollo(<AcceptInvite />, {
       operationMocks: [
-        buildShoppingListInvitesMock([
+        shoppingTokenMock(
           buildShoppingListInvite({ shoppingListName: 'My List' }),
-        ]),
-        buildEmptyHomeInvitesMock(),
-        buildDeclineShoppingListInviteErrorMock('invite-1'),
+        ),
+        homeTokenMock(null),
+        buildDeclineShoppingListInviteErrorMock(TOKEN),
       ],
     });
     await waitFor(() => expect(tree.getByText('Decline')).toBeTruthy());

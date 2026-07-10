@@ -21,9 +21,10 @@ import {
 } from './InvitationAcceptanceModal.generated';
 import {
   createAddToQueryConnectionUpdater,
-  createRemoveFromParentArrayUpdater,
+  createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
+import { extractNodes } from '#/utils/connectionUtils';
 import { useUser } from '#store/useAppStore';
 import type { NotificationPayload } from '#store/slices/notificationSlice';
 import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
@@ -34,16 +35,17 @@ const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
 }));
 
 const addToHomes = createAddToQueryConnectionUpdater('homes', 'Home');
-const removePendingHomeInvite = createRemoveFromParentArrayUpdater(
+const removePendingHomeInvite = createRemoveFromParentConnectionUpdater(
   'User',
-  'pendingHomeInvites',
+  'pendingHomeInvitesConnection',
   'HomeInvite',
 );
-const removePendingCollaborationInvite = createRemoveFromParentArrayUpdater(
-  'User',
-  'pendingCollaborationInvites',
-  'ShoppingListCollaborator',
-);
+const removePendingCollaborationInvite =
+  createRemoveFromParentConnectionUpdater(
+    'User',
+    'pendingCollaborationInvitesConnection',
+    'ShoppingListCollaborator',
+  );
 
 const getInvitationErrorMessage = (
   error: unknown,
@@ -151,8 +153,10 @@ export const InvitationAcceptanceModal: React.FC<
         query: MyShoppingListInvitesDocument,
         fetchPolicy: 'network-only',
       });
-      const invites = result.data?.me?.pendingCollaborationInvites;
-      const invite = invites?.find(
+      const invites = extractNodes(
+        result.data?.me?.pendingCollaborationInvitesConnection,
+      );
+      const invite = invites.find(
         inv => inv.id === invitation.payload?.inviteId,
       );
       token = invite?.token ?? undefined;
