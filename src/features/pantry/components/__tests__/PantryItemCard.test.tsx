@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { InMemoryCache } from '@apollo/client';
-import { screen } from '@testing-library/react-native';
+import { screen, within } from '@testing-library/react-native';
 import {
   renderWithApollo,
   toFragmentRef,
@@ -267,9 +267,38 @@ describe('PantryItemCard', () => {
     expect(screen.getByText('2 gal')).toBeTruthy();
   });
 
-  it('renders custom storage location in right slot when provided', () => {
+  it('renders custom storage location when provided', () => {
     renderCard({ storageLocationName: 'Kitchen Cabinet' });
     expect(screen.getByText('Kitchen Cabinet')).toBeTruthy();
+  });
+
+  it('places storage location under the item name when there is no expiry', () => {
+    renderCard({ storageLocationName: 'Freezer' });
+    // With no expiry, the location fills the empty left line-2 slot (under the
+    // name) instead of stacking a third row on the right.
+    const content = screen.getByTestId('card-content');
+    expect(within(content).getByText('Freezer')).toBeTruthy();
+  });
+
+  it('drops storage location when both an expiry and a detail line are present (two-row cap)', () => {
+    const expires = new Date();
+    expires.setDate(expires.getDate() + 3);
+    renderCard({
+      expiresAt: expires.toISOString(),
+      storageLocationName: 'Freezer',
+      quantityBreakdown: {
+        fullPackages: 2,
+        looseContentUnits: 0,
+        contentUnit: { id: 'gal', name: 'gallon', symbol: 'gal' },
+        totalContentUnits: 2,
+        remainingWeight: null,
+        remainingWeightUnit: null,
+      },
+    });
+    // Left shows the expiry, right shows the breakdown — location is dropped so
+    // the row never exceeds two lines.
+    expect(screen.getAllByText(/day/i).length).toBeGreaterThan(0);
+    expect(screen.queryByText('Freezer')).toBeNull();
   });
 
   it('does not render default storage tab labels as location', () => {

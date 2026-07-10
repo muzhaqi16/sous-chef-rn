@@ -1,11 +1,12 @@
 import React from 'react';
-import { renderHook } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { NavigationContext } from '@react-navigation/native';
 import type { ParamListBase, NavigationProp } from '@react-navigation/native';
 import {
   useStandardBottomSheet,
   type BottomSheetModalRef,
 } from '../useStandardBottomSheet';
+import { createFakeBottomSheetModal } from '#/test-utils/gorhomModalStateMachine';
 
 // Track present/dismiss calls on the BottomSheetModal ref
 const mockPresent = jest.fn();
@@ -22,6 +23,11 @@ const attachRefMocks = (
     dismiss: mockDismiss,
   };
 };
+
+// Stateful fake BottomSheetModal lives in #/test-utils/gorhomModalStateMachine —
+// it models gorhom 5.2.14's MODAL_STATUS gate (present() no-ops while DISMISSING,
+// a redundant dismiss() on a closed modal wedges it) that the plain jest.fn()
+// mocks above can't see. Reused across sheet tests via the reopen invariant.
 
 // Mock the hooks this depends on
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
@@ -103,6 +109,84 @@ describe('useStandardBottomSheet', () => {
     // verify calling it invokes the original callback
     result.current.modalProps.onDismiss?.();
     expect(onDismiss).toHaveBeenCalled();
+  });
+
+  // Invariant for the whole gorhom-5214 lifecycle bug class: after ANY close
+  // path, a subsequent open must put the sheet back on screen. Each path closes
+  // the sheet and drives the parent's `visible` to false the way the real
+  // consumer wiring does (`onDismiss → setVisible(false)`), then reopens. The
+  // stateful fake honors gorhom's DISMISSING render-gate, so a redundant
+  // `dismiss()` wedges it and the reopen `present()` no-ops — which plain
+  // jest.fn() mocks can't observe.
+  describe.each([
+    ['self-close (swipe / backdrop tap)', 'self'] as const,
+    ['programmatic close (parent drops visible)', 'programmatic'] as const,
+  ])('reopens after %s', (_label, kind) => {
+    it('puts the sheet back on screen', () => {
+      const fake = createFakeBottomSheetModal();
+      const onDismiss = jest.fn();
+      const { result, rerender } = renderHook(
+        ({ visible }: { visible: boolean }) =>
+          useStandardBottomSheet({ ...defaultOptions, visible, onDismiss }),
+        { initialProps: { visible: false } },
+      );
+      (result.current.ref as React.RefObject<unknown>).current = fake;
+
+      rerender({ visible: true }); // open
+      expect(fake.onScreen).toBe(true);
+
+      if (kind === 'self') {
+        // gorhom closes internally (no call to our dismiss()) then fires onDismiss
+        fake.selfClose();
+        result.current.modalProps.onDismiss?.(); // safeOnDismiss
+        expect(onDismiss).toHaveBeenCalled();
+        rerender({ visible: false }); // parent reacts — must NOT redundantly dismiss
+      } else {
+        // parent drops visible directly → effect dismisses → onDismiss fires
+        rerender({ visible: false });
+        fake.selfClose();
+        result.current.modalProps.onDismiss?.();
+      }
+
+      rerender({ visible: true }); // reopen
+      expect(fake.onScreen).toBe(true);
+    });
+  });
+
+  it('reopens after a blur-close → focus cycle', () => {
+    const fake = createFakeBottomSheetModal();
+    const navListeners: Record<string, Array<() => void>> = {};
+    const navigation = {
+      isFocused: () => true,
+      addListener: (event: string, cb: () => void) => {
+        (navListeners[event] ??= []).push(cb);
+        return () => {};
+      },
+    } as unknown as NavigationProp<ParamListBase>;
+
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible }),
+      {
+        initialProps: { visible: false },
+        wrapper: ({ children }) =>
+          React.createElement(
+            NavigationContext.Provider,
+            { value: navigation },
+            children,
+          ),
+      },
+    );
+    // Attach the fake BEFORE the first present (render visible=false first).
+    (result.current.ref as React.RefObject<unknown>).current = fake;
+
+    rerender({ visible: true }); // open on the attached fake
+    expect(fake.onScreen).toBe(true);
+
+    act(() => navListeners.blur?.forEach(cb => cb())); // blur → dismiss
+    expect(fake.onScreen).toBe(false);
+    act(() => navListeners.focus?.forEach(cb => cb())); // focus → re-present
+    expect(fake.onScreen).toBe(true);
   });
 
   it('includes animation configs in modalProps', () => {
@@ -249,7 +333,7 @@ describe('useStandardBottomSheet', () => {
           children,
         );
 
-    it('re-presents the sheet on focus when visible is true', () => {
+    it('re-presents the sheet on focus after a blur dismiss when visible is true', () => {
       const { navigation, emit } = createMockNavigation();
       const { result } = renderHook(
         () => useStandardBottomSheet({ ...defaultOptions, visible: true }),
@@ -258,7 +342,11 @@ describe('useStandardBottomSheet', () => {
 
       attachRefMocks(result.current.ref);
 
-      emit('focus');
+      // Blur dismisses (clears the presented flag); focus then re-presents.
+      // Focus while already presented is a no-op — only a prior blur re-arms it.
+      // (Focus/blur drive `isFocused` state, so flush the re-render with act.)
+      act(() => emit('blur'));
+      act(() => emit('focus'));
 
       expect(mockPresent).toHaveBeenCalled();
     });
@@ -272,7 +360,7 @@ describe('useStandardBottomSheet', () => {
 
       attachRefMocks(result.current.ref);
 
-      emit('blur');
+      act(() => emit('blur'));
 
       expect(mockDismiss).toHaveBeenCalled();
     });
@@ -286,10 +374,10 @@ describe('useStandardBottomSheet', () => {
 
       attachRefMocks(result.current.ref);
 
-      emit('focus');
+      act(() => emit('focus'));
       expect(mockPresent).not.toHaveBeenCalled();
 
-      emit('blur');
+      act(() => emit('blur'));
       expect(mockDismiss).not.toHaveBeenCalled();
     });
 
@@ -302,8 +390,8 @@ describe('useStandardBottomSheet', () => {
 
       attachRefMocks(result.current.ref);
 
-      emit('focus');
-      emit('blur');
+      act(() => emit('focus'));
+      act(() => emit('blur'));
 
       expect(mockPresent).not.toHaveBeenCalled();
       expect(mockDismiss).not.toHaveBeenCalled();

@@ -61,14 +61,21 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  // Per CLAUDE.md: never call present()/dismiss() outside an effect.
-  // Drive the manage sub-sheet visibility via state and an effect.
+  // The manage sub-sheet is the folder picker's swap-partner and borrows the
+  // picker's modalProps (single useStandardBottomSheet instance), so it stays
+  // on the manual ref + effect pattern rather than its own `visible` hook.
+  // `manageHasPresentedRef` guards the initial dismiss: gorhom 5.2.14 wedges a
+  // modal permanently closed if dismiss() lands while it's still in INITIAL
+  // status (never presented) — exactly what the else branch did on first mount
+  // with manageVisible=false.
   const [manageVisible, setManageVisible] = useState(false);
   const manageSheetRef = useRef<BottomSheetModalRef>(null);
+  const manageHasPresentedRef = useRef(false);
   useEffect(() => {
     if (manageVisible) {
+      manageHasPresentedRef.current = true;
       manageSheetRef.current?.present();
-    } else {
+    } else if (manageHasPresentedRef.current) {
       manageSheetRef.current?.dismiss();
     }
   }, [manageVisible]);

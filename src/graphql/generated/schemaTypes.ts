@@ -11535,6 +11535,15 @@ export type RecipeConnection = Connection & {
 /** Sub-input for recipe context */
 export type RecipeContextInput = {
   addedContext?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Meal plan this item was generated from. When set, the server flags the
+   * item as meal-plan-sourced (isFromMealPlan).
+   */
+  mealPlanId?: InputMaybe<Scalars['ID']['input']>;
+  /** Specific meal plan item this ingredient came from. */
+  mealPlanItemId?: InputMaybe<Scalars['ID']['input']>;
+  /** Human-readable meal/recipe reference for display (e.g. the meal plan name). */
+  mealPlanReference?: InputMaybe<Scalars['String']['input']>;
   recipeId?: InputMaybe<Scalars['ID']['input']>;
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
 };

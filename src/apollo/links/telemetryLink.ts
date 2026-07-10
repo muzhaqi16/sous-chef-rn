@@ -4,6 +4,7 @@ import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { isExpectedNetworkTransitionError } from '#/utils/subscriptionErrorHandler';
 import { useStore } from '#store';
 
 interface GraphQLTiming {
@@ -181,20 +182,42 @@ export const createTelemetryLink = () => {
             // Serialize error to avoid circular reference issues from WebSocket timers
             const serializedError = serializeError(error);
 
-            Telemetry.error(`GraphQL Network Error in ${operationName}`, {
-              operation_name: operationName,
-              operation_type: operationType,
-              error_message: serializedError.message,
-              error_name: serializedError.name,
-              error_stack: serializedError.stack,
-              duration_ms: duration,
-              network_error: true,
-            });
+            // Subscriptions drop their socket on every app background / network
+            // change and auto-reconnect — that's expected churn, not a fault.
+            // Log it at warn and keep it out of graphql_network_errors_total so
+            // the error dashboards stay meaningful.
+            const isExpectedSubscriptionDrop =
+              operationType === 'subscription' &&
+              isExpectedNetworkTransitionError(serializedError.message);
 
-            Telemetry.increment('graphql_network_errors_total', sampleWeight, {
-              type: operationType,
-              name: operationName,
-            });
+            if (isExpectedSubscriptionDrop) {
+              Telemetry.warn(`Subscription ${operationName} disconnected`, {
+                operation_name: operationName,
+                operation_type: operationType,
+                error_message: serializedError.message,
+                duration_ms: duration,
+                network_error: true,
+              });
+            } else {
+              Telemetry.error(`GraphQL Network Error in ${operationName}`, {
+                operation_name: operationName,
+                operation_type: operationType,
+                error_message: serializedError.message,
+                error_name: serializedError.name,
+                error_stack: serializedError.stack,
+                duration_ms: duration,
+                network_error: true,
+              });
+
+              Telemetry.increment(
+                'graphql_network_errors_total',
+                sampleWeight,
+                {
+                  type: operationType,
+                  name: operationName,
+                },
+              );
+            }
           }
 
           observer.error(error);

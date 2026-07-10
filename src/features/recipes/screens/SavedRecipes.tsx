@@ -299,6 +299,7 @@ export const SavedRecipes: React.FC = () => {
           renderItem={renderItem}
           onRefresh={handleRefresh}
           refreshing={false}
+          contentContainerStyle={styles.listContent}
           {...FLASHLIST_DEFAULTS.fullScreen}
         />
       )}
@@ -350,5 +351,8 @@ const styles = StyleSheet.create(theme => ({
   },
   searchBarContainer: {
     paddingHorizontal: theme.spacing.md,
+  },
+  listContent: {
+    paddingTop: theme.spacing['2.5'],
   },
 }));

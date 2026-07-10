@@ -9,6 +9,7 @@ import {
   setInternetCredentials,
   getInternetCredentials,
 } from 'react-native-keychain';
+import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 
 const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
@@ -366,6 +367,34 @@ export type SessionTokenLoadResult =
   | { status: 'ok'; tokens: SessionTokens }
   | { status: 'absent' }
   | { status: 'error' };
+
+/** Issue time (`iat`, seconds) of a refresh-token JWT; 0 when undecodable. */
+const refreshTokenIssuedAt = (refreshToken: string): number => {
+  try {
+    const { iat } = jwtDecode<{ iat?: number }>(refreshToken);
+    return typeof iat === 'number' ? iat : 0;
+  } catch {
+    return 0;
+  }
+};
+
+/**
+ * Choose the fresher of two session-token pairs by refresh-token issue time.
+ * A failed keychain write can strand a stale (already-rotated) pair in the
+ * keychain while the MMKV fallback holds the newer one; restoring the stale pair
+ * would present an already-rotated token and 401 → logout. Ties and undecodable
+ * tokens favor `primary` (the keychain, the canonical tier).
+ */
+export const pickFresherSessionTokens = (
+  primary: SessionTokens,
+  fallback: SessionTokens | null,
+): SessionTokens => {
+  if (!fallback) return primary;
+  return refreshTokenIssuedAt(fallback.refreshToken) >
+    refreshTokenIssuedAt(primary.refreshToken)
+    ? fallback
+    : primary;
+};
 
 // Serialized pair confirmed to be in the keychain. Lets saveSessionTokens
 // skip re-writing identical data — setGenericPassword is the slowest

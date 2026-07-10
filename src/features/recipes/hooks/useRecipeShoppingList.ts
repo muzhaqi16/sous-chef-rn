@@ -1,7 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery } from '@apollo/client/react';
-import type { BottomSheetModalRef } from '#hooks/useStandardBottomSheet';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -38,10 +37,7 @@ interface UseRecipeShoppingListOptions {
   externalRecipe: RecipeInformation | null;
 }
 
-type PendingAction =
-  | { type: 'single'; ingredient?: DisplayIngredient }
-  | { type: 'all' }
-  | { type: 'selected' };
+type PendingAction = { type: 'all' };
 
 export function useRecipeShoppingList({
   recipeId,
@@ -76,9 +72,6 @@ export function useRecipeShoppingList({
     shoppingLists.find(list => list.id === listId) || null;
 
   // State
-  const [selectedIngredients, setSelectedIngredients] = useState<Set<string>>(
-    new Set(),
-  );
   const [addingToList, setAddingToList] = useState(false);
   const [addedIngredients, setAddedIngredients] = useState<
     Set<string | number>
@@ -88,32 +81,9 @@ export function useRecipeShoppingList({
   );
   const [creatingList, setCreatingList] = useState(false);
 
-  // Sheet refs and visibility state. Per CLAUDE.md, control visibility via
-  // state + effect (never call present()/dismiss() directly from event handlers).
-  const shoppingListOptionsRef = useRef<BottomSheetModalRef>(null);
-  const ingredientSelectorRef = useRef<BottomSheetModalRef>(null);
-  const listPickerRef = useRef<BottomSheetModalRef>(null);
-  const pendingDismissActionRef = useRef<(() => void) | null>(null);
-
+  // The list picker is the only sheet — driven by `visible` through
+  // useStandardBottomSheet's guarded path.
   const [listPickerVisible, setListPickerVisible] = useState(false);
-  const [ingredientSelectorVisible, setIngredientSelectorVisible] =
-    useState(false);
-
-  useEffect(() => {
-    if (listPickerVisible) {
-      listPickerRef.current?.present();
-    } else {
-      listPickerRef.current?.dismiss();
-    }
-  }, [listPickerVisible]);
-
-  useEffect(() => {
-    if (ingredientSelectorVisible) {
-      ingredientSelectorRef.current?.present();
-    } else {
-      ingredientSelectorRef.current?.dismiss();
-    }
-  }, [ingredientSelectorVisible]);
 
   const openListPicker = (action: PendingAction) => {
     if (shoppingListsLoading) {
@@ -445,69 +415,6 @@ export function useRecipeShoppingList({
     );
   };
 
-  // Adds the user-selected subset of ingredients to the picked list.
-  const addSelectedIngredientsToList = (listId: string, listName?: string) => {
-    if (!backendRecipe || !recipeId) return;
-
-    const resolvedName = listName ?? getShoppingListById(listId)?.name;
-    if (!resolvedName) {
-      toastService.error(t('recipes.shoppingListNotFound'));
-      return;
-    }
-
-    executeWithLoadingState(
-      async () => {
-        let addedCount = 0;
-        let updatedCount = 0;
-
-        for (const ingredientId of selectedIngredients) {
-          const result = await addRecipeIngredientMutation({
-            variables: {
-              input: {
-                id: generateEntityId(),
-                recipeIngredientId: ingredientId,
-                shoppingListId: listId,
-              },
-            },
-            context: { localFirst: true },
-          });
-
-          const response =
-            result.data?.createShoppingListItemFromRecipeIngredient;
-          if (
-            response?.__typename ===
-            'CreateShoppingListItemFromRecipeIngredientPayload'
-          ) {
-            if (response.wasUpdated) {
-              updatedCount++;
-            } else {
-              addedCount++;
-            }
-          }
-        }
-
-        toastService.success(
-          updatedCount > 0
-            ? t('recipes.addedItemsToListUpdated', {
-                count: addedCount,
-                listName: resolvedName,
-                updated: updatedCount,
-              })
-            : t('recipes.addedItemsToList', {
-                count: addedCount,
-                listName: resolvedName,
-              }),
-        );
-        setSelectedIngredients(new Set());
-      },
-      setAddingToList,
-      err => {
-        logger.error('Failed to add selected ingredients:', err);
-        toastService.error(t('recipes.addIngredientsToListFailed'));
-      },
-    );
-  };
-
   // Entry point from the recipe ingredient list "Add All" button.
   const handleAddAll = () => {
     openListPicker({ type: 'all' });
@@ -515,13 +422,9 @@ export function useRecipeShoppingList({
 
   const handleListSelected = (listId: string) => {
     setListPickerVisible(false);
-
     if (pendingAction?.type === 'all') {
       addAllIngredientsToList(listId);
-    } else if (pendingAction?.type === 'selected') {
-      addSelectedIngredientsToList(listId);
     }
-
     setPendingAction(null);
   };
 
@@ -559,8 +462,6 @@ export function useRecipeShoppingList({
 
         if (currentPendingAction?.type === 'all') {
           addAllIngredientsToList(newList.id, newList.name);
-        } else if (currentPendingAction?.type === 'selected') {
-          addSelectedIngredientsToList(newList.id, newList.name);
         }
         setPendingAction(null);
       },
@@ -572,72 +473,23 @@ export function useRecipeShoppingList({
     );
   };
 
-  // Entry point from the shopping-list-options sheet "Add All" row.
-  // Dismisses the options sheet first; the dismiss callback then opens the picker.
-  const handleAddAllFromSheet = () => {
-    if (!backendRecipe || !recipeId) {
-      toastService.error(t('recipes.cannotAddExternalIngredients'));
-      return;
-    }
-    pendingDismissActionRef.current = () => openListPicker({ type: 'all' });
-    shoppingListOptionsRef.current?.dismiss();
-  };
-
-  const openIngredientSelector = () => {
-    pendingDismissActionRef.current = () => setIngredientSelectorVisible(true);
-    shoppingListOptionsRef.current?.dismiss();
-  };
-
-  const toggleIngredient = (ingredientId: string) => {
-    setSelectedIngredients(prev => {
-      const next = new Set(prev);
-      if (next.has(ingredientId)) {
-        next.delete(ingredientId);
-      } else {
-        next.add(ingredientId);
-      }
-      return next;
-    });
-  };
-
-  const handleAddSelectedIngredients = () => {
-    if (!backendRecipe || !recipeId) return;
-    if (selectedIngredients.size === 0) {
-      toastService.error(t('recipes.selectAtLeastOneIngredient'));
-      return;
-    }
-
-    pendingDismissActionRef.current = () =>
-      openListPicker({ type: 'selected' });
-    setIngredientSelectorVisible(false);
-  };
-
-  // Runs after each sheet's dismiss animation; flushes the queued cross-sheet action.
+  // List picker dismissed (selection, swipe, or blur) — sync visibility state.
   const handleSheetDismiss = () => {
-    const action = pendingDismissActionRef.current;
-    pendingDismissActionRef.current = null;
-    action?.();
+    setListPickerVisible(false);
   };
 
   return {
     shoppingLists,
-    selectedIngredients,
     addingToList,
     addedIngredients,
     creatingList,
 
     handleAddSingleIngredient,
     handleAddAll,
-    handleAddAllFromSheet,
-    handleAddSelectedIngredients,
     handleListSelected,
     handleCreateListAndAddIngredients,
-    openIngredientSelector,
-    toggleIngredient,
     handleSheetDismiss,
 
-    shoppingListOptionsRef,
-    ingredientSelectorRef,
-    listPickerRef,
+    listPickerVisible,
   };
 }

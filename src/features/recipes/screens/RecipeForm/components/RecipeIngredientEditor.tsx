@@ -1,9 +1,4 @@
-import React, {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useState,
-} from 'react';
+import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
@@ -50,28 +45,17 @@ export const RecipeIngredientEditor = forwardRef<
   const [isOptional, setIsOptional] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  // Manual-presentation pattern: omit `visible` so the hook doesn't auto-
-  // present/dismiss off prop changes, then drive presentation via the
-  // effect below. `useStandardBottomSheet` still owns the back handler,
-  // animation configs, focus-aware dismiss-on-blur, theme styles, and the
-  // backdrop claim wiring.
+  // State-driven presentation: the hook auto-presents/dismisses off `visible`
+  // via its guarded path (immune to gorhom 5.2.14's dismiss-before-present
+  // wedge) and owns the back handler, animation configs, focus-aware
+  // dismiss-on-blur, theme styles, and backdrop claim wiring. The imperative
+  // `open` / `close` ref API is preserved — it just toggles `visible`.
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
+    visible,
     onDismiss: () => setVisible(false),
     snapPoints: ['80%'],
     enableDynamicSizing: false,
   });
-
-  // Per CLAUDE.md: never call present()/dismiss() outside an effect.
-  // The imperative `open` / `close` API is preserved (parents still pass a
-  // ref), but internally it sets `visible` and an effect dispatches the
-  // present/dismiss after render commits.
-  useEffect(() => {
-    if (visible) {
-      bottomSheetRef.current?.present();
-    } else {
-      bottomSheetRef.current?.dismiss();
-    }
-  }, [visible, bottomSheetRef]);
 
   useImperativeHandle(ref, () => ({
     open: (ingredient?: IngredientFormState) => {

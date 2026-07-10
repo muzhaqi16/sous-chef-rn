@@ -23,7 +23,6 @@ import { GenerateShoppingListSheet } from '#features/mealPlan/components/Generat
 import { MealPlanSettingsSheet } from '#features/mealPlan/components/MealPlanSettingsSheet';
 import { DuplicatePlanSheet } from '#features/mealPlan/components/DuplicatePlanSheet';
 import { MarkCookedModal } from '#components/modals/MarkCookedModal';
-import { EditCustomMealSheet } from '#features/mealPlan/components/EditCustomMealSheet';
 import { NutritionSummaryCard } from '#features/mealPlan/components/NutritionSummaryCard';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
@@ -56,8 +55,6 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { type MealPlanMain_ItemFragment } from './MealPlanMain.generated';
-import { type EditCustomMealSheet_ItemFragment } from '#features/mealPlan/components/EditCustomMealSheet.generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
@@ -142,11 +139,6 @@ const MealPlanMainInner: React.FC = () => {
     defaultServings: number;
   } | null>(null);
 
-  // Edit custom meal state — only the EditCustomMealSheet's narrow shape is needed.
-  const [editCustomMealVisible, setEditCustomMealVisible] = useState(false);
-  const [editingCustomItem, setEditingCustomItem] =
-    useState<EditCustomMealSheet_ItemFragment | null>(null);
-
   // Settings and duplicate state
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [duplicateVisible, setDuplicateVisible] = useState(false);
@@ -216,7 +208,7 @@ const MealPlanMainInner: React.FC = () => {
   const { dailyMeals, isEmpty } = useDailyMeals(items, calendar.selectedDate);
 
   // Meal plan item actions
-  const { createItem, updateItem, toggleCompleted, deleteItem } =
+  const { createItem, toggleCompleted, deleteItem } =
     useMealPlanItemActions(activePlanId);
 
   // Shopping list generation
@@ -287,10 +279,11 @@ const MealPlanMainInner: React.FC = () => {
     toggleCompleted(id);
   };
 
+  // Granular deduction isn't part of the meal-plan flow — the API derives the
+  // pantry deduction from the recipe's ingredients when deductFromPantry is set.
   const handleMarkCooked = (input: {
     servings: number;
     deductFromPantry: boolean;
-    useGranularDeduction: boolean;
     notes?: string;
   }) => {
     if (!pendingCook) return;
@@ -338,23 +331,10 @@ const MealPlanMainInner: React.FC = () => {
   };
 
   const handleItemPress = (id: string) => {
-    const item = items.find(i => i.id === id) as
-      | (MealPlanMain_ItemFragment & EditCustomMealSheet_ItemFragment)
-      | undefined;
-    if (!item) return;
-    if (item.recipe?.id) {
+    const item = items.find(i => i.id === id);
+    if (item?.recipe?.id) {
       toMealPlanRecipeDetail({ recipeId: item.recipe.id });
-    } else if (item.customMealName && permissions.canEdit) {
-      setEditingCustomItem(item);
-      setEditCustomMealVisible(true);
     }
-  };
-
-  const handleSaveCustomMeal = (
-    id: string,
-    input: { customMealName?: string; notes?: string },
-  ) => {
-    updateItem(id, input);
   };
 
   const handleCreatePlan = () => {
@@ -718,17 +698,6 @@ const MealPlanMainInner: React.FC = () => {
           setPendingCook(null);
         }}
         onConfirm={handleMarkCooked}
-      />
-
-      {/* Edit Custom Meal Sheet */}
-      <EditCustomMealSheet
-        visible={editCustomMealVisible}
-        item={editingCustomItem}
-        onClose={() => {
-          setEditCustomMealVisible(false);
-          setEditingCustomItem(null);
-        }}
-        onSave={handleSaveCustomMeal}
       />
 
       {/* Plan Selector */}

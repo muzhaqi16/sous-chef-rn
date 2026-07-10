@@ -70,18 +70,30 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     if (!result) return null;
     const data = result.data?.generateShoppingListFromMealPlan;
     if (data?.__typename === 'GenerateShoppingListFromMealPlanPayload') {
-      const homeName = data.shoppingList.home?.name;
-      const baseMsg = `Shopping list "${data.shoppingList.name}" created with ${
-        data.shoppingList.totalItems ?? 0
-      } items`;
-      toastService.success(
-        homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
-      );
+      const { shoppingList } = data;
+      const itemCount = shoppingList.totalItems ?? 0;
+      if (itemCount === 0) {
+        // Plan generated but nothing to buy — pantry already covers it, or the
+        // recipes have no linked catalog items. Surface it instead of a
+        // misleading "created with 0 items" success.
+        toastService.info(`"${shoppingList.name}" is ready — nothing to add.`);
+      } else {
+        const homeName = shoppingList.home?.name;
+        const baseMsg = `Shopping list "${shoppingList.name}" created with ${itemCount} items`;
+        toastService.success(
+          homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
+        );
+      }
       Telemetry.trackEvent('shopping_list_generated_from_meal_plan', {
         meal_plan_id: mealPlanId,
         check_pantry: input.checkPantry ?? true,
         added_to_existing: !!input.shoppingListId,
       });
+    } else if (data && 'message' in data) {
+      // Result-union error member (ValidationError for an empty plan,
+      // Forbidden/NotFound/Conflict). `message` comes from the `Error`
+      // interface selected in the mutation document.
+      toastService.error(data.message ?? 'Failed to generate shopping list');
     }
     return data ?? null;
   };

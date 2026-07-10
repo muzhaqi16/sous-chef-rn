@@ -8037,6 +8037,17 @@ type RecipeConnection implements Connection {
 """Sub-input for recipe context"""
 input RecipeContextInput {
   addedContext: String
+  """
+  Meal plan this item was generated from. When set, the server flags the
+  item as meal-plan-sourced (isFromMealPlan).
+  """
+  mealPlanId: ID
+  """Specific meal plan item this ingredient came from."""
+  mealPlanItemId: ID
+  """
+  Human-readable meal/recipe reference for display (e.g. the meal plan name).
+  """
+  mealPlanReference: String
   recipeId: ID
   recipeIngredientId: ID
 }
