@@ -949,17 +949,20 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
 # BATCH OPERATIONS
 # ============================================
 
+# An explicit generous `first` rather than the server's implicit default page
+# size: an item's batch count is small in practice and no consumer paginates,
+# so relying on the default risks silent truncation with no load-more path.
 query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
-  pantryItemBatchesConnection(pantryItemId: $pantryItemId, status: $status) {
+  pantryItemBatchesConnection(
+    pantryItemId: $pantryItemId
+    status: $status
+    first: 100
+  ) {
     edges {
       node {
         id
         ...PantryItemBatchFragment
       }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
     }
   }
 }

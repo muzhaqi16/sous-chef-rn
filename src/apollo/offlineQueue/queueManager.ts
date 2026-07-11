@@ -34,6 +34,24 @@ const QUEUE_ITEM_DATA_FRAGMENT = gql`
 `;
 
 /**
+ * Reads a ShoppingListItem's catalog reference from cache during queue
+ * processing. `SyncShoppingListItemInput.item` is a required @oneOf ref, but
+ * toggle/quantity/plain-update inputs carry only the row id — the replay
+ * backfills the ref from the cached row. Kept separate from
+ * {@link QUEUE_ITEM_DATA_FRAGMENT} and read with `returnPartialData` so a row
+ * cached without the linked `item` entity still resolves its `itemName`.
+ */
+const QUEUE_ITEM_REF_FRAGMENT = gql`
+  fragment QueueItemRefData on ShoppingListItem {
+    id
+    itemName
+    item {
+      id
+    }
+  }
+`;
+
+/**
  * Reads a PantryItem's `pantryId` from cache during queue processing.
  * `UpdatePantryItemInput` carries no `pantryId`, but `SyncPantryItemInput`
  * requires it, so the update→sync replay backfills it from the cached entity
@@ -240,6 +258,7 @@ export class QueueManager {
     const { syncMutation, syncVariables } = convertToSyncMutation(mutation, {
       readPantryId: clientId => this.readPantryId(clientId),
       readShoppingListId: clientId => this.readShoppingListId(clientId),
+      readItemRef: clientId => this.readItemRef(clientId),
     });
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
@@ -323,6 +342,33 @@ export class QueueManager {
       fragment: QUEUE_ITEM_DATA_FRAGMENT,
     });
     return itemData?.shoppingList?.id;
+  }
+
+  /**
+   * Read a shopping-list item's @oneOf catalog ref from cache — the sync input
+   * requires it, but toggle/quantity/plain-update variables only carry the row
+   * id. Prefers the linked catalog item id; falls back to the row's free-text
+   * name (the server links-or-creates by name, matching the original add).
+   */
+  private readItemRef(
+    itemId: string | undefined,
+  ): { itemId: string } | { itemName: string } | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      itemName: string | null;
+      item: { id: string } | null;
+    }>({
+      id: client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_ITEM_REF_FRAGMENT,
+      returnPartialData: true,
+    });
+    if (itemData?.item?.id) return { itemId: itemData.item.id };
+    if (itemData?.itemName) return { itemName: itemData.itemName };
+    return undefined;
   }
 
   /**
@@ -485,6 +531,9 @@ export class QueueManager {
     return (
       vars.id ??
       vars.input?.id ??
+      // Single adds ride the batch AddItemsToShoppingListInput shape — the
+      // client-minted row id lives on the one queued item.
+      vars.input?.items?.[0]?.id ??
       vars.input?.pantryItemId ??
       vars.input?.itemId ??
       vars.itemId ??

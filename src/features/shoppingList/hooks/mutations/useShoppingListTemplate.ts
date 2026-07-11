@@ -25,10 +25,8 @@ import {
 } from './useShoppingListTemplate.generated';
 import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
@@ -57,47 +55,17 @@ export function useShoppingListTemplate() {
     templateName: string,
     saveItems = true,
   ): Promise<boolean> => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseShoppingListTemplate_ListFragment>({
-          id: cacheId,
+    const revert =
+      applyOptimisticFragmentPatch<UseShoppingListTemplate_ListFragment>(
+        client.cache,
+        { typename: 'ShoppingList', id },
+        {
           fragment: UseShoppingListTemplate_ListFragmentDoc,
           fragmentName: 'useShoppingListTemplate_list',
-        })
-      : null;
-
-    if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UseShoppingListTemplate_ListFragmentDoc,
-            fragmentName: 'useShoppingListTemplate_list',
-            data: {
-              ...snapshot,
-              isTemplate: true,
-              templateName,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        'Mark As Template (optimistic)',
+        },
+        { isTemplate: true, templateName },
+        'Mark As Template',
       );
-    }
-
-    const revert = () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseShoppingListTemplate_ListFragmentDoc,
-              fragmentName: 'useShoppingListTemplate_list',
-              data: snapshot,
-            }),
-          'Revert Mark As Template',
-        );
-      }
-    };
 
     const result = await executeMutation(
       () =>

@@ -68,10 +68,20 @@ export const SignUpScreen = (): React.JSX.Element => {
     if (!sentToEmail) return;
     executeMutation(
       async () => {
-        await resendVerificationEmail({
+        const result = await resendVerificationEmail({
           variables: { input: { email: sentToEmail } },
         });
-        toast({ message: t('auth.resendVerificationSent'), type: 'success' });
+        // Under errorPolicy:'all' failures resolve rather than throw — both a
+        // resolved error-union member and a transport error land here, so gate
+        // the success toast on the payload instead of on reaching this line.
+        const succeeded =
+          result.data?.resendVerificationEmail?.__typename ===
+            'ResendVerificationEmailPayload' && !result.error;
+        toast(
+          succeeded
+            ? { message: t('auth.resendVerificationSent'), type: 'success' }
+            : { message: t('auth.resendVerificationFailed'), type: 'error' },
+        );
       },
       () =>
         toast({ message: t('auth.resendVerificationFailed'), type: 'error' }),

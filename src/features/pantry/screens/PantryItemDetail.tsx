@@ -103,13 +103,21 @@ export const PantryItemDetail: React.FC<
   // "show all inactive" affordance in BatchSection both have their data.
   // `cache-and-network` paints from the persisted cache on cold start and
   // refreshes after a batch is opened/wasted.
-  const { data: batchesData } = useQuery(GetPantryItemBatchesDocument, {
-    variables: { pantryItemId: itemId },
-    fetchPolicy: 'cache-and-network',
-  });
+  const { data: batchesData, refetch: refetchBatches } = useQuery(
+    GetPantryItemBatchesDocument,
+    {
+      variables: { pantryItemId: itemId },
+      fetchPolicy: 'cache-and-network',
+    },
+  );
 
+  // Batches live in their own query, so pull-to-refresh must refetch both —
+  // refetching only the item would leave another member's batch changes stale.
   const handleRefresh = () => {
-    executeRefreshWithFinally(() => refetch(), setRefreshing);
+    executeRefreshWithFinally(
+      () => Promise.all([refetch(), refetchBatches()]),
+      setRefreshing,
+    );
   };
 
   const permissions = usePantryPermissions();

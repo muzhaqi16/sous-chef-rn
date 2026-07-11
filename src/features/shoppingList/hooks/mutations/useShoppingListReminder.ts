@@ -17,10 +17,8 @@ import {
   type UseShoppingListReminder_ListFragment,
 } from './useShoppingListReminder.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
@@ -36,48 +34,17 @@ export function useShoppingListReminder() {
     id: string,
     patch: Partial<UseShoppingListReminder_ListFragment>,
     label: string,
-  ): (() => void) => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseShoppingListReminder_ListFragment>({
-          id: cacheId,
-          fragment: UseShoppingListReminder_ListFragmentDoc,
-          fragmentName: 'useShoppingListReminder_list',
-        })
-      : null;
-
-    if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UseShoppingListReminder_ListFragmentDoc,
-            fragmentName: 'useShoppingListReminder_list',
-            data: {
-              ...snapshot,
-              ...patch,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        `${label} (optimistic)`,
-      );
-    }
-
-    return () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseShoppingListReminder_ListFragmentDoc,
-              fragmentName: 'useShoppingListReminder_list',
-              data: snapshot,
-            }),
-          `Revert ${label}`,
-        );
-      }
-    };
-  };
+  ): (() => void) =>
+    applyOptimisticFragmentPatch(
+      client.cache,
+      { typename: 'ShoppingList', id },
+      {
+        fragment: UseShoppingListReminder_ListFragmentDoc,
+        fragmentName: 'useShoppingListReminder_list',
+      },
+      patch,
+      label,
+    );
 
   const setReminder = async (
     id: string,

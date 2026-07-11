@@ -3,7 +3,10 @@
 query MyShoppingListInvites {
   me {
     id
-    pendingCollaborationInvitesConnection {
+    # Explicit generous page size: the token lookup does a find() over this
+    # single page, so relying on the server's implicit default could silently
+    # miss a pending invite and misreport it as unavailable.
+    pendingCollaborationInvitesConnection(first: 50) {
       edges {
         node {
           id

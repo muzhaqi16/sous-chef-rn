@@ -24,7 +24,7 @@ export function alertRejectedMutation(
   message: string,
 ): void {
   if (!result?.error) {
-    alertService.alert('Error', message);
+    alertService.alert(t('labels.error'), message);
   }
 }
 

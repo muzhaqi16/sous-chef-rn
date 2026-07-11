@@ -728,6 +728,7 @@ describe('QueueManager', () => {
       const readers = {
         readPantryId: manager['readPantryId'].bind(manager),
         readShoppingListId: manager['readShoppingListId'].bind(manager),
+        readItemRef: manager['readItemRef'].bind(manager),
       };
       convertToSyncMutation = mutation =>
         convertToSyncMutationFn(mutation, readers);
@@ -888,7 +889,9 @@ describe('QueueManager', () => {
             items: [
               {
                 id: 'sl-1',
-                itemName: 'Bread',
+                // The @oneOf catalog ref rides nested on the queued item,
+                // exactly as useAddShoppingItem enqueues it.
+                item: { itemName: 'Bread' },
                 quantity: 2,
               },
             ],
@@ -900,15 +903,18 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-1');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect((item.item as Record<string, unknown>).itemName).toBe('Bread');
+      expect(item.item).toEqual({ itemName: 'Bread' });
       // FlexibleQuantity scalar — passed through, no unitId needed.
       expect(item.quantity).toBe(2);
     });
 
     it('converts UpdateShoppingListItemQuantity with cache read', () => {
+      // One combined mock serves both cache reads (list id + item ref).
       mockClient.cache.readFragment.mockReturnValue({
         id: 'sl-item-1',
         shoppingList: { id: 'list-99' },
+        itemName: 'Bread',
+        item: null,
       });
       const mutation = makeMutation({
         operationName: 'UpdateShoppingListItemQuantity',
@@ -921,6 +927,9 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-item-1');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-99');
+      // The qty input's `itemId` is the ROW id — the @oneOf catalog ref must be
+      // backfilled from the cached row, never from that field.
+      expect(item.item).toEqual({ itemName: 'Bread' });
       expect(item.quantity).toBe('5');
       expect(item.version).toBe(3);
     });
@@ -932,6 +941,8 @@ describe('QueueManager', () => {
       mockClient.cache.readFragment.mockReturnValue({
         id: 'sl-item-1',
         shoppingList: { id: 'list-99' },
+        itemName: 'Bread',
+        item: null,
       });
       const mutation = makeMutation({
         operationName: 'UpdateShoppingListItemQuantity',
@@ -945,9 +956,13 @@ describe('QueueManager', () => {
     });
 
     it('converts ToggleShoppingListItemPurchased with cache read', () => {
+      // Toggle input carries no catalog ref — the cached row's linked item id
+      // wins over its free-text name for the @oneOf backfill.
       mockClient.cache.readFragment.mockReturnValue({
         id: 'sl-item-2',
         shoppingList: { id: 'list-88' },
+        itemName: 'Milk',
+        item: { id: 'cat-7' },
       });
       const mutation = makeMutation({
         operationName: 'ToggleShoppingListItemPurchased',
@@ -958,7 +973,46 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-item-2');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-88');
+      expect(item.item).toEqual({ itemId: 'cat-7' });
       expect(item.purchaseTracking).toEqual({ isPurchased: true });
+    });
+
+    it('carries a flat itemName rename into the @oneOf ref for UpdateShoppingListItem', () => {
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'sl-item-3',
+        shoppingList: { id: 'list-77' },
+        itemName: 'Old name',
+        item: { id: 'cat-9' },
+      });
+      const mutation = makeMutation({
+        operationName: 'UpdateShoppingListItem',
+        variables: {
+          input: { id: 'sl-item-3', itemName: 'New name', version: 4 },
+        },
+      });
+      const item = wrapper(convertToSyncMutation(mutation).syncVariables)
+        .item as Record<string, unknown>;
+      // The rename must win over the cached ref, or the replay undoes it.
+      expect(item.item).toEqual({ itemName: 'New name' });
+    });
+
+    it('throws when no @oneOf item ref is resolvable for a toggle', () => {
+      // Row cached without a linked item or name — the required ref cannot be
+      // built, so the replay surfaces a permanent failure instead of sending
+      // an empty ref the server rejects.
+      mockClient.cache.readFragment.mockReturnValue({
+        id: 'sl-item-4',
+        shoppingList: { id: 'list-66' },
+        itemName: null,
+        item: null,
+      });
+      const mutation = makeMutation({
+        operationName: 'ToggleShoppingListItemPurchased',
+        variables: { input: { id: 'sl-item-4', purchased: true } },
+      });
+      expect(() => convertToSyncMutation(mutation)).toThrow(
+        'item ref not found',
+      );
     });
 
     it('throws when cache has no shoppingList data for quantity update', () => {
@@ -1057,8 +1111,7 @@ describe('QueueManager', () => {
             items: [
               {
                 id: 'sl-9',
-                itemId: 'cat-1',
-                itemName: 'Cereal',
+                item: { itemId: 'cat-1' },
                 quantity: 1,
                 brand: { brandId: 'b1' },
                 netWeight: { netWeight: 500 },
@@ -1071,7 +1124,7 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-9');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect((item.item as Record<string, unknown>).itemName).toBe('Cereal');
+      expect(item.item).toEqual({ itemId: 'cat-1' });
       // Not dropped on sync replay (would be lost if it fell back to replay-original).
       expect(item.brand).toEqual({ brandId: 'b1' });
       expect(item.netWeight).toEqual({ netWeight: 500 });
@@ -1083,7 +1136,7 @@ describe('QueueManager', () => {
         variables: {
           input: {
             shoppingListId: 'list-1',
-            items: [{ id: 'sl-10', itemId: 'cat-2' }],
+            items: [{ id: 'sl-10', item: { itemId: 'cat-2' } }],
           },
         },
       });
@@ -1091,7 +1144,7 @@ describe('QueueManager', () => {
       expect(input.clientId).toBe('sl-10');
       const item = input.item as Record<string, unknown>;
       expect(item.shoppingListId).toBe('list-1');
-      expect((item.item as Record<string, unknown>).itemId).toBe('cat-2');
+      expect(item.item).toEqual({ itemId: 'cat-2' });
     });
 
     it('converts AddItemToShoppingListFromPantryItem → SyncShoppingListItem', () => {
@@ -1100,16 +1153,14 @@ describe('QueueManager', () => {
         variables: {
           input: {
             shoppingListId: 'list-1',
-            items: [
-              { id: 'sl-11', itemId: 'cat-3', itemName: 'Rice', quantity: 3 },
-            ],
+            items: [{ id: 'sl-11', item: { itemName: 'Rice' }, quantity: 3 }],
           },
         },
       });
       const input = wrapper(convertToSyncMutation(mutation).syncVariables);
       expect(input.clientId).toBe('sl-11');
       const item = input.item as Record<string, unknown>;
-      expect((item.item as Record<string, unknown>).itemName).toBe('Rice');
+      expect(item.item).toEqual({ itemName: 'Rice' });
       expect(item.quantity).toBe(3);
     });
   });

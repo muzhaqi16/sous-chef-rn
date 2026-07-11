@@ -18,6 +18,8 @@ import {
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
@@ -182,10 +184,13 @@ export function useToggleShoppingItem({
     if (!result) return false;
 
     // A resolved error-union member (ValidationError/ConflictError/…) doesn't
-    // fire the mutation `onError`, so revert here — same post-result guard
-    // recordPurchase uses. 'queued' (null payload, offline) keeps the optimistic
-    // flip; only 'rejected' rolls back.
+    // fire the mutation `onError`, so surface + revert it here — same
+    // post-result guard recordPurchase uses. When `result.error` is set,
+    // `onError` already ran and decided (network errors keep the flip for the
+    // queue's retry; other errors reverted + alerted) — don't second-guess it.
+    // 'queued' (null payload, offline) keeps the optimistic flip.
     if (
+      !result.error &&
       classifyCreateResult(
         result,
         'toggleShoppingListItemPurchased',
@@ -193,6 +198,7 @@ export function useToggleShoppingItem({
       ) === 'rejected'
     ) {
       revert();
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
 
@@ -310,7 +316,10 @@ export function useToggleShoppingItem({
     );
     if (!result) return false;
 
+    // Same contract as toggleItem's guard: only handle the resolved
+    // error-union case here; `result.error` was already routed by `onError`.
     if (
+      !result.error &&
       classifyCreateResult(
         result,
         'updateShoppingListItem',
@@ -318,6 +327,7 @@ export function useToggleShoppingItem({
       ) === 'rejected'
     ) {
       revert();
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
     return true;

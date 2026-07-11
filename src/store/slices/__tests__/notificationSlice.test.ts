@@ -407,6 +407,68 @@ describe('notificationSlice', () => {
       expect(store.getState().notifications).toHaveLength(2);
     });
 
+    it('derives isRead from readAt so read history stays read', () => {
+      // The history feed fetches read + unread; a hardcoded isRead: false
+      // would resurrect read items as unread and inflate the badge.
+      const store = createAuthenticatedStore();
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'read-1',
+            readAt: new Date().toISOString(),
+          }),
+          createNotification({ id: 'unread-1', readAt: null }),
+        ]);
+      const byId = Object.fromEntries(
+        store.getState().notifications.map(n => [n.id, n]),
+      );
+      expect(byId['read-1'].isRead).toBe(true);
+      expect(byId['unread-1'].isRead).toBe(false);
+      expect(store.getState().unreadCount).toBe(1);
+    });
+
+    it('honors an explicit isRead so a rollback restores read items as read', () => {
+      const store = createAuthenticatedStore();
+      const restored: NotificationItem = {
+        ...createNotification({ id: 'restored-1' }),
+        isRead: true,
+      };
+      store.getState().addNotification(restored);
+      expect(store.getState().notifications[0].isRead).toBe(true);
+      expect(store.getState().unreadCount).toBe(0);
+    });
+
+    it('keeps the list ordered newest-first when older history pages arrive', () => {
+      const store = createAuthenticatedStore();
+      store
+        .getState()
+        .addNotification(
+          createNotification({
+            id: 'newest',
+            sentAt: '2026-07-10T10:00:00.000Z',
+          }),
+        );
+      // History pages arrive older than what's already present.
+      store
+        .getState()
+        .addMultipleNotifications([
+          createNotification({
+            id: 'older',
+            sentAt: '2026-07-08T10:00:00.000Z',
+          }),
+          createNotification({
+            id: 'middle',
+            sentAt: '2026-07-09T10:00:00.000Z',
+          }),
+        ]);
+      expect(store.getState().notifications.map(n => n.id)).toEqual([
+        'newest',
+        'middle',
+        'older',
+      ]);
+    });
+
     it('tracks urgent count correctly in batch', () => {
       const store = createAuthenticatedStore();
       store.getState().addMultipleNotifications([

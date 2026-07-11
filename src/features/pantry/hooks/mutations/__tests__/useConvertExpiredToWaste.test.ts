@@ -161,7 +161,7 @@ describe('useConvertExpiredToWaste (local-first)', () => {
     // the hook must surface its own alert rather than reverting silently.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Failed to remove item',
+      'Failed to discard expired items',
     );
   });
 });

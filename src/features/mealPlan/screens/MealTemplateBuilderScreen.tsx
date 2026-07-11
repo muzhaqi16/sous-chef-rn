@@ -17,6 +17,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
 import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
+import { generateId } from '#/utils/generateId';
 
 const CATEGORY_OPTIONS = [
   TemplateCategory.Weekly,
@@ -178,7 +179,10 @@ export const MealTemplateBuilderScreen: React.FC<
 
     setDraftItems(prev => {
       const next: DraftItem = {
-        key: editingKey ?? `draft-${prev.length}-${dayOffset}-${itemMealType}`,
+        // A unique id, not an index-derived key: prev.length repeats after a
+        // remove-then-add, colliding with an existing row's key (duplicate
+        // React keys, and removing one row would filter out both).
+        key: editingKey ?? `draft-${generateId()}`,
         dayOffset,
         mealType: itemMealType,
         customMealName,

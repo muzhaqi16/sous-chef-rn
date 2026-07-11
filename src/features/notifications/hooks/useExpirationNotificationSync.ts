@@ -37,11 +37,8 @@ const ACTION_LABELS: Record<ExpirationAction, string> = {
 
 export function useExpirationNotificationSync() {
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
-  // The server merged the former `markExpirationNotificationDismissed` into
-  // `markExpirationNotificationAsRead`; dismiss now routes to the same mutation.
-  const [dismissMutation] = useMutation(
-    MarkExpirationNotificationAsReadDocument,
-  );
+  // The server merged the former dismiss mutation into
+  // markExpirationNotificationAsRead — marking read IS the dismissal.
   const [markReadMutation] = useMutation(
     MarkExpirationNotificationAsReadDocument,
   );
@@ -81,22 +78,6 @@ export function useExpirationNotificationSync() {
     );
   };
 
-  const syncDismiss = (expirationNotificationId: string) => {
-    executeMutation(
-      () =>
-        dismissMutation({
-          variables: { input: { notificationId: expirationNotificationId } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncDismissExpiration',
-          notificationId: expirationNotificationId,
-        });
-      },
-    );
-  };
-
   const syncMarkRead = (expirationNotificationId: string) => {
     executeMutation(
       () =>
@@ -113,5 +94,5 @@ export function useExpirationNotificationSync() {
     );
   };
 
-  return { syncMarkAction, syncDismiss, syncMarkRead };
+  return { syncMarkAction, syncMarkRead };
 }

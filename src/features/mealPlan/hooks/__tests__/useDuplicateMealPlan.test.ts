@@ -55,11 +55,11 @@ describe('useDuplicateMealPlan', () => {
     jest.clearAllMocks();
   });
 
-  describe('when the API is unavailable', () => {
-    afterEach(() => {
-      useStore.setState({ apiReachable: true, isOnline: true });
-    });
+  afterEach(() => {
+    useStore.setState({ apiReachable: true, isOnline: true });
+  });
 
+  describe('when the API is unavailable', () => {
     it('exposes isApiUnavailable, toasts, returns null, and skips the mutation', async () => {
       useStore.setState({ apiReachable: false });
       const dup = duplicateMock();
@@ -75,18 +75,18 @@ describe('useDuplicateMealPlan', () => {
       expect(toastService.error).toHaveBeenCalledWith('Not available offline');
       expect(dup.fired).toHaveLength(0);
     });
+  });
 
-    it('fires the mutation normally when online', async () => {
-      const dup = duplicateMock();
-      const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
-        operationMocks: [dup.mock],
-      });
-
-      expect(result.current.isApiUnavailable).toBe(false);
-
-      await result.current.duplicatePlan(input);
-
-      expect(dup.fired).toHaveLength(1);
+  it('fires the mutation normally when online', async () => {
+    const dup = duplicateMock();
+    const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
+      operationMocks: [dup.mock],
     });
+
+    expect(result.current.isApiUnavailable).toBe(false);
+
+    await result.current.duplicatePlan(input);
+
+    expect(dup.fired).toHaveLength(1);
   });
 });

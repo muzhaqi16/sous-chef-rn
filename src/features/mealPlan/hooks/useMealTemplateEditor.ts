@@ -25,29 +25,73 @@ import {
   UseMealTemplateEditor_TemplateFragmentDoc,
   type UseMealTemplateEditor_TemplateFragment,
 } from './useMealTemplateEditor.generated';
-import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  MealTemplateDisplayFragmentDoc,
+  type MealTemplateDisplayFragment,
+} from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import {
+  createAddToQueryConnectionUpdater,
+  createRemoveFromQueryConnectionUpdater,
+} from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
-import type {
-  CreateMealTemplateInput,
-  UpdateMealTemplateInput,
-  AddTemplateItemInput,
-  UpdateTemplateItemInput,
+import { useUser } from '#store/useAppStore';
+import {
+  TemplateCategory,
+  type CreateMealTemplateInput,
+  type UpdateMealTemplateInput,
+  type AddTemplateItemInput,
+  type UpdateTemplateItemInput,
 } from '#/graphql/generated/schemaTypes';
 
 const addToMealTemplates = createAddToQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
 );
+const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
+  'mealTemplates',
+  'MealTemplate',
+);
+
+/**
+ * Materialize a complete `MealTemplateDisplay` entity for a local-first create,
+ * mirroring useMealPlanActions' optimistic plan builder. Fallbacks match the
+ * server's defaults; `home` degrades to null when only a homeId is known — the
+ * post-replay response heals the gap.
+ */
+function buildOptimisticMealTemplate(
+  id: string,
+  input: Omit<CreateMealTemplateInput, 'id'>,
+  creatorId: string,
+): MealTemplateDisplayFragment {
+  const now = new Date().toISOString();
+  return {
+    __typename: 'MealTemplate',
+    id,
+    name: input.name,
+    description: input.description ?? null,
+    category: input.category ?? TemplateCategory.Custom,
+    durationDays: input.durationDays ?? 7,
+    defaultServings: input.defaultServings ?? 2,
+    tags: input.tags ?? [],
+    usageCount: 0,
+    lastUsedAt: null,
+    homeId: input.homeId ?? null,
+    home: null,
+    user: { __typename: 'User', id: creatorId },
+    createdAt: now,
+    updatedAt: now,
+  };
+}
 
 export function useMealTemplateEditor() {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const user = useUser();
 
   const [createMutation, { loading: creating }] = useMutation(
     CreateMealTemplateDocument,
@@ -77,6 +121,28 @@ export function useMealTemplateEditor() {
     input: Omit<CreateMealTemplateInput, 'id'>,
   ): Promise<string | null> => {
     const id = generateEntityId();
+
+    // Local-first: write the template into the cache before firing so an
+    // offline/queued create is visible in the overview immediately (the queued
+    // replay converges on the same client-minted id). Without this, "queued"
+    // reports success while the list shows nothing until a later refetch.
+    const optimisticTemplate = user
+      ? buildOptimisticMealTemplate(id, input, user.id)
+      : null;
+    if (optimisticTemplate) {
+      executeCacheUpdate(() => {
+        client.cache.writeFragment({
+          id: client.cache.identify(optimisticTemplate),
+          fragment: MealTemplateDisplayFragmentDoc,
+          fragmentName: 'MealTemplateDisplay',
+          data: optimisticTemplate,
+        });
+        addToMealTemplates(client.cache, optimisticTemplate, {
+          position: 'start',
+        });
+      }, 'Create Meal Template (optimistic)');
+    }
+
     const result = await executeMutation(
       () =>
         createMutation({
@@ -86,19 +152,21 @@ export function useMealTemplateEditor() {
       'Create Meal Template error:',
     );
 
-    if (!result) return null;
-    const outcome = classifyCreateResult(
-      result,
-      'createMealTemplate',
-      'CreateMealTemplatePayload',
-    );
-    if (outcome === 'rejected') {
+    const rejected =
+      !result ||
       alertIfRejected(
         result,
         'createMealTemplate',
         'CreateMealTemplatePayload',
         t('mealTemplateBuilder.failedToCreate'),
       );
+    if (rejected) {
+      if (optimisticTemplate) {
+        executeCacheUpdate(
+          () => removeFromMealTemplates(client.cache, id, { evictItem: true }),
+          'Revert rejected Meal Template create',
+        );
+      }
       return null;
     }
     // created (server) or queued (offline, replays keyed by the same id).

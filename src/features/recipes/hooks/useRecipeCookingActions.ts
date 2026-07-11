@@ -58,8 +58,9 @@ export function useRecipeCookingActions({
           context: { localFirst: true },
         }),
       error => {
+        // Report only — a throw classifies as 'rejected' below and every
+        // caller toasts on that outcome; toasting here too would double up.
         errorService.reportError(error, { operation: 'markRecipeAsCooked' });
-        toastService.error(t('recipes.markCookedFailed'));
       },
     );
 

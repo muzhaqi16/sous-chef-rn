@@ -9,6 +9,7 @@
 
 import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import { useMutation } from '@apollo/client/react';
 import {
   MarkHomeAsDefaultDocument,
@@ -216,7 +217,7 @@ export function useHomeSelection({
         // Rollback on error and re-enable queries
         setHomeAndPantry(previousHomeId, previousPantryId);
         setIsHomeSelectionReady(true);
-        alertService.alert('Error', 'Failed to set default home');
+        alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
       },
     );
     if (!result) return false;
@@ -240,7 +241,7 @@ export function useHomeSelection({
     // path; the early `if (!result) return false` keeps the two exclusive).
     setHomeAndPantry(previousHomeId, previousPantryId);
     setIsHomeSelectionReady(true);
-    alertService.alert('Error', 'Failed to set default home');
+    alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
     return false;
   };
 

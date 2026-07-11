@@ -30,7 +30,6 @@ import { t } from '#/i18n/t';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
-  setCachedFields,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
@@ -113,27 +112,14 @@ export function useHomeDetailManagement(homeId: string) {
   const [transferOwnershipMutation, { loading: transferringOwnership }] =
     useMutation(TransferHomeOwnershipDocument);
 
-  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
-    // Use cache.modify to update the membership role field
-    update(cache, { data }, { variables }) {
-      if (
-        data?.updateMembership?.__typename !== 'UpdateMembershipPayload' ||
-        !variables
-      ) {
-        return;
-      }
-
-      const membershipId = variables.input.id;
-      const newRole = variables.input.role;
-
-      setCachedFields(cache, 'Membership', membershipId, {
-        role: newRole,
-        updatedAt: new Date().toISOString(),
-      });
-    },
-    // Error/rejection handling lives in handleRoleSelect so a resolved
-    // ForbiddenError member is surfaced (it doesn't throw under errorPolicy:'all').
-  });
+  // No update callback: the response spreads HomeMemberCard_member, so Apollo
+  // normalizes role and the can* permission fields by Membership id. A manual
+  // cache.modify here would also run for permission-only toggles, where
+  // variables.input.role is undefined — and a modify writing undefined deletes
+  // the field, blanking the member card.
+  // Error/rejection handling lives in handleRoleSelect so a resolved
+  // ForbiddenError member is surfaced (it doesn't throw under errorPolicy:'all').
+  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
@@ -335,6 +321,7 @@ export function useHomeDetailManagement(homeId: string) {
       error =>
         handleMutationError(error, { operation: 'Update Member Permission' }),
     );
+    if (!result) return false;
     return !alertIfRejected(
       result,
       'updateMembership',
@@ -419,10 +406,18 @@ export function useHomeDetailManagement(homeId: string) {
       );
       return;
     }
-    // No disableHomeJoinLink mutation — clear the flag via updateHome.
-    await updateHomeMutation({
+    // No disableHomeJoinLink mutation — clear the flag via updateHome. Same
+    // rejection surface as the enable branch: a resolved error member never
+    // fires onError under errorPolicy:'all', so classify the result here.
+    const result = await updateHomeMutation({
       variables: { input: { id: homeId, allowJoinCode: false } },
     });
+    alertIfRejected(
+      result,
+      'updateHome',
+      'UpdateHomePayload',
+      t('errors.updateHomeFailed'),
+    );
   };
 
   // Hand the home off to another member. The server flips the OWNER role; the
@@ -436,6 +431,7 @@ export function useHomeDetailManagement(homeId: string) {
       error =>
         handleMutationError(error, { operation: 'Transfer Home Ownership' }),
     );
+    if (!result) return false;
     return !alertIfRejected(
       result,
       'transferHomeOwnership',
@@ -450,6 +446,7 @@ export function useHomeDetailManagement(homeId: string) {
       () => rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
       error => handleMutationError(error, { operation: 'Rotate Join Code' }),
     );
+    if (!result) return false;
     return !alertIfRejected(
       result,
       'updateHomeJoinCode',

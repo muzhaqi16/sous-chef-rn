@@ -83,25 +83,13 @@ export function useNotificationsOnLaunch(userId?: string) {
 
   useApolloErrorLogger('GetUnreadNotifications', error);
 
-  // Seed the badge from the server's authoritative totals on every fetch
-  // (mount / foreground). Runs even when there are zero unread so the badge
-  // clears correctly — kept separate from the list-materialize effect below,
-  // which early-returns on an empty page.
   useEffect(() => {
     const me = data?.me;
     if (!me) return;
-    setServerNotificationCounts(
-      me.unreadNotificationCount,
-      me.hasUrgentNotifications,
-    );
-  }, [data, setServerNotificationCounts]);
-
-  useEffect(() => {
-    const edges = data?.me?.notificationsConnection?.edges;
-    if (!edges || edges.length === 0) return;
 
     // Materialize each masked node ref via cache.readFragment so the hook can
     // read the fields it pushes into the Zustand store.
+    const edges = me.notificationsConnection?.edges ?? [];
     const notifications: Omit<NotificationItem, 'isRead'>[] = edges
       .map(edge =>
         client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
@@ -117,7 +105,18 @@ export function useNotificationsOnLaunch(userId?: string) {
       )
       .map(mapNotificationToStore);
 
-    if (notifications.length === 0) return;
-    addMultipleNotifications(notifications);
-  }, [data, addMultipleNotifications, client]);
+    if (notifications.length > 0) {
+      addMultipleNotifications(notifications);
+    }
+
+    // Seed the badge from the server's authoritative totals AFTER the list
+    // materializes: addMultipleNotifications ends by recomputing the counts
+    // from the local list, which would clobber a seed written first. Runs even
+    // with zero unread so the badge clears correctly, and covers unread beyond
+    // this page (or dropped by the store's category safety filters).
+    setServerNotificationCounts(
+      me.unreadNotificationCount,
+      me.hasUrgentNotifications,
+    );
+  }, [data, addMultipleNotifications, setServerNotificationCounts, client]);
 }

@@ -3,10 +3,12 @@
     "addItemFailed": "Impossibile aggiungere l'articolo",
     "updateItemFailed": "Impossibile aggiornare l'articolo",
     "removeItemFailed": "Impossibile rimuovere l'articolo",
+    "discardExpiredFailed": "Impossibile eliminare gli articoli scaduti",
     "deleteItemFailed": "Impossibile eliminare l'articolo",
     "fetchItemFailed": "Impossibile recuperare i dettagli dell'articolo",
     "createHomeFailed": "Impossibile creare la casa",
     "updateHomeFailed": "Impossibile aggiornare la casa",
+    "setDefaultHomeFailed": "Impossibile impostare la casa predefinita",
     "updateHomeNameFailed": "Impossibile aggiornare il nome della casa",
     "deleteHomeFailed": "Impossibile eliminare la casa",
     "fetchHomeFailed": "Impossibile recuperare i dettagli della casa",
@@ -97,7 +99,8 @@
     "profileUpdated": "Profilo aggiornato",
     "photoUpdated": "Foto aggiornata",
     "settingsSaved": "Impostazioni salvate",
-    "expiredBatchesDiscarded": "I lotti scaduti sono stati eliminati."
+    "expiredBatchesDiscarded": "I lotti scaduti sono stati eliminati.",
+    "expiredItemDiscarded": "L'articolo scaduto è stato eliminato."
   },
   "loading": {
     "authenticating": "Autenticazione in corso...",

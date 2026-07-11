@@ -46,9 +46,12 @@ fragment MealPlanDisplay on MealPlan {
 
 # Canonical shape for a MealTemplate.
 # Spread by: mealTemplate.graphql (GetMealTemplates, GetMealTemplate,
-#   DuplicateTemplate, CreateTemplateFromMealPlan)
-# Read via cache.readFragment by: TemplateCard.tsx
-# Kept shared — all 5 consumers need the identical template shape.
+#   DuplicateTemplate, CreateMealTemplate, UpdateMealTemplate,
+#   CreateTemplateFromMealPlan)
+# Read via cache.readFragment by: TemplateCard.tsx,
+#   useMealTemplateActions.ts (deleteTemplate snapshot),
+#   useMealTemplateEditor.ts (optimistic local-first create write)
+# Kept shared — every consumer needs the identical template shape.
 fragment MealTemplateDisplay on MealTemplate {
   id
   name
@@ -77,9 +80,10 @@ fragment MealTemplateDisplay on MealTemplate {
 
 # Canonical shape for a MealTemplateItem.
 # Spread by: mealTemplate.graphql (GetMealTemplate, DuplicateTemplate,
-#   CreateTemplateFromMealPlan)
+#   CreateTemplateFromMealPlan, AddTemplateItem, UpdateTemplateItem,
+#   RemoveTemplateItem)
 # Read via cache.readFragment by: useMealTemplate.ts
-# Kept shared — all 4 consumers need the identical item shape.
+# Kept shared — every consumer needs the identical item shape.
 fragment MealTemplateItemFragment on MealTemplateItem {
   id
   dayOffset

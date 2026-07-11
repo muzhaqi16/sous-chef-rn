@@ -37,13 +37,12 @@ query GetMealTemplate($id: ID!) {
   }
 }
 
-# ============================================
-# MUTATIONS
-# ============================================
-
 # All-inline detail for the template builder/editor form (no masked fragments,
 # so every field is read directly). Item mutations write these same
 # MealTemplate.items / MealTemplateItem fields, so the form stays in sync.
+# updatedAt is selected because useMealTemplateEditor's snapshot fragment
+# includes it — without it cached here, readFragment returns null and the
+# editor's optimistic update/revert silently skips.
 query GetMealTemplateForEdit($id: ID!) {
   mealTemplate(id: $id) {
     id
@@ -52,6 +51,7 @@ query GetMealTemplateForEdit($id: ID!) {
     category
     defaultServings
     tags
+    updatedAt
     items {
       id
       dayOffset
@@ -62,6 +62,10 @@ query GetMealTemplateForEdit($id: ID!) {
     }
   }
 }
+
+# ============================================
+# MUTATIONS
+# ============================================
 
 mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
   deleteMealTemplate(input: $input) {

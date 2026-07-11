@@ -41,7 +41,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { EmptyState } from '#components/base/EmptyState';
-import { extractNodes } from '#/utils/connectionUtils';
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 

@@ -69,7 +69,8 @@ export interface RecipeDisplayData {
   dairyFree?: boolean;
   sourceName?: string;
   sourceUrl?: string;
-  // Backend-recipe enrichment (Phase 5).
+  // Backend-only enrichment fields — absent on external (Spoonacular)
+  // recipes, hence all optional.
   caloriesPerServing?: number;
   nutritionData?: unknown;
   isPublished?: boolean;

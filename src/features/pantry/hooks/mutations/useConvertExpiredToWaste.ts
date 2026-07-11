@@ -109,17 +109,17 @@ export function useConvertExpiredToWaste({
     );
 
     if (outcome === 'rejected') {
-      executeCacheUpdate(
-        () =>
-          writeState(
-            snapshot?.quantity ?? 0,
-            snapshot?.condition ?? ItemCondition.Spoiled,
-          ),
-        'Revert rejected expired-to-waste convert',
-      );
+      // Only revert from a real snapshot — falling back to 0/SPOILED would
+      // re-apply the optimistic write instead of restoring the item.
+      if (snapshot) {
+        executeCacheUpdate(
+          () => writeState(snapshot.quantity, snapshot.condition),
+          'Revert rejected expired-to-waste convert',
+        );
+      }
       clearPersistence();
       // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.removeItemFailed'));
+      alertRejectedMutation(result, t('errors.discardExpiredFailed'));
       return false;
     }
 

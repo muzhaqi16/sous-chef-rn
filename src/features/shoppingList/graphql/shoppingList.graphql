@@ -9,6 +9,13 @@ query GetShoppingListDetails($id: ID!) {
   shoppingList(id: $id) {
     id
     name
+    # The ListSettings mutation hooks (complete/recurring/budget/reminder/
+    # template) snapshot the list via readFragment before their optimistic
+    # writes, and every snapshot fragment includes version + updatedAt — they
+    # must be cached by this query or readFragment returns null and the
+    # optimistic write silently skips.
+    version
+    updatedAt
     isDefault
     status
     isCompleted

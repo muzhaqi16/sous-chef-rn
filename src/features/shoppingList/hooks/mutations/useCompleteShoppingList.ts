@@ -23,10 +23,8 @@ import {
 } from './useCompleteShoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
@@ -44,48 +42,17 @@ export function useCompleteShoppingList() {
     id: string,
     patch: Partial<UseCompleteShoppingList_ListFragment>,
     label: string,
-  ): (() => void) => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseCompleteShoppingList_ListFragment>({
-          id: cacheId,
-          fragment: UseCompleteShoppingList_ListFragmentDoc,
-          fragmentName: 'useCompleteShoppingList_list',
-        })
-      : null;
-
-    if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UseCompleteShoppingList_ListFragmentDoc,
-            fragmentName: 'useCompleteShoppingList_list',
-            data: {
-              ...snapshot,
-              ...patch,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        `${label} (optimistic)`,
-      );
-    }
-
-    return () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseCompleteShoppingList_ListFragmentDoc,
-              fragmentName: 'useCompleteShoppingList_list',
-              data: snapshot,
-            }),
-          `Revert ${label}`,
-        );
-      }
-    };
-  };
+  ): (() => void) =>
+    applyOptimisticFragmentPatch(
+      client.cache,
+      { typename: 'ShoppingList', id },
+      {
+        fragment: UseCompleteShoppingList_ListFragmentDoc,
+        fragmentName: 'useCompleteShoppingList_list',
+      },
+      patch,
+      label,
+    );
 
   const completeList = async (
     id: string,

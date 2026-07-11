@@ -56,7 +56,7 @@ export function useConvertExpiredBatchesToWaste({
 
     if (outcome === 'rejected') {
       // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, t('errors.removeItemFailed'));
+      alertRejectedMutation(result, t('errors.discardExpiredFailed'));
       return false;
     }
 

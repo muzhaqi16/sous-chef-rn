@@ -20,6 +20,8 @@ import {
 } from './useNotificationsOnLaunch.generated';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
+import { useStore } from '#store';
+import { MAX_NOTIFICATIONS } from '#store/slices/notificationSlice';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { mapNotificationToStore } from '#features/notifications/utils/mapNotificationToStore';
 
@@ -75,6 +77,12 @@ export function useNotificationHistory(
 
   const loadMore = () => {
     if (!hasMore || !endCursor || loading) return;
+    // The feed renders from the store, which caps at MAX_NOTIFICATIONS and
+    // evicts the oldest entries — pages fetched past the cap can never become
+    // visible, so stop paging instead of fetching into eviction.
+    if (useStore.getState().notifications.length >= MAX_NOTIFICATIONS) {
+      return;
+    }
     fetchMore({
       variables: {
         filter: category ? { category } : undefined,

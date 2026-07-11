@@ -161,7 +161,7 @@ export function usePantryItemDetailActions({
 
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: () => {
-      alertService.alert('Done', 'Expired item has been discarded.');
+      alertService.alert(t('labels.done'), t('success.expiredItemDiscarded'));
     },
   });
 

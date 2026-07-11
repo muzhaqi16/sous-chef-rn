@@ -3,10 +3,12 @@
     "addItemFailed": "Nuk u shtua dot artikulli",
     "updateItemFailed": "Nuk u përditësua dot artikulli",
     "removeItemFailed": "Nuk u hoq dot artikulli",
+    "discardExpiredFailed": "Nuk u hodhën dot artikujt e skaduar",
     "deleteItemFailed": "Nuk u fshi dot artikulli",
     "fetchItemFailed": "Nuk u morën dot detajet e artikullit",
     "createHomeFailed": "Nuk u krijua dot shtëpia",
     "updateHomeFailed": "Nuk u përditësua dot shtëpia",
+    "setDefaultHomeFailed": "Nuk u caktua dot shtëpia e parazgjedhur",
     "updateHomeNameFailed": "Nuk u përditësua dot emri i shtëpisë",
     "deleteHomeFailed": "Nuk u fshi dot shtëpia",
     "fetchHomeFailed": "Nuk u morën dot detajet e shtëpisë",
@@ -97,7 +99,8 @@
     "profileUpdated": "Profili u përditësua",
     "photoUpdated": "Fotoja u përditësua",
     "settingsSaved": "Cilësimet u ruajtën",
-    "expiredBatchesDiscarded": "Grupet e skaduara janë hedhur."
+    "expiredBatchesDiscarded": "Grupet e skaduara janë hedhur.",
+    "expiredItemDiscarded": "Artikulli i skaduar është hedhur."
   },
   "loading": {
     "authenticating": "Po vërtetohet...",

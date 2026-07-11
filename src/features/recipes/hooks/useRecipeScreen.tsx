@@ -245,7 +245,12 @@ async function fetchRecipeSearchPage(
   }> = !fetchSpoonacular
     ? Promise.resolve({ results: [], total: null })
     : cached
-    ? Promise.resolve({ results: cached.results, total: null })
+    ? // A cache hit keeps the fetch-time total so paging still works — a null
+      // total (entry persisted before the field existed) reads as "unknown".
+      Promise.resolve({
+        results: cached.results,
+        total: cached.totalResults ?? null,
+      })
     : (async () => {
         let results: SpoonacularRecipe[] = [];
         let total: number | null = null;
@@ -266,7 +271,7 @@ async function fetchRecipeSearchPage(
             });
             results = data.results || [];
             total = data.totalResults;
-            cacheStore.setCached(cacheKey, results);
+            cacheStore.setCached(cacheKey, results, undefined, total);
             return data;
           },
           error => {
@@ -361,9 +366,10 @@ async function executeRecipeTextSearch(
     localEndCursor: page.localEndCursor,
     localHasNextPage: page.localHasNextPage,
     // The next page starts where this one ended. The total drives the
-    // "is there more Spoonacular?" check (offset < total); a null total
-    // (offline cache hit) means the catalog count is unknown, so treat the
-    // count we got as the total — there's nothing more to page to anyway.
+    // "is there more Spoonacular?" check (offset < total). Cache hits carry
+    // the fetch-time total; a null total only remains for entries persisted
+    // before the total was cached — treat the count we got as the total then
+    // (paging recovers on the next uncached search).
     spoonacularOffset: page.spoonacularResultCount,
     spoonacularTotal: page.spoonacularTotal ?? page.spoonacularResultCount,
     seen,
@@ -385,18 +391,17 @@ async function executeRecipeTextSearch(
 
 // Fetch the NEXT page from whichever source still has results, dedupe the new
 // rows against everything already shown (via the shared `seen` keys carried in
-// `pagination`), append, and advance the cursors. Each source is queried only
-// when it reports more (`localHasNextPage`, `offset < total`); the exhausted
-// one is skipped by the `fetchLocal` / `fetchSpoonacular` flags so it isn't
-// re-fetched and its rows re-appended. Local failures degrade silently; a
-// Spoonacular error on load-more is reported but never wipes already-shown
-// results.
+// `pagination`), and return the rows plus advanced cursors — the CALLER commits
+// them (atomically, and only if the search wasn't replaced mid-flight). Each
+// source is queried only when it reports more (`localHasNextPage`,
+// `offset < total`); the exhausted one is skipped by the `fetchLocal` /
+// `fetchSpoonacular` flags so it isn't re-fetched and its rows re-appended.
+// Local failures degrade silently; a Spoonacular error on load-more is reported
+// but never wipes already-shown results.
 async function executeRecipeLoadMore(
   pagination: SearchPagination,
   client: ApolloClient,
-  appendDisplayResults: (items: DisplayItem[]) => void,
-  setPagination: (p: SearchPagination) => void,
-): Promise<void> {
+): Promise<{ items: DisplayItem[]; nextPagination: SearchPagination } | null> {
   const { query, filters, seen } = pagination;
 
   const fetchLocal = pagination.localHasNextPage;
@@ -405,7 +410,7 @@ async function executeRecipeLoadMore(
 
   // Nothing left on either source — guard against an accidental duplicate
   // append.
-  if (!fetchLocal && !spoonacularHasMore) return;
+  if (!fetchLocal && !spoonacularHasMore) return null;
 
   const page = await fetchRecipeSearchPage(
     query,
@@ -418,8 +423,6 @@ async function executeRecipeLoadMore(
     seen,
   );
 
-  appendDisplayResults(page.items);
-
   // A Spoonacular page we asked for that came back empty means we've hit the
   // plan's paging cap (or a 402) even though `total` still advertises more
   // results. Freeze `total` at the current offset so `offset < total` flips
@@ -428,29 +431,32 @@ async function executeRecipeLoadMore(
   const spoonacularExhausted =
     spoonacularHasMore && page.spoonacularResultCount === 0;
 
-  setPagination({
-    ...pagination,
-    // Only the queried source's cursor advances; the exhausted one is left as-is.
-    localEndCursor: fetchLocal
-      ? page.localEndCursor
-      : pagination.localEndCursor,
-    localHasNextPage: fetchLocal ? page.localHasNextPage : false,
-    spoonacularOffset: spoonacularHasMore
-      ? pagination.spoonacularOffset + page.spoonacularResultCount
-      : pagination.spoonacularOffset,
-    // A null total (cache hit on the new page) keeps the prior known total.
-    spoonacularTotal: spoonacularExhausted
-      ? pagination.spoonacularOffset
-      : page.spoonacularTotal ?? pagination.spoonacularTotal,
-    seen,
-  });
-
   if (page.spoonacularError) {
     // Already-shown results stay on screen; report and degrade silently.
     errorService.reportError(page.spoonacularError, {
       operation: 'searchRecipesLoadMoreDegraded',
     });
   }
+
+  return {
+    items: page.items,
+    nextPagination: {
+      ...pagination,
+      // Only the queried source's cursor advances; the exhausted one is left as-is.
+      localEndCursor: fetchLocal
+        ? page.localEndCursor
+        : pagination.localEndCursor,
+      localHasNextPage: fetchLocal ? page.localHasNextPage : false,
+      spoonacularOffset: spoonacularHasMore
+        ? pagination.spoonacularOffset + page.spoonacularResultCount
+        : pagination.spoonacularOffset,
+      // A null total (cache hit on the new page) keeps the prior known total.
+      spoonacularTotal: spoonacularExhausted
+        ? pagination.spoonacularOffset
+        : page.spoonacularTotal ?? pagination.spoonacularTotal,
+      seen,
+    },
+  };
 }
 
 async function executeRecipeIngredientSearch(
@@ -532,15 +538,21 @@ export function useRecipeScreen() {
 
   // ── Search state ──
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<DisplayItem[]>([]);
   const [searchPerformed, setSearchPerformed] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  // Real pagination cursors for the dual-source text search — the local
-  // connection cursor + the Spoonacular offset/total, plus the dedupe keys
-  // seen so far. Load-more re-issues the stored query/filters against the next
-  // page of each source rather than slicing an already-fetched list.
-  const [searchPagination, setSearchPagination] =
-    useState<SearchPagination>(EMPTY_PAGINATION);
+  // Results and their pagination cursors live in ONE state atom because they
+  // advance together: the pagination carries the local connection cursor, the
+  // Spoonacular offset/total, and the dedupe keys for exactly the rows shown.
+  // A single atom lets a resolved load-more commit rows + cursors atomically —
+  // and lets it detect (via pagination identity) that a new search or clear
+  // replaced the state while the page was in flight, so the stale page is
+  // dropped instead of corrupting the new query's list.
+  const [searchData, setSearchData] = useState<{
+    items: DisplayItem[];
+    pagination: SearchPagination;
+  }>({ items: [], pagination: EMPTY_PAGINATION });
+  const searchResults = searchData.items;
+  const searchPagination = searchData.pagination;
   // Guards against overlapping load-more calls (onEndReached can fire several
   // times before the next page resolves) and re-appending the same page.
   const [searchLoadingMore, setSearchLoadingMore] = useState(false);
@@ -565,13 +577,11 @@ export function useRecipeScreen() {
   // transforms). A fresh search replaces the list and resets pagination (the
   // cursors come from executeRecipeTextSearch via setSearchPagination).
   const setDisplayResults = (displayItems: DisplayItem[]) => {
-    setSearchResults(displayItems);
+    setSearchData(prev => ({ ...prev, items: displayItems }));
   };
 
-  // Append a load-more page to what's already shown. Items are pre-deduped
-  // against the existing list (see executeRecipeLoadMore's `seen` keys).
-  const appendDisplayResults = (newItems: DisplayItem[]) => {
-    setSearchResults(prev => [...prev, ...newItems]);
+  const setSearchPagination = (pagination: SearchPagination) => {
+    setSearchData(prev => ({ ...prev, pagination }));
   };
 
   // Re-run the current search with an explicit filter set (state updates are
@@ -642,19 +652,25 @@ export function useRecipeScreen() {
   // (onEndReached can fire repeatedly mid-fetch).
   const loadMoreSearch = async () => {
     if (!searchHasMore || searchLoadingMore) return;
+    const captured = searchPagination;
     // executeWithLoadingState guarantees searchLoadingMore is cleared even if
     // the map/dedup step throws synchronously — otherwise a single throw would
     // leave the guard stuck and disable load-more permanently.
-    await executeWithLoadingState(
-      () =>
-        executeRecipeLoadMore(
-          searchPagination,
-          client,
-          appendDisplayResults,
-          setSearchPagination,
-        ),
-      setSearchLoadingMore,
-    );
+    await executeWithLoadingState(async () => {
+      const outcome = await executeRecipeLoadMore(captured, client);
+      if (!outcome) return;
+      // Commit rows + cursors together, and only if the pagination is still
+      // the one this fetch started from — a new search or clear mid-flight
+      // replaced it, and this page belongs to the old query.
+      setSearchData(prev =>
+        prev.pagination === captured
+          ? {
+              items: [...prev.items, ...outcome.items],
+              pagination: outcome.nextPagination,
+            }
+          : prev,
+      );
+    }, setSearchLoadingMore);
   };
 
   // DiscoveryItem already satisfies DisplayItem — no mapping needed
@@ -746,9 +762,8 @@ export function useRecipeScreen() {
 
   const clearSearch = () => {
     setSearchQuery('');
-    setSearchResults([]);
     setSearchPerformed(false);
-    setSearchPagination(EMPTY_PAGINATION);
+    setSearchData({ items: [], pagination: EMPTY_PAGINATION });
   };
 
   // ── Empty state ──

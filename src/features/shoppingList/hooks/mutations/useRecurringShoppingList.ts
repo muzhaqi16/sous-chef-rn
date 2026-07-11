@@ -27,10 +27,8 @@ import {
 import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();
@@ -62,48 +60,17 @@ export function useRecurringShoppingList() {
     id: string,
     patch: Partial<UseRecurringShoppingList_ListFragment>,
     label: string,
-  ): (() => void) => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseRecurringShoppingList_ListFragment>({
-          id: cacheId,
-          fragment: UseRecurringShoppingList_ListFragmentDoc,
-          fragmentName: 'useRecurringShoppingList_list',
-        })
-      : null;
-
-    if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UseRecurringShoppingList_ListFragmentDoc,
-            fragmentName: 'useRecurringShoppingList_list',
-            data: {
-              ...snapshot,
-              ...patch,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        `${label} (optimistic)`,
-      );
-    }
-
-    return () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseRecurringShoppingList_ListFragmentDoc,
-              fragmentName: 'useRecurringShoppingList_list',
-              data: snapshot,
-            }),
-          `Revert ${label}`,
-        );
-      }
-    };
-  };
+  ): (() => void) =>
+    applyOptimisticFragmentPatch(
+      client.cache,
+      { typename: 'ShoppingList', id },
+      {
+        fragment: UseRecurringShoppingList_ListFragmentDoc,
+        fragmentName: 'useRecurringShoppingList_list',
+      },
+      patch,
+      label,
+    );
 
   const setRecurring = async (
     id: string,

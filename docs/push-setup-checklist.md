@@ -43,51 +43,15 @@ on `device.platform` (the client sends `platform: 'ANDROID' | 'IOS'` in the
       private key*) and store it as a backend secret — see §6. **Never commit it
       or paste it anywhere; it is the send-side private key.**
 
-## 3. Inject the provider (JS — one small file, added after installs)
+## 3. Inject the provider (JS) — DONE
 
-Create `src/services/push/nativePushProvider.ts` implementing `PushTokenProvider`
-(it imports the native modules, so it must only be imported after they're
-installed), and call `setPushTokenProvider(nativePushProvider)` once at app
-startup (e.g. in `App.tsx`, alongside the existing init). Sketch:
-
-```ts
-import { Platform } from 'react-native';
-import messaging from '@react-native-firebase/messaging';
-import PushNotificationIOS from '@react-native-community/push-notification-ios';
-import type { PushTokenProvider } from './pushTokenProvider';
-
-export const nativePushProvider: PushTokenProvider = {
-  async requestPermission() {
-    if (Platform.OS === 'ios') {
-      const p = await PushNotificationIOS.requestPermissions();
-      return !!(p.alert || p.badge || p.sound);
-    }
-    const status = await messaging().requestPermission();
-    return (
-      status === messaging.AuthorizationStatus.AUTHORIZED ||
-      status === messaging.AuthorizationStatus.PROVISIONAL
-    );
-  },
-  async getToken() {
-    if (Platform.OS === 'ios') {
-      return new Promise(resolve => {
-        PushNotificationIOS.addEventListener('register', resolve);
-        PushNotificationIOS.addEventListener('registrationError', () =>
-          resolve(null),
-        );
-      });
-    }
-    return messaging().getToken();
-  },
-  onTokenRefresh(listener) {
-    if (Platform.OS === 'ios') {
-      PushNotificationIOS.addEventListener('register', listener);
-      return () => PushNotificationIOS.removeEventListener('register');
-    }
-    return messaging().onTokenRefresh(listener);
-  },
-};
-```
+`src/services/push/nativePushProvider.ts` implements `PushTokenProvider` using
+the modular `@react-native-firebase/messaging` API (`getMessaging` /
+`requestPermission` / `getToken` / `onTokenRefresh`). It is Android-only for
+now — on iOS every method no-ops (false / null) until the APNs half ships.
+`App.tsx` calls `setPushTokenProvider(nativePushProvider)` at startup, and
+`authService` acquires a real FCM token through it (validated live reaching
+`RegisterDevice`).
 
 ## 4. Background/killed delivery + tap deep-link (Phase 7.3) — DONE (Android JS side)
 

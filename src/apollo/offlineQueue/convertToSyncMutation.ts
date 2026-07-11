@@ -42,14 +42,18 @@ export interface SyncConversion {
 }
 
 /**
- * Cache readers a builder uses to backfill a required parent id the queued input
- * may omit (`UpdatePantryItemInput` carries no `pantryId`; shopping update/qty
- * inputs carry only the item id). Injected so the builders stay pure and the
- * cache access lives in the queue manager.
+ * Cache readers a builder uses to backfill required fields the queued input
+ * may omit (`UpdatePantryItemInput` carries no `pantryId`; shopping update/qty/
+ * toggle inputs carry only the row id, while `SyncShoppingListItemInput`
+ * requires the @oneOf catalog-item ref). Injected so the builders stay pure and
+ * the cache access lives in the queue manager.
  */
 export interface SyncReaders {
   readPantryId: (clientId: string | undefined) => string | undefined;
   readShoppingListId: (clientId: string | undefined) => string | undefined;
+  readItemRef: (
+    clientId: string | undefined,
+  ) => SyncShoppingListItemInput['item'] | undefined;
 }
 
 /**
@@ -256,14 +260,26 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
     input.purchaseTracking ??
     (input.purchased != null ? { isPurchased: input.purchased } : undefined);
 
+  // `item` is a required @oneOf ItemRefInput (exactly one of itemId/itemName —
+  // zero or both is rejected before any resolver runs). The add ops carry it
+  // nested on the queued item; UpdateShoppingListItem carries a flat `itemName`
+  // only when the user renamed; toggle/quantity/plain updates carry no ref at
+  // all, so backfill it from the cached row. Flat `itemId` is deliberately NOT
+  // used: on UpdateShoppingListItemQuantity it is the shopping-list ROW id, not
+  // a catalog item id.
+  const itemRef =
+    (input.item as SyncShoppingListItemInput['item'] | undefined) ??
+    (input.itemName != null ? { itemName: input.itemName } : undefined) ??
+    readers.readItemRef(clientId);
+  if (!itemRef) {
+    throw new Error(
+      `Cannot sync ${mutation.operationName}: item ref not found for item ${clientId}`,
+    );
+  }
+
   const item: SyncShoppingListItemInput = {
     shoppingListId,
-    // Item reference moved into a nested @oneOf `item` (exactly one of
-    // itemId/itemName); preserve whichever the original mutation carried.
-    item: {
-      ...(input.itemName != null && { itemName: input.itemName }),
-      ...(input.itemId != null && { itemId: input.itemId }),
-    },
+    item: itemRef,
     ...(input.category != null && { category: input.category }),
     ...(input.notes != null && { notes: input.notes }),
     ...(unit && { unit: unit as SyncShoppingListItemInput['unit'] }),

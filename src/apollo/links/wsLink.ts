@@ -413,6 +413,10 @@ export const disposeWebSocket = () => {
       wsClient.dispose();
       isReconnecting = false;
       lastReconnectTime = 0;
+      // Next session's first connect is a fresh connection, not a reconnect —
+      // without this reset it would fire the reconnect listeners and trigger a
+      // spurious notifications backfill.
+      hasConnectedBefore = false;
     }
   } catch (error) {
     logger.warn('Error disposing WebSocket:', serializeError(error));

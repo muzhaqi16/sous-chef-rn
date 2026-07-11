@@ -109,10 +109,16 @@ export interface NotificationState {
   // Buffers enrichment data when expirationNotificationChanged fires before notificationChanged
   pendingExpirationLinks: Record<string, ExpirationLinkData>;
 
-  // Actions
-  addNotification: (notification: Omit<NotificationItem, 'isRead'>) => void;
+  // Actions. `isRead` is derived from the server's `readAt` when not passed
+  // explicitly — the history feed fetches read notifications too, so a
+  // hardcoded false would resurrect them as unread (and inflate the badge).
+  // Callers restoring a store item (e.g. the clear-read rollback) pass the
+  // item's own `isRead` through.
+  addNotification: (
+    notification: Omit<NotificationItem, 'isRead'> & { isRead?: boolean },
+  ) => void;
   addMultipleNotifications: (
-    notifications: Omit<NotificationItem, 'isRead'>[],
+    notifications: (Omit<NotificationItem, 'isRead'> & { isRead?: boolean })[],
   ) => void;
   markAsRead: (notificationId: string) => void;
   markAsUnread: (notificationId: string) => void;
@@ -160,8 +166,9 @@ export interface NotificationState {
  * Maximum number of notifications to retain in the store.
  * When exceeded, oldest read notifications are evicted first.
  * Prevents unbounded memory growth from immer patches and persist serialization.
+ * Exported so the history feed can stop paging once the store is full.
  */
-const MAX_NOTIFICATIONS = 100;
+export const MAX_NOTIFICATIONS = 100;
 
 /**
  * Recomputes `unreadCount` / `urgentCount` from the `notifications` list in a
@@ -185,6 +192,43 @@ const recomputeCounts = (state: {
   }
   state.unreadCount = unread;
   state.urgentCount = urgent;
+};
+
+/**
+ * Inserts notifications, restores newest-first order, evicts over the cap, and
+ * recomputes the counts — the shared tail of both add actions. Sorting by
+ * `sentAt` matters twice: the feed renders store order within its date groups,
+ * and eviction keeps from the FRONT of the list — history pages arrive older
+ * than what's already present, so insertion order alone would both mis-order
+ * the feed and evict the newest notifications first.
+ */
+const insertNotifications = (
+  state: {
+    notifications: NotificationItem[];
+    unreadCount: number;
+    urgentCount: number;
+  },
+  items: NotificationItem[],
+): void => {
+  state.notifications.unshift(...items);
+  // sentAt is normalized to an ISO-8601 string on insert, so string comparison
+  // orders chronologically.
+  state.notifications.sort((a, b) =>
+    a.sentAt < b.sentAt ? 1 : a.sentAt > b.sentAt ? -1 : 0,
+  );
+
+  // Evict oldest read notifications when over the cap
+  if (state.notifications.length > MAX_NOTIFICATIONS) {
+    const keep: NotificationItem[] = [];
+    for (const n of state.notifications) {
+      if (!n.isRead || keep.length < MAX_NOTIFICATIONS) {
+        keep.push(n);
+      }
+    }
+    state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
+  }
+
+  recomputeCounts(state);
 };
 
 const initialNotificationState: Omit<
@@ -271,7 +315,7 @@ export const createNotificationSlice: StateCreator<
     set(state => {
       const newNotification: NotificationItem = {
         ...notification,
-        isRead: false,
+        isRead: notification.isRead ?? Boolean(notification.readAt),
         // Ensure sentAt is always a valid ISO string
         sentAt:
           safeParseDate(notification.sentAt)?.toISOString() ||
@@ -293,23 +337,7 @@ export const createNotificationSlice: StateCreator<
         delete state.pendingExpirationLinks[newNotification.id];
       }
 
-      state.notifications.unshift(newNotification);
-
-      // Evict oldest read notifications when over the cap
-      if (state.notifications.length > MAX_NOTIFICATIONS) {
-        const keep: NotificationItem[] = [];
-        const readOverflow: NotificationItem[] = [];
-        for (const n of state.notifications) {
-          if (!n.isRead || keep.length < MAX_NOTIFICATIONS) {
-            keep.push(n);
-          } else {
-            readOverflow.push(n);
-          }
-        }
-        state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
-      }
-
-      recomputeCounts(state);
+      insertNotifications(state, [newNotification]);
     });
   },
 
@@ -361,28 +389,13 @@ export const createNotificationSlice: StateCreator<
         .filter(n => !existingIds.has(n.id)) // Only add notifications that don't exist
         .map(n => ({
           ...n,
-          isRead: false,
+          isRead: n.isRead ?? Boolean(n.readAt),
           // Ensure sentAt is always a valid ISO string
           sentAt:
             safeParseDate(n.sentAt)?.toISOString() || new Date().toISOString(),
         }));
 
-      if (newNotifications.length > 0) {
-        state.notifications.unshift(...newNotifications);
-      }
-
-      // Evict oldest read notifications when over the cap
-      if (state.notifications.length > MAX_NOTIFICATIONS) {
-        const keep: NotificationItem[] = [];
-        for (const n of state.notifications) {
-          if (!n.isRead || keep.length < MAX_NOTIFICATIONS) {
-            keep.push(n);
-          }
-        }
-        state.notifications = keep.slice(0, MAX_NOTIFICATIONS);
-      }
-
-      recomputeCounts(state);
+      insertNotifications(state, newNotifications);
     });
   },
 

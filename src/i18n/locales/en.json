@@ -3,10 +3,12 @@
     "addItemFailed": "Failed to add item",
     "updateItemFailed": "Failed to update item",
     "removeItemFailed": "Failed to remove item",
+    "discardExpiredFailed": "Failed to discard expired items",
     "deleteItemFailed": "Failed to delete item",
     "fetchItemFailed": "Failed to fetch item details",
     "createHomeFailed": "Failed to create home",
     "updateHomeFailed": "Failed to update home",
+    "setDefaultHomeFailed": "Failed to set default home",
     "updateHomeNameFailed": "Failed to update home name",
     "deleteHomeFailed": "Failed to delete home",
     "fetchHomeFailed": "Failed to fetch home details",
@@ -97,7 +99,8 @@
     "profileUpdated": "Profile updated successfully",
     "photoUpdated": "Photo updated successfully",
     "settingsSaved": "Settings saved successfully",
-    "expiredBatchesDiscarded": "Expired batches have been discarded."
+    "expiredBatchesDiscarded": "Expired batches have been discarded.",
+    "expiredItemDiscarded": "Expired item has been discarded."
   },
   "loading": {
     "authenticating": "Authenticating...",

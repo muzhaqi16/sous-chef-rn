@@ -18,10 +18,8 @@ import {
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
 
 export function useShoppingListBudget() {
@@ -33,48 +31,17 @@ export function useShoppingListBudget() {
     id: string,
     patch: Partial<UseShoppingListBudget_ListFragment>,
     label: string,
-  ): (() => void) => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseShoppingListBudget_ListFragment>({
-          id: cacheId,
-          fragment: UseShoppingListBudget_ListFragmentDoc,
-          fragmentName: 'useShoppingListBudget_list',
-        })
-      : null;
-
-    if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          client.cache.writeFragment({
-            id: cacheId,
-            fragment: UseShoppingListBudget_ListFragmentDoc,
-            fragmentName: 'useShoppingListBudget_list',
-            data: {
-              ...snapshot,
-              ...patch,
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        `${label} (optimistic)`,
-      );
-    }
-
-    return () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseShoppingListBudget_ListFragmentDoc,
-              fragmentName: 'useShoppingListBudget_list',
-              data: snapshot,
-            }),
-          `Revert ${label}`,
-        );
-      }
-    };
-  };
+  ): (() => void) =>
+    applyOptimisticFragmentPatch(
+      client.cache,
+      { typename: 'ShoppingList', id },
+      {
+        fragment: UseShoppingListBudget_ListFragmentDoc,
+        fragmentName: 'useShoppingListBudget_list',
+      },
+      patch,
+      label,
+    );
 
   const runUpdate = async (
     id: string,

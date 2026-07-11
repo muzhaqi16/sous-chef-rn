@@ -3,10 +3,12 @@
     "addItemFailed": "No se pudo añadir el artículo",
     "updateItemFailed": "No se pudo actualizar el artículo",
     "removeItemFailed": "No se pudo quitar el artículo",
+    "discardExpiredFailed": "No se pudieron descartar los artículos caducados",
     "deleteItemFailed": "No se pudo eliminar el artículo",
     "fetchItemFailed": "No se pudieron obtener los detalles del artículo",
     "createHomeFailed": "No se pudo crear el hogar",
     "updateHomeFailed": "No se pudo actualizar el hogar",
+    "setDefaultHomeFailed": "No se pudo establecer el hogar predeterminado",
     "updateHomeNameFailed": "No se pudo actualizar el nombre del hogar",
     "deleteHomeFailed": "No se pudo eliminar el hogar",
     "fetchHomeFailed": "No se pudieron obtener los detalles del hogar",
@@ -97,7 +99,8 @@
     "profileUpdated": "Perfil actualizado",
     "photoUpdated": "Foto actualizada",
     "settingsSaved": "Ajustes guardados",
-    "expiredBatchesDiscarded": "Se han descartado los lotes caducados."
+    "expiredBatchesDiscarded": "Se han descartado los lotes caducados.",
+    "expiredItemDiscarded": "El artículo caducado se ha descartado."
   },
   "loading": {
     "authenticating": "Autenticando...",
