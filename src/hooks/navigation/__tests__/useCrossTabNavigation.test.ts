@@ -79,12 +79,7 @@ describe('useCrossTabNavigation', () => {
     });
 
     expect(mockParentDispatch).toHaveBeenCalledWith(
-      CommonActions.navigate({
-        name: 'Home',
-        params: {
-          screen: 'Pantry',
-        },
-      }),
+      CommonActions.navigate('Home', { screen: 'Pantry' }),
     );
     expect(mockGoBack).not.toHaveBeenCalled();
   });
@@ -100,12 +95,7 @@ describe('useCrossTabNavigation', () => {
     });
 
     expect(mockParentDispatch).toHaveBeenCalledWith(
-      CommonActions.navigate({
-        name: 'Home',
-        params: {
-          screen: 'ShoppingList',
-        },
-      }),
+      CommonActions.navigate('Home', { screen: 'ShoppingList' }),
     );
   });
 

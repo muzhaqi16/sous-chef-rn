@@ -89,6 +89,15 @@ module.exports = {
       '@react-native-clipboard/clipboard|' +
       '@react-native-community|' +
       '@react-navigation|' +
+      // react-navigation 8 @next pulls these in as ESM-only ("type":"module")
+      // deps — Jest must transform them or they throw "Unexpected token 'export'".
+      'nanoid|' +
+      'escape-string-regexp|' +
+      'query-string|' +
+      'decode-uri-component|' +
+      'split-on-first|' +
+      'filter-obj|' +
+      'standard-navigation|' +
       '@notifee/react-native|' +
       'immer|' +
       'zustand|' +

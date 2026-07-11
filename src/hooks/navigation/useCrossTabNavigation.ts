@@ -47,14 +47,9 @@ export function useCrossTabNavigation() {
     if (rootNavigator) {
       // Navigate to Home with the specific tab
       // This dismisses the modal and activates the correct tab without resetting
+      // Don't specify nested screen params — preserve the tab's current state.
       rootNavigator.dispatch(
-        CommonActions.navigate({
-          name: 'Home',
-          params: {
-            screen: source.sourceTab,
-            // Don't specify nested screen params - preserve the tab's current state
-          },
-        }),
+        CommonActions.navigate('Home', { screen: source.sourceTab }),
       );
     } else {
       goBack();

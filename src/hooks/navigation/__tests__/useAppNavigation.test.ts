@@ -53,10 +53,12 @@ describe('useAppNavigation', () => {
       expect(mockNavigate).toHaveBeenCalledWith('Profile');
     });
 
-    it('toNotifications navigates to Notifications', () => {
+    it('toNotifications navigates to Notifications > NotificationList', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toNotifications());
-      expect(mockNavigate).toHaveBeenCalledWith('Notifications');
+      expect(mockNavigate).toHaveBeenCalledWith('Notifications', {
+        screen: 'NotificationList',
+      });
     });
 
     it('toImageCrop navigates with imageFile params', () => {
@@ -72,21 +74,19 @@ describe('useAppNavigation', () => {
   });
 
   describe('nested-stack helpers', () => {
-    it('toPantryMain navigates Home > Pantry > PantryMain', () => {
+    it('toPantryMain focuses the Home > Pantry tab', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryMain());
       expect(mockNavigate).toHaveBeenCalledWith('Home', {
         screen: 'Pantry',
-        params: { screen: 'PantryMain' },
       });
     });
 
-    it('toShoppingListMain navigates Home > ShoppingList > ShoppingListMain', () => {
+    it('toShoppingListMain focuses the Home > ShoppingList tab', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toShoppingListMain());
       expect(mockNavigate).toHaveBeenCalledWith('Home', {
         screen: 'ShoppingList',
-        params: { screen: 'ShoppingListMain' },
       });
     });
 

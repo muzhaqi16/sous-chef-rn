@@ -70,7 +70,8 @@ export function useAppNavigation() {
 
     // ─── Main-app root screens ────────────────────────────────────────────
     toProfile: () => navigation.navigate('Profile'),
-    toNotifications: () => navigation.navigate('Notifications'),
+    toNotifications: () =>
+      navigation.navigate('Notifications', { screen: 'NotificationList' }),
     toHomeManagement: (params?: RootStackParamList['HomeManagement']) =>
       navigation.navigate('HomeManagement', params ?? {}),
     toHomeDetail: (params: RootStackParamList['HomeDetail']) =>
@@ -101,16 +102,11 @@ export function useAppNavigation() {
       navigation.navigate('Onboarding', { screen: 'InviteMembers' }),
 
     // ─── Cross-tab navigation (nested) ────────────────────────────────────
-    toPantryMain: () =>
-      navigation.navigate('Home', {
-        screen: 'Pantry',
-        params: { screen: 'PantryMain' },
-      }),
+    // Each tab stack is single-screen (detail screens live at the root level),
+    // so focusing the tab shows its main screen — no nested `params` needed.
+    toPantryMain: () => navigation.navigate('Home', { screen: 'Pantry' }),
     toShoppingListMain: () =>
-      navigation.navigate('Home', {
-        screen: 'ShoppingList',
-        params: { screen: 'ShoppingListMain' },
-      }),
+      navigation.navigate('Home', { screen: 'ShoppingList' }),
 
     // ─── Pantry detail/sub screens (root-level, siblings of Home) ─────────
     // `PantryItem` params are an all-optional object (not `undefined`), so
@@ -160,11 +156,7 @@ export function useAppNavigation() {
     // ─── Meal-plan screens ────────────────────────────────────────────────
     // MealPlanMain stays nested under Home (it's the tab's main screen);
     // CreateMealPlan + RecipeDetail are root-level.
-    toMealPlanMain: () =>
-      navigation.navigate('Home', {
-        screen: 'MealPlan',
-        params: { screen: 'MealPlanMain' },
-      }),
+    toMealPlanMain: () => navigation.navigate('Home', { screen: 'MealPlan' }),
     toCreateMealPlan: () => navigation.navigate('CreateMealPlan'),
     toMealTemplateBuilder: (params?: { templateId?: string }) =>
       navigation.navigate('MealTemplateBuilder', params),
