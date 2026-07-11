@@ -50,8 +50,9 @@ export function useCollapsibleScroll(): UseCollapsibleScrollReturn {
   // True only while a finger is driving the scroll — set on onScrollBeginDrag
   // and cleared when the scroll comes to rest. Programmatic and layout scrolls
   // (FlashList's maintainVisibleContentPosition after a focus refetch, lazy
-  // mounts, scrollToOffset, and background tabs under inactiveBehavior:'none')
-  // fire onScroll WITHOUT a preceding onScrollBeginDrag, so this stays false
+  // mounts, and scrollToOffset — including when a paused tab resumes and
+  // re-runs its focus refetch) fire onScroll WITHOUT a preceding
+  // onScrollBeginDrag, so this stays false
   // for them and they can never hide the tab bar. Those non-user scrolls during
   // a tab switch were what made the bar flicker hidden then visible.
   const isUserDragging = useSharedValue(false);

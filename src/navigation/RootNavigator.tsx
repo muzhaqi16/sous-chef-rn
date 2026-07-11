@@ -143,9 +143,6 @@ const RootStack = createNativeStackNavigator({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 200,
-    // Keep stacked screens active so Unistyles theme updates reach every
-    // mounted screen, not just the top one. See unistyles issue #1183.
-    inactiveBehavior: 'none',
   },
   groups: {
     Auth: {

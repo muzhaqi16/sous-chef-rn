@@ -48,10 +48,6 @@ export const HomeTabs = createBottomTabNavigator({
     // Crossfade between tabs instead of an instant cut. This is the most
     // repeated transition in the app; a hard swap reads as cheap.
     animation: 'fade',
-    // Keep all tabs active so Unistyles theme/appearance updates propagate
-    // to the ShadowTree of every mounted screen, not just the focused one.
-    // See https://github.com/jpudysz/react-native-unistyles/issues/1183
-    inactiveBehavior: 'none',
   },
   screens: tabScreens,
 });

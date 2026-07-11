@@ -22,14 +22,11 @@ export const BarcodeStack = createNativeStackNavigator({
     headerShown: false,
     presentation: 'modal',
     contentStyle: { backgroundColor: theme.colors.background },
-    inactiveBehavior: 'none',
   }),
-  // NOTE on screen freezing: BarcodeScanner would benefit from
-  // `inactiveBehavior: 'pause'` to release camera resources when blurred,
-  // but per-screen pause re-introduces the Unistyles ShadowTree bug that
-  // the navigator-level `inactiveBehavior: 'none'` was set to avoid.
-  // Camera lifecycle is instead managed inside the screens via
-  // useFocusEffect → camera.unmountOnBlur.
+  // Screens use the default `inactiveBehavior: 'pause'`, so BarcodeScanner is
+  // paused (and its camera resources released) once SearchResults is pushed on
+  // top. Camera lifecycle is additionally managed inside the screens via
+  // useFocusEffect → camera.unmountOnBlur for the blur/refocus case.
   // Top safe-area inset is the stack-wide default; the scanner opts out as a
   // full-bleed camera that hides the status bar (useHiddenStatusBar) while
   // focused.
