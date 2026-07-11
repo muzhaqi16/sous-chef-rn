@@ -10,14 +10,22 @@ import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
 import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { InfoRow } from '#components/molecules/InfoRow';
+import { DatePickerField } from '#components/molecules/DatePickerField';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
+import { useCompleteShoppingList } from '#features/shoppingList/hooks/mutations/useCompleteShoppingList';
+import { useSetDefaultShoppingList } from '#features/shoppingList/hooks/mutations/useSetDefaultShoppingList';
+import { useRecurringShoppingList } from '#features/shoppingList/hooks/mutations/useRecurringShoppingList';
+import { useShoppingListTemplate } from '#features/shoppingList/hooks/mutations/useShoppingListTemplate';
+import { useShoppingListReminder } from '#features/shoppingList/hooks/mutations/useShoppingListReminder';
+import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
+import { ListStatus, RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
@@ -40,17 +48,47 @@ import { Text } from '#components/atoms/Text';
 
 /** Module-level helper to sync shopping list form state from loaded data */
 function syncListFormState(
-  shoppingList: { name: string; isDefault: boolean } | null | undefined,
+  shoppingList:
+    | { name: string; isDefault: boolean; budgetAmount?: number | null }
+    | null
+    | undefined,
   listId: string | undefined,
   setName: (v: string) => void,
   setIsDefault: (v: boolean) => void,
+  setBudgetInput: (v: string) => void,
 ) {
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
+    setBudgetInput(
+      shoppingList.budgetAmount != null
+        ? String(shoppingList.budgetAmount)
+        : '',
+    );
   } else if (listId) {
     setName('');
     setIsDefault(false);
+    setBudgetInput('');
+  }
+}
+
+/**
+ * Format a money amount with the list's ISO currency code, degrading to a plain
+ * two-decimal number when the currency is absent or not recognized by Intl.
+ */
+function formatCurrencyAmount(
+  amount: number | null | undefined,
+  currency: string | null,
+): string {
+  const value = amount ?? 0;
+  if (!currency) return value.toFixed(2);
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+    }).format(value);
+  } catch {
+    return `${currency} ${value.toFixed(2)}`;
   }
 }
 
@@ -70,9 +108,11 @@ export const ListSettings: React.FC<
   );
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+  const [budgetInput, setBudgetInput] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
+  const [showPatternPicker, setShowPatternPicker] = useState(false);
 
   const { shoppingList, isShared, collaborators, ownerships } =
     useShoppingListDetails(listId);
@@ -126,13 +166,94 @@ export const ListSettings: React.FC<
   const { updateShoppingList } = useUpdateShoppingList(
     t('shoppingListScreens.failedToSave'),
   );
+  const { completeList, reactivateList, completing, reactivating } =
+    useCompleteShoppingList();
+  const { setAsDefault } = useSetDefaultShoppingList();
+  const { setRecurring, cancelRecurring, generateNext, generating } =
+    useRecurringShoppingList();
+  const { markAsTemplate, createFromTemplate, marking, creating } =
+    useShoppingListTemplate();
+  const { setReminder, clearReminder } = useShoppingListReminder();
+  const { setBudget, setPriceTracking } = useShoppingListBudget();
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
     t('shoppingListScreens.failedToCreate'),
   );
 
+  // Lifecycle status is read straight off the list (server-truth), not derived
+  // from item counts.
+  const status = shoppingList?.status ?? ListStatus.Active;
+  const isCompleted =
+    shoppingList?.isCompleted ?? status === ListStatus.Completed;
+  const isArchived = status === ListStatus.Archived;
+  const completedShopDate = shoppingList?.completedShopDate ?? null;
+  const statusDisplay =
+    status === ListStatus.Completed
+      ? t('shoppingListScreens.listStatusCompleted')
+      : status === ListStatus.Archived
+      ? t('shoppingListScreens.listStatusArchived')
+      : status === ListStatus.Paused
+      ? t('shoppingListScreens.listStatusPaused')
+      : status === ListStatus.Cancelled
+      ? t('shoppingListScreens.listStatusCancelled')
+      : status === ListStatus.Template
+      ? t('shoppingListScreens.listStatusTemplate')
+      : t('shoppingListScreens.listStatusActive');
+
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return t('shoppingListScreens.never');
+    return new Date(dateString).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  // Budget / spend — read straight off the list (totalCost / estimatedTotal are
+  // server-derived).
+  const currency = shoppingList?.currency ?? null;
+  const totalCost = shoppingList?.totalCost ?? 0;
+  const estimatedTotal = shoppingList?.estimatedTotal ?? 0;
+  const priceTracking = shoppingList?.priceTracking ?? false;
+
+  // Reminder — read straight off the list.
+  const reminderEnabled = shoppingList?.reminderEnabled ?? false;
+  const reminderDate = shoppingList?.reminderDate ?? null;
+
+  // Templates — read straight off the list.
+  const isTemplate = shoppingList?.isTemplate ?? false;
+  const templateName = shoppingList?.templateName ?? null;
+  const basedOnTemplate = shoppingList?.basedOnTemplate ?? null;
+
+  // Recurrence — read straight off the list.
+  const isRecurring = shoppingList?.isRecurring ?? false;
+  const recurringPattern = shoppingList?.recurringPattern ?? null;
+  const nextRecurringDate = shoppingList?.nextRecurringDate ?? null;
+  const patternLabel = (pattern: RecurringPattern | null): string => {
+    switch (pattern) {
+      case RecurringPattern.Daily:
+        return t('shoppingListScreens.patternDaily');
+      case RecurringPattern.Weekly:
+        return t('shoppingListScreens.patternWeekly');
+      case RecurringPattern.Biweekly:
+        return t('shoppingListScreens.patternBiweekly');
+      case RecurringPattern.Monthly:
+        return t('shoppingListScreens.patternMonthly');
+      case RecurringPattern.Custom:
+        return t('shoppingListScreens.patternCustom');
+      default:
+        return t('shoppingListScreens.patternNone');
+    }
+  };
+
   useEffect(() => {
-    syncListFormState(shoppingList, listId, setName, setIsDefault);
+    syncListFormState(
+      shoppingList,
+      listId,
+      setName,
+      setIsDefault,
+      setBudgetInput,
+    );
   }, [shoppingList, listId]);
 
   // Safe return after leaving the linked home. A non-owner's access to a
@@ -179,8 +300,32 @@ export const ListSettings: React.FC<
           goBack();
         } else {
           // Update existing list (local-first: a queued offline save keeps the
-          // permanent cache write and replays on reconnect)
-          await updateShoppingList(listId!, { name: name.trim(), isDefault });
+          // permanent cache write and replays on reconnect). The default flag
+          // goes through the dedicated mutation so the server unsets the prior
+          // default atomically; an explicit un-set rides on updateShoppingList.
+          const defaultTurnedOn = isDefault && !shoppingList?.isDefault;
+          const defaultTurnedOff = !isDefault && !!shoppingList?.isDefault;
+          if (defaultTurnedOn) {
+            await setAsDefault(listId!);
+          }
+          await updateShoppingList(listId!, {
+            name: name.trim(),
+            ...(defaultTurnedOff && { isDefault: false }),
+          });
+
+          // Commit a changed budget limit (empty clears it). Ignore a
+          // non-numeric entry rather than sending NaN.
+          const savedBudget =
+            shoppingList?.budgetAmount != null
+              ? String(shoppingList.budgetAmount)
+              : '';
+          if (budgetInput.trim() !== savedBudget) {
+            const parsed =
+              budgetInput.trim() === '' ? null : Number(budgetInput);
+            if (parsed === null || !Number.isNaN(parsed)) {
+              await setBudget(listId!, parsed, currency ?? undefined);
+            }
+          }
         }
       },
       setSaving,
@@ -227,6 +372,126 @@ export const ListSettings: React.FC<
           },
         },
       ],
+    );
+  };
+
+  // Complete / reactivate — the hook owns its own failure alert + optimistic
+  // revert, so we just fire the right direction.
+  const handleToggleComplete = () => {
+    if (!listId) return;
+    if (isCompleted) {
+      reactivateList(listId);
+    } else {
+      completeList(listId);
+    }
+  };
+
+  const archiveList = () => {
+    if (!listId) return;
+    executeMutation(
+      () => updateShoppingList(listId, { status: ListStatus.Archived }),
+      () => toastService.error(t('shoppingListScreens.failedToArchive')),
+    );
+  };
+
+  const handleArchiveToggle = () => {
+    if (!listId) return;
+    if (isArchived) {
+      // Restoring is non-destructive — flip straight back to active.
+      executeMutation(
+        () => updateShoppingList(listId, { status: ListStatus.Active }),
+        () => toastService.error(t('shoppingListScreens.failedToArchive')),
+      );
+      return;
+    }
+    // Archiving hides the list from the active view — confirm first.
+    alertService.alert(
+      t('shoppingListScreens.archiveListConfirmTitle'),
+      t('shoppingListScreens.archiveListConfirmMessage'),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('shoppingListScreens.archiveList'),
+          onPress: archiveList,
+        },
+      ],
+    );
+  };
+
+  // Price tracking toggles immediately (like a real setting), not on Save.
+  const handleTogglePriceTracking = (value: boolean) => {
+    if (listId) {
+      setPriceTracking(listId, value);
+    }
+  };
+
+  // Reminder — a picked date sets/updates it; the clear action removes it.
+  const handleSetReminderDate = (date: Date | null) => {
+    if (listId && date) {
+      setReminder(listId, date.toISOString(), true);
+    }
+  };
+
+  const handleClearReminder = () => {
+    if (listId) {
+      clearReminder(listId);
+    }
+  };
+
+  // Templates — save this list as a reusable template (keeps its items), or
+  // spin up a new list from it.
+  const handleSaveAsTemplate = () => {
+    if (listId) {
+      markAsTemplate(listId, name.trim() || t('shoppingListScreens.thisList'));
+    }
+  };
+
+  const handleCreateFromTemplate = () => {
+    if (!listId) return;
+    executeWithLoadingState(
+      async () => {
+        const newListId = await createFromTemplate(
+          listId,
+          name.trim() || undefined,
+        );
+        if (newListId) {
+          setSelectedShoppingListId(newListId);
+          goBack();
+        }
+      },
+      setSaving,
+      () =>
+        toastService.error(t('shoppingListScreens.failedToCreateFromTemplate')),
+    );
+  };
+
+  // Recurring — pick a pattern (interval defaults to 1; Custom intervals are an
+  // advanced case we don't expose here).
+  const handleSelectPattern = (pattern: RecurringPattern) => {
+    setShowPatternPicker(false);
+    if (listId) {
+      setRecurring(listId, pattern, 1);
+    }
+  };
+
+  const handleStopRecurring = () => {
+    if (listId) {
+      cancelRecurring(listId);
+    }
+  };
+
+  const handleGenerateNext = () => {
+    if (!listId) return;
+    executeWithLoadingState(
+      async () => {
+        const newListId = await generateNext(listId);
+        if (newListId) {
+          setSelectedShoppingListId(newListId);
+          goBack();
+        }
+      },
+      setSaving,
+      () => toastService.error(t('shoppingListScreens.failedToGenerateNext')),
     );
   };
 
@@ -473,6 +738,260 @@ export const ListSettings: React.FC<
           </View>
         )}
 
+        {/* List status — complete / reactivate / archive (owner, existing list) */}
+        {!!listId && !!isOwner && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.listStatusSection')}
+            </Text>
+
+            <InfoRow
+              label={t('shoppingListScreens.statusLabel')}
+              value={statusDisplay}
+            />
+            {!!isCompleted && !!completedShopDate && (
+              <InfoRow
+                label={t('shoppingListScreens.completedOn')}
+                value={formatDate(completedShopDate)}
+              />
+            )}
+
+            {!isArchived && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && styles.pressed,
+                ]}
+                onPress={handleToggleComplete}
+                disabled={completing || reactivating}
+              >
+                <Icon
+                  name={
+                    isCompleted ? 'refresh-outline' : 'checkmark-done-outline'
+                  }
+                  size={20}
+                  tone="primary"
+                />
+                <Text size="md" tone="accent" style={styles.actionText}>
+                  {isCompleted
+                    ? t('shoppingListScreens.reactivateList')
+                    : t('shoppingListScreens.markComplete')}
+                </Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionRow,
+                pressed && styles.pressed,
+              ]}
+              onPress={handleArchiveToggle}
+            >
+              <Icon
+                name={isArchived ? 'arrow-undo-outline' : 'archive-outline'}
+                size={20}
+                tone="primary"
+              />
+              <Text size="md" tone="accent" style={styles.actionText}>
+                {isArchived
+                  ? t('shoppingListScreens.restoreList')
+                  : t('shoppingListScreens.archiveList')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* Recurring — set up / stop auto-regeneration (owner, existing list) */}
+        {!!listId && !!isOwner && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.recurringSection')}
+            </Text>
+
+            {isRecurring ? (
+              <>
+                <InfoRow
+                  label={t('shoppingListScreens.recurringPatternLabel')}
+                  value={patternLabel(recurringPattern)}
+                />
+                {!!nextRecurringDate && (
+                  <InfoRow
+                    label={t('shoppingListScreens.nextOccurrence')}
+                    value={formatDate(nextRecurringDate)}
+                  />
+                )}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handleGenerateNext}
+                  disabled={generating}
+                >
+                  <Icon name="add-circle-outline" size={20} tone="primary" />
+                  <Text size="md" tone="accent" style={styles.actionText}>
+                    {t('shoppingListScreens.generateNextList')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handleStopRecurring}
+                >
+                  <Icon name="close-circle-outline" size={20} tone="primary" />
+                  <Text size="md" tone="accent" style={styles.actionText}>
+                    {t('shoppingListScreens.stopRecurring')}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && styles.pressed,
+                ]}
+                onPress={() => setShowPatternPicker(true)}
+              >
+                <Icon name="repeat-outline" size={20} tone="primary" />
+                <Text size="md" tone="accent" style={styles.actionText}>
+                  {t('shoppingListScreens.makeRecurring')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Templates — save as / create from a template (owner, existing list) */}
+        {!!listId && !!isOwner && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.templateSection')}
+            </Text>
+
+            {!!basedOnTemplate && (
+              <InfoRow
+                label={t('shoppingListScreens.basedOnTemplate')}
+                value={basedOnTemplate.name}
+              />
+            )}
+
+            {isTemplate ? (
+              <>
+                <InfoRow
+                  label={t('shoppingListScreens.templateNameLabel')}
+                  value={templateName ?? name}
+                />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={handleCreateFromTemplate}
+                  disabled={creating}
+                >
+                  <Icon name="duplicate-outline" size={20} tone="primary" />
+                  <Text size="md" tone="accent" style={styles.actionText}>
+                    {t('shoppingListScreens.createFromTemplate')}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && styles.pressed,
+                ]}
+                onPress={handleSaveAsTemplate}
+                disabled={marking}
+              >
+                <Icon name="bookmark-outline" size={20} tone="primary" />
+                <Text size="md" tone="accent" style={styles.actionText}>
+                  {t('shoppingListScreens.saveAsTemplate')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        {/* Budget / spend — limit, running totals, price tracking (owner) */}
+        {!!listId && !!isOwner && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.budgetSection')}
+            </Text>
+
+            <InfoRow
+              label={t('shoppingListScreens.totalSpent')}
+              value={formatCurrencyAmount(totalCost, currency)}
+            />
+            <InfoRow
+              label={t('shoppingListScreens.estimatedTotalLabel')}
+              value={formatCurrencyAmount(estimatedTotal, currency)}
+            />
+
+            <BaseInput
+              label={t('shoppingListScreens.budgetAmountLabel')}
+              value={budgetInput}
+              onChangeText={setBudgetInput}
+              keyboardType="numeric"
+              placeholder={t('shoppingListScreens.budgetPlaceholder')}
+            />
+
+            <View style={commonStyles.settingsRow}>
+              <View style={commonStyles.settingsRowInfo}>
+                <Text style={commonStyles.settingsRowLabel}>
+                  {t('shoppingListScreens.priceTrackingLabel')}
+                </Text>
+                <Text style={commonStyles.settingsRowDescription}>
+                  {t('shoppingListScreens.priceTrackingDesc')}
+                </Text>
+              </View>
+              <BaseSwitch
+                value={priceTracking}
+                onValueChange={handleTogglePriceTracking}
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Reminder — set / clear a shopping reminder (owner, existing list) */}
+        {!!listId && !!isOwner && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.reminderSection')}
+            </Text>
+
+            <DatePickerField
+              label={t('shoppingListScreens.reminderDateLabel')}
+              value={reminderDate ? new Date(reminderDate) : null}
+              onChange={handleSetReminderDate}
+              minimumDate={new Date()}
+              placeholder={t('shoppingListScreens.setReminderPlaceholder')}
+            />
+
+            {!!reminderEnabled && (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.actionRow,
+                  pressed && styles.pressed,
+                ]}
+                onPress={handleClearReminder}
+              >
+                <Icon
+                  name="notifications-off-outline"
+                  size={20}
+                  tone="primary"
+                />
+                <Text size="md" tone="accent" style={styles.actionText}>
+                  {t('shoppingListScreens.clearReminder')}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        )}
+
         {/* Only show sharing section if editing existing list and user is owner */}
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
@@ -549,6 +1068,33 @@ export const ListSettings: React.FC<
           setShowHomePicker(false);
         }}
         onCancel={() => setShowHomePicker(false)}
+      />
+
+      {/* Recurring pattern picker */}
+      <ModalPicker
+        visible={showPatternPicker}
+        label={t('shoppingListScreens.selectPattern')}
+        options={[
+          {
+            label: t('shoppingListScreens.patternDaily'),
+            value: RecurringPattern.Daily,
+          },
+          {
+            label: t('shoppingListScreens.patternWeekly'),
+            value: RecurringPattern.Weekly,
+          },
+          {
+            label: t('shoppingListScreens.patternBiweekly'),
+            value: RecurringPattern.Biweekly,
+          },
+          {
+            label: t('shoppingListScreens.patternMonthly'),
+            value: RecurringPattern.Monthly,
+          },
+        ]}
+        selected={recurringPattern ?? ''}
+        onSelect={value => handleSelectPattern(value as RecurringPattern)}
+        onCancel={() => setShowPatternPicker(false)}
       />
     </View>
   );

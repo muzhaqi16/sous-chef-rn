@@ -7,6 +7,10 @@ import {
 import {
   GetHomeDocument,
   UpdateHomeDocument,
+  EnableHomeJoinLinkDocument,
+  UpdateHomeJoinCodeDocument,
+  TransferHomeOwnershipDocument,
+  UpdateMembershipDocument,
 } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import type { RootState } from '#store/index';
@@ -174,6 +178,29 @@ function getHomeMock(
   }).mock;
 }
 
+function enableJoinLinkMock() {
+  return recordMock(EnableHomeJoinLinkDocument, {
+    data: {
+      enableHomeJoinLink: {
+        __typename: 'UpdateHomePayload',
+        home: {
+          __typename: 'Home',
+          id: 'home-1',
+          allowJoinCode: true,
+          joinCode: 'ABC123',
+          joinLink: {
+            __typename: 'ShareLink',
+            universal: 'https://x/join/ABC123',
+            scheme: 'souschef://join/ABC123',
+          },
+          version: 2,
+          updatedAt: '2025-01-02T00:00:00.000Z',
+        },
+      },
+    },
+  });
+}
+
 function updateHomeMock() {
   return recordMock(UpdateHomeDocument, {
     data: {
@@ -252,11 +279,11 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('toggleJoinCode', () => {
-    it('calls updateHomeMutation with allowJoinCode', async () => {
-      const update = updateHomeMock();
+    it('enabling fires the dedicated enableHomeJoinLink mutation', async () => {
+      const enable = enableJoinLinkMock();
       const { result } = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
-        { operationMocks: [getHomeMock(), update.mock] },
+        { operationMocks: [getHomeMock(), enable.mock] },
       );
 
       await waitFor(() => expect(result.current.home).toBeTruthy());
@@ -265,8 +292,103 @@ describe('useHomeDetailManagement', () => {
         await result.current.toggleJoinCode(true);
       });
 
-      expect(update.fired).toContainEqual({
-        input: { id: 'home-1', allowJoinCode: true },
+      expect(enable.fired).toContainEqual({ input: { id: 'home-1' } });
+    });
+  });
+
+  describe('rotateJoinCode', () => {
+    it('fires updateHomeJoinCode for the home', async () => {
+      const rotate = recordMock(UpdateHomeJoinCodeDocument, {
+        data: {
+          updateHomeJoinCode: {
+            __typename: 'UpdateHomePayload',
+            home: {
+              __typename: 'Home',
+              id: 'home-1',
+              allowJoinCode: true,
+              joinCode: 'NEW999',
+              joinLink: {
+                __typename: 'ShareLink',
+                universal: 'https://x/join/NEW999',
+                scheme: 'souschef://join/NEW999',
+              },
+              version: 3,
+              updatedAt: '2025-01-03T00:00:00.000Z',
+            },
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), rotate.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await result.current.rotateJoinCode();
+      });
+
+      expect(ok).toBe(true);
+      expect(rotate.fired).toContainEqual({ input: { id: 'home-1' } });
+    });
+  });
+
+  describe('transferOwnership', () => {
+    it('fires transferHomeOwnership and returns false on a rejection', async () => {
+      const transfer = recordMock(TransferHomeOwnershipDocument, {
+        data: {
+          transferHomeOwnership: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'not owner',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), transfer.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+
+      let ok: boolean | undefined;
+      await act(async () => {
+        ok = await result.current.transferOwnership('user-2');
+      });
+
+      expect(ok).toBe(false);
+      expect(transfer.fired).toContainEqual({
+        input: { homeId: 'home-1', newOwnerId: 'user-2' },
+      });
+    });
+  });
+
+  describe('updateMemberPermission', () => {
+    it('fires updateMembership with the single permission override', async () => {
+      const perm = recordMock(UpdateMembershipDocument, {
+        data: {
+          updateMembership: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'nope',
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => useHomeDetailManagement('home-1'),
+        { operationMocks: [getHomeMock(), perm.mock] },
+      );
+
+      await waitFor(() => expect(result.current.home).toBeTruthy());
+
+      await act(async () => {
+        await result.current.updateMemberPermission('m-1', 'canAddItems', true);
+      });
+
+      expect(perm.fired).toContainEqual({
+        input: { id: 'm-1', canAddItems: true },
       });
     });
   });

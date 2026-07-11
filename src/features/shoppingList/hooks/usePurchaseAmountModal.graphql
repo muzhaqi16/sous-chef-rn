@@ -1,0 +1,17 @@
+# Narrow fragment for usePurchaseAmountModal's live cache subscription.
+# Reads only the fields the PurchaseAmountSheet pre-fill needs. `priceEstimate`
+# is NOT on ShoppingListItemDisplayFragment, so the estimated price comes from
+# this colocated fragment (falls back to null when the cache lacks it).
+fragment usePurchaseAmountModal_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  unitName
+  unit {
+    id
+    symbol
+  }
+  priceEstimate {
+    estimated
+  }
+}

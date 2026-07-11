@@ -28,6 +28,40 @@ import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
 } from '#/utils/errorHandlers';
+import { t } from '#/i18n/t';
+
+/**
+ * Surface a resolved errors-as-data member from a mutation `data` payload.
+ *
+ * These CRUD helpers are type-erased (they don't know the success typename), so
+ * unlike call sites they can't use `classifyCreateResult`. Detect the `*Error`
+ * union member by its typename suffix — under `errorPolicy:'all'` it resolves as
+ * truthy `data` and would otherwise be treated as success. Returns true (and
+ * alerts + reports) when an error was surfaced.
+ */
+function surfaceCrudDataError(data: unknown, operationName: string): boolean {
+  if (!data || typeof data !== 'object') return false;
+  for (const value of Object.values(data as Record<string, unknown>)) {
+    if (
+      value &&
+      typeof value === 'object' &&
+      typeof (value as { __typename?: unknown }).__typename === 'string' &&
+      (value as { __typename: string }).__typename.endsWith('Error')
+    ) {
+      const raw = (value as { message?: unknown }).message;
+      const message =
+        typeof raw === 'string' && raw.length > 0
+          ? raw
+          : t('errors.somethingWentWrong');
+      alertService.alert(t('labels.error'), message);
+      errorService.reportError(new Error(`${operationName}: ${message}`), {
+        operation: operationName,
+      });
+      return true;
+    }
+  }
+  return false;
+}
 
 /**
  * Resolved value these CRUD helpers read off an Apollo mutate call — `data`
@@ -119,7 +153,7 @@ function createAddOperationImpl<TInput, TResult>(
       parentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -127,11 +161,14 @@ function createAddOperationImpl<TInput, TResult>(
     if (validateInput) {
       const validation = validateInput(input);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid input');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidInput'),
+        );
         return false;
       }
     }
@@ -156,8 +193,13 @@ function createAddOperationImpl<TInput, TResult>(
     // Check errors FIRST because result.data may be { mutationName: null } even on error
     if (result.errors && result.errors.length > 0) {
       const errorMessage =
-        result.errors[0].message || `Failed to ${operationName.toLowerCase()}`;
-      alertService.alert('Error', errorMessage);
+        result.errors[0].message || t('errors.somethingWentWrong');
+      alertService.alert(t('labels.error'), errorMessage);
+      return false;
+    }
+
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
       return false;
     }
 
@@ -166,7 +208,7 @@ function createAddOperationImpl<TInput, TResult>(
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }
@@ -197,7 +239,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       resolvedParentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -205,11 +247,14 @@ function createUpdateOperationImpl<TInput, TResult>(
     if (validateInput) {
       const validation = validateInput(input);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid input');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidInput'),
+        );
         return false;
       }
     }
@@ -257,12 +302,17 @@ function createUpdateOperationImpl<TInput, TResult>(
 
     if (!result) return false;
 
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
+      return false;
+    }
+
     if (result.data) {
       onSuccess?.(result.data);
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }
@@ -284,6 +334,11 @@ async function executeRemoveImpl<TResult>(
   );
 
   if (!result) return false;
+
+  if (surfaceCrudDataError(result.data, operationName)) {
+    onError?.(new Error(operationName));
+    return false;
+  }
 
   if (result.data) {
     onSuccess?.(result.data);
@@ -316,7 +371,7 @@ function createRemoveOperationImpl<TResult>(
       resolvedParentId !== undefined &&
       (resolvedParentId == null || resolvedParentId === '')
     ) {
-      alertService.alert('Error', 'Parent context is required');
+      alertService.alert(t('labels.error'), t('errors.parentContextRequired'));
       return false;
     }
 
@@ -330,12 +385,12 @@ function createRemoveOperationImpl<TResult>(
             : confirmMessage,
           [
             {
-              text: 'Cancel',
+              text: t('labels.cancel'),
               style: 'cancel',
               onPress: () => resolve(false),
             },
             {
-              text: 'Delete',
+              text: t('labels.delete'),
               style: 'destructive',
               onPress: async () => {
                 const result = await executeRemoveImpl(
@@ -383,11 +438,14 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
     if (validate) {
       const validation = validate(...args);
       if (typeof validation === 'string') {
-        alertService.alert('Validation Error', validation);
+        alertService.alert(t('labels.validationError'), validation);
         return false;
       }
       if (!validation) {
-        alertService.alert('Validation Error', 'Invalid operation');
+        alertService.alert(
+          t('labels.validationError'),
+          t('errors.invalidOperation'),
+        );
         return false;
       }
     }
@@ -403,12 +461,17 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
 
     if (!result) return false;
 
+    if (surfaceCrudDataError(result.data, operationName)) {
+      onError?.(new Error(operationName));
+      return false;
+    }
+
     if (result.data) {
       onSuccess?.(result.data);
       return result.data;
     }
 
-    alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
     return false;
   };
 }

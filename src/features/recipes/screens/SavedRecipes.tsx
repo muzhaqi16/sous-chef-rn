@@ -25,7 +25,7 @@ import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { useMutation } from '@apollo/client/react';
 import {
-  UnfavoriteRecipeDocument,
+  RemoveRecipeFromFavoritesDocument,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
@@ -97,44 +97,48 @@ export const SavedRecipes: React.FC = () => {
   } = useFolderActions();
 
   // Unfavorite (remove from saved) recipe mutation
-  const [unfavoriteRecipeMutation] = useMutation(UnfavoriteRecipeDocument, {
-    update: (cache, { data }, { variables }) => {
-      if (
-        data?.unfavoriteRecipe?.__typename !== 'UnfavoriteRecipePayload' ||
-        !variables?.input?.recipeId
-      ) {
-        return;
-      }
+  const [unfavoriteRecipeMutation] = useMutation(
+    RemoveRecipeFromFavoritesDocument,
+    {
+      update: (cache, { data }, { variables }) => {
+        if (
+          data?.removeRecipeFromFavorites?.__typename !==
+            'RemoveRecipeFromFavoritesPayload' ||
+          !variables?.input?.recipeId
+        ) {
+          return;
+        }
 
-      cache.updateQuery<MySavedRecipesQuery>(
-        { query: MySavedRecipesDocument },
-        existing => {
-          if (!existing?.me) return existing;
-          return {
-            ...existing,
-            me: {
-              ...existing.me,
-              savedRecipesConnection: {
-                ...existing.me.savedRecipesConnection,
-                edges: existing.me.savedRecipesConnection.edges.filter(
-                  edge => edge.node.recipe.id !== variables.input.recipeId,
-                ),
-                totalCount:
-                  (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+        cache.updateQuery<MySavedRecipesQuery>(
+          { query: MySavedRecipesDocument },
+          existing => {
+            if (!existing?.me) return existing;
+            return {
+              ...existing,
+              me: {
+                ...existing.me,
+                savedRecipesConnection: {
+                  ...existing.me.savedRecipesConnection,
+                  edges: existing.me.savedRecipesConnection.edges.filter(
+                    edge => edge.node.recipe.id !== variables.input.recipeId,
+                  ),
+                  totalCount:
+                    (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+                },
               },
-            },
-          };
-        },
-      );
+            };
+          },
+        );
 
-      optimisticDataPersistence.save(
-        'SavedRecipe',
-        variables.input.recipeId,
-        'isFavorited',
-        false,
-      );
+        optimisticDataPersistence.save(
+          'SavedRecipe',
+          variables.input.recipeId,
+          'isFavorited',
+          false,
+        );
+      },
     },
-  });
+  );
 
   // Filter recipes by folder + tags (search query filtering happens per-row).
   const filteredRecipes = (() => {

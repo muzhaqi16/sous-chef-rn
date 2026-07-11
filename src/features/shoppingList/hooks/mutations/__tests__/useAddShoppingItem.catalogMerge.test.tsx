@@ -66,16 +66,36 @@ const payloadItem = (id: string) => ({
   shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
 });
 
+// The single add fires the batch mutation with one item; the created/merged row
+// is the one entry in `results`.
+const batchPayload = (
+  item: ReturnType<typeof payloadItem>,
+  merged: boolean,
+) => ({
+  __typename: 'AddItemsToShoppingListPayload',
+  results: [
+    {
+      __typename: 'BatchAddShoppingListItemResult',
+      index: 0,
+      clientId: null,
+      success: true,
+      quantityIncremented: merged,
+      error: null,
+      item,
+    },
+  ],
+});
+
 // Server echoes back the client-sent id (no catalog merge).
 const echoMock = (): MockedResponse => ({
   request: { query: AddItemToShoppingListDocument, variables: () => true },
   maxUsageCount: Number.POSITIVE_INFINITY,
-  result: (vars: { input: { id: string } }) => ({
+  result: (vars: { input: { items: { id: string }[] } }) => ({
     data: {
-      addItemToShoppingList: {
-        __typename: 'AddItemToShoppingListPayload',
-        shoppingListItem: payloadItem(vars.input.id),
-      },
+      addItemsToShoppingList: batchPayload(
+        payloadItem(vars.input.items[0].id),
+        false,
+      ),
     },
   }),
 });
@@ -86,10 +106,7 @@ const mergeMock = (canonicalId: string): MockedResponse => ({
   maxUsageCount: Number.POSITIVE_INFINITY,
   result: () => ({
     data: {
-      addItemToShoppingList: {
-        __typename: 'AddItemToShoppingListPayload',
-        shoppingListItem: payloadItem(canonicalId),
-      },
+      addItemsToShoppingList: batchPayload(payloadItem(canonicalId), true),
     },
   }),
 });

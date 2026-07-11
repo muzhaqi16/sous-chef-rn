@@ -208,7 +208,7 @@ describe('createQueueLink', () => {
       });
     });
 
-    it('persists only the allowlisted context keys (localFirst, operationId)', done => {
+    it('persists only the allowlisted context key (localFirst) and drops everything else', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,
         user: { id: 'user-1' },
@@ -216,6 +216,8 @@ describe('createQueueLink', () => {
       // The live Apollo operation context carries client internals that must
       // not be persisted: functions vanish under JSON serialization and a
       // circular value would make the MMKV write throw, losing the enqueue.
+      // Idempotency now rides on input.idempotencyKey (in the variables), not on
+      // the context, so only localFirst survives here.
       const circular: Record<string, unknown> = {};
       circular.self = circular;
       const operation = makeOperation({
@@ -234,10 +236,7 @@ describe('createQueueLink', () => {
       link.request(operation, forward)!.subscribe({
         complete() {
           const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
-          expect(queued.context).toEqual({
-            localFirst: true,
-            operationId: 'op-1',
-          });
+          expect(queued.context).toEqual({ localFirst: true });
           done();
         },
       });

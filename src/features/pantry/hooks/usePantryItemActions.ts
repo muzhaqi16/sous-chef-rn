@@ -241,11 +241,13 @@ export function usePantryItemActions({
               purpose,
               notes: consumeNotes,
               usageUnitId,
+              // idempotencyKey dedups the usage ledger row on replay.
+              idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline and replay idempotently via
-          // syncConsumePantryItem (operationId dedups the usage ledger row).
-          context: { localFirst: true, operationId: generateEntityId() },
+          // Local-first: queue offline; replays as the canonical mutation,
+          // deduped by its idempotencyKey.
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         revertOptimistic?.();
@@ -320,11 +322,13 @@ export function usePantryItemActions({
               wasteReason,
               isComposted,
               isRecycled,
+              // idempotencyKey dedups the usage ledger row on replay.
+              idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline and replay idempotently via
-          // syncConsumePantryItem (operationId dedups the usage ledger row).
-          context: { localFirst: true, operationId: generateEntityId() },
+          // Local-first: queue offline; replays as the canonical mutation,
+          // deduped by its idempotencyKey.
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         revertOptimistic?.();
@@ -427,11 +431,13 @@ export function usePantryItemActions({
               costPerUnit,
               totalCost,
               expiresAt: expiresAtValue,
+              // idempotencyKey dedups the restock ledger row on replay.
+              idempotencyKey: generateEntityId(),
             },
           },
-          // Local-first: queue offline and replay idempotently via
-          // syncRestockPantryItem (operationId dedups the restock ledger row).
-          context: { localFirst: true, operationId: generateEntityId() },
+          // Local-first: queue offline; replays as the canonical mutation,
+          // deduped by its idempotencyKey.
+          context: { localFirst: true },
         }),
       (error: unknown) => {
         revertOptimistic();

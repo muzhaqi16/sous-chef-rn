@@ -8,6 +8,8 @@ import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
@@ -20,24 +22,7 @@ export const OnboardingCompleteScreen = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [completeOnboardingMutation] = useMutation(CompleteOnboardingDocument, {
-    onCompleted: () => {
-      // Update the user in the store
-      if (user) {
-        updateUser({ ...user, onBoarded: true });
-      }
-
-      setIsCompleting(false);
-
-      // Navigate to main app - onboarding is now complete
-      // The RootNavigator will automatically navigate to main_app since user.onBoarded = true
-    },
-    onError: error => {
-      handleMutationError(error, { operation: 'Complete Onboarding' });
-      setError(t('onBoarding.completeOnboardingError'));
-      setIsCompleting(false);
-    },
-  });
+  const [completeOnboardingMutation] = useMutation(CompleteOnboardingDocument);
 
   const handleComplete = async () => {
     if (!user?.id) {
@@ -48,10 +33,34 @@ export const OnboardingCompleteScreen = () => {
     setIsCompleting(true);
     setError(null);
 
-    // The mutation's onError handler (declared above) covers failures, and
-    // with errorPolicy:'all' the call doesn't throw — so no try/catch wrapper
-    // (which would bail the React Compiler out of this component) is needed.
-    await completeOnboardingMutation();
+    const result = await executeMutation(
+      () => completeOnboardingMutation(),
+      error => {
+        handleMutationError(error, { operation: 'Complete Onboarding' });
+        setError(t('onBoarding.completeOnboardingError'));
+        setIsCompleting(false);
+      },
+    );
+    if (!result) return; // transport error — already surfaced above
+
+    // A resolved error member doesn't throw under errorPolicy:'all' — inspect
+    // the union before marking the user onboarded and navigating to the app.
+    if (
+      alertIfRejected(
+        result,
+        'completeOnboarding',
+        'CompleteOnboardingPayload',
+        t('onBoarding.completeOnboardingError'),
+      )
+    ) {
+      setError(t('onBoarding.completeOnboardingError'));
+      setIsCompleting(false);
+      return;
+    }
+
+    // Success — RootNavigator auto-navigates to main_app once onBoarded = true.
+    if (user) updateUser({ ...user, onBoarded: true });
+    setIsCompleting(false);
   };
 
   return (

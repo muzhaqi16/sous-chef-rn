@@ -42,6 +42,26 @@ mutation MarkNotificationUnread($input: MarkNotificationUnreadInput!) {
   }
 }
 
+# Fire a self-addressed test notification — lets a user validate their
+# notification setup (and, once remote push lands, that pushes arrive) from
+# the settings screen.
+mutation SendTestNotification($input: SendTestNotificationInput!) {
+  sendTestNotification(input: $input) {
+    __typename
+    ... on SendTestNotificationPayload {
+      notification {
+        id
+        title
+        message
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
 mutation DeleteNotification($input: DeleteNotificationInput!) {
   deleteNotification(input: $input) {
     __typename

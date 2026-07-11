@@ -16,9 +16,9 @@ import { useWastePantryItemBatch } from '#features/pantry/hooks/mutations/useWas
 import { Text } from '#components/atoms/Text';
 
 /**
- * `batches` arrive already unmasked from the parent (PantryItemDetail
- * materializes the full PantryItemDetail_pantryItem via `cache.readFragment`, which
- * recursively unmasks nested fragments). `BatchListItem` then runs its own
+ * `batches` arrive already unmasked from the parent (PantryItemDetail fetches
+ * them via the GetPantryItemBatches connection query and materializes each edge
+ * node through `cache.readFragment`). `BatchListItem` then runs its own
  * `useFragment` for reactive per-row updates.
  */
 interface BatchSectionProps {
@@ -47,12 +47,12 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   );
 
   const allBatches: PantryItemBatchFragment[] =
-    allBatchesData?.pantryItemBatches
-      ?.map(ref =>
+    allBatchesData?.pantryItemBatchesConnection?.edges
+      ?.map(edge =>
         client.cache.readFragment<PantryItemBatchFragment>({
           fragment: PantryItemBatchFragmentDoc,
           fragmentName: 'PantryItemBatchFragment',
-          from: ref,
+          from: edge.node,
         }),
       )
       .filter((b): b is PantryItemBatchFragment => b !== null) ?? [];

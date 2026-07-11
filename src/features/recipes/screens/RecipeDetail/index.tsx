@@ -26,6 +26,9 @@ import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
 import { useRecipeDetail } from '../../hooks/useRecipeDetail';
+import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
+import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';
+import { RecipeEnrichment } from './components/RecipeEnrichment';
 import { IngredientCard } from './components/IngredientCard';
 import { RecipeHeroImage } from './components/RecipeHeroImage';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
@@ -45,8 +48,10 @@ const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('RecipeDetail');
 
-  const { toRecipeEdit } = useAppNavigation();
+  const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
   const user = useUser();
+  const { forkRecipe, forking } = useForkRecipe();
+  const { setPublished, publishing } = usePublishRecipe();
   const {
     goBack,
     recipeId,
@@ -120,6 +125,17 @@ const RecipeDetailScreen: React.FC = () => {
     }
   };
 
+  // Fork a recipe into an editable copy, then open the new copy.
+  const handleForkRecipe = async () => {
+    if (!recipeId) return;
+    const newId = await forkRecipe(recipeId);
+    if (newId) toRecipeDetail({ recipeId: newId });
+  };
+
+  const handleTogglePublish = () => {
+    if (recipeId) setPublished(recipeId, !displayData?.isPublished);
+  };
+
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
@@ -191,6 +207,30 @@ const RecipeDetailScreen: React.FC = () => {
             onPress: handleEditRecipe,
             variant: 'primary',
             testID: 'recipe-edit-button',
+          } satisfies HeaderAction,
+          {
+            icon: displayData?.isPublished
+              ? 'cloud-done-outline'
+              : 'cloud-upload-outline',
+            onPress: handleTogglePublish,
+            variant: 'primary',
+            loading: publishing,
+            accessibilityLabel: displayData?.isPublished
+              ? t('recipes.unpublishA11y')
+              : t('recipes.publishA11y'),
+            testID: 'recipe-publish-button',
+          } satisfies HeaderAction,
+        ]
+      : []),
+    ...(isBackendRecipe && !isOwner && recipeId
+      ? [
+          {
+            icon: 'git-branch-outline',
+            onPress: handleForkRecipe,
+            variant: 'primary',
+            loading: forking,
+            accessibilityLabel: t('recipes.forkA11y'),
+            testID: 'recipe-fork-button',
           } satisfies HeaderAction,
         ]
       : []),
@@ -343,6 +383,18 @@ const RecipeDetailScreen: React.FC = () => {
             </Pressable>
           )}
         </View>
+
+        <RecipeEnrichment
+          caloriesPerServing={displayData.caloriesPerServing}
+          nutritionData={displayData.nutritionData}
+          tips={displayData.tips}
+          videoUrl={displayData.videoUrl}
+          forkedFromName={displayData.forkedFromName}
+          originalAuthor={displayData.originalAuthor}
+          tags={displayData.tags}
+          isBackendRecipe={isBackendRecipe}
+          isPublished={displayData.isPublished}
+        />
 
         {!!isBackendRecipe && !!recipeId && !!isSaved && (
           <SavedRecipeMetadataPanel

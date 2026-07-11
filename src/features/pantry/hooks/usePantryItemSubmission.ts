@@ -329,14 +329,21 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                   input: {
                     id: duplicateInfo.existingPantryItemId,
                     quantity,
+                    // Forward the purchase details the user just entered so the
+                    // restock records an ItemPriceHistory observation instead of
+                    // discarding cost/store/expiry on the duplicate path.
+                    ...(costValue !== undefined && { costPerUnit: costValue }),
+                    ...(storeId && { storeId }),
+                    ...(expirationDate && {
+                      expiresAt: expirationDate.toISOString(),
+                    }),
+                    // idempotencyKey dedups the restock ledger row on replay.
+                    idempotencyKey: generateEntityId(),
                   },
                 },
-                // Local-first: replay-safe via syncRestockPantryItem (operationId
-                // dedups the restock ledger row if the request is queued).
-                context: {
-                  localFirst: true,
-                  operationId: generateEntityId(),
-                },
+                // Local-first: queued offline, replayed as the canonical
+                // mutation (deduped by its idempotencyKey).
+                context: { localFirst: true },
               }),
             'Restock pantry item error:',
           );

@@ -26,7 +26,7 @@ import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
   DeleteStorageLocationDocument,
-  SetDefaultStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
 } from '#operations/storageLocation/storageLocation.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '../useStorageLocationManagement';
@@ -209,13 +209,13 @@ function buildDeleteLocationMock(
 function buildSetDefaultMock(): MockedResponse {
   return {
     request: {
-      query: SetDefaultStorageLocationDocument,
+      query: MarkStorageLocationAsDefaultDocument,
       variables: () => true,
     },
     result: {
       data: {
-        setDefaultStorageLocation: {
-          __typename: 'SetDefaultStorageLocationPayload',
+        markStorageLocationAsDefault: {
+          __typename: 'MarkStorageLocationAsDefaultPayload',
           home: null,
           storageLocation: {
             __typename: 'StorageLocation',
@@ -352,7 +352,9 @@ describe('useStorageLocationManagement', () => {
       await result.current.deleteLocation('loc-1');
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Storage location deleted');
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Storage location deleted successfully',
+    );
   });
 
   it('shows error toast when delete returns success: false', async () => {

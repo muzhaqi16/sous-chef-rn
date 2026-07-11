@@ -36,12 +36,19 @@ import {
   RegisterDeviceDocument,
   type RegisterDeviceMutation,
   type RegisterDeviceMutationVariables,
+  UpdateDeviceDocument,
+  type UpdateDeviceMutation,
+  type UpdateDeviceMutationVariables,
 } from '#operations/auth/device.generated';
 import {
   type LoginInput,
   type RegisterInput,
-  type DeviceRegistrationInput,
+  type RegisterDeviceInput,
 } from '#/graphql/generated/schemaTypes';
+import {
+  acquirePushToken,
+  onPushTokenRefresh,
+} from '#/services/push/pushTokenProvider';
 import {
   loadCredentials,
   saveCredentials,
@@ -148,14 +155,15 @@ async function loadStoredCredentials(
 
 function buildDeviceInput(
   deviceInfo: Awaited<ReturnType<typeof collectDeviceInformation>>,
-): DeviceRegistrationInput {
+  pushToken: string | null,
+): RegisterDeviceInput {
   return {
     deviceId: deviceInfo.deviceId,
     deviceName: deviceInfo.deviceName,
     deviceType: deviceInfo.deviceType,
     platform: deviceInfo.platform,
     appVersion: deviceInfo.appVersion,
-    pushToken: undefined,
+    pushToken: pushToken ?? undefined,
     details: {
       browserOs: {
         osName: deviceInfo.osName,
@@ -226,6 +234,25 @@ function buildDeviceInput(
   };
 }
 
+/** Unsubscribe for the active token-refresh listener, so we don't stack them. */
+let pushTokenRefreshUnsubscribe: (() => void) | null = null;
+
+/** Push a rotated push token to the server for the registered device. */
+async function pushRotatedTokenToServer(
+  deviceId: string,
+  pushToken: string,
+): Promise<void> {
+  try {
+    await client.mutate<UpdateDeviceMutation, UpdateDeviceMutationVariables>({
+      mutation: UpdateDeviceDocument,
+      variables: { input: { id: deviceId, pushToken } },
+    });
+    logger.info('Device push token updated after rotation');
+  } catch (error) {
+    logger.error('Failed to update rotated push token:', error);
+  }
+}
+
 async function registerDeviceOnce(): Promise<boolean> {
   try {
     const deviceInfo = await collectDeviceInformation();
@@ -234,12 +261,17 @@ async function registerDeviceOnce(): Promise<boolean> {
       return false;
     }
 
+    // Acquire the push token via the platform provider (no-op → null until the
+    // native provider is installed; then permission-gated). Never blocks
+    // registration — a null token registers the device without push, as before.
+    const pushToken = await acquirePushToken();
+
     const result = await client.mutate<
       RegisterDeviceMutation,
       RegisterDeviceMutationVariables
     >({
       mutation: RegisterDeviceDocument,
-      variables: { input: buildDeviceInput(deviceInfo) },
+      variables: { input: buildDeviceInput(deviceInfo, pushToken) },
     });
 
     const registerPayload = result.data?.registerDevice;
@@ -250,6 +282,16 @@ async function registerDeviceOnce(): Promise<boolean> {
           : null;
       logger.error('Device registration failed:', message);
       return false;
+    }
+
+    // Keep the server token current: the OS rotates push tokens periodically, so
+    // subscribe once and updateDevice on each rotation.
+    const deviceId = registerPayload.device?.id;
+    if (deviceId) {
+      pushTokenRefreshUnsubscribe?.();
+      pushTokenRefreshUnsubscribe = onPushTokenRefresh(token => {
+        void pushRotatedTokenToServer(deviceId, token);
+      });
     }
 
     logger.info('Device registered successfully:', {
@@ -506,44 +548,6 @@ async function handleLogin(
   return false;
 }
 
-async function handleRegistration(
-  registerResponse: ResolvedAuthPayload,
-  shouldRemember?: boolean,
-): Promise<void> {
-  if (!registerResponse?.user) return;
-
-  const { user, accessToken, refreshToken } = registerResponse;
-  const store = useStore.getState();
-
-  store.setAuth(user, accessToken, refreshToken);
-  bootstrapUserStore(user);
-
-  if (shouldRemember !== undefined) {
-    store.setRememberMe(shouldRemember);
-  }
-
-  if (user.id) {
-    store.setUserNavigationState(user.id, {
-      lastLoginTimestamp: Date.now(),
-      rememberMeChoice: shouldRemember,
-      isNewUser: true,
-    });
-  }
-
-  logger.info('Auth success: Registration successful');
-  requestIdleCallback(() => registerDeviceInBackground());
-
-  if (!user.emailVerified) {
-    store.setNavigationState('verification');
-    return;
-  }
-  if (!user.onBoarded) {
-    store.setNavigationState('onboarding');
-    return;
-  }
-  store.setNavigationState('main_app');
-}
-
 // --- Biometric prompting (moved from useBiometricPrompting, only the check logic) ---
 
 async function shouldShowPostLoginBiometricPrompt(targetUser: {
@@ -658,7 +662,13 @@ async function register(
       variables: { input },
     });
 
-    if (result.data?.register) {
+    const payload = result.data?.register;
+
+    if (payload?.__typename === 'RegisterPayload') {
+      // Registration is verification-first and existence-blind: the API sends
+      // an activation email and issues NO tokens. Do NOT set auth here — the
+      // user activates via the emailed link, then logs in. Persist the
+      // just-entered credentials so the post-verification login can prefill.
       store.setRegistrationPassword(input.password);
 
       // Persist to keychain (non-fatal)
@@ -669,17 +679,23 @@ async function register(
         logger.warn('Non-fatal: failed to persist registration password');
       }
 
-      if (result.data.register.user?.id) {
-        const prefs = getUserPreferences(result.data.register.user.id);
-        prefs?.clearRegistrationPreferences();
+      if (shouldRemember !== undefined) {
+        store.setRememberMe(shouldRemember);
       }
 
-      const unmaskedRegister = unmaskAuthPayload(result.data.register);
-      if (unmaskedRegister) {
-        await handleRegistration(unmaskedRegister, shouldRemember);
-      }
+      logger.info('Registration successful: verification email sent');
       store.setAuthIsLoading(false);
       return true;
+    }
+
+    if (payload) {
+      // Non-success union member (ValidationError / ConflictError /
+      // ForbiddenError / NotFoundError). It resolves 200 with no transport
+      // error, so surface its message the way handleAuthError surfaces
+      // transport failures — a toast — and stay on the sign-up screen.
+      toastService.error(payload.message);
+      store.setAuthIsLoading(false);
+      return false;
     }
 
     if (result.error) {
@@ -802,7 +818,6 @@ export const authService = {
 
   // Post-auth flow handlers
   handleLogin,
-  handleRegistration,
   handleAuthError,
 
   // Credential management

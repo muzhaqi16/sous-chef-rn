@@ -50,7 +50,7 @@ export function useAddRecipeToMealPlan(
     }
     const result = await createItem({
       mealPlanId: activePlanId,
-      recipeId,
+      meal: { recipeId },
       mealType,
       date: date.toISOString(),
     });

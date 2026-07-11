@@ -3,6 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
+import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -29,6 +30,10 @@ jest.mock('#hooks/home/hooks/useHomeQuery', () => ({
   useHomeQuery: jest.fn(() => ({
     homes: [{ id: 'home-1', name: 'My Home' }],
   })),
+}));
+
+jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
+  useDietaryProfile: jest.fn(() => ({ profile: null })),
 }));
 
 jest.mock('#store/useAppStore', () => ({
@@ -119,5 +124,23 @@ describe('CreateMealPlanScreen', () => {
   it('renders form with home selector when multiple homes', () => {
     const tree = render(<CreateMealPlanScreen />);
     expect(tree.toJSON()).toBeTruthy();
+  });
+
+  it('renders the budget input field', () => {
+    const { getByTestId } = render(<CreateMealPlanScreen />);
+    expect(getByTestId('meal-plan-budget-input')).toBeTruthy();
+  });
+
+  it('shows the nutrition-tracking toggle only when the user has a dietary profile', () => {
+    // Default mock returns no profile → no toggle.
+    expect(
+      render(<CreateMealPlanScreen />).queryByText('Track nutrition goals'),
+    ).toBeNull();
+
+    (useDietaryProfile as jest.Mock).mockReturnValue({
+      profile: { id: 'dp-1' },
+    });
+    const { getByText } = render(<CreateMealPlanScreen />);
+    expect(getByText('Track nutrition goals')).toBeTruthy();
   });
 });

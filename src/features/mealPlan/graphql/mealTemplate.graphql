@@ -37,6 +37,32 @@ query GetMealTemplate($id: ID!) {
   }
 }
 
+# All-inline detail for the template builder/editor form (no masked fragments,
+# so every field is read directly). Item mutations write these same
+# MealTemplate.items / MealTemplateItem fields, so the form stays in sync.
+# updatedAt is selected because useMealTemplateEditor's snapshot fragment
+# includes it — without it cached here, readFragment returns null and the
+# editor's optimistic update/revert silently skips.
+query GetMealTemplateForEdit($id: ID!) {
+  mealTemplate(id: $id) {
+    id
+    name
+    description
+    category
+    defaultServings
+    tags
+    updatedAt
+    items {
+      id
+      dayOffset
+      mealType
+      customMealName
+      servings
+      notes
+    }
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -96,6 +122,134 @@ mutation CreateMealPlanFromTemplate($input: CreateMealPlanFromTemplateInput!) {
         id
         ...MealPlanMain_mealPlan
         ...MealPlanSettingsSheet_mealPlan
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
+  createMealTemplate(input: $input) {
+    __typename
+    ... on CreateMealTemplatePayload {
+      mealTemplate {
+        id
+        ...MealTemplateDisplay
+        items {
+          id
+          ...MealTemplateItemFragment
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateMealTemplate($input: UpdateMealTemplateInput!) {
+  updateMealTemplate(input: $input) {
+    __typename
+    ... on UpdateMealTemplatePayload {
+      mealTemplate {
+        id
+        ...MealTemplateDisplay
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation AddTemplateItem($input: AddTemplateItemInput!) {
+  addTemplateItem(input: $input) {
+    __typename
+    ... on AddTemplateItemPayload {
+      mealTemplate {
+        id
+        items {
+          id
+          ...MealTemplateItemFragment
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateTemplateItem($input: UpdateTemplateItemInput!) {
+  updateTemplateItem(input: $input) {
+    __typename
+    ... on UpdateTemplateItemPayload {
+      mealTemplateItem {
+        id
+        ...MealTemplateItemFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {
+  removeTemplateItem(input: $input) {
+    __typename
+    ... on RemoveTemplateItemPayload {
+      mealTemplate {
+        id
+        items {
+          id
+          ...MealTemplateItemFragment
+        }
+      }
+      mealTemplateItem {
+        id
       }
     }
     ... on Error {

@@ -218,6 +218,57 @@ function emptySearchRecipesMock(): MockedResponse {
   return searchRecipesMockWith([]);
 }
 
+/** Page-aware local-API mock: matches a specific `after` cursor (or its
+ * absence for page 1) so distinct pages can return distinct nodes, and lets
+ * the test set the returned `pageInfo`. Records every variables payload Apollo
+ * sent into `fired` so the test can assert the load-more `after`. */
+function searchRecipesPageMock(opts: {
+  matchAfter: string | null;
+  nodes: Record<string, unknown>[];
+  hasNextPage: boolean;
+  endCursor: string | null;
+  fired?: Record<string, unknown>[];
+}): MockedResponse {
+  return {
+    request: {
+      query: SearchRecipesDocument,
+      variables: (vars: Record<string, unknown>) => {
+        opts.fired?.push(vars);
+        const after = (vars.after ?? null) as string | null;
+        return after === opts.matchAfter;
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: {
+        searchRecipes: {
+          __typename: 'RecipeConnection',
+          edges: opts.nodes.map(node => ({
+            __typename: 'RecipeEdge',
+            cursor: `cursor-${node.id}`,
+            node,
+          })),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: opts.hasNextPage,
+            endCursor: opts.endCursor,
+          },
+          totalCount: opts.nodes.length,
+        },
+      },
+    },
+  };
+}
+
+/** Empty Spoonacular page — keeps a load-more test focused on the local
+ * source. `totalResults: 0` means the Spoonacular branch reports nothing more. */
+const emptySpoonacularResponse = {
+  results: [],
+  offset: 0,
+  number: 0,
+  totalResults: 0,
+};
+
 function renderRecipeScreen(
   operationMocks: MockedResponse[] = [emptySearchRecipesMock()],
 ) {
@@ -776,6 +827,266 @@ describe('useRecipeScreen', () => {
       expect(result.current.searchResults.map(r => r.id)).toEqual([
         'local-r-ext',
         'spoonacular-7002',
+      ]);
+    });
+  });
+
+  describe('text-search pagination (load more)', () => {
+    it('loadMoreSearch fetches the next local page with the end cursor and appends', async () => {
+      // Spoonacular contributes nothing here so the assertions isolate the
+      // local pagination path.
+      mockSearchRecipes.mockResolvedValue(emptySpoonacularResponse);
+
+      const fired: Record<string, unknown>[] = [];
+      const page1 = searchRecipesPageMock({
+        matchAfter: null,
+        nodes: [
+          makeLocalRecipeNode({ id: 'r1', name: 'Lasagna One' }),
+          makeLocalRecipeNode({ id: 'r2', name: 'Lasagna Two' }),
+        ],
+        hasNextPage: true,
+        endCursor: 'cursor-page1-end',
+        fired,
+      });
+      const page2 = searchRecipesPageMock({
+        matchAfter: 'cursor-page1-end',
+        nodes: [makeLocalRecipeNode({ id: 'r3', name: 'Lasagna Three' })],
+        hasNextPage: false,
+        endCursor: null,
+        fired,
+      });
+
+      const { result } = renderRecipeScreen([page1, page2]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('lasagna');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      // First page on screen; more remains because pageInfo.hasNextPage is true.
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r1',
+        'local-r2',
+      ]);
+      expect(result.current.searchHasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+      await waitFor(() => {
+        expect(result.current.searchResults).toHaveLength(3);
+      });
+
+      // A real second-page query was issued with the page-1 end cursor.
+      const afters = fired.map(v => v.after ?? null);
+      expect(afters).toContain('cursor-page1-end');
+
+      // New page appended after the existing rows.
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r1',
+        'local-r2',
+        'local-r3',
+      ]);
+      // pageInfo.hasNextPage on the second page was false → no more.
+      expect(result.current.searchHasMore).toBe(false);
+    });
+
+    it('does not duplicate a recipe present in both the first and second local page', async () => {
+      mockSearchRecipes.mockResolvedValue(emptySpoonacularResponse);
+
+      const page1 = searchRecipesPageMock({
+        matchAfter: null,
+        nodes: [makeLocalRecipeNode({ id: 'r1', name: 'Shared Recipe' })],
+        hasNextPage: true,
+        endCursor: 'cursor-p1',
+      });
+      // Page 2 re-surfaces "Shared Recipe" (different id) plus a genuinely new
+      // one. The cross-page title dedupe must drop the repeat.
+      const page2 = searchRecipesPageMock({
+        matchAfter: 'cursor-p1',
+        nodes: [
+          makeLocalRecipeNode({ id: 'r1-dup', name: 'Shared Recipe' }),
+          makeLocalRecipeNode({ id: 'r2', name: 'Brand New Recipe' }),
+        ],
+        hasNextPage: false,
+        endCursor: null,
+      });
+
+      const { result } = renderRecipeScreen([page1, page2]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('shared');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+      expect(result.current.searchResults.map(r => r.id)).toEqual(['local-r1']);
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+      await waitFor(() => {
+        expect(result.current.searchResults).toHaveLength(2);
+      });
+
+      // "Shared Recipe" appears once (the page-1 copy); only the new recipe is
+      // appended. The page-2 duplicate id never reaches the list.
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'local-r1',
+        'local-r2',
+      ]);
+    });
+
+    it('searchHasMore reflects pageInfo.hasNextPage', async () => {
+      mockSearchRecipes.mockResolvedValue(emptySpoonacularResponse);
+
+      const { result } = renderRecipeScreen([
+        searchRecipesPageMock({
+          matchAfter: null,
+          nodes: [makeLocalRecipeNode({ id: 'r1', name: 'Only Page' })],
+          hasNextPage: false,
+          endCursor: null,
+        }),
+      ]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('only');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      // No next local page and no Spoonacular results → nothing more to load.
+      expect(result.current.searchResults).toHaveLength(1);
+      expect(result.current.searchHasMore).toBe(false);
+    });
+
+    it('stops Spoonacular load-more when a requested page returns no rows (paging cap)', async () => {
+      // Local source has just one page, so Spoonacular alone drives "load more".
+      const localMock = searchRecipesPageMock({
+        matchAfter: null,
+        nodes: [makeLocalRecipeNode({ id: 'r1', name: 'Local Only' })],
+        hasNextPage: false,
+        endCursor: null,
+      });
+
+      // Page 1 returns 2 rows but advertises a far larger total (100), so
+      // offset(2) < total(100) and more is offered. The next offset returns no
+      // rows even though the total still says 100 — the plan's paging cap.
+      mockSearchRecipes.mockImplementation((params: { offset?: number }) => {
+        const offset = params.offset ?? 0;
+        if (offset === 0) {
+          return Promise.resolve({
+            results: sampleTextSearchResponse.results,
+            offset: 0,
+            number: 2,
+            totalResults: 100,
+          });
+        }
+        return Promise.resolve({
+          results: [],
+          offset,
+          number: 0,
+          totalResults: 100,
+        });
+      });
+
+      const { result } = renderRecipeScreen([localMock]);
+
+      await act(async () => {
+        await result.current.handleTextSearch('pasta');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+      // Spoonacular advertised more than it returned → load-more is offered.
+      expect(result.current.searchHasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+
+      // The empty page freezes the Spoonacular total at the current offset, so
+      // there's nothing more to load — the footer hides instead of re-firing the
+      // same empty page forever (the pre-fix infinite-loop regression).
+      await waitFor(() => {
+        expect(result.current.searchHasMore).toBe(false);
+      });
+    });
+
+    it('paginates the Spoonacular source by offset when more results remain', async () => {
+      // totalResults (3) > page size (1 here) so a second Spoonacular page
+      // exists. The mock returns a distinct recipe per offset.
+      mockSearchRecipes.mockImplementation((params: { offset?: number }) => {
+        const offset = params.offset ?? 0;
+        if (offset === 0) {
+          return Promise.resolve({
+            results: [
+              {
+                id: 9001,
+                title: 'Spoon One',
+                image: 'https://img/9001.jpg',
+                imageType: 'jpg',
+                readyInMinutes: 10,
+                servings: 1,
+                aggregateLikes: 1,
+              },
+            ],
+            offset: 0,
+            number: 1,
+            totalResults: 3,
+          });
+        }
+        return Promise.resolve({
+          results: [
+            {
+              id: 9002,
+              title: 'Spoon Two',
+              image: 'https://img/9002.jpg',
+              imageType: 'jpg',
+              readyInMinutes: 20,
+              servings: 2,
+              aggregateLikes: 2,
+            },
+          ],
+          offset,
+          number: 1,
+          totalResults: 3,
+        });
+      });
+
+      const { result } = renderRecipeScreen();
+
+      await act(async () => {
+        await result.current.handleTextSearch('spoon');
+      });
+      await waitFor(() => {
+        expect(result.current.searchLoading).toBe(false);
+      });
+
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-9001',
+      ]);
+      // offset(1) < totalResults(3) → more remains.
+      expect(result.current.searchHasMore).toBe(true);
+
+      await act(async () => {
+        await result.current.loadMoreSearch();
+      });
+      await waitFor(() => {
+        expect(result.current.searchResults).toHaveLength(2);
+      });
+
+      // Second page fetched with offset 1 (the count fetched on page 1).
+      const offsets = mockSearchRecipes.mock.calls.map(
+        c => (c[0] as { offset?: number }).offset,
+      );
+      expect(offsets).toContain(1);
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-9001',
+        'spoonacular-9002',
       ]);
     });
   });

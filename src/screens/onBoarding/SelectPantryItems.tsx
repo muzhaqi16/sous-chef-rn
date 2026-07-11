@@ -21,7 +21,6 @@ import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
-  ItemSortField,
   SortOrder,
   ItemType,
 } from '#/graphql/generated/schemaTypes';
@@ -56,9 +55,8 @@ export const SelectPantryItems = () => {
         curation: { showInOnboarding: true },
         types: [ItemType.Food, ItemType.Foundation],
       },
-      sort: {
-        field: ItemSortField.Popularity,
-        order: SortOrder.Asc,
+      orderBy: {
+        popularity: SortOrder.Asc,
       },
       first: 50,
     },

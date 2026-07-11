@@ -67,6 +67,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     revokeInvite,
     leaveHome,
     toggleJoinCode,
+    rotateJoinCode,
+    rotatingJoinCode,
+    transferOwnership,
+    updateMemberPermission,
   } = useHomeDetailManagement(homeId);
 
   const handleRefresh = () => {
@@ -94,6 +98,42 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       const url = home.joinLink?.universal ?? buildJoinHomeUrl(home.joinCode);
       void shareUrl(url, t('homeDetail.shareLinkMessage'));
     }
+  };
+
+  // Transferring ownership is irreversible from this side (the new owner must
+  // hand it back) — confirm with the target member's name.
+  const handleTransferOwnership = (memberUserId: string, name: string) => {
+    alertService.alert(
+      t('homeDetail.transferOwnershipTitle'),
+      t('homeDetail.transferOwnershipMessage', { name }),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('homeDetail.transferOwnershipConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            void transferOwnership(memberUserId);
+          },
+        },
+      ],
+    );
+  };
+
+  // Rotating the code invalidates any previously-shared link — confirm first.
+  const handleRotateJoinCode = () => {
+    alertService.alert(
+      t('homeDetail.rotateJoinCodeTitle'),
+      t('homeDetail.rotateJoinCodeMessage'),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('homeDetail.rotateJoinCodeConfirm'),
+          onPress: () => {
+            void rotateJoinCode();
+          },
+        },
+      ],
+    );
   };
 
   const handleToggleJoinCode = (enabled: boolean) => {
@@ -238,6 +278,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
               >
                 <Icon name="share-outline" size={20} tone="primary" />
               </AppPressable>
+              <AppPressable
+                style={styles.copyButton}
+                onPress={handleRotateJoinCode}
+                disabled={rotatingJoinCode}
+                accessibilityLabel={t('homeDetail.rotateJoinCodeConfirm')}
+              >
+                <Icon name="refresh-outline" size={20} tone="textPrimary" />
+              </AppPressable>
             </View>
           ) : null}
         </>
@@ -250,6 +298,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           members={memberNodes}
           invites={inviteNodes}
           canManageHome={canManage}
+          isOwner={isOwner}
           resolveMemberLabel={member => {
             const isCurrentUser =
               !!currentUser?.id && member.userId === currentUser.id;
@@ -272,6 +321,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           }
           onChangeRole={changeRole}
           onRemove={removeMember}
+          onTransferOwnership={handleTransferOwnership}
+          onUpdatePermission={updateMemberPermission}
           onRevokeInvite={revokeInvite}
         />
       ),

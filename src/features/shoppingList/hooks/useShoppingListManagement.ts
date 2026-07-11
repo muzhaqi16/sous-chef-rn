@@ -68,7 +68,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const error = listError || itemsError;
 
   // 3. Mutations: CRUD operations
-  const { addItem, updateItem, removeItem, toggleItem } =
+  const { addItem, updateItem, removeItem, toggleItem, recordPurchase } =
     useShoppingListItemMutations(currentListId, refetch);
 
   // 4. Search: Client-side filtering (only using query/setQuery for debounced state)
@@ -125,6 +125,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
     updateItem,
     removeItem,
     toggleItem,
+    recordPurchase,
     refetch,
   };
 }

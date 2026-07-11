@@ -7,6 +7,7 @@ import {
   DeleteRecipeReviewDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
+import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe } from '../useRecipeData';
 import type { toastService } from '#/services/toastService';
 
@@ -173,11 +174,25 @@ const makeBackendRecipe = (
   imageUrl: null,
   servings: 1,
   totalTimeMinutes: null,
+  caloriesPerServing: null,
+  nutritionData: null,
+  status: RecipeStatus.Draft,
+  isPublished: false,
+  publishedAt: null,
+  forkedFromId: null,
+  forkedFrom: null,
+  originalAuthor: null,
+  tips: null,
+  videoUrl: null,
+  tags: [],
   source: null,
   sourceUrl: null,
   instructions: null,
   savedDetails: null,
-  ingredients: [],
+  ingredientsConnection: {
+    __typename: 'RecipeIngredientConnection',
+    edges: [],
+  },
   totalReviews: 3,
   averageRating: 4.2,
   rating1Count: 0,

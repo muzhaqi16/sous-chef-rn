@@ -132,42 +132,45 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       }
     }
   }
-  batches {
-    id
-    ...PantryItemBatchFragment
-  }
 }
 
 # Local copy of AddItemToShoppingList per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingListFromPantryItem($input: CreateShoppingListItemInput!) {
-  addItemToShoppingList(input: $input) {
+mutation AddItemToShoppingListFromPantryItem($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListPayload {
-      shoppingListItem {
-        id
-        itemName
-        quantity
-        quantityInput
-        displayFormat
-        purchaseInfo {
-          isPurchased
-        }
-        version
-        updatedAt
-        category
-        notes
-        unitName
-        unit {
-          id
-          name
-          symbol
-        }
-        sortOrder
+    ... on AddItemsToShoppingListPayload {
+      results {
+        index
+        clientId
+        success
+        quantityIncremented
+        error
         item {
           id
-          imageUrl
-          images { url kind }
+          itemName
+          quantity
+          quantityInput
+          displayFormat
+          purchaseInfo {
+            isPurchased
+          }
+          version
+          updatedAt
+          category
+          notes
+          unitName
+          unit {
+            id
+            name
+            symbol
+          }
+          sortOrder
+          item {
+            id
+            imageUrl
+            images { url kind }
+          }
         }
       }
     }

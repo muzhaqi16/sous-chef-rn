@@ -3,6 +3,8 @@ import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.gener
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -12,6 +14,7 @@ import {
   type ConnectionData,
 } from '#/apollo/utils/cacheUpdaters';
 import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -21,6 +24,7 @@ interface UseBatchMoveToPantryOptions {
 interface UseBatchMoveToPantryReturn {
   batchMoveToPantry: () => Promise<void>;
   loading: boolean;
+  isApiUnavailable: boolean;
 }
 
 export function useBatchMoveToPantry({
@@ -31,15 +35,20 @@ export function useBatchMoveToPantry({
     MovePurchasedItemsToPantryDocument,
     {
       update: (cache, { data }) => {
-        const result = data?.movePurchasedItemsToPantry;
-        if (!result || !currentListId) return;
+        const payload = data?.movePurchasedItemsToPantry;
+        if (
+          payload?.__typename !== 'MovePurchasedItemsToPantryPayload' ||
+          !currentListId
+        )
+          return;
+        const { movedItems } = payload;
 
         executeCacheUpdate(() => {
-          const movedCount = result.movedItems.length;
+          const movedCount = movedItems.length;
           if (movedCount === 0) return;
 
           const movedIds = new Set(
-            result.movedItems.map(item => item.shoppingListItemId),
+            movedItems.map(item => item.shoppingListItemId),
           );
 
           const parentCacheId = cache.identify({
@@ -82,7 +91,7 @@ export function useBatchMoveToPantry({
           // Evict all moved items from cache
           safeEvictMany(
             cache,
-            result.movedItems.map(item => ({
+            movedItems.map(item => ({
               typename: 'ShoppingListItem',
               id: item.shoppingListItemId,
             })),
@@ -95,7 +104,14 @@ export function useBatchMoveToPantry({
     },
   );
 
+  const isApiUnavailable = useIsApiUnavailable();
+
   const batchMoveToPantry = async () => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return;
+    }
+
     if (!currentListId) {
       toastService.error('No shopping list selected');
       return;
@@ -110,17 +126,25 @@ export function useBatchMoveToPantry({
     );
     if (!result) return;
 
-    const data = result.data?.movePurchasedItemsToPantry;
-    if (!data) return;
+    const payload = result.data?.movePurchasedItemsToPantry;
+    if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') {
+      // A resolved `*Error` union member doesn't throw under errorPolicy:'all',
+      // so the mutation `onError` never fired for it. Surface it here — guarded
+      // to skip the transport-error case (`result.error`), which onError already
+      // alerted, so the two never double-alert.
+      alertRejectedMutation(result, t('errors.somethingWentWrong'));
+      return;
+    }
 
-    const { movedCount, skippedCount, targetPantryName } = data;
+    const movedCount = payload.summary.succeeded;
+    const skippedCount = payload.summary.skipped;
 
     if (movedCount > 0) {
       const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
       toastService.success(
         `Moved ${movedCount} item${
           movedCount !== 1 ? 's' : ''
-        } to ${targetPantryName}${skippedText}`,
+        } to pantry${skippedText}`,
       );
     } else {
       toastService.info('No items could be moved to pantry');
@@ -138,5 +162,6 @@ export function useBatchMoveToPantry({
   return {
     batchMoveToPantry,
     loading,
+    isApiUnavailable,
   };
 }

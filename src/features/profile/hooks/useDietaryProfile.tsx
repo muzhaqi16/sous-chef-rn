@@ -10,6 +10,7 @@ import {
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
 import {
+  Cuisine,
   Diet,
   Intolerance,
   HealthGoal,
@@ -35,7 +36,10 @@ export interface DietaryProfileData {
   id: string;
   userId: string;
   restrictions: DietaryRestriction[];
-  preferredCuisines: string[];
+  // Server stores cuisines as the `Cuisine` enum and echoes back the enum-name
+  // strings (the read type is [String!]!); the write input is [Cuisine!]. Typed
+  // as Cuisine[] so callers can only ever send valid enum members.
+  preferredCuisines: Cuisine[];
   dislikedIngredients: string[];
   favoriteIngredients: string[];
   calorieTarget?: number | null;
@@ -177,7 +181,7 @@ export const useDietaryProfile = () => {
           notes: r.notes,
           appliesToHomeId: r.appliesToHomeId,
         })) || [],
-      preferredCuisines: profile.preferredCuisines || [],
+      preferredCuisines: (profile.preferredCuisines ?? []) as Cuisine[],
       dislikedIngredients: profile.dislikedIngredients || [],
       favoriteIngredients: profile.favoriteIngredients || [],
       calorieTarget: profile.calorieTarget,
@@ -194,7 +198,7 @@ export const useDietaryProfile = () => {
   };
 
   const updateDietaryProfile = async (updates: {
-    preferredCuisines?: string[];
+    preferredCuisines?: Cuisine[];
     dislikedIngredients?: string[];
     favoriteIngredients?: string[];
     calorieTarget?: number | null;

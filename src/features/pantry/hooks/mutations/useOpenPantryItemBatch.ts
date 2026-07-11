@@ -4,9 +4,9 @@
  *
  * Writes `isOpened`/`openedAt` to the cached batch PERMANENTLY before firing so
  * the opened state shows instantly and survives an offline/queued open. The
- * open is naturally idempotent (re-opening is a no-op), and the queue replays it
- * via `syncOpenPantryItemBatch` keyed by a client-minted `operationId`. A real
- * rejection restores the pre-open snapshot.
+ * open is naturally idempotent (re-opening is a no-op), and the canonical
+ * mutation carries a client-minted `input.idempotencyKey` so a queued replay is
+ * deduped at the server too. A real rejection restores the pre-open snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -77,10 +77,9 @@ export function useOpenPantryItemBatch({
       'Open Pantry Item Batch (optimistic)',
     );
 
-    const operationId = generateEntityId();
     const result = await openMutation({
-      variables: { input: { batchId } },
-      context: { localFirst: true, operationId },
+      variables: { input: { batchId, idempotencyKey: generateEntityId() } },
+      context: { localFirst: true },
     });
 
     const outcome = classifyCreateResult(
@@ -102,7 +101,7 @@ export function useOpenPantryItemBatch({
     }
 
     // created (response normalized the authoritative batch) or queued (replays
-    // via syncOpenPantryItemBatch).
+    // the canonical mutation, deduped by its idempotencyKey).
     if (outcome === 'created') {
       clearPersistence();
     }

@@ -3,7 +3,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { DeleteShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -43,7 +43,7 @@ function createClearMock(
 ): MockedResponse {
   return {
     request: {
-      query: ClearShoppingListItemsDocument,
+      query: DeleteShoppingListItemsDocument,
       variables: vars => {
         recorded.push(vars);
         return true;
@@ -51,7 +51,22 @@ function createClearMock(
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
     delay,
-    result: { data: { clearShoppingListItems: true } },
+    result: {
+      data: {
+        deleteShoppingListItems: {
+          __typename: 'DeleteShoppingListItemsPayload',
+          summary: {
+            __typename: 'BulkOperationSummary',
+            total: 1,
+            successful: 1,
+            failed: 0,
+            skipped: 0,
+            executionTime: 0,
+          },
+          clearedItemIds: ['item-1'],
+        },
+      },
+    },
   };
 }
 

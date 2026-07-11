@@ -12,6 +12,7 @@ import {
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { computeIsQuietTime } from '#/utils/notifications/quietHours';
 
 export interface NotificationSettings {
   // Core toggles
@@ -252,34 +253,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     return updateMultipleSettings(defaultSettings);
   };
 
-  // PERFORMANCE: Use memoized settings instead of calling function
-  const isQuietTime = (): boolean => {
-    if (
-      !settings.quietHoursEnabled ||
-      !settings.quietHoursStart ||
-      !settings.quietHoursEnd
-    ) {
-      return false;
-    }
-
-    const now = new Date();
-    const currentTime = now.getHours() * 60 + now.getMinutes();
-
-    const [startHour, startMin] = settings.quietHoursStart
-      .split(':')
-      .map(Number);
-    const [endHour, endMin] = settings.quietHoursEnd.split(':').map(Number);
-
-    const startTime = startHour * 60 + startMin;
-    const endTime = endHour * 60 + endMin;
-
-    // Handle quiet hours that cross midnight
-    if (startTime > endTime) {
-      return currentTime >= startTime || currentTime <= endTime;
-    } else {
-      return currentTime >= startTime && currentTime <= endTime;
-    }
-  };
+  // Evaluated in the user's configured IANA timezone (not the device's) so
+  // client suppression matches the server's. See computeIsQuietTime.
+  const isQuietTime = (): boolean => computeIsQuietTime(settings);
 
   return {
     settings,

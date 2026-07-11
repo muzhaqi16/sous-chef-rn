@@ -37,6 +37,12 @@ import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalenda
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
 import { useMealPlanSelectorConfig } from '#features/mealPlan/hooks/useMealPlanSelectorConfig';
+import {
+  MealPlanFilterBar,
+  filterMealPlans,
+  EMPTY_MEAL_PLAN_FILTERS,
+  type MealPlanFilterState,
+} from '#features/mealPlan/components/MealPlanFilterBar';
 import { useGenerateShoppingList } from '#features/mealPlan/hooks/useGenerateShoppingList';
 import { useDuplicateMealPlan } from '#features/mealPlan/hooks/useDuplicateMealPlan';
 import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPermissions';
@@ -97,7 +103,8 @@ export const MealPlanMain: React.FC = () => (
  */
 const MealPlanMainInner: React.FC = () => {
   const { t } = useTranslation();
-  const { toMealPlanRecipeDetail, toCreateMealPlan } = useAppNavigation();
+  const { toMealPlanRecipeDetail, toCreateMealPlan, toMealTemplateBuilder } =
+    useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
   // Plan selector state
@@ -141,6 +148,7 @@ const MealPlanMainInner: React.FC = () => {
     createTemplateFromPlan,
     creatingFromTemplate,
     creatingTemplate,
+    isApiUnavailable: templateActionsUnavailable,
   } = useMealTemplateActions();
 
   // Fetch meal plans and resolve active plan
@@ -204,11 +212,18 @@ const MealPlanMainInner: React.FC = () => {
     useMealPlanItemActions(activePlanId);
 
   // Shopping list generation
-  const { generateShoppingList, loading: generatingShoppingList } =
-    useGenerateShoppingList(activePlanId);
+  const {
+    generateShoppingList,
+    loading: generatingShoppingList,
+    isApiUnavailable: generateShoppingListUnavailable,
+  } = useGenerateShoppingList(activePlanId);
 
   // Duplicate meal plan
-  const { duplicatePlan, loading: duplicatingPlan } = useDuplicateMealPlan();
+  const {
+    duplicatePlan,
+    loading: duplicatingPlan,
+    isApiUnavailable: duplicatePlanUnavailable,
+  } = useDuplicateMealPlan();
 
   // Delete meal plan
   const { deleteMealPlan, deleting: deletingPlan } = useMealPlanActions();
@@ -288,7 +303,7 @@ const MealPlanMainInner: React.FC = () => {
     if (!activePlanId) return;
     const result = await createItem({
       mealPlanId: activePlanId,
-      recipeId,
+      meal: { recipeId },
       mealType,
       date: calendar.selectedDate.toISOString(),
     });
@@ -301,7 +316,7 @@ const MealPlanMainInner: React.FC = () => {
     if (!activePlanId) return;
     const result = await createItem({
       mealPlanId: activePlanId,
-      customMealName: name,
+      meal: { customMealName: name },
       mealType,
       date: calendar.selectedDate.toISOString(),
     });
@@ -347,15 +362,27 @@ const MealPlanMainInner: React.FC = () => {
     setTemplateBrowserVisible(true);
   };
 
-  // Plan selector config
+  // Plan selector config. Filters apply client-side to the selector's list only
+  // (search / active-only / plan type), so the main calendar's selected plan is
+  // never disturbed by a filter that would exclude it.
+  const [planFilters, setPlanFilters] = useState<MealPlanFilterState>(
+    EMPTY_MEAL_PLAN_FILTERS,
+  );
+  const filteredMealPlans = filterMealPlans(mealPlans, planFilters, new Date());
+
   const planConfig = useMealPlanSelectorConfig({
-    mealPlans,
+    mealPlans: filteredMealPlans,
     selectedMealPlanId: activePlanId,
     loading: plansLoading,
     setSelectedMealPlanId: (id: string) => setSelectedMealPlanId(id),
     selectorRef,
     toCreateMealPlan,
     onCreateFromTemplate: handleOpenTemplateBrowser,
+    onCreateTemplate: () => toMealTemplateBuilder(),
+    listHeader:
+      mealPlans.length > 0 ? (
+        <MealPlanFilterBar filters={planFilters} onChange={setPlanFilters} />
+      ) : undefined,
   });
 
   const handleSelectTemplate = (template: MealTemplateDisplayFragment) => {
@@ -442,6 +469,12 @@ const MealPlanMainInner: React.FC = () => {
           }}
           onConfirm={handleCreateFromTemplate}
           confirmLoading={creatingFromTemplate}
+          disabled={templateActionsUnavailable}
+          onEdit={id => {
+            setTemplatePreviewVisible(false);
+            setSelectedTemplate(null);
+            toMealTemplateBuilder({ templateId: id });
+          }}
         />
       </TabMainScreen>
     );
@@ -474,23 +507,39 @@ const MealPlanMainInner: React.FC = () => {
                 {permissions.canGenerateShoppingList ? (
                   <Pressable
                     onPress={() => setShoppingListSheetVisible(true)}
+                    disabled={generateShoppingListUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t(
                       'mealPlanMain.generateShoppingListLabel',
                     )}
                   >
-                    <Icon name="cart-outline" size={22} tone="primary" />
+                    <Icon
+                      name="cart-outline"
+                      size={22}
+                      tone={
+                        generateShoppingListUnavailable
+                          ? 'textSecondary'
+                          : 'primary'
+                      }
+                    />
                   </Pressable>
                 ) : null}
                 {permissions.canSaveAsTemplate ? (
                   <Pressable
                     onPress={handleSaveAsTemplate}
+                    disabled={templateActionsUnavailable}
                     hitSlop={8}
                     style={styles.headerActionButton}
                     accessibilityLabel={t('mealPlanMain.saveAsTemplateLabel')}
                   >
-                    <Icon name="bookmark-outline" size={22} tone="primary" />
+                    <Icon
+                      name="bookmark-outline"
+                      size={22}
+                      tone={
+                        templateActionsUnavailable ? 'textSecondary' : 'primary'
+                      }
+                    />
                   </Pressable>
                 ) : null}
                 <Pressable
@@ -584,6 +633,7 @@ const MealPlanMainInner: React.FC = () => {
         onClose={() => setSaveTemplateVisible(false)}
         onSave={handleSaveTemplate}
         saving={creatingTemplate}
+        disabled={templateActionsUnavailable}
       />
 
       {/* Template Browser Sheet */}
@@ -603,6 +653,7 @@ const MealPlanMainInner: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
+        disabled={templateActionsUnavailable}
       />
 
       {/* Generate Shopping List Sheet */}
@@ -612,6 +663,7 @@ const MealPlanMainInner: React.FC = () => {
         onGenerate={handleGenerateShoppingList}
         loading={generatingShoppingList}
         homeName={activeMealPlan?.home?.name}
+        disabled={generateShoppingListUnavailable}
       />
 
       {/* Settings Sheet */}
@@ -633,6 +685,7 @@ const MealPlanMainInner: React.FC = () => {
         onClose={() => setDuplicateVisible(false)}
         onDuplicate={handleDuplicatePlan}
         loading={duplicatingPlan}
+        disabled={duplicatePlanUnavailable}
       />
 
       {/* Mark Cooked Modal */}

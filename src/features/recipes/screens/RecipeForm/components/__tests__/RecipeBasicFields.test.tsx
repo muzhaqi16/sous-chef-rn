@@ -96,6 +96,9 @@ const defaultState = {
   ingredients: [],
   steps: [],
   notes: '',
+  tips: '',
+  originalAuthor: '',
+  tags: '',
 };
 
 beforeEach(() => {

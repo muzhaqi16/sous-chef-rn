@@ -8,11 +8,12 @@
  * The corrected count is written to the cache PERMANENTLY before firing (an
  * `optimisticResponse` would roll back the moment the offline queue completes
  * the request with a null result), so it shows instantly and survives an
- * offline/API-down adjust. Because the server writes a ledger row per adjust,
- * the original mutation isn't replay-safe — the queue replays it through the
- * idempotent `syncAdjustPantryItemQuantity` keyed by a client-minted
- * `operationId` (carried on `context`), so a replay applies the delta exactly
- * once. A real rejection restores the pre-adjust snapshot.
+ * offline/API-down adjust. Because the server writes a ledger row per adjust, a
+ * naive replay would double-count — so the canonical mutation carries a
+ * client-minted `input.idempotencyKey` that the server records in the same
+ * transaction, so a replay applies the delta exactly once (it returns
+ * ConflictError(IDEMPOTENT_REPLAY), which the queue converges). A real rejection
+ * restores the pre-adjust snapshot.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -102,19 +103,19 @@ export function useAdjustPantryItemQuantity({
       );
     }
 
-    // operationId dedups the ADJUSTMENT ledger entry on replay.
-    const operationId = generateEntityId();
+    // idempotencyKey dedups the ADJUSTMENT ledger entry on replay.
     const result = await adjustMutation({
       variables: {
         input: {
           id: pantryItemId,
           newQuantity,
           reason,
+          idempotencyKey: generateEntityId(),
           ...(version != null ? { version } : {}),
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },
-      context: { localFirst: true, operationId },
+      context: { localFirst: true },
     });
 
     const outcome = classifyCreateResult(
@@ -139,7 +140,8 @@ export function useAdjustPantryItemQuantity({
     }
 
     // created (server confirmed, response normalized the authoritative value)
-    // or queued (offline / API down — replays via syncAdjustPantryItemQuantity).
+    // or queued (offline / API down — replays the canonical mutation, deduped
+    // by its idempotencyKey).
     if (outcome === 'created') {
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
     }

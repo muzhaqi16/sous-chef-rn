@@ -46,6 +46,8 @@ interface SaveAsTemplateSheetProps {
     tags?: string[];
   }) => void;
   saving: boolean;
+  /** Server unreachable (offline / API down) — disables confirm (no replay path). */
+  disabled?: boolean;
 }
 
 export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
@@ -56,6 +58,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
   onClose,
   onSave,
   saving,
+  disabled = false,
 }) => {
   const { t } = useTranslation();
   const categoryOptions: ChipOption<TemplateCategory>[] =
@@ -122,7 +125,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
           confirmLabel={
             saving ? t('saveAsTemplate.saving') : t('saveAsTemplate.save')
           }
-          confirmDisabled={saving || !name.trim()}
+          confirmDisabled={saving || disabled || !name.trim()}
           confirmColor="primary"
         />
 

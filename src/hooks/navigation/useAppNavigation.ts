@@ -166,6 +166,8 @@ export function useAppNavigation() {
         params: { screen: 'MealPlanMain' },
       }),
     toCreateMealPlan: () => navigation.navigate('CreateMealPlan'),
+    toMealTemplateBuilder: (params?: { templateId?: string }) =>
+      navigation.navigate('MealTemplateBuilder', params),
     toMealPlanRecipeDetail: (params: RootStackParamList['RecipeDetail']) =>
       navigation.navigate('RecipeDetail', params),
 

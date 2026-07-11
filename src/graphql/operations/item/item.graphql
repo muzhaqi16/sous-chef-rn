@@ -114,8 +114,8 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput, $first: Int, $after: String) {
-  items(filters: $filters, sort: $sort, first: $first, after: $after) {
+query GetOnboardingItems($filters: ItemFilters, $orderBy: ItemOrderBy, $first: Int, $after: String) {
+  items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -238,7 +238,7 @@ query AutocompleteCategories($input: AutocompleteCategoryInput!) {
 }
 
 query GetPopularItems($first: Int = 10) {
-  items(sort: { field: POPULARITY, order: DESC }, first: $first) {
+  items(orderBy: { popularity: DESC }, first: $first) {
     edges {
       node {
         id
@@ -349,10 +349,10 @@ mutation CreateItem($input: CreateItemInput!) {
 # Popular). Per-user and per-surface; reversible via UndismissSuggestion. Lives
 # here (shared item operations) so both the pantry and shopping sheets can use it
 # without reaching across feature boundaries.
-mutation DismissSuggestion($input: DismissSuggestionInput!) {
-  dismissSuggestion(input: $input) {
+mutation MarkSuggestionDismissed($input: MarkSuggestionDismissedInput!) {
+  markSuggestionDismissed(input: $input) {
     __typename
-    ... on DismissSuggestionPayload {
+    ... on MarkSuggestionDismissedPayload {
       itemId
       surface
       dismissed
@@ -364,10 +364,10 @@ mutation DismissSuggestion($input: DismissSuggestionInput!) {
   }
 }
 
-mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
-  undismissSuggestion(input: $input) {
+mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
+  markSuggestionActive(input: $input) {
     __typename
-    ... on UndismissSuggestionPayload {
+    ... on MarkSuggestionActivePayload {
       itemId
       surface
       dismissed
@@ -379,10 +379,10 @@ mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
   }
 }
 
-mutation FlagItemForReview($input: FlagItemForReviewInput!) {
-  flagItemForReview(input: $input) {
+mutation MarkItemForReview($input: MarkItemForReviewInput!) {
+  markItemForReview(input: $input) {
     __typename
-    ... on FlagItemForReviewPayload {
+    ... on MarkItemForReviewPayload {
       item {
         id
       }

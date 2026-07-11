@@ -48,6 +48,7 @@ export const SelectorContent = <T extends SelectableItem>({
     emptyMessage = 'No items available',
     keyExtractor,
     renderCustomItem,
+    listHeader,
   } = config;
 
   // This component renders only the scrollable list — the action buttons are
@@ -127,6 +128,7 @@ export const SelectorContent = <T extends SelectableItem>({
   if (!data.length) {
     return (
       <Animated.View layout={LinearTransition} style={styles.container}>
+        {listHeader}
         <EmptyState message={emptyMessage} />
       </Animated.View>
     );
@@ -138,6 +140,7 @@ export const SelectorContent = <T extends SelectableItem>({
       layout={LinearTransition}
       style={styles.container}
     >
+      {listHeader}
       {data.map(item => (
         <View
           key={keyExtractor ? keyExtractor(item) : item.id}

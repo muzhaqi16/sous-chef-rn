@@ -41,6 +41,9 @@ describe('RecipeCategoryFields', () => {
     ingredients: [],
     steps: [],
     notes: '',
+    tips: '',
+    originalAuthor: '',
+    tags: '',
   };
 
   const updateField = jest.fn();

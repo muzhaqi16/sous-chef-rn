@@ -22,7 +22,7 @@ jest.mock('#utils/permissions/mealPlanPermissions', () => ({
           canSaveAsTemplate: true,
         };
       }
-      if (mealPlan.createdBy?.id === userId) {
+      if (mealPlan.user?.id === userId) {
         return {
           canEdit: true,
           canDelete: true,
@@ -85,7 +85,7 @@ describe('useMealPlanPermissions', () => {
     const { result } = renderHook(() =>
       useMealPlanPermissions({
         homeId: null,
-        createdBy: { id: 'user-1' },
+        user: { id: 'user-1' },
       } as Partial<MealPlanLike> as MealPlanLike),
     );
 
@@ -94,11 +94,11 @@ describe('useMealPlanPermissions', () => {
     expect(result.current.canDuplicate).toBe(true);
   });
 
-  it('returns full permissions for plan creator in home', () => {
+  it('returns full permissions for plan owner in home', () => {
     const { result } = renderHook(() =>
       useMealPlanPermissions({
         homeId: 'home-1',
-        createdBy: { id: 'user-1' },
+        user: { id: 'user-1' },
         home: { myMembership: { role: 'MEMBER' } },
       } as Partial<MealPlanLike> as MealPlanLike),
     );
@@ -111,7 +111,7 @@ describe('useMealPlanPermissions', () => {
     const { result } = renderHook(() =>
       useMealPlanPermissions({
         homeId: 'home-1',
-        createdBy: { id: 'other-user' },
+        user: { id: 'other-user' },
         home: { myMembership: { role: 'GUEST' } },
       } as Partial<MealPlanLike> as MealPlanLike),
     );
@@ -125,7 +125,7 @@ describe('useMealPlanPermissions', () => {
     const { result } = renderHook(() =>
       useMealPlanPermissions({
         homeId: 'home-1',
-        createdBy: { id: 'other-user' },
+        user: { id: 'other-user' },
         home: { myMembership: null },
       } as Partial<MealPlanLike> as MealPlanLike),
     );

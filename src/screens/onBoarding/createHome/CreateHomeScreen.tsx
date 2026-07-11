@@ -343,7 +343,9 @@ const CreateHomeScreenComponent = () => {
     name?: string;
     pantriesConnection?: unknown;
   }>;
-  const pendingInvites = pendingInvitesData?.me?.pendingHomeInvites || [];
+  const pendingInvites = extractNodes(
+    pendingInvitesData?.me?.pendingHomeInvitesConnection,
+  );
   const existingHome = homes[0];
   const existingHomePantries = extractNodes(
     existingHome?.pantriesConnection as never,

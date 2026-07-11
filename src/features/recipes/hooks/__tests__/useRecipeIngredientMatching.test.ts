@@ -4,7 +4,10 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { MatchRecipeIngredientsToPantryDocument } from '#features/recipes/graphql/recipe.generated';
+import {
+  MatchRecipeIngredientsToPantryDocument,
+  ConfirmRecipeConsumptionDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import { logger } from '#/utils/environment';
 import type { RootState } from '#store';
 import {
@@ -65,6 +68,12 @@ jest.mock('#/services/telemetry', () => ({
 }));
 
 jest.mock('#/utils/compilerSafeWrappers');
+
+// Deterministic client-minted cooking-log id so we can assert the consumption
+// mutation sends it.
+jest.mock('#/utils/generateEntityId', () => ({
+  generateEntityId: jest.fn(() => 'client-cooklog-1'),
+}));
 
 jest.mock('#/apollo/links/tokenScheduler');
 
@@ -402,5 +411,112 @@ describe('useRecipeIngredientMatching', () => {
         included: 2,
       }),
     );
+  });
+});
+
+// A single included match (available, with a matched pantry item) so
+// confirmConsumption builds a non-empty consumptions array and fires.
+const includedMatch = {
+  ingredient: {
+    __typename: 'RecipeIngredient',
+    id: 'ing-1',
+    isOptional: false,
+    unit: { __typename: 'Unit', id: 'u-ing-1', name: 'cup', symbol: 'cup' },
+  },
+  isAvailable: true,
+  matchConfidence: 0.95,
+  matchedPantryItem: {
+    __typename: 'PantryItem',
+    id: 'pi-1',
+    unit: { __typename: 'Unit', id: 'u-ing-1' },
+  },
+  availableQuantity: 5,
+  suggestedQuantity: 2,
+  suggestedUnit: { __typename: 'Unit', id: 'su-1' },
+};
+
+function confirmMock(outcome: { kind: 'success' } | { kind: 'rejected' }) {
+  return recordMock(ConfirmRecipeConsumptionDocument, {
+    data:
+      outcome.kind === 'success'
+        ? {
+            confirmRecipeConsumption: {
+              __typename: 'ConfirmRecipeConsumptionPayload',
+              totalConsumed: 1,
+              totalFailed: 0,
+              cookingLog: {
+                __typename: 'CookingLog',
+                id: 'client-cooklog-1',
+                servingsMade: 4,
+                notes: null,
+                cookedAt: '2026-01-01T00:00:00.000Z',
+              },
+            },
+          }
+        : {
+            confirmRecipeConsumption: {
+              __typename: 'ValidationError',
+              code: 'VALIDATION',
+              message: 'bad',
+            },
+          },
+  });
+}
+
+describe('useRecipeIngredientMatching — confirmConsumption', () => {
+  async function loadOneMatch(confirm: ReturnType<typeof confirmMock>) {
+    const matchesM = matchesMock([includedMatch]);
+    const rendered = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      {
+        operationMocks: [matchesM.mock, confirm.mock],
+        cache: seedIngredientCache(['ing-1']),
+      },
+    );
+
+    await act(async () => {
+      await rendered.result.current.loadMatches(4);
+    });
+    await waitFor(() =>
+      expect(rendered.result.current.editableMatches).toHaveLength(1),
+    );
+    return rendered;
+  }
+
+  it('sends a client-minted cooking-log id with context.localFirst on success', async () => {
+    const confirm = confirmMock({ kind: 'success' });
+    const { result } = await loadOneMatch(confirm);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    // The consumption mutation carried the client-minted cooking-log id.
+    expect(confirm.fired).toContainEqual(
+      expect.objectContaining({
+        input: expect.objectContaining({ id: 'client-cooklog-1' }),
+      }),
+    );
+    // Success path: toast + sheet closed + matches cleared.
+    expect(mockToastSuccess).toHaveBeenCalled();
+    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    expect(result.current.editableMatches).toEqual([]);
+  });
+
+  it('toasts an error and keeps the sheet open when the server rejects', async () => {
+    const confirm = confirmMock({ kind: 'rejected' });
+    const { result } = await loadOneMatch(confirm);
+
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Failed to mark recipe as cooked',
+    );
+    expect(mockToastSuccess).not.toHaveBeenCalled();
+    // Sheet stays open so the user can retry.
+    expect(result.current.isSheetVisible).toBe(true);
+    expect(result.current.editableMatches).toHaveLength(1);
   });
 });

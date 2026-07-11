@@ -76,6 +76,7 @@ export function useShoppingListScreen() {
     updateItem,
     removeItem,
     toggleItem,
+    recordPurchase,
     refetch,
   } = useShoppingListManagement(optimisticListId);
 
@@ -221,6 +222,7 @@ export function useShoppingListScreen() {
       updateItem,
       removeItem,
       toggleItem,
+      recordPurchase,
       refetch: refetchWithImageSync,
       loadMoreUnpurchased,
       loadMorePurchased,

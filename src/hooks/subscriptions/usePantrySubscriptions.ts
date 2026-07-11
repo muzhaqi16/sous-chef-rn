@@ -28,10 +28,7 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import {
-  MutationType,
-  PantryEventSubtype,
-} from '#/graphql/generated/schemaTypes';
+import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -176,8 +173,8 @@ export function usePantrySubscriptions(userId?: string) {
       // pantry subtypes — they are NOT self-echo filtered. Handle before the
       // actor skip to preserve the legacy subscriptions' behavior.
       if (
-        payload.subtype === PantryEventSubtype.ExpirationNotificationCreated ||
-        payload.subtype === PantryEventSubtype.ExpirationActionTaken
+        payload.subtype === PantrySubtype.ExpirationNotificationCreated ||
+        payload.subtype === PantrySubtype.ExpirationActionTaken
       ) {
         if (payload.node.__typename === 'ExpirationNotification') {
           expirationOnData(payload.node, client);
@@ -193,15 +190,15 @@ export function usePantrySubscriptions(userId?: string) {
       }
 
       switch (payload.subtype) {
-        case PantryEventSubtype.ItemChanged:
+        case PantrySubtype.ItemChanged:
           handleItemChanged(payload, client, selectedPantryId);
           break;
 
-        case PantryEventSubtype.PantryUpdated:
-        case PantryEventSubtype.UsageChanged:
-        case PantryEventSubtype.LowStockAlert:
-        case PantryEventSubtype.ExpirationAlert:
-        case PantryEventSubtype.WasteAlert:
+        case PantrySubtype.PantryUpdated:
+        case PantrySubtype.UsageChanged:
+        case PantrySubtype.LowStockAlert:
+        case PantrySubtype.ExpirationAlert:
+        case PantrySubtype.WasteAlert:
           if (__DEV__) {
             logger.debug(
               `📡 [Subscription] Pantry event: ${payload.subtype}`,

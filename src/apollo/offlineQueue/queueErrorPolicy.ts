@@ -33,26 +33,34 @@ export class ReplayRejectedError extends Error {
  * value).
  *
  *  - `'applied'`   — success payload (or a scalar/absent field that carries no
- *                    error signal). Dequeue.
- *  - `'converged'` — `ConflictError` on a replayed create: every queued create
- *                    carries its client-minted id, so a duplicate-id conflict
- *                    proves an earlier attempt already committed the row. The
- *                    change is on the server; dequeue as success.
+ *                    error signal). Dequeue. This is also where a converged
+ *                    SUCCESS payload lands (`converged: true` on favorites,
+ *                    cooking logs, and the `sync*` resource ops) — it doesn't end
+ *                    in `Error`, so it's treated as applied.
+ *  - `'converged'` — `ConflictError` whose `code` is `IDEMPOTENT_REPLAY`: the
+ *                    API-wide signal that this exact op already committed once.
+ *                    Covers both idempotency-keyed cumulative ops (restock /
+ *                    consume / waste / adjust / open-batch / convert-expired,
+ *                    keyed by `input.idempotencyKey`) and client-PK creates
+ *                    (keyed by the row id). The change is on the server; dequeue
+ *                    as success. Match on the CODE, never the message, and never
+ *                    a generic `ConflictError` (that's a real version/uniqueness
+ *                    conflict → rejected).
  *  - `'rejected'`  — any other error payload: the server refused the change.
  *                    Route to the permanent-failure pipeline.
  */
 export type ReplayOutcome = 'applied' | 'converged' | 'rejected';
 
-export function classifyReplayResult(
-  operationName: string,
-  payload: unknown,
-): ReplayOutcome {
+export function classifyReplayResult(payload: unknown): ReplayOutcome {
   if (!payload || typeof payload !== 'object') return 'applied';
 
-  const typename = (payload as { __typename?: string }).__typename;
+  const { __typename: typename, code } = payload as {
+    __typename?: string;
+    code?: string;
+  };
   if (!typename || !typename.endsWith('Error')) return 'applied';
 
-  if (typename === 'ConflictError' && operationName.startsWith('Create')) {
+  if (typename === 'ConflictError' && code === 'IDEMPOTENT_REPLAY') {
     return 'converged';
   }
   return 'rejected';

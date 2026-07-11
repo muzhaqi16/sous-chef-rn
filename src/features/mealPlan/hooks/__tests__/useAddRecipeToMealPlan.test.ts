@@ -94,7 +94,7 @@ describe('useAddRecipeToMealPlan', () => {
     expect(mockCreateItem).toHaveBeenCalledWith(
       expect.objectContaining({
         mealPlanId: 'plan-1',
-        recipeId: 'r-1',
+        meal: { recipeId: 'r-1' },
         mealType: 'DINNER',
       }),
     );

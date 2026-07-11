@@ -288,7 +288,7 @@ query GetPantryItemSuggestions($pantryId: ID!, $limit: Int = 20) {
 query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
     id
-    usageAnalytics(filter: $filter) {
+    usageAnalytics(filters: $filter) {
       totalUsageCount
       totalQuantityUsed
       averageUsagePerDay
@@ -326,7 +326,7 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
 query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
     id
-    wasteAnalytics(filter: $filter) {
+    wasteAnalytics(filters: $filter) {
       totalWasteCount
       totalWasteQuantity
       totalWasteValue
@@ -368,7 +368,7 @@ query GetPantryLedgerAnalytics(
 ) {
   pantry(id: $pantryId) {
     id
-    ledgerAnalytics(filter: $filter, granularity: $granularity) {
+    ledgerAnalytics(filters: $filter, granularity: $granularity) {
       granularity
       periodStart
       periodEnd
@@ -557,10 +557,10 @@ mutation DeletePantry($input: DeletePantryInput!) {
   }
 }
 
-mutation SetDefaultPantry($input: SetDefaultPantryInput!) {
-  setDefaultPantry(input: $input) {
+mutation MarkPantryAsDefault($input: MarkPantryAsDefaultInput!) {
+  markPantryAsDefault(input: $input) {
     __typename
-    ... on SetDefaultPantryPayload {
+    ... on MarkPantryAsDefaultPayload {
       pantry {
         id
         name
@@ -746,7 +746,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!) {
   }
 }
 
-mutation CreatePantryItemUsage($input: RecordPantryItemUsageInput!) {
+mutation CreatePantryItemUsage($input: CreatePantryItemUsageInput!) {
   createPantryItemUsage(input: $input) {
     __typename
     ... on CreatePantryItemUsagePayload {
@@ -866,10 +866,10 @@ mutation AdjustPantryItemQuantity($input: AdjustPantryItemQuantityInput!) {
   }
 }
 
-mutation CorrectPantryItemWeight($input: CorrectPantryItemWeightInput!) {
-  correctPantryItemWeight(input: $input) {
+mutation AdjustPantryItemWeight($input: AdjustPantryItemWeightInput!) {
+  adjustPantryItemWeight(input: $input) {
     __typename
-    ... on CorrectPantryItemWeightPayload {
+    ... on AdjustPantryItemWeightPayload {
       pantryItem {
         id
         ...useCorrectPantryItemWeight_pantryItem
@@ -893,20 +893,22 @@ mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListIn
   addLowStockItemsToShoppingList(input: $input) {
     __typename
     ... on AddLowStockItemsToShoppingListPayload {
-      result {
-        addedCount
-        addedItems {
-          pantryItemId
-          shoppingListItemId
-          itemName
-          quantity
-        }
-        skippedCount
-        skippedItems {
-          pantryItemId
-          itemName
-          reason
-        }
+      addedItems {
+        pantryItemId
+        shoppingListItemId
+        itemName
+        quantity
+      }
+      skippedItems {
+        pantryItemId
+        itemName
+        reason
+      }
+      summary {
+        succeeded
+        skipped
+        total
+        failed
       }
     }
     ... on Error {
@@ -919,46 +921,6 @@ mutation AddLowStockItemsToShoppingList($input: AddLowStockItemsToShoppingListIn
     }
     ... on ValidationError {
       field
-    }
-  }
-}
-
-mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
-  movePurchasedItemsToPantry(input: $input) {
-    movedCount
-    movedItems {
-      shoppingListItemId
-      pantryItemId
-      itemName
-      quantity
-    }
-    skippedCount
-    skippedItems {
-      shoppingListItemId
-      itemName
-      reason
-    }
-    targetPantryId
-    targetPantryName
-  }
-}
-
-mutation OpenPantryItem($input: OpenPantryItemInput!) {
-  openPantryItem(input: $input) {
-    __typename
-    ... on OpenPantryItemPayload {
-      pantryItem {
-        id
-        ...useOpenPantryItem_pantryItem
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
     }
   }
 }
@@ -987,14 +949,25 @@ mutation ConvertExpiredToWaste($input: ConvertExpiredToWasteInput!) {
 # BATCH OPERATIONS
 # ============================================
 
+# An explicit generous `first` rather than the server's implicit default page
+# size: an item's batch count is small in practice and no consumer paginates,
+# so relying on the default risks silent truncation with no load-more path.
 query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
-  pantryItemBatches(pantryItemId: $pantryItemId, status: $status) {
-    id
-    ...PantryItemBatchFragment
+  pantryItemBatchesConnection(
+    pantryItemId: $pantryItemId
+    status: $status
+    first: 100
+  ) {
+    edges {
+      node {
+        id
+        ...PantryItemBatchFragment
+      }
+    }
   }
 }
 
-mutation OpenPantryItemBatch($input: OpenBatchInput!) {
+mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {
   openPantryItemBatch(input: $input) {
     __typename
     ... on OpenPantryItemBatchPayload {
@@ -1017,7 +990,7 @@ mutation OpenPantryItemBatch($input: OpenBatchInput!) {
   }
 }
 
-mutation WastePantryItemBatch($input: WasteBatchInput!) {
+mutation WastePantryItemBatch($input: WastePantryItemBatchInput!) {
   wastePantryItemBatch(input: $input) {
     __typename
     ... on WastePantryItemBatchPayload {
@@ -1069,7 +1042,7 @@ mutation SyncPantryItem($input: SyncPantryItemInput!) {
     clientId
     serverId
     operation
-    wasCreated
+    converged
     item {
       id
       ...queueManager_syncPantryItem
@@ -1091,7 +1064,7 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
     clientId
     serverId
     operation
-    wasCreated
+    converged
     item {
       id
       itemName
@@ -1104,81 +1077,12 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
   }
 }
 
-# Offline-replay (sync) mutations for granular pantry deltas. Each wraps the
-# original delta input + a client-minted operationId; the server dedups by
-# operationId so a queued replay applies the delta exactly once (no
-# double-count). Replayed by the offline queue via convertToSyncMutation.
-mutation SyncAdjustPantryItemQuantity(
-  $input: SyncAdjustPantryItemQuantityInput!
-) {
-  syncAdjustPantryItemQuantity(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncRestockPantryItem($input: SyncRestockPantryItemInput!) {
-  syncRestockPantryItem(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncConsumePantryItem($input: SyncConsumePantryItemInput!) {
-  syncConsumePantryItem(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncOpenPantryItemBatch($input: SyncOpenPantryItemBatchInput!) {
-  syncOpenPantryItemBatch(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
-
-mutation SyncWastePantryItemBatch($input: SyncWastePantryItemBatchInput!) {
-  syncWastePantryItemBatch(input: $input) {
-    operationId
-    wasApplied
-    pantryItem {
-      id
-      ...queueManager_syncPantryItem
-    }
-    pantry {
-      id
-    }
-  }
-}
+# NOTE: The granular pantry deltas (adjust / restock / consume / open-batch /
+# waste / convert-expired) no longer have `sync*` twins. They are made
+# replay-safe by passing a client-minted `idempotencyKey` on the CANONICAL
+# mutation's input — the server records the key in the same transaction as the
+# delta, so a queued replay applies it at most once and returns a
+# `ConflictError(code: IDEMPOTENT_REPLAY)`. See docs/api/offline-sync.md.
 
 # ============================================
 # SUBSCRIPTIONS

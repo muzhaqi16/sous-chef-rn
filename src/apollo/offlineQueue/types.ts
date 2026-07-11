@@ -35,7 +35,7 @@ export interface QueuedMutation {
   // Mutation details
   mutation: DocumentNode; // GraphQL mutation document
   variables: OperationVariables; // Mutation variables
-  context?: DefaultContext; // Allowlisted replay context (localFirst, operationId)
+  context?: DefaultContext; // Allowlisted replay context (localFirst)
 
   // Status tracking
   status: QueueStatus;

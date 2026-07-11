@@ -13,27 +13,37 @@ fragment RecipeForm_recipe on Recipe {
   category
   cuisine
   status
+  diets
+  healthGoals
+  intolerances
   notes
+  tips
+  originalAuthor
+  tags
   instructions
-  ingredients {
-    id
-    name
-    quantity
-    item {
-      id
-      name
-      imageUrl
+  ingredientsConnection {
+    edges {
+      node {
+        id
+        name
+        quantity
+        item {
+          id
+          name
+          imageUrl
+        }
+        unit {
+          id
+          name
+          symbol
+        }
+        image
+        isOptional
+        notes
+        preparation
+        sortOrder
+        section
+      }
     }
-    unit {
-      id
-      name
-      symbol
-    }
-    image
-    isOptional
-    notes
-    preparation
-    sortOrder
-    section
   }
 }

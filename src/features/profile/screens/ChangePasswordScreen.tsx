@@ -17,6 +17,7 @@ import {
   type ChangePasswordMutation,
   type ChangePasswordMutationVariables,
 } from '#operations/auth/auth.generated';
+import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
@@ -51,7 +52,12 @@ async function performChangePassword(
     },
   });
 
-  if (result.data?.changePassword?.success) {
+  const payload = result.data?.changePassword;
+
+  if (
+    payload?.__typename === 'ChangePasswordPayload' &&
+    payload.status === PasswordActionStatus.Completed
+  ) {
     toast({
       message: successMessage,
       type: 'success',
@@ -60,8 +66,10 @@ async function performChangePassword(
     setTimeout(() => {
       goBack();
     }, 1500);
+  } else if (payload?.__typename === 'ChangePasswordPayload') {
+    throw new Error(failedFallback);
   } else {
-    throw new Error(result.data?.changePassword?.message || failedFallback);
+    throw new Error(payload?.message || failedFallback);
   }
 }
 

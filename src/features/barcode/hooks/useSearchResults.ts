@@ -6,7 +6,7 @@ import {
   ItemByUpcFilterDocument,
   ItemBySkuFilterDocument,
   CreateItemDocument,
-  FlagItemForReviewDocument,
+  MarkItemForReviewDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
 import { UpcFormat } from '#/graphql/generated/schemaTypes';
@@ -429,7 +429,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
   };
 
   const [flagItem, { loading: suggestingEdit }] = useMutation(
-    FlagItemForReviewDocument,
+    MarkItemForReviewDocument,
   );
 
   const handleSuggestEdit = async (

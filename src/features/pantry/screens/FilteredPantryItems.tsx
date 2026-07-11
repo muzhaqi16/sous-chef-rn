@@ -330,19 +330,22 @@ export const FilteredPantryItems: React.FC<
       // comes into view (the mutation returns the full item). Reads the list id
       // from the mutation's own variables to stay correct across re-renders.
       update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemToShoppingList;
+        const payload = data?.addItemsToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
           !variables
         ) {
           return;
         }
-        const item = payload.shoppingListItem;
+        // Single add via the batch mutation — the created/merged row is the one
+        // entry in `results`. Null when that item failed.
+        const item = payload.results[0]?.item;
+        if (!item) return;
         reconcileShoppingItemCreateUpdate(
           cache,
           variables.input.shoppingListId,
           item,
-          variables.input.id,
+          variables.input.items[0]?.id,
         );
       },
     },
@@ -415,7 +418,10 @@ export const FilteredPantryItems: React.FC<
       () =>
         addToShoppingList({
           variables: {
-            input: { id, shoppingListId: selectedShoppingListId, itemId },
+            input: {
+              shoppingListId: selectedShoppingListId,
+              items: [{ id, item: { itemId } }],
+            },
           },
           context: { localFirst: true },
         }),

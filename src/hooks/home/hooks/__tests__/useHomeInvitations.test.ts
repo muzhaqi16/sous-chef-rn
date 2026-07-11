@@ -305,6 +305,43 @@ describe('useHomeInvitations', () => {
 
       expect(returnValue?.inviteToHome?.homeInvite?.id).toBe('invite-1');
     });
+
+    it('throws on a resolved error member so the modal surfaces it inline and stays open', async () => {
+      const rejectionMock: MockedResponse = {
+        request: {
+          query: InviteToHomeDocument,
+          variables: {
+            input: {
+              homeId: 'home-1',
+              email: 'dupe@test.com',
+              role: MembershipRole.Member,
+            },
+          },
+        },
+        result: {
+          data: {
+            inviteToHome: {
+              __typename: 'ConflictError',
+              code: 'CONFLICT',
+              message: 'User already invited',
+            },
+          },
+        },
+      };
+
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        { operationMocks: [rejectionMock] },
+      );
+
+      // The throw is the contract: the invite modal's screen-level catch keeps
+      // itself open and shows the message inline, instead of closing as success.
+      await act(async () => {
+        await expect(
+          result.current.inviteUserToHome('home-1', 'dupe@test.com'),
+        ).rejects.toThrow();
+      });
+    });
   });
 
   describe('joinHomeByCode', () => {

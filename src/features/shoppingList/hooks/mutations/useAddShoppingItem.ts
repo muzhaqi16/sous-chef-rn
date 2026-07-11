@@ -43,22 +43,26 @@ export function useAddShoppingItem({
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
     update(cache, { data }, { variables }) {
-      const payload = data?.addItemToShoppingList;
+      const payload = data?.addItemsToShoppingList;
       if (
-        payload?.__typename !== 'AddItemToShoppingListPayload' ||
+        payload?.__typename !== 'AddItemsToShoppingListPayload' ||
         !listId ||
         !variables
       ) {
         return;
       }
-      const item = payload.shoppingListItem;
+      // Single add via the batch mutation — the created/merged row is the one
+      // entry in `results`. Null when that item failed (then reconcileShoppingCreate
+      // reverts the optimistic row below).
+      const item = payload.results[0]?.item;
+      if (!item) return;
       executeCacheUpdate(
         () =>
           reconcileShoppingItemCreateUpdate(
             cache,
             listId,
             item,
-            variables.input.id,
+            variables.input.items[0]?.id,
           ),
         'Cache update failed for addItem, will refetch:',
         refetch,
@@ -86,10 +90,11 @@ export function useAddShoppingItem({
       ? parseFloat(input.quantityInput) || 1
       : input.quantity ?? 1;
 
-    const createInput = {
+    // One item per add — the batch mutation wraps it below. `shoppingListId`
+    // rides on the batch input, not the item.
+    const itemInput = {
       id,
-      shoppingListId: listId,
-      itemName: input.itemName,
+      item: { itemName: input.itemName },
       quantity: input.quantityInput ?? input.quantity ?? 1,
       ...((input.unitName || input.unitId) && {
         unit: {
@@ -143,7 +148,7 @@ export function useAddShoppingItem({
     const result = await executeMutation(
       () =>
         addItemMutation({
-          variables: { input: createInput },
+          variables: { input: { shoppingListId: listId, items: [itemInput] } },
           context: { localFirst: true },
         }),
       'Add Shopping List Item error:',
@@ -160,7 +165,10 @@ export function useAddShoppingItem({
     ) {
       return undefined;
     }
-    return result.data?.addItemToShoppingList;
+    const payload = result.data?.addItemsToShoppingList;
+    return payload?.__typename === 'AddItemsToShoppingListPayload'
+      ? payload.results[0]?.item
+      : undefined;
   };
 
   return { addItem };

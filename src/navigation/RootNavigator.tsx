@@ -53,6 +53,7 @@ import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
 import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
 import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
 import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
+import { MealTemplateBuilderScreen } from '#features/mealPlan/screens/MealTemplateBuilderScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -363,6 +364,10 @@ const RootStack = createNativeStackNavigator({
         }),
         CreateMealPlan: createNativeStackScreen({
           screen: CreateMealPlanScreen,
+          options: featureDetailOptions,
+        }),
+        MealTemplateBuilder: createNativeStackScreen({
+          screen: MealTemplateBuilderScreen,
           options: featureDetailOptions,
         }),
       },

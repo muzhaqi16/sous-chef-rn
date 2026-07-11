@@ -16,6 +16,7 @@ import {
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
+import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
@@ -210,6 +211,21 @@ export const NotificationSettingsScreen: React.FC = () => {
     resetToDefaults,
     isQuietTime,
   } = useNotificationSettings();
+  const { syncSendTest } = useNotificationSync();
+
+  const handleSendTest = async () => {
+    setUpdating('test');
+    const ok = await syncSendTest();
+    setUpdating(null);
+    alertService.alert(
+      ok
+        ? t('notifications.testSentTitle')
+        : t('notifications.testFailedTitle'),
+      ok
+        ? t('notifications.testSentMessage')
+        : t('notifications.testFailedMessage'),
+    );
+  };
 
   const appState = useRef(AppState.currentState);
 
@@ -539,6 +555,16 @@ export const NotificationSettingsScreen: React.FC = () => {
             </Text>
           </View>
         )}
+      </SettingSection>
+
+      <SettingSection title={t('notifications.testSection')}>
+        <SettingSwitch
+          title={t('notifications.sendTestNotification')}
+          description={t('notifications.sendTestNotificationDesc')}
+          value={false}
+          onValueChange={handleSendTest}
+          loading={updating === 'test'}
+        />
       </SettingSection>
 
       <SettingSection title={t('settings.resetSection')}>

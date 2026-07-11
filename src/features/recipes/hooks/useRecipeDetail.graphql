@@ -1,66 +1,32 @@
 # Local copies of shoppingList operations per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal.
-mutation AddItemToShoppingListFromRecipe($input: CreateShoppingListItemInput!) {
-  addItemToShoppingList(input: $input) {
+# A single ingredient is added via this same batch mutation with a one-element
+# `items` array — there is no separate single-add operation.
+mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+  addItemsToShoppingList(input: $input) {
     __typename
-    ... on AddItemToShoppingListPayload {
-      shoppingListItem {
-        id
-        itemName
-        quantity
-        quantityInput
-        displayFormat
-        purchaseInfo {
-          isPurchased
-        }
-        version
-        updatedAt
-        category
-        notes
-        unitName
-        unit {
-          id
-          name
-          symbol
-        }
-        sortOrder
+    ... on AddItemsToShoppingListPayload {
+      results {
+        index
+        clientId
+        success
         item {
           id
-          imageUrl
-          images { url kind }
+          ...useRecipeShoppingList_addedItem
         }
+        quantityIncremented
+        error
+      }
+      summary {
+        succeeded
+        failed
+        skipped
       }
     }
     ... on Error {
       code
       message
     }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}
-
-mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
-  addItemsToShoppingList(input: $input) {
-    results {
-      index
-      clientId
-      success
-      item {
-        id
-        ...useRecipeShoppingList_addedItem
-      }
-      quantityIncremented
-      error
-    }
-    successCount
-    failedCount
-    incrementedCount
   }
 }
 

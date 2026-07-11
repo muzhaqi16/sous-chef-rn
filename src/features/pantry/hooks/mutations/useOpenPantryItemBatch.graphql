@@ -1,12 +1,11 @@
 # Narrow fragment for OpenPantryItemBatch mutation response.
-# Server returns the parent PantryItem with updated batches; the hook reads
-# via Apollo auto-normalization (no manual cache writes).
+# Server returns the parent PantryItem with an updated activeBatchCount. The
+# opened batch's own state is written by the hook's permanent cache.modify
+# (isOpened/openedAt) before firing; batches otherwise live in the separate
+# Query.pantryItemBatchesConnection, refreshed by its own cache-and-network
+# query on the detail screen.
 fragment useOpenPantryItemBatch_pantryItem on PantryItem {
   id
   version
   activeBatchCount
-  batches {
-    id
-    ...PantryItemBatchFragment
-  }
 }

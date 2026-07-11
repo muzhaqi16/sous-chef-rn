@@ -9,9 +9,11 @@ import {
 import {
   AppTheme,
   UnitSystem,
-  type UpdateUserSettingsInput,
+  type UpdateSettingsInput,
 } from '#/graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import { storage } from '#/storage/mmkv';
 
 export interface AppSettings {
@@ -49,8 +51,8 @@ export const useAppSettings = () => {
 
   const toSettingsInput = (
     updates: Partial<AppSettings>,
-  ): UpdateUserSettingsInput => {
-    const input: UpdateUserSettingsInput = {};
+  ): UpdateSettingsInput => {
+    const input: UpdateSettingsInput = {};
     if (
       'theme' in updates ||
       'compactMode' in updates ||
@@ -88,8 +90,18 @@ export const useAppSettings = () => {
     const input = toSettingsInput({ [key]: value } as Partial<AppSettings>);
     const result = await executeMutation(
       () => updateSettings({ variables: { input } }),
-      'Failed to update app setting',
+      'Update Setting',
     );
+    if (
+      alertIfRejected(
+        result,
+        'updateSettings',
+        'UpdateSettingsPayload',
+        t('errors.somethingWentWrong'),
+      )
+    ) {
+      return false;
+    }
     return result !== false;
   };
 
@@ -97,8 +109,18 @@ export const useAppSettings = () => {
     const input = toSettingsInput(updates);
     const result = await executeMutation(
       () => updateSettings({ variables: { input } }),
-      'Failed to update app settings',
+      'Update Settings',
     );
+    if (
+      alertIfRejected(
+        result,
+        'updateSettings',
+        'UpdateSettingsPayload',
+        t('errors.somethingWentWrong'),
+      )
+    ) {
+      return false;
+    }
     return result !== false;
   };
 

@@ -2,7 +2,7 @@ import { waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { useDefaultHome } from '../useDefaultHome';
@@ -186,13 +186,13 @@ function buildGetHomesMock(
 function buildSetDefaultHomeMock(homeId: string): MockedResponse {
   return {
     request: {
-      query: SetDefaultHomeDocument,
+      query: MarkHomeAsDefaultDocument,
       variables: { homeId },
     },
     result: {
       data: {
-        setDefaultHome: {
-          __typename: 'SetDefaultHomePayload',
+        markHomeAsDefault: {
+          __typename: 'MarkHomeAsDefaultPayload',
           success: true,
           message: 'OK',
           code: 'OK',
