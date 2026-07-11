@@ -23,14 +23,15 @@ import {
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import { type Reference } from '@apollo/client';
 import {
   RemoveRecipeFromFavoritesDocument,
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
@@ -75,6 +76,7 @@ export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
   const { t } = useTranslation();
   const { toRecipeDetail, goBack } = useAppNavigation();
+  const client = useApolloClient();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -96,48 +98,13 @@ export const SavedRecipes: React.FC = () => {
     loading: folderActionLoading,
   } = useFolderActions();
 
-  // Unfavorite (remove from saved) recipe mutation
+  // Unfavorite (remove from saved) recipe mutation. The cache work (drop the
+  // MySavedRecipes edge + clear Recipe.savedDetails) runs optimistically BEFORE
+  // the mutation fires in handleRemoveRecipe, so the removal sticks even fully
+  // offline (the queue replays the idempotent unfavorite). A rejected result
+  // reverts from a snapshot — so no update callback here.
   const [unfavoriteRecipeMutation] = useMutation(
     RemoveRecipeFromFavoritesDocument,
-    {
-      update: (cache, { data }, { variables }) => {
-        if (
-          data?.removeRecipeFromFavorites?.__typename !==
-            'RemoveRecipeFromFavoritesPayload' ||
-          !variables?.input?.recipeId
-        ) {
-          return;
-        }
-
-        cache.updateQuery<MySavedRecipesQuery>(
-          { query: MySavedRecipesDocument },
-          existing => {
-            if (!existing?.me) return existing;
-            return {
-              ...existing,
-              me: {
-                ...existing.me,
-                savedRecipesConnection: {
-                  ...existing.me.savedRecipesConnection,
-                  edges: existing.me.savedRecipesConnection.edges.filter(
-                    edge => edge.node.recipe.id !== variables.input.recipeId,
-                  ),
-                  totalCount:
-                    (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-                },
-              },
-            };
-          },
-        );
-
-        optimisticDataPersistence.save(
-          'SavedRecipe',
-          variables.input.recipeId,
-          'isFavorited',
-          false,
-        );
-      },
-    },
   );
 
   // Filter recipes by folder + tags (search query filtering happens per-row).
@@ -170,14 +137,95 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    await executeMutation(
-      () => unfavoriteRecipeMutation({ variables: { input: { recipeId } } }),
+    const recipeCacheId = client.cache.identify({
+      __typename: 'Recipe',
+      id: recipeId,
+    });
+
+    // Snapshot for revert, then write the un-save optimistically so it sticks
+    // even fully offline (the queued mutation replays later).
+    const savedRecipesSnapshot = client.cache.readQuery<MySavedRecipesQuery>({
+      query: MySavedRecipesDocument,
+    });
+    let savedDetailsSnapshot: Reference | null = null;
+
+    client.cache.updateQuery<MySavedRecipesQuery>(
+      { query: MySavedRecipesDocument },
+      existing => {
+        if (!existing?.me) return existing;
+        return {
+          ...existing,
+          me: {
+            ...existing.me,
+            savedRecipesConnection: {
+              ...existing.me.savedRecipesConnection,
+              edges: existing.me.savedRecipesConnection.edges.filter(
+                edge => edge.node.recipe.id !== recipeId,
+              ),
+              totalCount: Math.max(
+                0,
+                (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
+              ),
+            },
+          },
+        };
+      },
+    );
+    if (recipeCacheId) {
+      client.cache.modify<{ savedDetails: Reference | null }>({
+        id: recipeCacheId,
+        fields: {
+          savedDetails(existing) {
+            savedDetailsSnapshot = existing;
+            return null;
+          },
+        },
+      });
+    }
+
+    const revert = () => {
+      if (savedRecipesSnapshot) {
+        client.cache.writeQuery({
+          query: MySavedRecipesDocument,
+          data: savedRecipesSnapshot,
+        });
+      }
+      if (recipeCacheId) {
+        client.cache.modify<{ savedDetails: Reference | null }>({
+          id: recipeCacheId,
+          fields: { savedDetails: () => savedDetailsSnapshot },
+        });
+      }
+    };
+
+    const result = await executeMutation(
+      () =>
+        unfavoriteRecipeMutation({
+          variables: { input: { recipeId } },
+          // Local-first: queue + replay (idempotent) when the API is
+          // unreachable instead of surfacing a blocking error.
+          context: { localFirst: true },
+        }),
       (error: unknown) => {
+        revert();
         errorService.reportError(error, { operation: 'removeSavedRecipe' });
         alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
       },
     );
-    optimisticDataPersistence.clear('SavedRecipe', recipeId, 'isFavorited');
+    if (!result) return; // threw -> already reverted above
+
+    // A resolved rejection (error union member / transport error) reverts;
+    // 'queued' (offline / API down) keeps the optimistic removal — it replays.
+    if (
+      classifyCreateResult(
+        result,
+        'removeRecipeFromFavorites',
+        'RemoveRecipeFromFavoritesPayload',
+      ) === 'rejected'
+    ) {
+      revert();
+      alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
+    }
   };
 
   const handleItemPress = (recipeId: string) => {

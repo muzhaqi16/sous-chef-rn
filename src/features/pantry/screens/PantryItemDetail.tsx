@@ -417,7 +417,6 @@ export const PantryItemDetail: React.FC<
           <DetailSection flush>
             <BatchSection
               batches={batches}
-              pantryItemId={item.id}
               unitSymbol={item.unit?.symbol ?? undefined}
             />
           </DetailSection>

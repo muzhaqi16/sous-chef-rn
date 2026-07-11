@@ -61,19 +61,36 @@ export const handleVersionConflictAlert = (
   error: unknown,
   config: VersionConflictConfig = {},
 ): boolean => {
-  const { itemName = 'Item', onRefresh, customMessage } = config;
-
   if (handleVersionConflict(error)) {
-    const message = customMessage || getVersionConflictMessage(error);
-
-    alertService.alert(`${itemName} ${t('labels.updated')}`, message, [
-      { text: t('labels.refresh'), onPress: () => onRefresh?.() },
-      { text: t('labels.cancel'), style: 'cancel' },
-    ]);
+    alertVersionConflict({
+      ...config,
+      customMessage: config.customMessage || getVersionConflictMessage(error),
+    });
     return true;
   }
 
   return false;
+};
+
+/**
+ * Show the version-conflict alert (title + Refresh/Cancel actions). Shared by
+ * the thrown-error path ({@link handleVersionConflictAlert}) and the
+ * errors-as-data path — a resolved `ConflictError` union member routes here so
+ * it reaches the same Refresh UX instead of a generic alert.
+ */
+export const alertVersionConflict = (
+  config: VersionConflictConfig = {},
+): void => {
+  const { itemName = 'Item', onRefresh, customMessage } = config;
+
+  alertService.alert(
+    `${itemName} ${t('labels.updated')}`,
+    customMessage || getVersionConflictMessage(undefined),
+    [
+      { text: t('labels.refresh'), onPress: () => onRefresh?.() },
+      { text: t('labels.cancel'), style: 'cancel' },
+    ],
+  );
 };
 
 /**

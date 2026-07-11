@@ -27,7 +27,9 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
+  alertVersionConflict,
 } from '#/utils/errorHandlers';
+import { findConflictDataMember } from '#/utils/errors/versionConflict';
 import { t } from '#/i18n/t';
 
 /**
@@ -301,6 +303,21 @@ function createUpdateOperationImpl<TInput, TResult>(
     );
 
     if (!result) return false;
+
+    // A ConflictError resolved as an errors-as-data union member routes to the
+    // version-conflict refresh UX, not the generic alert. The thrown-error
+    // branch in `onError` above only fires when Apollo throws, which
+    // `errorPolicy: 'all'` avoids — so without this the Refresh action is
+    // unreachable for the data-member shape the schema actually returns.
+    const conflict = findConflictDataMember(result.data);
+    if (conflict) {
+      alertVersionConflict({
+        onRefresh: onVersionConflict,
+        customMessage: conflict.message ?? undefined,
+      });
+      onError?.(new Error(`${operationName}: conflict`));
+      return false;
+    }
 
     if (surfaceCrudDataError(result.data, operationName)) {
       onError?.(new Error(operationName));
