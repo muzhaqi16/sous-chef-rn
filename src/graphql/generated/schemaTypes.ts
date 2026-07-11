@@ -653,7 +653,7 @@ export type AutocompleteCategoryInput = {
 /**
  * Mirrors AutocompleteResult: a bounded, ranked top-N suggestion set where
  * `totalCount` is meaningful, retained as an envelope rather than a connection
- * or bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
+ * or bare list. Named `*Result` — the `*Response` suffix is retired.
  */
 export type AutocompleteCategoryResult = {
   __typename: 'AutocompleteCategoryResult';
@@ -672,7 +672,7 @@ export type AutocompleteInput = {
  * Autocomplete returns a bounded, ranked top-N suggestion set (not a growable
  * Relay list); `totalCount` (how many items matched beyond the returned
  * suggestions) is meaningful, so it stays an envelope rather than a connection or
- * bare list. Named `*Result` (F28) — the `*Response` suffix is retired.
+ * bare list. Named `*Result` — the `*Response` suffix is retired.
  */
 export type AutocompleteResult = {
   __typename: 'AutocompleteResult';
@@ -5936,8 +5936,8 @@ export type Mutation = {
    * Add a recipe's ingredients to a shopping list, pantry-deficit-aware: checks
    * the pantry and adds only the shortfall (with smart unit handling). Use
    * createShoppingListItemsFromRecipe instead to add every ingredient in full
-   * regardless of pantry stock — the two are intentional variants (§5), not
-   * duplicates.
+   * regardless of pantry stock — the two are intentional variants (see
+   * graphql-operation-conventions.md §5), not duplicates.
    */
   addRecipeToShoppingList: AddRecipeToShoppingListResult;
   /** Add a dietary restriction to the user's profile. */
@@ -5951,7 +5951,8 @@ export type Mutation = {
    * usage record with a mandatory reason for the audit trail; the delta
    * (positive or negative) is computed automatically. For a plain quantity set
    * with no audit record, use updatePantryItemQuantity — the two are intentional
-   * §5 variants: audited adjust vs. quick set.
+   * variants (see graphql-operation-conventions.md §5): audited adjust vs.
+   * quick set.
    */
   adjustPantryItemQuantity: AdjustPantryItemQuantityResult;
   /**
@@ -6064,7 +6065,8 @@ export type Mutation = {
    * Add a SINGLE recipe ingredient to a shopping list (smart-merge: if the item
    * already exists, quantities are added with unit conversion). This is the
    * per-ingredient variant of createShoppingListItemsFromRecipe (which adds the
-   * whole recipe at once) — the two are intentional §5 variants, not duplicates:
+   * whole recipe at once) — the two are intentional variants (see
+   * graphql-operation-conventions.md §5), not duplicates:
    * use this to add one ingredient, the plural op to add them all.
    */
   createShoppingListItemFromRecipeIngredient: CreateShoppingListItemFromRecipeIngredientResult;
@@ -6072,8 +6074,8 @@ export type Mutation = {
    * Add every ingredient of a recipe to a shopping list in full (scaling
    * quantities when servings differ), without checking the pantry. Use
    * addRecipeToShoppingList instead for the pantry-deficit-aware variant that
-   * adds only the shortfall — the two are intentional variants (§5), not
-   * duplicates.
+   * adds only the shortfall — the two are intentional variants (see
+   * graphql-operation-conventions.md §5), not duplicates.
    */
   createShoppingListItemsFromRecipe: CreateShoppingListItemsFromRecipeResult;
   /**
@@ -6442,8 +6444,8 @@ export type Mutation = {
    * Set a pantry item's quantity directly (supports fractions). A plain setter
    * with no audit record. When reconciling to a physical count and you want an
    * auditable ADJUSTMENT usage record (mandatory reason, auto-computed delta),
-   * use adjustPantryItemQuantity instead — the two are intentional §5 variants:
-   * quick set vs. audited adjust.
+   * use adjustPantryItemQuantity instead — the two are intentional variants
+   * (see graphql-operation-conventions.md §5): quick set vs. audited adjust.
    */
   updatePantryItemQuantity: UpdatePantryItemQuantityResult;
   /**
@@ -6484,18 +6486,20 @@ export type Mutation = {
   /**
    * Admin-managed canonical store fields (name, address, pricing/quality
    * metadata). Distinct from updateStoreInfo, which lets any authed user
-   * contribute contact/location/hours details — the two are intentional §5
-   * variants by audience and field set, not duplicates. NOTE (F25): their id
-   * argument names differ (this input uses `id`, UpdateStoreInfoInput uses
-   * `storeId`); unify to `id` in the next coordinated breaking cutover.
+   * contribute contact/location/hours details — the two are intentional
+   * variants by audience and field set (see graphql-operation-conventions.md
+   * §5), not duplicates. NOTE: their id argument names differ (this input uses
+   * `id`, UpdateStoreInfoInput uses `storeId`); unify to `id` in the next
+   * coordinated breaking cutover.
    */
   updateStore: UpdateStoreResult;
   /**
    * User-contributed store details (phone, email, website, lat/lng, hours).
    * Distinct from the admin-managed updateStore (canonical name/address/pricing)
-   * — the two are intentional §5 variants by audience and field set. NOTE (F25):
-   * this input's id argument is `storeId` while UpdateStoreInput uses `id`;
-   * unify to `id` in the next coordinated breaking cutover.
+   * — the two are intentional variants by audience and field set (see
+   * graphql-operation-conventions.md §5). NOTE: this input's id argument is
+   * `storeId` while UpdateStoreInput uses `id`; unify to `id` in the next
+   * coordinated breaking cutover.
    */
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
