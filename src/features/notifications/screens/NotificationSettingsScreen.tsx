@@ -3,6 +3,7 @@ import { errorService } from '#/services/errorService';
 import { View, Platform, Linking, AppState } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
+import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 
@@ -292,7 +293,13 @@ export const NotificationSettingsScreen: React.FC = () => {
               t('labels.error'),
               t('notifications.updateFailed'),
             );
+            return;
           }
+
+          // Permission was just granted here (the login flow no longer prompts),
+          // so re-register the device to deliver the now-available push token to
+          // the server.
+          authService.registerDeviceInBackground();
         },
         isLoading => setUpdating(isLoading ? key : null),
         error => {

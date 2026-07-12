@@ -12,7 +12,10 @@
 import NavigationService from '#/services/NavigationService';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
-// FCM/Notifee data payloads are flat string maps; values may be absent.
+// FCM/Notifee data payloads are flat string maps; values may be absent. The
+// server sends `category` explicitly on every push, so routing reads it
+// directly. `notificationId` / `sourceId` / `sourceType` also ride along (for
+// dedup and source correlation) but are not needed to pick the screen.
 export interface NotificationTapData {
   category?: string;
   actionUrl?: string;
@@ -23,8 +26,9 @@ const readTapData = (
   data: NotificationTapData | Record<string, unknown> | null | undefined,
 ): NotificationTapData => {
   if (!data) return {};
-  const category = data.category;
-  return { category: typeof category === 'string' ? category : undefined };
+  const category =
+    typeof data.category === 'string' ? data.category : undefined;
+  return { category };
 };
 
 export const routeNotificationTap = (

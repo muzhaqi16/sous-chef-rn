@@ -9,7 +9,7 @@
  * The native providers are NOT imported here: importing an uninstalled native
  * module would break the Metro bundle. Instead the app injects the real provider
  * at startup via `setPushTokenProvider(...)` once the native modules are
- * installed (see docs/push-setup-checklist.md). Until then the no-op provider is
+ * installed (see docs/push-notifications.md). Until then the no-op provider is
  * active, so `pushToken` stays undefined — exactly today's behavior — and
  * nothing else changes.
  */
