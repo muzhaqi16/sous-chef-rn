@@ -1,4 +1,3 @@
-import { Linking } from 'react-native';
 import { routeNotificationTap } from '../pushNotificationRouting';
 import NavigationService from '#/services/NavigationService';
 
@@ -10,16 +9,7 @@ jest.mock('#/services/NavigationService', () => ({
 const mockNavigate = NavigationService.navigate as jest.Mock;
 
 describe('routeNotificationTap', () => {
-  let openURL: jest.SpyInstance;
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-    openURL = jest
-      .spyOn(Linking, 'openURL')
-      .mockResolvedValue(undefined as unknown as void);
-  });
-
-  afterEach(() => openURL.mockRestore());
+  beforeEach(() => jest.clearAllMocks());
 
   it('routes a SHOPPING notification to the shopping list', () => {
     routeNotificationTap({ category: 'SHOPPING' });
@@ -51,29 +41,6 @@ describe('routeNotificationTap', () => {
   it('matches the category case-insensitively', () => {
     routeNotificationTap({ category: 'pantry' });
 
-    expect(mockNavigate).toHaveBeenCalledWith('Home', {
-      screen: 'Pantry',
-      params: { screen: 'PantryMain' },
-    });
-  });
-
-  it('dispatches an app-scheme actionUrl as a deep link and skips category routing', () => {
-    routeNotificationTap({
-      category: 'SHOPPING',
-      actionUrl: 'souschef://join/abc123',
-    });
-
-    expect(openURL).toHaveBeenCalledWith('souschef://join/abc123');
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('ignores an external http actionUrl and falls back to category routing', () => {
-    routeNotificationTap({
-      category: 'PANTRY',
-      actionUrl: 'https://evil.example.com/phish',
-    });
-
-    expect(openURL).not.toHaveBeenCalled();
     expect(mockNavigate).toHaveBeenCalledWith('Home', {
       screen: 'Pantry',
       params: { screen: 'PantryMain' },

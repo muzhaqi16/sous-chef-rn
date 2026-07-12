@@ -5,6 +5,7 @@ import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { errorService } from '#/services/errorService';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -230,7 +231,15 @@ export const PurchaseHistoryScreen: React.FC<
 
   const loadMore = () => {
     if (!hasNextPage || !endCursor || loading || loadingMore) return;
-    fetchMore({ variables: { itemId, first: PAGE_SIZE, after: endCursor } });
+    // fetchMore rejects on network/GraphQL errors; catch it so a failed page
+    // doesn't surface as an unhandled promise rejection.
+    void fetchMore({
+      variables: { itemId, first: PAGE_SIZE, after: endCursor },
+    }).catch(error =>
+      errorService.reportError(error, {
+        operation: 'PurchaseHistory.loadMore',
+      }),
+    );
   };
 
   // Summary stats over purchases that actually carry a price. Auto-recorded
