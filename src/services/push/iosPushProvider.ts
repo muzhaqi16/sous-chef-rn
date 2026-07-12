@@ -75,14 +75,16 @@ export const iosPushProvider: PushTokenProvider = {
     ensureListeners();
     return new Promise<string | null>(resolve => {
       let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const settle = (value: string | null) => {
         if (settled) return;
         settled = true;
+        if (timeoutId) clearTimeout(timeoutId);
         pendingResolvers.delete(settle);
         resolve(value);
       };
       pendingResolvers.add(settle);
-      setTimeout(() => settle(cachedToken), TOKEN_WAIT_MS);
+      timeoutId = setTimeout(() => settle(cachedToken), TOKEN_WAIT_MS);
     });
   },
 

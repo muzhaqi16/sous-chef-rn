@@ -128,12 +128,21 @@ The mobile side is complete; pointers for future changes:
 
 ## Payload contract
 
-The push `data` carries `title`, `body`, `notificationId` (dedup key — must match
-the WebSocket notification id), `type` (the `NotificationType`, e.g. `LOW_STOCK`),
-`category` (the `NotificationCategory` — routing → Pantry / Shopping tab, else the
-feed), and `sourceId` / `sourceType` when set (source correlation, not used for
-routing). iOS sends an `aps.alert` (the OS
-auto-displays it when backgrounded); Android sends **data-only** (Notifee draws
-it). The badge is the live unread count, set by the server on each alert push and
+Every push carries `notificationId` (dedup key — must match the WebSocket
+notification id), `type` (the `NotificationType`, e.g. `LOW_STOCK`), `category`
+(the `NotificationCategory` — routing → Pantry / Shopping tab, else the feed),
+and `sourceId` / `sourceType` when set (source correlation, not used for
+routing). **Where `title` / `body` live differs by platform:** iOS puts them in
+`aps.alert` (the OS auto-displays it when backgrounded/killed), so they are *not*
+in the iOS `data`; Android sends **data-only** (no `notification` block), so
+`title` / `body` ride inside the FCM `data` and Notifee draws the tray entry.
+
+**Foreground display is suppressed on iOS** (`AppDelegate`'s `willPresent`
+returns `[]`) so no OS banner shows while the app is open — the in-app WebSocket
+feed owns the foreground, matching Android. Silent (`content-available`) pushes
+are completed by `iosPushMessaging` (`notification.finish()`) so iOS doesn't
+throttle background delivery.
+
+The badge is the live unread count, set by the server on each alert push and
 kept current client-side by `badgeSync`. Send-side detail lives in the API repo
 (`docs/api/notifications.md`, `docs/guides/push-notifications.md`).

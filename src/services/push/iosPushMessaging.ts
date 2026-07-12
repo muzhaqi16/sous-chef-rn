@@ -2,8 +2,9 @@
  * Native APNs message receiving (iOS).
  *
  * Routes taps on remote pushes — which iOS auto-displays when backgrounded or
- * killed — to the matching screen through the shared, platform-agnostic router.
- * The token/registration half lives in `iosPushProvider`; Android uses
+ * killed — to the matching screen through the shared, platform-agnostic router,
+ * and completes the background-fetch handler for silent (`content-available`)
+ * pushes. The token/registration half lives in `iosPushProvider`; Android uses
  * `nativePushMessaging` (FCM) instead.
  *
  * iOS-guarded and defensive: on the wrong platform, or if the native module is
@@ -32,6 +33,20 @@ export const registerIosPushTapHandlers = (): (() => void) => {
     };
     PushNotificationIOS.addEventListener('localNotification', handleTap);
 
+    // Silent/background pushes (content-available) arrive on the `notification`
+    // event with a stored completion handler (the AppDelegate forwards
+    // didReceiveRemoteNotification:fetchCompletionHandler:). We don't draw them
+    // — the OS displays alert pushes and the in-app feed owns the foreground —
+    // but we MUST call finish() so iOS doesn't throttle background delivery and
+    // the native completion callback isn't leaked.
+    const handleBackgroundNotification = (notification: PushNotification) => {
+      notification.finish(PushNotificationIOS.FetchResult.NoData);
+    };
+    PushNotificationIOS.addEventListener(
+      'notification',
+      handleBackgroundNotification,
+    );
+
     PushNotificationIOS.getInitialNotification()
       .then(notification => {
         if (notification) routeNotificationTap(notification.getData());
@@ -42,6 +57,7 @@ export const registerIosPushTapHandlers = (): (() => void) => {
 
     return () => {
       PushNotificationIOS.removeEventListener('localNotification');
+      PushNotificationIOS.removeEventListener('notification');
     };
   } catch (error) {
     logger.error('APNs tap handler registration failed:', error);

@@ -13,5 +13,10 @@ module.exports = {
     getInitialNotification: jest.fn(() => Promise.resolve(null)),
     setApplicationIconBadgeNumber: jest.fn(),
     getApplicationIconBadgeNumber: jest.fn(cb => cb && cb(0)),
+    FetchResult: {
+      NewData: 'UIBackgroundFetchResultNewData',
+      NoData: 'UIBackgroundFetchResultNoData',
+      ResultFailed: 'UIBackgroundFetchResultFailed',
+    },
   },
 };

@@ -14,6 +14,11 @@ jest.mock('@react-native-community/push-notification-ios', () => ({
       mockRemoveEventListener(...args),
     getInitialNotification: (...args: unknown[]) =>
       mockGetInitialNotification(...args),
+    FetchResult: {
+      NewData: 'UIBackgroundFetchResultNewData',
+      NoData: 'UIBackgroundFetchResultNoData',
+      ResultFailed: 'UIBackgroundFetchResultFailed',
+    },
   },
 }));
 
@@ -33,6 +38,15 @@ const notif = (data: Record<string, unknown>) => ({ getData: () => data });
 const getTapHandler = (): ((n: { getData: () => unknown }) => void) => {
   const call = mockAddEventListener.mock.calls.find(
     c => c[0] === 'localNotification',
+  );
+  return call?.[1];
+};
+
+const getBackgroundHandler = (): ((n: {
+  finish: (result: string) => void;
+}) => void) => {
+  const call = mockAddEventListener.mock.calls.find(
+    c => c[0] === 'notification',
   );
   return call?.[1];
 };
@@ -76,9 +90,19 @@ describe('registerIosPushTapHandlers', () => {
     expect(mockRouteTap).not.toHaveBeenCalled();
   });
 
-  it('unsubscribes the localNotification listener', () => {
+  it('completes a silent/background notification by calling finish()', () => {
+    registerIosPushTapHandlers();
+    const finish = jest.fn();
+    getBackgroundHandler()({ finish });
+    expect(finish).toHaveBeenCalledWith('UIBackgroundFetchResultNoData');
+    // Background pushes are not routed like taps.
+    expect(mockRouteTap).not.toHaveBeenCalled();
+  });
+
+  it('unsubscribes both the localNotification and notification listeners', () => {
     const unsubscribe = registerIosPushTapHandlers();
     unsubscribe();
     expect(mockRemoveEventListener).toHaveBeenCalledWith('localNotification');
+    expect(mockRemoveEventListener).toHaveBeenCalledWith('notification');
   });
 });
