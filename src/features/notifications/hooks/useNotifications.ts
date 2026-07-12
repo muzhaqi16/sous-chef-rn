@@ -18,6 +18,7 @@ import type { RootState } from '#store/index';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
+import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
 import {
   getNotificationAction,
   getNotificationDisplayMessage,
@@ -293,11 +294,16 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     return () => subscription.remove();
   }, []);
 
-  // Route taps on OS-auto-displayed FCM pushes (background tap + cold-launch).
+  // Route taps on OS-auto-displayed pushes (background tap + cold-launch): FCM
+  // on Android, APNs on iOS. Each is platform-guarded, so both are safe to call.
   // Taps on data-only pushes we drew ourselves route through Notifee's handlers.
   useEffect(() => {
-    const unsubscribe = registerFcmTapHandlers();
-    return unsubscribe;
+    const unsubscribeFcm = registerFcmTapHandlers();
+    const unsubscribeApns = registerIosPushTapHandlers();
+    return () => {
+      unsubscribeFcm();
+      unsubscribeApns();
+    };
   }, []);
 
   // Cleanup on logout

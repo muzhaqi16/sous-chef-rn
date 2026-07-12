@@ -2,9 +2,10 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import UserNotifications
 
 @main
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
   var window: UIWindow?
  
   var reactNativeDelegate: ReactNativeDelegate?
@@ -29,6 +30,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       launchOptions: launchOptions
     )
 
+    // Receive notification-tap and foreground-presentation callbacks so pushes
+    // route into RNCPushNotificationIOS.
+    UNUserNotificationCenter.current().delegate = self
+
     return true
   }
 
@@ -52,6 +57,60 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       continue: userActivity,
       restorationHandler: restorationHandler
     )
+  }
+
+  // MARK: - Remote notifications (RNCPushNotificationIOS bridge)
+
+  // APNs registration succeeded — hand the device token to the library so JS
+  // can send it to the backend via registerDevice.
+  func application(
+    _ application: UIApplication,
+    didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+  ) {
+    PushNotificationForwarder.didRegister(deviceToken: deviceToken)
+  }
+
+  // APNs registration failed.
+  func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    PushNotificationForwarder.didFailToRegister(error: error)
+  }
+
+  // A remote notification was delivered (background/silent). The library invokes
+  // the completion handler once it has finished handling the payload.
+  func application(
+    _ application: UIApplication,
+    didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+    fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+  ) {
+    PushNotificationForwarder.didReceiveRemoteNotification(
+      userInfo,
+      fetchCompletionHandler: completionHandler
+    )
+  }
+
+  // User tapped a notification (foreground or from background/killed).
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    didReceive response: UNNotificationResponse,
+    withCompletionHandler completionHandler: @escaping () -> Void
+  ) {
+    PushNotificationForwarder.didReceive(response: response)
+    completionHandler()
+  }
+
+  // Foreground presentation. Suppressed to match Android, where the in-app
+  // WebSocket feed owns the foreground and no OS heads-up is drawn (see
+  // docs/push-notifications.md). Return `[.banner, .list, .sound, .badge]`
+  // instead to show an OS banner while the app is open.
+  func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([])
   }
 }
 
