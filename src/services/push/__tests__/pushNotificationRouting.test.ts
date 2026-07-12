@@ -29,6 +29,15 @@ describe('routeNotificationTap', () => {
     });
   });
 
+  it('routes a RECIPE notification to the recipes tab', () => {
+    routeNotificationTap({ category: 'RECIPE' });
+
+    expect(mockNavigate).toHaveBeenCalledWith('Home', {
+      screen: 'Recipe',
+      params: { screen: 'RecipeMain' },
+    });
+  });
+
   it('matches the category case-insensitively', () => {
     routeNotificationTap({ category: 'pantry' });
 
@@ -38,8 +47,8 @@ describe('routeNotificationTap', () => {
     });
   });
 
-  it('opens the feed for other categories', () => {
-    routeNotificationTap({ category: 'RECIPE' });
+  it('opens the feed for home/system categories', () => {
+    routeNotificationTap({ category: 'SYSTEM' });
 
     expect(mockNavigate).toHaveBeenCalledWith('Notifications');
   });

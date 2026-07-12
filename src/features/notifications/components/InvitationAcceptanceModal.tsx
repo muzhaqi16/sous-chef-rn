@@ -94,7 +94,10 @@ export const InvitationAcceptanceModal: React.FC<
       if (payload?.__typename === 'AcceptHomeInvitePayload') {
         addToHomes(cache, payload.membership.home, { position: 'end' });
       }
-      const inviteId = invitation?.payload?.inviteId;
+      // Prefer the payload's inviteId; fall back to the canonical
+      // `invitation.id` (server `sourceId` correlation) so a sourceId-only
+      // notification still evicts its pending record.
+      const inviteId = invitation?.payload?.inviteId || invitation?.id;
       if (inviteId && userId) {
         removePendingHomeInvite(cache, userId, inviteId, { evictItem: true });
       }
@@ -110,7 +113,10 @@ export const InvitationAcceptanceModal: React.FC<
         ) {
           return;
         }
-        const inviteId = invitation?.payload?.inviteId;
+        // Prefer the payload's inviteId; fall back to the canonical
+        // `invitation.id` (server `sourceId` correlation) so a sourceId-only
+        // notification still evicts its pending record.
+        const inviteId = invitation?.payload?.inviteId || invitation?.id;
         if (inviteId && userId) {
           // Don't evict — accepting transitions the pending collaborator record
           // to active state. Apollo's normalized response already updated the
@@ -136,7 +142,10 @@ export const InvitationAcceptanceModal: React.FC<
     InvitationAcceptanceModalDeclineShoppingListInviteDocument,
     {
       update: cache => {
-        const inviteId = invitation?.payload?.inviteId;
+        // Prefer the payload's inviteId; fall back to the canonical
+        // `invitation.id` (server `sourceId` correlation) so a sourceId-only
+        // notification still evicts its pending record.
+        const inviteId = invitation?.payload?.inviteId || invitation?.id;
         if (inviteId && userId) {
           removePendingCollaborationInvite(cache, userId, inviteId, {
             evictItem: true,
@@ -156,8 +165,13 @@ export const InvitationAcceptanceModal: React.FC<
       const invites = extractNodes(
         result.data?.me?.pendingCollaborationInvitesConnection,
       );
+      // Match on either the payload's inviteId (legacy notifications) or the
+      // canonical `invitation.id` (which prefers the server's `sourceId`
+      // correlation) — so a notification carrying only a sourceId still
+      // resolves its token instead of silently failing.
       const invite = invites.find(
-        inv => inv.id === invitation.payload?.inviteId,
+        inv =>
+          inv.id === invitation.payload?.inviteId || inv.id === invitation.id,
       );
       token = invite?.token ?? undefined;
     }

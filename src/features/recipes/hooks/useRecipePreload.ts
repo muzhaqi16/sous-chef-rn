@@ -34,7 +34,6 @@ import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 /** Normalize an ingredient name for the fuzzy priceBreakdown join. */
@@ -224,14 +223,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
             },
           };
         },
-      );
-
-      // Persist optimistic favorite state to survive cache-and-network refetches while offline
-      optimisticDataPersistence.save(
-        'SavedRecipe',
-        savedRecipe.recipe.id,
-        'isFavorited',
-        true,
       );
 
       // Update SavedRecipeFolders cache if a folder was specified
@@ -603,16 +594,6 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       toastService.error(t('recipes.saveRecipeFailed'));
       return { success: false };
     }
-
-    // Persist so the favorite survives a restart before the queued create
-    // replays. (On the online path the mutation `update` callback also persists
-    // this, so the marker is present either way.)
-    optimisticDataPersistence.save(
-      'SavedRecipe',
-      recipeId,
-      'isFavorited',
-      true,
-    );
 
     toastService.success(t('recipes.recipeSavedToCollection'));
     onFavoriteSuccess?.();

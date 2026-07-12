@@ -66,6 +66,43 @@ export function isVersionConflictPayload(payload: {
 }
 
 /**
+ * Codes that mark an optimistic-concurrency conflict, whether the error arrives
+ * as a thrown GraphQL error (`extensions.code`) or a resolved errors-as-data
+ * union member (the member's own `code` field).
+ */
+const CONFLICT_CODES = new Set(['CONFLICT', 'VERSION_CONFLICT']);
+
+/**
+ * Detect a `ConflictError` union member resolved inside a mutation's `data`
+ * (errors-as-data), as opposed to a thrown GraphQL error. Under
+ * `errorPolicy: 'all'` a conflict resolves as a truthy `data` member and never
+ * throws, so this is how the update path reaches the version-conflict refresh
+ * UX instead of a generic alert. Returns the member's message (or `null`) when a
+ * conflict member is present, otherwise `null` for the whole result.
+ */
+export function findConflictDataMember(
+  data: unknown,
+): { message: string | null } | null {
+  if (!data || typeof data !== 'object') return null;
+  for (const value of Object.values(data as Record<string, unknown>)) {
+    if (!value || typeof value !== 'object') continue;
+    const typename = (value as { __typename?: unknown }).__typename;
+    const code = (value as { code?: unknown }).code;
+    const isConflict =
+      typename === 'ConflictError' ||
+      (typeof typename === 'string' &&
+        typename.endsWith('Error') &&
+        typeof code === 'string' &&
+        CONFLICT_CODES.has(code));
+    if (isConflict) {
+      const message = (value as { message?: unknown }).message;
+      return { message: typeof message === 'string' ? message : null };
+    }
+  }
+  return null;
+}
+
+/**
  * Extract version conflict details from an error
  *
  * @param error - Error containing CONFLICT

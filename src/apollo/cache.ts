@@ -514,6 +514,10 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
+          // Purchase history is a cursor-paginated connection; merge pages by
+          // node id (keyed on orderBy only, so first/after don't fragment the
+          // cache entry) so `fetchMore` appends instead of replacing.
+          purchasesConnection: mergeConnectionByNodeId(['orderBy']),
         },
       },
       ShoppingList: {

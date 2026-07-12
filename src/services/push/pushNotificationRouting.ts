@@ -13,13 +13,12 @@ import NavigationService from '#/services/NavigationService';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
 // FCM/Notifee data payloads are flat string maps; values may be absent. The
-// server sends `category` explicitly on every push, so routing reads it
-// directly. `notificationId` / `sourceId` / `sourceType` also ride along (for
-// dedup and source correlation) but are not needed to pick the screen.
+// server sends `category` explicitly on every push and routing keys off it
+// alone. Other fields (`actionUrl` / `notificationId` / `sourceId` /
+// `sourceType`) ride along on the payload for dedup and source correlation but
+// aren't needed to pick the screen, so they aren't modeled here.
 export interface NotificationTapData {
   category?: string;
-  actionUrl?: string;
-  notificationId?: string;
 }
 
 const readTapData = (
@@ -49,9 +48,15 @@ export const routeNotificationTap = (
         params: { screen: 'PantryMain' },
       });
       return;
+    case NotificationCategory.Recipe:
+      NavigationService.navigate('Home', {
+        screen: 'Recipe',
+        params: { screen: 'RecipeMain' },
+      });
+      return;
     default:
-      // Everything else (recipe/home/system or an unknown category) opens the
-      // feed, where the user can read the item and take its specific action.
+      // Everything else (home/system or an unknown category) opens the feed,
+      // where the user can read the item and take its specific action.
       NavigationService.navigate('Notifications');
   }
 };
