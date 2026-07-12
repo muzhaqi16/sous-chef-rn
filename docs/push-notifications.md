@@ -123,14 +123,16 @@ The mobile side is complete; pointers for future changes:
 |---|---|
 | Acquire token (per platform) | `iosPushProvider` (APNs) / `nativePushProvider` (FCM), injected in `App.tsx`; sent via `authService` → `registerDevice` |
 | iOS native forwarding | `AppDelegate` → `PushNotificationForwarder` (+ `SousChef-Bridging-Header.h`) → `RNCPushNotificationIOS` |
-| Receive / tap → deep-link | `iosPushMessaging` / `nativePushMessaging` → `routeNotificationTap` (routes on `data.category`, falls back to `data.sourceType`) |
+| Receive / tap → deep-link | `iosPushMessaging` / `nativePushMessaging` → `routeNotificationTap` (routes on `data.category`) |
 | OS app-icon badge | `badgeSync` keeps it in sync with the unread count |
 
 ## Payload contract
 
 The push `data` carries `title`, `body`, `notificationId` (dedup key — must match
-the WebSocket notification id), `category` (routing → Pantry / Shopping tab, else
-the feed), and `sourceType` (routing fallback). iOS sends an `aps.alert` (the OS
+the WebSocket notification id), `type` (the `NotificationType`, e.g. `LOW_STOCK`),
+`category` (the `NotificationCategory` — routing → Pantry / Shopping tab, else the
+feed), and `sourceId` / `sourceType` when set (source correlation, not used for
+routing). iOS sends an `aps.alert` (the OS
 auto-displays it when backgrounded); Android sends **data-only** (Notifee draws
 it). The badge is the live unread count, set by the server on each alert push and
 kept current client-side by `badgeSync`. Send-side detail lives in the API repo
