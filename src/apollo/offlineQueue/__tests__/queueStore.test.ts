@@ -613,5 +613,91 @@ describe('QueueStore', () => {
       store.addMutation(makeMutation({ id: 'no-id', variables: {} }));
       expect(store.getPendingClientIds().size).toBe(0);
     });
+
+    it('collects a top-level variables.id', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({ id: 'm-top', variables: { id: 'cuid-top-level' } }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-top-level']));
+    });
+
+    it('collects the item id from a single-item batch add', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-1',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [{ id: 'cuid-batch-a' }],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-batch-a']));
+    });
+
+    it('collects every item id from a multi-item batch add, not just the first', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-n',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [
+                { id: 'cuid-batch-1' },
+                { id: 'cuid-batch-2' },
+                { id: 'cuid-batch-3' },
+              ],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(
+        new Set(['cuid-batch-1', 'cuid-batch-2', 'cuid-batch-3']),
+      );
+    });
+
+    it('skips batch items with missing or non-string ids without throwing', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-bad',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [
+                { id: 'cuid-good' },
+                { name: 'no id at all' },
+                { id: 42 },
+                { id: '' },
+                null,
+              ],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-good']));
+    });
+
+    it('collects both input.id and items[].id when a shape carries both', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-both',
+          variables: {
+            input: { id: 'cuid-input', items: [{ id: 'cuid-item' }] },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(
+        new Set(['cuid-input', 'cuid-item']),
+      );
+    });
   });
 });

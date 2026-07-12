@@ -268,9 +268,10 @@ export class QueueStore {
    * current user's queue. The cache merge uses this to avoid dropping an
    * un-replayed optimistic item when a first-page background refetch lands
    * before the queue replays (a server-deleted item, by contrast, has no
-   * pending op and is correctly dropped). Reads the id from the queued input
-   * (`input.id`, else `input.itemId`, else top-level `id`). Returns an empty set
-   * when no user is set or the queue is empty.
+   * pending op and is correctly dropped). Reads ids from every queued input
+   * shape: `input.id`, else `input.itemId`, else top-level `id`, plus every
+   * `input.items[].id` of batch-shaped creates (`AddItemsToShoppingListInput`).
+   * Returns an empty set when no user is set or the queue is empty.
    */
   getPendingClientIds(): Set<string> {
     if (this.pendingClientIds) return this.pendingClientIds;
@@ -280,11 +281,28 @@ export class QueueStore {
     if (userId) {
       for (const mutation of this.getPendingMutationsForUser(userId)) {
         const variables = mutation.variables as
-          | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
+          | {
+              id?: unknown;
+              input?: {
+                id?: unknown;
+                itemId?: unknown;
+                items?: Array<{ id?: unknown } | null | undefined>;
+              };
+            }
           | undefined;
         const candidate =
           variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
         if (typeof candidate === 'string' && candidate) ids.add(candidate);
+
+        const items = variables?.input?.items;
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            const itemCandidate = item?.id;
+            if (typeof itemCandidate === 'string' && itemCandidate) {
+              ids.add(itemCandidate);
+            }
+          }
+        }
       }
     }
     this.pendingClientIds = ids;
