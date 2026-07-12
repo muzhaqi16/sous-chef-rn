@@ -102,7 +102,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - NitroModules (0.35.7):
+  - NitroModules (0.36.1):
     - boost
     - DoubleConversion
     - fast_float
@@ -3000,7 +3000,7 @@ PODS:
     - React-perflogger (= 0.83.9)
     - React-utils (= 0.83.9)
     - SocketRocket
-  - ReactNavigation (8.0.0-alpha.16):
+  - ReactNavigation (8.0.0-alpha.35):
     - boost
     - DoubleConversion
     - fast_float
@@ -3351,7 +3351,7 @@ PODS:
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNScreens (4.24.0):
+  - RNScreens (4.25.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3378,10 +3378,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNScreens/common (= 4.24.0)
+    - RNScreens/common (= 4.25.2)
     - SocketRocket
     - Yoga
-  - RNScreens/common (4.24.0):
+  - RNScreens/common (4.25.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3557,7 +3557,7 @@ PODS:
     - SocketRocket
     - Yoga
   - SocketRocket (0.7.1)
-  - Unistyles (3.2.5):
+  - Unistyles (3.3.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3586,7 +3586,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
-  - VisionCamera (5.0.10):
+  - VisionCamera (5.1.0):
     - boost
     - DoubleConversion
     - fast_float
@@ -3982,7 +3982,7 @@ SPEC CHECKSUMS:
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroImage: 4ffcf183d975de179ae1662b7c3b4b3b37747c7e
   NitroMmkv: 975be1948fd74280e6febcda06671d7bf604a4cd
-  NitroModules: 9ec4a2e0b9af22ba1f1f550e1dd9be94143afd18
+  NitroModules: 8d376059cb66130ebac6a84982c068d69012b567
   RCT-Folly: b29feb752b08042c62badaef7d453f3bb5e6ae23
   RCTDeprecation: c7d33f6bc08dbb8be7dfa70d219bfb034480a406
   RCTRequired: 42b13c9504609bae9a9f65673a6b4fcbd8d07bd1
@@ -4065,7 +4065,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 87593e9dfdba8dac1d7b2af1af05f0eff2a05684
   ReactCodegen: 417334350a76a91784cc20f7aff392327e217dc4
   ReactCommon: 5f2db7556b60816bdc5761a359539bacd2d0250d
-  ReactNavigation: 1b9895026254a0ef4669d7f6c574736e4b5731c0
+  ReactNavigation: 4f8cf31e1132c02dcaed8b0ff7416a53fc20cf56
   RNCClipboard: 4b58c780f63676367640f23c8e114e9bd0cf86ac
   RNCMaskedView: 5ef8c95cbab95334a32763b72896a7b7d07e6299
   RNCPicker: bf95ec4b2483e2ab256047130bc536b437cd916c
@@ -4077,12 +4077,12 @@ SPEC CHECKSUMS:
   RNPermissions: 1d7289d3c1233da7cc9edeef580d6bb7f91e3ef7
   RNReactNativeHapticFeedback: b309b317c95fc3b9bc8276da1a78dae34b6ed46e
   RNReanimated: ce6c58c02bd76d8d1017bf07d04ed4a7c387801e
-  RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
+  RNScreens: 9269ab4971b2bd24917be84295d2c2ae7d06e9be
   RNSVG: 3405336c4507ee0bafb02b08058d57216daa2c50
   RNWorklets: 534af667da0c0049e0060ae43f03c7df8cc9a6e0
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
-  Unistyles: bf8c783c1a45745290e665eee628b2888d31e8b6
-  VisionCamera: 8c913d0cb2c868f779035fb69a1e0ab69e10f1c3
+  Unistyles: f44a4e2d59a4fef3ed2cb13786c6e89a3db067b8
+  VisionCamera: 8407cd5a5a61543e8b35b1a9dab1ee39dc025130
   Yoga: e6489bbfdab9b98f8d51993484d6bd40216b7834
 
 PODFILE CHECKSUM: 37821b63aacf4fae712142bd8dae8b060f207414

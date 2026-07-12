@@ -9,5 +9,19 @@ module.exports = {
     'react-native-vision-camera-barcode-scanner': {
       platforms: { ios: null },
     },
+    // iOS push uses APNs directly (no Firebase) — see
+    // docs/push-setup-checklist.md. Firebase messaging is Android-only here:
+    // every entry point in src/services/push/native* is Android-guarded
+    // (Platform.OS !== 'android'). Skip the iOS pods so autolinking doesn't
+    // pull in FirebaseCoreInternal / GoogleUtilities, which fail `pod install`
+    // under static libraries with the "Swift pod depends on GoogleUtilities,
+    // which does not define modules" modular-headers error. Android still
+    // links both via autolinking.
+    '@react-native-firebase/app': {
+      platforms: { ios: null },
+    },
+    '@react-native-firebase/messaging': {
+      platforms: { ios: null },
+    },
   },
 };
