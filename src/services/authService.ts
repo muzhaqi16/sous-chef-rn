@@ -45,6 +45,7 @@ import {
   type RegisterInput,
   type RegisterDeviceInput,
 } from '#/graphql/generated/schemaTypes';
+import { PermissionService } from '#/services/permissions/PermissionService';
 import {
   acquirePushToken,
   onPushTokenRefresh,
@@ -261,10 +262,14 @@ async function registerDeviceOnce(): Promise<boolean> {
       return false;
     }
 
-    // Acquire the push token via the platform provider (no-op → null until the
-    // native provider is installed; then permission-gated). Never blocks
-    // registration — a null token registers the device without push, as before.
-    const pushToken = await acquirePushToken();
+    // Acquire the push token only when OS notification permission is already
+    // granted, so login never triggers the permission prompt. The prompt happens
+    // in-context when the user enables push in settings, which then re-runs
+    // registration (registerDeviceInBackground) to deliver the token. A null
+    // token registers the device without push, as before.
+    const notificationStatus = await PermissionService.check('notifications');
+    const pushToken =
+      notificationStatus === 'granted' ? await acquirePushToken() : null;
 
     const result = await client.mutate<
       RegisterDeviceMutation,

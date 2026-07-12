@@ -22,7 +22,10 @@ import { appConfig } from '#/config/appConfig';
 // notification can never bounce the user out to a browser.
 const DEEP_LINK_SCHEME_PREFIX = `${appConfig.identity.deepLink.scheme}://`;
 
-// FCM/Notifee data payloads are flat string maps; values may be absent.
+// FCM/Notifee data payloads are flat string maps; values may be absent. The
+// server sends `category` explicitly on every push, so routing reads it
+// directly. `notificationId` / `sourceId` / `sourceType` also ride along (for
+// dedup and source correlation) but are not needed to pick the screen.
 export interface NotificationTapData {
   category?: string;
   actionUrl?: string;
@@ -36,26 +39,9 @@ const readTapData = (
   data: NotificationTapData | Record<string, unknown> | null | undefined,
 ): NotificationTapData => {
   if (!data) return {};
-  return {
-    category: asString(data.category),
-    actionUrl: asString(data.actionUrl),
-    notificationId: asString(data.notificationId),
-  };
-};
-
-/**
- * Hand an app-scheme deep link (e.g. `souschef://join/abc`) to the OS so React
- * Navigation's linking config routes it — the same path an external tap on the
- * link takes. Returns `true` when the URL was an internal deep link we
- * dispatched (so the caller skips category routing). A failed dispatch falls
- * back to the feed rather than a dead tap.
- */
-const openInternalDeepLink = (url: string | undefined): boolean => {
-  if (!url || !url.startsWith(DEEP_LINK_SCHEME_PREFIX)) return false;
-  void Linking.openURL(url).catch(() => {
-    NavigationService.navigate('Notifications');
-  });
-  return true;
+  const category =
+    typeof data.category === 'string' ? data.category : undefined;
+  return { category };
 };
 
 export const routeNotificationTap = (
