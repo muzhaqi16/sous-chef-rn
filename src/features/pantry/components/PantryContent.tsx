@@ -283,9 +283,10 @@ export const PantryContent = React.forwardRef<
     // (rows swap in place under the sticky tabs). The mount run is a no-op
     // (offset is already 0).
     useEffect(() => {
-      requestAnimationFrame(() => {
+      const handle = requestAnimationFrame(() => {
         flashListRef.current?.scrollToOffset({ offset: 0, animated: false });
       });
+      return () => cancelAnimationFrame(handle);
     }, [sortOption, sortDirection]);
 
     // Items exist but the deferred/windowed slice hasn't caught up yet — a
