@@ -3000,7 +3000,7 @@ PODS:
     - React-perflogger (= 0.83.9)
     - React-utils (= 0.83.9)
     - SocketRocket
-  - ReactNavigation (8.0.0-alpha.16):
+  - ReactNavigation (8.0.0-alpha.35):
     - boost
     - DoubleConversion
     - fast_float
@@ -3353,7 +3353,7 @@ PODS:
     - RNWorklets
     - SocketRocket
     - Yoga
-  - RNScreens (4.24.0):
+  - RNScreens (4.25.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -3380,10 +3380,10 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
-    - RNScreens/common (= 4.24.0)
+    - RNScreens/common (= 4.25.2)
     - SocketRocket
     - Yoga
-  - RNScreens/common (4.24.0):
+  - RNScreens/common (4.25.2):
     - boost
     - DoubleConversion
     - fast_float
@@ -4070,7 +4070,7 @@ SPEC CHECKSUMS:
   ReactAppDependencyProvider: 87593e9dfdba8dac1d7b2af1af05f0eff2a05684
   ReactCodegen: 417334350a76a91784cc20f7aff392327e217dc4
   ReactCommon: 5f2db7556b60816bdc5761a359539bacd2d0250d
-  ReactNavigation: 1b9895026254a0ef4669d7f6c574736e4b5731c0
+  ReactNavigation: 4f8cf31e1132c02dcaed8b0ff7416a53fc20cf56
   RNCClipboard: 4b58c780f63676367640f23c8e114e9bd0cf86ac
   RNCMaskedView: 5ef8c95cbab95334a32763b72896a7b7d07e6299
   RNCPicker: bf95ec4b2483e2ab256047130bc536b437cd916c
@@ -4083,7 +4083,7 @@ SPEC CHECKSUMS:
   RNPermissions: 1d7289d3c1233da7cc9edeef580d6bb7f91e3ef7
   RNReactNativeHapticFeedback: b309b317c95fc3b9bc8276da1a78dae34b6ed46e
   RNReanimated: ce6c58c02bd76d8d1017bf07d04ed4a7c387801e
-  RNScreens: 7f643ee0fd1407dc5085c7795460bd93da113b8f
+  RNScreens: 9269ab4971b2bd24917be84295d2c2ae7d06e9be
   RNSVG: 3405336c4507ee0bafb02b08058d57216daa2c50
   RNWorklets: 534af667da0c0049e0060ae43f03c7df8cc9a6e0
   SocketRocket: d4aabe649be1e368d1318fdf28a022d714d65748
