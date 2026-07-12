@@ -70,10 +70,15 @@ Record these — the backend needs all four:
 The APNs key is **non-expiring** and **team-wide** ("one key is used for all of
 your apps").
 
-> The iOS entitlement `aps-environment` (in `ios/SousChef/SousChef.entitlements`)
-> is `development` for Xcode/dev builds; the App Store build gets `production`.
-> The backend's `APNS_PRODUCTION` flag must match — sandbox vs. production APNs
-> hosts reject each other's device tokens.
+> The iOS entitlement `aps-environment` is **build-config-driven**: the
+> entitlements file uses `$(APS_ENVIRONMENT)`, which the `project.pbxproj` sets
+> to `development` in the **Debug** config and `production` in the **Release**
+> config. So Xcode/dev builds register against **sandbox** APNs and archived
+> (TestFlight / App Store) builds against **production** — no per-release edit.
+> The backend's `APNS_PRODUCTION` flag must match the build being tested (sandbox
+> vs. production APNs hosts reject each other's device tokens). If you add a new
+> build configuration, define `APS_ENVIRONMENT` for it too, or the entitlement
+> expands empty and push registration fails.
 
 ## Creating the Android FCM service-account JSON
 
