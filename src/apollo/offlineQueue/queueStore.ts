@@ -274,6 +274,34 @@ export class QueueStore {
   }
 
   /**
+   * Reset stranded PROCESSING entries back to PENDING so the next drain
+   * replays them. Drains are serialized in-process by queueManager's
+   * isProcessing flag, so any PROCESSING entry observed at drain start is
+   * debris from a process killed mid-replay — without this reset it would
+   * never be replayed, never marked failed, and (being non-PENDING) lose
+   * its pending-client-id merge protection. Replaying a possibly-committed
+   * op is safe: replays are idempotent by design (client-minted PKs /
+   * input.idempotencyKey). Returns the number of entries reset.
+   */
+  resetProcessingToPending(userId: string): number {
+    const queue = this.loadQueue();
+    let reset = 0;
+    const updated = queue.map(m => {
+      if (m.userId !== userId || m.status !== QueueStatus.PROCESSING) return m;
+      reset++;
+      return { ...m, status: QueueStatus.PENDING, updatedAt: Date.now() };
+    });
+
+    if (reset > 0) {
+      this.saveQueue(updated);
+      logger.info(
+        `♻️ Queue: Reset ${reset} stranded PROCESSING mutation(s) to PENDING`,
+      );
+    }
+    return reset;
+  }
+
+  /**
    * Client-generated entity ids that still have a PENDING mutation in the
    * current user's queue. The cache merge uses this to avoid dropping an
    * un-replayed optimistic item when a first-page background refetch lands

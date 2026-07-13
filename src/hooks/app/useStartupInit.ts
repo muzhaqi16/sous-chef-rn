@@ -11,6 +11,7 @@ import { NativePerformanceService } from '#/services/performance/NativePerforman
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
 import { initializeDeviceId } from '#/utils/deviceId';
+import { authService } from '#services/authService';
 
 /**
  * DEV-only: read launch arguments injected by Detox to bypass the login UI
@@ -119,6 +120,16 @@ export function useStartupInit(): void {
           }
         }
       });
+
+      // A keychain-restored session skips the login path, which is where
+      // device registration normally happens — without this, the push-token
+      // rotation listener is never subscribed and an OS token rotation
+      // silently kills push until the next manual login. registerDeviceOnce
+      // permission-gates token acquisition, so this never prompts.
+      const { user, accessToken } = useStore.getState();
+      if (user && accessToken && !detoxDisabled) {
+        requestIdleCallback(() => authService.registerDeviceInBackground());
+      }
 
       if (global.__APP_START_TIMESTAMP) {
         const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;

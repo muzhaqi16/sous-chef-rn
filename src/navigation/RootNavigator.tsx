@@ -114,7 +114,7 @@ import {
   useIsOnboarding,
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
-import { navigationRef } from '#services/NavigationService';
+import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
@@ -540,6 +540,7 @@ export function Navigation() {
         <StaticNavigation
           ref={navigationRef}
           theme={navigationTheme}
+          onReady={NavigationService.flushPendingNavigation}
           linking={{
             prefixes: DEEP_LINK_PREFIXES,
           }}

@@ -42,6 +42,7 @@ jest.mock('../../client', () => ({
 jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
+    resetProcessingToPending: jest.fn(() => 0),
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
@@ -81,6 +82,15 @@ jest.mock('#/services/telemetry', () => ({
 jest.mock('../../links/refreshToken', () => ({
   proactiveTokenRefresh: jest.fn(),
 }));
+
+// Mock persisted optimistic-field storage — replay success/convergence must
+// clear entries so restoration can't re-apply stale values.
+jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
+  optimisticDataPersistence: { clearEntity: jest.fn() },
+}));
+const { optimisticDataPersistence } = jest.requireMock(
+  '#/apollo/offline/OptimisticDataPersistence',
+) as { optimisticDataPersistence: { clearEntity: jest.Mock } };
 
 // Mock the logger
 const mockedGetState = useStore.getState as jest.Mock;
@@ -173,6 +183,28 @@ describe('QueueManager', () => {
         'user-1',
       );
       expect(queueStore.cleanupSuccessful).not.toHaveBeenCalled();
+    });
+
+    it('recovers stranded PROCESSING entries before collecting pending work', async () => {
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([]);
+
+      await manager.processQueue();
+
+      expect(queueStore.resetProcessingToPending).toHaveBeenCalledWith(
+        'user-1',
+      );
+      // Reset happens before the pending snapshot so recovered entries join
+      // this drain.
+      const resetOrder = (queueStore.resetProcessingToPending as jest.Mock).mock
+        .invocationCallOrder[0];
+      const collectOrder = (queueStore.getPendingMutationsForUser as jest.Mock)
+        .mock.invocationCallOrder[0];
+      expect(resetOrder).toBeLessThan(collectOrder);
     });
 
     it('prevents concurrent processing', async () => {
@@ -509,6 +541,127 @@ describe('QueueManager', () => {
       jest.useFakeTimers();
 
       expect(result.success).toBe(false);
+    });
+
+    describe('persisted optimistic-field clearing', () => {
+      it('clears the entity entry on replay success', async () => {
+        const mutation = makeMutation({
+          id: 'proc-clear',
+          variables: { input: { id: 'cuid-item-1' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: { syncPantryItem: { item: {}, converged: false } },
+        });
+        client.cache.extract.mockReturnValue({
+          'PantryItem:cuid-item-1': { __typename: 'PantryItem' },
+        });
+
+        jest.useRealTimers();
+        await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
+          'PantryItem',
+          'cuid-item-1',
+        );
+      });
+
+      it('clears every item entry of a batch-shaped create', async () => {
+        const mutation = makeMutation({
+          id: 'proc-clear-batch',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [{ id: 'cuid-a' }, { id: 'cuid-b' }],
+            },
+          },
+        });
+        client.mutate.mockResolvedValue({
+          data: { addItemsToShoppingList: { results: [] } },
+        });
+        client.cache.extract.mockReturnValue({
+          'ShoppingListItem:cuid-a': { __typename: 'ShoppingListItem' },
+          'ShoppingListItem:cuid-b': { __typename: 'ShoppingListItem' },
+        });
+
+        jest.useRealTimers();
+        await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
+          'ShoppingListItem',
+          'cuid-a',
+        );
+        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
+          'ShoppingListItem',
+          'cuid-b',
+        );
+      });
+
+      it('clears on idempotent convergence too', async () => {
+        const mutation = makeMutation({
+          id: 'proc-clear-converged',
+          operationName: 'CreateShoppingList',
+          variables: { input: { id: 'cuid-list-1' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: {
+            createShoppingList: {
+              __typename: 'ConflictError',
+              code: 'IDEMPOTENT_REPLAY',
+              message: 'already exists',
+            },
+          },
+        });
+        client.cache.extract.mockReturnValue({
+          'ShoppingList:cuid-list-1': { __typename: 'ShoppingList' },
+        });
+
+        jest.useRealTimers();
+        const result = await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(result.success).toBe(true);
+        expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
+          'ShoppingList',
+          'cuid-list-1',
+        );
+      });
+
+      it('does not clear when the replay fails', async () => {
+        const mutation = makeMutation({
+          id: 'proc-no-clear',
+          retryCount: 3,
+          maxRetries: 3,
+          variables: { input: { id: 'cuid-item-1' } },
+        });
+        client.mutate.mockRejectedValue(new Error('Server error'));
+
+        jest.useRealTimers();
+        await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+      });
+
+      it('skips entities absent from the cache without throwing', async () => {
+        const mutation = makeMutation({
+          id: 'proc-clear-uncached',
+          variables: { input: { id: 'cuid-gone' } },
+        });
+        client.mutate.mockResolvedValue({
+          data: { syncPantryItem: { item: {}, converged: false } },
+        });
+        client.cache.extract.mockReturnValue({});
+
+        jest.useRealTimers();
+        const result = await processMutation(mutation);
+        jest.useFakeTimers();
+
+        expect(result.success).toBe(true);
+        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+      });
     });
 
     // Under errorPolicy 'all' a server refusal resolves as an error union

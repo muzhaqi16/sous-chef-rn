@@ -581,6 +581,64 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
+  // resetProcessingToPending
+  // -------------------------------------------------------------------------
+  describe('resetProcessingToPending', () => {
+    it('flips stranded PROCESSING entries back to PENDING', () => {
+      store.addMutation(
+        makeMutation({ id: 'stranded-1', status: QueueStatus.PROCESSING }),
+      );
+      store.addMutation(
+        makeMutation({ id: 'stranded-2', status: QueueStatus.PROCESSING }),
+      );
+
+      const reset = store.resetProcessingToPending('user-1');
+
+      expect(reset).toBe(2);
+      const pending = store.getPendingMutationsForUser('user-1');
+      expect(pending.map(m => m.id)).toEqual(
+        expect.arrayContaining(['stranded-1', 'stranded-2']),
+      );
+    });
+
+    it('leaves other statuses and other users untouched', () => {
+      store.addMutation(makeMutation({ id: 'pending-1' }));
+      store.addMutation(
+        makeMutation({ id: 'success-1', status: QueueStatus.SUCCESS }),
+      );
+      store.addMutation(
+        makeMutation({ id: 'failed-1', status: QueueStatus.FAILED }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'other-user',
+          userId: 'user-2',
+          status: QueueStatus.PROCESSING,
+        }),
+      );
+
+      const reset = store.resetProcessingToPending('user-1');
+
+      expect(reset).toBe(0);
+      expect(store.getMutation('success-1')?.status).toBe(QueueStatus.SUCCESS);
+      expect(store.getMutation('failed-1')?.status).toBe(QueueStatus.FAILED);
+      expect(store.getMutation('other-user')?.status).toBe(
+        QueueStatus.PROCESSING,
+      );
+    });
+
+    it('persists the reset (survives cache invalidation)', () => {
+      store.addMutation(
+        makeMutation({ id: 'stranded-p', status: QueueStatus.PROCESSING }),
+      );
+      store.resetProcessingToPending('user-1');
+      store.invalidateCache();
+
+      expect(store.getMutation('stranded-p')?.status).toBe(QueueStatus.PENDING);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // getPendingClientIds
   // -------------------------------------------------------------------------
   describe('getPendingClientIds', () => {
@@ -683,6 +741,21 @@ describe('QueueStore', () => {
         }),
       );
       expect(store.getPendingClientIds()).toEqual(new Set(['cuid-good']));
+    });
+
+    it('recovered PROCESSING entries regain pending-id protection', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-stranded',
+          status: QueueStatus.PROCESSING,
+          variables: { input: { id: 'cuid-stranded' } },
+        }),
+      );
+      expect(store.getPendingClientIds().size).toBe(0);
+
+      store.resetProcessingToPending('user-1');
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-stranded']));
     });
 
     it('collects both input.id and items[].id when a shape carries both', () => {
