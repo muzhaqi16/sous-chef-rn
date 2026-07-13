@@ -110,7 +110,11 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
           user {
             id
             email
-            profile { id displayName avatar }
+            profile {
+              id
+              displayName
+              avatar
+            }
           }
         }
       }
@@ -446,7 +450,9 @@ mutation MarkShoppingListActive($input: MarkShoppingListActiveInput!) {
   }
 }
 
-mutation CreateRecurringShoppingList($input: CreateRecurringShoppingListInput!) {
+mutation CreateRecurringShoppingList(
+  $input: CreateRecurringShoppingListInput!
+) {
   createRecurringShoppingList(input: $input) {
     __typename
     ... on CreateRecurringShoppingListPayload {
@@ -780,7 +786,10 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
           item {
             id
             imageUrl
-            images { url kind }
+            images {
+              url
+              kind
+            }
           }
           shoppingList {
             id
@@ -806,9 +815,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
   }
 }
 
-mutation UpdateShoppingListItem(
-  $input: UpdateShoppingListItemInput!
-) {
+mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
   updateShoppingListItem(input: $input) {
     __typename
     ... on UpdateShoppingListItemPayload {
@@ -948,9 +955,7 @@ mutation UpdateShoppingListItemQuantity(
   }
 }
 
-mutation UpdateCollaboratorRole(
-  $input: UpdateCollaboratorRoleInput!
-) {
+mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {
   updateCollaboratorRole(input: $input) {
     __typename
     ... on UpdateCollaboratorRolePayload {
@@ -1023,10 +1028,16 @@ mutation MoveShoppingItemToPantry($input: MoveShoppingItemToPantryInput!) {
   }
 }
 
-mutation DeleteShoppingListItems($input: DeleteShoppingListItemsInput!) {
-  deleteShoppingListItems(input: $input) {
+# Offline-safe "clear list": sends the concrete ids captured at tap time, so a
+# replayed offline clear deletes only those and never touches items other members
+# added/purchased after the request was built (unlike the `deleteShoppingListItems`
+# filter mutation, whose purchased filter is re-evaluated at drain time).
+mutation RemoveItemsFromShoppingList(
+  $input: RemoveItemsFromShoppingListInput!
+) {
+  removeItemsFromShoppingList(input: $input) {
     __typename
-    ... on DeleteShoppingListItemsPayload {
+    ... on RemoveItemsFromShoppingListPayload {
       summary {
         total
         succeeded
@@ -1101,7 +1112,9 @@ mutation ShareShoppingList($input: ShareShoppingListInput!) {
   }
 }
 
-mutation JoinShoppingListByShareCode($input: JoinShoppingListByShareCodeInput!) {
+mutation JoinShoppingListByShareCode(
+  $input: JoinShoppingListByShareCodeInput!
+) {
   joinShoppingListByShareCode(input: $input) {
     __typename
     ... on JoinShoppingListByShareCodePayload {

@@ -6159,6 +6159,17 @@ type Mutation {
   removeItemFromShoppingList(input: RemoveItemFromShoppingListInput!): RemoveItemFromShoppingListResult!
   """Remove the primary image from an item (deletes from S3)"""
   removeItemImage(input: RemoveItemImageInput!): RemoveItemImageResult!
+  """
+  Batch remove specific items from a shopping list by id (batch twin of
+  removeItemFromShoppingList). Deletes exactly the given ids scoped to
+  shoppingListId; an id that no longer exists is a no-op, not an error.
+  
+  Offline-safe alternative to deleteShoppingListItems for "clear list": the
+  client sends the concrete ids captured at tap time, so a replayed clear can
+  never delete items other members added/purchased after the request was built
+  (deleteShoppingListItems re-evaluates its purchased filter at drain time).
+  """
+  removeItemsFromShoppingList(input: RemoveItemsFromShoppingListInput!): RemoveItemsFromShoppingListResult!
   """Remove a member from a home (owner/admin only)."""
   removeMember(input: RemoveMemberInput!): RemoveMemberResult!
   """Remove a recipe from the user's favorites."""
@@ -8457,6 +8468,36 @@ type RemoveItemImagePayload {
 }
 
 union RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError
+
+"""
+Batch remove specific shopping list items by id (batch twin of
+removeItemFromShoppingList). Deletes exactly the given ids, scoped to
+shoppingListId; an id that no longer exists is a no-op, not an error.
+
+Offline-safe alternative to deleteShoppingListItems for "clear list": the
+client captures the concrete ids on screen at tap time, so a replayed clear
+never touches items other members added/purchased after the request was built.
+deleteShoppingListItems re-evaluates its purchased filter at drain time and
+cannot offer that guarantee.
+"""
+input RemoveItemsFromShoppingListInput {
+  """
+  Exact item ids to remove (scoped to shoppingListId). Unknown ids are skipped.
+  """
+  ids: [ID!]!
+  shoppingListId: ID!
+}
+
+type RemoveItemsFromShoppingListPayload {
+  """Shopping list items that were removed (soft-deleted) by the batch."""
+  shoppingListItems: [ShoppingListItem!]!
+  """
+  summary.succeeded = ids actually removed; summary.skipped = ids that matched nothing (already removed or foreign to the list).
+  """
+  summary: BulkSummary!
+}
+
+union RemoveItemsFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemsFromShoppingListPayload | ValidationError
 
 input RemoveMemberInput {
   membershipId: ID!

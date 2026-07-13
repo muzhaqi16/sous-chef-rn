@@ -15,8 +15,8 @@ import { useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import {
-  DeleteShoppingListItemsDocument,
-  type DeleteShoppingListItemsMutationVariables,
+  RemoveItemsFromShoppingListDocument,
+  type RemoveItemsFromShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -30,7 +30,7 @@ import {
 // `update`, and the local-first context, so this captures just that subset of
 // the Apollo mutate options.
 type ClearMutationFn = (options: {
-  variables: DeleteShoppingListItemsMutationVariables;
+  variables: RemoveItemsFromShoppingListMutationVariables;
   update?: () => void;
   context?: { localFirst: boolean };
 }) => Promise<unknown>;
@@ -65,13 +65,16 @@ async function executeClearItems(
     clearAllUnpurchasedItemsFromCache(client.cache, listId, itemIds);
   }
 
-  // 2. Fire single batch mutation. Local-first: a queued offline clear keeps
-  //    the cache cleared and replays later (clearing an already-cleared list
-  //    is a no-op, so the replay is idempotent).
+  // 2. Fire single batch mutation with the EXACT ids captured at tap time (not a
+  //    purchased filter). Local-first: a queued offline clear keeps the cache
+  //    cleared and replays later; because it targets concrete ids, a replay
+  //    deletes only those and never items another member added/purchased in the
+  //    meantime. Removing an already-removed id is a server-side no-op, so the
+  //    replay is idempotent.
   const result = await executeMutation(
     () =>
       clearMutation({
-        variables: { input: { shoppingListId: listId, purchased } },
+        variables: { input: { shoppingListId: listId, ids: itemIds } },
         update: () => {}, // Cache already cleared optimistically
         context: { localFirst: true },
       }),
@@ -94,8 +97,8 @@ async function executeClearItems(
   // still exist server-side, so refetch to restore them.
   const outcome = classifyCreateResult(
     result as { data?: unknown; error?: unknown },
-    'deleteShoppingListItems',
-    'DeleteShoppingListItemsPayload',
+    'removeItemsFromShoppingList',
+    'RemoveItemsFromShoppingListPayload',
   );
   if (outcome === 'rejected') {
     await refetch();
@@ -128,7 +131,7 @@ export function useClearShoppingListItems({
   const client = useApolloClient();
   const isClearingRef = useRef(false);
 
-  const [clearMutation] = useMutation(DeleteShoppingListItemsDocument, {});
+  const [clearMutation] = useMutation(RemoveItemsFromShoppingListDocument, {});
 
   const clearItems = async (purchased: boolean) => {
     if (!listId || isClearingRef.current) return;

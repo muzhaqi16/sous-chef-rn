@@ -6306,6 +6306,17 @@ export type Mutation = {
   removeItemFromShoppingList: RemoveItemFromShoppingListResult;
   /** Remove the primary image from an item (deletes from S3) */
   removeItemImage: RemoveItemImageResult;
+  /**
+   * Batch remove specific items from a shopping list by id (batch twin of
+   * removeItemFromShoppingList). Deletes exactly the given ids scoped to
+   * shoppingListId; an id that no longer exists is a no-op, not an error.
+   *
+   * Offline-safe alternative to deleteShoppingListItems for "clear list": the
+   * client sends the concrete ids captured at tap time, so a replayed clear can
+   * never delete items other members added/purchased after the request was built
+   * (deleteShoppingListItems re-evaluates its purchased filter at drain time).
+   */
+  removeItemsFromShoppingList: RemoveItemsFromShoppingListResult;
   /** Remove a member from a home (owner/admin only). */
   removeMember: RemoveMemberResult;
   /** Remove a recipe from the user's favorites. */
@@ -8246,6 +8257,19 @@ export type MutationRemoveItemFromShoppingListArgs = {
  */
 export type MutationRemoveItemImageArgs = {
   input: RemoveItemImageInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationRemoveItemsFromShoppingListArgs = {
+  input: RemoveItemsFromShoppingListInput;
 };
 
 
@@ -11972,6 +11996,33 @@ export type RemoveItemImagePayload = {
 };
 
 export type RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError;
+
+/**
+ * Batch remove specific shopping list items by id (batch twin of
+ * removeItemFromShoppingList). Deletes exactly the given ids, scoped to
+ * shoppingListId; an id that no longer exists is a no-op, not an error.
+ *
+ * Offline-safe alternative to deleteShoppingListItems for "clear list": the
+ * client captures the concrete ids on screen at tap time, so a replayed clear
+ * never touches items other members added/purchased after the request was built.
+ * deleteShoppingListItems re-evaluates its purchased filter at drain time and
+ * cannot offer that guarantee.
+ */
+export type RemoveItemsFromShoppingListInput = {
+  /** Exact item ids to remove (scoped to shoppingListId). Unknown ids are skipped. */
+  ids: Array<Scalars['ID']['input']>;
+  shoppingListId: Scalars['ID']['input'];
+};
+
+export type RemoveItemsFromShoppingListPayload = {
+  __typename: 'RemoveItemsFromShoppingListPayload';
+  /** Shopping list items that were removed (soft-deleted) by the batch. */
+  shoppingListItems: Array<ShoppingListItem>;
+  /** summary.succeeded = ids actually removed; summary.skipped = ids that matched nothing (already removed or foreign to the list). */
+  summary: BulkSummary;
+};
+
+export type RemoveItemsFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemsFromShoppingListPayload | ValidationError;
 
 export type RemoveMemberInput = {
   membershipId: Scalars['ID']['input'];

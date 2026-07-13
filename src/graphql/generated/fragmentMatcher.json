@@ -1191,6 +1191,13 @@
       "RemoveItemImagePayload",
       "ValidationError"
     ],
+    "RemoveItemsFromShoppingListResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RemoveItemsFromShoppingListPayload",
+      "ValidationError"
+    ],
     "RemoveMemberResult": [
       "ConflictError",
       "ForbiddenError",
