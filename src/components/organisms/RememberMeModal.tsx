@@ -23,7 +23,7 @@ export const RememberMeModal: React.FC<{
       navigationBarTranslucent
     >
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+        <View style={styles.modalContent} testID="remember-me-modal">
           <Icon name="lock-closed-outline" size={48} tone="primary" />
 
           <Text size="xl" weight="semibold" style={styles.modalTitle}>
@@ -43,13 +43,18 @@ export const RememberMeModal: React.FC<{
             <AppPressable
               style={styles.modalButtonSecondary}
               onPress={onDecline}
+              testID="remember-me-decline"
             >
               <Text size="md" weight="semibold">
                 {t('rememberMe.notNow')}
               </Text>
             </AppPressable>
 
-            <AppPressable style={styles.modalButtonPrimary} onPress={onAccept}>
+            <AppPressable
+              style={styles.modalButtonPrimary}
+              onPress={onAccept}
+              testID="remember-me-accept"
+            >
               <Text
                 size="md"
                 weight="semibold"

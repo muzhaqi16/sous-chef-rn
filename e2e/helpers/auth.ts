@@ -100,6 +100,21 @@ export async function loginWithCredentials(email: string, password: string) {
 export async function dismissBiometricPromptIfPresent() {
   console.log('🔍 Checking for post-login prompts...');
 
+  // The "Remember login info?" credential modal appears after a fresh UI
+  // login and blocks the tab bar until dismissed.
+  await waitIfPresent(
+    element(by.id('remember-me-modal')),
+    async () => {
+      console.log('📱 Dismissing remember-login-info prompt...');
+      await tapFirstAvailable([
+        element(by.id('remember-me-decline')),
+        element(by.text('Not Now')),
+      ]);
+      console.log('✅ Remember-login prompt dismissed');
+    },
+    3000,
+  );
+
   // Try to dismiss post-login biometric modal (only on real devices)
   // Use 3s timeout to allow for animation/network delay on real devices
   await waitIfPresent(
@@ -371,6 +386,7 @@ export async function bootstrapAuthenticatedSession() {
     console.log('Not logged in, creating new session...');
     await skipToLogin();
     await loginAsTestUser();
+    await dismissBiometricPromptIfPresent();
   }
 
   // Ensure we're on a known screen (pantry or shopping list)

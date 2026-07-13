@@ -22,11 +22,14 @@ function injectDetoxLaunchArgs(
   detoxBackgroundServicesDisabledRef: React.RefObject<boolean>,
 ): void {
   try {
+    // react-native-launch-arguments JSON.parses any value it can, so the
+    // detoxUser payload arrives as an object (a plain string on older lib
+    // versions) — handle both.
     const args = LaunchArguments.value<{
       detoxServer?: string;
       detoxUserToken?: string;
       detoxRefreshToken?: string;
-      detoxUser?: string;
+      detoxUser?: string | Record<string, unknown>;
       detoxDisableBackgroundServices?: string;
     }>();
     // Under Detox the LogBox dev-warning toast overlays the floating tab bar and
@@ -35,18 +38,26 @@ function injectDetoxLaunchArgs(
       LogBox.ignoreAllLogs();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
-      const user = JSON.parse(args.detoxUser);
-      useStore
-        .getState()
-        .setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
+      const user =
+        typeof args.detoxUser === 'string'
+          ? JSON.parse(args.detoxUser)
+          : args.detoxUser;
+      const store = useStore.getState();
+      store.setAuth(user, args.detoxUserToken, args.detoxRefreshToken);
+      // The root navigator gates its groups on navigationState, which the
+      // real login flow sets separately from setAuth (handleLogin) — without
+      // this the injected session renders the auth group anyway.
+      store.setNavigationState('main_app');
       logger.debug('[Detox] Auth injected via launchArgs');
     }
     if (args.detoxDisableBackgroundServices) {
       detoxBackgroundServicesDisabledRef.current = true;
       logger.debug('[Detox] Background services disabled for E2E tests');
     }
-  } catch {
-    // No launch args or parse error — normal app startup
+  } catch (error) {
+    // A real injection failure must be loud (dev log level always shows
+    // warn), or E2E auth silently degrades to the slow UI-login fallback.
+    logger.warn('[Detox] Launch-arg injection failed:', error);
   }
 }
 

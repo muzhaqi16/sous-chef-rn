@@ -28,13 +28,6 @@ const SHOPPING_TAP_NOTIFICATION = {
 describe('P1: cold-launch notification tap', () => {
   beforeAll(async () => {
     await bootstrapAuthenticatedSession();
-    // The post-login "Remember login info?" credential prompt blocks the tab
-    // bar and the bootstrap helper does not dismiss it.
-    try {
-      await element(by.text('Not Now')).tap();
-    } catch {
-      // Prompt not shown (session was restored, not freshly logged in).
-    }
   });
 
   it('routes a killed-app tap with category SHOPPING to the shopping list', async () => {
