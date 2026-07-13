@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { usePanGesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -138,15 +138,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     return () => clearTimeout(id);
   }, [current, queue.length]);
 
-  const panGesture = Gesture.Pan()
-    .minDistance(10)
-    .onUpdate(event => {
+  const panGesture = usePanGesture({
+    minDistance: 10,
+    onUpdate: event => {
+      'worklet';
       if (event.translationY < 0) {
         translateY.set(insets.top + 16 + event.translationY);
       }
       translateX.set(event.translationX);
-    })
-    .onEnd(event => {
+    },
+    onDeactivate: event => {
+      'worklet';
       const shouldDismiss =
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;
@@ -156,7 +158,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
       }
-    });
+    },
+  });
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [

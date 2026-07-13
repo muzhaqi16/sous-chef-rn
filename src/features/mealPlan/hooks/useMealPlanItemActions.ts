@@ -307,6 +307,13 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Toggle Meal completed (optimistic)',
     );
 
+    // No idempotencyKey needed on this ledger op. The server gates the pantry
+    // deduction on the false → true completion transition, read live from the
+    // pre-update row: a replayed completion (e.g. a lost-response offline-queue
+    // replay) finds the item already isCompleted and skips the deduction, so it
+    // never double-deducts. Confirmed server-side in sous-chef-api#178. (The
+    // only unguarded case is two truly concurrent in-flight completions — not
+    // the sequential queue-drain path this queues into.)
     const result = await executeMutation(
       () =>
         updateItemMutation({

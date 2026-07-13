@@ -36,6 +36,14 @@ NS_ASSUME_NONNULL_BEGIN
 + (void)didReceiveNotificationResponse:(UNNotificationResponse *)response
     NS_SWIFT_NAME(didReceive(response:));
 
+/// The userInfo of the tap that launched (or preceded) this JS session, if
+/// one was cached. One-shot: returns it once and clears; after the first
+/// call, later taps are never cached (the live event path owns them). The
+/// library's tap NSNotification is only observed once a JS listener attaches,
+/// so a killed-app tap would otherwise be dropped — JS pulls this via the
+/// InitialNotificationTap module once it is ready to route.
++ (nullable NSDictionary *)consumeInitialNotificationResponse;
+
 @end
 
 NS_ASSUME_NONNULL_END

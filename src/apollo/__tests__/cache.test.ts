@@ -8,6 +8,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
 import { queueStore } from '../offlineQueue/queueStore';
+import { QueueStatus } from '../offlineQueue/types';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -469,6 +470,104 @@ describe('cache', () => {
     });
   });
 
+  describe('mergeConnectionByNodeId - preserves un-replayed local creates', () => {
+    // shoppingListsConnection exercises the same mergeConnectionByNodeId policy
+    // that backs savedRecipesConnection (favorites) and mealTemplatesConnection.
+    const HOME_QUERY = gql`
+      query GetHome($id: ID!) {
+        home(id: $id) {
+          id
+          shoppingListsConnection {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const writeFirstPage = (
+      cache: InMemoryCache,
+      nodes: Array<{ id: string; name: string }>,
+    ) =>
+      cache.writeQuery({
+        query: HOME_QUERY,
+        variables: { id: 'home-1' },
+        data: {
+          home: {
+            __typename: 'Home',
+            id: 'home-1',
+            shoppingListsConnection: {
+              __typename: 'ShoppingListsConnection',
+              edges: nodes.map(n => ({
+                __typename: 'ShoppingListEdge',
+                node: { __typename: 'ShoppingList', ...n },
+              })),
+              pageInfo: {
+                __typename: 'PageInfo',
+                hasNextPage: false,
+                endCursor: '',
+              },
+            },
+          },
+        },
+      });
+
+    const readIds = (cache: InMemoryCache): string[] =>
+      cache
+        .readQuery<HomeConnectionResult>({
+          query: HOME_QUERY,
+          variables: { id: 'home-1' },
+        })
+        ?.home.shoppingListsConnection.edges.map((e: Edge) => e.node.id) ?? [];
+
+    it('preserves an offline-created edge over an authoritative first-page refetch', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set(['cuid-pending']));
+      const cache = makeCache();
+
+      // A server node + an offline-created (still-queued) node.
+      writeFirstPage(cache, [
+        { id: 'server-1', name: 'Groceries' },
+        { id: 'cuid-pending', name: 'Party' },
+      ]);
+      // First-page refetch that doesn't yet include the un-replayed node.
+      writeFirstPage(cache, [{ id: 'server-1', name: 'Groceries' }]);
+
+      expect(readIds(cache)).toEqual(
+        expect.arrayContaining(['server-1', 'cuid-pending']),
+      );
+      expect(readIds(cache)).toHaveLength(2);
+      spy.mockRestore();
+    });
+
+    it('does not force-preserve a non-pending edge (server-removed node is dropped)', () => {
+      const spy = jest
+        .spyOn(queueStore, 'getPendingClientIds')
+        .mockReturnValue(new Set()); // nothing queued
+      const cache = makeCache();
+
+      writeFirstPage(cache, [
+        { id: 'server-1', name: 'Groceries' },
+        { id: 'gone-1', name: 'Deleted elsewhere' },
+      ]);
+      // First-page refetch no longer includes gone-1; with no pending op for it,
+      // the incoming page stays authoritative → it is dropped.
+      writeFirstPage(cache, [{ id: 'server-1', name: 'Groceries' }]);
+
+      expect(readIds(cache)).toEqual(['server-1']);
+      spy.mockRestore();
+    });
+  });
+
   describe('itemsConnectionFieldPolicy (via ShoppingList.itemsConnection)', () => {
     // Need to add ShoppingList to the cache first - write via cache directly
     it('stores initial connection data', () => {
@@ -640,6 +739,53 @@ describe('cache', () => {
 
       expect(readIds(cache)).toEqual(['server-1']);
       spy.mockRestore();
+    });
+
+    it('preserves an offline batch-add edge through a REAL queue entry (no spy)', () => {
+      // Cross-seam: the merge guard's real getPendingClientIds() must extract
+      // the client id from the batch AddItemsToShoppingListInput shape every
+      // shopping-list add enqueues — a drift in that id-shape contract passes
+      // the spy-based tests above and the queueStore unit tests while still
+      // dropping offline adds in production.
+      queueStore.setCurrentUserId('cross-seam-user');
+      queueStore.addMutation({
+        id: 'cross-seam-batch-add',
+        userId: 'cross-seam-user',
+        operationName: 'AddItemsToShoppingList',
+        mutation: gql`
+          mutation AddItemsToShoppingList {
+            __typename
+          }
+        `,
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ id: 'cuid-batch-pending', name: 'Milk' }],
+          },
+        },
+        status: QueueStatus.PENDING,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        retryCount: 0,
+        maxRetries: 3,
+        requiresAuth: true,
+      });
+
+      const cache = makeCache();
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'cuid-batch-pending', name: 'Milk' },
+      ]);
+      // Authoritative refetch lands before the queue drains the create.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      expect(readIds(cache)).toEqual(
+        expect.arrayContaining(['server-1', 'cuid-batch-pending']),
+      );
+      expect(readIds(cache)).toHaveLength(2);
+
+      queueStore.clearAllQueues();
+      queueStore.clearCurrentUserId();
     });
   });
 

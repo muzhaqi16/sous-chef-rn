@@ -4,7 +4,7 @@ import React from 'react';
 import { Dimensions } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { render } from '@testing-library/react-native';
-import { Gesture } from 'react-native-gesture-handler';
+import { usePanGesture } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import { SpotlightCoachMark } from '../SpotlightCoachMark';
 
@@ -12,19 +12,22 @@ jest.mock('#hooks/settings/useSettings', () => ({
   useShowTutorials: () => true,
 }));
 
-const PanMock = Gesture.Pan as unknown as jest.Mock;
+const usePanGestureMock = usePanGesture as unknown as jest.Mock;
 const scheduleOnRNMock = scheduleOnRN as unknown as jest.Mock;
 
 const targetRect = { x: 100, y: 200, width: 50, height: 50 };
 
+// Each render calls usePanGesture(config); the mock returns the config, so the
+// latest result carries the gesture's props (activeOffsetX, enabled) + the
+// onDeactivate callback.
 const getLatestPanGesture = () => {
-  const results = PanMock.mock.results;
+  const results = usePanGestureMock.mock.results;
   return results[results.length - 1].value;
 };
 
 describe('SpotlightCoachMark swipe-to-advance gesture', () => {
   beforeEach(() => {
-    PanMock.mockClear();
+    usePanGestureMock.mockClear();
     scheduleOnRNMock.mockClear();
   });
 
@@ -40,7 +43,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    expect(gesture.activeOffsetX).toHaveBeenCalledWith([-20, 20]);
+    expect(gesture.activeOffsetX).toEqual([-20, 20]);
   });
 
   it('advances on left-swipe past threshold when onNext is provided', () => {
@@ -56,7 +59,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    const onEnd = gesture.onEnd.mock.calls[0][0];
+    const onEnd = gesture.onDeactivate;
 
     onEnd({ translationX: -80, translationY: 0 });
 
@@ -77,7 +80,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    const onEnd = gesture.onEnd.mock.calls[0][0];
+    const onEnd = gesture.onDeactivate;
 
     onEnd({ translationX: 100, translationY: 0 });
 
@@ -98,7 +101,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    const onEnd = gesture.onEnd.mock.calls[0][0];
+    const onEnd = gesture.onDeactivate;
 
     onEnd({ translationX: -30, translationY: 0 });
 
@@ -117,7 +120,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    expect(gesture.enabled).toHaveBeenCalledWith(false);
+    expect(gesture.enabled).toBe(false);
   });
 
   it('disables the gesture in passthrough mode', () => {
@@ -133,7 +136,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
       />,
     );
     const gesture = getLatestPanGesture();
-    expect(gesture.enabled).toHaveBeenCalledWith(false);
+    expect(gesture.enabled).toBe(false);
   });
 });
 

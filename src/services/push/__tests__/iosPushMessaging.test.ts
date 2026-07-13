@@ -90,6 +90,46 @@ describe('registerIosPushTapHandlers', () => {
     expect(mockRouteTap).not.toHaveBeenCalled();
   });
 
+  describe('InitialNotificationTap native cache', () => {
+    const { NativeModules } = jest.requireActual('react-native') as {
+      NativeModules: Record<string, unknown>;
+    };
+
+    afterEach(() => {
+      delete NativeModules.InitialNotificationTap;
+    });
+
+    it('routes the natively cached launching tap and skips the fallback', async () => {
+      const consume = jest
+        .fn()
+        .mockResolvedValue({ category: 'MEAL_PLAN', sourceId: 's1' });
+      NativeModules.InitialNotificationTap = { consume };
+
+      registerIosPushTapHandlers();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(consume).toHaveBeenCalledTimes(1);
+      expect(mockRouteTap).toHaveBeenCalledWith({
+        category: 'MEAL_PLAN',
+        sourceId: 's1',
+      });
+      expect(mockGetInitialNotification).not.toHaveBeenCalled();
+    });
+
+    it('does not route or fall back when the cache is empty', async () => {
+      const consume = jest.fn().mockResolvedValue(null);
+      NativeModules.InitialNotificationTap = { consume };
+
+      registerIosPushTapHandlers();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(mockRouteTap).not.toHaveBeenCalled();
+      expect(mockGetInitialNotification).not.toHaveBeenCalled();
+    });
+  });
+
   it('completes a silent/background notification by calling finish()', () => {
     registerIosPushTapHandlers();
     const finish = jest.fn();

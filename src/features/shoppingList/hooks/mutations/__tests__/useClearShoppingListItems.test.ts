@@ -3,7 +3,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { DeleteShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -43,7 +43,7 @@ function createClearMock(
 ): MockedResponse {
   return {
     request: {
-      query: DeleteShoppingListItemsDocument,
+      query: RemoveItemsFromShoppingListDocument,
       variables: vars => {
         recorded.push(vars);
         return true;
@@ -53,17 +53,17 @@ function createClearMock(
     delay,
     result: {
       data: {
-        deleteShoppingListItems: {
-          __typename: 'DeleteShoppingListItemsPayload',
+        removeItemsFromShoppingList: {
+          __typename: 'RemoveItemsFromShoppingListPayload',
           summary: {
-            __typename: 'BulkOperationSummary',
+            __typename: 'BulkSummary',
             total: 1,
-            successful: 1,
+            succeeded: 1,
             failed: 0,
             skipped: 0,
             executionTime: 0,
           },
-          clearedItemIds: ['item-1'],
+          shoppingListItems: [{ __typename: 'ShoppingListItem', id: 'item-1' }],
         },
       },
     },
@@ -158,10 +158,12 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
+    // P2-16: the mutation replays the exact captured ids (matching the
+    // optimistically-cleared set), not a re-evaluated `purchased` filter.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
-        purchased: true,
+        ids: ['item-1', 'item-3'],
       },
     });
   });
@@ -194,10 +196,11 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
+    // P2-16: id-based replay, matching the optimistically-cleared set.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
-        purchased: false,
+        ids: ['item-1', 'item-3'],
       },
     });
   });

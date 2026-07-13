@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { errorService } from '#/services/errorService';
 
 import { useTranslation } from 'react-i18next';
@@ -343,6 +343,7 @@ async function executeRecipeTextSearch(
   setSearchPerformed: (v: boolean) => void,
   setDisplayResults: (v: DisplayItem[]) => void,
   setPagination: (p: SearchPagination) => void,
+  shouldCommit: () => boolean,
 ): Promise<void> {
   setLoading(true);
   setSearchPerformed(true);
@@ -358,6 +359,12 @@ async function executeRecipeTextSearch(
     true,
     seen,
   );
+
+  // A newer search was fired while this one was in flight — discard this
+  // response entirely so it can't clobber the fresher results, commit stale
+  // pagination cursors, surface an irrelevant error, or clear the loading flag
+  // the newer search now owns. Mirrors the load-more path's mid-flight guard.
+  if (!shouldCommit()) return;
 
   setDisplayResults(page.items);
   setPagination({
@@ -509,6 +516,11 @@ export function useRecipeScreen() {
   // Apollo client for the imperative local-API search in executeRecipeTextSearch
   const client = useApolloClient();
 
+  // Monotonic token that supersedes in-flight text searches. Every fresh search
+  // (new query, filter re-run, refresh) bumps it and captures the value; a
+  // search only commits its results if its captured value is still current.
+  const searchGenerationRef = useRef(0);
+
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile();
 
@@ -588,6 +600,7 @@ export function useRecipeScreen() {
   // async, so the caller passes the next filters rather than reading state).
   const rerunSearchWithFilters = async (nextFilters: RecipeFilters) => {
     if (!searchPerformed || !searchQuery.trim()) return;
+    const generation = (searchGenerationRef.current += 1);
     await executeRecipeTextSearch(
       searchQuery,
       nextFilters,
@@ -596,6 +609,7 @@ export function useRecipeScreen() {
       setSearchPerformed,
       setDisplayResults,
       setSearchPagination,
+      () => generation === searchGenerationRef.current,
     );
   };
 
@@ -703,6 +717,7 @@ export function useRecipeScreen() {
     if (!query.trim()) return;
     setSearchQuery(query);
 
+    const generation = (searchGenerationRef.current += 1);
     await executeRecipeTextSearch(
       query,
       activeFilters,
@@ -711,6 +726,7 @@ export function useRecipeScreen() {
       setSearchPerformed,
       setDisplayResults,
       setSearchPagination,
+      () => generation === searchGenerationRef.current,
     );
   };
 
@@ -745,6 +761,7 @@ export function useRecipeScreen() {
   const handleRefresh = async () => {
     if (searchPerformed) {
       if (searchQuery.trim()) {
+        const generation = (searchGenerationRef.current += 1);
         await executeRecipeTextSearch(
           searchQuery,
           activeFilters,
@@ -753,6 +770,7 @@ export function useRecipeScreen() {
           setSearchPerformed,
           setDisplayResults,
           setSearchPagination,
+          () => generation === searchGenerationRef.current,
         );
       }
     } else {
@@ -761,6 +779,9 @@ export function useRecipeScreen() {
   };
 
   const clearSearch = () => {
+    // Bump the generation so any in-flight text search is superseded and can't
+    // re-populate the list after the user has cleared it.
+    searchGenerationRef.current += 1;
     setSearchQuery('');
     setSearchPerformed(false);
     setSearchData({ items: [], pagination: EMPTY_PAGINATION });

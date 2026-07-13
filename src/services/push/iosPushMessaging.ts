@@ -11,12 +11,24 @@
  * missing from the running binary, it degrades to a no-op instead of crashing.
  */
 
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 import PushNotificationIOS, {
   type PushNotification,
 } from '@react-native-community/push-notification-ios';
 import { logger } from '#/utils/environment';
 import { routeNotificationTap } from './pushNotificationRouting';
+
+// One-shot native cache of the tap that launched the killed app (see
+// PushNotificationForwarder). Optional: absent on Android and in binaries
+// built before the module existed.
+const getInitialTapModule = () =>
+  (
+    NativeModules as {
+      InitialNotificationTap?: {
+        consume: () => Promise<Record<string, unknown> | null>;
+      };
+    }
+  ).InitialNotificationTap;
 
 /**
  * Registers tap handlers for APNs notifications. A tap is delivered through the
@@ -47,13 +59,29 @@ export const registerIosPushTapHandlers = (): (() => void) => {
       handleBackgroundNotification,
     );
 
-    PushNotificationIOS.getInitialNotification()
-      .then(notification => {
+    // Killed-app tap: the library's tap NSNotification fires before any JS
+    // listener exists and getInitialNotification's launchOptions are not
+    // populated for tap-launches once a UNUserNotificationCenterDelegate is
+    // set — so pull the natively cached launching tap instead. Routing is
+    // safe even pre-nav-ready: NavigationService parks it in the pending
+    // slot and flushes on the container's onReady. getInitialNotification
+    // stays as the fallback for binaries without the module, gated behind
+    // the consume result so one tap can never route twice.
+    const routeInitialTap = async () => {
+      try {
+        const initialTapModule = getInitialTapModule();
+        if (initialTapModule) {
+          const userInfo = await initialTapModule.consume();
+          if (userInfo) routeNotificationTap(userInfo);
+          return;
+        }
+        const notification = await PushNotificationIOS.getInitialNotification();
         if (notification) routeNotificationTap(notification.getData());
-      })
-      .catch(error => {
-        logger.error('APNs getInitialNotification failed:', error);
-      });
+      } catch (error) {
+        logger.error('APNs initial tap retrieval failed:', error);
+      }
+    };
+    void routeInitialTap();
 
     return () => {
       PushNotificationIOS.removeEventListener('localNotification');

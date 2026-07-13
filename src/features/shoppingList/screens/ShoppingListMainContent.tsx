@@ -60,9 +60,9 @@ export interface ShoppingListMainContentProps {
   screenData: ReturnType<typeof useShoppingListScreen>;
 }
 
-// NOTE: Not wrapped in React.memo — the screenData prop is a new object each render
-// from useShoppingListScreen(), which defeats shallow comparison. The parent
-// ShoppingListMainScreen is React.memo'd, which is the effective optimization boundary.
+// Not wrapped in React.memo — the React Compiler memoizes this element at its
+// parent call site (`ShoppingListMain`), so a manual memo boundary is redundant
+// (and would be defeated anyway by `screenData` being a fresh object each render).
 export const ShoppingListMainContent: React.FC<
   ShoppingListMainContentProps
 > = ({ screenData }) => {

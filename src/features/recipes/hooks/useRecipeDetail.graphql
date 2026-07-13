@@ -2,7 +2,7 @@
 # The shoppingList feature's graphql/ folder is internal.
 # A single ingredient is added via this same batch mutation with a one-element
 # `items` array — there is no separate single-add operation.
-mutation AddItemsToShoppingList($input: AddItemsToShoppingListInput!) {
+mutation AddItemsToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
     ... on AddItemsToShoppingListPayload {

@@ -22,6 +22,7 @@ import {
 } from './queueErrorPolicy';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
 const QUEUE_ITEM_DATA_FRAGMENT = gql`
@@ -157,6 +158,11 @@ export class QueueManager {
       return;
     }
 
+    // Recover entries a killed process left mid-replay: drains are serialized
+    // by isProcessing, so any PROCESSING entry visible here is stranded debris,
+    // not live work. Reset to PENDING so this drain picks them up.
+    queueStore.resetProcessingToPending(userId);
+
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
@@ -227,6 +233,13 @@ export class QueueManager {
         status: QueueStatus.SUCCESS,
         processedAt: Date.now(),
       });
+
+      // The change is on the server now (plain success or IDEMPOTENT_REPLAY
+      // convergence both reach here) — drop the persisted optimistic fields
+      // for the touched entities so restoration can't re-apply stale values
+      // over fresher server state on later mounts. Entries for still-PENDING
+      // mutations are untouched.
+      this.clearPersistedOptimisticFields(mutation);
 
       // Remove after short delay (allows for reconciliation)
       setTimeout(() => queueStore.removeMutation(mutationId), 5000);
@@ -561,6 +574,40 @@ export class QueueManager {
   } {
     const entityId = this.getEntityId(mutation);
     return { entityType: this.findCachedTypename(entityId), entityId };
+  }
+
+  /**
+   * Every client entity id a queued mutation targets: getEntityId's single
+   * candidate plus all `input.items[].id` of a batch-shaped create (multi-item
+   * adds carry one client-minted id per row).
+   */
+  private getAllEntityIds(mutation: QueuedMutation): string[] {
+    const ids = new Set<string>();
+    const single = this.getEntityId(mutation);
+    if (single) ids.add(single);
+
+    const items = mutation.variables?.input?.items;
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (typeof item?.id === 'string' && item.id) ids.add(item.id);
+      }
+    }
+    return [...ids];
+  }
+
+  /**
+   * Drop persisted optimistic field values for every entity a landed mutation
+   * touched. Typename comes off the normalized cache the same way the failure
+   * pipeline resolves its evict target; an uncached entity has nothing to
+   * restore, so skipping it is correct.
+   */
+  private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
+    for (const entityId of this.getAllEntityIds(mutation)) {
+      const entityType = this.findCachedTypename(entityId);
+      if (entityType) {
+        optimisticDataPersistence.clearEntity(entityType, entityId);
+      }
+    }
   }
 
   private findCachedTypename(entityId: string | null): string | null {

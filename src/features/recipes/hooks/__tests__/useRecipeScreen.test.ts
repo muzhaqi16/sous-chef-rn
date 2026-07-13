@@ -1235,4 +1235,117 @@ describe('useRecipeScreen', () => {
       expect(result.current.activeFilterCount).toBe(0);
     });
   });
+
+  describe('superseded text searches (staleness guard)', () => {
+    const spoonResponse = (id: number, title: string) => ({
+      results: [
+        {
+          id,
+          title,
+          image: `https://img/${id}.jpg`,
+          imageType: 'jpg',
+          readyInMinutes: 30,
+          servings: 4,
+          aggregateLikes: 1,
+          vegan: false,
+          vegetarian: false,
+          glutenFree: false,
+          dairyFree: false,
+        },
+      ],
+      offset: 0,
+      number: 1,
+      totalResults: 1,
+    });
+
+    it('discards a slow search superseded by a newer one', async () => {
+      // Two searches race on their Spoonacular half: "app" is fired first but
+      // its response is deferred so it resolves LAST; "banana" is fired second
+      // and resolves first. The stale "app" response must not clobber banana.
+      let resolveApp!: (v: unknown) => void;
+      let resolveBanana!: (v: unknown) => void;
+      const appPromise = new Promise(res => {
+        resolveApp = res;
+      });
+      const bananaPromise = new Promise(res => {
+        resolveBanana = res;
+      });
+
+      mockSearchRecipes.mockImplementation((params: { query?: string }) => {
+        if (params.query === 'app') return appPromise;
+        if (params.query === 'banana') return bananaPromise;
+        return Promise.resolve(emptySpoonacularResponse);
+      });
+
+      const { result } = renderRecipeScreen();
+
+      let appDone!: Promise<void>;
+      let bananaDone!: Promise<void>;
+
+      // Fire both searches; each blocks on its deferred Spoonacular promise.
+      await act(async () => {
+        appDone = result.current.handleTextSearch('app');
+        bananaDone = result.current.handleTextSearch('banana');
+      });
+
+      // The NEWER search ("banana") resolves first and commits its results.
+      await act(async () => {
+        resolveBanana(spoonResponse(2222, 'Banana Bread'));
+        await bananaDone;
+      });
+
+      expect(result.current.searchQuery).toBe('banana');
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-2222',
+      ]);
+
+      // The STALE search ("app") resolves last — it must be discarded, not
+      // overwrite the banana results, pagination, or the loading flag.
+      await act(async () => {
+        resolveApp(spoonResponse(1111, 'Apple Pie'));
+        await appDone;
+      });
+
+      expect(result.current.searchQuery).toBe('banana');
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-2222',
+      ]);
+      expect(result.current.searchLoading).toBe(false);
+    });
+
+    it('a search cleared mid-flight does not repopulate the list on resolve', async () => {
+      let resolvePending!: (v: unknown) => void;
+      const pending = new Promise(res => {
+        resolvePending = res;
+      });
+      mockSearchRecipes.mockImplementation((params: { query?: string }) =>
+        params.query === 'soup'
+          ? pending
+          : Promise.resolve(emptySpoonacularResponse),
+      );
+
+      const { result } = renderRecipeScreen();
+
+      let searchDone!: Promise<void>;
+      await act(async () => {
+        searchDone = result.current.handleTextSearch('soup');
+      });
+
+      // User clears the search before the in-flight response lands.
+      act(() => {
+        result.current.clearSearch();
+      });
+      expect(result.current.searchResults).toEqual([]);
+      expect(result.current.searchPerformed).toBe(false);
+
+      // The stale response resolves — the cleared list must stay empty.
+      await act(async () => {
+        resolvePending(spoonResponse(3333, 'Tomato Soup'));
+        await searchDone;
+      });
+
+      expect(result.current.searchResults).toEqual([]);
+      expect(result.current.searchPerformed).toBe(false);
+    });
+  });
 });

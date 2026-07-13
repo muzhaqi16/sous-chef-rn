@@ -187,6 +187,45 @@ function shouldPreservePageInfo(
 }
 
 /**
+ * Preserve un-replayed local creates when an authoritative first page replaces
+ * a connection. Keeps only existing edges whose `node.id` still has a PENDING
+ * mutation in the offline queue and is absent from the incoming page — so an
+ * offline create survives a refetch that wins the race against the queue drain,
+ * while a genuinely server-deleted node (no pending op) is still dropped. Falls
+ * straight through to `incoming` once the queue drains (pendingIds empty).
+ * Shared by {@link itemsConnectionFieldPolicy} and
+ * {@link mergeConnectionByNodeId} so the guard is encoded in one place.
+ */
+function preservePendingEdges(
+  existing: CachedConnection,
+  incoming: CachedConnection,
+  readField: ReadField,
+): CachedConnection {
+  const pendingIds = queueStore.getPendingClientIds();
+  if (pendingIds.size === 0) return incoming;
+  const incomingIds = new Set<string>();
+  for (const edge of incoming.edges || []) {
+    const id = readEdgeNodeId(edge, readField);
+    if (id) incomingIds.add(id);
+  }
+  const preservedEdges = (existing.edges || []).filter(edge => {
+    const id = readEdgeNodeId(edge, readField);
+    return id != null && pendingIds.has(id) && !incomingIds.has(id);
+  });
+  if (preservedEdges.length === 0) return incoming;
+  if (__DEV__) {
+    logger.debug(
+      `🛡️ [Cache] preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
+    );
+  }
+  return {
+    ...incoming,
+    edges: [...preservedEdges, ...(incoming.edges || [])],
+    totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
+  };
+}
+
+/**
  * Connection merge for non-paginated-window lists where fresh server data
  * should win on duplicate node IDs.
  *
@@ -230,7 +269,13 @@ function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
+        // Preserve un-replayed local creates over an authoritative first page.
+        // An offline-created node (favorite, meal template, …) lives in
+        // `existing` until the queue replays it; a refetch that wins the race
+        // would otherwise drop it. Mirrors itemsConnectionFieldPolicy's guard.
+        return preservePendingEdges(existing, incoming, readField);
+      }
 
       const edgeMap = new Map<string, CachedEdge>();
       const existingEdges = existing.edges || [];
@@ -373,28 +418,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         // server-deleted item has no pending op and is still dropped, so the page
         // stays authoritative. Falls straight through to `return incoming` once
         // the queue drains (pendingIds empty).
-        const pendingIds = queueStore.getPendingClientIds();
-        if (pendingIds.size === 0) return incoming;
-        const incomingIds = new Set<string>();
-        for (const edge of incoming.edges || []) {
-          const id = readEdgeNodeId(edge, readField);
-          if (id) incomingIds.add(id);
-        }
-        const preservedEdges = (existing.edges || []).filter(edge => {
-          const id = readEdgeNodeId(edge, readField);
-          return id != null && pendingIds.has(id) && !incomingIds.has(id);
-        });
-        if (preservedEdges.length === 0) return incoming;
-        if (__DEV__) {
-          logger.debug(
-            `🛡️ [Cache] itemsConnection: preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
-          );
-        }
-        return {
-          ...incoming,
-          edges: [...preservedEdges, ...(incoming.edges || [])],
-          totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
-        };
+        return preservePendingEdges(existing, incoming, readField);
       }
 
       // Append-only: keep existing edges in place, add only new incoming edges
@@ -802,7 +826,11 @@ export function makeCache(): InMemoryCache {
           },
           recipes: {
             ...mergeConnectionByNodeId(),
-            keyArgs: ['category', 'difficulty'],
+            // MyRecipes passes category/difficulty nested inside `filters:` —
+            // keying on the whole input object keeps each filter set in its
+            // own entry (variable-less cache.updateQuery writers collapse to
+            // the same `filters: {}` key on both write and read paths).
+            keyArgs: ['filters'],
           },
           mealPlans: {
             ...mergeConnectionByNodeId(),

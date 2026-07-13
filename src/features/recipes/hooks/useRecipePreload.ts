@@ -32,6 +32,7 @@ import {
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from 'react-i18next';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
@@ -183,7 +184,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
   // Mutations
   const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
     // Use cache.updateQuery instead of refetchQueries for better performance and offline support
-    update: (cache, { data }) => {
+    update: (cache, { data }, { variables }) => {
       if (
         data?.addRecipeToFavorites?.__typename !== 'AddRecipeToFavoritesPayload'
       )
@@ -245,6 +246,37 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
             };
           },
         );
+      }
+
+      // Reconcile a divergent server id. The client mints `input.id` and writes
+      // the optimistic SavedRecipe under it; when the recipe was already
+      // favorited elsewhere the server resolves to an EXISTING SavedRecipe with
+      // a different id. Re-point Recipe.savedDetails at the server row (the
+      // mutation response omits recipe.savedDetails) and evict the stale
+      // client-id entity so its dangling MySavedRecipes edge drops via the
+      // self-healing read — one saved-list row, heart stays filled, no phantom
+      // entity. Runs after the server edge above roots the server SavedRecipe,
+      // so the evict's gc can't collect it. No-op when the server honored the
+      // client id.
+      const clientId = variables?.input?.id;
+      if (clientId && savedRecipe.id !== clientId) {
+        const recipeCacheId = cache.identify({
+          __typename: 'Recipe',
+          id: savedRecipe.recipeId,
+        });
+        if (recipeCacheId) {
+          cache.writeFragment({
+            id: recipeCacheId,
+            fragment: RecipeSavedDetailsFragment,
+            fragmentName: '_RecipeSavedDetails',
+            data: {
+              __typename: 'Recipe',
+              id: savedRecipe.recipeId,
+              savedDetails: { __typename: 'SavedRecipe', id: savedRecipe.id },
+            },
+          });
+        }
+        adoptServerEntityId(cache, 'SavedRecipe', savedRecipe.id, clientId);
       }
     },
   });

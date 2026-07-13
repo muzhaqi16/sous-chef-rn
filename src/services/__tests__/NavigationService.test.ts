@@ -46,6 +46,10 @@ import NavigationService, { navigationRef } from '../NavigationService';
 describe('NavigationService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Drain any navigation the previous test left in the pending slot
+    // (isReady is a cleared mock returning undefined, so this never dispatches).
+    NavigationService.flushPendingNavigation();
+    jest.clearAllMocks();
   });
 
   describe('navigate', () => {
@@ -56,10 +60,57 @@ describe('NavigationService', () => {
       expect(navigationRef.dispatch).toHaveBeenCalled();
     });
 
-    it('does nothing when not ready', () => {
+    it('does not dispatch when not ready', () => {
       (navigationRef.isReady as jest.Mock).mockReturnValue(false);
       NavigationService.navigate('Home');
       expect(navigationRef.dispatch).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('pending navigation / flushPendingNavigation', () => {
+    it('queues a not-ready navigate and dispatches it once on flush', () => {
+      (navigationRef.isReady as jest.Mock).mockReturnValue(false);
+      NavigationService.navigate('Notifications', { category: 'PANTRY' });
+      expect(navigationRef.dispatch).not.toHaveBeenCalled();
+
+      (navigationRef.isReady as jest.Mock).mockReturnValue(true);
+      NavigationService.flushPendingNavigation();
+      expect(CommonActions.navigate).toHaveBeenCalledWith('Notifications', {
+        category: 'PANTRY',
+      });
+      expect(navigationRef.dispatch).toHaveBeenCalledTimes(1);
+
+      // Slot is consumed — a second flush dispatches nothing
+      NavigationService.flushPendingNavigation();
+      expect(navigationRef.dispatch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps only the latest pre-ready navigation (last wins)', () => {
+      (navigationRef.isReady as jest.Mock).mockReturnValue(false);
+      NavigationService.navigate('Pantry');
+      NavigationService.navigate('ShoppingList', { listId: 'l-2' });
+
+      (navigationRef.isReady as jest.Mock).mockReturnValue(true);
+      NavigationService.flushPendingNavigation();
+      expect(navigationRef.dispatch).toHaveBeenCalledTimes(1);
+      expect(CommonActions.navigate).toHaveBeenCalledWith('ShoppingList', {
+        listId: 'l-2',
+      });
+    });
+
+    it('flush with an empty slot is a no-op', () => {
+      (navigationRef.isReady as jest.Mock).mockReturnValue(true);
+      NavigationService.flushPendingNavigation();
+      expect(navigationRef.dispatch).not.toHaveBeenCalled();
+    });
+
+    it('ready-state navigate does not populate the slot', () => {
+      (navigationRef.isReady as jest.Mock).mockReturnValue(true);
+      NavigationService.navigate('Home');
+      expect(navigationRef.dispatch).toHaveBeenCalledTimes(1);
+
+      NavigationService.flushPendingNavigation();
+      expect(navigationRef.dispatch).toHaveBeenCalledTimes(1);
     });
   });
 

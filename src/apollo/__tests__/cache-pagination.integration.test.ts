@@ -978,13 +978,13 @@ describe('cache pagination integration', () => {
 
   // =========================================================================
   // Section E: Query.recipes via mergeConnectionByNodeId()
-  //   keyArgs = ['category', 'difficulty'], cursor arg = 'after'
+  //   keyArgs = ['filters'], cursor arg = 'after'
   // =========================================================================
 
   describe('Query.recipes (after arg)', () => {
     const QUERY = gql`
-      query GetRecipes($after: String) {
-        recipes(after: $after) {
+      query GetRecipes($after: String, $filters: RecipeFilters) {
+        recipes(after: $after, filters: $filters) {
           edges {
             node {
               id
@@ -1076,6 +1076,64 @@ describe('cache pagination integration', () => {
 
       expect(readEdges(cache)).toHaveLength(1);
       expect(readEdges(cache)[0].node.id).toBe('r-1');
+    });
+
+    it('keeps different filter sets in distinct cache entries', () => {
+      const cache = makeCache();
+
+      // Unfiltered list
+      writeRecipes(
+        cache,
+        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
+        { hasNextPage: false, endCursor: 'rc2' },
+      );
+      // Filtered list — must not touch the unfiltered entry
+      writeRecipes(
+        cache,
+        [recipeEdge('r-9', 'Tiramisu')],
+        { hasNextPage: false, endCursor: 'rc9' },
+        { filters: { category: 'DESSERT' } },
+      );
+
+      const unfiltered = readEdges(cache).map(e => e.node.id);
+      expect(unfiltered).toEqual(['r-1', 'r-2']);
+
+      const filtered = cache.readQuery<RecipesResult>({
+        query: QUERY,
+        variables: { filters: { category: 'DESSERT' } },
+      });
+      expect(filtered?.recipes?.edges.map(e => e.node.id)).toEqual(['r-9']);
+    });
+
+    it('variable-less writes and reads resolve the same entry (writer symmetry)', () => {
+      const cache = makeCache();
+
+      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
+        hasNextPage: false,
+        endCursor: 'rc1',
+      });
+
+      // cache.updateQuery({ query }) with no variables — the
+      // recipeCacheWriters pattern — must land on the entry the
+      // variable-less read resolves.
+      cache.updateQuery<RecipesResult>({ query: QUERY }, data =>
+        data?.recipes
+          ? {
+              recipes: {
+                ...data.recipes,
+                edges: [
+                  ...data.recipes.edges,
+                  {
+                    __typename: 'RecipeEdge',
+                    node: { __typename: 'Recipe', id: 'r-2', name: 'Salad' },
+                  },
+                ],
+              },
+            }
+          : data,
+      );
+
+      expect(readEdges(cache).map(e => e.node.id)).toEqual(['r-1', 'r-2']);
     });
   });
 

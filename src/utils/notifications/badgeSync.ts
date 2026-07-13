@@ -24,7 +24,34 @@ const applyBadgeCount = (count: number): void => {
   });
 };
 
-export const setupBadgeSync = (): (() => void) =>
-  useStore.subscribe(state => state.unreadCount, applyBadgeCount, {
-    fireImmediately: true,
-  });
+export const setupBadgeSync = (): (() => void) => {
+  // Never apply a badge before hydration: the pre-hydration `unreadCount` is 0,
+  // so a `fireImmediately` apply at every JS start (including headless launches)
+  // would stomp a server-set badge to 0. Gate the count sync on `isHydrated`,
+  // and apply the real count once when hydration completes.
+  const syncIfHydrated = (count: number): void => {
+    if (useStore.getState().isHydrated) applyBadgeCount(count);
+  };
+
+  // Warm re-subscribe (already hydrated) applies immediately via fireImmediately;
+  // a cold start no-ops here until hydration.
+  const unsubscribeCount = useStore.subscribe(
+    state => state.unreadCount,
+    syncIfHydrated,
+    { fireImmediately: true },
+  );
+
+  // Cold start: apply the hydrated count once the flag flips, covering the case
+  // where `unreadCount` doesn't change during hydration (e.g. persisted 0).
+  const unsubscribeHydration = useStore.subscribe(
+    state => state.isHydrated,
+    hydrated => {
+      if (hydrated) applyBadgeCount(useStore.getState().unreadCount);
+    },
+  );
+
+  return () => {
+    unsubscribeCount();
+    unsubscribeHydration();
+  };
+};

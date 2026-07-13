@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { render, screen } from '@testing-library/react-native';
-import { Gesture } from 'react-native-gesture-handler';
+import { usePanGesture } from 'react-native-gesture-handler';
 import { Text } from '#components/atoms/Text';
 import { scheduleOnRN } from 'react-native-worklets';
 import { ToastProvider, type ToastType } from '../Toast';
@@ -17,11 +17,13 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-const PanMock = Gesture.Pan as unknown as jest.Mock;
+const usePanGestureMock = usePanGesture as unknown as jest.Mock;
 const scheduleOnRNMock = scheduleOnRN as unknown as jest.Mock;
 
+// Each render calls usePanGesture(config); the mock returns the config, so the
+// latest result carries the gesture's props + callbacks (onUpdate/onDeactivate).
 const getLatestPanGesture = () => {
-  const results = PanMock.mock.results;
+  const results = usePanGestureMock.mock.results;
   return results[results.length - 1].value;
 };
 
@@ -115,7 +117,7 @@ describe('ToastProvider', () => {
 
   describe('swipe-to-dismiss gesture', () => {
     beforeEach(() => {
-      PanMock.mockClear();
+      usePanGestureMock.mockClear();
       scheduleOnRNMock.mockClear();
     });
 
@@ -126,7 +128,7 @@ describe('ToastProvider', () => {
         </ToastProvider>,
       );
       const gesture = getLatestPanGesture();
-      expect(gesture.minDistance).toHaveBeenCalledWith(10);
+      expect(gesture.minDistance).toBe(10);
     });
 
     it('dismisses on upward swipe past threshold', () => {
@@ -136,7 +138,7 @@ describe('ToastProvider', () => {
         </ToastProvider>,
       );
       const gesture = getLatestPanGesture();
-      const onEnd = gesture.onEnd.mock.calls[0][0];
+      const onEnd = gesture.onDeactivate;
 
       onEnd({ translationY: -80, translationX: 0 });
 
@@ -151,7 +153,7 @@ describe('ToastProvider', () => {
         </ToastProvider>,
       );
       const gesture = getLatestPanGesture();
-      const onEnd = gesture.onEnd.mock.calls[0][0];
+      const onEnd = gesture.onDeactivate;
 
       onEnd({ translationY: 0, translationX: 80 });
 
@@ -165,7 +167,7 @@ describe('ToastProvider', () => {
         </ToastProvider>,
       );
       const gesture = getLatestPanGesture();
-      const onEnd = gesture.onEnd.mock.calls[0][0];
+      const onEnd = gesture.onDeactivate;
 
       onEnd({ translationY: -20, translationX: 10 });
 
@@ -179,7 +181,7 @@ describe('ToastProvider', () => {
         </ToastProvider>,
       );
       const gesture = getLatestPanGesture();
-      const onEnd = gesture.onEnd.mock.calls[0][0];
+      const onEnd = gesture.onDeactivate;
 
       onEnd({ translationY: 100, translationX: 0 });
 
