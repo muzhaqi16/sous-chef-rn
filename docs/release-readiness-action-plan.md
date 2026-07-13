@@ -85,6 +85,15 @@ Date: 2026-07-12. Scope: full review of the dev → main release PR (327 files, 
 
 ## Pre-submit release validation checklist
 
+> **Device-smoke results 2026-07-13** (Android, Galaxy S22 Ultra / Android 16; via OpenSpec change `validate-p0-p1-device-smokes`):
+> - ⛔️ **NEW P0 — Android build was broken across the branch:** `react-native-unistyles@3.3.0` calls `facebook::react::parseUnprocessedTransformOriginString`, **removed in RN 0.83.9**; CI Android failed since the 2026-07-11 unistyles bump (`stg-v4.1.0`/`v4.1.1` red; last green 2026-06-26). No fixed unistyles release exists. Fix owned separately (user). This must be green before any Android release.
+> - ✅ **P0-2 offline-add survives reconnect (checklist #4, Android):** added "Fasule" offline → reconnect with list on screen → item stayed continuously visible through queue drain + first-page refetch, no manual refresh (`SyncShoppingListItem` replayed 632ms).
+> - ✅ **P1-5 restored-session re-registration:** cold-start with keychain-restored session fired `RegisterDevice [cold]` with the real FCM token, no login.
+> - ✅ **FCM init / token:** Firebase initialized; real device token acquired (`dvmFE2gWTtaB2oB3_09wck:APA91b…`).
+> - 〜 **P1-7 kill-mid-replay (checklist #4):** durability confirmed (5 offline adds all replayed, zero loss) but the sub-second drain outran the kill — the `PROCESSING`-strand recovery stays **unit-verified only** (device-inconclusive).
+> - ⏳ **P1-4 Android Notifee killed-app tap (checklist #3):** not run — needs an FCM send path (service-account / server key).
+> - ⏳ **iOS legs (checklist #2, P0-1/P1-3):** blocked — no physical iOS device attached.
+
 1. `npm ci`, then re-run `npm run typecheck && npm run lint && npm test` (today's green run validated the stale alphas).
 2. iOS device smoke: release build boots and receives an APNs token (the static `@react-native-firebase/messaging` JS import with iOS pods excluded is the one unguarded surface); killed-app notification tap routes correctly **after** P0-1/P1-3 fixes.
 3. Android device smoke: killed-app data-only (Notifee) tap routes after P1-4; release build fails without `google-services.json` after P2-14.
