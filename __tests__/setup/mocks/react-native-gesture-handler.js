@@ -65,6 +65,16 @@ jest.mock('react-native-gesture-handler', () => {
       Exclusive: jest.fn((...gestures) => gestures),
       Race: jest.fn((...gestures) => gestures),
     },
+    // v3 hook-based gesture API: each hook returns the config it was passed so
+    // tests can read config props (minDistance, activeOffsetX, enabled) and
+    // invoke config callbacks (onActivate, onUpdate, onDeactivate) directly.
+    usePanGesture: jest.fn(config => config),
+    usePinchGesture: jest.fn(config => config),
+    useTapGesture: jest.fn(config => config),
+    useLongPressGesture: jest.fn(config => config),
+    useSimultaneousGestures: jest.fn((...gestures) => gestures),
+    useExclusiveGestures: jest.fn((...gestures) => gestures),
+    useCompetingGestures: jest.fn((...gestures) => gestures),
     GestureDetector: View,
   };
 });

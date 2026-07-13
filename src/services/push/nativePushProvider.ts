@@ -11,18 +11,18 @@
  */
 
 import { Platform } from 'react-native';
-// NOTE: react-native-firebase v25 JSDoc-marks its messaging API
-// (getMessaging / requestPermission / AuthorizationStatus) as deprecated ahead
-// of a future redesign, but there is no non-deprecated equivalent in this
-// version — the `no-deprecated` lint warnings here are unavoidable and benign.
-// See invertase/react-native-firebase#6283.
+// Notification permission is requested through the shared PermissionService
+// (Notifee + POST_NOTIFICATIONS on Android 13+) rather than the messaging
+// module's own permission API, which react-native-firebase deprecated in favor
+// of a dedicated permissions library. See invertase/react-native-firebase#6283.
+// The token plumbing below (getMessaging / getToken / onTokenRefresh) is not
+// deprecated and stays on the messaging modular API.
 import {
   getMessaging,
   getToken,
   onTokenRefresh,
-  requestPermission,
-  AuthorizationStatus,
 } from '@react-native-firebase/messaging';
+import { PermissionService } from '#/services/permissions/PermissionService';
 import { logger } from '#/utils/environment';
 import type { PushTokenProvider } from './pushTokenProvider';
 
@@ -30,11 +30,8 @@ export const nativePushProvider: PushTokenProvider = {
   async requestPermission() {
     if (Platform.OS !== 'android') return false;
     try {
-      const status = await requestPermission(getMessaging());
-      return (
-        status === AuthorizationStatus.AUTHORIZED ||
-        status === AuthorizationStatus.PROVISIONAL
-      );
+      const status = await PermissionService.request('notifications');
+      return status === 'granted';
     } catch (error) {
       logger.error('FCM requestPermission failed:', error);
       return false;
