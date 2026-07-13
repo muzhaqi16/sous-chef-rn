@@ -10,7 +10,7 @@ import {
   type DisplayIngredient,
 } from './useRecipeData';
 import {
-  AddItemsToShoppingListDocument,
+  AddItemsToShoppingListFromRecipeDocument,
   GetShoppingListsLiteDocument,
   CreateShoppingListDocument,
 } from './useRecipeDetail.generated';
@@ -165,7 +165,7 @@ export function useRecipeShoppingList({
   );
 
   const [addItemsToShoppingListMutation] = useMutation(
-    AddItemsToShoppingListDocument,
+    AddItemsToShoppingListFromRecipeDocument,
     {
       update: (cache, { data }, { variables }) => {
         const payload = data?.addItemsToShoppingList;

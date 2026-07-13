@@ -1,10 +1,20 @@
 import type { DocumentNode } from 'graphql';
 import { storage } from '#storage/mmkv';
-import { QueuedMutation, QueueStats, QueueStatus } from './types';
+import {
+  QueueCapacityError,
+  QueuedMutation,
+  QueueStats,
+  QueueStatus,
+} from './types';
 import { logger } from '#/utils/environment';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
+
+// Hard cap on total queued mutations across all users. When reached, terminal
+// (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
+// rejects the enqueue rather than dropping a PENDING op mid dependency chain.
+const MAX_QUEUE_SIZE = 100;
 
 /**
  * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
@@ -196,11 +206,25 @@ export class QueueStore {
       }
     }
 
-    // Regular add logic for non-move mutations or first move
-    // Check queue size limit
-    if (queue.length >= 100) {
-      logger.warn('Queue size limit reached, removing oldest mutation');
-      queue.shift(); // Remove oldest
+    // Regular add logic for non-move mutations or first move.
+    // Enforce the queue cap without ever silently dropping a PENDING op:
+    // evict the oldest terminal (SUCCESS/FAILED) entry to make room — those are
+    // done and safe to drop. Dropping a PENDING op instead would break a
+    // create→update dependency chain (the update replays against a create that
+    // never happened). If nothing terminal exists, the queue is full of
+    // un-synced work: reject the enqueue honestly.
+    if (queue.length >= MAX_QUEUE_SIZE) {
+      const evictIndex = queue.findIndex(
+        m =>
+          m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED,
+      );
+      if (evictIndex === -1) {
+        logger.warn(
+          'Queue at capacity with no terminal entries — rejecting enqueue',
+        );
+        throw new QueueCapacityError();
+      }
+      queue.splice(evictIndex, 1); // Remove the oldest terminal entry
     }
 
     queue.push(mutation);

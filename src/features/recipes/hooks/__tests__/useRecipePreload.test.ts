@@ -14,6 +14,7 @@ import {
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { useRecipePreload, type PreloadedRecipe } from '../useRecipePreload';
+import { makeCache } from '#/apollo/cache';
 
 jest.mock('#/services/recipeApi/SpoonacularService', () => ({
   spoonacularService: { getRecipePriceBreakdown: jest.fn() },
@@ -494,8 +495,7 @@ const SAVED_RECIPE_FRAGMENT = gql`
  * resolves) and an empty MySavedRecipes connection (so updateQuery can prepend
  * the optimistic edge).
  */
-function seedFavoriteCache() {
-  const cache = new InMemoryCache();
+function seedFavoriteCache(cache: InMemoryCache = new InMemoryCache()) {
   cache.writeQuery<MySavedRecipesQuery>({
     query: MySavedRecipesDocument,
     data: {
@@ -519,15 +519,19 @@ function seedFavoriteCache() {
   return cache;
 }
 
+// Resolve entity ids via cache.identify so the helpers work with both the bare
+// InMemoryCache (`Recipe:backend-1`) and makeCache (`Recipe:{"id":"backend-1"}`)
+// key formats.
 const readSavedDetails = (cache: InMemoryCache) =>
   cache.readFragment<{ savedDetails: { id: string } | null }>({
-    id: 'Recipe:backend-1',
+    id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }) ?? '',
     fragment: SAVED_DETAILS_FRAGMENT,
   })?.savedDetails;
 
 const readSavedRecipe = (cache: InMemoryCache) =>
   cache.readFragment<{ id: string; recipe: { id: string } }>({
-    id: `SavedRecipe:${SAVED_RECIPE_ID}`,
+    id:
+      cache.identify({ __typename: 'SavedRecipe', id: SAVED_RECIPE_ID }) ?? '',
     fragment: SAVED_RECIPE_FRAGMENT,
   });
 
@@ -543,10 +547,13 @@ const readSavedEdges = (cache: InMemoryCache) =>
  * the PK) so the online `update` callback's dedup-by-id guard fires. `rejected`
  * resolves a refusal union member (revert path).
  */
+const SERVER_SAVED_ID = 'server-saved-2';
+
 const favoriteMock = (
   outcome:
     | { kind: 'queued' }
     | { kind: 'created' }
+    | { kind: 'divergent' }
     | { kind: 'rejected'; __typename: 'ValidationError' },
 ): MockedResponse => ({
   request: {
@@ -558,12 +565,15 @@ const favoriteMock = (
       addRecipeToFavorites:
         outcome.kind === 'queued'
           ? null
-          : outcome.kind === 'created'
+          : outcome.kind === 'created' || outcome.kind === 'divergent'
           ? {
               __typename: 'AddRecipeToFavoritesPayload',
               savedRecipe: {
                 __typename: 'SavedRecipe',
-                id: SAVED_RECIPE_ID,
+                id:
+                  outcome.kind === 'divergent'
+                    ? SERVER_SAVED_ID
+                    : SAVED_RECIPE_ID,
                 recipeId: 'backend-1',
                 userId: 'u1',
                 folder: null,
@@ -687,6 +697,44 @@ describe('useRecipePreload — local-first favorite', () => {
     expect(conn?.edges.filter(e => e.node.id === SAVED_RECIPE_ID)).toHaveLength(
       1,
     );
+    expect(conn?.totalCount).toBe(1);
+  });
+
+  it('reconciles a divergent server id (recipe already favorited elsewhere)', async () => {
+    // The recipe was already favorited on another device, so the server resolves
+    // to an EXISTING SavedRecipe whose id differs from the client-minted one.
+    // The stale client-id entity must be evicted (its dangling edge drops) and
+    // savedDetails re-pointed — leaving exactly one server-id edge, no phantom.
+    // Uses the real cache policies so the self-healing connection read applies.
+    const cache = seedFavoriteCache(makeCache());
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      cache,
+      operationMocks: [
+        buildUpsertMock(
+          { id: 'backend-1', name: 'Test Recipe', imageUrl: null },
+          true,
+        ),
+        favoriteMock({ kind: 'divergent' }),
+      ],
+    });
+
+    await act(async () => {
+      await result.current.saveRecipeToFavorites(makeSpoonacularRecipe());
+    });
+
+    // The optimistic client-id SavedRecipe is evicted.
+    expect(readSavedRecipe(cache)).toBeNull();
+
+    // savedDetails points at the server row, not the dangling client id.
+    expect(readSavedDetails(cache)).toEqual(
+      expect.objectContaining({ id: SERVER_SAVED_ID }),
+    );
+
+    // Exactly one edge remains — the server id — with no double count.
+    const conn = readSavedEdges(cache);
+    const ids = conn?.edges.map(e => e.node.id) ?? [];
+    expect(ids).toEqual([SERVER_SAVED_ID]);
+    expect(ids).not.toContain(SAVED_RECIPE_ID);
     expect(conn?.totalCount).toBe(1);
   });
 });

@@ -797,6 +797,34 @@ export function safeEvict(
 }
 
 /**
+ * Reconcile a client-minted id with the server-assigned id after a create.
+ *
+ * When a mutation sends a client-minted PK (`input.id`) but the server resolves
+ * the create to an *existing* row (already created elsewhere / catalog merge),
+ * the returned id differs from the client cuid we wrote optimistically. Evict
+ * the stale client-id entity so its now-dangling connection edge is dropped by
+ * the self-healing read and the single server row stands — no duplicate rows,
+ * no phantom entity.
+ *
+ * `clientId` MUST be read off the mutation's own `variables` at the call site
+ * (never a shared ref) so this stays correct when creates overlap. A no-op when
+ * the server echoed the same id (the honored-client-id path).
+ *
+ * @example
+ * adoptServerEntityId(cache, 'SavedRecipe', savedRecipe.id, variables?.input?.id);
+ */
+export function adoptServerEntityId(
+  cache: ApolloCache,
+  typename: string,
+  serverId: string,
+  clientId: string | null | undefined,
+): void {
+  if (clientId && serverId !== clientId) {
+    safeEvict(cache, typename, clientId);
+  }
+}
+
+/**
  * Safely evict multiple entities from cache, running GC once at the end.
  *
  * More efficient than calling safeEvict() in a loop (single GC pass).

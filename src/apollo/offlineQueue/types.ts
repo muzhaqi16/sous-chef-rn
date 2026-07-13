@@ -13,6 +13,22 @@ export enum QueueStatus {
 }
 
 /**
+ * Thrown by `queueStore.addMutation` when the queue is at capacity and holds no
+ * terminal (SUCCESS/FAILED) entry to evict — i.e. it is full of un-synced work.
+ * Rejecting the enqueue is deliberate: silently dropping the oldest PENDING op
+ * would break create→update dependency chains. Callers can surface this as a
+ * "too many unsynced changes" message.
+ */
+export class QueueCapacityError extends Error {
+  constructor(
+    message = 'Too many unsynced changes. Reconnect to sync before making more changes.',
+  ) {
+    super(message);
+    this.name = 'QueueCapacityError';
+  }
+}
+
+/**
  * Error information for failed mutations
  */
 export interface QueueError {

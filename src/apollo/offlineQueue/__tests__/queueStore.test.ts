@@ -1,6 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
-import { QueuedMutation, QueueStatus } from '../types';
+import { QueueCapacityError, QueuedMutation, QueueStatus } from '../types';
 import { storage } from '#storage/mmkv';
 
 // The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
@@ -98,20 +98,39 @@ describe('QueueStore', () => {
       expect(result[0].id).toBe('add-1');
     });
 
-    it('enforces queue size limit of 100 by removing oldest', () => {
-      // Fill the queue to 100
-      for (let i = 0; i < 100; i++) {
-        store.addMutation(
-          makeMutation({ id: `fill-${i}`, operationName: 'FillMutation' }),
-        );
+    it('evicts the oldest terminal entry at capacity, preserving PENDING ops', () => {
+      // Oldest entry is terminal (SUCCESS); the rest are un-synced PENDING.
+      store.addMutation(
+        makeMutation({ id: 'done-0', status: QueueStatus.SUCCESS }),
+      );
+      for (let i = 0; i < 99; i++) {
+        store.addMutation(makeMutation({ id: `pending-${i}` }));
       }
 
-      // Adding the 101st should remove fill-0
+      // The 101st enqueue evicts the terminal entry, never a PENDING op.
       store.addMutation(makeMutation({ id: 'overflow' }));
+
       const all = store.getMutationsForUser('user-1');
       expect(all).toHaveLength(100);
-      expect(all.find(m => m.id === 'fill-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'done-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'pending-0')).toBeDefined();
       expect(all.find(m => m.id === 'overflow')).toBeDefined();
+    });
+
+    it('rejects the enqueue when the queue is full of un-synced PENDING work', () => {
+      for (let i = 0; i < 100; i++) {
+        store.addMutation(makeMutation({ id: `fill-${i}` }));
+      }
+
+      expect(() => store.addMutation(makeMutation({ id: 'overflow' }))).toThrow(
+        QueueCapacityError,
+      );
+
+      // No PENDING op was dropped and the rejected op was not added.
+      const all = store.getMutationsForUser('user-1');
+      expect(all).toHaveLength(100);
+      expect(all.find(m => m.id === 'fill-0')).toBeDefined();
+      expect(all.find(m => m.id === 'overflow')).toBeUndefined();
     });
 
     describe('MoveShoppingListItem coalescing', () => {
