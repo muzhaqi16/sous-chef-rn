@@ -8,6 +8,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 import { gql, InMemoryCache } from '@apollo/client';
 import { makeCache } from '../cache';
 import { queueStore } from '../offlineQueue/queueStore';
+import { QueueStatus } from '../offlineQueue/types';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -640,6 +641,53 @@ describe('cache', () => {
 
       expect(readIds(cache)).toEqual(['server-1']);
       spy.mockRestore();
+    });
+
+    it('preserves an offline batch-add edge through a REAL queue entry (no spy)', () => {
+      // Cross-seam: the merge guard's real getPendingClientIds() must extract
+      // the client id from the batch AddItemsToShoppingListInput shape every
+      // shopping-list add enqueues — a drift in that id-shape contract passes
+      // the spy-based tests above and the queueStore unit tests while still
+      // dropping offline adds in production.
+      queueStore.setCurrentUserId('cross-seam-user');
+      queueStore.addMutation({
+        id: 'cross-seam-batch-add',
+        userId: 'cross-seam-user',
+        operationName: 'AddItemsToShoppingList',
+        mutation: gql`
+          mutation AddItemsToShoppingList {
+            __typename
+          }
+        `,
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ id: 'cuid-batch-pending', name: 'Milk' }],
+          },
+        },
+        status: QueueStatus.PENDING,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        retryCount: 0,
+        maxRetries: 3,
+        requiresAuth: true,
+      });
+
+      const cache = makeCache();
+      writeSinglePage(cache, [
+        { id: 'server-1', name: 'Eggs' },
+        { id: 'cuid-batch-pending', name: 'Milk' },
+      ]);
+      // Authoritative refetch lands before the queue drains the create.
+      writeSinglePage(cache, [{ id: 'server-1', name: 'Eggs' }]);
+
+      expect(readIds(cache)).toEqual(
+        expect.arrayContaining(['server-1', 'cuid-batch-pending']),
+      );
+      expect(readIds(cache)).toHaveLength(2);
+
+      queueStore.clearAllQueues();
+      queueStore.clearCurrentUserId();
     });
   });
 

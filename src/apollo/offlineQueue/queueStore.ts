@@ -15,6 +15,16 @@ type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
 };
 
 /**
+ * Add `value` to `ids` when it is a non-empty string. Queued variables are
+ * duck-typed (`OperationVariables` spans every queued operation and rides a
+ * persistence boundary), so client-id extraction guards at runtime instead of
+ * trusting a compile-time shape.
+ */
+const addIfClientId = (ids: Set<string>, value: unknown): void => {
+  if (typeof value === 'string' && value) ids.add(value);
+};
+
+/**
  * Persistent queue store using MMKV
  * Provides user-scoped mutation queuing with atomic operations
  */
@@ -279,29 +289,17 @@ export class QueueStore {
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      for (const mutation of this.getPendingMutationsForUser(userId)) {
-        const variables = mutation.variables as
-          | {
-              id?: unknown;
-              input?: {
-                id?: unknown;
-                itemId?: unknown;
-                items?: Array<{ id?: unknown } | null | undefined>;
-              };
-            }
-          | undefined;
-        const candidate =
-          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
-        if (typeof candidate === 'string' && candidate) ids.add(candidate);
-
+      for (const { variables } of this.getPendingMutationsForUser(userId)) {
+        addIfClientId(
+          ids,
+          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
+        );
+        // Batch-shaped creates (AddItemsToShoppingListInput) mint one client
+        // id per item. Array.isArray guards persisted entries from older
+        // builds whose shape may not match what the app enqueues today.
         const items = variables?.input?.items;
         if (Array.isArray(items)) {
-          for (const item of items) {
-            const itemCandidate = item?.id;
-            if (typeof itemCandidate === 'string' && itemCandidate) {
-              ids.add(itemCandidate);
-            }
-          }
+          for (const item of items) addIfClientId(ids, item?.id);
         }
       }
     }
