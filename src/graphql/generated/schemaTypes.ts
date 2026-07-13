@@ -1765,8 +1765,11 @@ export type CreateMealPlanItemInput = {
   fat?: InputMaybe<Scalars['Float']['input']>;
   /**
    * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
-   * On a retry that collides with the (mealPlanId, date, mealType, recipeId) unique
-   * key, the existing row is returned (its original id wins).
+   * A retry converges on the existing row (its original id wins): recipe meals via
+   * the (mealPlanId, date, mealType, recipeId) natural key, and custom meals (no
+   * recipeId) via this client-minted id. Convergence is scoped to the target meal
+   * plan, so an id colliding with another plan's item conflicts (never returns a
+   * foreign row).
    */
   id?: InputMaybe<Scalars['ID']['input']>;
   /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
