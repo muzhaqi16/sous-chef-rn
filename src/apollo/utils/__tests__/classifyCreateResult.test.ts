@@ -30,6 +30,43 @@ describe('classifyCreateResult', () => {
     expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('rejected');
   });
 
+  it("returns 'created' for a replayed client-PK create (ConflictError code IDEMPOTENT_REPLAY)", () => {
+    // An online double-tap / retry-after-lost-response re-creates a row whose
+    // client-minted PK already exists; the server signals a safe replay with the
+    // distinct IDEMPOTENT_REPLAY code. The row is already on the server → success.
+    const result = {
+      data: {
+        createPantryItem: {
+          __typename: 'ConflictError',
+          code: 'IDEMPOTENT_REPLAY',
+          message: 'A pantry item with this ID already exists',
+        },
+      },
+    };
+    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('created');
+  });
+
+  it("returns 'rejected' for a generic ConflictError (code CONFLICT — real conflict, e.g. duplicate name)", () => {
+    // Must NOT converge: a genuine duplicate-name / business conflict carries the
+    // generic CONFLICT code, and the row was never created — reverting is correct.
+    const result = {
+      data: {
+        createShoppingList: {
+          __typename: 'ConflictError',
+          code: 'CONFLICT',
+          message: 'A shopping list with this name already exists',
+        },
+      },
+    };
+    expect(
+      classifyCreateResult(
+        result,
+        'createShoppingList',
+        'CreateShoppingListPayload',
+      ),
+    ).toBe('rejected');
+  });
+
   it("returns 'rejected' when a GraphQL error is surfaced", () => {
     expect(
       classifyCreateResult({ error: new Error('boom') }, KEY, SUCCESS),

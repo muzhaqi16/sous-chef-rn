@@ -5692,6 +5692,7 @@ input MoveShoppingItemToPantryInput {
   actualUnitId: ID
   """Expiration date (optional)"""
   expiresAt: DateTime
+  idempotencyKey: ID
   """Additional notes"""
   notes: String
   """ID of the target pantry"""

@@ -5839,6 +5839,7 @@ export type MoveShoppingItemToPantryInput = {
   actualUnitId?: InputMaybe<Scalars['ID']['input']>;
   /** Expiration date (optional) */
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** Additional notes */
   notes?: InputMaybe<Scalars['String']['input']>;
   /** ID of the target pantry */

@@ -6,7 +6,11 @@
  * the rule must be identical everywhere — this centralizes it so the branches
  * can't drift between call sites:
  *
- *  - `'created'`  — the server returned the success payload. Confirm and reconcile.
+ *  - `'created'`  — the server returned the success payload, OR a
+ *                   `ConflictError(code: IDEMPOTENT_REPLAY)` — a client-PK create
+ *                   replayed after it already committed (an online double-tap, or
+ *                   a retry whose first response was lost). Both mean the row is
+ *                   on the server: confirm and keep the optimistic item.
  *  - `'queued'`   — no data and no error: the create was queued while offline or
  *                   the API was unreachable. It replays later (keyed by the item's
  *                   id); keep the optimistic item and treat it as success.
@@ -31,11 +35,23 @@ export function classifyCreateResult(
 
   const data = result.data as Record<string, unknown> | null | undefined;
   const payload = data?.[payloadKey] as
-    | { __typename?: string }
+    | { __typename?: string; code?: string }
     | null
     | undefined;
 
   if (payload?.__typename === successTypename) return 'created';
+  // A client-PK create replayed after it already committed (an online double-tap,
+  // or a retry whose first response was lost) resolves as
+  // ConflictError(code: IDEMPOTENT_REPLAY) — the row is already on the server, so
+  // it's a success, not a refusal. Match the CODE (mirrors the offline queue's
+  // classifyReplayResult), never the message, and never a generic CONFLICT (a
+  // real duplicate-name / business conflict → rejected below).
+  if (
+    payload?.__typename === 'ConflictError' &&
+    payload.code === 'IDEMPOTENT_REPLAY'
+  ) {
+    return 'created';
+  }
   // A surfaced error, or a non-success payload object (e.g. ConflictError /
   // ValidationError) → the server refused it.
   if (result.error || payload) return 'rejected';
