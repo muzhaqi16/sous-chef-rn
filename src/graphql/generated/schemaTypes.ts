@@ -1787,6 +1787,14 @@ export type CreateMealPlanItemInput = {
 
 export type CreateMealPlanItemPayload = {
   __typename: 'CreateMealPlanItemPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing meal-plan item (an idempotent
+   * replay, or a second device) rather than creating a new one — recipe meals
+   * converge on the natural key (mealPlanId, date, mealType, recipeId), custom
+   * meals on the client-minted id. The canonical, API-wide replay flag; clients
+   * treat converged=true as already-synced.
+   */
+  converged: Scalars['Boolean']['output'];
   mealPlan: Maybe<MealPlan>;
   mealPlanItem: MealPlanItem;
 };
