@@ -2005,6 +2005,8 @@ export type CreatePurchaseInput = {
   currencyId: Scalars['ID']['input'];
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
   expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   itemId: Scalars['ID']['input'];
   originalPrice?: InputMaybe<Scalars['Float']['input']>;
   purchaseDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -2059,6 +2061,13 @@ export type CreateRecipeResult = ConflictError | CreateRecipePayload | Forbidden
 
 export type CreateRecipeReviewInput = {
   comment?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+   * Supplying it lets the server tell a replay of your own queued review
+   * (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
+   * review the same recipe twice (CONFLICT — a real refusal).
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   rating: Scalars['Int']['input'];
   recipeId: Scalars['ID']['input'];
 };

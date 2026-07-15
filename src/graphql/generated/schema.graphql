@@ -2117,6 +2117,10 @@ input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
   expirationDate: DateTime
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   itemId: ID!
   originalPrice: Float
   purchaseDate: DateTime
@@ -2171,6 +2175,13 @@ union CreateRecipeResult = ConflictError | CreateRecipePayload | ForbiddenError 
 
 input CreateRecipeReviewInput {
   comment: String
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  Supplying it lets the server tell a replay of your own queued review
+  (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
+  review the same recipe twice (CONFLICT — a real refusal).
+  """
+  id: ID
   rating: Int!
   recipeId: ID!
 }
