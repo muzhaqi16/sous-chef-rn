@@ -2573,7 +2573,6 @@
     "failedTitle": "Couldn't send that",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
     "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
-    "brandHint": "Pick a brand from the list to suggest a change, or describe it in your note.",
     "suggestAction": "Suggest Edit",
     "editAction": "Edit"
   },

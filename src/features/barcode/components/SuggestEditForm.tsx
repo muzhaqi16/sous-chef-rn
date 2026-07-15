@@ -34,11 +34,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
 }) => {
   const { t } = useTranslation();
   const { snapshot, loading, error, refetch } = useItemForEdit(itemId);
-  const {
-    submitEdit,
-    resolveRoute,
-    loading: submitting,
-  } = useSuggestItemEdit();
+  const { submitEdit, loading: submitting } = useSuggestItemEdit();
 
   const handleSubmit = async (formData: AddItemSubmitPayload) => {
     if (!snapshot) return;
@@ -78,9 +74,7 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     <AddItemForm
       barcode={barcode}
       format={format}
-      mode={
-        resolveRoute(snapshot.visibility) === 'direct' ? 'directEdit' : 'edit'
-      }
+      mode={snapshot.canEdit ? 'directEdit' : 'edit'}
       initialData={buildInitialDataFromSnapshot(snapshot)}
       onSubmit={handleSubmit}
       onClose={onClose}

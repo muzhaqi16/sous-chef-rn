@@ -1717,6 +1717,10 @@ input CreateCookingLogInput {
   actualPrepTime: Int
   cookedAt: DateTime
   difficulty: Difficulty
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   imageUrl: String
   notes: String
   rating: Int
@@ -3574,7 +3578,14 @@ type ForgotPasswordPayload {
 union ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError
 
 input ForkRecipeInput {
+  """The SOURCE recipe to fork."""
   id: ID!
+  """
+  Optional client-generated permanent ID (CUID2) for the recipe CREATED by this
+  fork, for offline-first idempotency. Distinct from the id field above, which
+  identifies the recipe being forked FROM.
+  """
+  newRecipeId: ID
 }
 
 type ForkRecipePayload {
@@ -4189,6 +4200,25 @@ type Item {
   approvedBy: User
   baseDimension: BaseDimension
   brands: [ItemBrand!]!
+  """
+  Whether the CALLING user may write to this item directly with updateItem
+  (true for its creator and for admins). When false, propose changes with
+  suggestItemEdit instead — the two paths are mutually exclusive and both
+  hard-fail when picked wrongly, so route on this rather than inferring from
+  visibility:
+  
+      item.canEdit ? updateItem(...) : suggestItemEdit(...)
+  
+  A private item you do not own is never returned by the API at all, so
+  canEdit=false always means "suggest", never "you cannot do anything".
+  Resolved against the same predicate that updateItem enforces, so it stays
+  correct if that rule changes.
+  
+  Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
+  scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
+  one user's edit rights to another.
+  """
+  canEdit: Boolean!
   categories: [ItemCategory!]!
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
@@ -8893,6 +8923,12 @@ Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
 type ShoppingList {
+  """
+  Audit trail of who changed what on this list (adds, edits, purchases,
+  removals, collaborator changes). ADMIN-only bookkeeping surface — clients
+  drive incremental updates from the `shoppingListEvents` subscription, not
+  from this feed.
+  """
   activitiesConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListActivityOrderBy): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
   """

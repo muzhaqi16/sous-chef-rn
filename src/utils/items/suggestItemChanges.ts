@@ -1,12 +1,11 @@
-import {
-  Visibility,
-  type BaseDimension,
-  type ItemClassificationInput,
-  type ItemType,
-  type PackageInfoInput,
-  type ProductDetailsInput,
-  type StorageState,
-  type SuggestibleItemChangesInput,
+import type {
+  BaseDimension,
+  ItemClassificationInput,
+  ItemType,
+  PackageInfoInput,
+  ProductDetailsInput,
+  StorageState,
+  SuggestibleItemChangesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { UseItemForEdit_ItemFragment } from '#hooks/items/useItemForEdit.generated';
 import type { AddItemFormData } from './createItemMapping';
@@ -21,7 +20,14 @@ import type { AddItemFormInitialData } from '#/components/organisms/AddItemForm/
  */
 export interface EditableItemSnapshot {
   id: string;
-  visibility: Visibility;
+  /**
+   * Whether this user may write to the item directly. Viewer-scoped and
+   * resolved server-side against the exact predicate `updateItem` enforces —
+   * true for the item's creator and for admins. `false` always means "propose a
+   * suggestion", never a dead end: a private item you don't own is never
+   * returned at all.
+   */
+  canEdit: boolean;
   name: string;
   description?: string;
   type: ItemType;
@@ -38,8 +44,6 @@ export interface EditableItemSnapshot {
   baseDimension?: BaseDimension;
   imageUrl?: string;
 }
-
-export type ItemEditRoute = 'suggest' | 'direct';
 
 export interface ItemChangesDiff {
   changes: SuggestibleItemChangesInput;
@@ -77,7 +81,7 @@ export function itemToEditableSnapshot(
   const primaryBrand = item.brands[0]?.brand;
   return {
     id: item.id,
-    visibility: item.visibility,
+    canEdit: item.canEdit,
     name: item.name,
     description: nullableToUndefined(item.description),
     type: item.type,
@@ -97,25 +101,6 @@ export function itemToEditableSnapshot(
 }
 
 /**
- * Whether an edit should be proposed for review or written straight through.
- *
- * `Item` exposes no ownership signal (no `createdBy`, no `createdById` filter),
- * so visibility is the only field that can route this. Known cost: a PUBLIC item
- * the user created themselves goes through review. Accepted, because the
- * alternative is worse — `suggestItemEdit` rejects any non-PUBLIC item with a
- * ValidationError regardless of ownership, so routing a user's own private item
- * to `suggest` would hard-fail. `useSuggestItemEdit` falls back to `suggest`
- * when a `direct` write comes back ForbiddenError, which absorbs a wrong guess.
- */
-export function resolveItemEditRoute(
-  visibility: Visibility,
-  isAdmin: boolean,
-): ItemEditRoute {
-  if (isAdmin) return 'direct';
-  return visibility === Visibility.Public ? 'suggest' : 'direct';
-}
-
-/**
  * Minimal diff of a form submission against the item as it exists today.
  *
  * Emits ONLY changed fields. Absent keys inside a sub-input are left untouched
@@ -124,19 +109,19 @@ export function resolveItemEditRoute(
  * to the reviewing admin as something the contributor wants changed.
  *
  * Fields deliberately excluded, and why:
- * - `media`         — on approve, `media.imageUrl` is ignored and `media.images`
- *                     replaces every image row. Photos go live immediately via
- *                     `uploadItemImage` instead.
- * - `brand`         — silently ignored by `updateItem`; `brandOps` is the path
- *                     that actually applies.
- * - `tagOps`        — combining addTags + removeTags drops the adds, and tagOps
- *                     destructively overrides `classification.tags`. The form
- *                     prefills the full tag list, so a set-replace via
- *                     `classification.tags` is both simpler and correct.
+ * - `media`         — `media.images` is a set-replace that drops every row you
+ *                     omit. Photos are additive via `confirmItemImageUpload`
+ *                     and go live without review, which is what the flow wants,
+ *                     so nothing here needs `media.imageUrl` either.
+ * - `tagOps`        — composes with `classification.tags` rather than replacing
+ *                     it, but the form prefills the whole tag list, so a plain
+ *                     set-replace via `classification.tags` says the same thing
+ *                     with one field instead of three.
  * - `categoryIds`   — an empty array wipes all categories, and the form has no
  *                     category editor to diff against.
- * - `unitConfig` / `unitOps` / `storeSkuOps` — no round-trippable form surface;
- *                     see the hidden fields in AddItemForm's edit modes.
+ * - `unitConfig` / `unitOps` / `storeSkuOps` / `packageInfo.defaultConsume*` —
+ *                     no round-trippable form surface; see the hidden fields in
+ *                     AddItemForm's edit modes.
  *
  * Clearing a value is not expressible: an absent key means "no change", so a
  * blanked description or UPC is ignored rather than sent as a deletion. Users
@@ -233,15 +218,24 @@ export function buildSuggestibleItemChanges(
     changes.packageInfo = packageInfo;
   }
 
-  // Only an id-bearing brand is diffable: brandOps works in ids, so a
-  // free-typed brand name that matched nothing in autocomplete can't be
-  // expressed. AddItemForm surfaces a hint pointing those users at the note.
-  if (formData.brandId && formData.brandId !== original.brandId) {
-    changes.brandOps = {
-      addBrandIds: [formData.brandId],
-      ...(original.brandId ? { removeBrandIds: [original.brandId] } : {}),
-    };
-    changedFields.push('brandOps');
+  // `brand` resolves brandId, else finds-or-creates by brandName — the only way
+  // to name a brand that isn't in the catalog yet, so a free-typed brand is
+  // expressible. It is purely additive and never removes the brand already on
+  // the item, so replacing one means pairing it with brandOps.removeBrandIds.
+  const brandName = norm(formData.brandName);
+  const brandChanged = formData.brandId
+    ? formData.brandId !== original.brandId
+    : !!brandName && brandName !== norm(original.brandName);
+
+  if (brandChanged) {
+    changes.brand = formData.brandId
+      ? { brandId: formData.brandId }
+      : { brandName };
+    changedFields.push('brand');
+    if (original.brandId) {
+      changes.brandOps = { removeBrandIds: [original.brandId] };
+      changedFields.push('brandOps.removeBrandIds');
+    }
   }
 
   return {

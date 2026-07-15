@@ -4,15 +4,19 @@
 # the server rejects `{}` with ValidationError, so the hook blocks a no-op
 # submit before it reaches the wire (the 10/hour budget is too tight to burn).
 #
-# `media` is never present in `changes`: on approve, updateItem silently ignores
-# media.imageUrl and REPLACES every ItemImage row from media.images. Photos go
-# live immediately via uploadItemImage instead (any authed user, no review).
+# `media` is never present in `changes`: media.images is a set-replace that drops
+# every row it omits. Photos go live immediately via uploadItemImage instead
+# (any authed user, additive, no review), which is what this flow wants.
 #
 # The 10-per-3600s rate limit is deliberately NOT handled as a union member — it
 # arrives as a TOP-LEVEL GraphQL error with extensions.code OPERATION_RATE_LIMITED
-# plus extensions.retryAfter. See the isRateLimitError(result.error) branch in
-# useSuggestItemEdit.ts. ForbiddenError is in the union but suggestItemEdit never
-# returns it; it falls through to the generic branch.
+# (the per-operation budget, not the global RATE_LIMIT_EXCEEDED one) plus
+# extensions.retryAfter in seconds. See the isRateLimitError(result.error) branch
+# in useSuggestItemEdit.ts, and docs/api/errors.md, which uses this very
+# operation as its example.
+#
+# ForbiddenError is in the union but suggestItemEdit never returns it; it falls
+# through to the generic branch.
 mutation SuggestItemEdit($input: SuggestItemEditInput!) {
   suggestItemEdit(input: $input) {
     __typename
@@ -41,9 +45,9 @@ mutation SuggestItemEdit($input: SuggestItemEditInput!) {
   }
 }
 
-# Direct write. Used only when resolveItemEditRoute() returns 'direct' (admin, or
-# a non-PUBLIC item — suggestItemEdit ValidationErrors on those regardless of
-# ownership). UpdateItemInput is a superset of SuggestibleItemChangesInput plus
+# Direct write. Used only when the item's viewer-scoped `canEdit` is true (its
+# creator, or an admin); updateItem is ownership-gated and ForbiddenErrors
+# otherwise. UpdateItemInput is a superset of SuggestibleItemChangesInput plus
 # { id, editReason }, so the SAME diff object spreads straight into it and there
 # is no separate update mapper.
 mutation UpdateItem($input: UpdateItemInput!) {

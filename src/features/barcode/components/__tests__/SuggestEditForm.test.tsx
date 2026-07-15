@@ -9,11 +9,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { SuggestEditForm } from '../SuggestEditForm';
 import { GetItemForEditDocument } from '#hooks/items/useItemForEdit.generated';
-import {
-  ItemType,
-  StorageState,
-  Visibility,
-} from '#/graphql/generated/schemaTypes';
+import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,
 // image picker). This suite is about what SuggestEditForm renders *around* it.
@@ -25,15 +21,11 @@ jest.mock('#components/organisms/AddItemForm/AddItemForm', () => ({
   },
 }));
 
-jest.mock('#store/useAppStore', () => ({
-  useIsAdminUser: jest.fn(() => false),
-}));
-
 jest.mock('#hooks/useImageUpload', () => ({
   useImageUpload: () => ({ uploadItemImages: jest.fn() }),
 }));
 
-const itemData = (visibility: Visibility = Visibility.Public) => ({
+const itemData = (canEdit = false) => ({
   item: {
     __typename: 'Item' as const,
     id: 'item-1',
@@ -48,7 +40,7 @@ const itemData = (visibility: Visibility = Visibility.Public) => ({
     netWeight: null,
     baseDimension: null,
     imageUrl: null,
-    visibility,
+    canEdit,
     displayUnit: null,
     brands: [],
   },
@@ -112,9 +104,9 @@ describe('SuggestEditForm', () => {
     );
   });
 
-  it('words the form as a direct edit for a non-public item', async () => {
+  it('words the form as a direct edit when the user may edit it', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData(Visibility.Private),
+      data: itemData(true),
     });
     renderForm([mock]);
 
@@ -125,9 +117,9 @@ describe('SuggestEditForm', () => {
     );
   });
 
-  it('words the form as a suggestion for a public item', async () => {
+  it('words the form as a suggestion when the user may not', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData(Visibility.Public),
+      data: itemData(false),
     });
     renderForm([mock]);
 

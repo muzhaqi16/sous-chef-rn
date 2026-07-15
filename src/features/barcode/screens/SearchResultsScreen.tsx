@@ -18,8 +18,7 @@ import AddItemForm, {
 } from '#components/organisms/AddItemForm/AddItemForm';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useBottomSheetState, useIsAdminUser } from '#store/useAppStore';
-import { resolveItemEditRoute } from '#utils/items/suggestItemChanges';
+import { useBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource } from '#/types/navigation';
 import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
@@ -56,7 +55,6 @@ export const SearchResultsScreen: React.FC<
 
   const { t } = useTranslation();
   const { goBack, navigation } = useAppNavigation();
-  const isAdmin = useIsAdminUser();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -133,14 +131,12 @@ export const SearchResultsScreen: React.FC<
       ? buildInitialDataFromItem(currentItem)
       : undefined;
 
-  // Cosmetic only — the sheet re-resolves the route from the authoritative item
-  // snapshot. `visibility` is absent on a cached scan, and the suggestion
-  // wording is the safe default.
-  const editActionLabel =
-    currentItem?.visibility &&
-    resolveItemEditRoute(currentItem.visibility, isAdmin) === 'direct'
-      ? t('suggestItemEdit.editAction')
-      : t('suggestItemEdit.suggestAction');
+  // Cosmetic only — the sheet re-reads canEdit from the authoritative item
+  // snapshot. It is absent on a cached scan, and the suggestion wording is the
+  // safe default.
+  const editActionLabel = currentItem?.canEdit
+    ? t('suggestItemEdit.editAction')
+    : t('suggestItemEdit.suggestAction');
 
   const renderContent = () => {
     if (isSearching || loading) {

@@ -9,15 +9,10 @@ import {
   UpdateItemDocument,
 } from '../useSuggestItemEdit.generated';
 import { useSuggestItemEdit } from '../useSuggestItemEdit';
-import {
-  ItemType,
-  StorageState,
-  Visibility,
-} from '#/graphql/generated/schemaTypes';
+import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#components/organisms/AddItemForm/AddItemForm';
 import { alertService } from '#/services/alertService';
-import { useIsAdminUser } from '#store/useAppStore';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 jest.mock('#/services/alertService', () => ({
@@ -28,10 +23,6 @@ jest.mock('#/services/alertService', () => ({
 // `false` return that a genuine throw produces. errorPolicy: 'all' means Apollo
 // resolves rather than throws, so it can't be provoked through a mocked link.
 jest.mock('#/utils/compilerSafeWrappers');
-
-jest.mock('#store/useAppStore', () => ({
-  useIsAdminUser: jest.fn(() => false),
-}));
 
 const mockUploadItemImages = jest.fn().mockResolvedValue([]);
 jest.mock('#hooks/useImageUpload', () => ({
@@ -44,7 +35,7 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
-  visibility: Visibility.Public,
+  canEdit: false,
   name: 'Whole Milk',
   type: ItemType.Food,
   storageState: StorageState.Ambient,
@@ -82,7 +73,6 @@ const renderHook = (operationMocks: MockedResponse[]) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (useIsAdminUser as jest.Mock).mockReturnValue(false);
 });
 
 describe('useSuggestItemEdit', () => {
@@ -216,7 +206,7 @@ describe('useSuggestItemEdit', () => {
     const { result } = renderHook([mock]);
 
     const outcome = await result.current.submitEdit(
-      snapshot({ visibility: Visibility.Private }),
+      snapshot({ canEdit: true }),
       form(),
     );
 
@@ -255,23 +245,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   describe('routing', () => {
-    // Exposed so the form can word itself the same way submitEdit will act,
-    // without a second component re-deriving `isAdmin` to ask the same question.
-    it('exposes the same route submitEdit will take', () => {
-      const { result } = renderHook([]);
-
-      expect(result.current.resolveRoute(Visibility.Public)).toBe('suggest');
-      expect(result.current.resolveRoute(Visibility.Private)).toBe('direct');
-    });
-
-    it('exposes an admin-aware route', () => {
-      (useIsAdminUser as jest.Mock).mockReturnValue(true);
-      const { result } = renderHook([]);
-
-      expect(result.current.resolveRoute(Visibility.Public)).toBe('direct');
-    });
-
-    it('writes a non-public item straight through', async () => {
+    it('writes straight through when the user may edit the item', async () => {
       const { mock, fired } = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
@@ -290,7 +264,7 @@ describe('useSuggestItemEdit', () => {
               netWeight: null,
               baseDimension: null,
               imageUrl: null,
-              visibility: Visibility.Private,
+              canEdit: true,
               displayUnit: null,
               brands: [],
             },
@@ -300,7 +274,7 @@ describe('useSuggestItemEdit', () => {
       const { result } = renderHook([mock]);
 
       const outcome = await result.current.submitEdit(
-        snapshot({ visibility: Visibility.Private }),
+        snapshot({ canEdit: true }),
         form(),
       );
 
@@ -312,8 +286,8 @@ describe('useSuggestItemEdit', () => {
       );
     });
 
-    // A stale/incorrect visibility guess is absorbed: updateItem's Forbidden
-    // explicitly tells the client to use suggestItemEdit, so do that.
+    // A stale cached canEdit is absorbed: updateItem's Forbidden explicitly
+    // tells the client to use suggestItemEdit, so do that.
     it('falls back to a suggestion when a direct write is forbidden', async () => {
       const update = recordMock(UpdateItemDocument, {
         data: {
@@ -330,50 +304,12 @@ describe('useSuggestItemEdit', () => {
       const { result } = renderHook([update.mock, suggest.mock]);
 
       const outcome = await result.current.submitEdit(
-        snapshot({ visibility: Visibility.Private }),
+        snapshot({ canEdit: true }),
         form(),
       );
 
       expect(outcome).toEqual({ status: 'suggested' });
       await waitFor(() => expect(suggest.fired).toHaveLength(1));
-    });
-
-    it('lets an admin write through to a public item', async () => {
-      (useIsAdminUser as jest.Mock).mockReturnValue(true);
-      const { mock, fired } = recordMock(UpdateItemDocument, {
-        data: {
-          updateItem: {
-            __typename: 'UpdateItemPayload',
-            item: {
-              __typename: 'Item',
-              id: 'item-1',
-              name: 'Skim Milk',
-              description: null,
-              type: ItemType.Food,
-              storageState: StorageState.Ambient,
-              tags: [],
-              primaryUpc: null,
-              shelfLifeDays: null,
-              shelfLifeOpenedDays: null,
-              netWeight: null,
-              baseDimension: null,
-              imageUrl: null,
-              visibility: Visibility.Public,
-              displayUnit: null,
-              brands: [],
-            },
-          },
-        },
-      });
-      const { result } = renderHook([mock]);
-
-      const outcome = await result.current.submitEdit(
-        snapshot({ visibility: Visibility.Public }),
-        form(),
-      );
-
-      expect(outcome).toEqual({ status: 'updated' });
-      await waitFor(() => expect(fired).toHaveLength(1));
     });
   });
 });

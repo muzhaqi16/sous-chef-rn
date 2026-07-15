@@ -48,8 +48,8 @@ import {
 /**
  * `edit` proposes changes for admin review (suggestItemEdit); `directEdit`
  * writes them straight through (updateItem). They render identically — the
- * route is decided by the caller via resolveItemEditRoute(), and only the
- * wording differs.
+ * caller picks by the item's viewer-scoped `canEdit`, and only the wording
+ * differs.
  */
 export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 
@@ -377,16 +377,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
             control={control}
             errors={errors}
           />
-        )}
-
-        {/* Sits directly under the brand autocomplete, which is last in Basics'
-            primary group. Only an id-bearing brand survives the diff, so a
-            free-typed name is dropped silently — this is the only thing telling
-            the user to put it in the note instead. */}
-        {activePage === 'Basics' && !!editing && (
-          <Text size="sm" tone="secondary" style={styles.notice}>
-            {t('suggestItemEdit.brandHint')}
-          </Text>
         )}
 
         {activePage === 'Basics' && (

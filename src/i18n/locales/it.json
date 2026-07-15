@@ -2573,7 +2573,6 @@
     "failedTitle": "Impossibile inviare",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
     "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore.",
-    "brandHint": "Scegli un marchio dall'elenco per suggerire una modifica, oppure descrivilo nella nota.",
     "suggestAction": "Suggerisci modifica",
     "editAction": "Modifica"
   },

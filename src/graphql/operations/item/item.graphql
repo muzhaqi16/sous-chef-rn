@@ -14,9 +14,9 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         netWeight
         primaryUpc
         type
-        # Routes an edit to suggestItemEdit (PUBLIC) vs updateItem — see
-        # resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
-        visibility
+        # Labels the edit action. Viewer-scoped: true only for the item's
+        # creator and admins, which visibility cannot tell us.
+        canEdit
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -80,9 +80,9 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         netWeight
         primaryUpc
         type
-        # Routes an edit to suggestItemEdit (PUBLIC) vs updateItem — see
-        # resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
-        visibility
+        # Labels the edit action. Viewer-scoped: true only for the item's
+        # creator and admins, which visibility cannot tell us.
+        canEdit
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -290,8 +290,9 @@ mutation CreateItem($input: CreateItemInput!) {
         name
         description
         # Labels the follow-up edit action correctly — a freshly created item is
-        # the creator's own and editable directly, not via suggestion.
-        visibility
+        # the creator's own, so canEdit comes back true and the card offers a
+        # direct "Edit" rather than a suggestion.
+        canEdit
         netWeight
         displayUnit {
           id

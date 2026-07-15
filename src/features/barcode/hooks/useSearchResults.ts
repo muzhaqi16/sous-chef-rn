@@ -8,7 +8,7 @@ import {
   CreateItemDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
-import { UpcFormat, type Visibility } from '#/graphql/generated/schemaTypes';
+import { UpcFormat } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -51,7 +51,7 @@ const convertToScannedItem = (
     name: string;
     description?: string | null;
     imageUrl?: string | null;
-    visibility?: Visibility | null;
+    canEdit?: boolean | null;
     primaryUpc?: string | null;
     netWeight?: number | null;
     type?: string | null;
@@ -136,7 +136,7 @@ const convertToScannedItem = (
     name: item.name,
     description: item.description || undefined,
     imageUrl: item.imageUrl || undefined,
-    visibility: item.visibility ?? undefined,
+    canEdit: item.canEdit ?? undefined,
     upc: item.primaryUpc || fallbackBarcode,
     unitId: item.units?.find(u => u.isDefault)?.unitId || undefined,
     netWeight: effectiveNetWeight,

@@ -6,7 +6,6 @@ import {
   type SuggestItemEditMutation,
   type UpdateItemMutation,
 } from './useSuggestItemEdit.generated';
-import { useIsAdminUser } from '#store/useAppStore';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
@@ -16,11 +15,8 @@ import {
 } from '#/utils/errors/rateLimit';
 import {
   buildSuggestibleItemChanges,
-  resolveItemEditRoute,
   type EditableItemSnapshot,
-  type ItemEditRoute,
 } from '#utils/items/suggestItemChanges';
-import type { Visibility } from '#/graphql/generated/schemaTypes';
 import type { AddItemSubmitPayload } from '#/components/organisms/AddItemForm/AddItemForm';
 
 export type ItemEditResult =
@@ -50,18 +46,12 @@ type MutationResult<TData> = { data?: TData | null; error?: unknown };
 
 export function useSuggestItemEdit() {
   const { t } = useTranslation();
-  const isAdmin = useIsAdminUser();
   const { uploadItemImages } = useImageUpload();
 
   const [suggestEdit, { loading: suggesting }] = useMutation(
     SuggestItemEditDocument,
   );
   const [updateItem, { loading: updating }] = useMutation(UpdateItemDocument);
-
-  /** The single route resolution for this hook and its callers, so nothing
-   *  re-derives `isAdmin` to answer the same question a second time. */
-  const resolveRoute = (visibility: Visibility): ItemEditRoute =>
-    resolveItemEditRoute(visibility, isAdmin);
 
   const submitEdit = async (
     original: EditableItemSnapshot,
@@ -94,7 +84,7 @@ export function useSuggestItemEdit() {
       return { status: 'imagesOnly' };
     }
 
-    if (resolveRoute(original.visibility) === 'direct') {
+    if (original.canEdit) {
       const result = await executeMutation(
         () =>
           updateItem({
@@ -125,8 +115,9 @@ export function useSuggestItemEdit() {
         return { status: 'updated' };
       }
       // Anything other than a Forbidden "use suggestItemEdit instead" is a real
-      // failure. Forbidden means our visibility guess was wrong or stale, so do
-      // what the server asked and fall through to the suggestion path.
+      // failure. Forbidden means the cached canEdit was stale (the item was
+      // published, or ownership changed), so do what the server asked and fall
+      // through to the suggestion path.
       if (outcome !== 'forbidden') {
         alertFailure(t, result, result.data?.updateItem);
         return FAILED;
@@ -172,7 +163,7 @@ export function useSuggestItemEdit() {
     return FAILED;
   };
 
-  return { submitEdit, resolveRoute, loading: suggesting || updating };
+  return { submitEdit, loading: suggesting || updating };
 }
 
 async function uploadImages(

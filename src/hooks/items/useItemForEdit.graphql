@@ -26,9 +26,11 @@ fragment useItemForEdit_item on Item {
   netWeight
   baseDimension
   imageUrl
-  # Routes the submit: PUBLIC -> suggestItemEdit, otherwise updateItem.
-  # See resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
-  visibility
+  # Routes the submit: true -> updateItem, false -> suggestItemEdit. Viewer-
+  # scoped and resolved against the same predicate updateItem enforces, so it
+  # is the only correct signal — visibility can't tell an owner from anyone
+  # else, and both paths hard-fail when picked wrongly.
+  canEdit
   displayUnit {
     id
     name

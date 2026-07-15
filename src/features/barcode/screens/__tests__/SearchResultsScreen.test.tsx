@@ -16,7 +16,6 @@ const mockHideBottomSheet = jest.fn();
 const mockShowBottomSheet = jest.fn();
 
 jest.mock('#store/useAppStore', () => ({
-  useIsAdminUser: jest.fn(() => false),
   useAppStore: jest.fn(
     <T,>(selector: (s: RootState) => T): T =>
       selector({

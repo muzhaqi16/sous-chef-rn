@@ -1,6 +1,5 @@
 import { StateCreator } from 'zustand';
 import { RootState } from '../index';
-import type { Visibility } from '#/graphql/generated/schemaTypes';
 
 // Types for your barcode scanner feature
 export interface ScannedItem {
@@ -9,8 +8,8 @@ export interface ScannedItem {
   description?: string;
   imageUrl?: string;
   /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
-   *  submit path re-reads visibility from the authoritative item snapshot. */
-  visibility?: Visibility;
+   *  submit path re-reads canEdit from the authoritative item snapshot. */
+  canEdit?: boolean;
   upc: string;
   unitId?: string;
   netWeight?: number;

@@ -245,8 +245,9 @@ export const buildTabFieldGroups = (
     foodStampField,
     fsaField,
   ];
-  // Consume increment/unit are create-only: updateItem never reads either from
-  // packageInfo, so editing them would report success and change nothing.
+  // Consume increment/unit are hidden while editing: the unit field's form
+  // value is the text the user typed, not the id `packageInfo.defaultConsumeUnitId`
+  // expects, so there is nothing to diff a saved item against.
   if (!editing) {
     inventoryAdvanced.unshift(consumeIncrementField, consumeUnitField);
   }

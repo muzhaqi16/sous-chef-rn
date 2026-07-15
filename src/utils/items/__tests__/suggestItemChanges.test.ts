@@ -2,11 +2,9 @@ import {
   BaseDimension,
   ItemType,
   StorageState,
-  Visibility,
 } from '#/graphql/generated/schemaTypes';
 import {
   buildSuggestibleItemChanges,
-  resolveItemEditRoute,
   type EditableItemSnapshot,
 } from '../suggestItemChanges';
 import type { AddItemFormData } from '../createItemMapping';
@@ -15,7 +13,7 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
-  visibility: Visibility.Public,
+  canEdit: false,
   name: 'Whole Milk',
   description: 'One gallon of whole milk',
   type: ItemType.Food,
@@ -51,19 +49,6 @@ const unchangedForm = (
   baseDimension: BaseDimension.Mass,
   netWeights: [{ value: 500, unitName: 'gram', unitId: 'unit-g' }],
   ...overrides,
-});
-
-describe('resolveItemEditRoute', () => {
-  it.each([
-    [Visibility.Public, false, 'suggest'],
-    [Visibility.Private, false, 'direct'],
-    [Visibility.Restricted, false, 'direct'],
-    [Visibility.Public, true, 'direct'],
-    [Visibility.Private, true, 'direct'],
-    [Visibility.Restricted, true, 'direct'],
-  ] as const)('%s / admin=%s -> %s', (visibility, isAdmin, expected) => {
-    expect(resolveItemEditRoute(visibility, isAdmin)).toBe(expected);
-  });
 });
 
 describe('buildSuggestibleItemChanges', () => {
@@ -143,34 +128,45 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes.classification).toEqual({ tags: [] });
   });
 
-  // brand is destructured away and never read by updateItem, so a `brand`
-  // change would approve and silently do nothing. brandOps is the applying path.
-  it('expresses a brand change as brandOps, never as brand', () => {
+  // `brand` is additive and never displaces what's already there, so swapping a
+  // brand needs the explicit removal alongside it — otherwise the item approves
+  // with BOTH brands attached.
+  it('pairs a brand swap with the removal of the old one', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brandOps).toEqual({
-      addBrandIds: ['brand-2'],
-      removeBrandIds: ['brand-1'],
-    });
-    expect(diff.changes).not.toHaveProperty('brand');
+    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
   });
 
-  it('omits removeBrandIds when the item had no brand', () => {
+  it('omits the removal when the item had no brand to displace', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot({ brandId: undefined, brandName: undefined }),
       unchangedForm({ brandId: 'brand-2', brandName: 'Globex' }),
     );
 
-    expect(diff.changes.brandOps).toEqual({ addBrandIds: ['brand-2'] });
+    expect(diff.changes.brand).toEqual({ brandId: 'brand-2' });
+    expect(diff.changes).not.toHaveProperty('brandOps');
   });
 
-  it('ignores a free-typed brand with no id, since brandOps needs one', () => {
+  // brandName is find-or-create server-side — the only way to name a brand the
+  // catalog doesn't have yet, so a typed brand must not be dropped.
+  it('sends a free-typed brand by name when it matched nothing', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({ brandId: undefined, brandName: 'Typed Brand' }),
+    );
+
+    expect(diff.changes.brand).toEqual({ brandName: 'Typed Brand' });
+    expect(diff.changes.brandOps).toEqual({ removeBrandIds: ['brand-1'] });
+  });
+
+  it('treats a re-typed identical brand name as unchanged', () => {
+    const diff = buildSuggestibleItemChanges(
+      snapshot(),
+      unchangedForm({ brandId: undefined, brandName: 'Acme' }),
     );
 
     expect(diff.hasChanges).toBe(false);
@@ -187,8 +183,8 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes.packageInfo).toEqual({ netWeight: 750 });
   });
 
-  // media is a no-op on approve for imageUrl and destroys every image row for
-  // media.images, so it must never reach `changes`.
+  // media.images is a set-replace that drops every row it omits, and photos
+  // already go live additively via confirmItemImageUpload.
   it('never includes media, even when an image is present', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
@@ -198,14 +194,15 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes).not.toHaveProperty('media');
   });
 
-  // tagOps.addTags + removeTags in one call silently drops the adds, and tagOps
-  // destructively overrides classification.tags.
-  it('never includes tagOps', () => {
+  // classification.tags already set-replaces the prefilled list, so tagOps
+  // would only restate it in more fields.
+  it('expresses a tag change through classification.tags alone', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({ tags: ['brand-new'] }),
     );
 
+    expect(diff.changes.classification).toEqual({ tags: ['brand-new'] });
     expect(diff.changes).not.toHaveProperty('tagOps');
   });
 
@@ -219,8 +216,9 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes.classification).toBeUndefined();
   });
 
-  // These three are never read on the update path.
-  it('never includes create-only packageInfo fields', () => {
+  // The unit field holds typed text rather than the id packageInfo expects, so
+  // there is no round-trippable surface to diff these against.
+  it('never includes the consume packageInfo fields', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
       unchangedForm({

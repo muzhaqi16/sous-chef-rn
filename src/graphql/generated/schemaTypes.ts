@@ -1601,6 +1601,8 @@ export type CreateCookingLogInput = {
   actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
   cookedAt?: InputMaybe<Scalars['DateTime']['input']>;
   difficulty?: InputMaybe<Difficulty>;
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   rating?: InputMaybe<Scalars['Int']['input']>;
@@ -3509,7 +3511,14 @@ export type ForgotPasswordPayload = {
 export type ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError;
 
 export type ForkRecipeInput = {
+  /** The SOURCE recipe to fork. */
   id: Scalars['ID']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for the recipe CREATED by this
+   * fork, for offline-first idempotency. Distinct from the id field above, which
+   * identifies the recipe being forked FROM.
+   */
+  newRecipeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type ForkRecipePayload = {
@@ -4236,6 +4245,25 @@ export type Item = {
   approvedBy: Maybe<User>;
   baseDimension: Maybe<BaseDimension>;
   brands: Array<ItemBrand>;
+  /**
+   * Whether the CALLING user may write to this item directly with updateItem
+   * (true for its creator and for admins). When false, propose changes with
+   * suggestItemEdit instead — the two paths are mutually exclusive and both
+   * hard-fail when picked wrongly, so route on this rather than inferring from
+   * visibility:
+   *
+   *     item.canEdit ? updateItem(...) : suggestItemEdit(...)
+   *
+   * A private item you do not own is never returned by the API at all, so
+   * canEdit=false always means "suggest", never "you cannot do anything".
+   * Resolved against the same predicate that updateItem enforces, so it stays
+   * correct if that rule changes.
+   *
+   * Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
+   * scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
+   * one user's edit rights to another.
+   */
+  canEdit: Scalars['Boolean']['output'];
   categories: Array<ItemCategory>;
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
@@ -12457,6 +12485,12 @@ export type ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundE
  */
 export type ShoppingList = {
   __typename: 'ShoppingList';
+  /**
+   * Audit trail of who changed what on this list (adds, edits, purchases,
+   * removals, collaborator changes). ADMIN-only bookkeeping surface — clients
+   * drive incremental updates from the `shoppingListEvents` subscription, not
+   * from this feed.
+   */
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   /**
