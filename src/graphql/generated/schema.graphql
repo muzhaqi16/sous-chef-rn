@@ -4256,6 +4256,15 @@ type Item {
   Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
   scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
   one user's edit rights to another.
+  
+  COSTS YOU THE RESPONSE CACHE. A response's policy is the most restrictive
+  hint in it, so selecting this field drops maxAge to 0 for EVERYTHING beside
+  it: the same query without canEdit is max-age=1800/public, with it the whole
+  response is no-store. Put canEdit in a shared item fragment and every catalog
+  query in your app silently stops caching. Fetch it in its own small query,
+  separate from cacheable catalog data — canSuggest is non-viewer-scoped for
+  exactly this reason and can ride along in the cacheable one. See
+  docs/api/item-suggestions.md.
   """
   canEdit: Boolean!
   """
