@@ -52,6 +52,7 @@ const convertToScannedItem = (
     description?: string | null;
     imageUrl?: string | null;
     canEdit?: boolean | null;
+    canSuggest?: boolean | null;
     primaryUpc?: string | null;
     netWeight?: number | null;
     type?: string | null;
@@ -137,6 +138,7 @@ const convertToScannedItem = (
     description: item.description || undefined,
     imageUrl: item.imageUrl || undefined,
     canEdit: item.canEdit ?? undefined,
+    canSuggest: item.canSuggest ?? undefined,
     upc: item.primaryUpc || fallbackBarcode,
     unitId: item.units?.find(u => u.isDefault)?.unitId || undefined,
     netWeight: effectiveNetWeight,

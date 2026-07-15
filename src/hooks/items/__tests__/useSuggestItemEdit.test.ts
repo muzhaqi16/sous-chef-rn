@@ -44,7 +44,10 @@ const snapshot = (
   overrides: Partial<EditableItemSnapshot> = {},
 ): EditableItemSnapshot => ({
   id: 'item-1',
+  // The default target: a public catalog item this user may propose edits to
+  // but not write through — the suggestion path.
   canEdit: false,
+  canSuggest: true,
   name: 'Whole Milk',
   type: ItemType.Food,
   storageState: StorageState.Ambient,
@@ -290,6 +293,7 @@ describe('useSuggestItemEdit', () => {
               baseDimension: null,
               imageUrl: null,
               canEdit: true,
+              canSuggest: true,
               displayUnit: null,
               brands: [],
             },
@@ -335,6 +339,101 @@ describe('useSuggestItemEdit', () => {
 
       expect(outcome).toEqual({ status: 'suggested' });
       await waitFor(() => expect(suggest.fired).toHaveLength(1));
+    });
+
+    // canEdit=false does not imply "suggest": a PRIVATE item the user doesn't
+    // own — a housemate's pantry entry, a recipe ingredient — reaches the form
+    // with both flags false. createItemSuggestion takes PUBLIC items only, so
+    // sending one would spend one of just 10 per hour to earn a ValidationError.
+    it('sends nothing for an item that accepts neither write path', async () => {
+      const suggest = recordMock(CreateItemSuggestionDocument, {
+        data: suggestionPayload(NOTE),
+      });
+      const { result } = renderHook([suggest.mock]);
+
+      const outcome = await result.current.submitEdit(
+        snapshot({ canEdit: false, canSuggest: false }),
+        form(),
+      );
+
+      expect(outcome).toEqual({ status: 'readOnly' });
+      expect(suggest.fired).toHaveLength(0);
+      expect(alertService.alert).toHaveBeenCalledWith(
+        "This item can't be edited",
+        expect.stringContaining('public catalog'),
+      );
+    });
+
+    // The Forbidden fallback is not unconditional. A stale canEdit tells us the
+    // cached rights are wrong, which is no reason to assume the item can take a
+    // suggestion — burning the same budget on the same guaranteed rejection.
+    it('does not fall back to a suggestion the item cannot take', async () => {
+      const update = recordMock(UpdateItemDocument, {
+        data: {
+          updateItem: {
+            __typename: 'ForbiddenError',
+            code: 'AUTHZ_FORBIDDEN',
+            message: 'Not yours',
+          },
+        },
+      });
+      const suggest = recordMock(CreateItemSuggestionDocument, {
+        data: suggestionPayload(NOTE),
+      });
+      const { result } = renderHook([update.mock, suggest.mock]);
+
+      const outcome = await result.current.submitEdit(
+        snapshot({ canEdit: true, canSuggest: false }),
+        form(),
+      );
+
+      expect(outcome).toEqual({ status: 'readOnly' });
+      await waitFor(() => expect(update.fired).toHaveLength(1));
+      expect(suggest.fired).toHaveLength(0);
+    });
+
+    // The flags are not mutually exclusive — an admin on a public item has both.
+    // The direct write wins: there is nothing to review when you can just write.
+    it('writes through rather than suggesting when both paths are open', async () => {
+      const update = recordMock(UpdateItemDocument, {
+        data: {
+          updateItem: {
+            __typename: 'UpdateItemPayload',
+            item: {
+              __typename: 'Item',
+              id: 'item-1',
+              name: 'Skim Milk',
+              description: null,
+              type: ItemType.Food,
+              storageState: StorageState.Ambient,
+              tags: [],
+              primaryUpc: null,
+              shelfLifeDays: null,
+              shelfLifeOpenedDays: null,
+              netWeight: null,
+              baseDimension: null,
+              imageUrl: null,
+              canEdit: true,
+              canSuggest: true,
+              displayUnit: null,
+              brands: [],
+            },
+          },
+        },
+      });
+      const suggest = recordMock(CreateItemSuggestionDocument, {
+        data: suggestionPayload(NOTE),
+      });
+      const { result } = renderHook([update.mock, suggest.mock]);
+
+      const outcome = await result.current.submitEdit(
+        snapshot({ canEdit: true, canSuggest: true }),
+        form(),
+      );
+
+      expect(outcome).toEqual({ status: 'updated' });
+      await waitFor(() => expect(update.fired).toHaveLength(1));
+      expect(suggest.fired).toHaveLength(0);
     });
   });
 });

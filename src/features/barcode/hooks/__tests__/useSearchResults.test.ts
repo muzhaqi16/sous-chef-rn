@@ -209,6 +209,42 @@ describe('useSearchResults', () => {
       expect(mockHideBottomSheet).toHaveBeenCalled();
     });
 
+    // Both flags carry through to the card, which hides its edit action when
+    // they are explicitly false — a scan can surface an item the user may not
+    // touch. Absent is not false: the card only hides on a definite no.
+    it('carries the write-path flags through to the scanned item', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [
+          upcMock([{ ...SAMPLE_UPC_ITEM, canEdit: false, canSuggest: false }]),
+        ],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ canEdit: false, canSuggest: false }),
+          ]),
+        ),
+      );
+    });
+
+    it('leaves the write-path flags undefined when the API omits them', async () => {
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upcMock([SAMPLE_UPC_ITEM])],
+      });
+
+      await waitFor(() =>
+        expect(mockSetSearchResults).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({
+              canEdit: undefined,
+              canSuggest: undefined,
+            }),
+          ]),
+        ),
+      );
+    });
+
     it('falls back to SKU query when UPC finds nothing', async () => {
       const skuItem = {
         id: 'item-sku',

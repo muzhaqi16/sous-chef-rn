@@ -70,6 +70,22 @@ export const SuggestEditForm: React.FC<SuggestEditFormProps> = ({
     );
   }
 
+  // Neither write path is open — a PRIVATE item this user doesn't own. Showing
+  // the form would invite an edit that can only be rejected on submit, so say
+  // so up front. The affordance that opened this sheet is hidden for such an
+  // item; this catches the case where the scan result's flags were stale or
+  // absent and only the authoritative snapshot knows.
+  if (!snapshot.canEdit && !snapshot.canSuggest) {
+    return (
+      <ErrorState
+        title={t('suggestItemEdit.readOnlyTitle')}
+        message={t('suggestItemEdit.readOnlyBody')}
+        secondaryAction={{ label: t('labels.close'), onPress: onClose }}
+        style={styles.error}
+      />
+    );
+  }
+
   return (
     <AddItemForm
       barcode={barcode}

@@ -2566,6 +2566,8 @@
     "rejectedTitle": "Nuk u dërgua dot",
     "loadFailedTitle": "Ky artikull nuk u ngarkua dot",
     "loadFailedBody": "Nuk arritëm t’i ngarkojmë të dhënat aktuale të artikullit, të cilat na duhen për të kuptuar çfarë ndryshove. Kontrollo lidhjen dhe provo përsëri.",
+    "readOnlyTitle": "Ky artikull nuk mund të redaktohet",
+    "readOnlyBody": "Ai nuk është pjesë e katalogut publik, prandaj këtu nuk ka çfarë të korrigjohet. Vetëm artikujt e katalogut publik mund të redaktohen ose të propozohen për shqyrtim.",
     "noChangesTitle": "Asgjë për të sugjeruar",
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
     "photosOnlyTitle": "Fotoja u shtua",

@@ -14,9 +14,13 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         netWeight
         primaryUpc
         type
-        # Labels the edit action. Viewer-scoped: true only for the item's
-        # creator and admins, which visibility cannot tell us.
+        # Together these decide whether the card offers an edit action at all,
+        # and which wording it uses. canEdit is viewer-scoped (true only for the
+        # item's creator and admins); canSuggest is structural (true for active
+        # PUBLIC catalog items). Neither is inferable from visibility, and both
+        # false means read-only — a scan can surface an item you may not touch.
         canEdit
+        canSuggest
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -80,9 +84,13 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         netWeight
         primaryUpc
         type
-        # Labels the edit action. Viewer-scoped: true only for the item's
-        # creator and admins, which visibility cannot tell us.
+        # Together these decide whether the card offers an edit action at all,
+        # and which wording it uses. canEdit is viewer-scoped (true only for the
+        # item's creator and admins); canSuggest is structural (true for active
+        # PUBLIC catalog items). Neither is inferable from visibility, and both
+        # false means read-only — a scan can surface an item you may not touch.
         canEdit
+        canSuggest
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -291,8 +299,10 @@ mutation CreateItem($input: CreateItemInput!) {
         description
         # Labels the follow-up edit action correctly — a freshly created item is
         # the creator's own, so canEdit comes back true and the card offers a
-        # direct "Edit" rather than a suggestion.
+        # direct "Edit" rather than a suggestion. canSuggest rides along to keep
+        # the cached Item complete for the card's read-only check.
         canEdit
+        canSuggest
         netWeight
         displayUnit {
           id

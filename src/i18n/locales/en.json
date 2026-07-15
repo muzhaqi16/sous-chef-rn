@@ -2566,6 +2566,8 @@
     "rejectedTitle": "Couldn't send that",
     "loadFailedTitle": "Couldn't load this item",
     "loadFailedBody": "We couldn't load the item's current details, and we need them to work out what you changed. Check your connection and try again.",
+    "readOnlyTitle": "This item can't be edited",
+    "readOnlyBody": "It isn't part of the public catalog, so there's nothing to correct here. Only public catalog items can be edited or suggested for review.",
     "noChangesTitle": "Nothing to suggest",
     "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
     "photosOnlyTitle": "Photo added",

@@ -25,7 +25,9 @@ jest.mock('#hooks/useImageUpload', () => ({
   useImageUpload: () => ({ uploadItemImages: jest.fn(), uploading: false }),
 }));
 
-const itemData = (canEdit = false) => ({
+// Defaults to the common target: a public catalog item this user may propose
+// edits to but not write through.
+const itemData = ({ canEdit = false, canSuggest = true } = {}) => ({
   item: {
     __typename: 'Item' as const,
     id: 'item-1',
@@ -41,6 +43,7 @@ const itemData = (canEdit = false) => ({
     baseDimension: null,
     imageUrl: null,
     canEdit,
+    canSuggest,
     displayUnit: null,
     brands: [],
   },
@@ -106,7 +109,7 @@ describe('SuggestEditForm', () => {
 
   it('words the form as a direct edit when the user may edit it', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData(true),
+      data: itemData({ canEdit: true }),
     });
     renderForm([mock]);
 
@@ -119,12 +122,28 @@ describe('SuggestEditForm', () => {
 
   it('words the form as a suggestion when the user may not', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
-      data: itemData(false),
+      data: itemData({ canEdit: false }),
     });
     renderForm([mock]);
 
     await waitFor(() =>
       expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit'),
     );
+  });
+
+  // Both paths closed — a PRIVATE item the user doesn't own. Rendering the form
+  // would invite an edit that could only be refused on submit, so the sheet says
+  // so instead. Reachable even though the card hides its edit action for such an
+  // item: a cached scan carries no flags, and only this snapshot is authoritative.
+  it('states the item is read-only when neither write path is open', async () => {
+    const { mock } = recordMock(GetItemForEditDocument, {
+      data: itemData({ canEdit: false, canSuggest: false }),
+    });
+    renderForm([mock]);
+
+    await waitFor(() =>
+      expect(screen.getByText("This item can't be edited")).toBeOnTheScreen(),
+    );
+    expect(screen.queryByTestId('add-item-form')).not.toBeOnTheScreen();
   });
 });

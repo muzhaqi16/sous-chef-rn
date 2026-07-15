@@ -26,11 +26,24 @@ fragment useItemForEdit_item on Item {
   netWeight
   baseDimension
   imageUrl
-  # Routes the submit: true -> updateItem, false -> createItemSuggestion. Viewer-
-  # scoped and resolved against the same predicate updateItem enforces, so it
-  # is the only correct signal — visibility can't tell an owner from anyone
-  # else, and both paths hard-fail when picked wrongly.
+  # The two write paths, which are mutually exclusive and each hard-fail when
+  # picked wrongly:
+  #
+  #     canEdit    -> updateItem            (direct write)
+  #     canSuggest -> createItemSuggestion  (proposed for review)
+  #     neither    -> read-only
+  #
+  # Both are needed: canEdit=false does NOT imply "suggest". A PRIVATE item you
+  # do not own — a housemate's pantry entry, a shared list's item, a recipe
+  # ingredient — reaches this sheet with both false, and createItemSuggestion
+  # takes PUBLIC items only. Neither can be inferred from visibility.
+  #
+  # canEdit is viewer-scoped (creator + admins). canSuggest is not — it is
+  # structural (active PUBLIC catalog item) and identical for every caller, so
+  # it does not account for the 5-pending cap or the 10/hour budget; both are
+  # transient and surface as a ConflictError / rate-limit error on submit.
   canEdit
+  canSuggest
   displayUnit {
     id
     name

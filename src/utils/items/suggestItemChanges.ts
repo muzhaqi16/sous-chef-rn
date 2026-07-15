@@ -21,13 +21,23 @@ import type { AddItemFormInitialData } from '#/components/organisms/AddItemForm/
 export interface EditableItemSnapshot {
   id: string;
   /**
-   * Whether this user may write to the item directly. Viewer-scoped and
-   * resolved server-side against the exact predicate `updateItem` enforces —
-   * true for the item's creator and for admins. `false` always means "propose a
-   * suggestion", never a dead end: a private item you don't own is never
-   * returned at all.
+   * Whether this user may write to the item directly with `updateItem`.
+   * Viewer-scoped and resolved server-side against the exact predicate that
+   * mutation enforces — true for the item's creator and for admins.
+   *
+   * `false` does NOT mean "propose a suggestion instead" — check `canSuggest`
+   * for that. The two are independent, and both are false for a read-only item.
    */
   canEdit: boolean;
+  /**
+   * Whether `createItemSuggestion` accepts this item — true for active PUBLIC
+   * catalog items. Not viewer-scoped: the answer is the same for everyone.
+   *
+   * Structural only. It says the item is a legal target, not that this user has
+   * budget left: the 5-pending cap and the 10/hour limit are transient and come
+   * back as errors on submit.
+   */
+  canSuggest: boolean;
   name: string;
   description?: string;
   type: ItemType;
@@ -82,6 +92,7 @@ export function itemToEditableSnapshot(
   return {
     id: item.id,
     canEdit: item.canEdit,
+    canSuggest: item.canSuggest,
     name: item.name,
     description: nullableToUndefined(item.description),
     type: item.type,

@@ -14,6 +14,7 @@ const snapshot = (
 ): EditableItemSnapshot => ({
   id: 'item-1',
   canEdit: false,
+  canSuggest: true,
   name: 'Whole Milk',
   description: 'One gallon of whole milk',
   type: ItemType.Food,

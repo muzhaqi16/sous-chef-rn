@@ -2566,6 +2566,8 @@
     "rejectedTitle": "No se pudo enviar",
     "loadFailedTitle": "No se pudo cargar este artículo",
     "loadFailedBody": "No pudimos cargar los datos actuales del artículo, y los necesitamos para saber qué cambiaste. Comprueba tu conexión e inténtalo de nuevo.",
+    "readOnlyTitle": "Este artículo no se puede editar",
+    "readOnlyBody": "No forma parte del catálogo público, así que aquí no hay nada que corregir. Solo los artículos del catálogo público se pueden editar o proponer para revisión.",
     "noChangesTitle": "Nada que sugerir",
     "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
     "photosOnlyTitle": "Foto añadida",

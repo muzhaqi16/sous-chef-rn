@@ -138,6 +138,18 @@ export const SearchResultsScreen: React.FC<
     ? t('suggestItemEdit.editAction')
     : t('suggestItemEdit.suggestAction');
 
+  // A scan can surface an item this user may not touch — a PRIVATE one they
+  // don't own — and neither write path accepts it. Withholding onEditItem drops
+  // the action from the card rather than offering an edit that could only be
+  // refused on submit.
+  //
+  // Only an explicit false on both hides it: a cached scan carries neither flag,
+  // and the sheet loads the authoritative snapshot and shows the read-only state
+  // if it turns out closed. Guessing "read-only" from a missing flag would strip
+  // the action from items that are perfectly editable.
+  const isReadOnly =
+    currentItem?.canEdit === false && currentItem?.canSuggest === false;
+
   const renderContent = () => {
     if (isSearching || loading) {
       return (
@@ -164,7 +176,7 @@ export const SearchResultsScreen: React.FC<
           item={searchResults[0]}
           format={format}
           onScanAnother={handleScanAnother}
-          onEditItem={handleEditItem}
+          onEditItem={isReadOnly ? undefined : handleEditItem}
           onCreateVariant={handleCreateVariant}
           editActionLabel={editActionLabel}
           source={source}

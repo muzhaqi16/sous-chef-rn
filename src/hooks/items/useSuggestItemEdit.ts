@@ -25,6 +25,7 @@ export type ItemEditResult =
   | { status: 'updated' }
   | { status: 'imagesOnly' }
   | { status: 'noChanges' }
+  | { status: 'readOnly' }
   | { status: 'failed' };
 
 type SuggestPayload = CreateItemSuggestionMutation['createItemSuggestion'];
@@ -87,6 +88,10 @@ export function useSuggestItemEdit() {
       return { status: 'imagesOnly' };
     }
 
+    // The two write paths are mutually exclusive and each hard-fails when
+    // picked wrongly, so route on the server's own predicates rather than
+    // inferring from visibility. canEdit wins when both are true (an admin on a
+    // public item) — a direct write needs no review.
     if (original.canEdit) {
       const result = await executeMutation(
         () =>
@@ -125,6 +130,21 @@ export function useSuggestItemEdit() {
         alertFailure(t, result, result.data?.updateItem);
         return FAILED;
       }
+    }
+
+    // Reached either by never having had canEdit, or by a stale one that the
+    // server just refused — both still need the item to be a legal suggestion
+    // target. It isn't for a PRIVATE item this user doesn't own (a housemate's
+    // pantry entry, a shared list's item, a recipe ingredient), which arrives
+    // with both flags false. The form should not have opened for one, so this
+    // is the last line of defence: createItemSuggestion takes PUBLIC items only
+    // and the rejected attempt would still cost one of the 10 per hour.
+    if (!original.canSuggest) {
+      alertService.alert(
+        t('suggestItemEdit.readOnlyTitle'),
+        t('suggestItemEdit.readOnlyBody'),
+      );
+      return { status: 'readOnly' };
     }
 
     const result = await executeMutation(
