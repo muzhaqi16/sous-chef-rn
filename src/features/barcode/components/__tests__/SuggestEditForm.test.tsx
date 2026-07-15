@@ -22,7 +22,7 @@ jest.mock('#components/organisms/AddItemForm/AddItemForm', () => ({
 }));
 
 jest.mock('#hooks/useImageUpload', () => ({
-  useImageUpload: () => ({ uploadItemImages: jest.fn() }),
+  useImageUpload: () => ({ uploadItemImages: jest.fn(), uploading: false }),
 }));
 
 const itemData = (canEdit = false) => ({

@@ -117,8 +117,8 @@ export function itemToEditableSnapshot(
  *                     it, but the form prefills the whole tag list, so a plain
  *                     set-replace via `classification.tags` says the same thing
  *                     with one field instead of three.
- * - `categoryIds`   — an empty array wipes all categories, and the form has no
- *                     category editor to diff against.
+ * - `categoryOps`   — the form has no category editor, so there is nothing to
+ *                     diff against.
  * - `unitConfig` / `unitOps` / `storeSkuOps` / `packageInfo.defaultConsume*` —
  *                     no round-trippable form surface; see the hidden fields in
  *                     AddItemForm's edit modes.

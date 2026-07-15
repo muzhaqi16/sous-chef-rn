@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#utils/validation/item';
@@ -18,10 +19,24 @@ import { type FieldDef } from '#/components/molecules/DynamicFormFields';
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
 
+// Minimal structural type for the translation function so this module doesn't
+// depend on i18next's generic `TFunction` namespace typing. `useTranslation().t`
+// is assignable to it.
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
 /** `edit` proposes changes for review; `directEdit` writes them through. Both
  *  render the same form, so most field logic branches on this rather than mode. */
 export const isEditMode = (mode: AddItemFormMode): boolean =>
   mode === 'edit' || mode === 'directEdit';
+
+/**
+ * Only the review path needs a note. `SuggestItemEditInput.note` is `String!`
+ * and the admin has nothing else to judge the diff against, whereas
+ * `UpdateItemInput.editReason` is optional and nobody reviews a direct edit —
+ * requiring one there would block Save on an explanation addressed to nobody.
+ */
+export const requiresEditNote = (mode: AddItemFormMode): boolean =>
+  mode === 'edit';
 
 const STORAGE_STATES = Object.values(StorageState);
 const ITEM_TYPES = Object.values(ItemType);
@@ -33,6 +48,14 @@ export const PAGES: readonly PageName[] = [
   'Storage',
   'Inventory',
 ];
+
+/** Page names double as record keys, so the display label is looked up here. */
+export const PAGE_LABEL_KEYS: Record<PageName, string> = {
+  Basics: 'addItemForm.tabs.basics',
+  Product: 'addItemForm.tabs.product',
+  Storage: 'addItemForm.tabs.storage',
+  Inventory: 'addItemForm.tabs.inventory',
+};
 
 // Helper function to detect if scanned value is barcode or SKU
 export const detectScanType = (value: string): 'barcode' | 'sku' => {
@@ -49,12 +72,14 @@ export const detectScanType = (value: string): 'barcode' | 'sku' => {
 export const ScanUpcButton: React.FC<{ onPress: () => void }> = ({
   onPress,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <AppPressable
       onPress={onPress}
       hitSlop={8}
       accessibilityRole="button"
-      accessibilityLabel="Scan UPC with camera"
+      accessibilityLabel={t('addItemForm.scanUpcA11y')}
       style={scanButtonStyles.button}
     >
       <Icon name="barcode-outline" size={22} tone="primary" />
@@ -81,6 +106,7 @@ type TabFieldGroups = {
 };
 
 export const buildTabFieldGroups = (
+  t: Translate,
   setSelectedBrandId: (id: string | null) => void,
   setSelectedStoreId: (id: string | null) => void,
   mode: AddItemFormMode,
@@ -88,22 +114,22 @@ export const buildTabFieldGroups = (
 ): Record<PageName, TabFieldGroups> => {
   const nameField: FieldDef<CreateItemFormData> = {
     name: 'name',
-    label: 'Item Name',
-    placeholder: 'Enter item name',
+    label: t('addItemForm.fields.name.label'),
+    placeholder: t('addItemForm.fields.name.placeholder'),
     component: FormInput,
     props: { autoCapitalize: 'words', required: true },
   };
   const descriptionField: FieldDef<CreateItemFormData> = {
     name: 'description',
-    label: 'Description',
-    placeholder: 'Enter item description (optional)',
+    label: t('addItemForm.fields.description.label'),
+    placeholder: t('addItemForm.fields.description.placeholder'),
     component: FormTextArea,
     props: { numberOfLines: 3 },
   };
   const vendorField: FieldDef<CreateItemFormData> = {
     name: 'vendor',
-    label: 'Brand/Vendor',
-    placeholder: 'Enter brand or vendor name',
+    label: t('addItemForm.fields.vendor.label'),
+    placeholder: t('addItemForm.fields.vendor.placeholder'),
     component: 'brandAutocomplete',
     props: {
       componentType: 'autocomplete',
@@ -113,15 +139,18 @@ export const buildTabFieldGroups = (
 
   const typeField: FieldDef<CreateItemFormData> = {
     name: 'type',
-    label: 'Item Type',
+    label: t('addItemForm.fields.type.label'),
     component: FormSelect,
     props: { componentType: 'select' },
-    options: ITEM_TYPES.map(type => ({ label: type, value: type })),
+    options: ITEM_TYPES.map(type => ({
+      label: t(`itemType.${type}`),
+      value: type,
+    })),
   };
   const upcField: FieldDef<CreateItemFormData> = {
     name: 'upc',
-    label: 'UPC/Barcode',
-    placeholder: 'Enter UPC/Barcode (optional)',
+    label: t('addItemForm.fields.upc.label'),
+    placeholder: t('addItemForm.fields.upc.placeholder'),
     component: FormInput,
     props: {
       keyboardType: 'numeric',
@@ -130,14 +159,14 @@ export const buildTabFieldGroups = (
   };
   const skuField: FieldDef<CreateItemFormData> = {
     name: 'sku',
-    label: 'SKU',
-    placeholder: 'Enter SKU (optional)',
+    label: t('addItemForm.fields.sku.label'),
+    placeholder: t('addItemForm.fields.sku.placeholder'),
     component: FormInput,
   };
   const storeField: FieldDef<CreateItemFormData> = {
     name: 'storeName',
-    label: 'Store (for SKU)',
-    placeholder: 'Search for store',
+    label: t('addItemForm.fields.store.label'),
+    placeholder: t('addItemForm.fields.store.placeholder'),
     component: 'storeAutocomplete',
     props: {
       componentType: 'autocomplete',
@@ -147,49 +176,61 @@ export const buildTabFieldGroups = (
 
   const storageStateField: FieldDef<CreateItemFormData> = {
     name: 'storageState',
-    label: 'Storage State',
+    label: t('addItemForm.fields.storageState.label'),
     component: FormSelect,
     props: { componentType: 'select' },
-    options: STORAGE_STATES.map(state => ({ label: state, value: state })),
+    options: STORAGE_STATES.map(state => ({
+      label: t(`storageState.${state}`),
+      value: state,
+    })),
   };
   const shelfLifeField: FieldDef<CreateItemFormData> = {
     name: 'shelfLifeDays',
-    label: 'Shelf Life (Days)',
-    placeholder: 'Enter shelf life in days',
+    label: t('addItemForm.fields.shelfLife.label'),
+    placeholder: t('addItemForm.fields.shelfLife.placeholder'),
     component: FormNumberInput,
     props: { componentType: 'number', keyboardType: 'numeric' },
   };
   const shelfLifeOpenedField: FieldDef<CreateItemFormData> = {
     name: 'shelfLifeOpenedDays',
-    label: 'Shelf Life Once Opened (Days)',
-    placeholder: 'Enter shelf life once opened',
+    label: t('addItemForm.fields.shelfLifeOpened.label'),
+    placeholder: t('addItemForm.fields.shelfLifeOpened.placeholder'),
     component: FormNumberInput,
     props: { componentType: 'number', keyboardType: 'numeric' },
   };
   const baseDimensionField: FieldDef<CreateItemFormData> = {
     name: 'baseDimension',
-    label: 'Base Dimension',
+    label: t('addItemForm.fields.baseDimension.label'),
     component: FormSelect,
     props: { componentType: 'select' },
     options: [
-      { label: 'None', value: '' },
-      { label: 'Volume', value: BaseDimension.Volume },
-      { label: 'Mass', value: BaseDimension.Mass },
-      { label: 'Count', value: BaseDimension.Count },
+      { label: t('baseDimension.none'), value: '' },
+      {
+        label: t(`baseDimension.${BaseDimension.Volume}`),
+        value: BaseDimension.Volume,
+      },
+      {
+        label: t(`baseDimension.${BaseDimension.Mass}`),
+        value: BaseDimension.Mass,
+      },
+      {
+        label: t(`baseDimension.${BaseDimension.Count}`),
+        value: BaseDimension.Count,
+      },
     ],
   };
 
   const consumeIncrementField: FieldDef<CreateItemFormData> = {
     name: 'defaultConsumeIncrement',
-    label: 'Default Consume Increment',
-    placeholder: 'e.g., 1',
+    label: t('addItemForm.fields.consumeIncrement.label'),
+    placeholder: t('addItemForm.fields.consumeIncrement.placeholder'),
     component: FormNumberInput,
     props: { componentType: 'number', keyboardType: 'decimal-pad' },
   };
   const consumeUnitField: FieldDef<CreateItemFormData> = {
     name: 'defaultConsumeUnitId',
-    label: 'Default Consume Unit',
-    placeholder: 'tsp, cup, etc.',
+    label: t('addItemForm.fields.consumeUnit.label'),
+    placeholder: t('addItemForm.fields.consumeUnit.placeholder'),
     component: 'unitAutocomplete',
     props: {
       componentType: 'autocomplete',
@@ -198,8 +239,8 @@ export const buildTabFieldGroups = (
   };
   const tagsField: FieldDef<CreateItemFormData> = {
     name: 'tags',
-    label: 'Tags',
-    placeholder: 'Comma-separated tags (e.g., organic, gluten-free)',
+    label: t('addItemForm.fields.tags.label'),
+    placeholder: t('addItemForm.fields.tags.placeholder'),
     component: FormTextArea,
     props: { numberOfLines: 2 },
     renderValue: (value: unknown) => {
@@ -219,23 +260,29 @@ export const buildTabFieldGroups = (
   };
   const foodStampField: FieldDef<CreateItemFormData> = {
     name: 'isFoodStampItem',
-    label: 'Food Stamp Eligible',
+    label: t('addItemForm.fields.foodStamp.label'),
     component: FormCheckbox,
     props: { componentType: 'checkbox' },
   };
   const fsaField: FieldDef<CreateItemFormData> = {
     name: 'isFsaEligible',
-    label: 'FSA Eligible',
+    label: t('addItemForm.fields.fsa.label'),
     component: FormCheckbox,
     props: { componentType: 'checkbox' },
   };
+  // Required on the review path and addressed to the admin; optional on the
+  // direct-edit path, where it is only an audit note on the item's history.
+  const noteRequired = requiresEditNote(mode);
   const editReasonField: FieldDef<CreateItemFormData> = {
     name: 'editReason',
-    label: 'What needs fixing?',
-    placeholder:
-      'Tell the reviewer what is wrong (e.g., wrong net weight on the label)',
+    label: noteRequired
+      ? t('addItemForm.fields.editNote.label')
+      : t('addItemForm.fields.directEditNote.label'),
+    placeholder: noteRequired
+      ? t('addItemForm.fields.editNote.placeholder')
+      : t('addItemForm.fields.directEditNote.placeholder'),
     component: FormTextArea,
-    props: { numberOfLines: 3, required: true },
+    props: { numberOfLines: 3, required: noteRequired },
   };
 
   const editing = isEditMode(mode);
@@ -254,8 +301,8 @@ export const buildTabFieldGroups = (
 
   return {
     Basics: {
-      // The note is required in edit modes, so it leads. Buried on the last tab
-      // inside "More options" it would block submit with no visible cause.
+      // The note leads in edit modes. Where it's required, burying it on the
+      // last tab inside "More options" would block submit with no visible cause.
       primary: editing
         ? [editReasonField, nameField, descriptionField, vendorField]
         : [nameField, descriptionField, vendorField],
@@ -278,31 +325,34 @@ export const buildTabFieldGroups = (
   };
 };
 
+/**
+ * Per-mode copy, held as i18n keys rather than text so this stays a static
+ * literal the form can index by mode. The caller resolves them with `t`.
+ */
 export const MODE_CONFIG = {
   create: {
-    title: 'Add New Item',
+    title: 'addItemForm.modes.create.title',
     subtitle: (hasBarcode: boolean) =>
       hasBarcode
-        ? 'Add this item to the database for future scans'
-        : 'Create a new item with basic information',
-    buttonLabel: 'Add Item',
+        ? 'addItemForm.modes.create.subtitleScanned'
+        : 'addItemForm.modes.create.subtitle',
+    buttonLabel: 'addItemForm.modes.create.button',
   },
   edit: {
-    title: 'Suggest Edit',
-    subtitle: () =>
-      'An admin reviews your changes — the listing stays as it is until then',
-    buttonLabel: 'Submit Suggestion',
+    title: 'addItemForm.modes.edit.title',
+    subtitle: () => 'addItemForm.modes.edit.subtitle',
+    buttonLabel: 'addItemForm.modes.edit.button',
   },
   // Same form as `edit`, but the caller resolved that this user may write
   // straight through, so the wording promises an immediate change.
   directEdit: {
-    title: 'Edit Item',
-    subtitle: () => 'Your changes go live right away',
-    buttonLabel: 'Save Changes',
+    title: 'addItemForm.modes.directEdit.title',
+    subtitle: () => 'addItemForm.modes.directEdit.subtitle',
+    buttonLabel: 'addItemForm.modes.directEdit.button',
   },
   variant: {
-    title: 'Create New Version',
-    subtitle: () => 'Create a new version of this item for your region',
-    buttonLabel: 'Create Version',
+    title: 'addItemForm.modes.variant.title',
+    subtitle: () => 'addItemForm.modes.variant.subtitle',
+    buttonLabel: 'addItemForm.modes.variant.button',
   },
 };

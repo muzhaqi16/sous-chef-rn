@@ -18,6 +18,7 @@
 import { device, element, by, waitFor } from 'detox';
 import { getAuthTokens } from '../helpers/tokenProvider';
 import { dismissBiometricPromptIfPresent } from '../helpers/auth';
+import { t } from '../helpers/i18n';
 
 // Seeded, PUBLIC, not created by the test user -> canEdit: false.
 const PUBLIC_ITEM_UPC = '085239110201'; // Ground Beef
@@ -62,40 +63,32 @@ describe('Item edit suggestions', () => {
 
   it('offers Suggest Edit for an item the user may not edit directly', async () => {
     // canEdit: false -> the suggestion wording, never "Edit".
-    await waitFor(element(by.text('Suggest Edit')))
+    await waitFor(element(by.text(t('suggestItemEdit.suggestAction'))))
       .toBeVisible()
       .withTimeout(10000);
     await shoot('02-suggest-edit-visible');
   });
 
   it('opens the form worded as a review, not an immediate change', async () => {
-    await element(by.text('Suggest Edit')).tap();
+    await element(by.text(t('suggestItemEdit.suggestAction'))).tap();
     await settle(2500);
     await shoot('03-suggest-edit-sheet');
 
-    // MODE_CONFIG.edit's subtitle. `directEdit` promises "Your changes go live
-    // right away" instead, so this string is what separates the two routes.
-    await waitFor(
-      element(
-        by.text(
-          'An admin reviews your changes — the listing stays as it is until then',
-        ),
-      ),
-    )
-      .toBeVisible()
+    // The subtitle is what separates the two routes: `directEdit` promises the
+    // change goes live immediately, `edit` promises review. Asserted through
+    // the resolved copy rather than a literal, so rewording en.json can't leave
+    // this passing against a string the app no longer shows.
+    await waitFor(element(by.id('add-item-form-subtitle')))
+      .toHaveText(t('addItemForm.modes.edit.subtitle'))
       .withTimeout(10000);
   });
 
   it('leads the form with the note the reviewer needs', async () => {
-    // The note sits first on Basics and is required. It used to be optional and
-    // buried on tab 4 under "More options", where a required field would block
-    // submit with no visible cause.
+    // The note sits first on Basics and is required on this path. It used to be
+    // optional and buried on tab 4 under "More options", where a required field
+    // would block submit with no visible cause.
     await waitFor(
-      element(
-        by.text(
-          'Tell the reviewer what is wrong (e.g., wrong net weight on the label)',
-        ),
-      ),
+      element(by.text(t('addItemForm.fields.editNote.placeholder'))),
     )
       .toBeVisible()
       .withTimeout(10000);

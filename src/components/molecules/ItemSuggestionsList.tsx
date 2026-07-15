@@ -128,9 +128,10 @@ const AddManuallyOption = ({
   );
 };
 
+// No `styles.useVariants` here, unlike the rows above: `reportOption` declares
+// no variants, so selecting them would be a no-op.
 const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
   const { t } = useTranslation();
-  styles.useVariants({ withBorder: false, disabled: false });
 
   return (
     <AppPressable style={styles.reportOption} onPress={onPress}>

@@ -71,7 +71,9 @@
     "missingRequiredInfo": "Missing required information",
     "invalidInput": "Invalid input",
     "invalidOperation": "Invalid operation",
-    "invalidUnitTitle": "Invalid Unit"
+    "invalidUnitTitle": "Invalid Unit",
+    "addItemFailedRetry": "Failed to add item. Please try again.",
+    "restockFailedRetry": "Failed to restock item. Please try again."
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -2587,6 +2589,190 @@
     "sentTitle": "Report sent",
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedTitle": "Couldn't send that",
-    "failedBody": "Something went wrong sending your report. Please try again."
+    "failedBody": "Something went wrong sending your report. Please try again.",
+    "alreadyReportedTitle": "Already reported",
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
+    "rateLimitedTitle": "Slow down a moment",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "rejectedTitle": "Couldn't send that"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Add New Item",
+        "subtitle": "Create a new item with basic information",
+        "subtitleScanned": "Add this item to the database for future scans",
+        "button": "Add Item"
+      },
+      "edit": {
+        "title": "Suggest Edit",
+        "subtitle": "An admin reviews your changes — the listing stays as it is until then",
+        "button": "Submit Suggestion"
+      },
+      "directEdit": {
+        "title": "Edit Item",
+        "subtitle": "Your changes go live right away",
+        "button": "Save Changes"
+      },
+      "variant": {
+        "title": "Create New Version",
+        "subtitle": "Create a new version of this item for your region",
+        "button": "Create Version"
+      }
+    },
+    "tabs": {
+      "basics": "Basics",
+      "product": "Product",
+      "storage": "Storage",
+      "inventory": "Inventory"
+    },
+    "moreOptions": "More options",
+    "scanUpcA11y": "Scan UPC with camera",
+    "fields": {
+      "name": {
+        "label": "Item Name",
+        "placeholder": "Enter item name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter item description (optional)"
+      },
+      "vendor": {
+        "label": "Brand/Vendor",
+        "placeholder": "Enter brand or vendor name"
+      },
+      "type": {
+        "label": "Item Type"
+      },
+      "upc": {
+        "label": "UPC/Barcode",
+        "placeholder": "Enter UPC/Barcode (optional)"
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "Enter SKU (optional)"
+      },
+      "store": {
+        "label": "Store (for SKU)",
+        "placeholder": "Search for store"
+      },
+      "storageState": {
+        "label": "Storage State"
+      },
+      "shelfLife": {
+        "label": "Shelf Life (Days)",
+        "placeholder": "Enter shelf life in days"
+      },
+      "shelfLifeOpened": {
+        "label": "Shelf Life Once Opened (Days)",
+        "placeholder": "Enter shelf life once opened"
+      },
+      "baseDimension": {
+        "label": "Base Dimension"
+      },
+      "consumeIncrement": {
+        "label": "Default Consume Increment",
+        "placeholder": "e.g., 1"
+      },
+      "consumeUnit": {
+        "label": "Default Consume Unit",
+        "placeholder": "tsp, cup, etc."
+      },
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Comma-separated tags (e.g., organic, gluten-free)"
+      },
+      "foodStamp": {
+        "label": "Food Stamp Eligible"
+      },
+      "fsa": {
+        "label": "FSA Eligible"
+      },
+      "editNote": {
+        "label": "What needs fixing?",
+        "placeholder": "Tell the reviewer what is wrong (e.g., wrong net weight on the label)"
+      },
+      "directEditNote": {
+        "label": "Note (optional)",
+        "placeholder": "Add a note about what you changed"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Drink",
+    "FOOD": "Food",
+    "FOUNDATION": "Staples",
+    "HOUSEHOLD": "Household",
+    "OTHER": "Other",
+    "PERSONAL_CARE": "Personal Care",
+    "PET": "Pet Supplies",
+    "PRODUCT": "Non-Food Goods",
+    "SUPPLEMENT": "Supplements"
+  },
+  "storageState": {
+    "AMBIENT": "Ambient",
+    "FROZEN": "Frozen",
+    "NONE": "None",
+    "REFRIGERATED": "Refrigerated"
+  },
+  "baseDimension": {
+    "none": "None",
+    "VOLUME": "Volume",
+    "MASS": "Mass",
+    "COUNT": "Count"
+  },
+  "netWeightEntry": {
+    "sectionTitle": "Net Weights",
+    "weightLabel": "Weight",
+    "weightPlaceholder": "e.g., 3.4",
+    "unitLabel": "Unit",
+    "unitPlaceholder": "e.g., oz, g",
+    "addButton": "Add Net Weight"
+  },
+  "itemValidation": {
+    "nameRequired": "Item name is required",
+    "nameEmpty": "Item name cannot be empty",
+    "nameMax": "Item name cannot exceed {{count}} characters",
+    "nameChars": "Item name can only contain letters, numbers, spaces, and common punctuation",
+    "descriptionMax": "Description cannot exceed {{count}} characters",
+    "upcDigits": "UPC must contain only numbers",
+    "upcMin": "UPC must be at least {{count}} digits",
+    "upcMax": "UPC cannot exceed {{count}} digits",
+    "skuMax": "SKU cannot exceed {{count}} characters",
+    "urlInvalid": "Please enter a valid URL",
+    "wholeNumber": "Must be a whole number",
+    "shelfLifeMin": "Shelf life must be at least 1 day",
+    "shelfLifeMax": "Shelf life cannot exceed {{count}} years",
+    "shelfLifeOpenedMin": "Opened shelf life must be at least 1 day",
+    "shelfLifeOpenedMax": "Opened shelf life cannot exceed {{count}} years",
+    "displayPricePerUnitMax": "Display price per unit cannot exceed {{count}} characters",
+    "unitQtyMin": "Unit quantity must be greater than 0",
+    "defaultUnitMax": "Unit symbol cannot exceed {{count}} characters",
+    "vendorMax": "Vendor name cannot exceed {{count}} characters",
+    "tagMax": "Each tag cannot exceed {{count}} characters",
+    "tagsMax": "Cannot have more than {{count}} tags",
+    "editReasonMax": "Edit reason cannot exceed {{count}} characters",
+    "editReasonRequired": "Tell us what needs fixing",
+    "editReasonMin": "Please add a little more detail (at least {{count}} characters)",
+    "netWeightMin": "Net weight must be greater than 0",
+    "netWeightValueRequired": "Value is required",
+    "netWeightUnitRequired": "Unit is required",
+    "greaterThanZero": "Must be greater than 0"
+  },
+  "imageUpload": {
+    "offlineTitle": "No Internet Connection",
+    "offlineBody": "Image upload requires an internet connection. Please try again when you're online.",
+    "offlineError": "You're offline. Image upload requires an internet connection.",
+    "failedTitle": "Upload Failed",
+    "failedBody": "Something went wrong uploading your image. Please try again.",
+    "invalidTypeBody": "Please select a JPEG, PNG, or WebP image file.",
+    "profileTooLargeBody": "The image is too large. Profile images must be under {{size}}MB.",
+    "itemTooLargeBody": "The image is too large. Item photos must be under {{size}}MB.",
+    "unreadableBody": "We couldn't read that image file. Please try a different one.",
+    "updateFailedTitle": "Update Failed",
+    "avatarUpdateFailedBody": "Failed to update profile avatar",
+    "coverUpdateFailedBody": "Failed to update profile cover",
+    "itemImageUpdateFailedBody": "Failed to update item image"
   }
 }

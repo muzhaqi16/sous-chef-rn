@@ -206,14 +206,16 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes).not.toHaveProperty('tagOps');
   });
 
-  // An empty categoryIds array wipes every category on the item.
-  it('never includes categoryIds', () => {
+  // Categories reach SuggestibleItemChangesInput through `categoryOps`, and the
+  // form has no category editor to diff against.
+  it('never includes categoryOps', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),
-      unchangedForm({ name: 'Skim Milk', categoryIds: [] }),
+      unchangedForm({ name: 'Skim Milk', categoryIds: ['cat-1'] }),
     );
 
-    expect(diff.changes.classification).toBeUndefined();
+    expect(diff.changes).not.toHaveProperty('categoryOps');
+    expect(diff.changedFields).toEqual(['name']);
   });
 
   // The unit field holds typed text rather than the id packageInfo expects, so

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -37,6 +38,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   disabled = false,
   maxEntries,
 }) => {
+  const { t } = useTranslation();
   const canAddEntry = maxEntries == null || entries.length < maxEntries;
 
   const handleAddEntry = () => {
@@ -81,26 +83,26 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Net Weights
+        {t('netWeightEntry.sectionTitle')}
       </Text>
       {entries.map((entry, index) => (
         <View key={entry.id} style={styles.entryRow}>
           <View style={styles.valueField}>
             <FormInput
-              label="Weight"
+              label={t('netWeightEntry.weightLabel')}
               value={entry.value || ''}
               onChangeText={(text: string) => handleValueChange(index, text)}
-              placeholder="e.g., 3.4"
+              placeholder={t('netWeightEntry.weightPlaceholder')}
               keyboardType="decimal-pad"
             />
           </View>
           <View style={styles.unitField}>
             <UnitAutocompleteField
               variant="modal"
-              label="Unit"
+              label={t('netWeightEntry.unitLabel')}
               value={entry.unitName || ''}
               onChangeText={(text: string) => handleUnitTextChange(index, text)}
-              placeholder="e.g., oz, g"
+              placeholder={t('netWeightEntry.unitPlaceholder')}
               onUnitSelected={(unitId, unitName) =>
                 handleUnitSelected(index, unitId, unitName)
               }
@@ -121,7 +123,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
           onPress={handleAddEntry}
           disabled={disabled}
         >
-          Add Net Weight
+          {t('netWeightEntry.addButton')}
         </Button>
       )}
     </View>

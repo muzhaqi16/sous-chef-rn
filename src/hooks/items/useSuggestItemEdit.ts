@@ -46,7 +46,10 @@ type MutationResult<TData> = { data?: TData | null; error?: unknown };
 
 export function useSuggestItemEdit() {
   const { t } = useTranslation();
-  const { uploadItemImages } = useImageUpload();
+  // `uploading` has to be part of the returned `loading`: the photos-only path
+  // runs no mutation at all, so without it the submit button stays live for the
+  // whole upload and a second tap re-uploads the same files as new image rows.
+  const { uploadItemImages, uploading } = useImageUpload();
 
   const [suggestEdit, { loading: suggesting }] = useMutation(
     SuggestItemEditDocument,
@@ -163,7 +166,7 @@ export function useSuggestItemEdit() {
     return FAILED;
   };
 
-  return { submitEdit, loading: suggesting || updating };
+  return { submitEdit, loading: suggesting || updating || uploading };
 }
 
 async function uploadImages(

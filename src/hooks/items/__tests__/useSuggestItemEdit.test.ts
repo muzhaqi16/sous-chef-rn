@@ -25,8 +25,17 @@ jest.mock('#/services/alertService', () => ({
 jest.mock('#/utils/compilerSafeWrappers');
 
 const mockUploadItemImages = jest.fn().mockResolvedValue([]);
+// `uploading` is part of the hook's contract, not incidental: the photos-only
+// path runs no mutation, so it is the only thing that can gate the submit
+// button while bytes are in flight.
+let mockUploading = false;
 jest.mock('#hooks/useImageUpload', () => ({
-  useImageUpload: () => ({ uploadItemImages: mockUploadItemImages }),
+  useImageUpload: () => ({
+    uploadItemImages: mockUploadItemImages,
+    get uploading() {
+      return mockUploading;
+    },
+  }),
 }));
 
 const NOTE = 'The net weight on the label is 500g, not 5g.';
@@ -73,9 +82,25 @@ const renderHook = (operationMocks: MockedResponse[]) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUploading = false;
 });
 
 describe('useSuggestItemEdit', () => {
+  // The submit button's only concurrency guard is this flag. The photos-only
+  // path fires no mutation, so without `uploading` folded in the button stays
+  // live for the whole upload and a second tap re-uploads the same files as
+  // fresh image rows.
+  it('reports loading while images are uploading', async () => {
+    const { mock } = recordMock(SuggestItemEditDocument, {
+      data: suggestionPayload(NOTE),
+    });
+
+    mockUploading = true;
+    const { result } = renderHook([mock]);
+
+    expect(result.current.loading).toBe(true);
+  });
+
   it('sends a minimal structured diff for a public item', async () => {
     const { mock, fired } = recordMock(SuggestItemEditDocument, {
       data: suggestionPayload(NOTE),

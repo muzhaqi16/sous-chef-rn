@@ -39,9 +39,11 @@ import { BarcodeInfo } from './BarcodeInfo';
 import {
   type PageName,
   PAGES,
+  PAGE_LABEL_KEYS,
   detectScanType,
   buildTabFieldGroups,
   isEditMode,
+  requiresEditNote,
   MODE_CONFIG,
 } from './fields';
 
@@ -212,6 +214,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   }
 
   const TAB_FIELDS = buildTabFieldGroups(
+    t,
     setSelectedBrandId,
     setSelectedStoreId,
     mode,
@@ -224,8 +227,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     setValue,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
+    // Only the review path mandates a note — see `requiresEditNote`.
     resolver: yupResolver(
-      isEditMode(mode) ? suggestItemEditSchema : createItemSchema,
+      requiresEditNote(mode) ? suggestItemEditSchema : createItemSchema,
     ) as Resolver<CreateItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
@@ -342,7 +346,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     fieldHasError(String(f.name)),
   );
   const indicatorPages = PAGES.map(page => ({
-    label: page,
+    label: t(PAGE_LABEL_KEYS[page]),
     hasError: tabHasError(page),
   }));
   const showAdvanced = advancedExpanded[activePage] || advancedHasError;
@@ -351,10 +355,15 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     <>
       <View style={styles.header}>
         <Text size="2xl" weight="bold" style={styles.title}>
-          {title || modeConfig.title}
+          {title || t(modeConfig.title)}
         </Text>
-        <Text size="sm" tone="secondary" lineHeight="tight">
-          {modeConfig.subtitle(!!barcode)}
+        <Text
+          size="sm"
+          tone="secondary"
+          lineHeight="tight"
+          testID="add-item-form-subtitle"
+        >
+          {t(modeConfig.subtitle(!!barcode))}
         </Text>
       </View>
 
@@ -424,7 +433,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
         {activeTab.advanced.length > 0 && (
           <CollapsibleSection
-            title="More options"
+            title={t('addItemForm.moreOptions')}
             expanded={showAdvanced}
             onToggle={() => toggleAdvanced(activePage)}
           >
@@ -447,7 +456,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           disabled={!isValid}
           onPress={handleSubmit(handleFormSubmit, logValidationErrors)}
         >
-          {modeConfig.buttonLabel}
+          {t(modeConfig.buttonLabel)}
         </Button>
 
         <Button
@@ -456,7 +465,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           disabled={loading}
           onPress={onClose}
         >
-          Cancel
+          {t('labels.cancel')}
         </Button>
       </View>
     </>

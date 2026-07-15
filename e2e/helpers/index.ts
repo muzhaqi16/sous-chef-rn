@@ -30,3 +30,6 @@ export * from './permissions';
 
 // Test data management
 export * from './data';
+
+// Locale lookup for assertions
+export * from './i18n';

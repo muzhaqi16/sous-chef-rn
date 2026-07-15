@@ -71,7 +71,9 @@
     "missingRequiredInfo": "Falta información obligatoria",
     "invalidInput": "Entrada no válida",
     "invalidOperation": "Operación no válida",
-    "invalidUnitTitle": "Unidad no válida"
+    "invalidUnitTitle": "Unidad no válida",
+    "addItemFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",
+    "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo."
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -2587,6 +2589,190 @@
     "sentTitle": "Informe enviado",
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedTitle": "No se pudo enviar",
-    "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo."
+    "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
+    "alreadyReportedTitle": "Ya lo informaste",
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
+    "rateLimitedTitle": "Espera un momento",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "rejectedTitle": "No se pudo enviar"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Añadir artículo nuevo",
+        "subtitle": "Crea un artículo nuevo con la información básica",
+        "subtitleScanned": "Añade este artículo a la base de datos para futuros escaneos",
+        "button": "Añadir artículo"
+      },
+      "edit": {
+        "title": "Sugerir cambio",
+        "subtitle": "Un administrador revisa tus cambios — la ficha permanece igual hasta entonces",
+        "button": "Enviar sugerencia"
+      },
+      "directEdit": {
+        "title": "Editar artículo",
+        "subtitle": "Tus cambios se publican de inmediato",
+        "button": "Guardar cambios"
+      },
+      "variant": {
+        "title": "Crear versión nueva",
+        "subtitle": "Crea una versión nueva de este artículo para tu región",
+        "button": "Crear versión"
+      }
+    },
+    "tabs": {
+      "basics": "Básicos",
+      "product": "Producto",
+      "storage": "Almacenamiento",
+      "inventory": "Inventario"
+    },
+    "moreOptions": "Más opciones",
+    "scanUpcA11y": "Escanear UPC con la cámara",
+    "fields": {
+      "name": {
+        "label": "Nombre del artículo",
+        "placeholder": "Introduce el nombre del artículo"
+      },
+      "description": {
+        "label": "Descripción",
+        "placeholder": "Introduce la descripción del artículo (opcional)"
+      },
+      "vendor": {
+        "label": "Marca/Proveedor",
+        "placeholder": "Introduce el nombre de la marca o del proveedor"
+      },
+      "type": {
+        "label": "Tipo de artículo"
+      },
+      "upc": {
+        "label": "UPC/Código de barras",
+        "placeholder": "Introduce el UPC/código de barras (opcional)"
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "Introduce el SKU (opcional)"
+      },
+      "store": {
+        "label": "Tienda (para el SKU)",
+        "placeholder": "Busca una tienda"
+      },
+      "storageState": {
+        "label": "Estado de almacenamiento"
+      },
+      "shelfLife": {
+        "label": "Vida útil (días)",
+        "placeholder": "Introduce la vida útil en días"
+      },
+      "shelfLifeOpened": {
+        "label": "Vida útil una vez abierto (días)",
+        "placeholder": "Introduce la vida útil una vez abierto"
+      },
+      "baseDimension": {
+        "label": "Dimensión base"
+      },
+      "consumeIncrement": {
+        "label": "Incremento de consumo predeterminado",
+        "placeholder": "p. ej., 1"
+      },
+      "consumeUnit": {
+        "label": "Unidad de consumo predeterminada",
+        "placeholder": "cdta., taza, etc."
+      },
+      "tags": {
+        "label": "Etiquetas",
+        "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
+      },
+      "foodStamp": {
+        "label": "Apto para cupones de alimentos"
+      },
+      "fsa": {
+        "label": "Apto para FSA"
+      },
+      "editNote": {
+        "label": "¿Qué hay que corregir?",
+        "placeholder": "Indica al revisor qué está mal (p. ej., el peso neto de la etiqueta es incorrecto)"
+      },
+      "directEditNote": {
+        "label": "Nota (opcional)",
+        "placeholder": "Añade una nota sobre lo que cambiaste"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Bebida",
+    "FOOD": "Alimento",
+    "FOUNDATION": "Ingredientes básicos",
+    "HOUSEHOLD": "Hogar",
+    "OTHER": "Otro",
+    "PERSONAL_CARE": "Cuidado personal",
+    "PET": "Para mascotas",
+    "PRODUCT": "Productos no alimentarios",
+    "SUPPLEMENT": "Suplementos"
+  },
+  "storageState": {
+    "AMBIENT": "Ambiente",
+    "FROZEN": "Congelado",
+    "NONE": "Ninguno",
+    "REFRIGERATED": "Refrigerado"
+  },
+  "baseDimension": {
+    "none": "Ninguna",
+    "VOLUME": "Volumen",
+    "MASS": "Masa",
+    "COUNT": "Recuento"
+  },
+  "netWeightEntry": {
+    "sectionTitle": "Pesos netos",
+    "weightLabel": "Peso",
+    "weightPlaceholder": "p. ej., 3.4",
+    "unitLabel": "Unidad",
+    "unitPlaceholder": "p. ej., oz, g",
+    "addButton": "Añadir peso neto"
+  },
+  "itemValidation": {
+    "nameRequired": "El nombre del artículo es obligatorio",
+    "nameEmpty": "El nombre del artículo no puede estar vacío",
+    "nameMax": "El nombre del artículo no puede superar los {{count}} caracteres",
+    "nameChars": "El nombre del artículo solo puede contener letras, números, espacios y signos de puntuación comunes",
+    "descriptionMax": "La descripción no puede superar los {{count}} caracteres",
+    "upcDigits": "El UPC solo puede contener números",
+    "upcMin": "El UPC debe tener al menos {{count}} dígitos",
+    "upcMax": "El UPC no puede superar los {{count}} dígitos",
+    "skuMax": "El SKU no puede superar los {{count}} caracteres",
+    "urlInvalid": "Introduce una URL válida",
+    "wholeNumber": "Debe ser un número entero",
+    "shelfLifeMin": "La vida útil debe ser de al menos 1 día",
+    "shelfLifeMax": "La vida útil no puede superar los {{count}} años",
+    "shelfLifeOpenedMin": "La vida útil una vez abierto debe ser de al menos 1 día",
+    "shelfLifeOpenedMax": "La vida útil una vez abierto no puede superar los {{count}} años",
+    "displayPricePerUnitMax": "El precio por unidad mostrado no puede superar los {{count}} caracteres",
+    "unitQtyMin": "La cantidad por unidad debe ser mayor que 0",
+    "defaultUnitMax": "El símbolo de la unidad no puede superar los {{count}} caracteres",
+    "vendorMax": "El nombre del proveedor no puede superar los {{count}} caracteres",
+    "tagMax": "Cada etiqueta no puede superar los {{count}} caracteres",
+    "tagsMax": "No puedes tener más de {{count}} etiquetas",
+    "editReasonMax": "El motivo del cambio no puede superar los {{count}} caracteres",
+    "editReasonRequired": "Dinos qué hay que corregir",
+    "editReasonMin": "Añade un poco más de detalle (al menos {{count}} caracteres)",
+    "netWeightMin": "El peso neto debe ser mayor que 0",
+    "netWeightValueRequired": "El valor es obligatorio",
+    "netWeightUnitRequired": "La unidad es obligatoria",
+    "greaterThanZero": "Debe ser mayor que 0"
+  },
+  "imageUpload": {
+    "offlineTitle": "Sin conexión a internet",
+    "offlineBody": "Para subir imágenes se necesita conexión a internet. Inténtalo de nuevo cuando vuelvas a estar en línea.",
+    "offlineError": "Estás sin conexión. Para subir imágenes se necesita conexión a internet.",
+    "failedTitle": "Error al subir",
+    "failedBody": "Algo salió mal al subir tu imagen. Inténtalo de nuevo.",
+    "invalidTypeBody": "Selecciona un archivo de imagen JPEG, PNG o WebP.",
+    "profileTooLargeBody": "La imagen es demasiado grande. Las imágenes de perfil deben pesar menos de {{size}} MB.",
+    "updateFailedTitle": "Error al actualizar",
+    "avatarUpdateFailedBody": "No se pudo actualizar el avatar del perfil",
+    "coverUpdateFailedBody": "No se pudo actualizar la portada del perfil",
+    "itemImageUpdateFailedBody": "No se pudo actualizar la imagen del artículo",
+    "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
+    "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro."
   }
 }

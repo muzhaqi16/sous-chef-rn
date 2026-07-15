@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
 import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
 import { useMutation } from '@apollo/client/react';
@@ -10,10 +11,58 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { MAX_PROFILE_SIZE } from '#utils/imageValidation';
+import {
+  MAX_IMAGE_SIZE,
+  MAX_PROFILE_SIZE,
+  type ImageValidationError,
+} from '#utils/imageValidation';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { logger } from '#/utils/environment';
+
+// Minimal structural type for the translation function so this doesn't depend
+// on i18next's generic `TFunction` namespace typing.
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Turns an upload failure into copy a user can act on.
+ *
+ * `error.message` is never shown. Those strings are internal control-flow
+ * signals — 'Failed to get upload URL', 'Upload request timed out', 'File too
+ * large. Maximum size: 2MB' — written in English and never translated, so
+ * surfacing them both leaks implementation detail and defeats localization.
+ * `logger.error` already records the real one for debugging.
+ *
+ * `ImageValidationError.code` is the only reliable discriminator. Matching the
+ * message instead (`message.includes('INVALID_TYPE')`) could never fire: the
+ * code lives on `error.code` while the message reads 'Only JPEG, PNG, and WebP
+ * images are allowed'. Only the 'file size' test ever matched, and it caught
+ * UNKNOWN_ERROR ("couldn't determine the size") while claiming the image was
+ * "too large or corrupted".
+ */
+const uploadErrorMessage = (
+  t: Translate,
+  error: unknown,
+  isProfileImage: boolean,
+): string => {
+  const code = (error as Partial<ImageValidationError> | null)?.code;
+  switch (code) {
+    case 'INVALID_TYPE':
+      return t('imageUpload.invalidTypeBody');
+    case 'FILE_TOO_LARGE':
+      return isProfileImage
+        ? t('imageUpload.profileTooLargeBody', {
+            size: MAX_PROFILE_SIZE / 1024 / 1024,
+          })
+        : t('imageUpload.itemTooLargeBody', {
+            size: MAX_IMAGE_SIZE / 1024 / 1024,
+          });
+    case 'UNKNOWN_ERROR':
+      return t('imageUpload.unreadableBody');
+    default:
+      return t('imageUpload.failedBody');
+  }
+};
 
 export interface ImageFile {
   uri: string;
@@ -36,6 +85,7 @@ export interface ImageUploadOptions {
 }
 
 export const useImageUpload = () => {
+  const { t } = useTranslation();
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -148,13 +198,11 @@ export const useImageUpload = () => {
     // Check if online before attempting upload
     const state = useStore.getState();
     if (!state.isOnline) {
-      const offlineError = new Error(
-        "You're offline. Image upload requires an internet connection.",
-      );
+      const offlineError = new Error(t('imageUpload.offlineError'));
       onError?.(offlineError);
       alertService.alert(
-        'No Internet Connection',
-        "Image upload requires an internet connection. Please try again when you're online.",
+        t('imageUpload.offlineTitle'),
+        t('imageUpload.offlineBody'),
       );
       return null;
     }
@@ -256,24 +304,9 @@ export const useImageUpload = () => {
         ),
       error => {
         logger.error('Profile image upload failed:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Upload failed';
-
-        // Provide more specific error messages for profile images
-        let userErrorMessage = errorMessage;
-        if (errorMessage.includes('file size')) {
-          userErrorMessage =
-            'The image file is too large or corrupted. Please try a different image.';
-        } else if (errorMessage.includes('INVALID_TYPE')) {
-          userErrorMessage = 'Please select a JPEG, PNG, or WebP image file.';
-        } else if (errorMessage.includes('FILE_TOO_LARGE')) {
-          userErrorMessage = `The image is too large. Profile images must be under ${
-            MAX_PROFILE_SIZE / 1024 / 1024
-          }MB.`;
-        }
-
+        const userErrorMessage = uploadErrorMessage(t, error, true);
         options.onError?.(new Error(userErrorMessage));
-        alertService.alert('Upload Failed', userErrorMessage);
+        alertService.alert(t('imageUpload.failedTitle'), userErrorMessage);
       },
     );
     return result || null;
@@ -304,10 +337,9 @@ export const useImageUpload = () => {
         ),
       error => {
         logger.error('Item image upload failed:', error);
-        const errorMessage =
-          error instanceof Error ? error.message : 'Upload failed';
+        const errorMessage = uploadErrorMessage(t, error, false);
         options.onError?.(new Error(errorMessage));
-        alertService.alert('Upload Failed', errorMessage);
+        alertService.alert(t('imageUpload.failedTitle'), errorMessage);
       },
     );
     return result || null;
@@ -340,7 +372,10 @@ export const useImageUpload = () => {
         }),
       error => {
         logger.error('Update profile avatar failed:', error);
-        alertService.alert('Update Failed', 'Failed to update profile avatar');
+        alertService.alert(
+          t('imageUpload.updateFailedTitle'),
+          t('imageUpload.avatarUpdateFailedBody'),
+        );
       },
     );
     if (!result) return null;
@@ -360,7 +395,10 @@ export const useImageUpload = () => {
         }),
       error => {
         logger.error('Update profile cover failed:', error);
-        alertService.alert('Update Failed', 'Failed to update profile cover');
+        alertService.alert(
+          t('imageUpload.updateFailedTitle'),
+          t('imageUpload.coverUpdateFailedBody'),
+        );
       },
     );
     if (!result) return null;
@@ -377,7 +415,10 @@ export const useImageUpload = () => {
         }),
       error => {
         logger.error('Update item image failed:', error);
-        alertService.alert('Update Failed', 'Failed to update item image');
+        alertService.alert(
+          t('imageUpload.updateFailedTitle'),
+          t('imageUpload.itemImageUpdateFailedBody'),
+        );
       },
     );
     if (!result) return null;

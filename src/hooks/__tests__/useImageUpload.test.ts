@@ -32,10 +32,14 @@ type ItemImageData = {
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
+// Spread the real module and stub only the two functions under control. Listing
+// exports by hand drifts: this factory predated MAX_IMAGE_SIZE and
+// createImageValidationError, so both arrived as `undefined` in the hook, and
+// its hand-written MAX_PROFILE_SIZE (5MB) disagreed with the real one (2MB).
 jest.mock('#utils/imageValidation', () => ({
+  ...jest.requireActual('#utils/imageValidation'),
   validateImageFile: jest.fn(),
   getMimeTypeFromUri: jest.fn(() => 'image/jpeg'),
-  MAX_PROFILE_SIZE: 5 * 1024 * 1024,
 }));
 
 jest.mock('#store', () => ({
@@ -473,11 +477,33 @@ describe('useImageUpload', () => {
     );
   });
 
-  it('uploadProfileImage shows specific error for file size issue', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
+  // These throw what the real `validateImageFile` throws — the code on
+  // `error.code`, the human message on `error.message`. Fabricating an error
+  // whose *message* carries the code (`new Error('INVALID_TYPE: ...')`) is what
+  // let a dead branch look covered: production never produced that shape, so
+  // the classifier fell through and alerted the raw English message instead.
+  const throwValidationError = (
+    message: string,
+    code: 'INVALID_TYPE' | 'FILE_TOO_LARGE' | 'UNKNOWN_ERROR',
+  ) => {
+    // createImageValidationError comes through requireActual in the module
+    // factory above, so the thrown shape matches production exactly.
+    const {
+      validateImageFile,
+      createImageValidationError,
+    } = require('#utils/imageValidation');
     validateImageFile.mockImplementation(() => {
-      throw new Error('Invalid file size');
+      throw createImageValidationError(message, code);
     });
+  };
+
+  const restoreValidation = () => {
+    const { validateImageFile } = require('#utils/imageValidation');
+    validateImageFile.mockImplementation(jest.fn());
+  };
+
+  it('reports an unreadable file when the size cannot be determined', async () => {
+    throwValidationError('Unable to determine file size', 'UNKNOWN_ERROR');
 
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
@@ -492,18 +518,18 @@ describe('useImageUpload', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      expect.stringContaining('too large or corrupted'),
+      expect.stringContaining("couldn't read that image"),
     );
 
-    // Restore
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
   });
 
-  it('uploadProfileImage shows specific error for INVALID_TYPE', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
-    validateImageFile.mockImplementation(() => {
-      throw new Error('INVALID_TYPE: not an image');
-    });
+  it('classifies INVALID_TYPE by code, not by message text', async () => {
+    // The real message says nothing about 'INVALID_TYPE' — only `code` does.
+    throwValidationError(
+      'Only JPEG, PNG, and WebP images are allowed',
+      'INVALID_TYPE',
+    );
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
@@ -520,14 +546,11 @@ describe('useImageUpload', () => {
       expect.stringContaining('JPEG, PNG, or WebP'),
     );
 
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
   });
 
-  it('uploadProfileImage shows specific error for FILE_TOO_LARGE', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
-    validateImageFile.mockImplementation(() => {
-      throw new Error('FILE_TOO_LARGE');
-    });
+  it('quotes the profile size limit on FILE_TOO_LARGE', async () => {
+    throwValidationError('File too large. Maximum size: 2MB', 'FILE_TOO_LARGE');
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
@@ -541,10 +564,35 @@ describe('useImageUpload', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      expect.stringContaining('too large'),
+      expect.stringContaining('Profile images must be under 2MB'),
     );
 
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
+  });
+
+  // The transport errors carry no code, and their messages are internal
+  // control-flow signals ('Upload request timed out') that must never surface.
+  it('falls back to translated copy for an uncoded failure', async () => {
+    const { validateImageFile } = require('#utils/imageValidation');
+    validateImageFile.mockImplementation(() => {
+      throw new Error('Network request failed during upload');
+    });
+
+    const { result } = renderHookWithApollo(() => useImageUpload());
+
+    await act(async () => {
+      await result.current.uploadItemImage(
+        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
+        'item-1',
+      );
+    });
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Upload Failed',
+      'Something went wrong uploading your image. Please try again.',
+    );
+
+    restoreValidation();
   });
 
   it('uploadItemImage shows error alert on failure', async () => {
@@ -562,9 +610,11 @@ describe('useImageUpload', () => {
       );
     });
 
+    // 'Upload failed' is an internal signal, not copy. It used to be alerted
+    // verbatim; an uncoded failure now gets translated text.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Upload failed',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());
@@ -588,9 +638,11 @@ describe('useImageUpload', () => {
     });
 
     expect(onError).toHaveBeenCalled();
+    // An error with no `code` can't be classified, so it must not leak its
+    // message ('Something went wrong') into the alert.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Something went wrong',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());
@@ -612,9 +664,10 @@ describe('useImageUpload', () => {
       });
     });
 
+    // A thrown string has no `code` either — same translated fallback.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Upload failed',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());
