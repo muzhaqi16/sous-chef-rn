@@ -6,6 +6,9 @@ const RATE_LIMIT_CODES = [
   'RATE_LIMIT_IP_BLOCKED',
   'RATE_LIMIT_USER_BLOCKED',
   'RATE_LIMIT_API_KEY_BLOCKED',
+  // Per-operation limit (e.g. suggestItemEdit at 10/hour). Arrives as a
+  // top-level GraphQL error, never as a result-union member.
+  'OPERATION_RATE_LIMITED',
 ];
 
 export interface RateLimitDetails {

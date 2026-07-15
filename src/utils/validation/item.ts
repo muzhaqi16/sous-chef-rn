@@ -145,6 +145,16 @@ export const editReasonRule = string()
   .max(500, 'Edit reason cannot exceed 500 characters')
   .optional();
 
+// suggestItemEdit requires a non-empty note, and the server only trims and
+// checks for emptiness — no length floor — so the minimum is ours to set. 10
+// characters turns away "fix" / "wrong" / "." without being onerous.
+export const editReasonRequiredRule = string()
+  .transform(normalizeSmartPunctuation)
+  .trim()
+  .required('Tell us what needs fixing')
+  .min(10, 'Please add a little more detail (at least 10 characters)')
+  .max(500, 'Edit reason cannot exceed 500 characters');
+
 // --- Create Item validation schema -------------------------------------------
 
 export const createItemSchema = object({
@@ -209,3 +219,12 @@ export const createItemSchema = object({
 });
 
 export type CreateItemFormData = InferType<typeof createItemSchema>;
+
+/**
+ * Edit-mode schema: identical to create, except the note is mandatory.
+ * `suggestItemEdit` rejects an empty note, and the reviewing admin has nothing
+ * but the note to judge the diff against.
+ */
+export const suggestItemEditSchema = createItemSchema.shape({
+  editReason: editReasonRequiredRule,
+});

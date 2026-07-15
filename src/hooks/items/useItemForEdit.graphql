@@ -1,0 +1,50 @@
+# Canonical "editable snapshot" of a catalog item, loaded when the barcode flow
+# opens its edit sheet.
+#
+# Spread by:
+#   - GetItemForEdit (useItemForEdit)      — loads the pre-edit original
+#   - UpdateItem     (useSuggestItemEdit)  — write-through on the direct-edit path
+#
+# This is the ONLY source of the `original` side of the suggest-edit diff.
+# ScannedItem is a lossy projection of the barcode query: diffing against it
+# would report fields the user never touched as changes.
+#
+# Invariant: every field AddItemForm can edit in an edit mode is selected here,
+# and every field here is prefilled into the form via
+# buildInitialDataFromSnapshot(). Break either half and the diff invents changes
+# or misses real ones.
+fragment useItemForEdit_item on Item {
+  id
+  name
+  description
+  type
+  storageState
+  tags
+  primaryUpc
+  shelfLifeDays
+  shelfLifeOpenedDays
+  netWeight
+  baseDimension
+  imageUrl
+  # Routes the submit: PUBLIC -> suggestItemEdit, otherwise updateItem.
+  # See resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
+  visibility
+  displayUnit {
+    id
+    name
+    symbol
+  }
+  brands {
+    brand {
+      id
+      name
+    }
+  }
+}
+
+query GetItemForEdit($id: ID!) {
+  item(id: $id) {
+    id
+    ...useItemForEdit_item
+  }
+}

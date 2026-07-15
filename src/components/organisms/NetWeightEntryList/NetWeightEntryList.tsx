@@ -19,6 +19,9 @@ interface NetWeightEntryListProps {
   entries: NetWeightEntry[];
   onEntriesChanged: (entries: NetWeightEntry[]) => void;
   disabled?: boolean;
+  /** Hides "Add Net Weight" once reached. Edit modes pass 1: PackageInfoInput
+   *  carries a single netWeight, so extra entries could not be submitted. */
+  maxEntries?: number;
 }
 
 let entryCounter = 0;
@@ -32,7 +35,10 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   entries,
   onEntriesChanged,
   disabled = false,
+  maxEntries,
 }) => {
+  const canAddEntry = maxEntries == null || entries.length < maxEntries;
+
   const handleAddEntry = () => {
     onEntriesChanged([...entries, createDefaultEntry()]);
   };
@@ -109,9 +115,15 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
           </AppPressable>
         </View>
       ))}
-      <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
-        Add Net Weight
-      </Button>
+      {!!canAddEntry && (
+        <Button
+          variant="secondary"
+          onPress={handleAddEntry}
+          disabled={disabled}
+        >
+          Add Net Weight
+        </Button>
+      )}
     </View>
   );
 };

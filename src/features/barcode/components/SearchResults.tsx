@@ -59,6 +59,7 @@ export interface SearchResultsProps {
   onScanAnother: () => void;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
+  editActionLabel?: string;
   source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
@@ -70,6 +71,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onScanAnother,
   onEditItem,
   onCreateVariant,
+  editActionLabel,
   source,
   pantryId,
   shoppingListId,
@@ -413,6 +415,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         format={format}
         onEditItem={onEditItem}
         onCreateVariant={onCreateVariant}
+        editActionLabel={editActionLabel}
       />
 
       <ActionButtons

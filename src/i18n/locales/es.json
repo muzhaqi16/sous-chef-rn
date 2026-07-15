@@ -2550,5 +2550,39 @@
     "title": "Resultados de búsqueda",
     "searching": "Buscando artículo...",
     "errorTitle": "Error de búsqueda"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Sugerencia enviada",
+    "sentBody": "Gracias: un administrador revisará tus cambios. La ficha permanecerá igual hasta que se aprueben.",
+    "duplicateTitle": "Ya lo sugeriste",
+    "duplicateBody": "Ya sugeriste exactamente estos cambios y siguen pendientes de revisión, así que conservamos el original.",
+    "pendingCapTitle": "5 sugerencias pendientes",
+    "pendingCapBody": "Tienes 5 sugerencias de edición pendientes de revisión, que es el límite. Cuando un administrador revise una, podrás enviar otra.",
+    "rateLimitedTitle": "Espera un momento",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "rejectedTitle": "No se pudo enviar",
+    "noChangesTitle": "Nada que sugerir",
+    "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
+    "photosOnlyTitle": "Foto añadida",
+    "photosOnlyBody": "Tu foto ya está en el artículo. Cambia también un campo si hay algo más que corregir.",
+    "updatedTitle": "Artículo actualizado",
+    "updatedBody": "Tus cambios están publicados.",
+    "failedTitle": "No se pudo enviar",
+    "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
+    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador.",
+    "brandHint": "Elige una marca de la lista para sugerir un cambio, o descríbela en tu nota."
+  },
+  "reportItem": {
+    "footer": "¿Algún dato incorrecto en estos?",
+    "title": "Informar de datos incorrectos",
+    "pickPrompt": "¿Qué artículo tiene datos incorrectos?",
+    "reasonLabel": "¿Qué está mal?",
+    "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
+    "submit": "Enviar informe",
+    "sentTitle": "Informe enviado",
+    "sentBody": "Gracias: un administrador revisará este artículo.",
+    "failedTitle": "No se pudo enviar",
+    "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo."
   }
 }

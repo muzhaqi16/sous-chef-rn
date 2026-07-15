@@ -2550,5 +2550,39 @@
     "title": "Search Results",
     "searching": "Searching for item...",
     "errorTitle": "Search Error"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Suggestion sent",
+    "sentBody": "Thanks — an admin will review your changes. The listing stays as it is until they're approved.",
+    "duplicateTitle": "Already suggested",
+    "duplicateBody": "You've already suggested these exact changes and they're still waiting for review, so we kept your original one.",
+    "pendingCapTitle": "5 suggestions pending",
+    "pendingCapBody": "You have 5 edit suggestions waiting for review — that's the limit. Once an admin reviews one, you can send another.",
+    "rateLimitedTitle": "Slow down a moment",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "rejectedTitle": "Couldn't send that",
+    "noChangesTitle": "Nothing to suggest",
+    "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
+    "photosOnlyTitle": "Photo added",
+    "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
+    "updatedTitle": "Item updated",
+    "updatedBody": "Your changes are live.",
+    "failedTitle": "Couldn't send that",
+    "failedBody": "Something went wrong sending your suggestion. Please try again.",
+    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
+    "brandHint": "Pick a brand from the list to suggest a change, or describe it in your note."
+  },
+  "reportItem": {
+    "footer": "Wrong details on one of these?",
+    "title": "Report wrong details",
+    "pickPrompt": "Which item has wrong details?",
+    "reasonLabel": "What's wrong with it?",
+    "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
+    "submit": "Send report",
+    "sentTitle": "Report sent",
+    "sentBody": "Thanks — an admin will take a look at this item.",
+    "failedTitle": "Couldn't send that",
+    "failedBody": "Something went wrong sending your report. Please try again."
   }
 }

@@ -15,10 +15,11 @@ import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
-  type AddItemSubmitPayload,
 } from '#components/organisms/AddItemForm/AddItemForm';
+import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useBottomSheetState } from '#store/useAppStore';
+import { useBottomSheetState, useIsAdminUser } from '#store/useAppStore';
+import { resolveItemEditRoute } from '#utils/items/suggestItemChanges';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource } from '#/types/navigation';
 import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
@@ -55,6 +56,7 @@ export const SearchResultsScreen: React.FC<
 
   const { t } = useTranslation();
   const { goBack, navigation } = useAppNavigation();
+  const isAdmin = useIsAdminUser();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -77,9 +79,7 @@ export const SearchResultsScreen: React.FC<
     searchResults,
     loading,
     addingItem,
-    suggestingEdit,
     handleAddItem,
-    handleSuggestEdit,
     handleRetry,
     clearSearch,
   } = useSearchResults(barcode, format);
@@ -127,21 +127,20 @@ export const SearchResultsScreen: React.FC<
     showBottomSheet(1);
   };
 
-  const handleFormSubmit = (formData: AddItemSubmitPayload) => {
-    if (sheetMode === 'edit' && searchResults[0]) {
-      handleSuggestEdit(searchResults[0].id, formData);
-    } else {
-      handleAddItem(formData);
-    }
-  };
-
   const currentItem = searchResults[0];
   const formInitialData =
-    currentItem && sheetMode !== 'create'
+    currentItem && sheetMode === 'variant'
       ? buildInitialDataFromItem(currentItem)
       : undefined;
 
-  const formLoading = sheetMode === 'edit' ? suggestingEdit : addingItem;
+  // Cosmetic only — the sheet re-resolves the route from the authoritative item
+  // snapshot. `visibility` is absent on a cached scan, and the suggestion
+  // wording is the safe default.
+  const editActionLabel =
+    currentItem?.visibility &&
+    resolveItemEditRoute(currentItem.visibility, isAdmin) === 'direct'
+      ? 'Edit'
+      : 'Suggest Edit';
 
   const renderContent = () => {
     if (isSearching || loading) {
@@ -171,6 +170,7 @@ export const SearchResultsScreen: React.FC<
           onScanAnother={handleScanAnother}
           onEditItem={handleEditItem}
           onCreateVariant={handleCreateVariant}
+          editActionLabel={editActionLabel}
           source={source}
           pantryId={pantryId}
           shoppingListId={shoppingListId}
@@ -207,16 +207,26 @@ export const SearchResultsScreen: React.FC<
           keyboardShouldPersistTaps="handled"
           bottomOffset={16}
         >
-          <AddItemForm
-            key={sheetMode}
-            barcode={barcode}
-            format={format}
-            mode={sheetMode}
-            initialData={formInitialData}
-            onSubmit={handleFormSubmit}
-            onClose={hideBottomSheet}
-            loading={formLoading}
-          />
+          {sheetMode === 'edit' && currentItem ? (
+            <SuggestEditForm
+              key={`edit-${currentItem.id}`}
+              itemId={currentItem.id}
+              barcode={barcode}
+              format={format}
+              onClose={hideBottomSheet}
+            />
+          ) : (
+            <AddItemForm
+              key={sheetMode}
+              barcode={barcode}
+              format={format}
+              mode={sheetMode}
+              initialData={formInitialData}
+              onSubmit={handleAddItem}
+              onClose={hideBottomSheet}
+              loading={addingItem}
+            />
+          )}
         </BottomSheetKeyboardAwareScrollView>
       </BottomSheetModal>
     </View>

@@ -25,6 +25,9 @@ interface ItemCardProps {
   format?: string;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
+  /** "Suggest Edit" for a public catalog item, "Edit" when this user can write
+   *  through. Defaults to the suggestion wording — the safe assumption. */
+  editActionLabel?: string;
 }
 
 export const ProductResultCard: React.FC<ItemCardProps> = ({
@@ -32,6 +35,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   format,
   onEditItem,
   onCreateVariant,
+  editActionLabel = 'Suggest Edit',
 }) => {
   const showActions = !!onEditItem || !!onCreateVariant;
 
@@ -85,7 +89,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             <Pressable style={styles.actionLink} onPress={onEditItem}>
               <Icon name="create-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
-                Suggest Edit
+                {editActionLabel}
               </Text>
             </Pressable>
           )}

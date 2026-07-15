@@ -2550,5 +2550,39 @@
     "title": "Rezultatet e kërkimit",
     "searching": "Duke kërkuar artikullin...",
     "errorTitle": "Gabim në kërkim"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Sugjerimi u dërgua",
+    "sentBody": "Faleminderit — një administrator do t'i shqyrtojë ndryshimet e tua. Artikulli mbetet i pandryshuar derisa të miratohen.",
+    "duplicateTitle": "Tashmë e sugjeruar",
+    "duplicateBody": "I ke sugjeruar tashmë pikërisht këto ndryshime dhe janë ende në pritje të shqyrtimit, prandaj ruajtëm sugjerimin origjinal.",
+    "pendingCapTitle": "5 sugjerime në pritje",
+    "pendingCapBody": "Ke 5 sugjerime ndryshimi në pritje të shqyrtimit — ky është kufiri. Sapo një administrator të shqyrtojë njërin, mund të dërgosh një tjetër.",
+    "rateLimitedTitle": "Prit një moment",
+    "notFoundTitle": "Artikulli nuk u gjet",
+    "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
+    "rejectedTitle": "Nuk u dërgua dot",
+    "noChangesTitle": "Asgjë për të sugjeruar",
+    "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
+    "photosOnlyTitle": "Fotoja u shtua",
+    "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
+    "updatedTitle": "Artikulli u përditësua",
+    "updatedBody": "Ndryshimet e tua janë publikuar.",
+    "failedTitle": "Nuk u dërgua dot",
+    "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
+    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator.",
+    "brandHint": "Zgjidh një markë nga lista për të sugjeruar një ndryshim, ose përshkruaje në shënimin tënd."
+  },
+  "reportItem": {
+    "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
+    "title": "Raporto të dhëna të gabuara",
+    "pickPrompt": "Cili artikull ka të dhëna të gabuara?",
+    "reasonLabel": "Çfarë nuk shkon?",
+    "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
+    "submit": "Dërgo raportin",
+    "sentTitle": "Raporti u dërgua",
+    "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
+    "failedTitle": "Nuk u dërgua dot",
+    "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri."
   }
 }

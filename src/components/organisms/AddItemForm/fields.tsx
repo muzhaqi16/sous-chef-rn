@@ -14,7 +14,14 @@ import { FormNumberInput } from '#/components/molecules/FormNumberInput';
 import { FormSelect } from '#/components/molecules/FormSelect';
 import { FormCheckbox } from '#/components/molecules/FormCheckbox';
 import { type FieldDef } from '#/components/molecules/DynamicFormFields';
+// Type-only, so this does not create a runtime cycle with AddItemForm (which
+// imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
+
+/** `edit` proposes changes for review; `directEdit` writes them through. Both
+ *  render the same form, so most field logic branches on this rather than mode. */
+export const isEditMode = (mode: AddItemFormMode): boolean =>
+  mode === 'edit' || mode === 'directEdit';
 
 const STORAGE_STATES = Object.values(StorageState);
 const ITEM_TYPES = Object.values(ItemType);
@@ -224,32 +231,40 @@ export const buildTabFieldGroups = (
   };
   const editReasonField: FieldDef<CreateItemFormData> = {
     name: 'editReason',
-    label: 'Reason for Edit',
+    label: 'What needs fixing?',
     placeholder:
-      'What needs to be corrected? (e.g., wrong weight, missing image)',
+      'Tell the reviewer what is wrong (e.g., wrong net weight on the label)',
     component: FormTextArea,
-    props: { numberOfLines: 2 },
+    props: { numberOfLines: 3, required: true },
   };
 
+  const editing = isEditMode(mode);
+
   const inventoryAdvanced: FieldDef<CreateItemFormData>[] = [
-    consumeIncrementField,
-    consumeUnitField,
     tagsField,
     foodStampField,
     fsaField,
   ];
-  if (mode === 'edit') {
-    inventoryAdvanced.push(editReasonField);
+  // Consume increment/unit are create-only: updateItem never reads either from
+  // packageInfo, so editing them would report success and change nothing.
+  if (!editing) {
+    inventoryAdvanced.unshift(consumeIncrementField, consumeUnitField);
   }
 
   return {
     Basics: {
-      primary: [nameField, descriptionField, vendorField],
+      // The note is required in edit modes, so it leads. Buried on the last tab
+      // inside "More options" it would block submit with no visible cause.
+      primary: editing
+        ? [editReasonField, nameField, descriptionField, vendorField]
+        : [nameField, descriptionField, vendorField],
       advanced: [],
     },
     Product: {
       primary: [typeField, upcField],
-      advanced: [skuField, storeField],
+      // SKU/store are create-only: Item.storeSkus is a connection the form
+      // never loads, so an edit can't tell an addition from a duplicate.
+      advanced: editing ? [] : [skuField, storeField],
     },
     Storage: {
       primary: [storageStateField, shelfLifeField],
@@ -273,8 +288,16 @@ export const MODE_CONFIG = {
   },
   edit: {
     title: 'Suggest Edit',
-    subtitle: () => "Submit corrections — we'll review and update the catalog",
+    subtitle: () =>
+      'An admin reviews your changes — the listing stays as it is until then',
     buttonLabel: 'Submit Suggestion',
+  },
+  // Same form as `edit`, but the caller resolved that this user may write
+  // straight through, so the wording promises an immediate change.
+  directEdit: {
+    title: 'Edit Item',
+    subtitle: () => 'Your changes go live right away',
+    buttonLabel: 'Save Changes',
   },
   variant: {
     title: 'Create New Version',

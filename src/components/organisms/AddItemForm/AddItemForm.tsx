@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#/components/base/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { createItemSchema, CreateItemFormData } from '#utils/validation/item';
+import {
+  createItemSchema,
+  suggestItemEditSchema,
+  CreateItemFormData,
+} from '#utils/validation/item';
 import {
   StorageState,
   ItemType,
@@ -36,10 +41,17 @@ import {
   PAGES,
   detectScanType,
   buildTabFieldGroups,
+  isEditMode,
   MODE_CONFIG,
 } from './fields';
 
-export type AddItemFormMode = 'create' | 'edit' | 'variant';
+/**
+ * `edit` proposes changes for admin review (suggestItemEdit); `directEdit`
+ * writes them straight through (updateItem). They render identically — the
+ * route is decided by the caller via resolveItemEditRoute(), and only the
+ * wording differs.
+ */
+export type AddItemFormMode = 'create' | 'edit' | 'variant' | 'directEdit';
 
 export interface AddItemFormInitialData {
   name?: string;
@@ -53,6 +65,7 @@ export interface AddItemFormInitialData {
   storageState?: string;
   shelfLifeDays?: number;
   shelfLifeOpenedDays?: number;
+  baseDimension?: string;
   tags?: string[];
   categoryIds?: string[];
   netWeights?: Array<{ value: number; unitName: string; unitId?: string }>;
@@ -101,6 +114,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   onScanUpc,
 }) => {
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
+  const [seededBrandId, setSeededBrandId] = useState<string | undefined>(
+    undefined,
+  );
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
 
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
@@ -125,7 +141,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     Inventory: false,
   });
 
+  const { t } = useTranslation();
   const modeConfig = MODE_CONFIG[mode];
+  const editing = isEditMode(mode);
 
   const getInitialValues = (): CreateItemFormData => {
     const values: CreateItemFormData = {
@@ -175,6 +193,8 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         values.shelfLifeDays = initialData.shelfLifeDays;
       if (initialData.shelfLifeOpenedDays != null)
         values.shelfLifeOpenedDays = initialData.shelfLifeOpenedDays;
+      if (initialData.baseDimension)
+        values.baseDimension = initialData.baseDimension;
       if (initialData.tags) values.tags = initialData.tags;
       if (initialData.categoryIds) values.categoryIds = initialData.categoryIds;
     }
@@ -182,7 +202,12 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     return values;
   };
 
-  if (initialData?.brandId && !selectedBrandId) {
+  // Seed the brand exactly once per incoming brandId. Re-seeding on every
+  // render would undo the null that BrandAutocompleteField sets when the user
+  // starts typing a different brand, silently pinning the original brand id to
+  // the new name.
+  if (initialData?.brandId && seededBrandId !== initialData.brandId) {
+    setSeededBrandId(initialData.brandId);
     setSelectedBrandId(initialData.brandId);
   }
 
@@ -199,7 +224,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     setValue,
     formState: { errors, isValid },
   } = useForm<CreateItemFormData>({
-    resolver: yupResolver(createItemSchema) as Resolver<CreateItemFormData>,
+    resolver: yupResolver(
+      isEditMode(mode) ? suggestItemEditSchema : createItemSchema,
+    ) as Resolver<CreateItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
@@ -362,6 +389,11 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
               }}
               disabled={loading}
             />
+            {!!editing && (
+              <Text size="sm" tone="secondary" style={styles.notice}>
+                {t('suggestItemEdit.photoNotice')}
+              </Text>
+            )}
           </View>
         )}
 
@@ -372,15 +404,21 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 entries={netWeightEntries}
                 onEntriesChanged={setNetWeightEntries}
                 disabled={loading}
+                maxEntries={editing ? 1 : undefined}
               />
             </View>
-            <View style={styles.section}>
-              <UnitEntryList
-                entries={unitEntries}
-                onEntriesChanged={setUnitEntries}
-                disabled={loading}
-              />
-            </View>
+            {/* Units are hidden while editing: Item.units can't be round-tripped
+                into UnitEntry rows, so an empty list would read as "remove every
+                unit" rather than "left untouched". */}
+            {!editing && (
+              <View style={styles.section}>
+                <UnitEntryList
+                  entries={unitEntries}
+                  onEntriesChanged={setUnitEntries}
+                  disabled={loading}
+                />
+              </View>
+            )}
           </>
         )}
 
@@ -437,6 +475,9 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginBottom: theme.spacing.xl,
+  },
+  notice: {
+    marginTop: theme.spacing.sm,
   },
   advancedContent: {
     paddingTop: theme.spacing.md,

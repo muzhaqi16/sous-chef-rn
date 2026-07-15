@@ -5,6 +5,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
+import { t } from '#/i18n/t';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 interface ItemSuggestionsListProps {
@@ -28,6 +29,9 @@ interface ItemSuggestionsListProps {
   showBrands?: boolean;
   /** When false, always show placeholder icon regardless of image URL */
   showImages?: boolean;
+  /** Renders a "wrong details?" footer row under the results. Omit for no footer.
+   *  Only shown when there are results — with none there is nothing to report. */
+  onReportItem?: () => void;
 }
 
 interface SuggestionRowProps {
@@ -124,6 +128,19 @@ const AddManuallyOption = ({
   );
 };
 
+const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
+  styles.useVariants({ withBorder: false, disabled: false });
+
+  return (
+    <AppPressable style={styles.reportOption} onPress={onPress}>
+      <Icon name="alert-circle-outline" size={18} tone="secondary" />
+      <Text size="sm" tone="secondary">
+        {t('reportItem.footer')}
+      </Text>
+    </AppPressable>
+  );
+};
+
 export const ItemSuggestionsList = ({
   searchQuery,
   suggestions,
@@ -134,6 +151,7 @@ export const ItemSuggestionsList = ({
   placeholderIcon = 'cube-outline',
   showBrands = true,
   showImages = true,
+  onReportItem,
 }: ItemSuggestionsListProps) => {
   const hasResults = suggestions.length > 0;
 
@@ -168,7 +186,10 @@ export const ItemSuggestionsList = ({
           />
         );
       })}
-      {addManuallyPosition === 'bottom' && renderAddManually(true)}
+      {addManuallyPosition === 'bottom' && renderAddManually(!!onReportItem)}
+      {!!onReportItem && !!hasResults && (
+        <ReportItemOption onPress={onReportItem} />
+      )}
     </View>
   );
 };
@@ -246,6 +267,14 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  // Secondary tone throughout so it doesn't compete with the accent-toned
+  // "Add manually" call to action directly above it.
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   pressed: {
     opacity: theme.opacity.pressed,

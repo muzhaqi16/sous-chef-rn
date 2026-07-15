@@ -6,16 +6,13 @@ import {
   ItemByUpcFilterDocument,
   ItemBySkuFilterDocument,
   CreateItemDocument,
-  MarkItemForReviewDocument,
   type CreateItemMutation,
 } from '#operations/item/item.generated';
-import { UpcFormat } from '#/graphql/generated/schemaTypes';
+import { UpcFormat, type Visibility } from '#/graphql/generated/schemaTypes';
 import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '#store/slices/barcodeScannerSlice';
-import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { useImageUpload } from '#hooks/useImageUpload';
-import { storage } from '#/storage/mmkv';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   mapFormToCreateItemInput,
@@ -54,6 +51,7 @@ const convertToScannedItem = (
     name: string;
     description?: string | null;
     imageUrl?: string | null;
+    visibility?: Visibility | null;
     primaryUpc?: string | null;
     netWeight?: number | null;
     type?: string | null;
@@ -138,6 +136,7 @@ const convertToScannedItem = (
     name: item.name,
     description: item.description || undefined,
     imageUrl: item.imageUrl || undefined,
+    visibility: item.visibility ?? undefined,
     upc: item.primaryUpc || fallbackBarcode,
     unitId: item.units?.find(u => u.isDefault)?.unitId || undefined,
     netWeight: effectiveNetWeight,
@@ -159,60 +158,6 @@ const convertToScannedItem = (
 
 const uploadPendingImages = sharedUploadPendingImages;
 const cleanupPendingImageStorage = sharedCleanupPendingImageStorage;
-
-/** Build a human-readable reason string from form corrections */
-function buildSuggestEditReason(formData: AddItemFormData): string {
-  const parts: string[] = [];
-  if (formData.editReason) {
-    parts.push(String(formData.editReason));
-  }
-  const fields: Array<[string, string]> = [
-    ['name', 'Name'],
-    ['brandName', 'Brand'],
-    ['primaryUpc', 'UPC'],
-  ];
-  for (const [key, label] of fields) {
-    if (formData[key]) {
-      parts.push(`${label}: ${formData[key]}`);
-    }
-  }
-  if (
-    formData.netWeights &&
-    Array.isArray(formData.netWeights) &&
-    formData.netWeights.length > 0
-  ) {
-    const weights = formData.netWeights
-      .map(
-        (w: { value?: unknown; unitName?: unknown }) =>
-          `${String(w.value)} ${String(w.unitName)}`,
-      )
-      .join(', ');
-    parts.push(`Net Weight: ${weights}`);
-  }
-  return parts.join(' | ') || 'User suggested corrections';
-}
-
-/** Build a corrected ScannedItem from form data */
-function buildCorrectedScannedItem(
-  original: ScannedItem,
-  formData: AddItemFormData,
-): ScannedItem {
-  return {
-    ...original,
-    name: formData.name || original.name,
-    description: formData.description || original.description,
-    brandName: formData.brandName || original.brandName,
-    brandId: formData.brandId || original.brandId,
-    imageUrl: formData.imageUrl || original.imageUrl,
-    upc: formData.primaryUpc || original.upc,
-    type: formData.type || original.type,
-    storageState: formData.storageState || original.storageState,
-    shelfLifeDays: formData.shelfLifeDays ?? original.shelfLifeDays,
-    shelfLifeOpenedDays:
-      formData.shelfLifeOpenedDays ?? original.shelfLifeOpenedDays,
-    tags: formData.tags || original.tags,
-  };
-}
 
 export const useSearchResults = (barcode: string, format?: string) => {
   const upcFormat = mapVisionCameraFormatToUpcFormat(format);
@@ -428,58 +373,6 @@ export const useSearchResults = (barcode: string, format?: string) => {
     );
   };
 
-  const [flagItem, { loading: suggestingEdit }] = useMutation(
-    MarkItemForReviewDocument,
-  );
-
-  const handleSuggestEdit = async (
-    itemId: string,
-    formData: AddItemFormData,
-  ) => {
-    const reason = buildSuggestEditReason(formData);
-    const selectedImages = Array.isArray(formData.selectedImages)
-      ? formData.selectedImages
-      : [];
-
-    // Store images for upload if provided
-    if (selectedImages.length > 0) {
-      storage.set('temp_pending_item_images', JSON.stringify(selectedImages));
-    }
-
-    const result = await executeMutation(
-      () => flagItem({ variables: { input: { itemId, reason } } }),
-      'Error flagging item for review:',
-    );
-
-    if (result !== false) {
-      // Upload images if any were selected
-      if (selectedImages.length > 0) {
-        await executeMutation(
-          () =>
-            uploadPendingImages(
-              { id: itemId, imageUrl: null },
-              uploadItemImage,
-            ),
-          'Error uploading images for suggestion:',
-        );
-      }
-      cleanupPendingImageStorage();
-
-      // Update local display with corrected data
-      const currentItem = searchResults[0];
-      if (currentItem) {
-        const correctedItem = buildCorrectedScannedItem(currentItem, formData);
-        setSearchResults([correctedItem]);
-      }
-
-      hideBottomSheet();
-      alertService.alert(
-        'Thank You',
-        'Your suggestion has been submitted for review.',
-      );
-    }
-  };
-
   const handleRetry = () => {
     setSearchError(null);
     // Add refetch logic here
@@ -490,9 +383,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
     loading: upcLoading || skuLoading,
     error: upcError || skuError,
     addingItem,
-    suggestingEdit,
     handleAddItem,
-    handleSuggestEdit,
     handleRetry,
     clearSearch,
   };

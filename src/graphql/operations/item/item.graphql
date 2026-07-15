@@ -14,6 +14,9 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         netWeight
         primaryUpc
         type
+        # Routes an edit to suggestItemEdit (PUBLIC) vs updateItem — see
+        # resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
+        visibility
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -77,6 +80,9 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         netWeight
         primaryUpc
         type
+        # Routes an edit to suggestItemEdit (PUBLIC) vs updateItem — see
+        # resolveItemEditRoute() in src/utils/items/suggestItemChanges.ts.
+        visibility
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -283,6 +289,9 @@ mutation CreateItem($input: CreateItemInput!) {
         id
         name
         description
+        # Labels the follow-up edit action correctly — a freshly created item is
+        # the creator's own and editable directly, not via suggestion.
+        visibility
         netWeight
         displayUnit {
           id
@@ -379,6 +388,15 @@ mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
   }
 }
 
+# Flags a whole item for admin moderation with a free-text reason. This is a
+# REPORT, not an edit proposal: it sets needsApproval and carries no structured
+# changes. Used by the autocomplete "Wrong details on one of these?" affordance,
+# where the user has only seen a name, brand and thumbnail and so can't
+# meaningfully fill in an edit form.
+#
+# Not to be confused with suggestItemEdit (src/hooks/items/useSuggestItemEdit.graphql),
+# which proposes a structured diff and is reachable only from the barcode scan
+# flow, where the user is looking at the item's full details.
 mutation MarkItemForReview($input: MarkItemForReviewInput!) {
   markItemForReview(input: $input) {
     __typename

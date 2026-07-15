@@ -627,6 +627,8 @@ export type ApproveItemPayload = {
 
 export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export type ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
+
 /** Sub-input for attribution data */
 export type AttributionInput = {
   campaign?: InputMaybe<Scalars['String']['input']>;
@@ -4261,6 +4263,8 @@ export type Item = {
   needsApproval: Scalars['Boolean']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
   nutritions: Maybe<Scalars['JSON']['output']>;
+  /** Number of PENDING community edit suggestions for this item. */
+  pendingSuggestionCount: Scalars['Int']['output'];
   popularity: Scalars['Int']['output'];
   preferredTrackingUnit: Maybe<Unit>;
   preferredTrackingUnitId: Maybe<Scalars['ID']['output']>;
@@ -4433,6 +4437,42 @@ export type ItemEdit = {
   newValues: Maybe<Scalars['JSON']['output']>;
   oldValues: Maybe<Scalars['JSON']['output']>;
   user: User;
+};
+
+/**
+ * A proposed edit to a PUBLIC catalog item, awaiting or having undergone admin
+ * review. The live item is only changed when a suggestion is APPROVED.
+ */
+export type ItemEditSuggestion = {
+  __typename: 'ItemEditSuggestion';
+  /** Proposed field changes (a subset of UpdateItemInput's descriptive fields). */
+  changes: Scalars['JSON']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  item: Item;
+  /** Required justification supplied by the contributor. */
+  note: Scalars['String']['output'];
+  reviewNote: Maybe<Scalars['String']['output']>;
+  reviewedAt: Maybe<Scalars['DateTime']['output']>;
+  /** The admin who reviewed it (once reviewed). */
+  reviewedBy: Maybe<User>;
+  status: ItemSuggestionStatus;
+  /** The contributor who proposed the change. */
+  suggestedBy: Maybe<User>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ItemEditSuggestionConnection = Connection & {
+  __typename: 'ItemEditSuggestionConnection';
+  edges: Array<ItemEditSuggestionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+export type ItemEditSuggestionEdge = Edge & {
+  __typename: 'ItemEditSuggestionEdge';
+  cursor: Scalars['String']['output'];
+  node: ItemEditSuggestion;
 };
 
 export type ItemFilters = {
@@ -4620,6 +4660,19 @@ export type ItemSuggestion = {
   netWeight: Maybe<Scalars['Float']['output']>;
   type: ItemType;
 };
+
+/** Filters for the admin item-suggestion review queue. */
+export type ItemSuggestionFilters = {
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<ItemSuggestionStatus>;
+};
+
+/** Lifecycle of a community edit suggestion against a public catalog item. */
+export enum ItemSuggestionStatus {
+  Approved = 'APPROVED',
+  Pending = 'PENDING',
+  Rejected = 'REJECTED'
+}
 
 /** Categorizes the general type of an item in the pantry or shopping list */
 export enum ItemType {
@@ -6348,6 +6401,12 @@ export type Mutation = {
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
+  /**
+   * Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+   * admin review — the live item is NOT changed. Non-owners use this instead of
+   * updateItem (which is owner/admin-only). Rate-limited and capped per user.
+   */
+  suggestItemEdit: SuggestItemEditResult;
   /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
   syncDeletePantryItem: SyncPantryItemResult;
   /**
@@ -8430,6 +8489,19 @@ export type MutationSendTestNotificationArgs = {
  */
 export type MutationShareShoppingListArgs = {
   input: ShareShoppingListInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSuggestItemEditArgs = {
+  input: SuggestItemEditInput;
 };
 
 
@@ -10727,6 +10799,8 @@ export type Query = {
   /** List memberships for a home with cursor-based pagination. */
   memberships: MembershipConnection;
   myModeration: Maybe<MyModerationStatus>;
+  /** The current user's own item edit suggestions, newest first. */
+  mySuggestions: ItemEditSuggestionConnection;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
   /** Fetch notification statistics with optional filtering. */
@@ -11133,6 +11207,15 @@ export type QueryMembershipsArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   homeId: Scalars['ID']['input'];
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryMySuggestionsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+  status?: InputMaybe<ItemSuggestionStatus>;
 };
 
 
@@ -11956,6 +12039,8 @@ export type RejectItemPayload = {
 
 export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError;
 
+export type RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
+
 export enum ReligiousDiet {
   Halal = 'HALAL',
   Kosher = 'KOSHER'
@@ -12231,6 +12316,17 @@ export type ReviewHelpful = {
   id: Scalars['ID']['output'];
   review: RecipeReview;
   user: User;
+};
+
+/** Approve or reject a pending suggestion (admin only). */
+export type ReviewItemSuggestionInput = {
+  id: Scalars['ID']['input'];
+  reviewNote?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ReviewItemSuggestionPayload = {
+  __typename: 'ReviewItemSuggestionPayload';
+  suggestion: ItemEditSuggestion;
 };
 
 /** Sub-input for risk assessment data */
@@ -13530,6 +13626,49 @@ export type SubscriptionStoreEventsArgs = {
 
 export type SubscriptionUserEventsArgs = {
   userId: Scalars['ID']['input'];
+};
+
+/**
+ * Propose an edit to a PUBLIC catalog item. `note` is a required justification
+ * shown to the reviewer.
+ */
+export type SuggestItemEditInput = {
+  changes: SuggestibleItemChangesInput;
+  itemId: Scalars['ID']['input'];
+  note: Scalars['String']['input'];
+};
+
+export type SuggestItemEditPayload = {
+  __typename: 'SuggestItemEditPayload';
+  suggestion: ItemEditSuggestion;
+};
+
+export type SuggestItemEditResult = ConflictError | ForbiddenError | NotFoundError | SuggestItemEditPayload | ValidationError;
+
+/**
+ * The fields a community edit suggestion may change — the descriptive subset of
+ * UpdateItemInput. This type IS the whitelist: moderation/ownership fields
+ * (visibility, status, createdById) are intentionally absent, so the GraphQL
+ * layer rejects them at validation time rather than at runtime. Reuses the same
+ * sub-input types as create/update for a single source of truth per field.
+ */
+export type SuggestibleItemChangesInput = {
+  brand?: InputMaybe<BrandReferenceInput>;
+  brandOps?: InputMaybe<BrandOpsInput>;
+  categoryOps?: InputMaybe<CategoryOpsInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  healthInfo?: InputMaybe<HealthInfoInput>;
+  media?: InputMaybe<MediaAssetsInput>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
+  packageInfo?: InputMaybe<PackageInfoInput>;
+  productDetails?: InputMaybe<ProductDetailsInput>;
+  storeSkuOps?: InputMaybe<StoreSkuOpsInput>;
+  tagOps?: InputMaybe<TagOpsInput>;
+  type?: InputMaybe<ItemType>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
+  unitOps?: InputMaybe<UnitOpsInput>;
 };
 
 /**

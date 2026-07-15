@@ -2550,5 +2550,39 @@
     "title": "Risultati della ricerca",
     "searching": "Ricerca dell'articolo...",
     "errorTitle": "Errore di ricerca"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Suggerimento inviato",
+    "sentBody": "Grazie: un amministratore esaminerà le tue modifiche. La scheda resta invariata finché non vengono approvate.",
+    "duplicateTitle": "Già suggerito",
+    "duplicateBody": "Hai già suggerito esattamente queste modifiche e sono ancora in attesa di revisione, quindi abbiamo mantenuto l'originale.",
+    "pendingCapTitle": "5 suggerimenti in attesa",
+    "pendingCapBody": "Hai 5 suggerimenti di modifica in attesa di revisione: è il limite. Quando un amministratore ne esaminerà uno, potrai inviarne un altro.",
+    "rateLimitedTitle": "Aspetta un momento",
+    "notFoundTitle": "Articolo non trovato",
+    "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
+    "rejectedTitle": "Impossibile inviare",
+    "noChangesTitle": "Niente da suggerire",
+    "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
+    "photosOnlyTitle": "Foto aggiunta",
+    "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
+    "updatedTitle": "Articolo aggiornato",
+    "updatedBody": "Le tue modifiche sono online.",
+    "failedTitle": "Impossibile inviare",
+    "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
+    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore.",
+    "brandHint": "Scegli un marchio dall'elenco per suggerire una modifica, oppure descrivilo nella nota."
+  },
+  "reportItem": {
+    "footer": "Dettagli sbagliati in uno di questi?",
+    "title": "Segnala dettagli errati",
+    "pickPrompt": "Quale articolo ha dettagli errati?",
+    "reasonLabel": "Cosa c'è che non va?",
+    "reasonPlaceholder": "es. il marchio è sbagliato, la foto è di un altro prodotto",
+    "submit": "Invia segnalazione",
+    "sentTitle": "Segnalazione inviata",
+    "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
+    "failedTitle": "Impossibile inviare",
+    "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova."
   }
 }

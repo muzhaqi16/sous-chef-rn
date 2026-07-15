@@ -789,6 +789,8 @@ type ApproveItemPayload {
 
 union ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+union ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
+
 """Sub-input for attribution data"""
 input AttributionInput {
   campaign: String
@@ -4214,6 +4216,8 @@ type Item {
   needsApproval: Boolean!
   netWeight: Float
   nutritions: JSON
+  """Number of PENDING community edit suggestions for this item."""
+  pendingSuggestionCount: Int!
   popularity: Int!
   preferredTrackingUnit: Unit
   preferredTrackingUnitId: ID
@@ -4332,6 +4336,41 @@ type ItemEdit {
   newValues: JSON
   oldValues: JSON
   user: User!
+}
+
+"""
+A proposed edit to a PUBLIC catalog item, awaiting or having undergone admin
+review. The live item is only changed when a suggestion is APPROVED.
+"""
+type ItemEditSuggestion {
+  """
+  Proposed field changes (a subset of UpdateItemInput's descriptive fields).
+  """
+  changes: JSON!
+  createdAt: DateTime!
+  id: ID!
+  item: Item!
+  """Required justification supplied by the contributor."""
+  note: String!
+  reviewNote: String
+  reviewedAt: DateTime
+  """The admin who reviewed it (once reviewed)."""
+  reviewedBy: User
+  status: ItemSuggestionStatus!
+  """The contributor who proposed the change."""
+  suggestedBy: User
+  updatedAt: DateTime!
+}
+
+type ItemEditSuggestionConnection implements Connection {
+  edges: [ItemEditSuggestionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type ItemEditSuggestionEdge implements Edge {
+  cursor: String!
+  node: ItemEditSuggestion!
 }
 
 input ItemFilters {
@@ -4515,6 +4554,21 @@ type ItemSuggestion {
   name: String!
   netWeight: Float
   type: ItemType!
+}
+
+"""Filters for the admin item-suggestion review queue."""
+input ItemSuggestionFilters {
+  itemId: ID
+  status: ItemSuggestionStatus
+}
+
+"""
+Lifecycle of a community edit suggestion against a public catalog item.
+"""
+enum ItemSuggestionStatus {
+  APPROVED
+  PENDING
+  REJECTED
 }
 
 """Categorizes the general type of an item in the pantry or shopping list"""
@@ -6202,6 +6256,12 @@ type Mutation {
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """
+  Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+  admin review — the live item is NOT changed. Non-owners use this instead of
+  updateItem (which is owner/admin-only). Rate-limited and capped per user.
+  """
+  suggestItemEdit(input: SuggestItemEditInput!): SuggestItemEditResult!
+  """
   Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
   """
   syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
@@ -7796,6 +7856,8 @@ type Query {
   """List memberships for a home with cursor-based pagination."""
   memberships(after: String, before: String, first: Int, homeId: ID!, last: Int): MembershipConnection!
   myModeration: MyModerationStatus
+  """The current user's own item edit suggestions, newest first."""
+  mySuggestions(after: String, before: String, first: Int, last: Int, status: ItemSuggestionStatus): ItemEditSuggestionConnection!
   """Fetch a single notification by its ID."""
   notification(id: ID!): Notification
   """Fetch notification statistics with optional filtering."""
@@ -8431,6 +8493,8 @@ type RejectItemPayload {
 
 union RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError
 
+union RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
+
 enum ReligiousDiet {
   HALAL
   KOSHER
@@ -8697,6 +8761,16 @@ type ReviewHelpful {
   id: ID!
   review: RecipeReview!
   user: User!
+}
+
+"""Approve or reject a pending suggestion (admin only)."""
+input ReviewItemSuggestionInput {
+  id: ID!
+  reviewNote: String
+}
+
+type ReviewItemSuggestionPayload {
+  suggestion: ItemEditSuggestion!
 }
 
 """Sub-input for risk assessment data"""
@@ -9799,6 +9873,48 @@ type Subscription {
   Subscribe once and branch on subtype.
   """
   userEvents(userId: ID!): UserEvent!
+}
+
+"""
+Propose an edit to a PUBLIC catalog item. `note` is a required justification
+shown to the reviewer.
+"""
+input SuggestItemEditInput {
+  changes: SuggestibleItemChangesInput!
+  itemId: ID!
+  note: String!
+}
+
+type SuggestItemEditPayload {
+  suggestion: ItemEditSuggestion!
+}
+
+union SuggestItemEditResult = ConflictError | ForbiddenError | NotFoundError | SuggestItemEditPayload | ValidationError
+
+"""
+The fields a community edit suggestion may change — the descriptive subset of
+UpdateItemInput. This type IS the whitelist: moderation/ownership fields
+(visibility, status, createdById) are intentionally absent, so the GraphQL
+layer rejects them at validation time rather than at runtime. Reuses the same
+sub-input types as create/update for a single source of truth per field.
+"""
+input SuggestibleItemChangesInput {
+  brand: BrandReferenceInput
+  brandOps: BrandOpsInput
+  categoryOps: CategoryOpsInput
+  classification: ItemClassificationInput
+  description: String
+  healthInfo: HealthInfoInput
+  media: MediaAssetsInput
+  name: String
+  nutritionFacts: [NutritionFactInput!]
+  packageInfo: PackageInfoInput
+  productDetails: ProductDetailsInput
+  storeSkuOps: StoreSkuOpsInput
+  tagOps: TagOpsInput
+  type: ItemType
+  unitConfig: ItemUnitConfigInput
+  unitOps: UnitOpsInput
 }
 
 """
