@@ -25,6 +25,8 @@ export interface ImageFile {
 export interface PresignedUploadData {
   url: string;
   key: string;
+  /** The presigned POST policy — opaque to us, forwarded verbatim. */
+  fields: ReadonlyArray<{ name: string; value: string }>;
 }
 
 export interface ImageUploadOptions {
@@ -56,12 +58,31 @@ export const useImageUpload = () => {
   const [updateProfile] = useMutation(UpdateUserProfileDocument);
   const [updateItemImage] = useMutation(UpdateItemImageDocument);
 
-  const uploadToMinIO = async (
+  /**
+   * Uploads the bytes to object storage with the server's presigned POST.
+   *
+   * The policy in `uploadData.fields` must be appended before the file, and the
+   * file part must be named `file` and come last — object storage enforces both
+   * and answers 400 otherwise. The Content-Type header is deliberately not set:
+   * the runtime has to author it so the multipart boundary matches the body.
+   */
+  const uploadToObjectStorage = async (
     file: ImageFile,
     uploadData: PresignedUploadData,
     onProgress?: (progress: number) => void,
   ): Promise<void> => {
     const mimeType = file.type || getMimeTypeFromUri(file.uri);
+
+    const form = new FormData();
+    for (const field of uploadData.fields) {
+      form.append(field.name, field.value);
+    }
+    // RN's FormData streams a file from disk given `{ uri, type, name }`.
+    form.append('file', {
+      uri: file.uri,
+      type: mimeType,
+      name: file.fileName || 'image.jpg',
+    });
 
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -74,8 +95,10 @@ export const useImageUpload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           resolve();
         } else {
+          // 400 here is a policy violation — oversized body or a mime that
+          // doesn't match the one the presign was issued for.
           logger.error(
-            `MinIO upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
+            `Image upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
           );
           const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
           reject(new Error(`Upload failed: ${xhr.status}${statusText}`));
@@ -106,17 +129,9 @@ export const useImageUpload = () => {
         };
       }
 
-      xhr.open('PUT', uploadData.url);
-      xhr.setRequestHeader('Content-Type', mimeType);
+      xhr.open('POST', uploadData.url);
       xhr.timeout = 60000; // 60 second timeout
-
-      // XMLHttpRequest in React Native can handle file:// URIs properly
-      // by passing an object with uri, type, and name
-      xhr.send({
-        uri: file.uri,
-        type: mimeType,
-        name: file.fileName || 'image.jpg',
-      });
+      xhr.send(form);
     });
   };
 
@@ -182,10 +197,14 @@ export const useImageUpload = () => {
 
         onProgress?.(30);
 
-        // Step 2: Upload to MinIO
-        await uploadToMinIO(fileToUpload, uploadResult, uploadProgress => {
-          onProgress?.(30 + uploadProgress * 0.5);
-        });
+        // Step 2: Upload the bytes with the presigned POST
+        await uploadToObjectStorage(
+          fileToUpload,
+          uploadResult,
+          uploadProgress => {
+            onProgress?.(30 + uploadProgress * 0.5);
+          },
+        );
 
         onProgress?.(80);
 

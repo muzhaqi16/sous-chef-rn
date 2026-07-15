@@ -4,7 +4,11 @@ import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { UpdateItemImageDocument } from '#operations/image/imageUpload.generated';
+import {
+  ConfirmItemImageUploadDocument,
+  CreateImageUploadUrlDocument,
+  UpdateItemImageDocument,
+} from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
 
@@ -158,11 +162,125 @@ beforeEach(() => {
   useStore.getState = () => ({ isOnline: true, updateUser: jest.fn() });
 });
 
+// The presigned POST the server hands back. `fields` is the storage policy and
+// is non-null on the payload — the upload is rejected without every entry.
+const PRESIGN_FIELDS = [
+  { __typename: 'UploadFormField' as const, name: 'key', value: 'items/i1/a' },
+  { __typename: 'UploadFormField' as const, name: 'policy', value: 'eyJ0' },
+  {
+    __typename: 'UploadFormField' as const,
+    name: 'x-amz-signature',
+    value: 'sig',
+  },
+];
+
+function buildPresignMock(): MockedResponse {
+  return {
+    request: { query: CreateImageUploadUrlDocument, variables: () => true },
+    result: {
+      data: {
+        createImageUploadUrl: {
+          __typename: 'CreateImageUploadUrlPayload',
+          url: 'https://storage.test/bucket',
+          key: 'items/i1/a',
+          fields: PRESIGN_FIELDS,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildConfirmItemMock(url: string): MockedResponse {
+  return {
+    request: { query: ConfirmItemImageUploadDocument, variables: () => true },
+    result: {
+      data: {
+        confirmItemImageUpload: {
+          __typename: 'ConfirmItemImageUploadPayload',
+          url,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
 describe('useImageUpload', () => {
   it('initializes with uploading false and progress 0', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(result.current.uploading).toBe(false);
     expect(result.current.progress).toBe(0);
+  });
+
+  // The server issues a presigned POST, not a PUT. Storage rejects the upload
+  // unless every policy field precedes a file part named `file`, and the
+  // Content-Type must be left to the runtime so the multipart boundary matches.
+  describe('presigned POST upload', () => {
+    const file = { uri: 'file://a.jpg', fileName: 'a.jpg', fileSize: 1024 };
+    let appendSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // Storage answers asynchronously. Driving onload from send() rather than
+      // from the test body means the reply can't land before the hook is
+      // listening for it.
+      mockXhr.send.mockImplementation(() => {
+        setImmediate(() => mockXhr.onload?.({} as ProgressEvent));
+      });
+      appendSpy = jest.spyOn(FormData.prototype, 'append');
+    });
+
+    afterEach(() => {
+      appendSpy.mockRestore();
+      mockXhr.send.mockReset();
+    });
+
+    async function runUpload(): Promise<ItemUploadResult> {
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [
+          buildPresignMock(),
+          buildConfirmItemMock('https://cdn.test/a.jpg'),
+        ],
+      });
+
+      let uploaded: ItemUploadResult = null;
+      await act(async () => {
+        uploaded = await result.current.uploadItemImage(file, 'item-1');
+      });
+      return uploaded;
+    }
+
+    it('POSTs to the presigned url rather than PUTting', async () => {
+      await runUpload();
+
+      expect(mockXhr.open).toHaveBeenCalledWith(
+        'POST',
+        'https://storage.test/bucket',
+      );
+    });
+
+    it('never sets Content-Type — the runtime owns the multipart boundary', async () => {
+      await runUpload();
+
+      expect(mockXhr.setRequestHeader).not.toHaveBeenCalledWith(
+        'Content-Type',
+        expect.anything(),
+      );
+    });
+
+    it('sends every policy field, with the file part last', async () => {
+      await runUpload();
+
+      const names = appendSpy.mock.calls.map(([name]) => name);
+
+      expect(names).toEqual(['key', 'policy', 'x-amz-signature', 'file']);
+    });
+
+    it('returns the confirmed url', async () => {
+      const uploaded = await runUpload();
+
+      expect(uploaded).toBe('https://cdn.test/a.jpg');
+    });
   });
 
   it('exposes all expected functions', () => {
