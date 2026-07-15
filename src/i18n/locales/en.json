@@ -2562,6 +2562,8 @@
     "notFoundTitle": "Item not found",
     "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
     "rejectedTitle": "Couldn't send that",
+    "loadFailedTitle": "Couldn't load this item",
+    "loadFailedBody": "We couldn't load the item's current details, and we need them to work out what you changed. Check your connection and try again.",
     "noChangesTitle": "Nothing to suggest",
     "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
     "photosOnlyTitle": "Photo added",
@@ -2571,7 +2573,9 @@
     "failedTitle": "Couldn't send that",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
     "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
-    "brandHint": "Pick a brand from the list to suggest a change, or describe it in your note."
+    "brandHint": "Pick a brand from the list to suggest a change, or describe it in your note.",
+    "suggestAction": "Suggest Edit",
+    "editAction": "Edit"
   },
   "reportItem": {
     "footer": "Wrong details on one of these?",
@@ -2579,6 +2583,7 @@
     "pickPrompt": "Which item has wrong details?",
     "reasonLabel": "What's wrong with it?",
     "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
+    "reasonTooShort": "Please add at least {{count}} characters so an admin knows what to look at.",
     "submit": "Send report",
     "sentTitle": "Report sent",
     "sentBody": "Thanks — an admin will take a look at this item.",

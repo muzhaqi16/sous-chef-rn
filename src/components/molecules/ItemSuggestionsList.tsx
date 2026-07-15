@@ -5,7 +5,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
-import { t } from '#/i18n/t';
+import { useTranslation } from 'react-i18next';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 interface ItemSuggestionsListProps {
@@ -129,6 +129,7 @@ const AddManuallyOption = ({
 };
 
 const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
+  const { t } = useTranslation();
   styles.useVariants({ withBorder: false, disabled: false });
 
   return (
@@ -167,12 +168,20 @@ export const ItemSuggestionsList = ({
     );
   };
 
+  // Only rendered with results behind it — with none there is nothing to report.
+  const showReportOption = !!onReportItem && hasResults;
+
   return (
     <View style={styles.container}>
       {addManuallyPosition === 'top' && renderAddManually(!hasResults)}
       {suggestions.map((item, index) => {
-        const isLastSuggestion = index === suggestions.length - 1;
-        const isLast = addManuallyPosition === 'top' ? isLastSuggestion : false;
+        // `isLast` drops the row's separator, so it means "nothing follows me"
+        // rather than "last suggestion" — with add-manually or the report row
+        // below, the separator has to stay.
+        const isLast =
+          addManuallyPosition === 'top' &&
+          index === suggestions.length - 1 &&
+          !showReportOption;
         return (
           <SuggestionRow
             key={item.id}
@@ -186,10 +195,8 @@ export const ItemSuggestionsList = ({
           />
         );
       })}
-      {addManuallyPosition === 'bottom' && renderAddManually(!!onReportItem)}
-      {!!onReportItem && !!hasResults && (
-        <ReportItemOption onPress={onReportItem} />
-      )}
+      {addManuallyPosition === 'bottom' && renderAddManually(!showReportOption)}
+      {!!showReportOption && <ReportItemOption onPress={onReportItem} />}
     </View>
   );
 };

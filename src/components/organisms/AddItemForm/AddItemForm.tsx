@@ -379,6 +379,16 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           />
         )}
 
+        {/* Sits directly under the brand autocomplete, which is last in Basics'
+            primary group. Only an id-bearing brand survives the diff, so a
+            free-typed name is dropped silently — this is the only thing telling
+            the user to put it in the note instead. */}
+        {activePage === 'Basics' && !!editing && (
+          <Text size="sm" tone="secondary" style={styles.notice}>
+            {t('suggestItemEdit.brandHint')}
+          </Text>
+        )}
+
         {activePage === 'Basics' && (
           <View style={styles.section}>
             <MultiImagePicker

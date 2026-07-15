@@ -13,6 +13,8 @@ export interface UseItemForEditResult {
   snapshot: EditableItemSnapshot | null;
   loading: boolean;
   error: unknown;
+  /** Re-runs the query. `error` alone strands the caller on a spinner. */
+  refetch: () => void;
 }
 
 /**
@@ -24,7 +26,7 @@ export interface UseItemForEditResult {
  * A spinner is the right answer while the read is incomplete.
  */
 export function useItemForEdit(itemId: string): UseItemForEditResult {
-  const { loading, error } = useQuery(GetItemForEditDocument, {
+  const { loading, error, refetch } = useQuery(GetItemForEditDocument, {
     variables: { id: itemId },
     fetchPolicy: 'cache-and-network',
   });
@@ -42,5 +44,6 @@ export function useItemForEdit(itemId: string): UseItemForEditResult {
     snapshot: result.complete ? itemToEditableSnapshot(result.data) : null,
     loading,
     error,
+    refetch,
   };
 }

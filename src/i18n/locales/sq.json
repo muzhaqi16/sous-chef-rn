@@ -2562,6 +2562,8 @@
     "notFoundTitle": "Artikulli nuk u gjet",
     "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
     "rejectedTitle": "Nuk u dërgua dot",
+    "loadFailedTitle": "Ky artikull nuk u ngarkua dot",
+    "loadFailedBody": "Nuk arritëm t’i ngarkojmë të dhënat aktuale të artikullit, të cilat na duhen për të kuptuar çfarë ndryshove. Kontrollo lidhjen dhe provo përsëri.",
     "noChangesTitle": "Asgjë për të sugjeruar",
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
     "photosOnlyTitle": "Fotoja u shtua",
@@ -2571,7 +2573,9 @@
     "failedTitle": "Nuk u dërgua dot",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
     "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator.",
-    "brandHint": "Zgjidh një markë nga lista për të sugjeruar një ndryshim, ose përshkruaje në shënimin tënd."
+    "brandHint": "Zgjidh një markë nga lista për të sugjeruar një ndryshim, ose përshkruaje në shënimin tënd.",
+    "suggestAction": "Sugjero ndryshim",
+    "editAction": "Ndrysho"
   },
   "reportItem": {
     "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
@@ -2579,6 +2583,7 @@
     "pickPrompt": "Cili artikull ka të dhëna të gabuara?",
     "reasonLabel": "Çfarë nuk shkon?",
     "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
+    "reasonTooShort": "Shto të paktën {{count}} karaktere që administratori të dijë çfarë të shohë.",
     "submit": "Dërgo raportin",
     "sentTitle": "Raporti u dërgua",
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",

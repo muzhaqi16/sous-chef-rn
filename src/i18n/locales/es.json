@@ -2562,6 +2562,8 @@
     "notFoundTitle": "Artículo no encontrado",
     "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
     "rejectedTitle": "No se pudo enviar",
+    "loadFailedTitle": "No se pudo cargar este artículo",
+    "loadFailedBody": "No pudimos cargar los datos actuales del artículo, y los necesitamos para saber qué cambiaste. Comprueba tu conexión e inténtalo de nuevo.",
     "noChangesTitle": "Nada que sugerir",
     "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
     "photosOnlyTitle": "Foto añadida",
@@ -2571,7 +2573,9 @@
     "failedTitle": "No se pudo enviar",
     "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
     "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador.",
-    "brandHint": "Elige una marca de la lista para sugerir un cambio, o descríbela en tu nota."
+    "brandHint": "Elige una marca de la lista para sugerir un cambio, o descríbela en tu nota.",
+    "suggestAction": "Sugerir cambio",
+    "editAction": "Editar"
   },
   "reportItem": {
     "footer": "¿Algún dato incorrecto en estos?",
@@ -2579,6 +2583,7 @@
     "pickPrompt": "¿Qué artículo tiene datos incorrectos?",
     "reasonLabel": "¿Qué está mal?",
     "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
+    "reasonTooShort": "Añade al menos {{count}} caracteres para que un administrador sepa qué revisar.",
     "submit": "Enviar informe",
     "sentTitle": "Informe enviado",
     "sentBody": "Gracias: un administrador revisará este artículo.",

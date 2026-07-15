@@ -18,10 +18,16 @@ import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#components/organisms/AddItemForm/AddItemForm';
 import { alertService } from '#/services/alertService';
 import { useIsAdminUser } from '#store/useAppStore';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
+
+// Passthrough auto-mock — real behavior, but overridable per test to force the
+// `false` return that a genuine throw produces. errorPolicy: 'all' means Apollo
+// resolves rather than throws, so it can't be provoked through a mocked link.
+jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#store/useAppStore', () => ({
   useIsAdminUser: jest.fn(() => false),
@@ -185,6 +191,42 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
+  // A throw escaping errorPolicy leaves no union member and no result.error to
+  // read, so it has to alert from the default branch — returning `failed`
+  // silently would leave the sheet open with no explanation at all.
+  it('still tells the user when the suggestion throws outright', async () => {
+    (executeMutation as jest.Mock).mockResolvedValueOnce(false);
+    const { mock } = recordMock(SuggestItemEditDocument, {
+      data: suggestionPayload(NOTE),
+    });
+    const { result } = renderHook([mock]);
+
+    const outcome = await result.current.submitEdit(snapshot(), form());
+
+    expect(outcome).toEqual({ status: 'failed' });
+    expect(alertService.alert).toHaveBeenCalledWith(
+      "Couldn't send that",
+      'Something went wrong sending your suggestion. Please try again.',
+    );
+  });
+
+  it('still tells the user when a direct write throws outright', async () => {
+    (executeMutation as jest.Mock).mockResolvedValueOnce(false);
+    const { mock } = recordMock(UpdateItemDocument, { data: {} });
+    const { result } = renderHook([mock]);
+
+    const outcome = await result.current.submitEdit(
+      snapshot({ visibility: Visibility.Private }),
+      form(),
+    );
+
+    expect(outcome).toEqual({ status: 'failed' });
+    expect(alertService.alert).toHaveBeenCalledWith(
+      "Couldn't send that",
+      'Something went wrong sending your suggestion. Please try again.',
+    );
+  });
+
   // The 10/hour limit is a top-level GraphQL error, not a union member.
   it('recognises the rate limit even though it is not a union member', async () => {
     const { result } = renderHook([
@@ -213,6 +255,22 @@ describe('useSuggestItemEdit', () => {
   });
 
   describe('routing', () => {
+    // Exposed so the form can word itself the same way submitEdit will act,
+    // without a second component re-deriving `isAdmin` to ask the same question.
+    it('exposes the same route submitEdit will take', () => {
+      const { result } = renderHook([]);
+
+      expect(result.current.resolveRoute(Visibility.Public)).toBe('suggest');
+      expect(result.current.resolveRoute(Visibility.Private)).toBe('direct');
+    });
+
+    it('exposes an admin-aware route', () => {
+      (useIsAdminUser as jest.Mock).mockReturnValue(true);
+      const { result } = renderHook([]);
+
+      expect(result.current.resolveRoute(Visibility.Public)).toBe('direct');
+    });
+
     it('writes a non-public item straight through', async () => {
       const { mock, fired } = recordMock(UpdateItemDocument, {
         data: {

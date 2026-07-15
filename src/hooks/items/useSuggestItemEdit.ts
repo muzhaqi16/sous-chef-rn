@@ -18,7 +18,9 @@ import {
   buildSuggestibleItemChanges,
   resolveItemEditRoute,
   type EditableItemSnapshot,
+  type ItemEditRoute,
 } from '#utils/items/suggestItemChanges';
+import type { Visibility } from '#/graphql/generated/schemaTypes';
 import type { AddItemSubmitPayload } from '#/components/organisms/AddItemForm/AddItemForm';
 
 export type ItemEditResult =
@@ -35,10 +37,14 @@ type UpdatePayload = UpdateItemMutation['updateItem'];
 const FAILED: ItemEditResult = { status: 'failed' };
 
 /**
- * `errorPolicy: 'all'` is set globally, so Apollo mutations resolve with
+ * The slice of an Apollo mutation result the helpers below read. Structural on
+ * purpose: they take whatever `executeMutation` inferred rather than naming
+ * Apollo's result type, so neither helper has to be retyped when it changes.
+ *
+ * `errorPolicy: 'all'` is set globally, so mutations resolve with
  * `{ data, error }` instead of throwing. `executeMutation` is therefore the net
- * for genuine network throws, not the error path — the union and `result.error`
- * below are what actually carry server outcomes.
+ * for genuine network throws, not the error path — the result union and
+ * `result.error` are what actually carry server outcomes.
  */
 type MutationResult<TData> = { data?: TData | null; error?: unknown };
 
@@ -51,6 +57,11 @@ export function useSuggestItemEdit() {
     SuggestItemEditDocument,
   );
   const [updateItem, { loading: updating }] = useMutation(UpdateItemDocument);
+
+  /** The single route resolution for this hook and its callers, so nothing
+   *  re-derives `isAdmin` to answer the same question a second time. */
+  const resolveRoute = (visibility: Visibility): ItemEditRoute =>
+    resolveItemEditRoute(visibility, isAdmin);
 
   const submitEdit = async (
     original: EditableItemSnapshot,
@@ -83,8 +94,8 @@ export function useSuggestItemEdit() {
       return { status: 'imagesOnly' };
     }
 
-    if (resolveItemEditRoute(original.visibility, isAdmin) === 'direct') {
-      const result = (await executeMutation(
+    if (resolveRoute(original.visibility) === 'direct') {
+      const result = await executeMutation(
         () =>
           updateItem({
             variables: {
@@ -96,9 +107,15 @@ export function useSuggestItemEdit() {
             },
           }),
         'Error updating item:',
-      )) as MutationResult<UpdateItemMutation> | false;
+      );
 
-      const outcome = result === false ? null : interpretUpdate(result);
+      // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
+      if (result === false) {
+        alertFailure(t);
+        return FAILED;
+      }
+
+      const outcome = interpretUpdate(result);
       if (outcome === 'updated') {
         await uploadImages(uploadItemImages, images, original.id);
         alertService.alert(
@@ -111,24 +128,23 @@ export function useSuggestItemEdit() {
       // failure. Forbidden means our visibility guess was wrong or stale, so do
       // what the server asked and fall through to the suggestion path.
       if (outcome !== 'forbidden') {
-        alertFailure(
-          t,
-          result === false ? undefined : result,
-          result === false ? undefined : result.data?.updateItem,
-        );
+        alertFailure(t, result, result.data?.updateItem);
         return FAILED;
       }
     }
 
-    const result = (await executeMutation(
+    const result = await executeMutation(
       () =>
         suggestEdit({
           variables: { input: { itemId: original.id, note, changes } },
         }),
       'Error suggesting item edit:',
-    )) as MutationResult<SuggestItemEditMutation> | false;
+    );
 
-    if (result === false) return FAILED;
+    if (result === false) {
+      alertFailure(t);
+      return FAILED;
+    }
 
     const payload = result.data?.suggestItemEdit;
     if (payload?.__typename === 'SuggestItemEditPayload') {
@@ -156,7 +172,7 @@ export function useSuggestItemEdit() {
     return FAILED;
   };
 
-  return { submitEdit, loading: suggesting || updating };
+  return { submitEdit, resolveRoute, loading: suggesting || updating };
 }
 
 async function uploadImages(
@@ -199,6 +215,9 @@ function alertFailure(
   }
 
   switch (payload?.__typename) {
+    // The 5-pending cap is the only CONFLICT either mutation raises, so the
+    // typename alone identifies it. Should a second conflict appear, switch on
+    // `payload.code` instead — this copy would be actively wrong for it.
     case 'ConflictError':
       alertService.alert(
         t('suggestItemEdit.pendingCapTitle'),

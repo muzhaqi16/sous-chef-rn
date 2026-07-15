@@ -145,14 +145,24 @@ export const editReasonRule = string()
   .max(500, 'Edit reason cannot exceed 500 characters')
   .optional();
 
-// suggestItemEdit requires a non-empty note, and the server only trims and
-// checks for emptiness — no length floor — so the minimum is ours to set. 10
-// characters turns away "fix" / "wrong" / "." without being onerous.
+/**
+ * Floor for any free-text moderation reason a human has to act on — the
+ * suggest-edit note and the item report both apply it, so the two stay in step.
+ *
+ * The server only trims and checks for emptiness, with no length floor, so the
+ * minimum is ours to set. 10 characters turns away "fix" / "wrong" / "."
+ * without being onerous.
+ */
+export const MIN_EDIT_REASON_LENGTH = 10;
+
 export const editReasonRequiredRule = string()
   .transform(normalizeSmartPunctuation)
   .trim()
   .required('Tell us what needs fixing')
-  .min(10, 'Please add a little more detail (at least 10 characters)')
+  .min(
+    MIN_EDIT_REASON_LENGTH,
+    `Please add a little more detail (at least ${MIN_EDIT_REASON_LENGTH} characters)`,
+  )
   .max(500, 'Edit reason cannot exceed 500 characters');
 
 // --- Create Item validation schema -------------------------------------------

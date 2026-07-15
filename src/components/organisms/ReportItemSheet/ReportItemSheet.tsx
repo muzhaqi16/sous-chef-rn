@@ -10,6 +10,7 @@ import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { useReportItem } from '#hooks/items/useReportItem';
+import { MIN_EDIT_REASON_LENGTH } from '#utils/validation/item';
 
 export interface ReportItemTarget {
   id: string;
@@ -24,8 +25,6 @@ interface ReportItemSheetProps {
   candidates: ReportItemTarget[];
   onDismiss: () => void;
 }
-
-const MIN_REASON_LENGTH = 10;
 
 /**
  * Reports a catalog item with wrong details.
@@ -45,6 +44,9 @@ export const ReportItemSheet: React.FC<ReportItemSheetProps> = ({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
+
+  const trimmedReason = reason.trim();
+  const reasonTooShort = trimmedReason.length < MIN_EDIT_REASON_LENGTH;
 
   const onlyCandidateId = candidates.length === 1 ? candidates[0].id : null;
   const targetId = selectedId ?? onlyCandidateId;
@@ -129,12 +131,21 @@ export const ReportItemSheet: React.FC<ReportItemSheetProps> = ({
             numberOfLines={3}
             editable={!loading}
           />
+          {/* Says why submit is disabled. Withheld until they start typing, so
+              it reads as guidance rather than an error on an untouched field. */}
+          {!!trimmedReason && !!reasonTooShort && (
+            <Text size="sm" tone="secondary" style={styles.reasonHint}>
+              {t('reportItem.reasonTooShort', {
+                count: MIN_EDIT_REASON_LENGTH,
+              })}
+            </Text>
+          )}
 
           <Button
             variant="primary"
             fullWidth
             loading={loading}
-            disabled={reason.trim().length < MIN_REASON_LENGTH}
+            disabled={reasonTooShort}
             onPress={handleSubmit}
             style={styles.submit}
           >
@@ -177,6 +188,9 @@ const styles = StyleSheet.create(theme => ({
   reasonLabel: {
     marginTop: theme.spacing.lg,
     marginBottom: theme.spacing.sm,
+  },
+  reasonHint: {
+    marginTop: theme.spacing.sm,
   },
   reasonInput: {
     minHeight: 96,

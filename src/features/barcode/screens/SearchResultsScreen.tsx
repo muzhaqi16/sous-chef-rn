@@ -139,8 +139,8 @@ export const SearchResultsScreen: React.FC<
   const editActionLabel =
     currentItem?.visibility &&
     resolveItemEditRoute(currentItem.visibility, isAdmin) === 'direct'
-      ? 'Edit'
-      : 'Suggest Edit';
+      ? t('suggestItemEdit.editAction')
+      : t('suggestItemEdit.suggestAction');
 
   const renderContent = () => {
     if (isSearching || loading) {
