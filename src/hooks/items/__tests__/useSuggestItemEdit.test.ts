@@ -5,7 +5,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import {
-  SuggestItemEditDocument,
+  CreateItemSuggestionDocument,
   UpdateItemDocument,
 } from '../useSuggestItemEdit.generated';
 import { useSuggestItemEdit } from '../useSuggestItemEdit';
@@ -66,8 +66,8 @@ const form = (
   } as AddItemSubmitPayload);
 
 const suggestionPayload = (note: string) => ({
-  suggestItemEdit: {
-    __typename: 'SuggestItemEditPayload' as const,
+  createItemSuggestion: {
+    __typename: 'CreateItemSuggestionPayload' as const,
     suggestion: {
       __typename: 'ItemEditSuggestion' as const,
       id: 'sug-1',
@@ -91,7 +91,7 @@ describe('useSuggestItemEdit', () => {
   // live for the whole upload and a second tap re-uploads the same files as
   // fresh image rows.
   it('reports loading while images are uploading', async () => {
-    const { mock } = recordMock(SuggestItemEditDocument, {
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
     });
 
@@ -102,7 +102,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   it('sends a minimal structured diff for a public item', async () => {
-    const { mock, fired } = recordMock(SuggestItemEditDocument, {
+    const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
     });
     const { result } = renderHook([mock]);
@@ -120,7 +120,7 @@ describe('useSuggestItemEdit', () => {
   // The server collapses a byte-identical pending suggestion onto the existing
   // one and drops the new note — the echoed note is the only way to tell.
   it('detects the idempotent duplicate collapse via the echoed note', async () => {
-    const { mock } = recordMock(SuggestItemEditDocument, {
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload('An older note the server kept'),
     });
     const { result } = renderHook([mock]);
@@ -131,7 +131,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   it('blocks a no-op before it reaches the network', async () => {
-    const { mock, fired } = recordMock(SuggestItemEditDocument, {
+    const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
     });
     const { result } = renderHook([mock]);
@@ -146,7 +146,7 @@ describe('useSuggestItemEdit', () => {
   });
 
   it('uploads photos without a mutation when only images changed', async () => {
-    const { mock, fired } = recordMock(SuggestItemEditDocument, {
+    const { mock, fired } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
     });
     const { result } = renderHook([mock]);
@@ -162,9 +162,9 @@ describe('useSuggestItemEdit', () => {
   });
 
   it('reports the 5-pending cap distinctly from other failures', async () => {
-    const { mock } = recordMock(SuggestItemEditDocument, {
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: {
-        suggestItemEdit: {
+        createItemSuggestion: {
           __typename: 'ConflictError',
           code: 'CONFLICT',
           message: 'Too many pending',
@@ -185,9 +185,9 @@ describe('useSuggestItemEdit', () => {
 
   // A non-PUBLIC target answers ValidationError, never ForbiddenError.
   it('surfaces the server message on a validation failure', async () => {
-    const { mock } = recordMock(SuggestItemEditDocument, {
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: {
-        suggestItemEdit: {
+        createItemSuggestion: {
           __typename: 'ValidationError',
           code: 'VALIDATION_FAILED',
           message: 'Item is not public',
@@ -211,7 +211,7 @@ describe('useSuggestItemEdit', () => {
   // silently would leave the sheet open with no explanation at all.
   it('still tells the user when the suggestion throws outright', async () => {
     (executeMutation as jest.Mock).mockResolvedValueOnce(false);
-    const { mock } = recordMock(SuggestItemEditDocument, {
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
       data: suggestionPayload(NOTE),
     });
     const { result } = renderHook([mock]);
@@ -246,7 +246,7 @@ describe('useSuggestItemEdit', () => {
   it('recognises the rate limit even though it is not a union member', async () => {
     const { result } = renderHook([
       {
-        request: { query: SuggestItemEditDocument, variables: () => true },
+        request: { query: CreateItemSuggestionDocument, variables: () => true },
         error: Object.assign(new Error('rate limited'), {
           errors: [
             {
@@ -312,18 +312,18 @@ describe('useSuggestItemEdit', () => {
     });
 
     // A stale cached canEdit is absorbed: updateItem's Forbidden explicitly
-    // tells the client to use suggestItemEdit, so do that.
+    // tells the client to use createItemSuggestion, so do that.
     it('falls back to a suggestion when a direct write is forbidden', async () => {
       const update = recordMock(UpdateItemDocument, {
         data: {
           updateItem: {
             __typename: 'ForbiddenError',
             code: 'AUTHZ_FORBIDDEN',
-            message: 'Use suggestItemEdit',
+            message: 'Use createItemSuggestion',
           },
         },
       });
-      const suggest = recordMock(SuggestItemEditDocument, {
+      const suggest = recordMock(CreateItemSuggestionDocument, {
         data: suggestionPayload(NOTE),
       });
       const { result } = renderHook([update.mock, suggest.mock]);

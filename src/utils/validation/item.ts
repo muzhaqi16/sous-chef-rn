@@ -243,7 +243,7 @@ export type CreateItemFormData = InferType<typeof createItemSchema>;
 
 /**
  * Suggestion schema: identical to create, except the note is mandatory.
- * `SuggestItemEditInput.note` is `String!`, and the reviewing admin has nothing
+ * `CreateItemSuggestionInput.note` is `String!`, and the reviewing admin has nothing
  * but the note to judge the diff against.
  *
  * Only for the suggestion path. The direct-edit path writes through

@@ -434,6 +434,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "CreateItemSuggestionResult": [
+      "ConflictError",
+      "CreateItemSuggestionPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CreateMealPlanItemResult": [
       "ConflictError",
       "CreateMealPlanItemPayload",
@@ -1302,13 +1309,6 @@
       "ShoppingList",
       "ShoppingListCollaborator",
       "ShoppingListItem"
-    ],
-    "SuggestItemEditResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SuggestItemEditPayload",
-      "ValidationError"
     ],
     "Timestamped": [
       "Notification"

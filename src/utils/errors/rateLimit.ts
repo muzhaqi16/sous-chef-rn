@@ -12,7 +12,7 @@ const RATE_LIMIT_CODES = [
   'RATE_LIMIT_USER_BLOCKED',
   'RATE_LIMIT_API_KEY_BLOCKED',
   // A single operation's own budget, stricter than and separate from the global
-  // one — ~30 operations have one (suggestItemEdit: 10/hour), so this fires
+  // one — ~30 operations have one (createItemSuggestion: 10/hour), so this fires
   // while well under RATE_LIMIT_EXCEEDED. Both must be handled.
   'OPERATION_RATE_LIMITED',
 ];

@@ -395,7 +395,7 @@ mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
 # where the user has only seen a name, brand and thumbnail and so can't
 # meaningfully fill in an edit form.
 #
-# Not to be confused with suggestItemEdit (src/hooks/items/useSuggestItemEdit.graphql),
+# Not to be confused with createItemSuggestion (src/hooks/items/useSuggestItemEdit.graphql),
 # which proposes a structured diff and is reachable only from the barcode scan
 # flow, where the user is looking at the item's full details.
 mutation MarkItemForReview($input: MarkItemForReviewInput!) {

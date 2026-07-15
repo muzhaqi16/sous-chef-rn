@@ -26,7 +26,7 @@ fragment useItemForEdit_item on Item {
   netWeight
   baseDimension
   imageUrl
-  # Routes the submit: true -> updateItem, false -> suggestItemEdit. Viewer-
+  # Routes the submit: true -> updateItem, false -> createItemSuggestion. Viewer-
   # scoped and resolved against the same predicate updateItem enforces, so it
   # is the only correct signal — visibility can't tell an owner from anyone
   # else, and both paths hard-fail when picked wrongly.

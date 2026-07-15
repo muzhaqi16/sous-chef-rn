@@ -1726,6 +1726,23 @@ export type CreateItemPayload = {
 
 export type CreateItemResult = ConflictError | CreateItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Propose an edit to a PUBLIC catalog item. `note` is a required justification
+ * shown to the reviewer.
+ */
+export type CreateItemSuggestionInput = {
+  changes: SuggestibleItemChangesInput;
+  itemId: Scalars['ID']['input'];
+  note: Scalars['String']['input'];
+};
+
+export type CreateItemSuggestionPayload = {
+  __typename: 'CreateItemSuggestionPayload';
+  suggestion: ItemEditSuggestion;
+};
+
+export type CreateItemSuggestionResult = ConflictError | CreateItemSuggestionPayload | ForbiddenError | NotFoundError | ValidationError;
+
 /** Input for creating a meal plan from a template */
 export type CreateMealPlanFromTemplateInput = {
   /** Optional budget for the meal plan */
@@ -4264,23 +4281,38 @@ export type Item = {
   brands: Array<ItemBrand>;
   /**
    * Whether the CALLING user may write to this item directly with updateItem
-   * (true for its creator and for admins). When false, propose changes with
-   * suggestItemEdit instead — the two paths are mutually exclusive and both
-   * hard-fail when picked wrongly, so route on this rather than inferring from
-   * visibility:
+   * (true for its creator and for admins). Resolved against the same predicate
+   * updateItem enforces, so it stays correct if that rule changes.
    *
-   *     item.canEdit ? updateItem(...) : suggestItemEdit(...)
+   * Route on this together with canSuggest rather than inferring from
+   * visibility — the write paths are mutually exclusive and each hard-fails when
+   * picked wrongly:
    *
-   * A private item you do not own is never returned by the API at all, so
-   * canEdit=false always means "suggest", never "you cannot do anything".
-   * Resolved against the same predicate that updateItem enforces, so it stays
-   * correct if that rule changes.
+   *     item.canEdit    -> updateItem(...)
+   *     item.canSuggest -> createItemSuggestion(...)
+   *     neither         -> read-only, offer no edit affordance
+   *
+   * canEdit=false does NOT imply you may suggest: you can legitimately receive a
+   * PRIVATE item you do not own (a housemate's pantry entry, a shared list's
+   * item, a recipe ingredient), and those are read-only to you — createItemSuggestion
+   * accepts PUBLIC items only. Check canSuggest; do not assume the fallback.
    *
    * Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
    * scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
    * one user's edit rights to another.
    */
   canEdit: Scalars['Boolean']['output'];
+  /**
+   * Whether createItemSuggestion accepts this item as a target — true for
+   * active PUBLIC catalog items. Resolved against the same predicate that
+   * mutation enforces.
+   *
+   * Structural only: it does not account for your per-user pending-suggestion
+   * cap or the rate limit, both of which are transient and clear on their own.
+   * Unlike canEdit this is not viewer-scoped — the answer is identical for
+   * every caller, so it inherits Item's PUBLIC cache scope.
+   */
+  canSuggest: Scalars['Boolean']['output'];
   categories: Array<ItemCategory>;
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
@@ -6131,6 +6163,12 @@ export type Mutation = {
   createImageUploadUrl: CreateImageUploadUrlResult;
   /** Create a new item */
   createItem: CreateItemResult;
+  /**
+   * Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+   * admin review — the live item is NOT changed. Non-owners use this instead of
+   * updateItem (which is owner/admin-only). Rate-limited and capped per user.
+   */
+  createItemSuggestion: CreateItemSuggestionResult;
   /** Create a new meal plan. */
   createMealPlan: CreateMealPlanResult;
   /**
@@ -6446,12 +6484,6 @@ export type Mutation = {
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
-  /**
-   * Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
-   * admin review — the live item is NOT changed. Non-owners use this instead of
-   * updateItem (which is owner/admin-only). Rate-limited and capped per user.
-   */
-  suggestItemEdit: SuggestItemEditResult;
   /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
   syncDeletePantryItem: SyncPantryItemResult;
   /**
@@ -7130,6 +7162,19 @@ export type MutationCreateImageUploadUrlArgs = {
  */
 export type MutationCreateItemArgs = {
   input: CreateItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationCreateItemSuggestionArgs = {
+  input: CreateItemSuggestionInput;
 };
 
 
@@ -8534,19 +8579,6 @@ export type MutationSendTestNotificationArgs = {
  */
 export type MutationShareShoppingListArgs = {
   input: ShareShoppingListInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSuggestItemEditArgs = {
-  input: SuggestItemEditInput;
 };
 
 
@@ -10843,9 +10875,12 @@ export type Query = {
   membership: Maybe<Membership>;
   /** List memberships for a home with cursor-based pagination. */
   memberships: MembershipConnection;
+  /**
+   * The current user's own item edit suggestions, newest first. Same filters as
+   * the admin queue, scoped to the caller — there is no arg to widen that scope.
+   */
+  myItemSuggestions: ItemEditSuggestionConnection;
   myModeration: Maybe<MyModerationStatus>;
-  /** The current user's own item edit suggestions, newest first. */
-  mySuggestions: ItemEditSuggestionConnection;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
   /** Fetch notification statistics with optional filtering. */
@@ -11255,12 +11290,12 @@ export type QueryMembershipsArgs = {
 };
 
 
-export type QueryMySuggestionsArgs = {
+export type QueryMyItemSuggestionsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ItemSuggestionFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
-  status?: InputMaybe<ItemSuggestionStatus>;
 };
 
 
@@ -13678,23 +13713,6 @@ export type SubscriptionStoreEventsArgs = {
 export type SubscriptionUserEventsArgs = {
   userId: Scalars['ID']['input'];
 };
-
-/**
- * Propose an edit to a PUBLIC catalog item. `note` is a required justification
- * shown to the reviewer.
- */
-export type SuggestItemEditInput = {
-  changes: SuggestibleItemChangesInput;
-  itemId: Scalars['ID']['input'];
-  note: Scalars['String']['input'];
-};
-
-export type SuggestItemEditPayload = {
-  __typename: 'SuggestItemEditPayload';
-  suggestion: ItemEditSuggestion;
-};
-
-export type SuggestItemEditResult = ConflictError | ForbiddenError | NotFoundError | SuggestItemEditPayload | ValidationError;
 
 /**
  * The fields a community edit suggestion may change — the descriptive subset of

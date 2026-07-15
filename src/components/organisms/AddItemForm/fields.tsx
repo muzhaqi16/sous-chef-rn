@@ -30,7 +30,7 @@ export const isEditMode = (mode: AddItemFormMode): boolean =>
   mode === 'edit' || mode === 'directEdit';
 
 /**
- * Only the review path needs a note. `SuggestItemEditInput.note` is `String!`
+ * Only the review path needs a note. `CreateItemSuggestionInput.note` is `String!`
  * and the admin has nothing else to judge the diff against, whereas
  * `UpdateItemInput.editReason` is optional and nobody reviews a direct edit —
  * requiring one there would block Save on an explanation addressed to nobody.

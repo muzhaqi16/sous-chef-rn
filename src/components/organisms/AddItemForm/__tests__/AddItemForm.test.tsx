@@ -181,7 +181,7 @@ describe('AddItemForm', () => {
     expect(screen.getByText('Add New Item')).toBeTruthy();
   });
 
-  // SuggestItemEditInput.note is String! and an admin reads it, so the review
+  // CreateItemSuggestionInput.note is String! and an admin reads it, so the review
   // path mandates it. UpdateItemInput.editReason is optional and nobody reviews
   // a direct edit — requiring one there blocked Save on a note addressed to
   // nobody, under a subtitle promising the change goes live immediately.

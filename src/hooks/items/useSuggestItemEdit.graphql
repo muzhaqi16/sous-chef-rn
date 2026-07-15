@@ -15,12 +15,12 @@
 # in useSuggestItemEdit.ts, and docs/api/errors.md, which uses this very
 # operation as its example.
 #
-# ForbiddenError is in the union but suggestItemEdit never returns it; it falls
-# through to the generic branch.
-mutation SuggestItemEdit($input: SuggestItemEditInput!) {
-  suggestItemEdit(input: $input) {
+# ForbiddenError is in the union but createItemSuggestion never returns it; it
+# falls through to the generic branch.
+mutation CreateItemSuggestion($input: CreateItemSuggestionInput!) {
+  createItemSuggestion(input: $input) {
     __typename
-    ... on SuggestItemEditPayload {
+    ... on CreateItemSuggestionPayload {
       suggestion {
         id
         status

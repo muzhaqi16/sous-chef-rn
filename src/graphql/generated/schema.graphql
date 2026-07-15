@@ -1840,6 +1840,22 @@ type CreateItemPayload {
 
 union CreateItemResult = ConflictError | CreateItemPayload | ForbiddenError | NotFoundError | ValidationError
 
+"""
+Propose an edit to a PUBLIC catalog item. `note` is a required justification
+shown to the reviewer.
+"""
+input CreateItemSuggestionInput {
+  changes: SuggestibleItemChangesInput!
+  itemId: ID!
+  note: String!
+}
+
+type CreateItemSuggestionPayload {
+  suggestion: ItemEditSuggestion!
+}
+
+union CreateItemSuggestionResult = ConflictError | CreateItemSuggestionPayload | ForbiddenError | NotFoundError | ValidationError
+
 """Input for creating a meal plan from a template"""
 input CreateMealPlanFromTemplateInput {
   """Optional budget for the meal plan"""
@@ -4221,23 +4237,38 @@ type Item {
   brands: [ItemBrand!]!
   """
   Whether the CALLING user may write to this item directly with updateItem
-  (true for its creator and for admins). When false, propose changes with
-  suggestItemEdit instead — the two paths are mutually exclusive and both
-  hard-fail when picked wrongly, so route on this rather than inferring from
-  visibility:
+  (true for its creator and for admins). Resolved against the same predicate
+  updateItem enforces, so it stays correct if that rule changes.
   
-      item.canEdit ? updateItem(...) : suggestItemEdit(...)
+  Route on this together with canSuggest rather than inferring from
+  visibility — the write paths are mutually exclusive and each hard-fails when
+  picked wrongly:
   
-  A private item you do not own is never returned by the API at all, so
-  canEdit=false always means "suggest", never "you cannot do anything".
-  Resolved against the same predicate that updateItem enforces, so it stays
-  correct if that rule changes.
+      item.canEdit    -> updateItem(...)
+      item.canSuggest -> createItemSuggestion(...)
+      neither         -> read-only, offer no edit affordance
+  
+  canEdit=false does NOT imply you may suggest: you can legitimately receive a
+  PRIVATE item you do not own (a housemate's pantry entry, a shared list's
+  item, a recipe ingredient), and those are read-only to you — createItemSuggestion
+  accepts PUBLIC items only. Check canSuggest; do not assume the fallback.
   
   Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
   scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
   one user's edit rights to another.
   """
   canEdit: Boolean!
+  """
+  Whether createItemSuggestion accepts this item as a target — true for
+  active PUBLIC catalog items. Resolved against the same predicate that
+  mutation enforces.
+  
+  Structural only: it does not account for your per-user pending-suggestion
+  cap or the rate limit, both of which are transient and clear on their own.
+  Unlike canEdit this is not viewer-scoped — the answer is identical for
+  every caller, so it inherits Item's PUBLIC cache scope.
+  """
+  canSuggest: Boolean!
   categories: [ItemCategory!]!
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
@@ -5989,6 +6020,12 @@ type Mutation {
   createImageUploadUrl(input: CreateImageUploadUrlInput!): CreateImageUploadUrlResult!
   """Create a new item"""
   createItem(input: CreateItemInput!): CreateItemResult!
+  """
+  Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+  admin review — the live item is NOT changed. Non-owners use this instead of
+  updateItem (which is owner/admin-only). Rate-limited and capped per user.
+  """
+  createItemSuggestion(input: CreateItemSuggestionInput!): CreateItemSuggestionResult!
   """Create a new meal plan."""
   createMealPlan(input: CreateMealPlanInput!): CreateMealPlanResult!
   """
@@ -6304,12 +6341,6 @@ type Mutation {
   sendTestNotification(input: SendTestNotificationInput!): SendTestNotificationResult!
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
-  """
-  Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
-  admin review — the live item is NOT changed. Non-owners use this instead of
-  updateItem (which is owner/admin-only). Rate-limited and capped per user.
-  """
-  suggestItemEdit(input: SuggestItemEditInput!): SuggestItemEditResult!
   """
   Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
   """
@@ -7904,9 +7935,12 @@ type Query {
   membership(id: ID!): Membership
   """List memberships for a home with cursor-based pagination."""
   memberships(after: String, before: String, first: Int, homeId: ID!, last: Int): MembershipConnection!
+  """
+  The current user's own item edit suggestions, newest first. Same filters as
+  the admin queue, scoped to the caller — there is no arg to widen that scope.
+  """
+  myItemSuggestions(after: String, before: String, filters: ItemSuggestionFilters, first: Int, last: Int): ItemEditSuggestionConnection!
   myModeration: MyModerationStatus
-  """The current user's own item edit suggestions, newest first."""
-  mySuggestions(after: String, before: String, first: Int, last: Int, status: ItemSuggestionStatus): ItemEditSuggestionConnection!
   """Fetch a single notification by its ID."""
   notification(id: ID!): Notification
   """Fetch notification statistics with optional filtering."""
@@ -9929,22 +9963,6 @@ type Subscription {
   """
   userEvents(userId: ID!): UserEvent!
 }
-
-"""
-Propose an edit to a PUBLIC catalog item. `note` is a required justification
-shown to the reviewer.
-"""
-input SuggestItemEditInput {
-  changes: SuggestibleItemChangesInput!
-  itemId: ID!
-  note: String!
-}
-
-type SuggestItemEditPayload {
-  suggestion: ItemEditSuggestion!
-}
-
-union SuggestItemEditResult = ConflictError | ForbiddenError | NotFoundError | SuggestItemEditPayload | ValidationError
 
 """
 The fields a community edit suggestion may change — the descriptive subset of

@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
 import {
-  SuggestItemEditDocument,
+  CreateItemSuggestionDocument,
   UpdateItemDocument,
-  type SuggestItemEditMutation,
+  type CreateItemSuggestionMutation,
   type UpdateItemMutation,
 } from './useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
@@ -27,7 +27,7 @@ export type ItemEditResult =
   | { status: 'noChanges' }
   | { status: 'failed' };
 
-type SuggestPayload = SuggestItemEditMutation['suggestItemEdit'];
+type SuggestPayload = CreateItemSuggestionMutation['createItemSuggestion'];
 type UpdatePayload = UpdateItemMutation['updateItem'];
 
 const FAILED: ItemEditResult = { status: 'failed' };
@@ -52,7 +52,7 @@ export function useSuggestItemEdit() {
   const { uploadItemImages, uploading } = useImageUpload();
 
   const [suggestEdit, { loading: suggesting }] = useMutation(
-    SuggestItemEditDocument,
+    CreateItemSuggestionDocument,
   );
   const [updateItem, { loading: updating }] = useMutation(UpdateItemDocument);
 
@@ -117,7 +117,7 @@ export function useSuggestItemEdit() {
         );
         return { status: 'updated' };
       }
-      // Anything other than a Forbidden "use suggestItemEdit instead" is a real
+      // Anything other than a Forbidden "use createItemSuggestion instead" is a real
       // failure. Forbidden means the cached canEdit was stale (the item was
       // published, or ownership changed), so do what the server asked and fall
       // through to the suggestion path.
@@ -140,8 +140,8 @@ export function useSuggestItemEdit() {
       return FAILED;
     }
 
-    const payload = result.data?.suggestItemEdit;
-    if (payload?.__typename === 'SuggestItemEditPayload') {
+    const payload = result.data?.createItemSuggestion;
+    if (payload?.__typename === 'CreateItemSuggestionPayload') {
       await uploadImages(uploadItemImages, images, original.id);
       // The server collapses a byte-identical pending suggestion onto the
       // existing one and silently drops the new note, so a note that differs
