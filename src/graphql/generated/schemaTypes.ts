@@ -692,6 +692,33 @@ export enum AutomatedFlag {
   SuspiciousBehavior = 'SUSPICIOUS_BEHAVIOR'
 }
 
+/**
+ * Lifecycle state of a background job.
+ *
+ * Mirrors the queue engine's own job states (BullMQ JobState), which is the
+ * authority for this set — not a curated subset. UNKNOWN is a real state the
+ * engine returns for a job it can no longer resolve (typically reaped), so it
+ * is modelled rather than mapped away.
+ */
+export enum BackgroundJobState {
+  /** Currently being processed by a worker */
+  Active = 'ACTIVE',
+  /** Finished successfully */
+  Completed = 'COMPLETED',
+  /** Scheduled to run at a later time */
+  Delayed = 'DELAYED',
+  /** Finished with an error */
+  Failed = 'FAILED',
+  /** Queued behind higher-priority jobs */
+  Prioritized = 'PRIORITIZED',
+  /** The engine could not resolve the job's state (usually already reaped) */
+  Unknown = 'UNKNOWN',
+  /** Queued, waiting for a worker */
+  Waiting = 'WAITING',
+  /** Waiting for child jobs to finish before becoming runnable */
+  WaitingChildren = 'WAITING_CHILDREN'
+}
+
 export type BanUserInput = {
   reason: Scalars['String']['input'];
   userId: Scalars['ID']['input'];
@@ -4014,10 +4041,10 @@ export type ImageDeletionJobStatus = {
   jobId: Scalars['String']['output'];
   /** Progress percentage (0-100) */
   progress: Maybe<Scalars['Int']['output']>;
-  /** Deletion result (only available when status is 'completed') */
+  /** Deletion result (only available when status is COMPLETED) */
   result: Maybe<ImageDeletionResult>;
-  /** Current job status: waiting, active, completed, failed, delayed */
-  status: Scalars['String']['output'];
+  /** Current job state */
+  status: BackgroundJobState;
 };
 
 /**
@@ -4301,14 +4328,16 @@ export type Item = {
    * scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
    * one user's edit rights to another.
    *
-   * COSTS YOU THE RESPONSE CACHE. A response's policy is the most restrictive
-   * hint in it, so selecting this field drops maxAge to 0 for EVERYTHING beside
-   * it: the same query without canEdit is max-age=1800/public, with it the whole
-   * response is no-store. Put canEdit in a shared item fragment and every catalog
-   * query in your app silently stops caching. Fetch it in its own small query,
-   * separate from cacheable catalog data — canSuggest is non-viewer-scoped for
-   * exactly this reason and can ride along in the cacheable one. See
-   * docs/api/item-suggestions.md.
+   * COSTS YOU THE RESPONSE CACHE ON item(id:) — AND ONLY THERE. A response's
+   * policy is the most restrictive hint in it, so selecting this field drops
+   * maxAge to 0 for everything beside it: item(id:) without canEdit is
+   * max-age=1800/public, with it the whole response is no-store.
+   *
+   * This does NOT apply to the connection reads (items, searchItems,
+   * searchItemsSemantic). Those are no-store with or without canEdit — a root
+   * field has no parent for ItemConnection's inheritMaxAge to inherit from, so
+   * they fall back to defaultMaxAge: 0. Splitting canEdit out of a connection
+   * query buys nothing. See docs/api/item-suggestions.md.
    */
   canEdit: Scalars['Boolean']['output'];
   /**
@@ -4319,10 +4348,25 @@ export type Item = {
    * Structural only: it does not account for your per-user pending-suggestion
    * cap or the rate limit, both of which are transient and clear on their own.
    * Unlike canEdit this is not viewer-scoped — the answer is identical for
-   * every caller, so it inherits Item's PUBLIC cache scope.
+   * every caller, so it inherits Item's PUBLIC cache scope and can ride along
+   * in a cacheable item(id:) read. That benefit is limited to item(id:): the
+   * connection reads are no-store regardless, so there is no cacheable catalog
+   * list query for it to ride along in.
    */
   canSuggest: Scalars['Boolean']['output'];
   categories: Array<ItemCategory>;
+  /**
+   * netWeight auto-converted to the caller's preferred unit system.
+   *
+   * Viewer-scoped: it resolves through context.user to
+   * userSettings.preferredUnitSystem, so two callers reading the same item get
+   * different answers. The pin is what keeps it out of a shared cache — without
+   * it the field would inherit Item's type-level maxAge: 1800, scope: PUBLIC.
+   * Do not rely on ConvertedValue being an unannotated composite for that
+   * protection: the plugin restricts unannotated composites to defaultMaxAge,
+   * but adding inheritMaxAge: true to ConvertedValue would silently undo it.
+   * See resolvers/item/item.fields.ts convertedNetWeight.
+   */
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
   dataSource: DataSource;
@@ -11628,6 +11672,17 @@ export type Recipe = {
   isExternal: Scalars['Boolean']['output'];
   isPublished: Scalars['Boolean']['output'];
   isSaved: Scalars['Boolean']['output'];
+  /**
+   * How much of this recipe you can already make from your pantry, 0-100.
+   *
+   * Viewer-scoped: recipe.fields.ts resolves it via
+   * calculateMatchPercentage(parent.id, context.user.id) against YOUR pantry,
+   * and returns null when unauthenticated. The pin is mandatory, not defensive.
+   * Recipe is type-level maxAge: 1800, scope: PUBLIC, and an unannotated SCALAR
+   * gets no defaultMaxAge protection — the plugin only restricts unannotated
+   * composites and root fields, so this would otherwise inherit 1800/PUBLIC and
+   * a shared cache could serve one user's pantry-match score to another.
+   */
   matchPercentage: Maybe<Scalars['Float']['output']>;
   mealPlanItems: Array<MealPlanItem>;
   name: Scalars['String']['output'];
@@ -13377,9 +13432,28 @@ export type Store = {
   id: Scalars['ID']['output'];
   lastPriceUpdate: Maybe<Scalars['DateTime']['output']>;
   name: Scalars['String']['output'];
+  /**
+   * Pantry items sourced from this store that you can see. Viewer-scoped:
+   * purchaseStore.fields.ts restricts to MembershipService.getAccessiblePantryIds().
+   *
+   * Pinned on the FIELD for the same reason as purchases — PantryItem is already
+   * maxAge: 0, scope: PRIVATE, but that does not cover totalCount, which would
+   * otherwise inherit Store's 1800/PUBLIC and publish a per-household count.
+   */
   pantryItems: PantryItemConnection;
   priceAccuracy: Maybe<Scalars['Float']['output']>;
   priceHistory: ItemPriceHistoryConnection;
+  /**
+   * YOUR purchases at this store. Viewer-scoped: purchaseStore.fields.ts builds
+   * where { storeId, userId: context.user.id }.
+   *
+   * Pinned on the FIELD, and it has to be here. Pinning the node type is not
+   * enough — Purchase is already maxAge: 0, scope: PRIVATE, which covers
+   * edges.node but NOT totalCount: that is an unannotated Int on
+   * PurchaseConnection, which carries inheritMaxAge: true, so under Store's
+   * type-level maxAge: 1800, scope: PUBLIC a totalCount-only selection would
+   * inherit 1800/PUBLIC and publish how many purchases you made here.
+   */
   purchases: PurchaseConnection;
   qualityRating: Maybe<Scalars['Float']['output']>;
   stats: Maybe<StoreStats>;
