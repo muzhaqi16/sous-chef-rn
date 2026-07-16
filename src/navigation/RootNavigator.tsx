@@ -187,6 +187,9 @@ const RootStack = createNativeStackNavigator({
       screens: {
         BiometricSetup: createNativeStackScreen({
           screen: PostLoginBiometricScreen,
+          // Not deep-linkable: it is a gate the app decides to show, never a
+          // destination a URL asks for.
+          linking: null,
         }),
       },
     },

@@ -789,6 +789,8 @@ type ApproveItemPayload {
 
 union ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
+union ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
+
 """Sub-input for attribution data"""
 input AttributionInput {
   campaign: String
@@ -1715,6 +1717,10 @@ input CreateCookingLogInput {
   actualPrepTime: Int
   cookedAt: DateTime
   difficulty: Difficulty
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   imageUrl: String
   notes: String
   rating: Int
@@ -1834,6 +1840,22 @@ type CreateItemPayload {
 
 union CreateItemResult = ConflictError | CreateItemPayload | ForbiddenError | NotFoundError | ValidationError
 
+"""
+Propose an edit to a PUBLIC catalog item. `note` is a required justification
+shown to the reviewer.
+"""
+input CreateItemSuggestionInput {
+  changes: SuggestibleItemChangesInput!
+  itemId: ID!
+  note: String!
+}
+
+type CreateItemSuggestionPayload {
+  suggestion: ItemEditSuggestion!
+}
+
+union CreateItemSuggestionResult = ConflictError | CreateItemSuggestionPayload | ForbiddenError | NotFoundError | ValidationError
+
 """Input for creating a meal plan from a template"""
 input CreateMealPlanFromTemplateInput {
   """Optional budget for the meal plan"""
@@ -1900,6 +1922,14 @@ input CreateMealPlanItemInput {
 }
 
 type CreateMealPlanItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing meal-plan item (an idempotent
+  replay, or a second device) rather than creating a new one — recipe meals
+  converge on the natural key (mealPlanId, date, mealType, recipeId), custom
+  meals on the client-minted id. The canonical, API-wide replay flag; clients
+  treat converged=true as already-synced.
+  """
+  converged: Boolean!
   mealPlan: MealPlan
   mealPlanItem: MealPlanItem!
 }
@@ -2111,6 +2141,10 @@ input CreatePurchaseInput {
   currencyId: ID!
   discountAmount: Float
   expirationDate: DateTime
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   itemId: ID!
   originalPrice: Float
   purchaseDate: DateTime
@@ -2165,6 +2199,13 @@ union CreateRecipeResult = ConflictError | CreateRecipePayload | ForbiddenError 
 
 input CreateRecipeReviewInput {
   comment: String
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  Supplying it lets the server tell a replay of your own queued review
+  (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
+  review the same recipe twice (CONFLICT — a real refusal).
+  """
+  id: ID
   rating: Int!
   recipeId: ID!
 }
@@ -3572,7 +3613,14 @@ type ForgotPasswordPayload {
 union ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError
 
 input ForkRecipeInput {
+  """The SOURCE recipe to fork."""
   id: ID!
+  """
+  Optional client-generated permanent ID (CUID2) for the recipe CREATED by this
+  fork, for offline-first idempotency. Distinct from the id field above, which
+  identifies the recipe being forked FROM.
+  """
+  newRecipeId: ID
 }
 
 type ForkRecipePayload {
@@ -4187,6 +4235,49 @@ type Item {
   approvedBy: User
   baseDimension: BaseDimension
   brands: [ItemBrand!]!
+  """
+  Whether the CALLING user may write to this item directly with updateItem
+  (true for its creator and for admins). Resolved against the same predicate
+  updateItem enforces, so it stays correct if that rule changes.
+  
+  Route on this together with canSuggest rather than inferring from
+  visibility — the write paths are mutually exclusive and each hard-fails when
+  picked wrongly:
+  
+      item.canEdit    -> updateItem(...)
+      item.canSuggest -> createItemSuggestion(...)
+      neither         -> read-only, offer no edit affordance
+  
+  canEdit=false does NOT imply you may suggest: you can legitimately receive a
+  PRIVATE item you do not own (a housemate's pantry entry, a shared list's
+  item, a recipe ingredient), and those are read-only to you — createItemSuggestion
+  accepts PUBLIC items only. Check canSuggest; do not assume the fallback.
+  
+  Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
+  scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
+  one user's edit rights to another.
+  
+  COSTS YOU THE RESPONSE CACHE. A response's policy is the most restrictive
+  hint in it, so selecting this field drops maxAge to 0 for EVERYTHING beside
+  it: the same query without canEdit is max-age=1800/public, with it the whole
+  response is no-store. Put canEdit in a shared item fragment and every catalog
+  query in your app silently stops caching. Fetch it in its own small query,
+  separate from cacheable catalog data — canSuggest is non-viewer-scoped for
+  exactly this reason and can ride along in the cacheable one. See
+  docs/api/item-suggestions.md.
+  """
+  canEdit: Boolean!
+  """
+  Whether createItemSuggestion accepts this item as a target — true for
+  active PUBLIC catalog items. Resolved against the same predicate that
+  mutation enforces.
+  
+  Structural only: it does not account for your per-user pending-suggestion
+  cap or the rate limit, both of which are transient and clear on their own.
+  Unlike canEdit this is not viewer-scoped — the answer is identical for
+  every caller, so it inherits Item's PUBLIC cache scope.
+  """
+  canSuggest: Boolean!
   categories: [ItemCategory!]!
   convertedNetWeight: ConvertedValue
   createdAt: DateTime!
@@ -4214,6 +4305,8 @@ type Item {
   needsApproval: Boolean!
   netWeight: Float
   nutritions: JSON
+  """Number of PENDING community edit suggestions for this item."""
+  pendingSuggestionCount: Int!
   popularity: Int!
   preferredTrackingUnit: Unit
   preferredTrackingUnitId: ID
@@ -4332,6 +4425,41 @@ type ItemEdit {
   newValues: JSON
   oldValues: JSON
   user: User!
+}
+
+"""
+A proposed edit to a PUBLIC catalog item, awaiting or having undergone admin
+review. The live item is only changed when a suggestion is APPROVED.
+"""
+type ItemEditSuggestion {
+  """
+  Proposed field changes (a subset of UpdateItemInput's descriptive fields).
+  """
+  changes: JSON!
+  createdAt: DateTime!
+  id: ID!
+  item: Item!
+  """Required justification supplied by the contributor."""
+  note: String!
+  reviewNote: String
+  reviewedAt: DateTime
+  """The admin who reviewed it (once reviewed)."""
+  reviewedBy: User
+  status: ItemSuggestionStatus!
+  """The contributor who proposed the change."""
+  suggestedBy: User
+  updatedAt: DateTime!
+}
+
+type ItemEditSuggestionConnection implements Connection {
+  edges: [ItemEditSuggestionEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type ItemEditSuggestionEdge implements Edge {
+  cursor: String!
+  node: ItemEditSuggestion!
 }
 
 input ItemFilters {
@@ -4515,6 +4643,21 @@ type ItemSuggestion {
   name: String!
   netWeight: Float
   type: ItemType!
+}
+
+"""Filters for the admin item-suggestion review queue."""
+input ItemSuggestionFilters {
+  itemId: ID
+  status: ItemSuggestionStatus
+}
+
+"""
+Lifecycle of a community edit suggestion against a public catalog item.
+"""
+enum ItemSuggestionStatus {
+  APPROVED
+  PENDING
+  REJECTED
 }
 
 """Categorizes the general type of an item in the pantry or shopping list"""
@@ -5886,6 +6029,12 @@ type Mutation {
   createImageUploadUrl(input: CreateImageUploadUrlInput!): CreateImageUploadUrlResult!
   """Create a new item"""
   createItem(input: CreateItemInput!): CreateItemResult!
+  """
+  Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+  admin review — the live item is NOT changed. Non-owners use this instead of
+  updateItem (which is owner/admin-only). Rate-limited and capped per user.
+  """
+  createItemSuggestion(input: CreateItemSuggestionInput!): CreateItemSuggestionResult!
   """Create a new meal plan."""
   createMealPlan(input: CreateMealPlanInput!): CreateMealPlanResult!
   """
@@ -7795,6 +7944,11 @@ type Query {
   membership(id: ID!): Membership
   """List memberships for a home with cursor-based pagination."""
   memberships(after: String, before: String, first: Int, homeId: ID!, last: Int): MembershipConnection!
+  """
+  The current user's own item edit suggestions, newest first. Same filters as
+  the admin queue, scoped to the caller — there is no arg to widen that scope.
+  """
+  myItemSuggestions(after: String, before: String, filters: ItemSuggestionFilters, first: Int, last: Int): ItemEditSuggestionConnection!
   myModeration: MyModerationStatus
   """Fetch a single notification by its ID."""
   notification(id: ID!): Notification
@@ -8431,6 +8585,8 @@ type RejectItemPayload {
 
 union RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError
 
+union RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
+
 enum ReligiousDiet {
   HALAL
   KOSHER
@@ -8699,6 +8855,16 @@ type ReviewHelpful {
   user: User!
 }
 
+"""Approve or reject a pending suggestion (admin only)."""
+input ReviewItemSuggestionInput {
+  id: ID!
+  reviewNote: String
+}
+
+type ReviewItemSuggestionPayload {
+  suggestion: ItemEditSuggestion!
+}
+
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
   isRisky: Boolean
@@ -8819,6 +8985,12 @@ Shopping list for a home
 Cache: 1 minute - frequently updated by collaborators
 """
 type ShoppingList {
+  """
+  Audit trail of who changed what on this list (adds, edits, purchases,
+  removals, collaborator changes). ADMIN-only bookkeeping surface — clients
+  drive incremental updates from the `shoppingListEvents` subscription, not
+  from this feed.
+  """
   activitiesConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListActivityOrderBy): ShoppingListActivityConnection!
   autoAddSuggestions: Boolean!
   """
@@ -9799,6 +9971,32 @@ type Subscription {
   Subscribe once and branch on subtype.
   """
   userEvents(userId: ID!): UserEvent!
+}
+
+"""
+The fields a community edit suggestion may change — the descriptive subset of
+UpdateItemInput. This type IS the whitelist: moderation/ownership fields
+(visibility, status, createdById) are intentionally absent, so the GraphQL
+layer rejects them at validation time rather than at runtime. Reuses the same
+sub-input types as create/update for a single source of truth per field.
+"""
+input SuggestibleItemChangesInput {
+  brand: BrandReferenceInput
+  brandOps: BrandOpsInput
+  categoryOps: CategoryOpsInput
+  classification: ItemClassificationInput
+  description: String
+  healthInfo: HealthInfoInput
+  media: MediaAssetsInput
+  name: String
+  nutritionFacts: [NutritionFactInput!]
+  packageInfo: PackageInfoInput
+  productDetails: ProductDetailsInput
+  storeSkuOps: StoreSkuOpsInput
+  tagOps: TagOpsInput
+  type: ItemType
+  unitConfig: ItemUnitConfigInput
+  unitOps: UnitOpsInput
 }
 
 """

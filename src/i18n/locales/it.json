@@ -71,7 +71,9 @@
     "missingRequiredInfo": "Informazioni obbligatorie mancanti",
     "invalidInput": "Input non valido",
     "invalidOperation": "Operazione non valida",
-    "invalidUnitTitle": "Unità non valida"
+    "invalidUnitTitle": "Unità non valida",
+    "addItemFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
+    "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova."
   },
   "success": {
     "itemAdded": "Articolo aggiunto",
@@ -2550,5 +2552,229 @@
     "title": "Risultati della ricerca",
     "searching": "Ricerca dell'articolo...",
     "errorTitle": "Errore di ricerca"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Suggerimento inviato",
+    "sentBody": "Grazie: un amministratore esaminerà le tue modifiche. La scheda resta invariata finché non vengono approvate.",
+    "duplicateTitle": "Già suggerito",
+    "duplicateBody": "Hai già suggerito esattamente queste modifiche e sono ancora in attesa di revisione, quindi abbiamo mantenuto l'originale.",
+    "pendingCapTitle": "5 suggerimenti in attesa",
+    "pendingCapBody": "Hai 5 suggerimenti di modifica in attesa di revisione: è il limite. Quando un amministratore ne esaminerà uno, potrai inviarne un altro.",
+    "rateLimitedTitle": "Aspetta un momento",
+    "notFoundTitle": "Articolo non trovato",
+    "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
+    "rejectedTitle": "Impossibile inviare",
+    "loadFailedTitle": "Impossibile caricare questo articolo",
+    "loadFailedBody": "Non siamo riusciti a caricare i dettagli attuali dell'articolo, che ci servono per capire cosa hai modificato. Controlla la connessione e riprova.",
+    "readOnlyTitle": "Questo articolo non può essere modificato",
+    "readOnlyBody": "Non fa parte del catalogo pubblico, quindi non c’è nulla da correggere qui. Solo gli articoli del catalogo pubblico possono essere modificati o proposti per la revisione.",
+    "noChangesTitle": "Niente da suggerire",
+    "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
+    "photosOnlyTitle": "Foto aggiunta",
+    "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
+    "updatedTitle": "Articolo aggiornato",
+    "updatedBody": "Le tue modifiche sono online.",
+    "failedTitle": "Impossibile inviare",
+    "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
+    "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore.",
+    "suggestAction": "Suggerisci modifica",
+    "editAction": "Modifica"
+  },
+  "reportItem": {
+    "footer": "Dettagli sbagliati in uno di questi?",
+    "title": "Segnala dettagli errati",
+    "pickPrompt": "Quale articolo ha dettagli errati?",
+    "reasonLabel": "Cosa c'è che non va?",
+    "reasonPlaceholder": "es. il marchio è sbagliato, la foto è di un altro prodotto",
+    "reasonTooShort": "Aggiungi almeno {{count}} caratteri, così un amministratore sa cosa controllare.",
+    "submit": "Invia segnalazione",
+    "sentTitle": "Segnalazione inviata",
+    "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
+    "failedTitle": "Impossibile inviare",
+    "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
+    "alreadyReportedTitle": "Già segnalato",
+    "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
+    "rateLimitedTitle": "Aspetta un momento",
+    "notFoundTitle": "Articolo non trovato",
+    "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
+    "rejectedTitle": "Impossibile inviare"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Aggiungi nuovo articolo",
+        "subtitle": "Crea un nuovo articolo con le informazioni di base",
+        "subtitleScanned": "Aggiungi questo articolo al database per le scansioni future",
+        "button": "Aggiungi articolo"
+      },
+      "edit": {
+        "title": "Suggerisci modifica",
+        "subtitle": "Un amministratore esamina le tue modifiche — fino ad allora la scheda resta invariata",
+        "button": "Invia suggerimento"
+      },
+      "directEdit": {
+        "title": "Modifica articolo",
+        "subtitle": "Le tue modifiche vanno online subito",
+        "button": "Salva modifiche"
+      },
+      "variant": {
+        "title": "Crea nuova versione",
+        "subtitle": "Crea una nuova versione di questo articolo per la tua regione",
+        "button": "Crea versione"
+      }
+    },
+    "tabs": {
+      "basics": "Base",
+      "product": "Prodotto",
+      "storage": "Conservazione",
+      "inventory": "Inventario"
+    },
+    "moreOptions": "Altre opzioni",
+    "scanUpcA11y": "Scansiona UPC con la fotocamera",
+    "fields": {
+      "name": {
+        "label": "Nome articolo",
+        "placeholder": "Inserisci il nome dell'articolo"
+      },
+      "description": {
+        "label": "Descrizione",
+        "placeholder": "Inserisci la descrizione dell'articolo (facoltativo)"
+      },
+      "vendor": {
+        "label": "Marchio/Fornitore",
+        "placeholder": "Inserisci il nome del marchio o del fornitore"
+      },
+      "type": {
+        "label": "Tipo di articolo"
+      },
+      "upc": {
+        "label": "UPC/Codice a barre",
+        "placeholder": "Inserisci UPC/codice a barre (facoltativo)"
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "Inserisci SKU (facoltativo)"
+      },
+      "store": {
+        "label": "Negozio (per SKU)",
+        "placeholder": "Cerca un negozio"
+      },
+      "storageState": {
+        "label": "Stato di conservazione"
+      },
+      "shelfLife": {
+        "label": "Durata di conservazione (giorni)",
+        "placeholder": "Inserisci la durata di conservazione in giorni"
+      },
+      "shelfLifeOpened": {
+        "label": "Durata dopo l'apertura (giorni)",
+        "placeholder": "Inserisci la durata dopo l'apertura"
+      },
+      "baseDimension": {
+        "label": "Dimensione di base"
+      },
+      "consumeIncrement": {
+        "label": "Incremento di consumo predefinito",
+        "placeholder": "es. 1"
+      },
+      "consumeUnit": {
+        "label": "Unità di consumo predefinita",
+        "placeholder": "cucchiaino, tazza, ecc."
+      },
+      "tags": {
+        "label": "Tag",
+        "placeholder": "Tag separati da virgole (es. biologico, senza glutine)"
+      },
+      "foodStamp": {
+        "label": "Idoneo ai buoni alimentari"
+      },
+      "fsa": {
+        "label": "Idoneo FSA"
+      },
+      "editNote": {
+        "label": "Cosa c'è da correggere?",
+        "placeholder": "Indica al revisore cosa non va (es. peso netto sbagliato sull'etichetta)"
+      },
+      "directEditNote": {
+        "label": "Nota (facoltativa)",
+        "placeholder": "Aggiungi una nota su cosa hai modificato"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Bevande",
+    "FOOD": "Alimenti",
+    "FOUNDATION": "Ingredienti base",
+    "HOUSEHOLD": "Casalinghi",
+    "OTHER": "Altro",
+    "PERSONAL_CARE": "Cura della persona",
+    "PET": "Per animali",
+    "PRODUCT": "Prodotti non alimentari",
+    "SUPPLEMENT": "Integratori"
+  },
+  "storageState": {
+    "AMBIENT": "Temperatura ambiente",
+    "FROZEN": "Congelato",
+    "NONE": "Nessuno",
+    "REFRIGERATED": "Refrigerato"
+  },
+  "baseDimension": {
+    "none": "Nessuna",
+    "VOLUME": "Volume",
+    "MASS": "Massa",
+    "COUNT": "Conteggio"
+  },
+  "netWeightEntry": {
+    "sectionTitle": "Pesi netti",
+    "weightLabel": "Peso",
+    "weightPlaceholder": "es. 3,4",
+    "unitLabel": "Unità",
+    "unitPlaceholder": "es. oz, g",
+    "addButton": "Aggiungi peso netto"
+  },
+  "itemValidation": {
+    "nameRequired": "Il nome dell'articolo è obbligatorio",
+    "nameEmpty": "Il nome dell'articolo non può essere vuoto",
+    "nameMax": "Il nome dell'articolo non può superare {{count}} caratteri",
+    "nameChars": "Il nome dell'articolo può contenere solo lettere, numeri, spazi e punteggiatura comune",
+    "descriptionMax": "La descrizione non può superare {{count}} caratteri",
+    "upcDigits": "L'UPC può contenere solo numeri",
+    "upcMin": "L'UPC deve avere almeno {{count}} cifre",
+    "upcMax": "L'UPC non può superare {{count}} cifre",
+    "skuMax": "Lo SKU non può superare {{count}} caratteri",
+    "urlInvalid": "Inserisci un URL valido",
+    "wholeNumber": "Deve essere un numero intero",
+    "shelfLifeMin": "La durata di conservazione deve essere di almeno 1 giorno",
+    "shelfLifeMax": "La durata di conservazione non può superare {{count}} anni",
+    "shelfLifeOpenedMin": "La durata dopo l'apertura deve essere di almeno 1 giorno",
+    "shelfLifeOpenedMax": "La durata dopo l'apertura non può superare {{count}} anni",
+    "displayPricePerUnitMax": "Il prezzo per unità visualizzato non può superare {{count}} caratteri",
+    "unitQtyMin": "La quantità unitaria deve essere maggiore di 0",
+    "defaultUnitMax": "Il simbolo dell'unità non può superare {{count}} caratteri",
+    "vendorMax": "Il nome del fornitore non può superare {{count}} caratteri",
+    "tagMax": "Ogni tag non può superare {{count}} caratteri",
+    "tagsMax": "Non puoi avere più di {{count}} tag",
+    "editReasonMax": "Il motivo della modifica non può superare {{count}} caratteri",
+    "editReasonRequired": "Dicci cosa c'è da correggere",
+    "editReasonMin": "Aggiungi qualche dettaglio in più (almeno {{count}} caratteri)",
+    "netWeightMin": "Il peso netto deve essere maggiore di 0",
+    "netWeightValueRequired": "Il valore è obbligatorio",
+    "netWeightUnitRequired": "L'unità è obbligatoria",
+    "greaterThanZero": "Deve essere maggiore di 0"
+  },
+  "imageUpload": {
+    "offlineTitle": "Nessuna connessione a Internet",
+    "offlineBody": "Il caricamento delle immagini richiede una connessione a Internet. Riprova quando sei online.",
+    "offlineError": "Sei offline. Il caricamento delle immagini richiede una connessione a Internet.",
+    "failedTitle": "Caricamento non riuscito",
+    "failedBody": "Qualcosa è andato storto durante il caricamento dell'immagine. Riprova.",
+    "invalidTypeBody": "Seleziona un file immagine JPEG, PNG o WebP.",
+    "profileTooLargeBody": "L'immagine è troppo grande. Le immagini del profilo devono essere inferiori a {{size}} MB.",
+    "updateFailedTitle": "Aggiornamento non riuscito",
+    "avatarUpdateFailedBody": "Impossibile aggiornare l'avatar del profilo",
+    "coverUpdateFailedBody": "Impossibile aggiornare la copertina del profilo",
+    "itemImageUpdateFailedBody": "Impossibile aggiornare l'immagine dell'articolo",
+    "itemTooLargeBody": "Immagine troppo grande. Le foto degli articoli devono essere inferiori a {{size}} MB.",
+    "unreadableBody": "Non siamo riusciti a leggere questo file immagine. Provane un altro."
   }
 }

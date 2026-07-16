@@ -59,6 +59,7 @@ export interface SearchResultsProps {
   onScanAnother: () => void;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
+  editActionLabel?: string;
   source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
@@ -70,6 +71,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onScanAnother,
   onEditItem,
   onCreateVariant,
+  editActionLabel,
   source,
   pantryId,
   shoppingListId,
@@ -235,8 +237,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   setIsLoading,
                   () => {
                     alertService.alert(
-                      'Error',
-                      'Failed to restock item. Please try again.',
+                      t('labels.error'),
+                      t('errors.restockFailedRetry'),
                     );
                   },
                 );
@@ -258,16 +260,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       onScanAnother();
                     } else {
                       alertService.alert(
-                        'Error',
-                        'Failed to add item. Please try again.',
+                        t('labels.error'),
+                        t('errors.addItemFailedRetry'),
                       );
                     }
                   },
                   setIsLoading,
                   () => {
                     alertService.alert(
-                      'Error',
-                      'Failed to add item. Please try again.',
+                      t('labels.error'),
+                      t('errors.addItemFailedRetry'),
                     );
                   },
                 );
@@ -285,8 +287,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             // The server refused the create — discard the item we wrote.
             safeEvict(client.cache, 'PantryItem', id);
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
           } else {
             // 'created' or 'queued' — the item stays (and replays if it was
@@ -365,8 +367,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             ) === 'reverted'
           ) {
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
             return;
           }
@@ -413,6 +415,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         format={format}
         onEditItem={onEditItem}
         onCreateVariant={onCreateVariant}
+        editActionLabel={editActionLabel}
       />
 
       <ActionButtons

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -19,6 +20,9 @@ interface NetWeightEntryListProps {
   entries: NetWeightEntry[];
   onEntriesChanged: (entries: NetWeightEntry[]) => void;
   disabled?: boolean;
+  /** Hides "Add Net Weight" once reached. Edit modes pass 1: PackageInfoInput
+   *  carries a single netWeight, so extra entries could not be submitted. */
+  maxEntries?: number;
 }
 
 let entryCounter = 0;
@@ -32,7 +36,11 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   entries,
   onEntriesChanged,
   disabled = false,
+  maxEntries,
 }) => {
+  const { t } = useTranslation();
+  const canAddEntry = maxEntries == null || entries.length < maxEntries;
+
   const handleAddEntry = () => {
     onEntriesChanged([...entries, createDefaultEntry()]);
   };
@@ -75,26 +83,26 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Net Weights
+        {t('netWeightEntry.sectionTitle')}
       </Text>
       {entries.map((entry, index) => (
         <View key={entry.id} style={styles.entryRow}>
           <View style={styles.valueField}>
             <FormInput
-              label="Weight"
+              label={t('netWeightEntry.weightLabel')}
               value={entry.value || ''}
               onChangeText={(text: string) => handleValueChange(index, text)}
-              placeholder="e.g., 3.4"
+              placeholder={t('netWeightEntry.weightPlaceholder')}
               keyboardType="decimal-pad"
             />
           </View>
           <View style={styles.unitField}>
             <UnitAutocompleteField
               variant="modal"
-              label="Unit"
+              label={t('netWeightEntry.unitLabel')}
               value={entry.unitName || ''}
               onChangeText={(text: string) => handleUnitTextChange(index, text)}
-              placeholder="e.g., oz, g"
+              placeholder={t('netWeightEntry.unitPlaceholder')}
               onUnitSelected={(unitId, unitName) =>
                 handleUnitSelected(index, unitId, unitName)
               }
@@ -109,9 +117,15 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
           </AppPressable>
         </View>
       ))}
-      <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
-        Add Net Weight
-      </Button>
+      {!!canAddEntry && (
+        <Button
+          variant="secondary"
+          onPress={handleAddEntry}
+          disabled={disabled}
+        >
+          {t('netWeightEntry.addButton')}
+        </Button>
+      )}
     </View>
   );
 };

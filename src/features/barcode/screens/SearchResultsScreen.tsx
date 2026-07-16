@@ -15,8 +15,8 @@ import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
-  type AddItemSubmitPayload,
 } from '#components/organisms/AddItemForm/AddItemForm';
+import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#store/useAppStore';
 import { useSearchResults } from '../hooks/useSearchResults';
@@ -77,9 +77,7 @@ export const SearchResultsScreen: React.FC<
     searchResults,
     loading,
     addingItem,
-    suggestingEdit,
     handleAddItem,
-    handleSuggestEdit,
     handleRetry,
     clearSearch,
   } = useSearchResults(barcode, format);
@@ -127,21 +125,30 @@ export const SearchResultsScreen: React.FC<
     showBottomSheet(1);
   };
 
-  const handleFormSubmit = (formData: AddItemSubmitPayload) => {
-    if (sheetMode === 'edit' && searchResults[0]) {
-      handleSuggestEdit(searchResults[0].id, formData);
-    } else {
-      handleAddItem(formData);
-    }
-  };
-
   const currentItem = searchResults[0];
   const formInitialData =
-    currentItem && sheetMode !== 'create'
+    currentItem && sheetMode === 'variant'
       ? buildInitialDataFromItem(currentItem)
       : undefined;
 
-  const formLoading = sheetMode === 'edit' ? suggestingEdit : addingItem;
+  // Cosmetic only — the sheet re-reads canEdit from the authoritative item
+  // snapshot. It is absent on a cached scan, and the suggestion wording is the
+  // safe default.
+  const editActionLabel = currentItem?.canEdit
+    ? t('suggestItemEdit.editAction')
+    : t('suggestItemEdit.suggestAction');
+
+  // A scan can surface an item this user may not touch — a PRIVATE one they
+  // don't own — and neither write path accepts it. Withholding onEditItem drops
+  // the action from the card rather than offering an edit that could only be
+  // refused on submit.
+  //
+  // Only an explicit false on both hides it: a cached scan carries neither flag,
+  // and the sheet loads the authoritative snapshot and shows the read-only state
+  // if it turns out closed. Guessing "read-only" from a missing flag would strip
+  // the action from items that are perfectly editable.
+  const isReadOnly =
+    currentItem?.canEdit === false && currentItem?.canSuggest === false;
 
   const renderContent = () => {
     if (isSearching || loading) {
@@ -169,8 +176,9 @@ export const SearchResultsScreen: React.FC<
           item={searchResults[0]}
           format={format}
           onScanAnother={handleScanAnother}
-          onEditItem={handleEditItem}
+          onEditItem={isReadOnly ? undefined : handleEditItem}
           onCreateVariant={handleCreateVariant}
+          editActionLabel={editActionLabel}
           source={source}
           pantryId={pantryId}
           shoppingListId={shoppingListId}
@@ -207,16 +215,26 @@ export const SearchResultsScreen: React.FC<
           keyboardShouldPersistTaps="handled"
           bottomOffset={16}
         >
-          <AddItemForm
-            key={sheetMode}
-            barcode={barcode}
-            format={format}
-            mode={sheetMode}
-            initialData={formInitialData}
-            onSubmit={handleFormSubmit}
-            onClose={hideBottomSheet}
-            loading={formLoading}
-          />
+          {sheetMode === 'edit' && currentItem ? (
+            <SuggestEditForm
+              key={`edit-${currentItem.id}`}
+              itemId={currentItem.id}
+              barcode={barcode}
+              format={format}
+              onClose={hideBottomSheet}
+            />
+          ) : (
+            <AddItemForm
+              key={sheetMode}
+              barcode={barcode}
+              format={format}
+              mode={sheetMode}
+              initialData={formInitialData}
+              onSubmit={handleAddItem}
+              onClose={hideBottomSheet}
+              loading={addingItem}
+            />
+          )}
         </BottomSheetKeyboardAwareScrollView>
       </BottomSheetModal>
     </View>

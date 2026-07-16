@@ -41,9 +41,14 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: ProfilePictureUploadScreen,
       linking: 'onboarding/profile-picture',
     }),
-    // Wrapped without a `linking` key — intentionally not deep-linkable;
-    // only reachable mid-onboarding from ProfilePictureUpload.
-    ImageCrop: createNativeStackScreen({ screen: ImageCropScreen }),
+    // `linking: null` — intentionally not deep-linkable; only reachable
+    // mid-onboarding from ProfilePictureUpload. Omitting the key is NOT the
+    // same thing: linking runs in `auto` mode, which hands any screen without
+    // an explicit config a path derived from its name.
+    ImageCrop: createNativeStackScreen({
+      screen: ImageCropScreen,
+      linking: null,
+    }),
     InviteMembers: createNativeStackScreen({
       screen: InviteMemberScreen,
       linking: 'onboarding/invite',
@@ -52,9 +57,14 @@ export const OnboardingStack = createNativeStackNavigator({
       screen: OnboardingCompleteScreen,
       linking: 'onboarding/complete',
     }),
-    // Wrapped without a `linking` key — intentionally not deep-linkable; reached
-    // only at the end of the onboarding flow.
-    BiometricSetup: createNativeStackScreen({ screen: BiometricSetupScreen }),
+    // `linking: null` — intentionally not deep-linkable; reached only at the end
+    // of the onboarding flow. Without it, auto mode derives `biometric-setup`
+    // here AND on RootNavigator's post-login BiometricSetup screen, and two
+    // screens claiming one pattern make the whole linking config throw.
+    BiometricSetup: createNativeStackScreen({
+      screen: BiometricSetupScreen,
+      linking: null,
+    }),
   },
 });
 

@@ -9,6 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
+import { ReportItemSheet } from '#components/organisms/ReportItemSheet/ReportItemSheet';
 import {
   BottomSheetSearchBar,
   type BottomSheetSearchBarRef,
@@ -108,6 +109,8 @@ export function AddItemSheet<
   // Autocomplete search — debounceMs: 0 because BottomSheetSearchBar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
   const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
+
+  const [reportVisible, setReportVisible] = useState(false);
 
   // Drill-down view state: when set, the sheet shows one source's full list
   // instead of the multi-section overview.
@@ -328,6 +331,7 @@ export function AddItemSheet<
                 placeholderIcon={config.placeholderIcon}
                 showBrands={false}
                 showImages={showImages}
+                onReportItem={() => setReportVisible(true)}
               />
             )}
 
@@ -385,6 +389,17 @@ export function AddItemSheet<
           </BottomSheetScrollView>
         )}
       </View>
+
+      <ReportItemSheet
+        visible={reportVisible}
+        candidates={autocomplete.displayItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          imageUrl: item.imageUrl,
+          brandName: item.brands?.[0]?.name,
+        }))}
+        onDismiss={() => setReportVisible(false)}
+      />
     </BottomSheetModal>
   );
 }

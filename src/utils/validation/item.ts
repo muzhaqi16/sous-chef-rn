@@ -1,22 +1,29 @@
 import { string, number, array, object, boolean, type InferType } from 'yup';
 import { normalizeSmartPunctuation } from './common';
+import { getI18n } from '#/i18n/config';
+
+/**
+ * These schemas are built once at module scope, so a message resolved eagerly
+ * would freeze whichever language happened to be active at import time. Yup
+ * accepts a function and calls it when the rule actually fails, so the lookup
+ * lands after any language change.
+ */
+const msg = (key: string, options?: Record<string, unknown>) => (): string =>
+  getI18n().t(`itemValidation.${key}`, options);
 
 // --- item-specific validation rules ------------------------------------------
 
 // Item name validation
 export const itemNameRule = string()
-  .required('Item name is required')
+  .required(msg('nameRequired'))
   .transform(normalizeSmartPunctuation)
-  .min(1, 'Item name cannot be empty')
-  .max(100, 'Item name cannot exceed 100 characters')
-  .matches(
-    /^[a-zA-Z0-9\s\-_'.,()&]+$/,
-    'Item name can only contain letters, numbers, spaces, and common punctuation',
-  );
+  .min(1, msg('nameEmpty'))
+  .max(100, msg('nameMax', { count: 100 }))
+  .matches(/^[a-zA-Z0-9\s\-_'.,()&]+$/, msg('nameChars'));
 
 // Description validation
 export const descriptionRule = string()
-  .max(500, 'Description cannot exceed 500 characters')
+  .max(500, msg('descriptionMax', { count: 500 }))
   .optional();
 
 // UPC validation (replaces barcode)
@@ -27,26 +34,26 @@ export const upcRule = string()
   .transform(value =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
   )
-  .matches(/^[0-9]+$/, 'UPC must contain only numbers')
-  .min(8, 'UPC must be at least 8 digits')
-  .max(18, 'UPC cannot exceed 18 digits')
+  .matches(/^[0-9]+$/, msg('upcDigits'))
+  .min(8, msg('upcMin', { count: 8 }))
+  .max(18, msg('upcMax', { count: 18 }))
   .optional();
 
 export const skuRule = string()
-  .max(50, 'SKU cannot exceed 50 characters')
+  .max(50, msg('skuMax', { count: 50 }))
   .optional();
 
 // URL validation
-export const urlRule = string().url('Please enter a valid URL').optional();
+export const urlRule = string().url(msg('urlInvalid')).optional();
 
 // Shelf life validation (in days)
 export const shelfLifeDaysRule = number()
   .transform((value, originalValue) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
-  .integer('Must be a whole number')
-  .min(1, 'Shelf life must be at least 1 day')
-  .max(3650, 'Shelf life cannot exceed 10 years')
+  .integer(msg('wholeNumber'))
+  .min(1, msg('shelfLifeMin'))
+  .max(3650, msg('shelfLifeMax', { count: 10 }))
   .optional();
 
 // Shelf life once opened validation (in days)
@@ -54,14 +61,14 @@ export const shelfLifeOpenedDaysRule = number()
   .transform((value, originalValue) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
-  .integer('Must be a whole number')
-  .min(1, 'Opened shelf life must be at least 1 day')
-  .max(3650, 'Opened shelf life cannot exceed 10 years')
+  .integer(msg('wholeNumber'))
+  .min(1, msg('shelfLifeOpenedMin'))
+  .max(3650, msg('shelfLifeOpenedMax', { count: 10 }))
   .optional();
 
 // Display price per unit validation
 export const displayPricePerUnitRule = string()
-  .max(50, 'Display price per unit cannot exceed 50 characters')
+  .max(50, msg('displayPricePerUnitMax', { count: 50 }))
   .optional();
 
 // Unit quantity validation
@@ -69,12 +76,12 @@ export const unitQtyRule = number()
   .transform((value, originalValue) =>
     String(originalValue).trim() === '' ? undefined : value,
   )
-  .min(0.001, 'Unit quantity must be greater than 0')
+  .min(0.001, msg('unitQtyMin'))
   .optional();
 
 // Default unit validation (symbol)
 export const defaultUnitRule = string()
-  .max(10, 'Unit symbol cannot exceed 10 characters')
+  .max(10, msg('defaultUnitMax', { count: 10 }))
   .optional();
 
 // Category IDs validation
@@ -99,7 +106,7 @@ export const unitsRule = array()
 
 // Vendor/Brand name validation
 export const vendorRule = string()
-  .max(100, 'Vendor name cannot exceed 100 characters')
+  .max(100, msg('vendorMax', { count: 100 }))
   .optional();
 
 // Tags validation (array of strings)
@@ -115,8 +122,12 @@ export const tagsRule = array()
     }
     return value;
   })
-  .of(string().trim().max(30, 'Each tag cannot exceed 30 characters'))
-  .max(10, 'Cannot have more than 10 tags')
+  .of(
+    string()
+      .trim()
+      .max(30, msg('tagMax', { count: 30 })),
+  )
+  .max(10, msg('tagsMax', { count: 10 }))
   .optional();
 
 // Selected images validation (for multi-image picker)
@@ -142,8 +153,28 @@ export const selectedImagesRule = array()
 
 // Edit reason validation (for suggest-edit flow)
 export const editReasonRule = string()
-  .max(500, 'Edit reason cannot exceed 500 characters')
+  .max(500, msg('editReasonMax', { count: 500 }))
   .optional();
+
+/**
+ * Floor for any free-text moderation reason a human has to act on — the
+ * suggest-edit note and the item report both apply it, so the two stay in step.
+ *
+ * The server only trims and checks for emptiness, with no length floor, so the
+ * minimum is ours to set. 10 characters turns away "fix" / "wrong" / "."
+ * without being onerous.
+ */
+export const MIN_EDIT_REASON_LENGTH = 10;
+
+export const editReasonRequiredRule = string()
+  .transform(normalizeSmartPunctuation)
+  .trim()
+  .required(msg('editReasonRequired'))
+  .min(
+    MIN_EDIT_REASON_LENGTH,
+    msg('editReasonMin', { count: MIN_EDIT_REASON_LENGTH }),
+  )
+  .max(500, msg('editReasonMax', { count: 500 }));
 
 // --- Create Item validation schema -------------------------------------------
 
@@ -165,9 +196,9 @@ export const createItemSchema = object({
     .of(
       object({
         value: number()
-          .min(0.001, 'Net weight must be greater than 0')
-          .required('Value is required'),
-        unitName: string().required('Unit is required'),
+          .min(0.001, msg('netWeightMin'))
+          .required(msg('netWeightValueRequired')),
+        unitName: string().required(msg('netWeightUnitRequired')),
       }),
     )
     .optional(),
@@ -182,7 +213,7 @@ export const createItemSchema = object({
     .transform((value, originalValue) =>
       String(originalValue).trim() === '' ? undefined : value,
     )
-    .min(0.001, 'Must be greater than 0')
+    .min(0.001, msg('greaterThanZero'))
     .optional(),
   defaultConsumeUnitId: string().optional(),
 
@@ -209,3 +240,17 @@ export const createItemSchema = object({
 });
 
 export type CreateItemFormData = InferType<typeof createItemSchema>;
+
+/**
+ * Suggestion schema: identical to create, except the note is mandatory.
+ * `CreateItemSuggestionInput.note` is `String!`, and the reviewing admin has nothing
+ * but the note to judge the diff against.
+ *
+ * Only for the suggestion path. The direct-edit path writes through
+ * `UpdateItemInput.editReason`, which is optional and has no reviewer to read
+ * it, so it keeps `createItemSchema` — requiring a note there would block Save
+ * on an explanation addressed to nobody.
+ */
+export const suggestItemEditSchema = createItemSchema.shape({
+  editReason: editReasonRequiredRule,
+});

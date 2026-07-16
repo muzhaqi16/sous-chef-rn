@@ -196,6 +196,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ApproveItemSuggestionResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ReviewItemSuggestionPayload",
+      "ValidationError"
+    ],
     "BulkCreateItemsResult": [
       "BulkCreateItemsPayload",
       "ConflictError",
@@ -326,6 +333,7 @@
       "HomeOwnershipConnection",
       "InviteLogConnection",
       "ItemConnection",
+      "ItemEditSuggestionConnection",
       "ItemPriceHistoryConnection",
       "ItemStoreSkuConnection",
       "ItemUnitConversionConnection",
@@ -422,6 +430,13 @@
     "CreateItemResult": [
       "ConflictError",
       "CreateItemPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "CreateItemSuggestionResult": [
+      "ConflictError",
+      "CreateItemSuggestionPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -844,6 +859,7 @@
       "HomeOwnershipEdge",
       "InviteLogEdge",
       "ItemEdge",
+      "ItemEditSuggestionEdge",
       "ItemPriceHistoryEdge",
       "ItemStoreSkuEdge",
       "ItemUnitConversionEdge",
@@ -1168,6 +1184,13 @@
       "ForbiddenError",
       "NotFoundError",
       "RejectItemPayload",
+      "ValidationError"
+    ],
+    "RejectItemSuggestionResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ReviewItemSuggestionPayload",
       "ValidationError"
     ],
     "RemoveItemFromCategoryResult": [

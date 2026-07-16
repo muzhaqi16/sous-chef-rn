@@ -627,6 +627,8 @@ export type ApproveItemPayload = {
 
 export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export type ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
+
 /** Sub-input for attribution data */
 export type AttributionInput = {
   campaign?: InputMaybe<Scalars['String']['input']>;
@@ -1599,6 +1601,8 @@ export type CreateCookingLogInput = {
   actualPrepTime?: InputMaybe<Scalars['Int']['input']>;
   cookedAt?: InputMaybe<Scalars['DateTime']['input']>;
   difficulty?: InputMaybe<Difficulty>;
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   imageUrl?: InputMaybe<Scalars['String']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
   rating?: InputMaybe<Scalars['Int']['input']>;
@@ -1722,6 +1726,23 @@ export type CreateItemPayload = {
 
 export type CreateItemResult = ConflictError | CreateItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Propose an edit to a PUBLIC catalog item. `note` is a required justification
+ * shown to the reviewer.
+ */
+export type CreateItemSuggestionInput = {
+  changes: SuggestibleItemChangesInput;
+  itemId: Scalars['ID']['input'];
+  note: Scalars['String']['input'];
+};
+
+export type CreateItemSuggestionPayload = {
+  __typename: 'CreateItemSuggestionPayload';
+  suggestion: ItemEditSuggestion;
+};
+
+export type CreateItemSuggestionResult = ConflictError | CreateItemSuggestionPayload | ForbiddenError | NotFoundError | ValidationError;
+
 /** Input for creating a meal plan from a template */
 export type CreateMealPlanFromTemplateInput = {
   /** Optional budget for the meal plan */
@@ -1783,6 +1804,14 @@ export type CreateMealPlanItemInput = {
 
 export type CreateMealPlanItemPayload = {
   __typename: 'CreateMealPlanItemPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing meal-plan item (an idempotent
+   * replay, or a second device) rather than creating a new one — recipe meals
+   * converge on the natural key (mealPlanId, date, mealType, recipeId), custom
+   * meals on the client-minted id. The canonical, API-wide replay flag; clients
+   * treat converged=true as already-synced.
+   */
+  converged: Scalars['Boolean']['output'];
   mealPlan: Maybe<MealPlan>;
   mealPlanItem: MealPlanItem;
 };
@@ -2001,6 +2030,8 @@ export type CreatePurchaseInput = {
   currencyId: Scalars['ID']['input'];
   discountAmount?: InputMaybe<Scalars['Float']['input']>;
   expirationDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /** Optional client-generated permanent ID (CUID2) for offline-first idempotency. */
+  id?: InputMaybe<Scalars['ID']['input']>;
   itemId: Scalars['ID']['input'];
   originalPrice?: InputMaybe<Scalars['Float']['input']>;
   purchaseDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -2055,6 +2086,13 @@ export type CreateRecipeResult = ConflictError | CreateRecipePayload | Forbidden
 
 export type CreateRecipeReviewInput = {
   comment?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+   * Supplying it lets the server tell a replay of your own queued review
+   * (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
+   * review the same recipe twice (CONFLICT — a real refusal).
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   rating: Scalars['Int']['input'];
   recipeId: Scalars['ID']['input'];
 };
@@ -3507,7 +3545,14 @@ export type ForgotPasswordPayload = {
 export type ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError;
 
 export type ForkRecipeInput = {
+  /** The SOURCE recipe to fork. */
   id: Scalars['ID']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for the recipe CREATED by this
+   * fork, for offline-first idempotency. Distinct from the id field above, which
+   * identifies the recipe being forked FROM.
+   */
+  newRecipeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type ForkRecipePayload = {
@@ -4234,6 +4279,49 @@ export type Item = {
   approvedBy: Maybe<User>;
   baseDimension: Maybe<BaseDimension>;
   brands: Array<ItemBrand>;
+  /**
+   * Whether the CALLING user may write to this item directly with updateItem
+   * (true for its creator and for admins). Resolved against the same predicate
+   * updateItem enforces, so it stays correct if that rule changes.
+   *
+   * Route on this together with canSuggest rather than inferring from
+   * visibility — the write paths are mutually exclusive and each hard-fails when
+   * picked wrongly:
+   *
+   *     item.canEdit    -> updateItem(...)
+   *     item.canSuggest -> createItemSuggestion(...)
+   *     neither         -> read-only, offer no edit affordance
+   *
+   * canEdit=false does NOT imply you may suggest: you can legitimately receive a
+   * PRIVATE item you do not own (a housemate's pantry entry, a shared list's
+   * item, a recipe ingredient), and those are read-only to you — createItemSuggestion
+   * accepts PUBLIC items only. Check canSuggest; do not assume the fallback.
+   *
+   * Viewer-scoped, so it must never inherit Item's type-level PUBLIC cache
+   * scope — pinned PRIVATE + no-store so a shared or CDN cache cannot serve
+   * one user's edit rights to another.
+   *
+   * COSTS YOU THE RESPONSE CACHE. A response's policy is the most restrictive
+   * hint in it, so selecting this field drops maxAge to 0 for EVERYTHING beside
+   * it: the same query without canEdit is max-age=1800/public, with it the whole
+   * response is no-store. Put canEdit in a shared item fragment and every catalog
+   * query in your app silently stops caching. Fetch it in its own small query,
+   * separate from cacheable catalog data — canSuggest is non-viewer-scoped for
+   * exactly this reason and can ride along in the cacheable one. See
+   * docs/api/item-suggestions.md.
+   */
+  canEdit: Scalars['Boolean']['output'];
+  /**
+   * Whether createItemSuggestion accepts this item as a target — true for
+   * active PUBLIC catalog items. Resolved against the same predicate that
+   * mutation enforces.
+   *
+   * Structural only: it does not account for your per-user pending-suggestion
+   * cap or the rate limit, both of which are transient and clear on their own.
+   * Unlike canEdit this is not viewer-scoped — the answer is identical for
+   * every caller, so it inherits Item's PUBLIC cache scope.
+   */
+  canSuggest: Scalars['Boolean']['output'];
   categories: Array<ItemCategory>;
   convertedNetWeight: Maybe<ConvertedValue>;
   createdAt: Scalars['DateTime']['output'];
@@ -4261,6 +4349,8 @@ export type Item = {
   needsApproval: Scalars['Boolean']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
   nutritions: Maybe<Scalars['JSON']['output']>;
+  /** Number of PENDING community edit suggestions for this item. */
+  pendingSuggestionCount: Scalars['Int']['output'];
   popularity: Scalars['Int']['output'];
   preferredTrackingUnit: Maybe<Unit>;
   preferredTrackingUnitId: Maybe<Scalars['ID']['output']>;
@@ -4433,6 +4523,42 @@ export type ItemEdit = {
   newValues: Maybe<Scalars['JSON']['output']>;
   oldValues: Maybe<Scalars['JSON']['output']>;
   user: User;
+};
+
+/**
+ * A proposed edit to a PUBLIC catalog item, awaiting or having undergone admin
+ * review. The live item is only changed when a suggestion is APPROVED.
+ */
+export type ItemEditSuggestion = {
+  __typename: 'ItemEditSuggestion';
+  /** Proposed field changes (a subset of UpdateItemInput's descriptive fields). */
+  changes: Scalars['JSON']['output'];
+  createdAt: Scalars['DateTime']['output'];
+  id: Scalars['ID']['output'];
+  item: Item;
+  /** Required justification supplied by the contributor. */
+  note: Scalars['String']['output'];
+  reviewNote: Maybe<Scalars['String']['output']>;
+  reviewedAt: Maybe<Scalars['DateTime']['output']>;
+  /** The admin who reviewed it (once reviewed). */
+  reviewedBy: Maybe<User>;
+  status: ItemSuggestionStatus;
+  /** The contributor who proposed the change. */
+  suggestedBy: Maybe<User>;
+  updatedAt: Scalars['DateTime']['output'];
+};
+
+export type ItemEditSuggestionConnection = Connection & {
+  __typename: 'ItemEditSuggestionConnection';
+  edges: Array<ItemEditSuggestionEdge>;
+  pageInfo: PageInfo;
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+export type ItemEditSuggestionEdge = Edge & {
+  __typename: 'ItemEditSuggestionEdge';
+  cursor: Scalars['String']['output'];
+  node: ItemEditSuggestion;
 };
 
 export type ItemFilters = {
@@ -4620,6 +4746,19 @@ export type ItemSuggestion = {
   netWeight: Maybe<Scalars['Float']['output']>;
   type: ItemType;
 };
+
+/** Filters for the admin item-suggestion review queue. */
+export type ItemSuggestionFilters = {
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<ItemSuggestionStatus>;
+};
+
+/** Lifecycle of a community edit suggestion against a public catalog item. */
+export enum ItemSuggestionStatus {
+  Approved = 'APPROVED',
+  Pending = 'PENDING',
+  Rejected = 'REJECTED'
+}
 
 /** Categorizes the general type of an item in the pantry or shopping list */
 export enum ItemType {
@@ -6033,6 +6172,12 @@ export type Mutation = {
   createImageUploadUrl: CreateImageUploadUrlResult;
   /** Create a new item */
   createItem: CreateItemResult;
+  /**
+   * Propose an edit to a PUBLIC catalog item. Creates a PENDING suggestion for
+   * admin review — the live item is NOT changed. Non-owners use this instead of
+   * updateItem (which is owner/admin-only). Rate-limited and capped per user.
+   */
+  createItemSuggestion: CreateItemSuggestionResult;
   /** Create a new meal plan. */
   createMealPlan: CreateMealPlanResult;
   /**
@@ -7026,6 +7171,19 @@ export type MutationCreateImageUploadUrlArgs = {
  */
 export type MutationCreateItemArgs = {
   input: CreateItemInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationCreateItemSuggestionArgs = {
+  input: CreateItemSuggestionInput;
 };
 
 
@@ -10726,6 +10884,11 @@ export type Query = {
   membership: Maybe<Membership>;
   /** List memberships for a home with cursor-based pagination. */
   memberships: MembershipConnection;
+  /**
+   * The current user's own item edit suggestions, newest first. Same filters as
+   * the admin queue, scoped to the caller — there is no arg to widen that scope.
+   */
+  myItemSuggestions: ItemEditSuggestionConnection;
   myModeration: Maybe<MyModerationStatus>;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
@@ -11132,6 +11295,15 @@ export type QueryMembershipsArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   homeId: Scalars['ID']['input'];
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type QueryMyItemSuggestionsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  filters?: InputMaybe<ItemSuggestionFilters>;
+  first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -11956,6 +12128,8 @@ export type RejectItemPayload = {
 
 export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError;
 
+export type RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
+
 export enum ReligiousDiet {
   Halal = 'HALAL',
   Kosher = 'KOSHER'
@@ -12233,6 +12407,17 @@ export type ReviewHelpful = {
   user: User;
 };
 
+/** Approve or reject a pending suggestion (admin only). */
+export type ReviewItemSuggestionInput = {
+  id: Scalars['ID']['input'];
+  reviewNote?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ReviewItemSuggestionPayload = {
+  __typename: 'ReviewItemSuggestionPayload';
+  suggestion: ItemEditSuggestion;
+};
+
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
   isRisky?: InputMaybe<Scalars['Boolean']['input']>;
@@ -12361,6 +12546,12 @@ export type ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundE
  */
 export type ShoppingList = {
   __typename: 'ShoppingList';
+  /**
+   * Audit trail of who changed what on this list (adds, edits, purchases,
+   * removals, collaborator changes). ADMIN-only bookkeeping surface — clients
+   * drive incremental updates from the `shoppingListEvents` subscription, not
+   * from this feed.
+   */
   activitiesConnection: ShoppingListActivityConnection;
   autoAddSuggestions: Scalars['Boolean']['output'];
   /**
@@ -13530,6 +13721,32 @@ export type SubscriptionStoreEventsArgs = {
 
 export type SubscriptionUserEventsArgs = {
   userId: Scalars['ID']['input'];
+};
+
+/**
+ * The fields a community edit suggestion may change — the descriptive subset of
+ * UpdateItemInput. This type IS the whitelist: moderation/ownership fields
+ * (visibility, status, createdById) are intentionally absent, so the GraphQL
+ * layer rejects them at validation time rather than at runtime. Reuses the same
+ * sub-input types as create/update for a single source of truth per field.
+ */
+export type SuggestibleItemChangesInput = {
+  brand?: InputMaybe<BrandReferenceInput>;
+  brandOps?: InputMaybe<BrandOpsInput>;
+  categoryOps?: InputMaybe<CategoryOpsInput>;
+  classification?: InputMaybe<ItemClassificationInput>;
+  description?: InputMaybe<Scalars['String']['input']>;
+  healthInfo?: InputMaybe<HealthInfoInput>;
+  media?: InputMaybe<MediaAssetsInput>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
+  packageInfo?: InputMaybe<PackageInfoInput>;
+  productDetails?: InputMaybe<ProductDetailsInput>;
+  storeSkuOps?: InputMaybe<StoreSkuOpsInput>;
+  tagOps?: InputMaybe<TagOpsInput>;
+  type?: InputMaybe<ItemType>;
+  unitConfig?: InputMaybe<ItemUnitConfigInput>;
+  unitOps?: InputMaybe<UnitOpsInput>;
 };
 
 /**

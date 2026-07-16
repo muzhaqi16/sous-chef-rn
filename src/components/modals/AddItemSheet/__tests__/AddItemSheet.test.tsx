@@ -1,7 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
+// The sheet renders ReportItemSheet, whose useReportItem calls useMutation, so
+// the tree needs an Apollo context even though this suite mocks the data hooks.
+import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
 import { renderHook } from '@testing-library/react-native';
 import type {
