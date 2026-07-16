@@ -3317,6 +3317,21 @@ export type Error = {
  * Machine-readable error code. Returned on every Error implementer so
  * clients can branch on `code` without needing to inspect `__typename`
  * for common cases.
+ *
+ * This enum covers the **business-error channel only** — conditions that
+ * arrive as a member of a `*Result` union. Two other classes of failure
+ * never reach it, and clients read them from a top-level error's
+ * `extensions` instead:
+ *
+ * - **Rate limiting** — thrown as a top-level error carrying
+ *   `OPERATION_RATE_LIMITED` plus `retryAfter` in `extensions`. It is not
+ *   a union member, so it cannot populate this enum. (Related codes on that
+ *   channel: `API_KEY_RATE_LIMITED`, `EXTERNAL_API_RATE_LIMITED`.)
+ * - **Internal failures** — surface as a top-level error, masked in
+ *   production. There is no `InternalError` union member to carry a code.
+ *
+ * A value here without an emitter is a false promise; see the
+ * `error-code-contract` spec.
  */
 export enum ErrorCode {
   AuthAccountLocked = 'AUTH_ACCOUNT_LOCKED',
@@ -3331,10 +3346,8 @@ export enum ErrorCode {
   HomeAccessDenied = 'HOME_ACCESS_DENIED',
   /** An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure. */
   IdempotentReplay = 'IDEMPOTENT_REPLAY',
-  InternalError = 'INTERNAL_ERROR',
   NotFound = 'NOT_FOUND',
   PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
-  RateLimited = 'RATE_LIMITED',
   ResourceAlreadyExists = 'RESOURCE_ALREADY_EXISTS',
   UnitInvalid = 'UNIT_INVALID',
   ValidationFailed = 'VALIDATION_FAILED',
@@ -9789,14 +9802,6 @@ export type OfferInput = {
   validUntil?: InputMaybe<Scalars['DateTime']['input']>;
 };
 
-export type OfferSummary = {
-  __typename: 'OfferSummary';
-  discount: Scalars['Float']['output'];
-  id: Scalars['String']['output'];
-  title: Scalars['String']['output'];
-  type: Scalars['String']['output'];
-};
-
 /** Input for opening a specific batch */
 export type OpenPantryItemBatchInput = {
   batchId: Scalars['ID']['input'];
@@ -13436,9 +13441,11 @@ export type Store = {
    * Pantry items sourced from this store that you can see. Viewer-scoped:
    * purchaseStore.fields.ts restricts to MembershipService.getAccessiblePantryIds().
    *
-   * Pinned on the FIELD for the same reason as purchases — PantryItem is already
-   * maxAge: 0, scope: PRIVATE, but that does not cover totalCount, which would
-   * otherwise inherit Store's 1800/PUBLIC and publish a per-household count.
+   * Pinned on the FIELD for the same reasons as purchases — PantryItem is
+   * already maxAge: 0, scope: PRIVATE, but that covers neither totalCount (which
+   * would otherwise inherit Store's 1800/PUBLIC and publish a per-household
+   * count) nor the zero-row case (where node never resolves, so its hint never
+   * fires and even edges.node inherits).
    */
   pantryItems: PantryItemConnection;
   priceAccuracy: Maybe<Scalars['Float']['output']>;
@@ -13447,12 +13454,16 @@ export type Store = {
    * YOUR purchases at this store. Viewer-scoped: purchaseStore.fields.ts builds
    * where { storeId, userId: context.user.id }.
    *
-   * Pinned on the FIELD, and it has to be here. Pinning the node type is not
-   * enough — Purchase is already maxAge: 0, scope: PRIVATE, which covers
-   * edges.node but NOT totalCount: that is an unannotated Int on
-   * PurchaseConnection, which carries inheritMaxAge: true, so under Store's
+   * Pinned on the FIELD, and it has to be here. Purchase is already
+   * maxAge: 0, scope: PRIVATE, but pinning the node type is not enough twice
+   * over. It does not cover totalCount — an unannotated Int on
+   * PurchaseConnection, which carries inheritMaxAge: true — so under Store's
    * type-level maxAge: 1800, scope: PUBLIC a totalCount-only selection would
-   * inherit 1800/PUBLIC and publish how many purchases you made here.
+   * inherit 1800/PUBLIC and publish how many purchases you made here. And it is
+   * data-dependent: a hint applies only to a field that actually resolves, so at
+   * zero rows node never resolves, its maxAge: 0 never fires, and even
+   * edges.node would inherit 1800/PUBLIC. The field pin holds for any selection
+   * at any row count.
    */
   purchases: PurchaseConnection;
   qualityRating: Maybe<Scalars['Float']['output']>;
@@ -13634,7 +13645,6 @@ export type StorePreferencesInput = {
 export type StorePriceComparison = {
   __typename: 'StorePriceComparison';
   lastUpdated: Maybe<Scalars['DateTime']['output']>;
-  offers: Array<OfferSummary>;
   price: Maybe<Scalars['Float']['output']>;
   storeId: Scalars['ID']['output'];
   storeName: Scalars['String']['output'];
