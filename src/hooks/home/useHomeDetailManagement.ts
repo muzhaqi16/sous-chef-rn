@@ -6,19 +6,30 @@ import { HomeDetailScreen_HomeFragmentDoc } from '#/screens/home/HomeDetailScree
 import {
   GetHomeDocument,
   UpdateHomeDocument,
+  EnableHomeJoinLinkDocument,
+  UpdateHomeJoinCodeDocument,
+  TransferHomeOwnershipDocument,
   UpdateMembershipDocument,
   RemoveMemberDocument,
-  RevokeHomeInviteDocument,
+  DeleteHomeInviteDocument,
   LeaveHomeDocument,
   GetHomesDocument,
 } from '#operations/home/home.generated';
-import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+
+/** The per-member permission overrides `updateMembership` accepts. */
+export type MembershipPermissionKey =
+  | 'canAddItems'
+  | 'canRemoveItems'
+  | 'canEditPantry'
+  | 'canViewPantry'
+  | 'canInviteOthers'
+  | 'canManageHome';
 import { t } from '#/i18n/t';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
-  setCachedFields,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   executeCacheUpdate,
@@ -30,6 +41,7 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   useAppStore,
   useHomeState,
@@ -93,32 +105,21 @@ export function useHomeDetailManagement(homeId: string) {
       },
     },
   );
+  const [enableJoinLinkMutation] = useMutation(EnableHomeJoinLinkDocument);
+  const [rotateJoinCodeMutation, { loading: rotatingJoinCode }] = useMutation(
+    UpdateHomeJoinCodeDocument,
+  );
+  const [transferOwnershipMutation, { loading: transferringOwnership }] =
+    useMutation(TransferHomeOwnershipDocument);
 
-  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument, {
-    // Use cache.modify to update the membership role field
-    update(cache, { data }, { variables }) {
-      if (
-        data?.updateMembership?.__typename !== 'UpdateMembershipPayload' ||
-        !variables
-      ) {
-        return;
-      }
-
-      const membershipId = variables.input.id;
-      const newRole = variables.input.role;
-
-      setCachedFields(cache, 'Membership', membershipId, {
-        role: newRole,
-        updatedAt: new Date().toISOString(),
-      });
-    },
-    onError: error => {
-      alertService.alert(
-        'Error',
-        error.message || t('errors.updateMemberRoleFailed'),
-      );
-    },
-  });
+  // No update callback: the response spreads HomeMemberCard_member, so Apollo
+  // normalizes role and the can* permission fields by Membership id. A manual
+  // cache.modify here would also run for permission-only toggles, where
+  // variables.input.role is undefined — and a modify writing undefined deletes
+  // the field, blanking the member card.
+  // Error/rejection handling lives in handleRoleSelect so a resolved
+  // ForbiddenError member is surfaced (it doesn't throw under errorPolicy:'all').
+  const [updateMembershipMutation] = useMutation(UpdateMembershipDocument);
 
   const [removeMemberMutation] = useMutation(RemoveMemberDocument, {
     update(cache, { data }, { variables }) {
@@ -153,10 +154,10 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [revokeInviteMutation] = useMutation(RevokeHomeInviteDocument, {
+  const [revokeInviteMutation] = useMutation(DeleteHomeInviteDocument, {
     update(cache, { data }, { variables }) {
       if (
-        data?.revokeHomeInvite?.__typename !== 'RevokeHomeInvitePayload' ||
+        data?.deleteHomeInvite?.__typename !== 'DeleteHomeInvitePayload' ||
         !variables
       ) {
         return;
@@ -186,7 +187,7 @@ export function useHomeDetailManagement(homeId: string) {
     },
   });
 
-  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument);
+  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument);
 
   const [leaveHomeMutation, { loading: leaving, client: leaveClient }] =
     useMutation(LeaveHomeDocument, {
@@ -225,9 +226,8 @@ export function useHomeDetailManagement(homeId: string) {
           setSelectedShoppingListId(null);
         }
       },
-      onError: error => {
-        alertService.alert('Error', error.message || 'Failed to leave home');
-      },
+      // Error/rejection handling lives in the leaveHome action below; onCompleted
+      // (above) runs only on the success payload.
     });
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error.
@@ -287,11 +287,47 @@ export function useHomeDetailManagement(homeId: string) {
     closeRolePicker();
     if (value === currentRole) return;
 
-    await updateMembershipMutation({
-      variables: {
-        input: { id: membershipId, role: value as MembershipRole },
-      },
-    });
+    const result = await executeMutation(
+      () =>
+        updateMembershipMutation({
+          variables: {
+            input: { id: membershipId, role: value as MembershipRole },
+          },
+        }),
+      error => handleMutationError(error, { operation: 'Update Member Role' }),
+    );
+    if (!result) return;
+    alertIfRejected(
+      result,
+      'updateMembership',
+      'UpdateMembershipPayload',
+      t('errors.updateMemberRoleFailed'),
+    );
+  };
+
+  // Toggle a single membership permission override. updateMembership returns the
+  // updated member (HomeMemberCard_member), so Apollo normalizes it and the
+  // toggle reflects the server state.
+  const updateMemberPermission = async (
+    membershipId: string,
+    permission: MembershipPermissionKey,
+    value: boolean,
+  ) => {
+    const result = await executeMutation(
+      () =>
+        updateMembershipMutation({
+          variables: { input: { id: membershipId, [permission]: value } },
+        }),
+      error =>
+        handleMutationError(error, { operation: 'Update Member Permission' }),
+    );
+    if (!result) return false;
+    return !alertIfRejected(
+      result,
+      'updateMembership',
+      'UpdateMembershipPayload',
+      t('errors.updateMemberRoleFailed'),
+    );
   };
 
   const removeMember = (membershipId: string, memberName: string) => {
@@ -329,13 +365,25 @@ export function useHomeDetailManagement(homeId: string) {
             onPress: async () => {
               const result = await executeMutation(
                 () => leaveHomeMutation({ variables: { input: { homeId } } }),
-                'Failed to leave home',
+                error =>
+                  handleMutationError(error, { operation: 'Leave Home' }),
               );
-              resolve(
-                result
-                  ? result.data?.leaveHome?.__typename === 'LeaveHomePayload'
-                  : false,
-              );
+              if (!result) {
+                resolve(false);
+                return;
+              }
+              if (
+                alertIfRejected(
+                  result,
+                  'leaveHome',
+                  'LeaveHomePayload',
+                  t('errors.somethingWentWrong'),
+                )
+              ) {
+                resolve(false);
+                return;
+              }
+              resolve(true);
             },
           },
         ],
@@ -344,11 +392,67 @@ export function useHomeDetailManagement(homeId: string) {
   };
 
   const toggleJoinCode = async (enabled: boolean) => {
-    await updateHomeMutation({
-      variables: {
-        input: { id: homeId, allowJoinCode: enabled },
-      },
+    if (enabled) {
+      // Dedicated mutation: mints a joinCode + join link server-side.
+      const result = await executeMutation(
+        () => enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
+        error => handleMutationError(error, { operation: 'Enable Join Link' }),
+      );
+      alertIfRejected(
+        result,
+        'enableHomeJoinLink',
+        'UpdateHomePayload',
+        t('errors.updateHomeFailed'),
+      );
+      return;
+    }
+    // No disableHomeJoinLink mutation — clear the flag via updateHome. Same
+    // rejection surface as the enable branch: a resolved error member never
+    // fires onError under errorPolicy:'all', so classify the result here.
+    const result = await updateHomeMutation({
+      variables: { input: { id: homeId, allowJoinCode: false } },
     });
+    alertIfRejected(
+      result,
+      'updateHome',
+      'UpdateHomePayload',
+      t('errors.updateHomeFailed'),
+    );
+  };
+
+  // Hand the home off to another member. The server flips the OWNER role; the
+  // response carries the refreshed membersConnection so roles update in-place.
+  const transferOwnership = async (newOwnerId: string) => {
+    const result = await executeMutation(
+      () =>
+        transferOwnershipMutation({
+          variables: { input: { homeId, newOwnerId } },
+        }),
+      error =>
+        handleMutationError(error, { operation: 'Transfer Home Ownership' }),
+    );
+    if (!result) return false;
+    return !alertIfRejected(
+      result,
+      'transferHomeOwnership',
+      'TransferHomeOwnershipPayload',
+      t('errors.updateHomeFailed'),
+    );
+  };
+
+  // Rotate the join code to invalidate a leaked link.
+  const rotateJoinCode = async () => {
+    const result = await executeMutation(
+      () => rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
+      error => handleMutationError(error, { operation: 'Rotate Join Code' }),
+    );
+    if (!result) return false;
+    return !alertIfRejected(
+      result,
+      'updateHomeJoinCode',
+      'UpdateHomePayload',
+      t('errors.updateHomeFailed'),
+    );
   };
 
   return {
@@ -372,5 +476,10 @@ export function useHomeDetailManagement(homeId: string) {
     revokeInvite,
     leaveHome,
     toggleJoinCode,
+    rotateJoinCode,
+    rotatingJoinCode,
+    transferOwnership,
+    transferringOwnership,
+    updateMemberPermission,
   };
 }

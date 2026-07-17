@@ -2,7 +2,7 @@
 # EXPIRATION NOTIFICATION MUTATIONS
 # ============================================
 
-mutation MarkExpirationAction($input: MarkActionInput!) {
+mutation MarkExpirationAction($input: MarkExpirationActionInput!) {
   markExpirationAction(input: $input) {
     __typename
     ... on MarkExpirationActionPayload {
@@ -22,27 +22,6 @@ mutation MarkExpirationAction($input: MarkActionInput!) {
     }
     ... on ValidationError {
       field
-    }
-  }
-}
-
-mutation DismissExpirationNotification($input: DismissNotificationInput!) {
-  dismissExpirationNotification(input: $input) {
-    __typename
-    ... on DismissExpirationNotificationPayload {
-      expirationNotification {
-        id
-        status
-        actionTaken
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
     }
   }
 }

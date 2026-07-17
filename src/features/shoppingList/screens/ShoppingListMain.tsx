@@ -65,6 +65,7 @@ const ShoppingListMainInner: React.FC = () => {
           ...(screenData.state.rawUnpurchasedItems ?? []),
           ...(screenData.state.rawPurchasedItems ?? []),
         ]}
+        recordPurchase={screenData.actions.recordPurchase}
         searchQuery={screenData.state.searchQuery}
         onSearchQueryClear={() => screenData.actions.setSearchQuery('')}
         onNavigateToListSettings={() => toListSettings()}

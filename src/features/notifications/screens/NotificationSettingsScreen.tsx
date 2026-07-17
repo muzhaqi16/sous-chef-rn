@@ -3,6 +3,7 @@ import { errorService } from '#/services/errorService';
 import { View, Platform, Linking, AppState } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
+import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +17,7 @@ import {
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
 import { useNotificationPermissions } from '#features/notifications/hooks/useNotificationPermissions';
+import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 import { ExpirationFrequency } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
@@ -210,6 +212,21 @@ export const NotificationSettingsScreen: React.FC = () => {
     resetToDefaults,
     isQuietTime,
   } = useNotificationSettings();
+  const { syncSendTest } = useNotificationSync();
+
+  const handleSendTest = async () => {
+    setUpdating('test');
+    const ok = await syncSendTest();
+    setUpdating(null);
+    alertService.alert(
+      ok
+        ? t('notifications.testSentTitle')
+        : t('notifications.testFailedTitle'),
+      ok
+        ? t('notifications.testSentMessage')
+        : t('notifications.testFailedMessage'),
+    );
+  };
 
   const appState = useRef(AppState.currentState);
 
@@ -276,7 +293,13 @@ export const NotificationSettingsScreen: React.FC = () => {
               t('labels.error'),
               t('notifications.updateFailed'),
             );
+            return;
           }
+
+          // Permission was just granted here (the login flow no longer prompts),
+          // so re-register the device to deliver the now-available push token to
+          // the server.
+          authService.registerDeviceInBackground();
         },
         isLoading => setUpdating(isLoading ? key : null),
         error => {
@@ -539,6 +562,16 @@ export const NotificationSettingsScreen: React.FC = () => {
             </Text>
           </View>
         )}
+      </SettingSection>
+
+      <SettingSection title={t('notifications.testSection')}>
+        <SettingSwitch
+          title={t('notifications.sendTestNotification')}
+          description={t('notifications.sendTestNotificationDesc')}
+          value={false}
+          onValueChange={handleSendTest}
+          loading={updating === 'test'}
+        />
       </SettingSection>
 
       <SettingSection title={t('settings.resetSection')}>

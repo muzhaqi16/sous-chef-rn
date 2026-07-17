@@ -234,14 +234,18 @@ export function useCreatePantryItem({
                     input: {
                       id: duplicateInfo.existingPantryItemId,
                       quantity: restockQuantity,
+                      // Carry the expiry the user entered into the restock batch
+                      // (the full-add form doesn't collect cost/store).
+                      ...(input.expirationDate && {
+                        expiresAt: input.expirationDate.toISOString(),
+                      }),
+                      // idempotencyKey dedups the restock ledger row on replay.
+                      idempotencyKey: generateEntityId(),
                     },
                   },
-                  // Local-first: replay-safe via syncRestockPantryItem
-                  // (operationId dedups the restock ledger row if queued).
-                  context: {
-                    localFirst: true,
-                    operationId: generateEntityId(),
-                  },
+                  // Local-first: queued offline, replayed as the canonical
+                  // mutation (deduped by its idempotencyKey).
+                  context: { localFirst: true },
                 }),
               'Restock pantry item error:',
             );

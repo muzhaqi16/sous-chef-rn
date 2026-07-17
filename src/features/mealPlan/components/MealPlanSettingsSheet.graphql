@@ -6,6 +6,11 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
   description
   startDate
   endDate
+  budgetAmount
+  actualCost
+  dietaryProfile {
+    id
+  }
   home {
     id
     name

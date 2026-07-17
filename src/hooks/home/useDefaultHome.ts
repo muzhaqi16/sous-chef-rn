@@ -6,7 +6,7 @@ import {
 } from '@apollo/client/react';
 import { safeEvictMany } from '#/apollo/utils/cacheUpdaters';
 import { GetHomesDocument } from '#operations/home/home.generated';
-import { SetDefaultHomeDocument } from '#operations/home/userSettings.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import {
   usePantryState,
   useIsHomeSelectionReady,
@@ -61,7 +61,7 @@ export const useDefaultHome = () => {
   const setIsHomeSelectionReady = useSetIsHomeSelectionReady();
 
   // SetDefaultHome mutation for syncing auto-selection to server
-  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {});
+  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument, {});
 
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
@@ -303,8 +303,9 @@ export const useDefaultHome = () => {
       .then(result => {
         // Use pantry from mutation response (eliminates race condition)
         const returnedPantry =
-          result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload'
-            ? result.data.setDefaultHome.defaultPantry
+          result.data?.markHomeAsDefault?.__typename ===
+          'MarkHomeAsDefaultPayload'
+            ? result.data.markHomeAsDefault.defaultPantry
             : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);
@@ -370,8 +371,9 @@ export const useDefaultHome = () => {
     })
       .then(result => {
         const returnedPantry =
-          result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload'
-            ? result.data.setDefaultHome.defaultPantry
+          result.data?.markHomeAsDefault?.__typename ===
+          'MarkHomeAsDefaultPayload'
+            ? result.data.markHomeAsDefault.defaultPantry
             : null;
         if (returnedPantry?.id && !selectedPantryId) {
           setSelectedPantryId(returnedPantry.id);

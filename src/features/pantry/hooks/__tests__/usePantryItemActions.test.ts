@@ -280,6 +280,7 @@ describe('usePantryItemActions', () => {
           purpose: 'COOK',
           notes: 'For dinner',
           usageUnitId: undefined,
+          idempotencyKey: expect.any(String),
         },
       });
 
@@ -374,6 +375,7 @@ describe('usePantryItemActions', () => {
           wasteReason: 'EXPIRED',
           isComposted: true,
           isRecycled: false,
+          idempotencyKey: expect.any(String),
         },
       });
 
@@ -406,6 +408,7 @@ describe('usePantryItemActions', () => {
           costPerUnit: undefined,
           totalCost: undefined,
           expiresAt: null,
+          idempotencyKey: expect.any(String),
         },
       });
 

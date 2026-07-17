@@ -7,6 +7,14 @@ export interface ScannedItem {
   name: string;
   description?: string;
   imageUrl?: string;
+  /** Labels the edit action ("Suggest Edit" vs "Edit"). Cosmetic only — the
+   *  submit path re-reads canEdit from the authoritative item snapshot. */
+  canEdit?: boolean;
+  /** Whether the item can take an edit suggestion. With canEdit, decides
+   *  whether the edit action is offered: both explicitly false means read-only.
+   *  Undefined on a cached scan, which is why the sheet re-checks the
+   *  authoritative snapshot rather than trusting this. */
+  canSuggest?: boolean;
   upc: string;
   unitId?: string;
   netWeight?: number;

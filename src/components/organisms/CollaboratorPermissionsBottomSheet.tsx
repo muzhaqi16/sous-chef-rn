@@ -11,8 +11,17 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { useMutation } from '@apollo/client/react';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { UpdateCollaboratorRoleDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import {
+  UpdateCollaboratorRoleDocument,
+  UpdateCollaboratorPermissionsDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { BaseSwitch } from '#components/base/BaseSwitch';
+import {
+  executeMutation,
+  executeWithLoadingState,
+} from '#/utils/compilerSafeWrappers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -22,6 +31,25 @@ interface CollaboratorPermissionsBottomSheetProps {
   shoppingListId: string;
   onSuccess?: () => void;
 }
+
+// The item-level permissions the collaborator fragment carries — these can be
+// toggled individually to override the role's defaults.
+interface CollabPermissions {
+  canAddItems: boolean;
+  canEditItems: boolean;
+  canRemoveItems: boolean;
+  canMarkPurchased: boolean;
+}
+
+const PERMISSION_ROWS: { key: keyof CollabPermissions; labelKey: string }[] = [
+  { key: 'canAddItems', labelKey: 'shoppingListScreens.permCanAddItems' },
+  { key: 'canEditItems', labelKey: 'shoppingListScreens.permCanEditItems' },
+  { key: 'canRemoveItems', labelKey: 'shoppingListScreens.permCanRemoveItems' },
+  {
+    key: 'canMarkPurchased',
+    labelKey: 'shoppingListScreens.permCanMarkPurchased',
+  },
+];
 
 export interface CollaboratorPermissionsBottomSheetRef {
   open: (collaborator: ShoppingListCollaboratorFragment) => void;
@@ -71,6 +99,9 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
     null,
   );
+  const [permissions, setPermissions] = useState<CollabPermissions | null>(
+    null,
+  );
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -85,11 +116,20 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   });
 
   const [updateRole] = useMutation(UpdateCollaboratorRoleDocument);
+  const [updatePermissions] = useMutation(
+    UpdateCollaboratorPermissionsDocument,
+  );
 
   useImperativeHandle(ref, () => ({
     open: (collab: ShoppingListCollaboratorFragment) => {
       setCollaborator(collab);
       setSelectedRole(collab.role);
+      setPermissions({
+        canAddItems: !!collab.canAddItems,
+        canEditItems: !!collab.canEditItems,
+        canRemoveItems: !!collab.canRemoveItems,
+        canMarkPurchased: !!collab.canMarkPurchased,
+      });
       setIsVisible(true);
     },
     close: () => {
@@ -99,7 +139,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   const handleSubmit = () => {
     if (!collaborator || !selectedRole || !collaborator.collaboratorId) {
-      alertService.alert('Error', 'Missing required information');
+      alertService.alert(t('labels.error'), t('errors.missingRequiredInfo'));
       return;
     }
 
@@ -115,7 +155,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
     executeWithLoadingState(
       async () => {
-        await updateRole({
+        const result = await updateRole({
           variables: {
             input: {
               shoppingListId,
@@ -125,16 +165,63 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
           },
         });
 
+        // A resolved error member doesn't throw under errorPolicy:'all' — keep
+        // the sheet open and surface it instead of reporting success.
+        if (
+          alertIfRejected(
+            result,
+            'updateCollaboratorRole',
+            'UpdateCollaboratorRolePayload',
+            t('errors.somethingWentWrong'),
+          )
+        ) {
+          return;
+        }
+
         setIsVisible(false);
         onSuccess?.();
       },
       setIsSubmitting,
       (error: unknown) => {
         alertService.alert(
-          'Error',
-          errorMessageOr(error, 'Failed to update collaborator role'),
+          t('labels.error'),
+          errorMessageOr(error, t('errors.somethingWentWrong')),
         );
       },
+    );
+  };
+
+  // Each permission toggle fires immediately (overriding the role's default)
+  // and reverts the switch if the server refuses it.
+  const handleTogglePermission = (
+    key: keyof CollabPermissions,
+    value: boolean,
+  ) => {
+    if (!collaborator?.collaboratorId || !permissions) return;
+    const previous = permissions;
+    const next = { ...permissions, [key]: value };
+    setPermissions(next);
+    const collaboratorId = collaborator.collaboratorId;
+
+    executeMutation(
+      async () => {
+        const result = await updatePermissions({
+          variables: {
+            input: { shoppingListId, collaboratorId, permissions: next },
+          },
+        });
+        if (
+          alertIfRejected(
+            result,
+            'updateCollaboratorPermissions',
+            'UpdateCollaboratorPermissionsPayload',
+            t('errors.somethingWentWrong'),
+          )
+        ) {
+          setPermissions(previous);
+        }
+      },
+      () => setPermissions(previous),
     );
   };
 
@@ -247,6 +334,30 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             );
           })}
         </View>
+
+        {/* Granular per-permission overrides on top of the selected role. */}
+        {!!permissions && (
+          <View style={styles.customPermissions}>
+            <Text
+              size="sm"
+              weight="semibold"
+              style={styles.customPermissionsTitle}
+            >
+              {t('shoppingListScreens.customPermissions')}
+            </Text>
+            {PERMISSION_ROWS.map(({ key, labelKey }) => (
+              <View key={key} style={styles.permissionToggleRow}>
+                <Text size="sm" style={styles.permissionToggleLabel}>
+                  {t(labelKey)}
+                </Text>
+                <BaseSwitch
+                  value={permissions[key]}
+                  onValueChange={value => handleTogglePermission(key, value)}
+                />
+              </View>
+            ))}
+          </View>
+        )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -338,6 +449,22 @@ const styles = StyleSheet.create(theme => ({
   permissionDenied: {
     color: theme.colors.textSecondary,
     textDecorationLine: 'line-through',
+  },
+  customPermissions: {
+    marginBottom: theme.spacing.lg,
+  },
+  customPermissionsTitle: {
+    marginBottom: theme.spacing.sm,
+  },
+  permissionToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.sm,
+  },
+  permissionToggleLabel: {
+    flex: 1,
+    marginRight: theme.spacing.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

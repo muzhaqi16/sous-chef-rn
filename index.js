@@ -43,6 +43,22 @@ import { setupNotificationHandlers } from './src/utils/notifications/localNotifi
 setupNotificationHandlers();
 
 /**
+ * Keep the OS app-icon badge in sync with the unread notification count, so it
+ * clears when the user reads notifications in-app (the server can only set the
+ * badge on push delivery).
+ */
+import { setupBadgeSync } from './src/utils/notifications/badgeSync';
+setupBadgeSync();
+
+/**
+ * Register the FCM background/quit-state message handler.
+ * Must run synchronously at the JS entry point — the headless task that wakes
+ * the app to deliver a push invokes this handler outside the React tree.
+ */
+import { registerFcmBackgroundHandler } from './src/services/push/nativePushMessaging';
+registerFcmBackgroundHandler();
+
+/**
  * @format
  */
 import { AppRegistry } from 'react-native';

@@ -17,6 +17,7 @@ import {
   type ResetPasswordMutation,
   type ResetPasswordMutationVariables,
 } from '#operations/auth/auth.generated';
+import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { errorMessageOr } from '#/services/errorService';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -50,7 +51,12 @@ async function performPasswordReset(
     variables: { input: { token, newPassword } },
   });
 
-  if (result.data?.resetPassword?.success) {
+  const payload = result.data?.resetPassword;
+
+  if (
+    payload?.__typename === 'ResetPasswordPayload' &&
+    payload.status === PasswordActionStatus.Completed
+  ) {
     logger.info('Password reset successful');
 
     toast({
@@ -61,8 +67,10 @@ async function performPasswordReset(
     setTimeout(() => {
       navigateToLogin();
     }, 1500);
+  } else if (payload?.__typename === 'ResetPasswordPayload') {
+    throw new Error(defaultErrorMessage);
   } else {
-    throw new Error(result.data?.resetPassword?.message || defaultErrorMessage);
+    throw new Error(payload?.message || defaultErrorMessage);
   }
 }
 

@@ -5,6 +5,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
+import { useTranslation } from 'react-i18next';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 interface ItemSuggestionsListProps {
@@ -28,6 +29,9 @@ interface ItemSuggestionsListProps {
   showBrands?: boolean;
   /** When false, always show placeholder icon regardless of image URL */
   showImages?: boolean;
+  /** Renders a "wrong details?" footer row under the results. Omit for no footer.
+   *  Only shown when there are results — with none there is nothing to report. */
+  onReportItem?: () => void;
 }
 
 interface SuggestionRowProps {
@@ -124,6 +128,21 @@ const AddManuallyOption = ({
   );
 };
 
+// No `styles.useVariants` here, unlike the rows above: `reportOption` declares
+// no variants, so selecting them would be a no-op.
+const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
+  const { t } = useTranslation();
+
+  return (
+    <AppPressable style={styles.reportOption} onPress={onPress}>
+      <Icon name="alert-circle-outline" size={18} tone="secondary" />
+      <Text size="sm" tone="secondary">
+        {t('reportItem.footer')}
+      </Text>
+    </AppPressable>
+  );
+};
+
 export const ItemSuggestionsList = ({
   searchQuery,
   suggestions,
@@ -134,6 +153,7 @@ export const ItemSuggestionsList = ({
   placeholderIcon = 'cube-outline',
   showBrands = true,
   showImages = true,
+  onReportItem,
 }: ItemSuggestionsListProps) => {
   const hasResults = suggestions.length > 0;
 
@@ -149,12 +169,20 @@ export const ItemSuggestionsList = ({
     );
   };
 
+  // Only rendered with results behind it — with none there is nothing to report.
+  const showReportOption = !!onReportItem && hasResults;
+
   return (
     <View style={styles.container}>
       {addManuallyPosition === 'top' && renderAddManually(!hasResults)}
       {suggestions.map((item, index) => {
-        const isLastSuggestion = index === suggestions.length - 1;
-        const isLast = addManuallyPosition === 'top' ? isLastSuggestion : false;
+        // `isLast` drops the row's separator, so it means "nothing follows me"
+        // rather than "last suggestion" — with add-manually or the report row
+        // below, the separator has to stay.
+        const isLast =
+          addManuallyPosition === 'top' &&
+          index === suggestions.length - 1 &&
+          !showReportOption;
         return (
           <SuggestionRow
             key={item.id}
@@ -168,7 +196,8 @@ export const ItemSuggestionsList = ({
           />
         );
       })}
-      {addManuallyPosition === 'bottom' && renderAddManually(true)}
+      {addManuallyPosition === 'bottom' && renderAddManually(!showReportOption)}
+      {!!showReportOption && <ReportItemOption onPress={onReportItem} />}
     </View>
   );
 };
@@ -246,6 +275,14 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  // Secondary tone throughout so it doesn't compete with the accent-toned
+  // "Add manually" call to action directly above it.
+  reportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   pressed: {
     opacity: theme.opacity.pressed,

@@ -25,6 +25,7 @@ import {
   MealPlanItemActions_RecipeRefFragmentDoc,
   type MealPlanItemActions_RecipeRefFragment,
 } from './useMealPlanItemActions.generated';
+import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -69,7 +70,7 @@ type OptimisticMealPlanItem = {
   customMealName: string | null;
   servings: number | null;
   calories: number | null;
-  usedPantryItems: JsonValue;
+  usedPantryItems: MealPlanItemCard_ItemFragment['usedPantryItems'];
   notes: string | null;
   isCompleted: boolean;
   completedAt: string | null;
@@ -87,8 +88,8 @@ function buildOptimisticMealPlanItem(
   id: string,
   input: CreateMealPlanItemInput,
 ): OptimisticMealPlanItem {
-  const recipeCacheId = input.recipeId
-    ? cache.identify({ __typename: 'Recipe', id: input.recipeId })
+  const recipeCacheId = input.meal.recipeId
+    ? cache.identify({ __typename: 'Recipe', id: input.meal.recipeId })
     : undefined;
   const recipe = recipeCacheId
     ? cache.readFragment<MealPlanItemActions_RecipeRefFragment>({
@@ -103,7 +104,7 @@ function buildOptimisticMealPlanItem(
     id,
     date: input.date,
     mealType: input.mealType,
-    customMealName: input.customMealName ?? null,
+    customMealName: input.meal.customMealName ?? null,
     servings: input.servings ?? null,
     calories: input.calories ?? null,
     usedPantryItems: [],
@@ -220,8 +221,8 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         () =>
           writeItem({
             ...snapshot,
-            ...(input.customMealName !== undefined && {
-              customMealName: input.customMealName,
+            ...(input.meal?.customMealName !== undefined && {
+              customMealName: input.meal.customMealName,
             }),
             ...(input.servings !== undefined && { servings: input.servings }),
             ...(input.notes !== undefined && { notes: input.notes }),
@@ -307,6 +308,13 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Toggle Meal completed (optimistic)',
     );
 
+    // No idempotencyKey needed on this ledger op. The server gates the pantry
+    // deduction on the false → true completion transition, read live from the
+    // pre-update row: a replayed completion (e.g. a lost-response offline-queue
+    // replay) finds the item already isCompleted and skips the deduction, so it
+    // never double-deducts. Confirmed server-side in sous-chef-api#178. (The
+    // only unguarded case is two truly concurrent in-flight completions — not
+    // the sequential queue-drain path this queues into.)
     const result = await executeMutation(
       () =>
         updateItemMutation({

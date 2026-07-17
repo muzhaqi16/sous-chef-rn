@@ -59,6 +59,7 @@ export interface SearchResultsProps {
   onScanAnother: () => void;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
+  editActionLabel?: string;
   source?: BarcodeSource;
   pantryId?: string;
   shoppingListId?: string;
@@ -70,6 +71,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   onScanAnother,
   onEditItem,
   onCreateVariant,
+  editActionLabel,
   source,
   pantryId,
   shoppingListId,
@@ -108,19 +110,22 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     BarcodeAddItemToShoppingListDocument,
     {
       update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemToShoppingList;
+        const payload = data?.addItemsToShoppingList;
         if (
-          payload?.__typename === 'AddItemToShoppingListPayload' &&
+          payload?.__typename === 'AddItemsToShoppingListPayload' &&
           shoppingListId &&
           variables
         ) {
-          const maskedItem = payload.shoppingListItem;
+          // Single add via the batch mutation — the created/merged row is the
+          // one entry in `results`. Null when that item failed.
+          const maskedItem = payload.results[0]?.item;
+          if (!maskedItem) return;
           // Catalog-merge: adopt the server id, evicting the optimistic cuid if
           // the server merged into an existing row.
           adoptServerShoppingListItemId(
             cache,
             maskedItem.id,
-            variables.input.id,
+            variables.input.items[0]?.id,
           );
           const shoppingListItem =
             cache.readFragment<SearchResults_ShoppingListItemFragment>({
@@ -217,14 +222,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                         input: {
                           id: duplicateInfo.existingPantryItemId,
                           quantity,
+                          // idempotencyKey dedups the restock ledger row on replay.
+                          idempotencyKey: generateEntityId(),
                         },
                       },
-                      // Local-first: replay-safe via syncRestockPantryItem
-                      // (operationId dedups the restock ledger row if queued).
-                      context: {
-                        localFirst: true,
-                        operationId: generateEntityId(),
-                      },
+                      // Local-first: queued offline, replayed as the canonical
+                      // mutation (deduped by its idempotencyKey).
+                      context: { localFirst: true },
                     });
                     setIsAdded(true);
                     setPendingPantryScrollToTop(true);
@@ -233,8 +237,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   setIsLoading,
                   () => {
                     alertService.alert(
-                      'Error',
-                      'Failed to restock item. Please try again.',
+                      t('labels.error'),
+                      t('errors.restockFailedRetry'),
                     );
                   },
                 );
@@ -256,16 +260,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                       onScanAnother();
                     } else {
                       alertService.alert(
-                        'Error',
-                        'Failed to add item. Please try again.',
+                        t('labels.error'),
+                        t('errors.addItemFailedRetry'),
                       );
                     }
                   },
                   setIsLoading,
                   () => {
                     alertService.alert(
-                      'Error',
-                      'Failed to add item. Please try again.',
+                      t('labels.error'),
+                      t('errors.addItemFailedRetry'),
                     );
                   },
                 );
@@ -283,8 +287,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             // The server refused the create — discard the item we wrote.
             safeEvict(client.cache, 'PantryItem', id);
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
           } else {
             // 'created' or 'queued' — the item stays (and replays if it was
@@ -321,25 +325,28 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           const result = await addToShoppingList({
             variables: {
               input: {
-                id,
                 shoppingListId,
-                itemId: item.id,
-                quantity: 1,
-                itemName: item.name,
-                unit: {
-                  unitId: item.displayUnit?.id ?? item.unitId,
-                  unitName: item.displayUnit?.name,
-                },
-                brand:
-                  item.brandId || item.brandName
-                    ? { brandId: item.brandId, brandName: item.brandName }
-                    : undefined,
-                netWeight: item.netWeight
-                  ? {
-                      netWeight: item.netWeight,
-                      netWeightUnitId: item.displayUnit?.id,
-                    }
-                  : undefined,
+                items: [
+                  {
+                    id,
+                    item: { itemId: item.id },
+                    quantity: 1,
+                    unit: {
+                      unitId: item.displayUnit?.id ?? item.unitId,
+                      unitName: item.displayUnit?.name,
+                    },
+                    brand:
+                      item.brandId || item.brandName
+                        ? { brandId: item.brandId, brandName: item.brandName }
+                        : undefined,
+                    netWeight: item.netWeight
+                      ? {
+                          netWeight: item.netWeight,
+                          netWeightUnitId: item.displayUnit?.id,
+                        }
+                      : undefined,
+                  },
+                ],
               },
             },
             context: { localFirst: true },
@@ -360,8 +367,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             ) === 'reverted'
           ) {
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
             return;
           }
@@ -408,6 +415,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         format={format}
         onEditItem={onEditItem}
         onCreateVariant={onCreateVariant}
+        editActionLabel={editActionLabel}
       />
 
       <ActionButtons

@@ -3,10 +3,12 @@
     "addItemFailed": "No se pudo añadir el artículo",
     "updateItemFailed": "No se pudo actualizar el artículo",
     "removeItemFailed": "No se pudo quitar el artículo",
+    "discardExpiredFailed": "No se pudieron descartar los artículos caducados",
     "deleteItemFailed": "No se pudo eliminar el artículo",
     "fetchItemFailed": "No se pudieron obtener los detalles del artículo",
     "createHomeFailed": "No se pudo crear el hogar",
     "updateHomeFailed": "No se pudo actualizar el hogar",
+    "setDefaultHomeFailed": "No se pudo establecer el hogar predeterminado",
     "updateHomeNameFailed": "No se pudo actualizar el nombre del hogar",
     "deleteHomeFailed": "No se pudo eliminar el hogar",
     "fetchHomeFailed": "No se pudieron obtener los detalles del hogar",
@@ -31,6 +33,7 @@
     "verificationFailed": "Verificación fallida",
     "resetPasswordFailed": "No se pudo restablecer la contraseña",
     "networkError": "Error de red. Revisa tu conexión.",
+    "notAvailableOffline": "No disponible sin conexión",
     "somethingWentWrong": "Algo salió mal. Inténtalo de nuevo.",
     "unknownError": "Ocurrió un error desconocido",
     "boundary": {
@@ -65,7 +68,12 @@
     "itemNotFound": "Artículo no encontrado",
     "parentContextRequired": "Se requiere el contexto principal",
     "createStorageLocationFailed": "No se pudo crear la ubicación de almacenamiento",
-    "missingRequiredInfo": "Falta información obligatoria"
+    "missingRequiredInfo": "Falta información obligatoria",
+    "invalidInput": "Entrada no válida",
+    "invalidOperation": "Operación no válida",
+    "invalidUnitTitle": "Unidad no válida",
+    "addItemFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",
+    "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo."
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -76,6 +84,7 @@
     "homeUpdated": "Hogar actualizado",
     "homeNameUpdated": "Nombre del hogar actualizado",
     "homeDeleted": "Hogar eliminado",
+    "storageLocationDeleted": "Ubicación eliminada",
     "memberAdded": "Miembro añadido",
     "memberRemoved": "Miembro quitado",
     "memberRoleUpdated": "Rol del miembro actualizado",
@@ -92,7 +101,8 @@
     "profileUpdated": "Perfil actualizado",
     "photoUpdated": "Foto actualizada",
     "settingsSaved": "Ajustes guardados",
-    "expiredBatchesDiscarded": "Se han descartado los lotes caducados."
+    "expiredBatchesDiscarded": "Se han descartado los lotes caducados.",
+    "expiredItemDiscarded": "El artículo caducado se ha descartado."
   },
   "loading": {
     "authenticating": "Autenticando...",
@@ -164,7 +174,10 @@
     "create": "Crear",
     "notNow": "Ahora no",
     "clear": "Borrar",
-    "enableNow": "Activar ahora"
+    "enableNow": "Activar ahora",
+    "refresh": "Actualizar",
+    "updated": "Actualizado",
+    "validationError": "Error de validación"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -234,6 +247,11 @@
     "passwordsMustMatch": "Las contraseñas deben coincidir",
     "signupTitle": "Crear cuenta",
     "signupSubtitle": "Únete a Sous Chef hoy",
+    "checkInboxTitle": "Revisa tu bandeja de entrada",
+    "verificationSentSubtitle": "Enviamos un enlace de verificación a {{email}}. Ábrelo para activar tu cuenta y luego inicia sesión.",
+    "resendEmail": "Reenviar correo",
+    "resendVerificationSent": "Correo de verificación enviado.",
+    "alreadyVerified": "¿Ya verificaste?",
     "name": "Nombre",
     "namePlaceholder": "Introduce tu nombre",
     "creatingAccount": "Creando cuenta…",
@@ -359,6 +377,24 @@
     "percentHealthy": "% saludable",
     "cookedCount": "Cocinada {{count}}x",
     "markCooked": "Marcar como cocinada",
+    "nutritionTitle": "Nutrición",
+    "caloriesPerServingLabel": "Cal / ración",
+    "tipsTitle": "Consejos",
+    "tips": "Consejos",
+    "tipsPlaceholder": "Consejos del chef (opcional)",
+    "recipeTags": "Etiquetas",
+    "recipeTagsPlaceholder": "Separadas por comas",
+    "originalAuthor": "Autor original",
+    "originalAuthorPlaceholder": "Atribución (opcional)",
+    "forkedFrom": "Bifurcado de {{name}}",
+    "byAuthor": "Por {{author}}",
+    "hasVideo": "Vídeo disponible",
+    "draftBadge": "Borrador — no publicado",
+    "forkFailed": "No se pudo bifurcar la receta",
+    "publishFailed": "No se pudo actualizar la receta",
+    "forkA11y": "Bifurcar esta receta",
+    "publishA11y": "Publicar receta",
+    "unpublishA11y": "Despublicar receta",
     "vegetarian": "Vegetariana",
     "vegan": "Vegana",
     "glutenFree": "Sin gluten",
@@ -654,6 +690,71 @@
     "failedToSave": "No se pudieron guardar los ajustes",
     "failedToCreate": "No se pudo crear la lista",
     "failedToLeave": "No se pudo abandonar la lista",
+    "listStatusSection": "Estado de la lista",
+    "statusLabel": "Estado",
+    "completedOn": "Completada el",
+    "markComplete": "Marcar como completada",
+    "reactivateList": "Reactivar lista",
+    "archiveList": "Archivar lista",
+    "restoreList": "Restaurar lista",
+    "archiveListConfirmTitle": "Archivar lista",
+    "archiveListConfirmMessage": "¿Archivar esta lista? Se ocultará de tus listas activas. Puedes restaurarla cuando quieras.",
+    "failedToComplete": "No se pudo actualizar el estado de la lista",
+    "failedToReactivate": "No se pudo reactivar la lista",
+    "failedToArchive": "No se pudo archivar la lista",
+    "failedToSetDefault": "No se pudo establecer la lista predeterminada",
+    "recurringSection": "Recurrente",
+    "recurringPatternLabel": "Se repite",
+    "nextOccurrence": "Próxima vez",
+    "generateNextList": "Generar siguiente lista",
+    "stopRecurring": "Detener recurrencia",
+    "makeRecurring": "Hacer recurrente",
+    "selectPattern": "Repetir cada",
+    "patternDaily": "Diariamente",
+    "patternWeekly": "Semanalmente",
+    "patternBiweekly": "Cada 2 semanas",
+    "patternMonthly": "Mensualmente",
+    "patternCustom": "Personalizado",
+    "patternNone": "No recurrente",
+    "failedToSetRecurring": "No se pudo configurar la lista recurrente",
+    "failedToCancelRecurring": "No se pudo detener la recurrencia",
+    "failedToGenerateNext": "No se pudo generar la siguiente lista",
+    "templateSection": "Plantillas",
+    "basedOnTemplate": "Basada en",
+    "templateNameLabel": "Nombre de la plantilla",
+    "saveAsTemplate": "Guardar como plantilla",
+    "createFromTemplate": "Crear lista desde plantilla",
+    "failedToSaveTemplate": "No se pudo guardar como plantilla",
+    "failedToCreateFromTemplate": "No se pudo crear desde la plantilla",
+    "reminderSection": "Recordatorio",
+    "reminderDateLabel": "Fecha del recordatorio",
+    "setReminderPlaceholder": "Establece una fecha de recordatorio",
+    "clearReminder": "Quitar recordatorio",
+    "failedToSetReminder": "No se pudo establecer el recordatorio",
+    "failedToClearReminder": "No se pudo quitar el recordatorio",
+    "budgetSection": "Presupuesto",
+    "totalSpent": "Total gastado",
+    "estimatedTotalLabel": "Total estimado",
+    "budgetAmountLabel": "Límite de presupuesto",
+    "budgetPlaceholder": "Sin presupuesto",
+    "priceTrackingLabel": "Seguimiento de precios",
+    "priceTrackingDesc": "Sigue los precios y gastos de esta lista",
+    "failedToSetBudget": "No se pudo actualizar el presupuesto",
+    "failedToSetPriceTracking": "No se pudo actualizar el seguimiento de precios",
+    "lastPaidPrice": "Último pagado",
+    "averagePrice": "Precio medio",
+    "priceRange": "Rango de precios",
+    "customPermissions": "Permisos personalizados",
+    "permCanAddItems": "Puede añadir artículos",
+    "permCanEditItems": "Puede editar artículos",
+    "permCanRemoveItems": "Puede eliminar artículos",
+    "permCanMarkPurchased": "Puede marcar como comprado",
+    "listStatusActive": "Activa",
+    "listStatusCompleted": "Completada",
+    "listStatusArchived": "Archivada",
+    "listStatusPaused": "Pausada",
+    "listStatusCancelled": "Cancelada",
+    "listStatusTemplate": "Plantilla",
     "couldNotDetermineMembership": "No se pudo determinar tu pertenencia",
     "thisList": "esta lista",
     "listInformation": "Información de la lista",
@@ -735,6 +836,7 @@
     "mostRecentPurchase": "Compra más reciente",
     "noPurchaseHistory": "Sin historial de compras",
     "addedBy": "Añadido por",
+    "lastEditedBy": "Última edición por",
     "addedOn": "Añadido el",
     "lastUpdated": "Última actualización",
     "autoAdded": "Añadido automáticamente",
@@ -765,6 +867,9 @@
     "monthly": "Mensual",
     "startDate": "Fecha de inicio",
     "defaultServings": "Raciones por defecto",
+    "budgetAmount": "Presupuesto (opcional)",
+    "budgetPlaceholder": "Sin presupuesto",
+    "trackNutrition": "Seguir objetivos nutricionales",
     "shareWith": "Compartir con",
     "personal": "Personal",
     "orCreateFromTemplate": "O crear desde una plantilla",
@@ -1093,6 +1198,13 @@
     "resetFailed": "No se pudieron restablecer los ajustes. Inténtalo de nuevo.",
     "resetConfirm": "¿Seguro que quieres restablecer todos los ajustes de notificación a sus valores predeterminados?",
     "resetToDefaultsDesc": "Restablece todos los ajustes de notificación a sus valores predeterminados",
+    "testSection": "Prueba",
+    "sendTestNotification": "Enviar notificación de prueba",
+    "sendTestNotificationDesc": "Envíate una notificación de ejemplo para comprobar tu configuración",
+    "testSentTitle": "Prueba enviada",
+    "testSentMessage": "Una notificación de prueba está en camino.",
+    "testFailedTitle": "No se pudo enviar",
+    "testFailedMessage": "No se pudo enviar la notificación de prueba. Inténtalo de nuevo.",
     "notFound": "Notificación no encontrada",
     "titleFallback": "Notificación",
     "noMessageAvailable": "No hay mensaje disponible",
@@ -1598,6 +1710,11 @@
     "viewNutrition": "Ver nutrición",
     "hideNutrition": "Ocultar nutrición",
     "viewNutritionDesc": "Calorías, macros y progreso de objetivos",
+    "budgetSpent": "Gastado ${{spent}} de ${{budget}}",
+    "spentAmount": "Gastado ${{spent}}",
+    "trackNutrition": "Seguir objetivos nutricionales",
+    "nutritionTrackingOn": "Seguimiento nutricional activado",
+    "trackNutritionDesc": "Compara este plan con tu perfil dietético",
     "generatedLists": "Listas generadas",
     "dangerZone": "Zona de peligro",
     "deletePlanLabel": "Eliminar plan",
@@ -1689,6 +1806,7 @@
     "servings": "{{count}} raciones"
   },
   "templatePreview": {
+    "editTemplate": "Editar plantilla",
     "configuration": "Configuración",
     "planNameLabel": "Nombre del plan (opcional)",
     "startDateLabel": "Fecha de inicio",
@@ -1731,11 +1849,45 @@
     "editSelectedPantry": "Editar",
     "viewAnalytics": "Análisis"
   },
+  "mealTemplateBuilder": {
+    "createTitle": "Nueva plantilla",
+    "editTitle": "Editar plantilla",
+    "name": "Nombre de la plantilla",
+    "namePlaceholder": "p. ej. Cenas entre semana",
+    "category": "Categoría",
+    "defaultServings": "Raciones por defecto",
+    "description": "Descripción",
+    "descriptionPlaceholder": "Notas opcionales",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "Separadas por comas",
+    "mealsSection": "Comidas",
+    "noMeals": "Aún no hay comidas",
+    "mealName": "Comida",
+    "mealNamePlaceholder": "p. ej. Espaguetis a la boloñesa",
+    "mealType": "Tipo de comida",
+    "dayNumber": "Día",
+    "servings": "Raciones",
+    "addMeal": "Añadir comida",
+    "updateMeal": "Actualizar comida",
+    "itemSummary": "Día {{day}} · {{meal}} · {{servings}} raciones",
+    "nameRequiredTitle": "Nombre obligatorio",
+    "nameRequiredMessage": "Ponle un nombre a tu plantilla.",
+    "itemNameRequiredTitle": "Nombre de comida obligatorio",
+    "itemNameRequiredMessage": "Ponle un nombre a la comida.",
+    "failedToCreate": "No se pudo crear la plantilla",
+    "failedToSave": "No se pudo guardar la plantilla",
+    "failedToAddItem": "No se pudo añadir la comida",
+    "failedToSaveItem": "No se pudo guardar la comida",
+    "failedToRemoveItem": "No se pudo eliminar la comida"
+  },
   "mealPlanSelector": {
     "title": "Seleccionar plan de comidas",
     "emptyMessage": "No hay planes de comidas disponibles",
     "createNewPlan": "Crear",
     "createFromTemplate": "Plantilla",
+    "searchPlaceholder": "Buscar planes",
+    "filterActive": "Activos",
+    "createTemplate": "Nueva plantilla",
     "personalSubtitle": "Personal"
   },
   "pantryHeader": {
@@ -1905,6 +2057,13 @@
     "unit": "Unidad",
     "orTypeToSearch": "O escribe para buscar...",
     "typeToSearchUnits": "Escribe para buscar unidades..."
+  },
+  "purchaseAmountSheet": {
+    "title": "Marcar como comprado",
+    "quantity": "Cantidad",
+    "price": "Precio",
+    "currencySymbol": "$",
+    "pricePlaceholder": "0.00"
   },
   "addStorageLocation": {
     "createFailed": "No se pudo crear la ubicación",
@@ -2277,6 +2436,20 @@
     "labelAllowJoinCode": "Permitir Código de Acceso",
     "descriptionAllowJoinCode": "Permite a otros unirse a este hogar con un código",
     "labelJoinCode": "Código de Acceso",
+    "rotateJoinCodeTitle": "Regenerar código de acceso",
+    "rotateJoinCodeMessage": "Esto invalida el código actual y cualquier enlace compartido. Los miembros actuales permanecen. ¿Continuar?",
+    "rotateJoinCodeConfirm": "Regenerar",
+    "makeOwner": "Hacer propietario",
+    "transferOwnershipTitle": "Transferir propiedad",
+    "transferOwnershipMessage": "¿Hacer a {{name}} propietario de este hogar? Pasarás a ser miembro normal y solo esa persona podrá devolverlo.",
+    "transferOwnershipConfirm": "Transferir",
+    "permissions": "Permisos",
+    "permViewPantry": "Puede ver la despensa",
+    "permAddItems": "Puede añadir artículos",
+    "permRemoveItems": "Puede eliminar artículos",
+    "permEditPantry": "Puede editar la despensa",
+    "permInviteOthers": "Puede invitar a otros",
+    "permManageHome": "Puede gestionar el hogar",
     "sectionMembersInvites": "Miembros e Invitaciones",
     "youLabel": "Tú",
     "sectionStorage": "Almacenamiento",
@@ -2379,5 +2552,225 @@
     "title": "Resultados de búsqueda",
     "searching": "Buscando artículo...",
     "errorTitle": "Error de búsqueda"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Sugerencia enviada",
+    "sentBody": "Gracias: un administrador revisará tus cambios. La ficha permanecerá igual hasta que se aprueben.",
+    "duplicateTitle": "Ya lo sugeriste",
+    "duplicateBody": "Ya sugeriste exactamente estos cambios y siguen pendientes de revisión, así que conservamos el original.",
+    "pendingCapTitle": "5 sugerencias pendientes",
+    "pendingCapBody": "Tienes 5 sugerencias de edición pendientes de revisión, que es el límite. Cuando un administrador revise una, podrás enviar otra.",
+    "rateLimitedTitle": "Espera un momento",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "rejectedTitle": "No se pudo enviar",
+    "loadFailedTitle": "No se pudo cargar este artículo",
+    "loadFailedBody": "No pudimos cargar los datos actuales del artículo, y los necesitamos para saber qué cambiaste. Comprueba tu conexión e inténtalo de nuevo.",
+    "readOnlyTitle": "Este artículo no se puede editar",
+    "readOnlyBody": "No forma parte del catálogo público, así que aquí no hay nada que corregir. Solo los artículos del catálogo público se pueden editar o proponer para revisión.",
+    "noChangesTitle": "Nada que sugerir",
+    "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
+    "photosOnlyTitle": "Foto añadida",
+    "photosOnlyBody": "Tu foto ya está en el artículo. Cambia también un campo si hay algo más que corregir.",
+    "updatedTitle": "Artículo actualizado",
+    "updatedBody": "Tus cambios están publicados.",
+    "failedTitle": "No se pudo enviar",
+    "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
+    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador.",
+    "suggestAction": "Sugerir cambio",
+    "editAction": "Editar"
+  },
+  "reportItem": {
+    "footer": "¿Algún dato incorrecto en estos?",
+    "title": "Informar de datos incorrectos",
+    "pickPrompt": "¿Qué artículo tiene datos incorrectos?",
+    "reasonLabel": "¿Qué está mal?",
+    "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
+    "reasonTooShort": "Añade al menos {{count}} caracteres para que un administrador sepa qué revisar.",
+    "submit": "Enviar informe",
+    "sentTitle": "Informe enviado",
+    "sentBody": "Gracias: un administrador revisará este artículo.",
+    "failedTitle": "No se pudo enviar",
+    "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
+    "alreadyReportedTitle": "Ya lo informaste",
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
+    "rateLimitedTitle": "Espera un momento",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "rejectedTitle": "No se pudo enviar"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Añadir artículo nuevo",
+        "subtitle": "Crea un artículo nuevo con la información básica",
+        "subtitleScanned": "Añade este artículo a la base de datos para futuros escaneos",
+        "button": "Añadir artículo"
+      },
+      "edit": {
+        "title": "Sugerir cambio",
+        "subtitle": "Un administrador revisa tus cambios — la ficha permanece igual hasta entonces",
+        "button": "Enviar sugerencia"
+      },
+      "directEdit": {
+        "title": "Editar artículo",
+        "subtitle": "Tus cambios se publican de inmediato",
+        "button": "Guardar cambios"
+      },
+      "variant": {
+        "title": "Crear versión nueva",
+        "subtitle": "Crea una versión nueva de este artículo para tu región",
+        "button": "Crear versión"
+      }
+    },
+    "tabs": {
+      "basics": "Básicos",
+      "product": "Producto",
+      "storage": "Almacenamiento",
+      "inventory": "Inventario"
+    },
+    "moreOptions": "Más opciones",
+    "scanUpcA11y": "Escanear UPC con la cámara",
+    "fields": {
+      "name": {
+        "label": "Nombre del artículo",
+        "placeholder": "Introduce el nombre del artículo"
+      },
+      "description": {
+        "label": "Descripción",
+        "placeholder": "Introduce la descripción del artículo (opcional)"
+      },
+      "vendor": {
+        "label": "Marca/Proveedor",
+        "placeholder": "Introduce el nombre de la marca o del proveedor"
+      },
+      "type": {
+        "label": "Tipo de artículo"
+      },
+      "upc": {
+        "label": "UPC/Código de barras",
+        "placeholder": "Introduce el UPC/código de barras (opcional)"
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "Introduce el SKU (opcional)"
+      },
+      "store": {
+        "label": "Tienda (para el SKU)",
+        "placeholder": "Busca una tienda"
+      },
+      "storageState": {
+        "label": "Estado de almacenamiento"
+      },
+      "shelfLife": {
+        "label": "Vida útil (días)",
+        "placeholder": "Introduce la vida útil en días"
+      },
+      "shelfLifeOpened": {
+        "label": "Vida útil una vez abierto (días)",
+        "placeholder": "Introduce la vida útil una vez abierto"
+      },
+      "baseDimension": {
+        "label": "Dimensión base"
+      },
+      "consumeIncrement": {
+        "label": "Incremento de consumo predeterminado",
+        "placeholder": "p. ej., 1"
+      },
+      "consumeUnit": {
+        "label": "Unidad de consumo predeterminada",
+        "placeholder": "cdta., taza, etc."
+      },
+      "tags": {
+        "label": "Etiquetas",
+        "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
+      },
+      "foodStamp": {
+        "label": "Apto para cupones de alimentos"
+      },
+      "fsa": {
+        "label": "Apto para FSA"
+      },
+      "editNote": {
+        "label": "¿Qué hay que corregir?",
+        "placeholder": "Indica al revisor qué está mal (p. ej., el peso neto de la etiqueta es incorrecto)"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Bebida",
+    "FOOD": "Alimento",
+    "FOUNDATION": "Ingredientes básicos",
+    "HOUSEHOLD": "Hogar",
+    "OTHER": "Otro",
+    "PERSONAL_CARE": "Cuidado personal",
+    "PET": "Para mascotas",
+    "PRODUCT": "Productos no alimentarios",
+    "SUPPLEMENT": "Suplementos"
+  },
+  "storageState": {
+    "AMBIENT": "Ambiente",
+    "FROZEN": "Congelado",
+    "NONE": "Ninguno",
+    "REFRIGERATED": "Refrigerado"
+  },
+  "baseDimension": {
+    "none": "Ninguna",
+    "VOLUME": "Volumen",
+    "MASS": "Masa",
+    "COUNT": "Recuento"
+  },
+  "netWeightEntry": {
+    "sectionTitle": "Pesos netos",
+    "weightLabel": "Peso",
+    "weightPlaceholder": "p. ej., 3.4",
+    "unitLabel": "Unidad",
+    "unitPlaceholder": "p. ej., oz, g",
+    "addButton": "Añadir peso neto"
+  },
+  "itemValidation": {
+    "nameRequired": "El nombre del artículo es obligatorio",
+    "nameEmpty": "El nombre del artículo no puede estar vacío",
+    "nameMax": "El nombre del artículo no puede superar los {{count}} caracteres",
+    "nameChars": "El nombre del artículo solo puede contener letras, números, espacios y signos de puntuación comunes",
+    "descriptionMax": "La descripción no puede superar los {{count}} caracteres",
+    "upcDigits": "El UPC solo puede contener números",
+    "upcMin": "El UPC debe tener al menos {{count}} dígitos",
+    "upcMax": "El UPC no puede superar los {{count}} dígitos",
+    "skuMax": "El SKU no puede superar los {{count}} caracteres",
+    "urlInvalid": "Introduce una URL válida",
+    "wholeNumber": "Debe ser un número entero",
+    "shelfLifeMin": "La vida útil debe ser de al menos 1 día",
+    "shelfLifeMax": "La vida útil no puede superar los {{count}} años",
+    "shelfLifeOpenedMin": "La vida útil una vez abierto debe ser de al menos 1 día",
+    "shelfLifeOpenedMax": "La vida útil una vez abierto no puede superar los {{count}} años",
+    "displayPricePerUnitMax": "El precio por unidad mostrado no puede superar los {{count}} caracteres",
+    "unitQtyMin": "La cantidad por unidad debe ser mayor que 0",
+    "defaultUnitMax": "El símbolo de la unidad no puede superar los {{count}} caracteres",
+    "vendorMax": "El nombre del proveedor no puede superar los {{count}} caracteres",
+    "tagMax": "Cada etiqueta no puede superar los {{count}} caracteres",
+    "tagsMax": "No puedes tener más de {{count}} etiquetas",
+    "editReasonMax": "El motivo del cambio no puede superar los {{count}} caracteres",
+    "editReasonRequired": "Dinos qué hay que corregir",
+    "editReasonMin": "Añade un poco más de detalle (al menos {{count}} caracteres)",
+    "netWeightMin": "El peso neto debe ser mayor que 0",
+    "netWeightValueRequired": "El valor es obligatorio",
+    "netWeightUnitRequired": "La unidad es obligatoria",
+    "greaterThanZero": "Debe ser mayor que 0"
+  },
+  "imageUpload": {
+    "offlineTitle": "Sin conexión a internet",
+    "offlineBody": "Para subir imágenes se necesita conexión a internet. Inténtalo de nuevo cuando vuelvas a estar en línea.",
+    "offlineError": "Estás sin conexión. Para subir imágenes se necesita conexión a internet.",
+    "failedTitle": "Error al subir",
+    "failedBody": "Algo salió mal al subir tu imagen. Inténtalo de nuevo.",
+    "invalidTypeBody": "Selecciona un archivo de imagen JPEG, PNG o WebP.",
+    "profileTooLargeBody": "La imagen es demasiado grande. Las imágenes de perfil deben pesar menos de {{size}} MB.",
+    "updateFailedTitle": "Error al actualizar",
+    "avatarUpdateFailedBody": "No se pudo actualizar el avatar del perfil",
+    "coverUpdateFailedBody": "No se pudo actualizar la portada del perfil",
+    "itemImageUpdateFailedBody": "No se pudo actualizar la imagen del artículo",
+    "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
+    "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro."
   }
 }

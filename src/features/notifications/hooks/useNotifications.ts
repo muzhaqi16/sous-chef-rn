@@ -10,13 +10,15 @@ import {
 import {
   NotificationType,
   NotificationCategory,
-  NotificationEventSubtype,
+  NotificationSubtype,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
 import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
+import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
+import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
 import {
   getNotificationAction,
   getNotificationDisplayMessage,
@@ -133,6 +135,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       payload?: JsonValue | null;
       sentAt?: string;
       expiresAt?: string | null;
+      sourceId?: string | null;
+      sourceType?: string | null;
+      actionUrl?: string | null;
+      readAt?: string | null;
     },
     category: NotificationCategory,
     sourceUserId?: string,
@@ -170,6 +176,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       sentAt: notification.sentAt || new Date().toISOString(),
       expiresAt: notification.expiresAt,
       isRead: false,
+      sourceId: notification.sourceId,
+      sourceType: notification.sourceType,
+      actionUrl: notification.actionUrl,
+      readAt: notification.readAt,
       requiresAction,
       actionType,
       actionData: payload,
@@ -187,6 +197,10 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         id: processedNotification.id,
         title: processedNotification.title,
         body: getNotificationDisplayMessage(processedNotification, t),
+        data: {
+          category: processedNotification.category,
+          notificationId: processedNotification.id,
+        },
       });
     }
   };
@@ -226,7 +240,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         });
       if (!rawNotification) return;
 
-      if (event.subtype === NotificationEventSubtype.Created) {
+      if (event.subtype === NotificationSubtype.Created) {
         // New notification (RECEIVED equivalent)
         const sp = rawNotification.priority;
         const mappedPriority =
@@ -250,10 +264,14 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
             payload: rawNotification.payload,
             sentAt: rawNotification.sentAt,
             expiresAt: rawNotification.expiresAt,
+            sourceId: rawNotification.sourceId,
+            sourceType: rawNotification.sourceType,
+            actionUrl: rawNotification.actionUrl,
+            readAt: rawNotification.readAt,
           },
           rawNotification.category ?? NotificationCategory.System,
         );
-      } else if (event.subtype === NotificationEventSubtype.Updated) {
+      } else if (event.subtype === NotificationSubtype.Updated) {
         // Status changes — read, dismissed, expired
         const status = rawNotification.status;
         if (status === 'READ' || status === 'CLICKED') {
@@ -274,6 +292,18 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       appStateRef.current = nextAppState;
     });
     return () => subscription.remove();
+  }, []);
+
+  // Route taps on OS-auto-displayed pushes (background tap + cold-launch): FCM
+  // on Android, APNs on iOS. Each is platform-guarded, so both are safe to call.
+  // Taps on data-only pushes we drew ourselves route through Notifee's handlers.
+  useEffect(() => {
+    const unsubscribeFcm = registerFcmTapHandlers();
+    const unsubscribeApns = registerIosPushTapHandlers();
+    return () => {
+      unsubscribeFcm();
+      unsubscribeApns();
+    };
   }, []);
 
   // Cleanup on logout

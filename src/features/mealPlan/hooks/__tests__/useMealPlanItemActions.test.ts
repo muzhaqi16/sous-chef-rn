@@ -29,7 +29,7 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
       notes: null,
       customMealName: null,
       calories: null,
-      usedPantryItems: null,
+      usedPantryItems: [],
       mealType: 'DINNER',
       date: '2025-06-15',
       recipe: {
@@ -99,7 +99,7 @@ describe('useMealPlanItemActions', () => {
       await act(async () => {
         created = await result.current.createItem({
           mealPlanId: 'plan-1',
-          recipeId: 'r-1',
+          meal: { recipeId: 'r-1' },
           mealType: MealType.Dinner,
           date: '2025-06-15',
         } satisfies CreateMealPlanItemInput);
@@ -134,7 +134,7 @@ describe('useMealPlanItemActions', () => {
       await act(async () => {
         created = await result.current.createItem({
           mealPlanId: 'plan-1',
-          recipeId: 'r-1',
+          meal: { recipeId: 'r-1' },
           mealType: MealType.Dinner,
           date: '2025-06-15',
         } satisfies CreateMealPlanItemInput);

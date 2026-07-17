@@ -14,9 +14,11 @@ query SearchRecipes(
     query: $query
     first: $first
     after: $after
-    diets: $diets
-    intolerances: $intolerances
-    maxReadyTime: $maxReadyTime
+    filters: {
+      diets: $diets
+      intolerances: $intolerances
+      maxReadyTime: $maxReadyTime
+    }
   ) {
     edges {
       node {
@@ -43,23 +45,6 @@ query SearchRecipes(
   }
 }
 
-query SuggestedRecipes($first: Int, $after: String) {
-  recipeSuggestions(first: $first, after: $after) {
-    edges {
-      node {
-        id
-        ...BasicRecipeFragment
-      }
-      cursor
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query MyRecipes(
   $cursor: String
   $first: Int = 25
@@ -69,8 +54,7 @@ query MyRecipes(
   recipes(
     after: $cursor
     first: $first
-    category: $category
-    difficulty: $difficulty
+    filters: { category: $category, difficulty: $difficulty }
   ) {
     edges {
       node {
@@ -183,18 +167,25 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
 
 mutation UpsertExternalRecipe($input: CreateRecipeInput!) {
   upsertExternalRecipe(input: $input) {
-    recipe {
-      id
-      name
-      imageUrl
-      externalSource
-      externalId
-      servings
-      prepTimeMinutes
-      cookTimeMinutes
-      totalTimeMinutes
+    __typename
+    ... on UpsertExternalRecipePayload {
+      recipe {
+        id
+        name
+        imageUrl
+        externalSource
+        externalId
+        servings
+        prepTimeMinutes
+        cookTimeMinutes
+        totalTimeMinutes
+      }
+      created
     }
-    created
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
@@ -222,15 +213,42 @@ mutation UpdateRecipe($input: UpdateRecipeInput!) {
   }
 }
 
+mutation ForkRecipe($input: ForkRecipeInput!) {
+  forkRecipe(input: $input) {
+    __typename
+    ... on ForkRecipePayload {
+      recipe {
+        id
+        ...BasicRecipeFragment
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
 mutation UpdateRecipeIngredients($input: UpdateRecipeIngredientsInput!) {
   updateRecipeIngredients(input: $input) {
     __typename
     ... on UpdateRecipeIngredientsPayload {
       recipe {
         id
-        ingredients {
-          id
-          ...RecipeIngredientFragment
+        ingredientsConnection {
+          edges {
+            node {
+              id
+              ...RecipeIngredientFragment
+            }
+          }
         }
       }
     }
@@ -252,7 +270,9 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
   deleteRecipe(input: $input) {
     __typename
     ... on DeleteRecipePayload {
-      success
+      recipe {
+        id
+      }
     }
     ... on Error {
       code
@@ -265,10 +285,10 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
   }
 }
 
-mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
-  favoriteRecipe(input: $input) {
+mutation AddRecipeToFavorites($input: AddRecipeToFavoritesInput!) {
+  addRecipeToFavorites(input: $input) {
     __typename
-    ... on FavoriteRecipePayload {
+    ... on AddRecipeToFavoritesPayload {
       savedRecipe {
         id
         recipeId
@@ -301,10 +321,10 @@ mutation FavoriteRecipe($input: FavoriteRecipeInput!) {
   }
 }
 
-mutation UnfavoriteRecipe($input: UnfavoriteRecipeInput!) {
-  unfavoriteRecipe(input: $input) {
+mutation RemoveRecipeFromFavorites($input: RemoveRecipeFromFavoritesInput!) {
+  removeRecipeFromFavorites(input: $input) {
     __typename
-    ... on UnfavoriteRecipePayload {
+    ... on RemoveRecipeFromFavoritesPayload {
       savedRecipe {
         id
       }
@@ -324,7 +344,8 @@ mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
   deleteRecipeFolder(input: $input) {
     __typename
     ... on DeleteRecipeFolderPayload {
-      success
+      folder
+      movedCount
     }
     ... on Error {
       code
@@ -372,43 +393,50 @@ mutation CreateShoppingListItemsFromRecipe(
   $input: CreateShoppingListItemsFromRecipeInput!
 ) {
   createShoppingListItemsFromRecipe(input: $input) {
-    addedItems {
-      id
-      itemName
-      quantity
-      unit {
+    __typename
+    ... on CreateShoppingListItemsFromRecipePayload {
+      addedItems {
+        id
+        itemName
+        quantity
+        unit {
+          id
+          name
+          symbol
+        }
+        storeInfo {
+          aisle
+        }
+        purchaseInfo {
+          isPurchased
+        }
+      }
+      updatedItems {
+        id
+        itemName
+        quantity
+        unit {
+          id
+          name
+          symbol
+        }
+        purchaseInfo {
+          isPurchased
+        }
+      }
+      skippedItems {
         id
         name
-        symbol
+        quantity
       }
-      storeInfo {
-        aisle
-      }
-      purchaseInfo {
-        isPurchased
-      }
+      totalAdded
+      totalUpdated
+      totalSkipped
     }
-    updatedItems {
-      id
-      itemName
-      quantity
-      unit {
-        id
-        name
-        symbol
-      }
-      purchaseInfo {
-        isPurchased
-      }
+    ... on Error {
+      code
+      message
     }
-    skippedItems {
-      id
-      name
-      quantity
-    }
-    totalAdded
-    totalUpdated
-    totalSkipped
   }
 }
 
@@ -418,22 +446,20 @@ mutation CreateShoppingListItemFromRecipeIngredient(
   createShoppingListItemFromRecipeIngredient(input: $input) {
     __typename
     ... on CreateShoppingListItemFromRecipeIngredientPayload {
-      result {
-        shoppingListItem {
+      shoppingListItem {
+        id
+        itemName
+        quantity
+        unit {
           id
-          itemName
-          quantity
-          unit {
-            id
-            name
-            symbol
-          }
+          name
+          symbol
         }
-        previousQuantity
-        quantityAdded
-        wasUpdated
-        unitConversionApplied
       }
+      previousQuantity
+      quantityAdded
+      wasUpdated
+      unitConversionApplied
     }
     ... on Error {
       code
@@ -490,14 +516,20 @@ mutation ConfirmRecipeConsumption(
   $input: ConfirmRecipeConsumptionInput!
 ) {
   confirmRecipeConsumption(input: $input) {
-    success
-    totalConsumed
-    totalFailed
-    cookingLog {
-      id
-      servingsMade
-      notes
-      cookedAt
+    __typename
+    ... on ConfirmRecipeConsumptionPayload {
+      totalConsumed
+      totalFailed
+      cookingLog {
+        id
+        servingsMade
+        notes
+        cookedAt
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }

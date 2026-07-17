@@ -1,11 +1,20 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
 
 const mockGoBack = jest.fn();
 const mockNavigateToLogin = jest.fn();
+const mockRegister = jest.fn();
+
+jest.mock('#/services/authService', () => ({
+  authService: {
+    register: (...args: unknown[]) => mockRegister(...args),
+    handleAuthError: jest.fn(),
+  },
+}));
 
 jest.mock('#hooks/navigation/useAuthNavigation', () => ({
   useAuthNavigation: () => ({
@@ -98,8 +107,14 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
 }));
 
 jest.mock('#/utils/validation/auth', () => ({
-  getSignUpValidationSchema: () => ({}),
+  // A permissive real schema so `handleSubmit` passes validation and invokes
+  // `onSubmit` (the default `() => ({})` isn't a yup schema and blocks submit).
+  getSignUpValidationSchema: () => require('yup').object({}),
 }));
+
+beforeEach(() => {
+  mockRegister.mockReset();
+});
 
 describe('SignUpScreen', () => {
   beforeEach(() => {
@@ -107,48 +122,78 @@ describe('SignUpScreen', () => {
   });
 
   it('renders the signup screen container', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByTestId('signup-screen')).toBeTruthy();
   });
 
   it('renders the create account title', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByText('Create account')).toBeTruthy();
   });
 
   it('renders the subtitle', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByText('Join Sous Chef today')).toBeTruthy();
   });
 
   it('renders the Sign Up submit button', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByTestId('signup-submit-button')).toBeTruthy();
     expect(screen.getByText('Sign Up')).toBeTruthy();
   });
 
   it('renders the back button', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByTestId('back-button')).toBeTruthy();
   });
 
   it('calls goBack when back button is pressed', async () => {
     const user = userEvent.setup();
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     await user.press(screen.getByTestId('back-button'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
   it('renders sign in footer link', () => {
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     expect(screen.getByText('Already have an account?')).toBeTruthy();
     expect(screen.getByText('Sign In')).toBeTruthy();
   });
 
   it('navigates to login when footer link is pressed', async () => {
     const user = userEvent.setup();
-    render(<SignUpScreen />);
+    renderWithApollo(<SignUpScreen />);
     await user.press(screen.getByTestId('signup-login-link'));
     expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the inline "check your inbox" confirmation on successful registration', async () => {
+    mockRegister.mockResolvedValue(true);
+    const user = userEvent.setup();
+    renderWithApollo(<SignUpScreen />);
+
+    await user.press(screen.getByTestId('signup-submit-button'));
+
+    // Registration succeeded → the form is replaced by the verification-sent
+    // confirmation (no navigation into the app, no auth).
+    await waitFor(() => {
+      expect(screen.getByTestId('signup-verification-sent')).toBeTruthy();
+    });
+    expect(screen.getByText('Check your inbox')).toBeTruthy();
+    // Resend is available on the confirmation (spec: verification hand-off).
+    expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
+    expect(mockRegister).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays on the form (no confirmation) when registration is rejected', async () => {
+    mockRegister.mockResolvedValue(false);
+    const user = userEvent.setup();
+    renderWithApollo(<SignUpScreen />);
+
+    await user.press(screen.getByTestId('signup-submit-button'));
+
+    await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+    expect(screen.queryByTestId('signup-verification-sent')).toBeNull();
+    expect(screen.getByTestId('signup-screen')).toBeTruthy();
   });
 });

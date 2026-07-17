@@ -1,8 +1,8 @@
 import { useMutation } from '@apollo/client/react';
 import { useTranslation } from 'react-i18next';
 import {
-  DismissSuggestionDocument,
-  UndismissSuggestionDocument,
+  MarkSuggestionDismissedDocument,
+  MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
@@ -25,14 +25,25 @@ export function useSuggestionDismissal(
   refetch: () => void,
 ) {
   const { t } = useTranslation();
-  const [dismiss] = useMutation(DismissSuggestionDocument);
-  const [undismiss] = useMutation(UndismissSuggestionDocument);
+  const [dismiss] = useMutation(MarkSuggestionDismissedDocument);
+  const [undismiss] = useMutation(MarkSuggestionActiveDocument);
 
   const undo = (itemId: string) => {
     undismiss({ variables: { input: { itemId, surface } } })
-      // No optimistic re-add — the item comes back via the resync refetch
-      // (and only if it still qualifies as a candidate).
-      .then(() => refetch())
+      .then(result => {
+        // Union error variants resolve in `.then` (not `.catch`) — mirror
+        // dismissSuggestion and only act on the success payload. On success the
+        // item comes back via the resync refetch (if it still qualifies). A
+        // rejected undo surfaces an error instead of silently doing nothing.
+        if (
+          result.data?.markSuggestionActive?.__typename ===
+          'MarkSuggestionActivePayload'
+        ) {
+          refetch();
+        } else {
+          toastService.error(t('addItemSheet.undoFailed'));
+        }
+      })
       .catch(() => toastService.error(t('addItemSheet.undoFailed')));
   };
 
@@ -43,12 +54,12 @@ export function useSuggestionDismissal(
 
     dismiss({ variables: { input: { itemId, surface } } })
       .then(result => {
-        const payload = result.data?.dismissSuggestion;
+        const payload = result.data?.markSuggestionDismissed;
         // Union error variants resolve in `.then` (not `.catch`) — restore on
         // anything that isn't the success payload. Success needs no refetch: the
         // caller's optimistic removal already hid it, and the server-side
         // dismissal keeps it hidden on the next cache-and-network load.
-        if (payload?.__typename !== 'DismissSuggestionPayload') {
+        if (payload?.__typename !== 'MarkSuggestionDismissedPayload') {
           refetch();
           toastService.error(t('addItemSheet.dismissFailed'));
         }

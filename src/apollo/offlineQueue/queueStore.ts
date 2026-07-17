@@ -1,10 +1,20 @@
 import type { DocumentNode } from 'graphql';
 import { storage } from '#storage/mmkv';
-import { QueuedMutation, QueueStats, QueueStatus } from './types';
+import {
+  QueueCapacityError,
+  QueuedMutation,
+  QueueStats,
+  QueueStatus,
+} from './types';
 import { logger } from '#/utils/environment';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
+
+// Hard cap on total queued mutations across all users. When reached, terminal
+// (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
+// rejects the enqueue rather than dropping a PENDING op mid dependency chain.
+const MAX_QUEUE_SIZE = 100;
 
 /**
  * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
@@ -12,6 +22,16 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
  */
 type SerializedQueuedMutation = Omit<QueuedMutation, 'mutation'> & {
   mutation: string;
+};
+
+/**
+ * Add `value` to `ids` when it is a non-empty string. Queued variables are
+ * duck-typed (`OperationVariables` spans every queued operation and rides a
+ * persistence boundary), so client-id extraction guards at runtime instead of
+ * trusting a compile-time shape.
+ */
+const addIfClientId = (ids: Set<string>, value: unknown): void => {
+  if (typeof value === 'string' && value) ids.add(value);
 };
 
 /**
@@ -186,11 +206,25 @@ export class QueueStore {
       }
     }
 
-    // Regular add logic for non-move mutations or first move
-    // Check queue size limit
-    if (queue.length >= 100) {
-      logger.warn('Queue size limit reached, removing oldest mutation');
-      queue.shift(); // Remove oldest
+    // Regular add logic for non-move mutations or first move.
+    // Enforce the queue cap without ever silently dropping a PENDING op:
+    // evict the oldest terminal (SUCCESS/FAILED) entry to make room — those are
+    // done and safe to drop. Dropping a PENDING op instead would break a
+    // create→update dependency chain (the update replays against a create that
+    // never happened). If nothing terminal exists, the queue is full of
+    // un-synced work: reject the enqueue honestly.
+    if (queue.length >= MAX_QUEUE_SIZE) {
+      const evictIndex = queue.findIndex(
+        m =>
+          m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED,
+      );
+      if (evictIndex === -1) {
+        logger.warn(
+          'Queue at capacity with no terminal entries — rejecting enqueue',
+        );
+        throw new QueueCapacityError();
+      }
+      queue.splice(evictIndex, 1); // Remove the oldest terminal entry
     }
 
     queue.push(mutation);
@@ -264,13 +298,42 @@ export class QueueStore {
   }
 
   /**
+   * Reset stranded PROCESSING entries back to PENDING so the next drain
+   * replays them. Drains are serialized in-process by queueManager's
+   * isProcessing flag, so any PROCESSING entry observed at drain start is
+   * debris from a process killed mid-replay — without this reset it would
+   * never be replayed, never marked failed, and (being non-PENDING) lose
+   * its pending-client-id merge protection. Replaying a possibly-committed
+   * op is safe: replays are idempotent by design (client-minted PKs /
+   * input.idempotencyKey). Returns the number of entries reset.
+   */
+  resetProcessingToPending(userId: string): number {
+    const queue = this.loadQueue();
+    let reset = 0;
+    const updated = queue.map(m => {
+      if (m.userId !== userId || m.status !== QueueStatus.PROCESSING) return m;
+      reset++;
+      return { ...m, status: QueueStatus.PENDING, updatedAt: Date.now() };
+    });
+
+    if (reset > 0) {
+      this.saveQueue(updated);
+      logger.info(
+        `♻️ Queue: Reset ${reset} stranded PROCESSING mutation(s) to PENDING`,
+      );
+    }
+    return reset;
+  }
+
+  /**
    * Client-generated entity ids that still have a PENDING mutation in the
    * current user's queue. The cache merge uses this to avoid dropping an
    * un-replayed optimistic item when a first-page background refetch lands
    * before the queue replays (a server-deleted item, by contrast, has no
-   * pending op and is correctly dropped). Reads the id from the queued input
-   * (`input.id`, else `input.itemId`, else top-level `id`). Returns an empty set
-   * when no user is set or the queue is empty.
+   * pending op and is correctly dropped). Reads ids from every queued input
+   * shape: `input.id`, else `input.itemId`, else top-level `id`, plus every
+   * `input.items[].id` of batch-shaped creates (`AddItemsToShoppingListInput`).
+   * Returns an empty set when no user is set or the queue is empty.
    */
   getPendingClientIds(): Set<string> {
     if (this.pendingClientIds) return this.pendingClientIds;
@@ -278,13 +341,18 @@ export class QueueStore {
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      for (const mutation of this.getPendingMutationsForUser(userId)) {
-        const variables = mutation.variables as
-          | { id?: unknown; input?: { id?: unknown; itemId?: unknown } }
-          | undefined;
-        const candidate =
-          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id;
-        if (typeof candidate === 'string' && candidate) ids.add(candidate);
+      for (const { variables } of this.getPendingMutationsForUser(userId)) {
+        addIfClientId(
+          ids,
+          variables?.input?.id ?? variables?.input?.itemId ?? variables?.id,
+        );
+        // Batch-shaped creates (AddItemsToShoppingListInput) mint one client
+        // id per item. Array.isArray guards persisted entries from older
+        // builds whose shape may not match what the app enqueues today.
+        const items = variables?.input?.items;
+        if (Array.isArray(items)) {
+          for (const item of items) addIfClientId(ids, item?.id);
+        }
       }
     }
     this.pendingClientIds = ids;

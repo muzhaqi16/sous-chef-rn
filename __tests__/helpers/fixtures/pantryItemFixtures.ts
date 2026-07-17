@@ -141,7 +141,6 @@ export function pantryItemData(
         __typename: 'PantryItemUsageConnection',
         edges: [],
       },
-      batches: [],
     },
   };
   return data;

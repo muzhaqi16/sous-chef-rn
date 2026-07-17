@@ -19,6 +19,13 @@ type AnimatedCheckboxProps = {
   size?: number;
   disabled?: boolean;
   testID?: string;
+  /**
+   * Show the toggled state immediately on press (default). Set false when the
+   * press only *starts* a confirmed/deferred action (e.g. opens a sheet) so the
+   * box stays on the real `checked` value until the change actually lands —
+   * otherwise it gets stuck visually checked if the user cancels.
+   */
+  optimistic?: boolean;
 };
 
 export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
@@ -28,6 +35,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   size = 24,
   disabled = false,
   testID,
+  optimistic = true,
 }) => {
   const animatedTheme = useAnimatedTheme();
   const isPressed = useSharedValue(false);
@@ -101,9 +109,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
   const handlePress = () => {
     if (disabled) return;
 
-    // Immediately show opposite state visually
-    const newState = !checked;
-    setPendingChecked(newState);
+    // Immediately show the opposite state — unless the press only starts a
+    // deferred/confirmed action, in which case the box must stay on the real
+    // `checked` value (it would otherwise stick checked if the user cancels).
+    if (optimistic) {
+      setPendingChecked(!checked);
+    }
 
     // Fire onPress - caller handles timing of actual state change
     onPress?.();

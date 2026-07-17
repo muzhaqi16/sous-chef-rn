@@ -30,6 +30,7 @@ import {
 import { useMealTemplateActions } from '../useMealTemplateActions';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { useStore } from '#store';
 
 describe('useMealTemplateActions', () => {
   beforeEach(() => {
@@ -191,5 +192,92 @@ describe('useMealTemplateActions', () => {
       mealTemplate: { id: 'dup-1' },
     });
     expect(toastService.success).toHaveBeenCalledWith('Template duplicated!');
+  });
+
+  describe('when the API is unavailable', () => {
+    afterEach(() => {
+      useStore.setState({ apiReachable: true, isOnline: true });
+    });
+
+    it('exposes isApiUnavailable for the online-only ops', () => {
+      useStore.setState({ apiReachable: false });
+      const { result } = renderHookWithApollo(() => useMealTemplateActions());
+      expect(result.current.isApiUnavailable).toBe(true);
+    });
+
+    it('createPlanFromTemplate toasts, returns null, and skips the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const create = recordMock(CreateMealPlanFromTemplateDocument, {
+        data: {
+          createMealPlanFromTemplate: {
+            __typename: 'CreateMealPlanPayload',
+            mealPlan: { __typename: 'MealPlan', id: 'plan-1' },
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [create.mock],
+      });
+
+      const response = await result.current.createPlanFromTemplate({
+        templateId: 'template-1',
+        startDate: '2025-01-01',
+      });
+
+      expect(response).toBeNull();
+      expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+      expect(create.fired).toHaveLength(0);
+    });
+
+    it('createTemplateFromPlan toasts, returns null, and skips the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const create = recordMock(CreateTemplateFromMealPlanDocument, {
+        data: {
+          createTemplateFromMealPlan: {
+            __typename: 'CreateTemplateFromMealPlanPayload',
+            mealTemplate: { __typename: 'MealTemplate', id: 'tmpl-1' },
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [create.mock],
+      });
+
+      const response = await result.current.createTemplateFromPlan({
+        mealPlanId: 'plan-1',
+        name: 'My Template',
+      });
+
+      expect(response).toBeNull();
+      expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+      expect(create.fired).toHaveLength(0);
+    });
+
+    it('duplicateTemplate toasts, returns null, and skips the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const dup = recordMock(DuplicateTemplateDocument, {
+        data: {
+          duplicateTemplate: {
+            __typename: 'DuplicateTemplatePayload',
+            mealTemplate: { __typename: 'MealTemplate', id: 'dup-1' },
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useMealTemplateActions(), {
+        operationMocks: [dup.mock],
+      });
+
+      const response = await result.current.duplicateTemplate(
+        'template-1',
+        'Copy',
+      );
+
+      expect(response).toBeNull();
+      expect(toastService.error).toHaveBeenCalledWith('Not available offline');
+      expect(dup.fired).toHaveLength(0);
+    });
   });
 });

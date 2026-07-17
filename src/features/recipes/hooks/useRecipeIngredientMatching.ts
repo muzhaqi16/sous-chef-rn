@@ -19,6 +19,8 @@ import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { logger } from '#/utils/environment';
 
@@ -193,17 +195,45 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return;
     }
 
+    // Mint the cooking-log id client-side and queue + replay (`localFirst`) when
+    // the API is unreachable. The shared id means a re-synced consumption
+    // converges on the same cooking log instead of creating a duplicate and
+    // re-consuming the pantry.
     const result = await executeMutation(
       () =>
         confirmMutation({
-          variables: { input: { recipeId, pantryId, consumptions } },
+          variables: {
+            input: { id: generateEntityId(), recipeId, pantryId, consumptions },
+          },
+          context: { localFirst: true },
         }),
       'Confirm recipe consumption error:',
     );
     if (!result) return;
 
-    const data = result.data?.confirmRecipeConsumption;
-    if (data?.success) {
+    // A resolved refusal (error union member / transport error) under
+    // errorPolicy:'all' RESOLVES rather than throws — bail before the success
+    // toast / sheet-close. 'created' and 'queued' both succeed (a queued
+    // consumption replays later).
+    if (
+      classifyCreateResult(
+        result,
+        'confirmRecipeConsumption',
+        'ConfirmRecipeConsumptionPayload',
+      ) === 'rejected'
+    ) {
+      toastService.error(t('recipes.markCookedFailed'));
+      return;
+    }
+
+    const payload = result.data?.confirmRecipeConsumption;
+    // The success union member no longer carries a `success` flag — reaching it
+    // IS the success case (partial failures surface via `totalFailed`).
+    const data =
+      payload?.__typename === 'ConfirmRecipeConsumptionPayload'
+        ? payload
+        : null;
+    if (data) {
       toastService.success(
         data.totalFailed > 0
           ? t('recipes.deductedFromPantryFailed', {
@@ -211,6 +241,12 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
               failed: data.totalFailed,
             })
           : t('recipes.deductedFromPantry', { count: data.totalConsumed }),
+      );
+    } else {
+      // Queued offline — no response yet; show the optimistic count (every
+      // included consumption replays on reconnect).
+      toastService.success(
+        t('recipes.deductedFromPantry', { count: consumptions.length }),
       );
     }
 

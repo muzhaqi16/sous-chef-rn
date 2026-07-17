@@ -68,10 +68,14 @@ query GetHomes($first: Int, $after: String) {
 query GetMyPendingInvites {
   me {
     id
-    pendingHomeInvites {
-      id
-      role
-      ...InviteCard_invite
+    pendingHomeInvitesConnection {
+      edges {
+        node {
+          id
+          role
+          ...InviteCard_invite
+        }
+      }
     }
   }
 }
@@ -154,6 +158,89 @@ mutation UpdateHome($input: UpdateHomeInput!) {
         joinCode
         version
         updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation EnableHomeJoinLink($input: EnableHomeJoinLinkInput!) {
+  enableHomeJoinLink(input: $input) {
+    __typename
+    ... on UpdateHomePayload {
+      home {
+        id
+        allowJoinCode
+        joinCode
+        joinLink {
+          universal
+          scheme
+        }
+        version
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
+  updateHomeJoinCode(input: $input) {
+    __typename
+    ... on UpdateHomePayload {
+      home {
+        id
+        allowJoinCode
+        joinCode
+        joinLink {
+          universal
+          scheme
+        }
+        version
+        updatedAt
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
+  transferHomeOwnership(input: $input) {
+    __typename
+    ... on TransferHomeOwnershipPayload {
+      home {
+        id
+        ...HomeDetailScreen_home
       }
     }
     ... on Error {
@@ -329,10 +416,10 @@ mutation RemoveMember($input: RemoveMemberInput!) {
   }
 }
 
-mutation RevokeHomeInvite($input: RevokeHomeInviteInput!) {
-  revokeHomeInvite(input: $input) {
+mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
+  deleteHomeInvite(input: $input) {
     __typename
-    ... on RevokeHomeInvitePayload {
+    ... on DeleteHomeInvitePayload {
       homeInvite {
         id
       }

@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
+import { useStore } from '#store';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
 const mockToastSuccess = jest.fn();
@@ -24,6 +25,11 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+const mockAlert = jest.fn();
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
+}));
+
 jest.mock('#/utils/compilerSafeWrappers');
 
 beforeEach(() => {
@@ -40,13 +46,20 @@ function moveMock(payload: {
     data: {
       movePurchasedItemsToPantry: {
         __typename: 'MovePurchasedItemsToPantryPayload',
-        movedCount: payload.movedCount,
-        skippedCount: payload.skippedCount,
-        targetPantryName: payload.targetPantryName,
         movedItems: payload.movedItemIds.map(id => ({
-          __typename: 'MovedShoppingItem',
+          __typename: 'MovedItemInfo',
           shoppingListItemId: id,
+          pantryItemId: `pantry-${id}`,
+          itemName: id,
+          quantity: 1,
         })),
+        summary: {
+          __typename: 'BulkSummary',
+          total: payload.movedCount + payload.skippedCount,
+          succeeded: payload.movedCount,
+          failed: 0,
+          skipped: payload.skippedCount,
+        },
       },
     },
   });
@@ -111,7 +124,7 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to My Pantry');
+    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to pantry');
   });
 
   it('shows success toast with singular item text', async () => {
@@ -131,7 +144,7 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to My Pantry');
+    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
   });
 
   it('includes skipped count in toast when items were skipped', async () => {
@@ -152,7 +165,7 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Moved 2 items to My Pantry (1 skipped)',
+      'Moved 2 items to pantry (1 skipped)',
     );
   });
 
@@ -231,6 +244,35 @@ describe('useBatchMoveToPantry', () => {
     );
   });
 
+  it('surfaces an alert and skips onSuccess when the server resolves an error member', async () => {
+    const mockOnSuccess = jest.fn();
+    const move = recordMock(MovePurchasedItemsToPantryDocument, {
+      data: {
+        movePurchasedItemsToPantry: {
+          __typename: 'ForbiddenError',
+          code: 'FORBIDDEN',
+          message: 'Not allowed',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({
+          currentListId: 'list-1',
+          onSuccess: mockOnSuccess,
+        }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    expect(mockAlert).toHaveBeenCalled();
+    expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
+
   it('does not call onSuccess when mutation returns no data', async () => {
     const mockOnSuccess = jest.fn();
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
@@ -251,5 +293,57 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockOnSuccess).not.toHaveBeenCalled();
+  });
+
+  describe('when the API is unavailable', () => {
+    afterEach(() => {
+      useStore.setState({ apiReachable: true, isOnline: true });
+    });
+
+    it('exposes isApiUnavailable, toasts, and does not fire the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const move = moveMock({
+        movedCount: 1,
+        skippedCount: 0,
+        targetPantryName: 'My Pantry',
+        movedItemIds: ['item-1'],
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
+      expect(move.fired).toHaveLength(0);
+    });
+
+    it('fires the mutation normally when online', async () => {
+      const move = moveMock({
+        movedCount: 1,
+        skippedCount: 0,
+        targetPantryName: 'My Pantry',
+        movedItemIds: ['item-1'],
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(false);
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      expect(move.fired).toHaveLength(1);
+    });
   });
 });

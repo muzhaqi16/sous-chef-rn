@@ -10,9 +10,11 @@ import { NotificationGroupHeader } from '#features/notifications/components/Noti
 import { NotificationFilters } from '#features/notifications/components/NotificationFilters';
 import { UrgentNotificationsBanner } from '#features/notifications/components/UrgentNotificationsBanner';
 import { useNotifications } from '#features/notifications/hooks/useNotifications';
+import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
 import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { Header } from '#components/molecules/Header';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import {
   groupNotificationsByDate,
@@ -41,6 +43,13 @@ export const NotificationListScreen: React.FC = () => {
     clearAll,
     getNotificationsByCategory,
   } = useNotifications();
+
+  // Load the paginated read + unread history (server-side category filter) into
+  // the store so the feed shows history and can page past the startup batch.
+  const { loadMore, loadingMore } = useNotificationHistory(
+    filterCategory,
+    true,
+  );
 
   // Filter notifications based on selected category
   const filteredNotifications = (() => {
@@ -177,6 +186,13 @@ export const NotificationListScreen: React.FC = () => {
               renderItem={renderNotificationItem}
               renderSectionHeader={renderSectionHeader}
               ListEmptyComponent={<EmptyNotifications />}
+              ListFooterComponent={
+                loadingMore ? (
+                  <ThemedActivityIndicator style={styles.footerLoader} />
+                ) : null
+              }
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.4}
               contentContainerStyle={
                 !hasNotifications ? styles.emptyContainer : undefined
               }
@@ -195,5 +211,8 @@ const styles = StyleSheet.create(theme => ({
   },
   emptyContainer: {
     flex: 1,
+  },
+  footerLoader: {
+    paddingVertical: theme.spacing.md,
   },
 }));

@@ -132,6 +132,10 @@ describe('DuplicatePlanSheet', () => {
         role: MembershipRole.Owner,
       },
     },
+    user: {
+      __typename: 'User',
+      id: 'user-1',
+    },
     createdBy: {
       __typename: 'User',
       id: 'user-1',

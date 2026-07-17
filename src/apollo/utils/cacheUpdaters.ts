@@ -1,5 +1,11 @@
 import type { ApolloCache, Reference } from '@apollo/client';
 import { InMemoryCache } from '@apollo/client';
+import type { TypedDocumentNode } from '@apollo/client';
+// The GraphQLCodegenDataMasking variant matches what the project's HKT
+// registration (src/types/apollo-masking.d.ts) makes read/writeFragment use.
+import type { GraphQLCodegenDataMasking } from '@apollo/client/masking';
+
+type Unmasked<TData> = GraphQLCodegenDataMasking.Unmasked<TData>;
 import { serializeError } from '#/utils/errorSerialization';
 import { logger } from '#/utils/environment';
 
@@ -690,6 +696,75 @@ export function setCachedFields(
   }
 }
 
+/**
+ * Snapshot a cached entity via its fragment, write `patch` over it PERMANENTLY
+ * (a plain write, not Apollo's transient optimistic layer — it survives an
+ * offline/queued mutation where no response ever arrives), and return a revert
+ * that restores the snapshot.
+ *
+ * Contract for the fragment: it must select every field the patch writes plus
+ * `updatedAt` (bumped on write so watchers re-render), and every field it
+ * selects must be cached by the query that loads the entity — `readFragment`
+ * returns null on ANY missing field, in which case both the write and the
+ * revert silently no-op (the mutation response then becomes the only UI
+ * update). The local-first list-settings hooks (complete / recurring / budget /
+ * reminder / template) all share this shape.
+ */
+export function applyOptimisticFragmentPatch<TFragment>(
+  cache: ApolloCache,
+  entity: { typename: string; id: string },
+  doc: {
+    fragment: TypedDocumentNode<TFragment, unknown>;
+    fragmentName: string;
+  },
+  patch: Partial<Unmasked<TFragment>>,
+  label: string,
+): () => void {
+  const cacheId = cache.identify({
+    __typename: entity.typename,
+    id: entity.id,
+  });
+  // readFragment/writeFragment operate on Unmasked<TFragment> — that's
+  // Apollo's own signature for the round trip, not a mask bypass; the snapshot
+  // fragments here are flat (no nested spreads), so the shape is unchanged.
+  const snapshot = cacheId
+    ? cache.readFragment<TFragment>({
+        id: cacheId,
+        fragment: doc.fragment,
+        fragmentName: doc.fragmentName,
+      })
+    : null;
+
+  const write = (data: Unmasked<TFragment>, writeLabel: string) => {
+    try {
+      cache.writeFragment({
+        id: cacheId,
+        fragment: doc.fragment,
+        fragmentName: doc.fragmentName,
+        data,
+      });
+    } catch (error) {
+      logger.warn(
+        `Cache update failed for ${writeLabel}:`,
+        serializeError(error),
+      );
+    }
+  };
+
+  if (snapshot) {
+    write(
+      { ...snapshot, ...patch, updatedAt: new Date().toISOString() },
+      `${label} (optimistic)`,
+    );
+  }
+
+  return () => {
+    if (snapshot) {
+      write(snapshot, `Revert ${label}`);
+    }
+  };
+}
+
 // =============================================================================
 // Direct Item Eviction
 // =============================================================================
@@ -718,6 +793,34 @@ export function safeEvict(
       `Cache eviction failed for ${typename}:${itemId}:`,
       serializeError(error),
     );
+  }
+}
+
+/**
+ * Reconcile a client-minted id with the server-assigned id after a create.
+ *
+ * When a mutation sends a client-minted PK (`input.id`) but the server resolves
+ * the create to an *existing* row (already created elsewhere / catalog merge),
+ * the returned id differs from the client cuid we wrote optimistically. Evict
+ * the stale client-id entity so its now-dangling connection edge is dropped by
+ * the self-healing read and the single server row stands — no duplicate rows,
+ * no phantom entity.
+ *
+ * `clientId` MUST be read off the mutation's own `variables` at the call site
+ * (never a shared ref) so this stays correct when creates overlap. A no-op when
+ * the server echoed the same id (the honored-client-id path).
+ *
+ * @example
+ * adoptServerEntityId(cache, 'SavedRecipe', savedRecipe.id, variables?.input?.id);
+ */
+export function adoptServerEntityId(
+  cache: ApolloCache,
+  typename: string,
+  serverId: string,
+  clientId: string | null | undefined,
+): void {
+  if (clientId && serverId !== clientId) {
+    safeEvict(cache, typename, clientId);
   }
 }
 

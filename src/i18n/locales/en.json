@@ -3,10 +3,12 @@
     "addItemFailed": "Failed to add item",
     "updateItemFailed": "Failed to update item",
     "removeItemFailed": "Failed to remove item",
+    "discardExpiredFailed": "Failed to discard expired items",
     "deleteItemFailed": "Failed to delete item",
     "fetchItemFailed": "Failed to fetch item details",
     "createHomeFailed": "Failed to create home",
     "updateHomeFailed": "Failed to update home",
+    "setDefaultHomeFailed": "Failed to set default home",
     "updateHomeNameFailed": "Failed to update home name",
     "deleteHomeFailed": "Failed to delete home",
     "fetchHomeFailed": "Failed to fetch home details",
@@ -31,6 +33,7 @@
     "verificationFailed": "Verification failed",
     "resetPasswordFailed": "Failed to reset password",
     "networkError": "Network error. Please check your connection.",
+    "notAvailableOffline": "Not available offline",
     "somethingWentWrong": "Something went wrong. Please try again.",
     "unknownError": "An unknown error occurred",
     "boundary": {
@@ -65,7 +68,12 @@
     "itemNotFound": "Item not found",
     "parentContextRequired": "Parent context is required",
     "createStorageLocationFailed": "Failed to create storage location",
-    "missingRequiredInfo": "Missing required information"
+    "missingRequiredInfo": "Missing required information",
+    "invalidInput": "Invalid input",
+    "invalidOperation": "Invalid operation",
+    "invalidUnitTitle": "Invalid Unit",
+    "addItemFailedRetry": "Failed to add item. Please try again.",
+    "restockFailedRetry": "Failed to restock item. Please try again."
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -76,6 +84,7 @@
     "homeUpdated": "Home updated successfully",
     "homeNameUpdated": "Home name updated successfully",
     "homeDeleted": "Home deleted successfully",
+    "storageLocationDeleted": "Storage location deleted successfully",
     "memberAdded": "Member added successfully",
     "memberRemoved": "Member removed successfully",
     "memberRoleUpdated": "Member role updated successfully",
@@ -92,7 +101,8 @@
     "profileUpdated": "Profile updated successfully",
     "photoUpdated": "Photo updated successfully",
     "settingsSaved": "Settings saved successfully",
-    "expiredBatchesDiscarded": "Expired batches have been discarded."
+    "expiredBatchesDiscarded": "Expired batches have been discarded.",
+    "expiredItemDiscarded": "Expired item has been discarded."
   },
   "loading": {
     "authenticating": "Authenticating...",
@@ -164,7 +174,10 @@
     "create": "Create",
     "notNow": "Not now",
     "clear": "Clear",
-    "enableNow": "Enable Now"
+    "enableNow": "Enable Now",
+    "refresh": "Refresh",
+    "updated": "Updated",
+    "validationError": "Validation Error"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -234,6 +247,11 @@
     "passwordsMustMatch": "Passwords must match",
     "signupTitle": "Create account",
     "signupSubtitle": "Join Sous Chef today",
+    "checkInboxTitle": "Check your inbox",
+    "verificationSentSubtitle": "We sent a verification link to {{email}}. Open it to activate your account, then sign in.",
+    "resendEmail": "Resend email",
+    "resendVerificationSent": "Verification email sent.",
+    "alreadyVerified": "Already verified?",
     "name": "Name",
     "namePlaceholder": "Enter your name",
     "creatingAccount": "Creating account…",
@@ -359,6 +377,24 @@
     "percentHealthy": "% healthy",
     "cookedCount": "Cooked {{count}}x",
     "markCooked": "Mark cooked",
+    "nutritionTitle": "Nutrition",
+    "caloriesPerServingLabel": "Cal / serving",
+    "tipsTitle": "Tips",
+    "tips": "Tips",
+    "tipsPlaceholder": "Chef's tips (optional)",
+    "recipeTags": "Tags",
+    "recipeTagsPlaceholder": "Comma-separated",
+    "originalAuthor": "Original Author",
+    "originalAuthorPlaceholder": "Attribution (optional)",
+    "forkedFrom": "Forked from {{name}}",
+    "byAuthor": "By {{author}}",
+    "hasVideo": "Video available",
+    "draftBadge": "Draft — not published",
+    "forkFailed": "Failed to fork recipe",
+    "publishFailed": "Failed to update recipe",
+    "forkA11y": "Fork this recipe",
+    "publishA11y": "Publish recipe",
+    "unpublishA11y": "Unpublish recipe",
     "vegetarian": "Vegetarian",
     "vegan": "Vegan",
     "glutenFree": "Gluten Free",
@@ -654,6 +690,71 @@
     "failedToSave": "Failed to save settings",
     "failedToCreate": "Failed to create list",
     "failedToLeave": "Failed to leave list",
+    "listStatusSection": "List Status",
+    "statusLabel": "Status",
+    "completedOn": "Completed On",
+    "markComplete": "Mark as Complete",
+    "reactivateList": "Reactivate List",
+    "archiveList": "Archive List",
+    "restoreList": "Restore List",
+    "archiveListConfirmTitle": "Archive List",
+    "archiveListConfirmMessage": "Archive this list? It will be hidden from your active lists. You can restore it anytime.",
+    "failedToComplete": "Failed to update list status",
+    "failedToReactivate": "Failed to reactivate list",
+    "failedToArchive": "Failed to archive list",
+    "failedToSetDefault": "Failed to set default list",
+    "recurringSection": "Recurring",
+    "recurringPatternLabel": "Repeats",
+    "nextOccurrence": "Next Occurrence",
+    "generateNextList": "Generate Next List",
+    "stopRecurring": "Stop Recurring",
+    "makeRecurring": "Make Recurring",
+    "selectPattern": "Repeat Every",
+    "patternDaily": "Daily",
+    "patternWeekly": "Weekly",
+    "patternBiweekly": "Every 2 Weeks",
+    "patternMonthly": "Monthly",
+    "patternCustom": "Custom",
+    "patternNone": "Not Recurring",
+    "failedToSetRecurring": "Failed to set up recurring list",
+    "failedToCancelRecurring": "Failed to stop recurring",
+    "failedToGenerateNext": "Failed to generate next list",
+    "templateSection": "Templates",
+    "basedOnTemplate": "Based On",
+    "templateNameLabel": "Template Name",
+    "saveAsTemplate": "Save as Template",
+    "createFromTemplate": "Create List from Template",
+    "failedToSaveTemplate": "Failed to save as template",
+    "failedToCreateFromTemplate": "Failed to create from template",
+    "reminderSection": "Reminder",
+    "reminderDateLabel": "Reminder Date",
+    "setReminderPlaceholder": "Set a reminder date",
+    "clearReminder": "Clear Reminder",
+    "failedToSetReminder": "Failed to set reminder",
+    "failedToClearReminder": "Failed to clear reminder",
+    "budgetSection": "Budget",
+    "totalSpent": "Total Spent",
+    "estimatedTotalLabel": "Estimated Total",
+    "budgetAmountLabel": "Budget Limit",
+    "budgetPlaceholder": "No budget set",
+    "priceTrackingLabel": "Price Tracking",
+    "priceTrackingDesc": "Track prices and spending for this list",
+    "failedToSetBudget": "Failed to update budget",
+    "failedToSetPriceTracking": "Failed to update price tracking",
+    "lastPaidPrice": "Last Paid",
+    "averagePrice": "Average Price",
+    "priceRange": "Price Range",
+    "customPermissions": "Custom Permissions",
+    "permCanAddItems": "Can add items",
+    "permCanEditItems": "Can edit items",
+    "permCanRemoveItems": "Can remove items",
+    "permCanMarkPurchased": "Can mark purchased",
+    "listStatusActive": "Active",
+    "listStatusCompleted": "Completed",
+    "listStatusArchived": "Archived",
+    "listStatusPaused": "Paused",
+    "listStatusCancelled": "Cancelled",
+    "listStatusTemplate": "Template",
     "couldNotDetermineMembership": "Could not determine your membership",
     "thisList": "this list",
     "listInformation": "List Information",
@@ -735,6 +836,7 @@
     "mostRecentPurchase": "Most Recent Purchase",
     "noPurchaseHistory": "No purchase history available",
     "addedBy": "Added By",
+    "lastEditedBy": "Last Edited By",
     "addedOn": "Added On",
     "lastUpdated": "Last Updated",
     "autoAdded": "Auto-Added",
@@ -765,6 +867,9 @@
     "monthly": "Monthly",
     "startDate": "Start Date",
     "defaultServings": "Default Servings",
+    "budgetAmount": "Budget (optional)",
+    "budgetPlaceholder": "No budget",
+    "trackNutrition": "Track nutrition goals",
     "shareWith": "Share With",
     "personal": "Personal",
     "orCreateFromTemplate": "Or create from a template",
@@ -1093,6 +1198,13 @@
     "resetFailed": "Failed to reset settings. Please try again.",
     "resetConfirm": "Are you sure you want to reset all notification settings to their default values?",
     "resetToDefaultsDesc": "Reset all notification settings to their default values",
+    "testSection": "Test",
+    "sendTestNotification": "Send test notification",
+    "sendTestNotificationDesc": "Send yourself a sample notification to check your setup",
+    "testSentTitle": "Test sent",
+    "testSentMessage": "A test notification is on its way.",
+    "testFailedTitle": "Couldn't send",
+    "testFailedMessage": "The test notification could not be sent. Please try again.",
     "notFound": "Notification not found",
     "titleFallback": "Notification",
     "noMessageAvailable": "No message available",
@@ -1598,6 +1710,11 @@
     "viewNutrition": "View Nutrition",
     "hideNutrition": "Hide Nutrition",
     "viewNutritionDesc": "Calories, macros, and goal progress",
+    "budgetSpent": "Spent ${{spent}} of ${{budget}}",
+    "spentAmount": "Spent ${{spent}}",
+    "trackNutrition": "Track nutrition goals",
+    "nutritionTrackingOn": "Nutrition tracking on",
+    "trackNutritionDesc": "Compare this plan against your dietary profile",
     "generatedLists": "Generated Lists",
     "dangerZone": "Danger Zone",
     "deletePlanLabel": "Delete Plan",
@@ -1689,6 +1806,7 @@
     "servings": "{{count}} servings"
   },
   "templatePreview": {
+    "editTemplate": "Edit Template",
     "configuration": "Configuration",
     "planNameLabel": "Plan Name (optional)",
     "startDateLabel": "Start Date",
@@ -1731,11 +1849,45 @@
     "editSelectedPantry": "Edit",
     "viewAnalytics": "Analytics"
   },
+  "mealTemplateBuilder": {
+    "createTitle": "New Template",
+    "editTitle": "Edit Template",
+    "name": "Template Name",
+    "namePlaceholder": "e.g. Weeknight Dinners",
+    "category": "Category",
+    "defaultServings": "Default Servings",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional notes",
+    "tags": "Tags",
+    "tagsPlaceholder": "Comma-separated",
+    "mealsSection": "Meals",
+    "noMeals": "No meals added yet",
+    "mealName": "Meal",
+    "mealNamePlaceholder": "e.g. Spaghetti Bolognese",
+    "mealType": "Meal Type",
+    "dayNumber": "Day",
+    "servings": "Servings",
+    "addMeal": "Add Meal",
+    "updateMeal": "Update Meal",
+    "itemSummary": "Day {{day}} · {{meal}} · {{servings}} servings",
+    "nameRequiredTitle": "Name required",
+    "nameRequiredMessage": "Give your template a name.",
+    "itemNameRequiredTitle": "Meal name required",
+    "itemNameRequiredMessage": "Give the meal a name.",
+    "failedToCreate": "Failed to create template",
+    "failedToSave": "Failed to save template",
+    "failedToAddItem": "Failed to add meal",
+    "failedToSaveItem": "Failed to save meal",
+    "failedToRemoveItem": "Failed to remove meal"
+  },
   "mealPlanSelector": {
     "title": "Select Meal Plan",
     "emptyMessage": "No meal plans available",
     "createNewPlan": "Create",
     "createFromTemplate": "Template",
+    "searchPlaceholder": "Search plans",
+    "filterActive": "Active",
+    "createTemplate": "New Template",
     "personalSubtitle": "Personal"
   },
   "pantryHeader": {
@@ -1905,6 +2057,13 @@
     "unit": "Unit",
     "orTypeToSearch": "Or type to search...",
     "typeToSearchUnits": "Type to search units..."
+  },
+  "purchaseAmountSheet": {
+    "title": "Mark Purchased",
+    "quantity": "Quantity",
+    "price": "Price",
+    "currencySymbol": "$",
+    "pricePlaceholder": "0.00"
   },
   "addStorageLocation": {
     "createFailed": "Failed to create location",
@@ -2277,6 +2436,20 @@
     "labelAllowJoinCode": "Allow Join Code",
     "descriptionAllowJoinCode": "Let others join this home using a code",
     "labelJoinCode": "Join Code",
+    "rotateJoinCodeTitle": "Regenerate Join Code",
+    "rotateJoinCodeMessage": "This invalidates the current code and any shared link. Members already in the home stay. Continue?",
+    "rotateJoinCodeConfirm": "Regenerate",
+    "makeOwner": "Make Owner",
+    "transferOwnershipTitle": "Transfer Ownership",
+    "transferOwnershipMessage": "Make {{name}} the owner of this home? You'll become a regular member and only they can transfer it back.",
+    "transferOwnershipConfirm": "Transfer",
+    "permissions": "Permissions",
+    "permViewPantry": "Can view pantry",
+    "permAddItems": "Can add items",
+    "permRemoveItems": "Can remove items",
+    "permEditPantry": "Can edit pantry",
+    "permInviteOthers": "Can invite others",
+    "permManageHome": "Can manage home",
     "sectionMembersInvites": "Members & Invites",
     "youLabel": "You",
     "sectionStorage": "Storage",
@@ -2379,5 +2552,225 @@
     "title": "Search Results",
     "searching": "Searching for item...",
     "errorTitle": "Search Error"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Suggestion sent",
+    "sentBody": "Thanks — an admin will review your changes. The listing stays as it is until they're approved.",
+    "duplicateTitle": "Already suggested",
+    "duplicateBody": "You've already suggested these exact changes and they're still waiting for review, so we kept your original one.",
+    "pendingCapTitle": "5 suggestions pending",
+    "pendingCapBody": "You have 5 edit suggestions waiting for review — that's the limit. Once an admin reviews one, you can send another.",
+    "rateLimitedTitle": "Slow down a moment",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "rejectedTitle": "Couldn't send that",
+    "loadFailedTitle": "Couldn't load this item",
+    "loadFailedBody": "We couldn't load the item's current details, and we need them to work out what you changed. Check your connection and try again.",
+    "readOnlyTitle": "This item can't be edited",
+    "readOnlyBody": "It isn't part of the public catalog, so there's nothing to correct here. Only public catalog items can be edited or suggested for review.",
+    "noChangesTitle": "Nothing to suggest",
+    "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
+    "photosOnlyTitle": "Photo added",
+    "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
+    "updatedTitle": "Item updated",
+    "updatedBody": "Your changes are live.",
+    "failedTitle": "Couldn't send that",
+    "failedBody": "Something went wrong sending your suggestion. Please try again.",
+    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
+    "suggestAction": "Suggest Edit",
+    "editAction": "Edit"
+  },
+  "reportItem": {
+    "footer": "Wrong details on one of these?",
+    "title": "Report wrong details",
+    "pickPrompt": "Which item has wrong details?",
+    "reasonLabel": "What's wrong with it?",
+    "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
+    "reasonTooShort": "Please add at least {{count}} characters so an admin knows what to look at.",
+    "submit": "Send report",
+    "sentTitle": "Report sent",
+    "sentBody": "Thanks — an admin will take a look at this item.",
+    "failedTitle": "Couldn't send that",
+    "failedBody": "Something went wrong sending your report. Please try again.",
+    "alreadyReportedTitle": "Already reported",
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
+    "rateLimitedTitle": "Slow down a moment",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "rejectedTitle": "Couldn't send that"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Add New Item",
+        "subtitle": "Create a new item with basic information",
+        "subtitleScanned": "Add this item to the database for future scans",
+        "button": "Add Item"
+      },
+      "edit": {
+        "title": "Suggest Edit",
+        "subtitle": "An admin reviews your changes — the listing stays as it is until then",
+        "button": "Submit Suggestion"
+      },
+      "directEdit": {
+        "title": "Edit Item",
+        "subtitle": "Your changes go live right away",
+        "button": "Save Changes"
+      },
+      "variant": {
+        "title": "Create New Version",
+        "subtitle": "Create a new version of this item for your region",
+        "button": "Create Version"
+      }
+    },
+    "tabs": {
+      "basics": "Basics",
+      "product": "Product",
+      "storage": "Storage",
+      "inventory": "Inventory"
+    },
+    "moreOptions": "More options",
+    "scanUpcA11y": "Scan UPC with camera",
+    "fields": {
+      "name": {
+        "label": "Item Name",
+        "placeholder": "Enter item name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter item description (optional)"
+      },
+      "vendor": {
+        "label": "Brand/Vendor",
+        "placeholder": "Enter brand or vendor name"
+      },
+      "type": {
+        "label": "Item Type"
+      },
+      "upc": {
+        "label": "UPC/Barcode",
+        "placeholder": "Enter UPC/Barcode (optional)"
+      },
+      "sku": {
+        "label": "SKU",
+        "placeholder": "Enter SKU (optional)"
+      },
+      "store": {
+        "label": "Store (for SKU)",
+        "placeholder": "Search for store"
+      },
+      "storageState": {
+        "label": "Storage State"
+      },
+      "shelfLife": {
+        "label": "Shelf Life (Days)",
+        "placeholder": "Enter shelf life in days"
+      },
+      "shelfLifeOpened": {
+        "label": "Shelf Life Once Opened (Days)",
+        "placeholder": "Enter shelf life once opened"
+      },
+      "baseDimension": {
+        "label": "Base Dimension"
+      },
+      "consumeIncrement": {
+        "label": "Default Consume Increment",
+        "placeholder": "e.g., 1"
+      },
+      "consumeUnit": {
+        "label": "Default Consume Unit",
+        "placeholder": "tsp, cup, etc."
+      },
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Comma-separated tags (e.g., organic, gluten-free)"
+      },
+      "foodStamp": {
+        "label": "Food Stamp Eligible"
+      },
+      "fsa": {
+        "label": "FSA Eligible"
+      },
+      "editNote": {
+        "label": "What needs fixing?",
+        "placeholder": "Tell the reviewer what is wrong (e.g., wrong net weight on the label)"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Drink",
+    "FOOD": "Food",
+    "FOUNDATION": "Staples",
+    "HOUSEHOLD": "Household",
+    "OTHER": "Other",
+    "PERSONAL_CARE": "Personal Care",
+    "PET": "Pet Supplies",
+    "PRODUCT": "Non-Food Goods",
+    "SUPPLEMENT": "Supplements"
+  },
+  "storageState": {
+    "AMBIENT": "Ambient",
+    "FROZEN": "Frozen",
+    "NONE": "None",
+    "REFRIGERATED": "Refrigerated"
+  },
+  "baseDimension": {
+    "none": "None",
+    "VOLUME": "Volume",
+    "MASS": "Mass",
+    "COUNT": "Count"
+  },
+  "netWeightEntry": {
+    "sectionTitle": "Net Weights",
+    "weightLabel": "Weight",
+    "weightPlaceholder": "e.g., 3.4",
+    "unitLabel": "Unit",
+    "unitPlaceholder": "e.g., oz, g",
+    "addButton": "Add Net Weight"
+  },
+  "itemValidation": {
+    "nameRequired": "Item name is required",
+    "nameEmpty": "Item name cannot be empty",
+    "nameMax": "Item name cannot exceed {{count}} characters",
+    "nameChars": "Item name can only contain letters, numbers, spaces, and common punctuation",
+    "descriptionMax": "Description cannot exceed {{count}} characters",
+    "upcDigits": "UPC must contain only numbers",
+    "upcMin": "UPC must be at least {{count}} digits",
+    "upcMax": "UPC cannot exceed {{count}} digits",
+    "skuMax": "SKU cannot exceed {{count}} characters",
+    "urlInvalid": "Please enter a valid URL",
+    "wholeNumber": "Must be a whole number",
+    "shelfLifeMin": "Shelf life must be at least 1 day",
+    "shelfLifeMax": "Shelf life cannot exceed {{count}} years",
+    "shelfLifeOpenedMin": "Opened shelf life must be at least 1 day",
+    "shelfLifeOpenedMax": "Opened shelf life cannot exceed {{count}} years",
+    "displayPricePerUnitMax": "Display price per unit cannot exceed {{count}} characters",
+    "unitQtyMin": "Unit quantity must be greater than 0",
+    "defaultUnitMax": "Unit symbol cannot exceed {{count}} characters",
+    "vendorMax": "Vendor name cannot exceed {{count}} characters",
+    "tagMax": "Each tag cannot exceed {{count}} characters",
+    "tagsMax": "Cannot have more than {{count}} tags",
+    "editReasonMax": "Edit reason cannot exceed {{count}} characters",
+    "editReasonRequired": "Tell us what needs fixing",
+    "editReasonMin": "Please add a little more detail (at least {{count}} characters)",
+    "netWeightMin": "Net weight must be greater than 0",
+    "netWeightValueRequired": "Value is required",
+    "netWeightUnitRequired": "Unit is required",
+    "greaterThanZero": "Must be greater than 0"
+  },
+  "imageUpload": {
+    "offlineTitle": "No Internet Connection",
+    "offlineBody": "Image upload requires an internet connection. Please try again when you're online.",
+    "offlineError": "You're offline. Image upload requires an internet connection.",
+    "failedTitle": "Upload Failed",
+    "failedBody": "Something went wrong uploading your image. Please try again.",
+    "invalidTypeBody": "Please select a JPEG, PNG, or WebP image file.",
+    "profileTooLargeBody": "The image is too large. Profile images must be under {{size}}MB.",
+    "itemTooLargeBody": "The image is too large. Item photos must be under {{size}}MB.",
+    "unreadableBody": "We couldn't read that image file. Please try a different one.",
+    "updateFailedTitle": "Update Failed",
+    "avatarUpdateFailedBody": "Failed to update profile avatar",
+    "coverUpdateFailedBody": "Failed to update profile cover",
+    "itemImageUpdateFailedBody": "Failed to update item image"
   }
 }

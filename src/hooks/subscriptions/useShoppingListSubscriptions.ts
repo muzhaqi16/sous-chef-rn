@@ -27,7 +27,7 @@ import {
 import {
   CollaboratorStatus,
   MutationType,
-  ShoppingListEventSubtype,
+  ShoppingListSubtype,
 } from '#/graphql/generated/schemaTypes';
 import {
   UseShoppingListSubscriptions_ItemFragmentDoc,
@@ -240,8 +240,8 @@ export function useShoppingListSubscriptions(
         // node and the isParentDeleting evict is idempotent, so this one branch
         // handles both subtypes safely.
         if (
-          payload.subtype === ShoppingListEventSubtype.ListUpdated ||
-          payload.subtype === ShoppingListEventSubtype.StatusChanged
+          payload.subtype === ShoppingListSubtype.ListUpdated ||
+          payload.subtype === ShoppingListSubtype.StatusChanged
         ) {
           if (
             payload.node?.__typename === 'ShoppingList' &&
@@ -271,7 +271,7 @@ export function useShoppingListSubscriptions(
         // Maintains collaboratorsConnection. Self-echo is already filtered by the
         // shared actorUserId skip above, so the server must set actorUserId on the
         // envelope for COLLABORATION_CHANGED events.
-        if (payload.subtype === ShoppingListEventSubtype.CollaborationChanged) {
+        if (payload.subtype === ShoppingListSubtype.CollaborationChanged) {
           if (payload.node?.__typename !== 'ShoppingListCollaborator') return;
 
           const collaborator =
@@ -317,7 +317,7 @@ export function useShoppingListSubscriptions(
           return;
         }
 
-        if (payload.subtype === ShoppingListEventSubtype.ItemsBatchCleared) {
+        if (payload.subtype === ShoppingListSubtype.ItemsBatchCleared) {
           clearAllPurchasedItemsFromCache(
             client.cache,
             selectedShoppingListId,
@@ -326,7 +326,7 @@ export function useShoppingListSubscriptions(
           return;
         }
 
-        if (payload.subtype !== ShoppingListEventSubtype.ItemsChanged) return;
+        if (payload.subtype !== ShoppingListSubtype.ItemsChanged) return;
 
         const mutation = payload.mutation;
         const item =

@@ -70,6 +70,9 @@ const makeMealPlan = (
   description: 'My meal plan description',
   startDate: '2024-03-01',
   endDate: '2024-03-07',
+  budgetAmount: null,
+  actualCost: 0,
+  dietaryProfile: null,
   home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
   createdBy: {
     __typename: 'User',
@@ -153,6 +156,16 @@ describe('MealPlanSettingsSheet', () => {
   it('renders the creator name', () => {
     render(<MealPlanSettingsSheet {...defaultProps} />);
     expect(screen.getByText('Created by John Doe')).toBeTruthy();
+  });
+
+  it('shows spend vs budget when a budget is set', () => {
+    render(
+      <MealPlanSettingsSheet
+        {...defaultProps}
+        mealPlanRef={makeMealPlan({ budgetAmount: 50, actualCost: 30 })}
+      />,
+    );
+    expect(screen.getByText('Spent $30.00 of $50.00')).toBeTruthy();
   });
 
   it('renders action items', () => {

@@ -22,12 +22,31 @@ import {
 } from './queueErrorPolicy';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
+import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
 const QUEUE_ITEM_DATA_FRAGMENT = gql`
   fragment QueueItemData on ShoppingListItem {
     id
     shoppingList {
+      id
+    }
+  }
+`;
+
+/**
+ * Reads a ShoppingListItem's catalog reference from cache during queue
+ * processing. `SyncShoppingListItemInput.item` is a required @oneOf ref, but
+ * toggle/quantity/plain-update inputs carry only the row id — the replay
+ * backfills the ref from the cached row. Kept separate from
+ * {@link QUEUE_ITEM_DATA_FRAGMENT} and read with `returnPartialData` so a row
+ * cached without the linked `item` entity still resolves its `itemName`.
+ */
+const QUEUE_ITEM_REF_FRAGMENT = gql`
+  fragment QueueItemRefData on ShoppingListItem {
+    id
+    itemName
+    item {
       id
     }
   }
@@ -139,6 +158,11 @@ export class QueueManager {
       return;
     }
 
+    // Recover entries a killed process left mid-replay: drains are serialized
+    // by isProcessing, so any PROCESSING entry visible here is stranded debris,
+    // not live work. Reset to PENDING so this drain picks them up.
+    queueStore.resetProcessingToPending(userId);
+
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
@@ -210,6 +234,13 @@ export class QueueManager {
         processedAt: Date.now(),
       });
 
+      // The change is on the server now (plain success or IDEMPOTENT_REPLAY
+      // convergence both reach here) — drop the persisted optimistic fields
+      // for the touched entities so restoration can't re-apply stale values
+      // over fresher server state on later mounts. Entries for still-PENDING
+      // mutations are untouched.
+      this.clearPersistedOptimisticFields(mutation);
+
       // Remove after short delay (allows for reconciliation)
       setTimeout(() => queueStore.removeMutation(mutationId), 5000);
 
@@ -240,6 +271,7 @@ export class QueueManager {
     const { syncMutation, syncVariables } = convertToSyncMutation(mutation, {
       readPantryId: clientId => this.readPantryId(clientId),
       readShoppingListId: clientId => this.readShoppingListId(clientId),
+      readItemRef: clientId => this.readItemRef(clientId),
     });
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
@@ -262,6 +294,7 @@ export class QueueManager {
     const payload = Object.values(result.data || {})[0] as
       | {
           __typename?: string;
+          code?: string;
           message?: string;
           conflict?: { message?: string };
         }
@@ -271,10 +304,11 @@ export class QueueManager {
     // member instead of throwing — same trap the foreground path closes with
     // classifyCreateResult. Without this, a rejected replay would be marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
-    const outcome = classifyReplayResult(mutation.operationName, payload);
+    const outcome = classifyReplayResult(payload);
     if (outcome === 'converged') {
-      // Duplicate-id conflict on a create: an earlier attempt already
-      // committed this row — the change is on the server. Dequeue as success.
+      // IDEMPOTENT_REPLAY conflict: an earlier attempt already committed this
+      // op (a client-PK create, or an idempotency-keyed cumulative delta) — the
+      // change is on the server. Dequeue as success.
       logger.info(
         `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
       );
@@ -321,6 +355,33 @@ export class QueueManager {
       fragment: QUEUE_ITEM_DATA_FRAGMENT,
     });
     return itemData?.shoppingList?.id;
+  }
+
+  /**
+   * Read a shopping-list item's @oneOf catalog ref from cache — the sync input
+   * requires it, but toggle/quantity/plain-update variables only carry the row
+   * id. Prefers the linked catalog item id; falls back to the row's free-text
+   * name (the server links-or-creates by name, matching the original add).
+   */
+  private readItemRef(
+    itemId: string | undefined,
+  ): { itemId: string } | { itemName: string } | undefined {
+    if (!itemId) return undefined;
+    const itemData = client.cache.readFragment<{
+      id: string;
+      itemName: string | null;
+      item: { id: string } | null;
+    }>({
+      id: client.cache.identify({
+        __typename: 'ShoppingListItem',
+        id: itemId,
+      }),
+      fragment: QUEUE_ITEM_REF_FRAGMENT,
+      returnPartialData: true,
+    });
+    if (itemData?.item?.id) return { itemId: itemData.item.id };
+    if (itemData?.itemName) return { itemName: itemData.itemName };
+    return undefined;
   }
 
   /**
@@ -483,6 +544,9 @@ export class QueueManager {
     return (
       vars.id ??
       vars.input?.id ??
+      // Single adds ride the batch AddItemsToShoppingListInput shape — the
+      // client-minted row id lives on the one queued item.
+      vars.input?.items?.[0]?.id ??
       vars.input?.pantryItemId ??
       vars.input?.itemId ??
       vars.itemId ??
@@ -510,6 +574,40 @@ export class QueueManager {
   } {
     const entityId = this.getEntityId(mutation);
     return { entityType: this.findCachedTypename(entityId), entityId };
+  }
+
+  /**
+   * Every client entity id a queued mutation targets: getEntityId's single
+   * candidate plus all `input.items[].id` of a batch-shaped create (multi-item
+   * adds carry one client-minted id per row).
+   */
+  private getAllEntityIds(mutation: QueuedMutation): string[] {
+    const ids = new Set<string>();
+    const single = this.getEntityId(mutation);
+    if (single) ids.add(single);
+
+    const items = mutation.variables?.input?.items;
+    if (Array.isArray(items)) {
+      for (const item of items) {
+        if (typeof item?.id === 'string' && item.id) ids.add(item.id);
+      }
+    }
+    return [...ids];
+  }
+
+  /**
+   * Drop persisted optimistic field values for every entity a landed mutation
+   * touched. Typename comes off the normalized cache the same way the failure
+   * pipeline resolves its evict target; an uncached entity has nothing to
+   * restore, so skipping it is correct.
+   */
+  private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
+    for (const entityId of this.getAllEntityIds(mutation)) {
+      const entityType = this.findCachedTypename(entityId);
+      if (entityType) {
+        optimisticDataPersistence.clearEntity(entityType, entityId);
+      }
+    }
   }
 
   private findCachedTypename(entityId: string | null): string | null {

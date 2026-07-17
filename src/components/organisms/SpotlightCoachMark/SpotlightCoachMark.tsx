@@ -13,7 +13,7 @@ import {
   useReducedMotion,
 } from 'react-native-reanimated';
 import {
-  Gesture,
+  usePanGesture,
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
@@ -263,14 +263,16 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     onNext?.();
   };
 
-  const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .onEnd(event => {
+  const swipeGesture = usePanGesture({
+    activeOffsetX: [-20, 20],
+    onDeactivate: event => {
+      'worklet';
       if (event.translationX < -SWIPE_THRESHOLD) {
         scheduleOnRN(handleSwipeAdvance);
       }
-    })
-    .enabled(!!onNext && !allowGesturePassthrough);
+    },
+    enabled: !!onNext && !allowGesturePassthrough,
+  });
 
   // Clamp tooltip horizontally within screen
   const tooltipHalf = TOOLTIP_WIDTH / 2;

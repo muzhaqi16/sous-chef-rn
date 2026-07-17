@@ -11,12 +11,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
 import {
-  MyShoppingListInvitesDocument,
   AcceptShoppingListInviteDocument,
   DeclineShoppingListInviteDocument,
 } from '#features/shoppingList/graphql/collaboration.generated';
 import {
-  GetMyPendingInvitesDocument,
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
 } from '#operations/home/home.generated';
@@ -40,26 +38,17 @@ export const AcceptInvite: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useNavigation();
   const route = useRoute();
-  const { token, inviteId } = (route.params ?? {}) as {
+  const { token } = (route.params ?? {}) as {
     token?: string;
-    inviteId?: string;
   };
 
   const [processing, setProcessing] = useState(false);
 
-  // Get shopping list invites
-  const { data: shoppingListData, loading: shoppingListLoading } = useQuery(
-    MyShoppingListInvitesDocument,
-  );
-
-  // Get home invites
-  const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
-    GetMyPendingInvitesDocument,
-  );
-
-  // Token deep links (accept-invitation?token=…) may reference an invite that
-  // isn't in the cached pending list (fresh device, not-yet-loaded list) —
-  // resolve it directly by token, for both home and shopping-list invites.
+  // This screen is the deep-link acceptance surface: the invite is resolved
+  // straight from the URL token (accept-invitation?token=…) via the *ByToken
+  // queries, since it may not be in the user's cached pending list on a fresh
+  // device. In-app acceptance from a notification is handled separately by
+  // InvitationAcceptanceModal.
   const { data: tokenHomeInviteData, loading: tokenHomeInviteLoading } =
     useQuery(GetHomeInviteByTokenDocument, {
       variables: { token: token ?? '' },
@@ -83,29 +72,11 @@ export const AcceptInvite: React.FC = () => {
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument);
   const [declineHomeInvite] = useMutation(DeclineHomeInviteDocument);
 
-  const loading =
-    shoppingListLoading ||
-    homeInviteLoading ||
-    tokenHomeInviteLoading ||
-    tokenListInviteLoading;
+  const loading = tokenHomeInviteLoading || tokenListInviteLoading;
 
-  // Find the specific invite and determine type
-  // Note: Tokens are no longer exposed in query responses for security.
-  // When navigating via deep link, token comes from route params.
-  // When navigating via in-app UI, inviteId is used to match.
   const shoppingListInvite =
-    shoppingListData?.me?.pendingCollaborationInvites?.find(inv =>
-      inviteId ? inv.id === inviteId : false,
-    ) ??
-    tokenListInviteData?.shoppingListInviteByToken ??
-    null;
-
-  const homeInvite =
-    homeInviteData?.me?.pendingHomeInvites?.find(inv =>
-      inviteId ? inv.id === inviteId : false,
-    ) ??
-    tokenHomeInviteData?.homeInviteByToken ??
-    null;
+    tokenListInviteData?.shoppingListInviteByToken ?? null;
+  const homeInvite = tokenHomeInviteData?.homeInviteByToken ?? null;
 
   // Unmask display fields via useFragment (pattern B — resilient fallback).
   // The queries already select these fields, so the cache has them;
@@ -137,15 +108,10 @@ export const AcceptInvite: React.FC = () => {
     ? 'home'
     : 'unknown';
 
-  const resolveInviteToken = (): string | undefined => {
-    if (invitationType === 'shopping_list' && shoppingListInvite) {
-      return token || shoppingListInvite.id;
-    }
-    if (invitationType === 'home' && homeInvite) {
-      return token || homeInvite.id;
-    }
-    return undefined;
-  };
+  // The invite only ever resolves from the route token, so that token is the
+  // credential the accept/decline mutations need.
+  const resolveInviteToken = (): string | undefined =>
+    invitationType === 'unknown' ? undefined : token;
 
   const handleAccept = () => {
     const inviteToken = resolveInviteToken();

@@ -14,6 +14,13 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         netWeight
         primaryUpc
         type
+        # Together these decide whether the card offers an edit action at all,
+        # and which wording it uses. canEdit is viewer-scoped (true only for the
+        # item's creator and admins); canSuggest is structural (true for active
+        # PUBLIC catalog items). Neither is inferable from visibility, and both
+        # false means read-only — a scan can surface an item you may not touch.
+        canEdit
+        canSuggest
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -77,6 +84,13 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         netWeight
         primaryUpc
         type
+        # Together these decide whether the card offers an edit action at all,
+        # and which wording it uses. canEdit is viewer-scoped (true only for the
+        # item's creator and admins); canSuggest is structural (true for active
+        # PUBLIC catalog items). Neither is inferable from visibility, and both
+        # false means read-only — a scan can surface an item you may not touch.
+        canEdit
+        canSuggest
         storageState
         shelfLifeDays
         shelfLifeOpenedDays
@@ -114,8 +128,8 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
   }
 }
 
-query GetOnboardingItems($filters: ItemFilters, $sort: ItemSortInput, $first: Int, $after: String) {
-  items(filters: $filters, sort: $sort, first: $first, after: $after) {
+query GetOnboardingItems($filters: ItemFilters, $orderBy: ItemOrderBy, $first: Int, $after: String) {
+  items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {
     edges {
       cursor
       node {
@@ -238,7 +252,7 @@ query AutocompleteCategories($input: AutocompleteCategoryInput!) {
 }
 
 query GetPopularItems($first: Int = 10) {
-  items(sort: { field: POPULARITY, order: DESC }, first: $first) {
+  items(orderBy: { popularity: DESC }, first: $first) {
     edges {
       node {
         id
@@ -283,6 +297,12 @@ mutation CreateItem($input: CreateItemInput!) {
         id
         name
         description
+        # Labels the follow-up edit action correctly — a freshly created item is
+        # the creator's own, so canEdit comes back true and the card offers a
+        # direct "Edit" rather than a suggestion. canSuggest rides along to keep
+        # the cached Item complete for the card's read-only check.
+        canEdit
+        canSuggest
         netWeight
         displayUnit {
           id
@@ -349,10 +369,10 @@ mutation CreateItem($input: CreateItemInput!) {
 # Popular). Per-user and per-surface; reversible via UndismissSuggestion. Lives
 # here (shared item operations) so both the pantry and shopping sheets can use it
 # without reaching across feature boundaries.
-mutation DismissSuggestion($input: DismissSuggestionInput!) {
-  dismissSuggestion(input: $input) {
+mutation MarkSuggestionDismissed($input: MarkSuggestionDismissedInput!) {
+  markSuggestionDismissed(input: $input) {
     __typename
-    ... on DismissSuggestionPayload {
+    ... on MarkSuggestionDismissedPayload {
       itemId
       surface
       dismissed
@@ -364,10 +384,10 @@ mutation DismissSuggestion($input: DismissSuggestionInput!) {
   }
 }
 
-mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
-  undismissSuggestion(input: $input) {
+mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
+  markSuggestionActive(input: $input) {
     __typename
-    ... on UndismissSuggestionPayload {
+    ... on MarkSuggestionActivePayload {
       itemId
       surface
       dismissed
@@ -379,10 +399,19 @@ mutation UndismissSuggestion($input: UndismissSuggestionInput!) {
   }
 }
 
-mutation FlagItemForReview($input: FlagItemForReviewInput!) {
-  flagItemForReview(input: $input) {
+# Flags a whole item for admin moderation with a free-text reason. This is a
+# REPORT, not an edit proposal: it sets needsApproval and carries no structured
+# changes. Used by the autocomplete "Wrong details on one of these?" affordance,
+# where the user has only seen a name, brand and thumbnail and so can't
+# meaningfully fill in an edit form.
+#
+# Not to be confused with createItemSuggestion (src/hooks/items/useSuggestItemEdit.graphql),
+# which proposes a structured diff and is reachable only from the barcode scan
+# flow, where the user is looking at the item's full details.
+mutation MarkItemForReview($input: MarkItemForReviewInput!) {
+  markItemForReview(input: $input) {
     __typename
-    ... on FlagItemForReviewPayload {
+    ... on MarkItemForReviewPayload {
       item {
         id
       }

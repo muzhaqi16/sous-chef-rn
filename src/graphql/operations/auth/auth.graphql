@@ -15,11 +15,17 @@ mutation Login($input: LoginInput!) {
 
 mutation Register($input: RegisterInput!) {
   register(input: $input) {
-    accessToken
-    refreshToken
-    user {
-      id
-      ...LoginUser
+    __typename
+    ... on RegisterPayload {
+      status
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
@@ -58,11 +64,7 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
   forgotPassword(input: $input) {
     __typename
     ... on ForgotPasswordPayload {
-      status {
-        success
-        code
-        message
-      }
+      status
     }
     ... on Error {
       code
@@ -73,9 +75,17 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
 
 mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
   resetPassword(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on ResetPasswordPayload {
+      status
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }
 
@@ -99,8 +109,16 @@ mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
 
 mutation ChangePassword($input: ChangePasswordInput!) {
   changePassword(input: $input) {
-    success
-    message
-    code
+    __typename
+    ... on ChangePasswordPayload {
+      status
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
   }
 }

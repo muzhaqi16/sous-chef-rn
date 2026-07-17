@@ -6,6 +6,8 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { t } from '#/i18n/t';
 
 const addToMealPlans = createAddToQueryConnectionUpdater<{ id: string }>(
   'mealPlans',
@@ -28,7 +30,13 @@ export function useDuplicateMealPlan() {
     },
   );
 
+  const isApiUnavailable = useIsApiUnavailable();
+
   const duplicatePlan = async (input: DuplicateMealPlanInput) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
     const result = await executeMutation(
       () => duplicateMutation({ variables: { input } }),
       'Duplicate meal plan error:',
@@ -47,5 +55,6 @@ export function useDuplicateMealPlan() {
   return {
     duplicatePlan,
     loading,
+    isApiUnavailable,
   };
 }

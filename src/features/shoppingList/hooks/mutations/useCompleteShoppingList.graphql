@@ -1,0 +1,13 @@
+# Snapshot/write shape for useCompleteShoppingList's optimistic status writes:
+# the completion fields the screen flips (status, isCompleted, completedShopDate)
+# plus the version/updatedAt pair the revert restores. Every field must be
+# selected by the reading query (GetShoppingListDetails) so the snapshot reads
+# complete — otherwise the optimistic write silently skips.
+fragment useCompleteShoppingList_list on ShoppingList {
+  id
+  status
+  isCompleted
+  completedShopDate
+  version
+  updatedAt
+}

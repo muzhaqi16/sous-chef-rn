@@ -19,6 +19,7 @@ import {
   getInvalidUnitMessage,
 } from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
+import { t } from '#/i18n/t';
 
 export interface VersionConflictConfig {
   /** Name of the item being updated (e.g., "Item", "Home", "Recipe"). */
@@ -60,19 +61,36 @@ export const handleVersionConflictAlert = (
   error: unknown,
   config: VersionConflictConfig = {},
 ): boolean => {
-  const { itemName = 'Item', onRefresh, customMessage } = config;
-
   if (handleVersionConflict(error)) {
-    const message = customMessage || getVersionConflictMessage(error);
-
-    alertService.alert(`${itemName} Updated`, message, [
-      { text: 'Refresh', onPress: () => onRefresh?.() },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    alertVersionConflict({
+      ...config,
+      customMessage: config.customMessage || getVersionConflictMessage(error),
+    });
     return true;
   }
 
   return false;
+};
+
+/**
+ * Show the version-conflict alert (title + Refresh/Cancel actions). Shared by
+ * the thrown-error path ({@link handleVersionConflictAlert}) and the
+ * errors-as-data path — a resolved `ConflictError` union member routes here so
+ * it reaches the same Refresh UX instead of a generic alert.
+ */
+export const alertVersionConflict = (
+  config: VersionConflictConfig = {},
+): void => {
+  const { itemName = 'Item', onRefresh, customMessage } = config;
+
+  alertService.alert(
+    `${itemName} ${t('labels.updated')}`,
+    customMessage || getVersionConflictMessage(undefined),
+    [
+      { text: t('labels.refresh'), onPress: () => onRefresh?.() },
+      { text: t('labels.cancel'), style: 'cancel' },
+    ],
+  );
 };
 
 /**
@@ -97,7 +115,7 @@ export const handleMutationErrorAlert = (
   const errorMessage = customMessage || getErrorMessage(error);
 
   if (showAlert) {
-    alertService.alert('Error', errorMessage);
+    alertService.alert(t('labels.error'), errorMessage);
   }
 
   errorService.reportError(error, { operation });
@@ -165,7 +183,10 @@ export function invalidUnitCheck(): MutationErrorCheck {
   return {
     detect: error => isInvalidUnitError(error),
     handle: error => {
-      alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+      alertService.alert(
+        t('errors.invalidUnitTitle'),
+        getInvalidUnitMessage(error),
+      );
     },
   };
 }

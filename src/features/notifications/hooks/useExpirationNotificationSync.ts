@@ -17,7 +17,6 @@
 import { useMutation } from '@apollo/client/react';
 import {
   MarkExpirationActionDocument,
-  DismissExpirationNotificationDocument,
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
@@ -38,7 +37,8 @@ const ACTION_LABELS: Record<ExpirationAction, string> = {
 
 export function useExpirationNotificationSync() {
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
-  const [dismissMutation] = useMutation(DismissExpirationNotificationDocument);
+  // The server merged the former dismiss mutation into
+  // markExpirationNotificationAsRead — marking read IS the dismissal.
   const [markReadMutation] = useMutation(
     MarkExpirationNotificationAsReadDocument,
   );
@@ -78,22 +78,6 @@ export function useExpirationNotificationSync() {
     );
   };
 
-  const syncDismiss = (expirationNotificationId: string) => {
-    executeMutation(
-      () =>
-        dismissMutation({
-          variables: { input: { notificationId: expirationNotificationId } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncDismissExpiration',
-          notificationId: expirationNotificationId,
-        });
-      },
-    );
-  };
-
   const syncMarkRead = (expirationNotificationId: string) => {
     executeMutation(
       () =>
@@ -110,5 +94,5 @@ export function useExpirationNotificationSync() {
     );
   };
 
-  return { syncMarkAction, syncDismiss, syncMarkRead };
+  return { syncMarkAction, syncMarkRead };
 }

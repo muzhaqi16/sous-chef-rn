@@ -18,22 +18,27 @@ export interface MealPlanPermissions {
 }
 
 /**
- * Meal plan data shape needed for permission calculation
+ * Meal plan data shape needed for permission calculation.
+ *
+ * Owner identity is the plan's `user` (the direct-owner field the API resolves
+ * OWNER from), NOT `createdBy` (the original-creator field, which is display-only
+ * and can differ from the owner on home/legacy plans).
  */
 interface MealPlanData extends HomeLinkedResource {
-  createdBy?: { id: string } | null;
+  user?: { id: string } | null;
 }
 
 /**
- * Check if the current user is the creator of the meal plan
+ * Check if the current user is the owner of the meal plan.
+ *
+ * Keys off `mealPlan.user.id` — gating on `createdBy` would compute the wrong
+ * owner whenever the owner and original creator differ.
  */
-export function isMealPlanCreator(
+export function isMealPlanOwner(
   mealPlan: MealPlanData,
   userId?: string,
 ): boolean {
-  return (
-    !!mealPlan.createdBy?.id && !!userId && mealPlan.createdBy.id === userId
-  );
+  return !!mealPlan.user?.id && !!userId && mealPlan.user.id === userId;
 }
 
 /**
@@ -48,16 +53,13 @@ export function isPersonalPlan(mealPlan: MealPlanData): boolean {
  *
  * Uses the centralized HomeLinkedResource permission model:
  * - Personal plans (no homeId): full permissions
- * - Home plans: creator → full; OWNER/ADMIN → full; MEMBER → edit (no delete); GUEST → view only
+ * - Home plans: owner → full; OWNER/ADMIN → full; MEMBER → edit (no delete); GUEST → view only
  */
 export function getMealPlanPermissions(
   mealPlan: MealPlanData,
   userId?: string,
 ): MealPlanPermissions {
-  const level = getPermissionLevel(
-    mealPlan,
-    isMealPlanCreator(mealPlan, userId),
-  );
+  const level = getPermissionLevel(mealPlan, isMealPlanOwner(mealPlan, userId));
 
   return {
     canEdit: canEdit(level),

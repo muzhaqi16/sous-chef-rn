@@ -1,5 +1,6 @@
 - to regenerate the schema run npm run codegen
 - always run npm run typecheck and npm run lint after making code changes to ensure no typescript and linting errors were introduced
+- `npm run lint` also lints every `.graphql` operation against the codegen-pulled schema (`@graphql-eslint` override in `.eslintrc.js`, files `**/*.graphql`): `fields-on-correct-type` (selecting a field/arg the schema lacks) and `no-deprecated` (using an `@deprecated` field/arg/enum value) are both `error`. This surfaces API drift — a renamed/removed field or a freshly-deprecated one — at lint time, one at a time, instead of as a surprise `npm run codegen` batch failure. The guard reads `src/graphql/generated/schema.graphql`, so run `npm run codegen` first if the schema is stale.
 - typecasting \_\_typename: 'Mutation' as any, is never needed
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
@@ -94,12 +95,18 @@ happen inside that factory.
   `<View style={[styles.x, callerStyle]} />` ([Unistyles "Merging styles"
   guide](https://www.unistyl.es/v3/guides/merging-styles/)). No wrapper or
   `'use no memo'` directive needed.
-- **Navigators must use `inactiveBehavior: 'none'`** in `screenOptions`. The
-  default `'pause'` behavior in `@react-navigation/native-stack` v8 and
-  `@react-navigation/bottom-tabs` v8 freezes inactive screens, preventing
-  Unistyles ShadowTree updates from reaching them — the visible symptom is a
-  theme change that only applies after navigating back. See
-  [react-native-unistyles#1183](https://github.com/jpudysz/react-native-unistyles/issues/1183).
+- **Navigators use the default `inactiveBehavior: 'pause'`.** Historically the
+  app pinned `inactiveBehavior: 'none'` on every navigator because the default
+  `'pause'` (React 19 `React.Activity`, used by `@react-navigation/native-stack`
+  v8 and `@react-navigation/bottom-tabs` v8 to freeze inactive screens) prevented
+  Unistyles ShadowTree updates from reaching them — a theme change only applied
+  after navigating back. **Fixed in `react-native-unistyles@3.3.0`**
+  ([#1183](https://github.com/jpudysz/react-native-unistyles/issues/1183) /
+  [#1212](https://github.com/jpudysz/react-native-unistyles/pull/1212)): unistyles
+  now detects the React `Offscreen` fiber boundary and re-links + pushes a fresh
+  ShadowTree update when a paused screen resumes, so `'pause'` applies theme
+  changes correctly. Do **not** re-add `inactiveBehavior: 'none'` — the default
+  `'pause'` is correct and reclaims the freeze-inactive-screens optimization.
 
 The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 (see `babel.config.js`); reversing the order produces compile errors.

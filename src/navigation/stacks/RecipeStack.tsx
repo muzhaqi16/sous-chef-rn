@@ -14,7 +14,6 @@ export const RecipeStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,
     contentStyle: { backgroundColor: theme.colors.background },
-    inactiveBehavior: 'none',
   }),
   screenLayout: topInsetScreenLayout,
   screens: {

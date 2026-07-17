@@ -37,6 +37,8 @@ interface MoveToPantryModalProps {
     actualPrice?: number;
     notes?: string;
   }) => void;
+  /** Server unreachable (offline / API down) — disables the confirm action. */
+  confirmDisabled?: boolean;
 }
 
 export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
@@ -46,6 +48,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   selectedPantryId,
   onClose,
   onConfirm,
+  confirmDisabled = false,
 }) => {
   const { t } = useTranslation();
 
@@ -188,6 +191,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             {
               icon: 'checkmark',
               onPress: handleConfirm,
+              disabled: confirmDisabled,
             },
           ]}
         />

@@ -48,7 +48,10 @@ export function useAddLowStockToShoppingList({
     );
     if (!result) return;
 
-    const { addedCount, skippedCount } = result.result;
+    // The payload's shared summary carries the authoritative counters — the
+    // inlined item lists exist for display and may be capped server-side.
+    const addedCount = result.summary.succeeded;
+    const skippedCount = result.summary.skipped;
 
     if (addedCount === 0 && skippedCount === 0) {
       toastService.info('No low stock items found');

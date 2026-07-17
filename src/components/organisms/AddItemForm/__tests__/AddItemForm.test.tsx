@@ -154,8 +154,13 @@ jest.mock('#/components/molecules/DynamicFormFields', () => ({
   },
 }));
 
+// Both schemas must be present: the form picks between them by mode, so omitting
+// one leaves yupResolver holding `undefined` the moment that mode renders.
 jest.mock('#utils/validation/item', () => ({
   createItemSchema: {
+    validate: jest.fn(),
+  },
+  suggestItemEditSchema: {
     validate: jest.fn(),
   },
   CreateItemFormData: {},
@@ -174,6 +179,21 @@ describe('AddItemForm', () => {
   it('renders the default title', () => {
     render(<AddItemForm {...defaultProps} />);
     expect(screen.getByText('Add New Item')).toBeTruthy();
+  });
+
+  // CreateItemSuggestionInput.note is String! and an admin reads it, so the review
+  // path mandates it. A direct edit has no reviewer and the server no longer
+  // accepts a note on UpdateItemInput, so the field is omitted there entirely.
+  describe('edit note requirement', () => {
+    it('addresses the note to the reviewer on the suggestion path', () => {
+      render(<AddItemForm {...defaultProps} mode="edit" />);
+      expect(screen.getByText('What needs fixing?')).toBeTruthy();
+    });
+
+    it('omits the note field on the direct-edit path', () => {
+      render(<AddItemForm {...defaultProps} mode="directEdit" />);
+      expect(screen.queryByText('What needs fixing?')).toBeNull();
+    });
   });
 
   it('renders a custom title when provided', () => {

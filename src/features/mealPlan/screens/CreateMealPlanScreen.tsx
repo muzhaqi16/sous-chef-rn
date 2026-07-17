@@ -10,6 +10,7 @@ import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
 import { FormTextArea } from '#components/molecules/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
+import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
@@ -18,6 +19,7 @@ import { TemplatePreviewSheet } from '#features/mealPlan/components/TemplatePrev
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
+import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
@@ -54,9 +56,13 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
   const { createMealPlan, creating } = useMealPlanActions();
-  const { createPlanFromTemplate, creatingFromTemplate } =
-    useMealTemplateActions();
+  const {
+    createPlanFromTemplate,
+    creatingFromTemplate,
+    isApiUnavailable: templateActionsUnavailable,
+  } = useMealTemplateActions();
   const { homes } = useHomeQuery();
+  const { profile: dietaryProfile } = useDietaryProfile();
   const selectedHomeId = useSelectedHomeId();
 
   const [name, setName] = useState('');
@@ -64,6 +70,8 @@ export const CreateMealPlanScreen: React.FC = () => {
   const [planType, setPlanType] = useState<MealPlanType>(MealPlanType.Weekly);
   const [startDate, setStartDate] = useState<Date | null>(new Date());
   const [servings, setServings] = useState('2');
+  const [budget, setBudget] = useState('');
+  const [trackNutrition, setTrackNutrition] = useState(false);
   const [homeSelection, setHomeSelection] = useState<string>(
     selectedHomeId ?? PERSONAL_VALUE,
   );
@@ -126,6 +134,12 @@ export const CreateMealPlanScreen: React.FC = () => {
     const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
     const descriptionValue = description.trim() || undefined;
     const servingsValue = parseInt(servings) || 2;
+    // Empty clears the budget; ignore a non-numeric entry rather than send NaN.
+    const parsedBudget = budget.trim() === '' ? undefined : Number(budget);
+    const budgetValue =
+      parsedBudget !== undefined && !Number.isNaN(parsedBudget)
+        ? parsedBudget
+        : undefined;
 
     const result = await executeMutation(
       () =>
@@ -136,6 +150,9 @@ export const CreateMealPlanScreen: React.FC = () => {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
           servings: servingsValue,
+          budgetAmount: budgetValue,
+          dietaryProfileId:
+            trackNutrition && dietaryProfile ? dietaryProfile.id : undefined,
           homeId,
         }),
       error => {
@@ -208,6 +225,23 @@ export const CreateMealPlanScreen: React.FC = () => {
         step={1}
       />
 
+      <FormInput
+        label={t('mealPlan.budgetAmount')}
+        value={budget}
+        onChangeText={setBudget}
+        placeholder={t('mealPlan.budgetPlaceholder')}
+        keyboardType="numeric"
+        testID="meal-plan-budget-input"
+      />
+
+      {!!dietaryProfile && (
+        <FormCheckbox
+          label={t('mealPlan.trackNutrition')}
+          checked={trackNutrition}
+          onPress={() => setTrackNutrition(prev => !prev)}
+        />
+      )}
+
       {homeOptions.length > 1 && (
         <FormSelect
           label={t('mealPlan.shareWith')}
@@ -253,6 +287,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         }}
         onConfirm={handleCreateFromTemplate}
         confirmLoading={creatingFromTemplate}
+        disabled={templateActionsUnavailable}
       />
     </FormModal>
   );

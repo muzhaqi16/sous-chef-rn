@@ -87,6 +87,28 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
           />
         </View>
       </View>
+
+      <FormTextArea
+        label={t('recipes.tips')}
+        value={state.tips}
+        onChangeText={v => updateField('tips', v)}
+        placeholder={t('recipes.tipsPlaceholder')}
+      />
+
+      <FormInput
+        label={t('recipes.recipeTags')}
+        value={state.tags}
+        onChangeText={v => updateField('tags', v)}
+        placeholder={t('recipes.recipeTagsPlaceholder')}
+        autoCapitalize="none"
+      />
+
+      <FormInput
+        label={t('recipes.originalAuthor')}
+        value={state.originalAuthor}
+        onChangeText={v => updateField('originalAuthor', v)}
+        placeholder={t('recipes.originalAuthorPlaceholder')}
+      />
     </>
   );
 };

@@ -53,6 +53,7 @@ import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
 import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
 import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
 import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
+import { MealTemplateBuilderScreen } from '#features/mealPlan/screens/MealTemplateBuilderScreen';
 
 // Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
 const ProfilePhotoUploadScreen = React.lazy(
@@ -113,7 +114,7 @@ import {
   useIsOnboarding,
   useIsMainApp,
 } from '#hooks/navigation/useNavigationGuards';
-import { navigationRef } from '#services/NavigationService';
+import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
@@ -142,9 +143,6 @@ const RootStack = createNativeStackNavigator({
     headerShown: false,
     animation: 'slide_from_right',
     animationDuration: 200,
-    // Keep stacked screens active so Unistyles theme updates reach every
-    // mounted screen, not just the top one. See unistyles issue #1183.
-    inactiveBehavior: 'none',
   },
   groups: {
     Auth: {
@@ -189,6 +187,9 @@ const RootStack = createNativeStackNavigator({
       screens: {
         BiometricSetup: createNativeStackScreen({
           screen: PostLoginBiometricScreen,
+          // Not deep-linkable: it is a gate the app decides to show, never a
+          // destination a URL asks for.
+          linking: null,
         }),
       },
     },
@@ -365,6 +366,10 @@ const RootStack = createNativeStackNavigator({
           screen: CreateMealPlanScreen,
           options: featureDetailOptions,
         }),
+        MealTemplateBuilder: createNativeStackScreen({
+          screen: MealTemplateBuilderScreen,
+          options: featureDetailOptions,
+        }),
       },
     },
     // Always-available deep link screens — placed last so the active
@@ -538,6 +543,7 @@ export function Navigation() {
         <StaticNavigation
           ref={navigationRef}
           theme={navigationTheme}
+          onReady={NavigationService.flushPendingNavigation}
           linking={{
             prefixes: DEEP_LINK_PREFIXES,
           }}

@@ -14,33 +14,49 @@ import { useMutation, useQuery } from '@apollo/client/react';
 import {
   DeleteAccountDocument,
   CanDeleteAccountDocument,
+  type DeleteAccountMutation,
 } from '#operations/auth/user.generated';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { errorService } from '#/services/errorService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 
 /** Module-level wrapper around the deleteAccount mutation. Extracted from the
  *  inline `onPress` arrow inside the component body so the surrounding try/catch
  *  does not bail out the React Compiler. */
 async function performDeleteAccount(
-  deleteAccountMutation: () => Promise<unknown>,
+  deleteAccountMutation: () => Promise<{
+    data?: DeleteAccountMutation | null;
+    error?: unknown;
+  }>,
   setIsDeleting: (v: boolean) => void,
+  rejectionMessage: string,
 ): Promise<void> {
   setIsDeleting(true);
   const result = await executeMutation(
     () => deleteAccountMutation(),
     error => {
-      errorService.reportError(error, {
-        operation: 'DeleteAccount.deleteAccount',
-      });
+      handleMutationError(error, { operation: 'Delete Account' });
       setIsDeleting(false);
     },
   );
-  if (result === false) {
-    // executeMutation already invoked the error callback above; nothing else to do
+  if (!result) return; // transport error — already surfaced by the handler above
+
+  // A ForbiddenError/ValidationError member resolves WITHOUT throwing under
+  // errorPolicy:'all' — only the success payload logs the user out.
+  if (
+    alertIfRejected(
+      result,
+      'deleteAccount',
+      'DeleteAccountPayload',
+      rejectionMessage,
+    )
+  ) {
+    setIsDeleting(false);
+    return;
   }
+  authService.logout();
 }
 
 export const DeleteAccountScreen: React.FC = () => {
@@ -63,13 +79,9 @@ export const DeleteAccountScreen: React.FC = () => {
   const canDelete = eligibilityData?.canDeleteAccount?.canDelete ?? false;
   const blockers = eligibilityData?.canDeleteAccount?.blockers ?? [];
 
-  const [deleteAccountMutation] = useMutation(DeleteAccountDocument, {
-    onCompleted: () => authService.logout(),
-    onError: error => {
-      handleMutationError(error, { operation: 'Delete Account' });
-      setIsDeleting(false);
-    },
-  });
+  // Error/success handling lives in `performDeleteAccount` so a resolved error
+  // member can't trigger logout — see the unwrapPayload note there.
+  const [deleteAccountMutation] = useMutation(DeleteAccountDocument);
 
   const handleDeleteAccount = async () => {
     if (confirmText.trim().toUpperCase() !== 'DELETE') {
@@ -92,7 +104,11 @@ export const DeleteAccountScreen: React.FC = () => {
           text: t('account.deleteForeverButton'),
           style: 'destructive',
           onPress: () =>
-            performDeleteAccount(deleteAccountMutation, setIsDeleting),
+            performDeleteAccount(
+              deleteAccountMutation,
+              setIsDeleting,
+              t('account.deleteGenericError'),
+            ),
         },
       ],
     );

@@ -2,6 +2,7 @@
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService, type AlertButton } from '#/services/alertService';
+import { alertVersionConflict } from '#/utils/errorHandlers';
 import { useCrudOperations } from '../useCrudOperations';
 
 jest.mock('#/services/alertService', () => ({
@@ -20,6 +21,7 @@ jest.mock('#/utils/compilerSafeWrappers');
 jest.mock('#/utils/errorHandlers', () => ({
   handleVersionConflictAlert: jest.fn(() => false),
   handleMutationErrorAlert: jest.fn(),
+  alertVersionConflict: jest.fn(),
 }));
 
 describe('useCrudOperations', () => {
@@ -203,7 +205,7 @@ describe('useCrudOperations', () => {
       expect(data).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Failed to create item',
+        'Something went wrong. Please try again.',
       );
     });
   });
@@ -271,6 +273,43 @@ describe('useCrudOperations', () => {
         'Validation Error',
         'Field is required',
       );
+    });
+
+    it('routes a resolved ConflictError data-member to the version-conflict refresh UX', async () => {
+      const mockMutation = jest.fn().mockResolvedValue({
+        data: {
+          updateItem: {
+            __typename: 'ConflictError',
+            code: 'VERSION_CONFLICT',
+            message: 'Stale write',
+          },
+        },
+      });
+      const onVersionConflict = jest.fn();
+      const onError = jest.fn();
+
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const updateOp = result.current.createUpdateOperation({
+        mutation: mockMutation,
+        itemId: 'item-1',
+        onVersionConflict,
+        onError,
+      });
+
+      const data = await updateOp({ name: 'x' });
+
+      // The conflict is surfaced via the refresh alert wired to onVersionConflict,
+      // not the generic error alert.
+      expect(data).toBe(false);
+      expect(alertVersionConflict).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onRefresh: onVersionConflict,
+          customMessage: 'Stale write',
+        }),
+      );
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalled();
     });
   });
 
@@ -434,7 +473,7 @@ describe('useCrudOperations', () => {
       expect(data).toBe(false);
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Failed to my operation',
+        'Something went wrong. Please try again.',
       );
     });
   });

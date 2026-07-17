@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -25,6 +26,9 @@ interface ItemCardProps {
   format?: string;
   onEditItem?: () => void;
   onCreateVariant?: () => void;
+  /** "Suggest Edit" for a public catalog item, "Edit" when this user can write
+   *  through. Falls back to the suggestion wording — the safe assumption. */
+  editActionLabel?: string;
 }
 
 export const ProductResultCard: React.FC<ItemCardProps> = ({
@@ -32,7 +36,9 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   format,
   onEditItem,
   onCreateVariant,
+  editActionLabel,
 }) => {
+  const { t } = useTranslation();
   const showActions = !!onEditItem || !!onCreateVariant;
 
   return (
@@ -85,7 +91,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             <Pressable style={styles.actionLink} onPress={onEditItem}>
               <Icon name="create-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
-                Suggest Edit
+                {editActionLabel ?? t('suggestItemEdit.suggestAction')}
               </Text>
             </Pressable>
           )}

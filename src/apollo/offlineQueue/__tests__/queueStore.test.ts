@@ -1,6 +1,6 @@
 import type { DocumentNode } from 'graphql';
 import { QueueStore } from '../queueStore';
-import { QueuedMutation, QueueStatus } from '../types';
+import { QueueCapacityError, QueuedMutation, QueueStatus } from '../types';
 import { storage } from '#storage/mmkv';
 
 // The global jest.setup.js already mocks react-native-mmkv with an in-memory Map,
@@ -98,20 +98,39 @@ describe('QueueStore', () => {
       expect(result[0].id).toBe('add-1');
     });
 
-    it('enforces queue size limit of 100 by removing oldest', () => {
-      // Fill the queue to 100
-      for (let i = 0; i < 100; i++) {
-        store.addMutation(
-          makeMutation({ id: `fill-${i}`, operationName: 'FillMutation' }),
-        );
+    it('evicts the oldest terminal entry at capacity, preserving PENDING ops', () => {
+      // Oldest entry is terminal (SUCCESS); the rest are un-synced PENDING.
+      store.addMutation(
+        makeMutation({ id: 'done-0', status: QueueStatus.SUCCESS }),
+      );
+      for (let i = 0; i < 99; i++) {
+        store.addMutation(makeMutation({ id: `pending-${i}` }));
       }
 
-      // Adding the 101st should remove fill-0
+      // The 101st enqueue evicts the terminal entry, never a PENDING op.
       store.addMutation(makeMutation({ id: 'overflow' }));
+
       const all = store.getMutationsForUser('user-1');
       expect(all).toHaveLength(100);
-      expect(all.find(m => m.id === 'fill-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'done-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'pending-0')).toBeDefined();
       expect(all.find(m => m.id === 'overflow')).toBeDefined();
+    });
+
+    it('rejects the enqueue when the queue is full of un-synced PENDING work', () => {
+      for (let i = 0; i < 100; i++) {
+        store.addMutation(makeMutation({ id: `fill-${i}` }));
+      }
+
+      expect(() => store.addMutation(makeMutation({ id: 'overflow' }))).toThrow(
+        QueueCapacityError,
+      );
+
+      // No PENDING op was dropped and the rejected op was not added.
+      const all = store.getMutationsForUser('user-1');
+      expect(all).toHaveLength(100);
+      expect(all.find(m => m.id === 'fill-0')).toBeDefined();
+      expect(all.find(m => m.id === 'overflow')).toBeUndefined();
     });
 
     describe('MoveShoppingListItem coalescing', () => {
@@ -581,6 +600,64 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
+  // resetProcessingToPending
+  // -------------------------------------------------------------------------
+  describe('resetProcessingToPending', () => {
+    it('flips stranded PROCESSING entries back to PENDING', () => {
+      store.addMutation(
+        makeMutation({ id: 'stranded-1', status: QueueStatus.PROCESSING }),
+      );
+      store.addMutation(
+        makeMutation({ id: 'stranded-2', status: QueueStatus.PROCESSING }),
+      );
+
+      const reset = store.resetProcessingToPending('user-1');
+
+      expect(reset).toBe(2);
+      const pending = store.getPendingMutationsForUser('user-1');
+      expect(pending.map(m => m.id)).toEqual(
+        expect.arrayContaining(['stranded-1', 'stranded-2']),
+      );
+    });
+
+    it('leaves other statuses and other users untouched', () => {
+      store.addMutation(makeMutation({ id: 'pending-1' }));
+      store.addMutation(
+        makeMutation({ id: 'success-1', status: QueueStatus.SUCCESS }),
+      );
+      store.addMutation(
+        makeMutation({ id: 'failed-1', status: QueueStatus.FAILED }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'other-user',
+          userId: 'user-2',
+          status: QueueStatus.PROCESSING,
+        }),
+      );
+
+      const reset = store.resetProcessingToPending('user-1');
+
+      expect(reset).toBe(0);
+      expect(store.getMutation('success-1')?.status).toBe(QueueStatus.SUCCESS);
+      expect(store.getMutation('failed-1')?.status).toBe(QueueStatus.FAILED);
+      expect(store.getMutation('other-user')?.status).toBe(
+        QueueStatus.PROCESSING,
+      );
+    });
+
+    it('persists the reset (survives cache invalidation)', () => {
+      store.addMutation(
+        makeMutation({ id: 'stranded-p', status: QueueStatus.PROCESSING }),
+      );
+      store.resetProcessingToPending('user-1');
+      store.invalidateCache();
+
+      expect(store.getMutation('stranded-p')?.status).toBe(QueueStatus.PENDING);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // getPendingClientIds
   // -------------------------------------------------------------------------
   describe('getPendingClientIds', () => {
@@ -612,6 +689,107 @@ describe('QueueStore', () => {
       store.setCurrentUserId('user-1');
       store.addMutation(makeMutation({ id: 'no-id', variables: {} }));
       expect(store.getPendingClientIds().size).toBe(0);
+    });
+
+    it('collects a top-level variables.id', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({ id: 'm-top', variables: { id: 'cuid-top-level' } }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-top-level']));
+    });
+
+    it('collects the item id from a single-item batch add', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-1',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [{ id: 'cuid-batch-a' }],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-batch-a']));
+    });
+
+    it('collects every item id from a multi-item batch add, not just the first', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-n',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [
+                { id: 'cuid-batch-1' },
+                { id: 'cuid-batch-2' },
+                { id: 'cuid-batch-3' },
+              ],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(
+        new Set(['cuid-batch-1', 'cuid-batch-2', 'cuid-batch-3']),
+      );
+    });
+
+    it('skips batch items with missing or non-string ids without throwing', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-batch-bad',
+          operationName: 'AddItemsToShoppingList',
+          variables: {
+            input: {
+              shoppingListId: 'list-1',
+              items: [
+                { id: 'cuid-good' },
+                { name: 'no id at all' },
+                { id: 42 },
+                { id: '' },
+                null,
+              ],
+            },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-good']));
+    });
+
+    it('recovered PROCESSING entries regain pending-id protection', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-stranded',
+          status: QueueStatus.PROCESSING,
+          variables: { input: { id: 'cuid-stranded' } },
+        }),
+      );
+      expect(store.getPendingClientIds().size).toBe(0);
+
+      store.resetProcessingToPending('user-1');
+      expect(store.getPendingClientIds()).toEqual(new Set(['cuid-stranded']));
+    });
+
+    it('collects both input.id and items[].id when a shape carries both', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(
+        makeMutation({
+          id: 'm-both',
+          variables: {
+            input: { id: 'cuid-input', items: [{ id: 'cuid-item' }] },
+          },
+        }),
+      );
+      expect(store.getPendingClientIds()).toEqual(
+        new Set(['cuid-input', 'cuid-item']),
+      );
     });
   });
 });

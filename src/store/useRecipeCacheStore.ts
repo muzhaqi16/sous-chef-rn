@@ -12,6 +12,11 @@ interface CachedRecipeSearch {
   results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[];
   enrichment: Record<number, RecipeInformation>;
   cachedAt: number;
+  // Source's total result count at fetch time (text search pagination reads
+  // this so a cache hit doesn't lose the "is there more?" signal). Optional:
+  // entries persisted before the field existed, and non-paginated searches,
+  // don't carry it.
+  totalResults?: number | null;
 }
 
 interface RecipeCacheState {
@@ -22,6 +27,7 @@ interface RecipeCacheState {
     key: string,
     results: (RecipeSearchResult | SearchRecipesResult | RecipeInformation)[],
     enrichment?: Record<number, RecipeInformation>,
+    totalResults?: number | null,
   ) => void;
   updateEnrichment: (
     key: string,
@@ -44,7 +50,12 @@ export function ingredientCacheKey(ingredients: string): string {
   return `ingredient:${sorted}`;
 }
 
-/** Build a normalized cache key for text-based searches */
+/** Build a normalized cache key for text-based searches.
+ *
+ * `offset` distinguishes paginated pages of the same query: without it page 2
+ * (offset 25) would collide with page 1 (offset 0) and the cache would serve
+ * the first page's results for every "load more". Defaults to 0 so first-page
+ * callers don't have to pass it. */
 export function textSearchCacheKey(
   query: string,
   filters?: {
@@ -53,6 +64,7 @@ export function textSearchCacheKey(
     mealType?: string | null;
     maxReadyTime?: number | null;
   },
+  offset = 0,
 ): string {
   const parts = [`text:${query.toLowerCase().trim()}`];
   if (filters?.diet?.length)
@@ -61,6 +73,7 @@ export function textSearchCacheKey(
     parts.push(`intol:${filters.intolerances.sort().join(',')}`);
   if (filters?.mealType) parts.push(`type:${filters.mealType}`);
   if (filters?.maxReadyTime) parts.push(`time:${filters.maxReadyTime}`);
+  if (offset > 0) parts.push(`offset:${offset}`);
   return parts.join('|');
 }
 
@@ -105,12 +118,17 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
         return cached;
       },
 
-      setCached: (key, results, enrichment = {}) => {
+      setCached: (key, results, enrichment = {}, totalResults = null) => {
         // Don't cache empty result sets: a transient zero (API hiccup,
         // over-restrictive filters) would otherwise stick for the full TTL.
         if (results.length === 0) return;
         set(state => {
-          state.cache[key] = { results, enrichment, cachedAt: Date.now() };
+          state.cache[key] = {
+            results,
+            enrichment,
+            cachedAt: Date.now(),
+            totalResults,
+          };
         });
       },
 

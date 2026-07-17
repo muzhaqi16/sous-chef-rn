@@ -12,6 +12,9 @@ const LIST = {
   id: 'list-1',
   name: 'Groceries',
   isDefault: false,
+  status: 'ACTIVE',
+  isCompleted: false,
+  completedShopDate: null,
   version: 1,
   updatedAt: '2026-01-01T00:00:00Z',
 };

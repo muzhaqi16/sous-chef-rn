@@ -8,4 +8,8 @@ fragment useNotificationsOnLaunch_notification on Notification {
   category
   sentAt
   expiresAt
+  sourceId
+  sourceType
+  actionUrl
+  readAt
 }

@@ -12,7 +12,7 @@
  * - Membership changes (join/leave, role/permission updates) — Apollo
  *   auto-normalizes the Membership entity by id.
  * - Invite lifecycle (created/accepted/declined/revoked) — maintains
- *   me.pendingHomeInvites.
+ *   me.pendingHomeInvitesConnection.
  */
 
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
@@ -21,7 +21,7 @@ import {
   HomeEventsDocument,
   type HomeEventsSubscription,
 } from '#operations/home/home.generated';
-import { HomeEventSubtype } from '#/graphql/generated/schemaTypes';
+import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   CacheStrategy,
@@ -29,20 +29,21 @@ import {
 } from '#/services/subscriptions/types';
 import { logger } from '#/utils/environment';
 import {
-  createAddToParentArrayUpdater,
-  createRemoveFromParentArrayUpdater,
+  createAddToParentConnectionUpdater,
+  createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
-// Invite array updaters — module scope (constant config, no closure deps).
-const addInviteToCache = createAddToParentArrayUpdater<{ id: string }>(
+// Invite connection updaters — module scope (constant config, no closure deps).
+const addInviteToCache = createAddToParentConnectionUpdater<{ id: string }>(
   'User',
-  'pendingHomeInvites',
+  'pendingHomeInvitesConnection',
+  'HomeInvite',
 );
-const removeInviteFromCache = createRemoveFromParentArrayUpdater(
+const removeInviteFromCache = createRemoveFromParentConnectionUpdater(
   'User',
-  'pendingHomeInvites',
+  'pendingHomeInvitesConnection',
   'HomeInvite',
 );
 
@@ -84,24 +85,24 @@ export function useHomeSubscriptions(userId?: string) {
         // Membership changes: Apollo auto-normalizes the Membership entity by
         // id (role/permission/status merge automatically). Join/leave
         // connection membership self-corrects via cache-and-network on next read.
-        case HomeEventSubtype.MembershipJoined:
-        case HomeEventSubtype.MembershipLeft:
-        case HomeEventSubtype.MembershipUpdated:
-        case HomeEventSubtype.MembershipRoleChanged:
+        case HomeSubtype.MembershipJoined:
+        case HomeSubtype.MembershipLeft:
+        case HomeSubtype.MembershipUpdated:
+        case HomeSubtype.MembershipRoleChanged:
           break;
 
-        // New invite sent → add to me.pendingHomeInvites.
-        case HomeEventSubtype.InviteCreated:
+        // New invite sent → add to me.pendingHomeInvitesConnection.
+        case HomeSubtype.InviteCreated:
           if (userId && payload.node.__typename === 'HomeInvite') {
             addInviteToCache(client.cache, userId, payload.node);
           }
           break;
 
-        // Invite accepted/declined/revoked → remove from me.pendingHomeInvites
-        // and evict the entity.
-        case HomeEventSubtype.InviteAccepted:
-        case HomeEventSubtype.InviteDeclined:
-        case HomeEventSubtype.InviteRevoked:
+        // Invite accepted/declined/revoked → remove from
+        // me.pendingHomeInvitesConnection and evict the entity.
+        case HomeSubtype.InviteAccepted:
+        case HomeSubtype.InviteDeclined:
+        case HomeSubtype.InviteRevoked:
           if (userId && payload.node.__typename === 'HomeInvite') {
             removeInviteFromCache(client.cache, userId, payload.node.id, {
               evictItem: true,

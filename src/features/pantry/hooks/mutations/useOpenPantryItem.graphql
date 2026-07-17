@@ -1,9 +1,0 @@
-# Narrow fragment for OpenPantryItem mutation. Currently no TS consumer
-# but the mutation must remain wire-compatible. Sets the item's open
-# state, version, and lastUsedAt.
-fragment useOpenPantryItem_pantryItem on PantryItem {
-  id
-  version
-  lastUsedAt
-  activeBatchCount
-}

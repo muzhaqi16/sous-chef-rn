@@ -4,7 +4,11 @@ import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
-import { UpdateItemImageDocument } from '#operations/image/imageUpload.generated';
+import {
+  ConfirmItemImageUploadDocument,
+  CreateImageUploadUrlDocument,
+  UpdateItemImageDocument,
+} from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
 
@@ -28,10 +32,14 @@ type ItemImageData = {
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
+// Spread the real module and stub only the two functions under control. Listing
+// exports by hand drifts: this factory predated MAX_IMAGE_SIZE and
+// createImageValidationError, so both arrived as `undefined` in the hook, and
+// its hand-written MAX_PROFILE_SIZE (5MB) disagreed with the real one (2MB).
 jest.mock('#utils/imageValidation', () => ({
+  ...jest.requireActual('#utils/imageValidation'),
   validateImageFile: jest.fn(),
   getMimeTypeFromUri: jest.fn(() => 'image/jpeg'),
-  MAX_PROFILE_SIZE: 5 * 1024 * 1024,
 }));
 
 jest.mock('#store', () => ({
@@ -158,11 +166,125 @@ beforeEach(() => {
   useStore.getState = () => ({ isOnline: true, updateUser: jest.fn() });
 });
 
+// The presigned POST the server hands back. `fields` is the storage policy and
+// is non-null on the payload — the upload is rejected without every entry.
+const PRESIGN_FIELDS = [
+  { __typename: 'UploadFormField' as const, name: 'key', value: 'items/i1/a' },
+  { __typename: 'UploadFormField' as const, name: 'policy', value: 'eyJ0' },
+  {
+    __typename: 'UploadFormField' as const,
+    name: 'x-amz-signature',
+    value: 'sig',
+  },
+];
+
+function buildPresignMock(): MockedResponse {
+  return {
+    request: { query: CreateImageUploadUrlDocument, variables: () => true },
+    result: {
+      data: {
+        createImageUploadUrl: {
+          __typename: 'CreateImageUploadUrlPayload',
+          url: 'https://storage.test/bucket',
+          key: 'items/i1/a',
+          fields: PRESIGN_FIELDS,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
+function buildConfirmItemMock(url: string): MockedResponse {
+  return {
+    request: { query: ConfirmItemImageUploadDocument, variables: () => true },
+    result: {
+      data: {
+        confirmItemImageUpload: {
+          __typename: 'ConfirmItemImageUploadPayload',
+          url,
+        },
+      },
+    },
+    maxUsageCount: 10,
+  };
+}
+
 describe('useImageUpload', () => {
   it('initializes with uploading false and progress 0', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(result.current.uploading).toBe(false);
     expect(result.current.progress).toBe(0);
+  });
+
+  // The server issues a presigned POST, not a PUT. Storage rejects the upload
+  // unless every policy field precedes a file part named `file`, and the
+  // Content-Type must be left to the runtime so the multipart boundary matches.
+  describe('presigned POST upload', () => {
+    const file = { uri: 'file://a.jpg', fileName: 'a.jpg', fileSize: 1024 };
+    let appendSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+      // Storage answers asynchronously. Driving onload from send() rather than
+      // from the test body means the reply can't land before the hook is
+      // listening for it.
+      mockXhr.send.mockImplementation(() => {
+        setImmediate(() => mockXhr.onload?.({} as ProgressEvent));
+      });
+      appendSpy = jest.spyOn(FormData.prototype, 'append');
+    });
+
+    afterEach(() => {
+      appendSpy.mockRestore();
+      mockXhr.send.mockReset();
+    });
+
+    async function runUpload(): Promise<ItemUploadResult> {
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [
+          buildPresignMock(),
+          buildConfirmItemMock('https://cdn.test/a.jpg'),
+        ],
+      });
+
+      let uploaded: ItemUploadResult = null;
+      await act(async () => {
+        uploaded = await result.current.uploadItemImage(file, 'item-1');
+      });
+      return uploaded;
+    }
+
+    it('POSTs to the presigned url rather than PUTting', async () => {
+      await runUpload();
+
+      expect(mockXhr.open).toHaveBeenCalledWith(
+        'POST',
+        'https://storage.test/bucket',
+      );
+    });
+
+    it('never sets Content-Type — the runtime owns the multipart boundary', async () => {
+      await runUpload();
+
+      expect(mockXhr.setRequestHeader).not.toHaveBeenCalledWith(
+        'Content-Type',
+        expect.anything(),
+      );
+    });
+
+    it('sends every policy field, with the file part last', async () => {
+      await runUpload();
+
+      const names = appendSpy.mock.calls.map(([name]) => name);
+
+      expect(names).toEqual(['key', 'policy', 'x-amz-signature', 'file']);
+    });
+
+    it('returns the confirmed url', async () => {
+      const uploaded = await runUpload();
+
+      expect(uploaded).toBe('https://cdn.test/a.jpg');
+    });
   });
 
   it('exposes all expected functions', () => {
@@ -355,11 +477,33 @@ describe('useImageUpload', () => {
     );
   });
 
-  it('uploadProfileImage shows specific error for file size issue', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
+  // These throw what the real `validateImageFile` throws — the code on
+  // `error.code`, the human message on `error.message`. Fabricating an error
+  // whose *message* carries the code (`new Error('INVALID_TYPE: ...')`) is what
+  // let a dead branch look covered: production never produced that shape, so
+  // the classifier fell through and alerted the raw English message instead.
+  const throwValidationError = (
+    message: string,
+    code: 'INVALID_TYPE' | 'FILE_TOO_LARGE' | 'UNKNOWN_ERROR',
+  ) => {
+    // createImageValidationError comes through requireActual in the module
+    // factory above, so the thrown shape matches production exactly.
+    const {
+      validateImageFile,
+      createImageValidationError,
+    } = require('#utils/imageValidation');
     validateImageFile.mockImplementation(() => {
-      throw new Error('Invalid file size');
+      throw createImageValidationError(message, code);
     });
+  };
+
+  const restoreValidation = () => {
+    const { validateImageFile } = require('#utils/imageValidation');
+    validateImageFile.mockImplementation(jest.fn());
+  };
+
+  it('reports an unreadable file when the size cannot be determined', async () => {
+    throwValidationError('Unable to determine file size', 'UNKNOWN_ERROR');
 
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
@@ -374,18 +518,18 @@ describe('useImageUpload', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      expect.stringContaining('too large or corrupted'),
+      expect.stringContaining("couldn't read that image"),
     );
 
-    // Restore
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
   });
 
-  it('uploadProfileImage shows specific error for INVALID_TYPE', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
-    validateImageFile.mockImplementation(() => {
-      throw new Error('INVALID_TYPE: not an image');
-    });
+  it('classifies INVALID_TYPE by code, not by message text', async () => {
+    // The real message says nothing about 'INVALID_TYPE' — only `code` does.
+    throwValidationError(
+      'Only JPEG, PNG, and WebP images are allowed',
+      'INVALID_TYPE',
+    );
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
@@ -402,14 +546,11 @@ describe('useImageUpload', () => {
       expect.stringContaining('JPEG, PNG, or WebP'),
     );
 
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
   });
 
-  it('uploadProfileImage shows specific error for FILE_TOO_LARGE', async () => {
-    const { validateImageFile } = require('#utils/imageValidation');
-    validateImageFile.mockImplementation(() => {
-      throw new Error('FILE_TOO_LARGE');
-    });
+  it('quotes the profile size limit on FILE_TOO_LARGE', async () => {
+    throwValidationError('File too large. Maximum size: 2MB', 'FILE_TOO_LARGE');
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
@@ -423,10 +564,35 @@ describe('useImageUpload', () => {
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      expect.stringContaining('too large'),
+      expect.stringContaining('Profile images must be under 2MB'),
     );
 
-    validateImageFile.mockImplementation(jest.fn());
+    restoreValidation();
+  });
+
+  // The transport errors carry no code, and their messages are internal
+  // control-flow signals ('Upload request timed out') that must never surface.
+  it('falls back to translated copy for an uncoded failure', async () => {
+    const { validateImageFile } = require('#utils/imageValidation');
+    validateImageFile.mockImplementation(() => {
+      throw new Error('Network request failed during upload');
+    });
+
+    const { result } = renderHookWithApollo(() => useImageUpload());
+
+    await act(async () => {
+      await result.current.uploadItemImage(
+        { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
+        'item-1',
+      );
+    });
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Upload Failed',
+      'Something went wrong uploading your image. Please try again.',
+    );
+
+    restoreValidation();
   });
 
   it('uploadItemImage shows error alert on failure', async () => {
@@ -444,9 +610,11 @@ describe('useImageUpload', () => {
       );
     });
 
+    // 'Upload failed' is an internal signal, not copy. It used to be alerted
+    // verbatim; an uncoded failure now gets translated text.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Upload failed',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());
@@ -470,9 +638,11 @@ describe('useImageUpload', () => {
     });
 
     expect(onError).toHaveBeenCalled();
+    // An error with no `code` can't be classified, so it must not leak its
+    // message ('Something went wrong') into the alert.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Something went wrong',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());
@@ -494,9 +664,10 @@ describe('useImageUpload', () => {
       });
     });
 
+    // A thrown string has no `code` either — same translated fallback.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
-      'Upload failed',
+      'Something went wrong uploading your image. Please try again.',
     );
 
     validateImageFile.mockImplementation(jest.fn());

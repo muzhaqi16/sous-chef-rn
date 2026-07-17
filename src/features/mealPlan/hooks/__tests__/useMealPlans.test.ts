@@ -31,6 +31,7 @@ function seedPlanCache(
       budgetAmount: null,
       homeId: 'h1',
       home: null,
+      user: { __typename: 'User', id: `u-${p.id}` },
       createdBy: null,
       version: 1,
       createdAt: '2025-01-01T00:00:00Z',

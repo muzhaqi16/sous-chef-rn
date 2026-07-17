@@ -2,11 +2,6 @@ import type { DocumentNode } from 'graphql';
 import {
   SyncPantryItemDocument,
   SyncDeletePantryItemDocument,
-  SyncAdjustPantryItemQuantityDocument,
-  SyncRestockPantryItemDocument,
-  SyncConsumePantryItemDocument,
-  SyncOpenPantryItemBatchDocument,
-  SyncWastePantryItemBatchDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   SyncShoppingListItemDocument,
@@ -26,11 +21,16 @@ import { logger } from '#/utils/environment';
 /**
  * Two-tier offline replay mapping.
  *
- * A queued mutation is replayed through a dedicated `Sync*` mutation that is
- * idempotent by the client-minted cuid (which rides the replay as `clientId`),
- * so an online success and a queued replay converge on one row. Operations with
- * no clean `Sync*` shape fall through to {@link replayOriginal}, which re-sends
- * the original mutation (the server's direct-create path is itself id-idempotent).
+ * Entity create/update/delete/move ops are replayed through a dedicated `Sync*`
+ * mutation that is idempotent by the client-minted cuid (which rides the replay
+ * as `clientId`), so an online success and a queued replay converge on one row.
+ * Everything else falls through to {@link convertToSyncMutation}'s default,
+ * which re-sends the original mutation. That covers the granular pantry deltas
+ * (restock / consume / waste / adjust / open-batch / convert-expired): they no
+ * longer have `sync*` twins — instead each carries a client-minted
+ * `input.idempotencyKey`, so re-sending the canonical mutation is itself
+ * at-most-once (the server returns `ConflictError(code: IDEMPOTENT_REPLAY)` on a
+ * replay, which the queue treats as converged). See docs/api/offline-sync.md.
  *
  * The op-name → builder mapping lives in {@link SYNC_REGISTRY} (a data table, not
  * an if-chain) so adding a queued op is a one-line entry, and each builder is an
@@ -42,14 +42,18 @@ export interface SyncConversion {
 }
 
 /**
- * Cache readers a builder uses to backfill a required parent id the queued input
- * may omit (`UpdatePantryItemInput` carries no `pantryId`; shopping update/qty
- * inputs carry only the item id). Injected so the builders stay pure and the
- * cache access lives in the queue manager.
+ * Cache readers a builder uses to backfill required fields the queued input
+ * may omit (`UpdatePantryItemInput` carries no `pantryId`; shopping update/qty/
+ * toggle inputs carry only the row id, while `SyncShoppingListItemInput`
+ * requires the @oneOf catalog-item ref). Injected so the builders stay pure and
+ * the cache access lives in the queue manager.
  */
 export interface SyncReaders {
   readPantryId: (clientId: string | undefined) => string | undefined;
   readShoppingListId: (clientId: string | undefined) => string | undefined;
+  readItemRef: (
+    clientId: string | undefined,
+  ) => SyncShoppingListItemInput['item'] | undefined;
 }
 
 /**
@@ -80,6 +84,10 @@ interface QueuedInput {
   afterItemId?: string;
   beforeItemId?: string;
   item?: Record<string, unknown>;
+  // The single-add ops send the batch AddItemsToShoppingListInput shape
+  // ({ shoppingListId, items: [<one item>] }); buildShoppingItemSync flattens
+  // items[0] so its per-field reads work for both batch-add and flat inputs.
+  items?: QueuedInput[];
   [key: string]: unknown;
 }
 
@@ -108,43 +116,6 @@ const getClientId = (
   input: QueuedInput,
 ): string | undefined =>
   input.id ?? input.itemId ?? (mutation.variables.id as string | undefined);
-
-/**
- * The per-operation `operationId` for a granular pantry delta (adjust / restock
- * / consume / open / waste). The delta hooks mint it (cuid2) and ride it on the
- * mutation `context` so it survives queueing; the server dedups by it, making a
- * queued replay apply the delta exactly once. Throwing on a missing id mirrors
- * `buildPantryItemSync`'s missing-`pantryId` guard — a delta queued without one
- * can't replay safely, so it surfaces as a permanent failure rather than a
- * silently double-applied op.
- */
-const getOperationId = (mutation: QueuedMutation): string => {
-  const operationId = (mutation.context as { operationId?: string } | undefined)
-    ?.operationId;
-  if (!operationId) {
-    throw new Error(
-      `Cannot sync ${mutation.operationName}: missing operationId in context`,
-    );
-  }
-  return operationId;
-};
-
-/**
- * Builder for granular pantry deltas. The `Sync*` delta inputs wrap the original
- * delta input verbatim (`{ input: <original>, operationId }`), so the queued
- * variables pass straight through under `input.input`.
- */
-const buildPantryDeltaSync =
-  (syncMutation: DocumentNode): SyncBuilder =>
-  mutation => ({
-    syncMutation,
-    syncVariables: {
-      input: {
-        input: mutation.variables.input,
-        operationId: getOperationId(mutation),
-      },
-    },
-  });
 
 /**
  * PantryItem create/update sync. `SyncPantryItemInput` mirrors
@@ -252,7 +223,15 @@ const buildDeletePantryItemSync: SyncBuilder = mutation => {
  * produce a ShoppingListItem from the same fields, so they sync through here too.
  */
 const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
-  const input = getQueuedInput(mutation);
+  const queued = getQueuedInput(mutation);
+  // The single-add ops now send the batch AddItemsToShoppingListInput
+  // ({ shoppingListId, items: [item] }); flatten the one item so the per-field
+  // reads below resolve for both the batch-add ops and the flat
+  // update/quantity/toggle inputs (which have no `items`).
+  const input: QueuedInput =
+    Array.isArray(queued.items) && queued.items.length > 0
+      ? { ...queued.items[0], shoppingListId: queued.shoppingListId }
+      : queued;
   const clientId = getClientId(mutation, input);
 
   const shoppingListId =
@@ -281,10 +260,26 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
     input.purchaseTracking ??
     (input.purchased != null ? { isPurchased: input.purchased } : undefined);
 
+  // `item` is a required @oneOf ItemRefInput (exactly one of itemId/itemName —
+  // zero or both is rejected before any resolver runs). The add ops carry it
+  // nested on the queued item; UpdateShoppingListItem carries a flat `itemName`
+  // only when the user renamed; toggle/quantity/plain updates carry no ref at
+  // all, so backfill it from the cached row. Flat `itemId` is deliberately NOT
+  // used: on UpdateShoppingListItemQuantity it is the shopping-list ROW id, not
+  // a catalog item id.
+  const itemRef =
+    (input.item as SyncShoppingListItemInput['item'] | undefined) ??
+    (input.itemName != null ? { itemName: input.itemName } : undefined) ??
+    readers.readItemRef(clientId);
+  if (!itemRef) {
+    throw new Error(
+      `Cannot sync ${mutation.operationName}: item ref not found for item ${clientId}`,
+    );
+  }
+
   const item: SyncShoppingListItemInput = {
     shoppingListId,
-    ...(input.itemName != null && { itemName: input.itemName }),
-    ...(input.itemId != null && { itemId: input.itemId }),
+    item: itemRef,
     ...(input.category != null && { category: input.category }),
     ...(input.notes != null && { notes: input.notes }),
     ...(unit && { unit: unit as SyncShoppingListItemInput['unit'] }),
@@ -361,14 +356,11 @@ const SYNC_REGISTRY: Record<string, SyncBuilder> = {
   UpdatePantryItemQuantity: buildPantryItemQuantitySync,
   BarcodeCreatePantryItem: buildPantryItemSync,
   DeletePantryItem: buildDeletePantryItemSync,
-  // PantryItem granular deltas — idempotent replay keyed by operationId
-  AdjustPantryItemQuantity: buildPantryDeltaSync(
-    SyncAdjustPantryItemQuantityDocument,
-  ),
-  RestockPantryItem: buildPantryDeltaSync(SyncRestockPantryItemDocument),
-  CreatePantryItemUsage: buildPantryDeltaSync(SyncConsumePantryItemDocument),
-  OpenPantryItemBatch: buildPantryDeltaSync(SyncOpenPantryItemBatchDocument),
-  WastePantryItemBatch: buildPantryDeltaSync(SyncWastePantryItemBatchDocument),
+  // Granular pantry deltas (adjust / restock / consume / open-batch / waste /
+  // convert-expired) have NO entry: they replay as the original canonical
+  // mutation, made at-most-once by a client-minted `input.idempotencyKey` (the
+  // server returns ConflictError(code: IDEMPOTENT_REPLAY) on a replay). They
+  // queue via their explicit `context.localFirst`, not via this registry.
   // ShoppingListItem create / update
   AddItemToShoppingList: buildShoppingItemSync,
   UpdateShoppingListItem: buildShoppingItemSync,

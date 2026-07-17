@@ -107,6 +107,10 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     priceEstimate: {
       __typename: 'PriceEstimate',
       estimated: 4.59,
+      lastKnown: null,
+      average: null,
+      lowest: null,
+      highest: null,
     },
     storeInfo: {
       __typename: 'ShoppingListItemStoreInfo',
@@ -116,11 +120,19 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
         name: 'Costco',
       },
     },
-    purchaseInfo: { __typename: 'PurchaseInfo', isPurchased: false },
-    purchasesConnection: {
-      __typename: 'PurchaseConnection',
-      edges: [],
-      totalCount: 0,
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: false,
+      purchasedQuantity: null,
+      purchasedPrice: null,
+      purchaseDate: null,
+      purchasedBy: null,
+    },
+    purchaseHistory: {
+      __typename: 'PurchaseHistorySummary',
+      previouslyPurchased: false,
+      purchaseCount: 0,
+      lastPurchaseDate: null,
     },
     addedBy: {
       __typename: 'User',
@@ -133,6 +145,7 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
         avatar: null,
       },
     },
+    lastEditedBy: null,
     source: null,
     ...overrides,
   };

@@ -36,8 +36,8 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
         if (
           classifyCreateResult(
             result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
+            'addItemsToShoppingList',
+            'AddItemsToShoppingListPayload',
           ) === 'rejected'
         ) {
           revertOptimisticShoppingListItem(cache, listId, id);

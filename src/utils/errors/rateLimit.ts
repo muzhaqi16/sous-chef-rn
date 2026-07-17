@@ -1,11 +1,20 @@
 import { getI18n } from '#/i18n/config';
 
+// Match on the exact code — never on a `RATE_` prefix. OPERATION_RATE_LIMITED
+// deliberately doesn't carry it (docs/api/errors.md), so a prefix test would
+// silently drop every per-operation limit.
 const RATE_LIMIT_CODES = [
   'RATE_LIMITED',
+  // The global budget. Carries `resetAt` rather than `retryAfter`, so the
+  // message below falls back to the server's text for it.
   'RATE_LIMIT_EXCEEDED',
   'RATE_LIMIT_IP_BLOCKED',
   'RATE_LIMIT_USER_BLOCKED',
   'RATE_LIMIT_API_KEY_BLOCKED',
+  // A single operation's own budget, stricter than and separate from the global
+  // one — ~30 operations have one (createItemSuggestion: 10/hour), so this fires
+  // while well under RATE_LIMIT_EXCEEDED. Both must be handled.
+  'OPERATION_RATE_LIMITED',
 ];
 
 export interface RateLimitDetails {

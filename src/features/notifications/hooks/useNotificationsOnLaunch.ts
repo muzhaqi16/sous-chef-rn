@@ -24,28 +24,20 @@ import {
   UseNotificationsOnLaunch_NotificationFragmentDoc,
   type UseNotificationsOnLaunch_NotificationFragment,
 } from './useNotificationsOnLaunch.generated';
-import {
-  NotificationCategory,
-  Priority,
-} from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
-import {
-  NotificationPriority,
-  isNotificationPayload,
-  type NotificationItem,
-  type NotificationPayload,
-} from '#store/slices/notificationSlice';
+import { type NotificationItem } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import {
-  getNotificationAction,
-  getNotificationTitle,
-} from '#utils/notifications/notificationHelpers';
+import { mapNotificationToStore } from '#features/notifications/utils/mapNotificationToStore';
+import { onWebSocketReconnected } from '#/apollo/links/wsLink';
 
 export function useNotificationsOnLaunch(userId?: string) {
   const client = useApolloClient();
   const addMultipleNotifications = useAppStore(
     state => state.addMultipleNotifications,
+  );
+  const setServerNotificationCounts = useAppStore(
+    state => state.setServerNotificationCounts,
   );
 
   const hasFetchedRef = useRef(false);
@@ -81,14 +73,23 @@ export function useNotificationsOnLaunch(userId?: string) {
     return () => sub.remove();
   }, [fetchUnreadNotifications]);
 
+  // Backfill on WS reconnect: the subscription can miss events while the socket
+  // is down, so re-pull unread when it comes back (not only on foreground).
+  useEffect(() => {
+    return onWebSocketReconnected(() => {
+      if (hasFetchedRef.current) fetchUnreadNotifications();
+    });
+  }, [fetchUnreadNotifications]);
+
   useApolloErrorLogger('GetUnreadNotifications', error);
 
   useEffect(() => {
-    const edges = data?.me?.notificationsConnection?.edges;
-    if (!edges || edges.length === 0) return;
+    const me = data?.me;
+    if (!me) return;
 
     // Materialize each masked node ref via cache.readFragment so the hook can
     // read the fields it pushes into the Zustand store.
+    const edges = me.notificationsConnection?.edges ?? [];
     const notifications: Omit<NotificationItem, 'isRead'>[] = edges
       .map(edge =>
         client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
@@ -102,42 +103,20 @@ export function useNotificationsOnLaunch(userId?: string) {
       .filter(
         (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
       )
-      .map(n => {
-        const type = n.type;
-        const payload: NotificationPayload = isNotificationPayload(n.payload)
-          ? n.payload
-          : {};
+      .map(mapNotificationToStore);
 
-        const { requiresAction, actionType } = getNotificationAction(type);
+    if (notifications.length > 0) {
+      addMultipleNotifications(notifications);
+    }
 
-        // Map server Priority enum → store NotificationPriority
-        const sp = n.priority;
-        const priority =
-          sp === Priority.High
-            ? NotificationPriority.HIGH
-            : sp === Priority.Urgent
-            ? NotificationPriority.URGENT
-            : sp === Priority.Low
-            ? NotificationPriority.LOW
-            : NotificationPriority.MEDIUM;
-
-        return {
-          id: n.id,
-          type,
-          title: n.title ?? getNotificationTitle(type),
-          message: n.message ?? '',
-          category: n.category ?? NotificationCategory.System,
-          priority,
-          payload,
-          sentAt: n.sentAt,
-          expiresAt: n.expiresAt,
-          requiresAction,
-          actionType,
-          actionData: payload,
-        };
-      });
-
-    if (notifications.length === 0) return;
-    addMultipleNotifications(notifications);
-  }, [data, addMultipleNotifications, client]);
+    // Seed the badge from the server's authoritative totals AFTER the list
+    // materializes: addMultipleNotifications ends by recomputing the counts
+    // from the local list, which would clobber a seed written first. Runs even
+    // with zero unread so the badge clears correctly, and covers unread beyond
+    // this page (or dropped by the store's category safety filters).
+    setServerNotificationCounts(
+      me.unreadNotificationCount,
+      me.hasUrgentNotifications,
+    );
+  }, [data, addMultipleNotifications, setServerNotificationCounts, client]);
 }

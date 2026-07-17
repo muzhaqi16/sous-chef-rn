@@ -8,7 +8,7 @@ import {
   NotificationType,
   NotificationCategory,
   NotificationStatus,
-  NotificationEventSubtype,
+  NotificationSubtype,
   Priority,
   MutationType,
 } from '#/graphql/generated/schemaTypes';
@@ -131,8 +131,8 @@ function buildNotificationSubscriptionMock(
         notificationEvents: {
           __typename: 'NotificationEvent',
           subtype: isCreated
-            ? NotificationEventSubtype.Created
-            : NotificationEventSubtype.Updated,
+            ? NotificationSubtype.Created
+            : NotificationSubtype.Updated,
           mutation: isCreated ? MutationType.Created : MutationType.Updated,
           actorUserId: null,
           timestamp: '2024-01-01T00:00:00Z',
@@ -148,6 +148,10 @@ function buildNotificationSubscriptionMock(
             category: NotificationCategory.System,
             sentAt: notification.sentAt ?? '2024-01-01T00:00:00Z',
             expiresAt: null,
+            sourceId: null,
+            sourceType: null,
+            actionUrl: null,
+            readAt: null,
           },
         },
       },

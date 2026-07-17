@@ -13,7 +13,7 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ProfileVisibility,
-  type UpdateUserProfileInput,
+  type UpdateProfileInput,
 } from '#/graphql/generated/schemaTypes';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
@@ -75,7 +75,7 @@ export const PersonalInformationScreen: React.FC = () => {
     executeRefreshWithFinally(() => refetch(), setRefreshing);
   };
 
-  const updateProfile = async (input: UpdateUserProfileInput) => {
+  const updateProfile = async (input: UpdateProfileInput) => {
     if (!profile) return;
     const cacheId = client.cache.identify({
       __typename: 'UserProfile',

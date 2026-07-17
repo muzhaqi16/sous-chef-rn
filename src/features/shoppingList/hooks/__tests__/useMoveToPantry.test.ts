@@ -6,6 +6,8 @@ import {
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import { toastService } from '#/services/toastService';
+import { useStore } from '#store';
 import { useMoveToPantry } from '../useMoveToPantry';
 
 jest.mock('#/services/telemetry', () => ({
@@ -184,5 +186,56 @@ describe('useMoveToPantry', () => {
         remove_from_list: true,
       }),
     );
+  });
+
+  describe('when the API is unavailable', () => {
+    afterEach(() => {
+      useStore.setState({ apiReachable: true, isOnline: true });
+    });
+
+    it('exposes isApiUnavailable, toasts, returns false, and skips the mutation', async () => {
+      useStore.setState({ apiReachable: false });
+      const errorSpy = jest.spyOn(toastService, 'error');
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(true);
+
+      let moveResult: boolean = true;
+      await act(async () => {
+        moveResult = await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: true,
+        });
+      });
+
+      expect(moveResult).toBe(false);
+      expect(errorSpy).toHaveBeenCalledWith('Not available offline');
+      expect(move.fired).toHaveLength(0);
+    });
+
+    it('fires the mutation normally when online', async () => {
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      expect(result.current.isApiUnavailable).toBe(false);
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: true,
+        });
+      });
+
+      expect(move.fired).toHaveLength(1);
+    });
   });
 });

@@ -1,8 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { errorService } from '#/services/errorService';
+import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
@@ -18,28 +22,31 @@ import { Text } from '#components/atoms/Text';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
+const PAGE_SIZE = 30;
+
 type RouteParams = {
   itemId: string;
   itemName: string;
-  purchases: Array<{
-    id: string;
-    purchaseDate: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-    currencySymbol: string;
-    unitSymbol: string;
-    user?: {
-      id: string;
-      email: string;
-      profile?: {
-        displayName?: string;
-      };
-    };
-  }>;
 };
 
-type PurchaseItem = RouteParams['purchases'][0];
+type PurchaseItem = {
+  id: string;
+  purchaseDate: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  currencySymbol: string;
+  unitSymbol: string;
+  // Not selected by GetItemPurchaseHistory today, but kept optional so the row's
+  // "purchased by" line degrades gracefully if the query starts returning it.
+  user?: {
+    id: string;
+    email: string;
+    profile?: {
+      displayName?: string;
+    };
+  };
+};
 
 // Pure function at module scope
 const formatDate = (dateString: string) => {
@@ -200,7 +207,40 @@ export const PurchaseHistoryScreen: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { itemName, purchases } = route.params;
+  const { itemId, itemName } = route.params;
+
+  // Fetch the history on demand (ItemDetail only carries the summary), paging
+  // in more as the user scrolls — a frequently re-bought item can exceed a
+  // single page.
+  const { data, loading, fetchMore, networkStatus } = useQuery(
+    GetItemPurchaseHistoryDocument,
+    {
+      variables: { itemId, first: PAGE_SIZE },
+      notifyOnNetworkStatusChange: true,
+    },
+  );
+
+  const connection = data?.shoppingListItem?.purchasesConnection;
+  const purchases: PurchaseItem[] =
+    connection?.edges?.map(edge => edge.node) ?? [];
+  const totalCount = connection?.totalCount ?? purchases.length;
+  const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
+  const endCursor = connection?.pageInfo?.endCursor ?? null;
+  // networkStatus 3 = fetchMore in flight.
+  const loadingMore = networkStatus === 3;
+
+  const loadMore = () => {
+    if (!hasNextPage || !endCursor || loading || loadingMore) return;
+    // fetchMore rejects on network/GraphQL errors; catch it so a failed page
+    // doesn't surface as an unhandled promise rejection.
+    void fetchMore({
+      variables: { itemId, first: PAGE_SIZE, after: endCursor },
+    }).catch(error =>
+      errorService.reportError(error, {
+        operation: 'PurchaseHistory.loadMore',
+      }),
+    );
+  };
 
   // Summary stats over purchases that actually carry a price. Auto-recorded
   // purchases with no price are excluded so the average isn't dragged toward 0.
@@ -229,29 +269,42 @@ export const PurchaseHistoryScreen: React.FC<
       </View>
 
       {/* Purchase List */}
-      <PurchaseHistoryProvider value={{ totalCount: purchases.length }}>
-        <FlashList
-          data={purchases}
-          keyExtractor={keyExtractor}
-          renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
-            <PurchaseHistoryItem {...info} />
-          )}
-          getItemType={getPurchaseItemType}
-          {...FLASHLIST_DEFAULTS.fullScreen}
-          ListHeaderComponent={
-            purchases.length > 0 ? (
-              <PurchaseHistoryHeader
-                totalCount={purchases.length}
-                totalSpent={totalSpent}
-                averageSpent={averageSpent}
-              />
-            ) : null
-          }
-          ListEmptyComponent={PurchaseHistoryEmpty}
-          contentContainerStyle={styles.content}
-          style={styles.scrollView}
-        />
-      </PurchaseHistoryProvider>
+      {loading && purchases.length === 0 ? (
+        <View style={styles.loadingContainer}>
+          <ThemedActivityIndicator />
+        </View>
+      ) : (
+        <PurchaseHistoryProvider value={{ totalCount }}>
+          <FlashList
+            data={purchases}
+            keyExtractor={keyExtractor}
+            renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (
+              <PurchaseHistoryItem {...info} />
+            )}
+            getItemType={getPurchaseItemType}
+            {...FLASHLIST_DEFAULTS.fullScreen}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.4}
+            ListHeaderComponent={
+              purchases.length > 0 ? (
+                <PurchaseHistoryHeader
+                  totalCount={totalCount}
+                  totalSpent={totalSpent}
+                  averageSpent={averageSpent}
+                />
+              ) : null
+            }
+            ListFooterComponent={
+              loadingMore ? (
+                <ThemedActivityIndicator style={styles.footerLoader} />
+              ) : null
+            }
+            ListEmptyComponent={PurchaseHistoryEmpty}
+            contentContainerStyle={styles.content}
+            style={styles.scrollView}
+          />
+        </PurchaseHistoryProvider>
+      )}
     </View>
   );
 };
@@ -260,6 +313,11 @@ const styles = StyleSheet.create(theme => ({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -374,6 +432,9 @@ const styles = StyleSheet.create(theme => ({
   emptySubtext: {
     marginTop: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xl,
+  },
+  footerLoader: {
+    paddingVertical: theme.spacing.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

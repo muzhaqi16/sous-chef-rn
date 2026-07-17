@@ -6,13 +6,16 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { CorrectPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
+import { AdjustPantryItemWeightDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   handleMutationError,
   versionConflictCheck,
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
 import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;
@@ -22,8 +25,9 @@ export function useCorrectPantryItemWeight({
   onSuccess,
 }: UseCorrectPantryItemWeightOptions = {}) {
   const [correctMutation, { loading }] = useMutation(
-    CorrectPantryItemWeightDocument,
+    AdjustPantryItemWeightDocument,
   );
+  const isApiUnavailable = useIsApiUnavailable();
 
   const correctWeight = async (
     pantryItemId: string,
@@ -32,6 +36,11 @@ export function useCorrectPantryItemWeight({
     version: number,
     netWeightUnitId?: string,
   ): Promise<boolean> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     const result = await correctMutation({
       variables: {
         input: {
@@ -46,8 +55,8 @@ export function useCorrectPantryItemWeight({
 
     if (
       isSuccessPayload(
-        result.data?.correctPantryItemWeight,
-        'CorrectPantryItemWeightPayload',
+        result.data?.adjustPantryItemWeight,
+        'AdjustPantryItemWeightPayload',
       )
     ) {
       onSuccess?.();
@@ -64,5 +73,5 @@ export function useCorrectPantryItemWeight({
     return false;
   };
 
-  return { correctWeight, loading };
+  return { correctWeight, loading, isApiUnavailable };
 }

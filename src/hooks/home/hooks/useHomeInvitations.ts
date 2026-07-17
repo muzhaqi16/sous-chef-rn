@@ -19,9 +19,11 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   executeCacheUpdate,
   executeMutation,
+  unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { t } from '#/i18n/t';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -73,9 +75,8 @@ export function useHomeInvitations({
         }, 'Cache update failed for inviteUser:');
       },
 
-      onError: error => {
-        handleMutationError(error, { operation: 'Invite User' });
-      },
+      // Error/rejection handling lives in inviteUserToHome below; the update
+      // callback (above) runs only on the success payload.
     },
   );
 
@@ -139,7 +140,16 @@ export function useHomeInvitations({
         },
       },
     });
-
+    // A resolved `*Error` union member and a transport error both resolve
+    // without throwing under errorPolicy:'all'. Throw here (via unwrapPayload)
+    // so the invite modal's screen-level catch surfaces the message inline and
+    // keeps itself open — instead of a native alert firing while the modal
+    // closes as though the invite succeeded.
+    unwrapPayload(
+      result.data?.inviteToHome,
+      'InviteToHomePayload',
+      t('errors.sendInviteFailed'),
+    );
     return result.data;
   };
 

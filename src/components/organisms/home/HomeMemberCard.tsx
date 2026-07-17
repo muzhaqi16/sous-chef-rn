@@ -1,14 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
+import { BaseSwitch } from '#components/base/BaseSwitch';
 import { formatRole } from '#/utils/formatters/roleFormatters';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import type { MembershipPermissionKey } from '#hooks/home/useHomeDetailManagement';
 import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
+
+const PERMISSION_ROWS: {
+  key: MembershipPermissionKey;
+  labelKey: string;
+}[] = [
+  { key: 'canViewPantry', labelKey: 'homeDetail.permViewPantry' },
+  { key: 'canAddItems', labelKey: 'homeDetail.permAddItems' },
+  { key: 'canRemoveItems', labelKey: 'homeDetail.permRemoveItems' },
+  { key: 'canEditPantry', labelKey: 'homeDetail.permEditPantry' },
+  { key: 'canInviteOthers', labelKey: 'homeDetail.permInviteOthers' },
+  { key: 'canManageHome', labelKey: 'homeDetail.permManageHome' },
+];
 
 interface HomeMemberCardProps {
   memberRef: FragmentType<typeof HomeMemberCard_MemberFragmentDoc>;
@@ -16,8 +31,15 @@ interface HomeMemberCardProps {
   isCurrentUser: boolean;
   /** Current user's own membership — drives whether action buttons render. */
   canManageHome?: boolean;
+  /** Current user is the home OWNER — gates the transfer-ownership action. */
+  isOwner?: boolean;
   onChangeRole: () => void;
   onRemove: () => void;
+  onTransferOwnership?: () => void;
+  onUpdatePermission?: (
+    permission: MembershipPermissionKey,
+    value: boolean,
+  ) => void;
 }
 
 /**
@@ -31,9 +53,14 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   displayName,
   isCurrentUser,
   canManageHome,
+  isOwner,
   onChangeRole,
   onRemove,
+  onTransferOwnership,
+  onUpdatePermission,
 }) => {
+  const { t } = useTranslation();
+  const [showPermissions, setShowPermissions] = useState(false);
   const { data: member, complete } = useFragment({
     fragment: HomeMemberCard_MemberFragmentDoc,
     fragmentName: 'HomeMemberCard_member',
@@ -75,12 +102,54 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
               Change Role
             </Text>
           </AppPressable>
+          {!!isOwner && !!onTransferOwnership && (
+            <AppPressable
+              style={styles.actionButton}
+              onPress={onTransferOwnership}
+            >
+              <Icon name="ribbon-outline" size={18} tone="primary" />
+              <Text size="sm" weight="medium" tone="accent">
+                {t('homeDetail.makeOwner')}
+              </Text>
+            </AppPressable>
+          )}
+          {!!onUpdatePermission && (
+            <AppPressable
+              style={styles.actionButton}
+              onPress={() => setShowPermissions(prev => !prev)}
+            >
+              <Icon
+                name={showPermissions ? 'chevron-up' : 'options-outline'}
+                size={18}
+              />
+              <Text size="sm" weight="medium" style={styles.actionButtonText}>
+                {t('homeDetail.permissions')}
+              </Text>
+            </AppPressable>
+          )}
           <AppPressable style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
             <Text size="sm" weight="medium" tone="error">
               Remove
             </Text>
           </AppPressable>
+        </View>
+      )}
+
+      {/* Per-permission overrides (managed members only). */}
+      {!!canManageMember && !!onUpdatePermission && !!showPermissions && (
+        <View style={styles.permissionList}>
+          {PERMISSION_ROWS.map(({ key, labelKey }) => (
+            <View key={key} style={styles.permissionRow}>
+              <Text size="sm" style={styles.permissionLabel}>
+                {t(labelKey)}
+              </Text>
+              <BaseSwitch
+                value={!!member[key]}
+                onValueChange={value => onUpdatePermission(key, value)}
+              />
+            </View>
+          ))}
         </View>
       )}
     </View>
@@ -132,6 +201,23 @@ const styles = StyleSheet.create(theme => ({
   },
   actionButtonText: {
     color: theme.colors.info,
+  },
+  permissionList: {
+    marginTop: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    gap: theme.spacing.xs,
+  },
+  permissionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: theme.spacing.xs,
+  },
+  permissionLabel: {
+    flex: 1,
+    marginRight: theme.spacing.md,
   },
   pressed: {
     opacity: theme.opacity.pressed,

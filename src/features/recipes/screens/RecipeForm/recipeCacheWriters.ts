@@ -23,6 +23,7 @@ import {
 import {
   Difficulty,
   RecipeCategory,
+  RecipeStatus,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -105,6 +106,17 @@ function buildOptimisticRecipeEntity(
     imageUrl: input.media?.imageUrl ?? null,
     servings: input.metadata?.servings ?? 4,
     totalTimeMinutes: totalTime(prep, cook),
+    caloriesPerServing: input.nutrition?.caloriesPerServing ?? null,
+    nutritionData: (input.nutrition?.nutritionData as JsonValue) ?? null,
+    status: input.status ?? RecipeStatus.Draft,
+    isPublished: input.status === RecipeStatus.Published,
+    publishedAt: null,
+    forkedFromId: null,
+    forkedFrom: null,
+    originalAuthor: input.attribution?.originalAuthor ?? null,
+    tips: input.tips ?? null,
+    videoUrl: null,
+    tags: input.tags ?? [],
     source: null,
     sourceUrl: null,
     // The create input's JSON (write type) is the same runtime instructions
@@ -119,21 +131,27 @@ function buildOptimisticRecipeEntity(
     rating4Count: 0,
     rating5Count: 0,
     createdBy,
-    ingredients: (input.ingredients ?? []).map((ing, index) => ({
-      __typename: 'RecipeIngredient',
-      id: generateEntityId(),
-      name: ing.name,
-      quantity: ing.quantity,
-      estimatedPrice: ing.estimatedPrice ?? null,
-      item: null,
-      unit: null,
-      image: null,
-      isOptional: ing.isOptional ?? false,
-      notes: ing.notes ?? null,
-      preparation: ing.preparation ?? null,
-      sortOrder: ing.sortOrder ?? index,
-      section: ing.section ?? null,
-    })),
+    ingredientsConnection: {
+      __typename: 'RecipeIngredientConnection',
+      edges: (input.ingredients ?? []).map((ing, index) => ({
+        __typename: 'RecipeIngredientEdge',
+        node: {
+          __typename: 'RecipeIngredient',
+          id: generateEntityId(),
+          name: ing.name,
+          quantity: ing.quantity,
+          estimatedPrice: ing.estimatedPrice ?? null,
+          item: null,
+          unit: null,
+          image: null,
+          isOptional: ing.isOptional ?? false,
+          notes: ing.notes ?? null,
+          preparation: ing.preparation ?? null,
+          sortOrder: ing.sortOrder ?? index,
+          section: ing.section ?? null,
+        },
+      })),
+    },
   };
 }
 

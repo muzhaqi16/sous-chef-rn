@@ -49,8 +49,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 129  
-        versionName "4.0.9"
+        versionCode 131 
+        versionName "4.1.1"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -171,4 +171,24 @@ dependencies {
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')
     androidTestImplementation 'junit:junit:4.13.2'
+}
+// FCM (push): apply the google-services plugin ONLY when google-services.json is
+// present, so debug/dev builds keep working before the file is added. Drop the
+// file (from the Firebase console, package dev.souschef.app) into android/app/
+// then rebuild — see docs/push-setup-checklist.md.
+if (file("google-services.json").exists()) {
+    apply plugin: "com.google.gms.google-services"
+} else {
+    // A release/bundle build without FCM config would ship with push silently
+    // dead — fail fast instead. Debug/dev builds still succeed without the file.
+    def isReleaseBuild = gradle.startParameter.taskNames.any { taskName ->
+        taskName.toLowerCase().contains("release")
+    }
+    if (isReleaseBuild) {
+        throw new GradleException(
+            "Missing android/app/google-services.json — required for release " +
+            "builds (FCM/push). Add it from the Firebase console " +
+            "(package dev.souschef.app); see docs/push-setup-checklist.md."
+        )
+    }
 }

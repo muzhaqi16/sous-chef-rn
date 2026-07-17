@@ -14,7 +14,6 @@ export const PantryStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,
     contentStyle: { backgroundColor: theme.colors.background },
-    inactiveBehavior: 'none',
   }),
   // Top safe-area inset for the main screen (Home opts out of the inset and
   // delegates it to each tab's stack — see RootNavigator).

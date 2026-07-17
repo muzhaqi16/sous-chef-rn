@@ -21,7 +21,7 @@ import {
   UpdatePantryDocument,
   DeletePantryDocument,
   CreatePantryDocument,
-  SetDefaultPantryDocument,
+  MarkPantryAsDefaultDocument,
   type DeletePantryMutation,
   type DeletePantryMutationVariables,
   type CreatePantryMutation,
@@ -227,7 +227,7 @@ export const PantrySettings: React.FC<
     // No need to update home's pantries array since the pantry is just updated, not added/removed
   });
 
-  const [setDefaultPantry] = useMutation(SetDefaultPantryDocument, {
+  const [setDefaultPantry] = useMutation(MarkPantryAsDefaultDocument, {
     onError: error => {
       handleMutationError(error, { operation: 'Set Default Pantry' });
       // Revert the toggle on error

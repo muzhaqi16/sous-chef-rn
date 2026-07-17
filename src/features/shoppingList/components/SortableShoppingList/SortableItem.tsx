@@ -287,14 +287,25 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <AnimatedCheckbox
         checked={isPurchased}
         itemId={itemId}
+        // Un-purchasing applies immediately, so let the box flip optimistically.
+        // Marking purchased is a confirmed (deferred) action — don't pre-check
+        // the box; it follows the real state once the purchase is confirmed.
+        optimistic={isPurchased}
         onPress={() => {
-          // Direction: 1 = right (marking as purchased), -1 = left (unmarking)
-          const direction = isPurchased ? -1 : 1;
-          // Trigger slide animation with callback for state change AFTER animation
-          triggerSlide(direction, () => {
+          if (isPurchased) {
+            // Un-purchasing moves the row to the other tab right away — slide it
+            // out, then apply the toggle after the animation.
+            triggerSlide(-1, () => {
+              onTogglePurchase(itemId);
+              tutorialActions?.notifyCheckboxTapped();
+            });
+          } else {
+            // Marking purchased opens a confirmation step; don't remove the row
+            // on tap. The list animates it out when the item actually moves on
+            // confirm (cancel leaves it in place).
             onTogglePurchase(itemId);
             tutorialActions?.notifyCheckboxTapped();
-          });
+          }
         }}
         size={28}
         testID={`shopping-item-checkbox-${itemId}`}

@@ -89,6 +89,9 @@ interface ShoppingListTabsProps {
   // Batch move purchased items to pantry
   onBatchMoveToPantry?: () => void;
   batchMoveToPantryLoading?: boolean;
+  // Server unreachable (offline / API down) — the batch move has no offline
+  // replay path, so disable the trigger instead of failing the call.
+  batchMoveToPantryUnavailable?: boolean;
   // List header (e.g. SearchBar) rendered inside FlashList for correct RefreshControl position
   listHeaderComponent?: React.ReactElement | null;
   // Current search query for search-aware empty states in tabs
@@ -157,6 +160,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Batch move to pantry
   onBatchMoveToPantry,
   batchMoveToPantryLoading = false,
+  batchMoveToPantryUnavailable = false,
   // Search query
   searchQuery,
   // Scroll direction tracking
@@ -338,7 +342,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     actionButtons.push({
       icon: 'archive-outline',
       onPress: handleBatchMoveToPantryWithConfirmation,
-      disabled: batchMoveToPantryLoading,
+      disabled: batchMoveToPantryLoading || batchMoveToPantryUnavailable,
       testID: 'shopping-list-batch-move-pantry',
     });
   }

@@ -12,10 +12,14 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   ToggleShoppingListItemPurchasedDocument,
+  UpdateShoppingListItemDocument,
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListItemsFilteredQueryVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
@@ -51,6 +55,11 @@ export function useToggleShoppingItem({
   const [togglePurchasedMutation] = useMutation(
     ToggleShoppingListItemPurchasedDocument,
   );
+
+  // Recording a purchase WITH amounts goes through updateShoppingListItem — the
+  // toggle input can't carry purchaseTracking. Offline-capable: UpdateShoppingListItem
+  // replays via SyncShoppingListItem, which forwards purchaseTracking.
+  const [updatePurchaseMutation] = useMutation(UpdateShoppingListItemDocument);
 
   const toggleItem = async (itemId: string) => {
     if (!listId) return false;
@@ -174,11 +183,155 @@ export function useToggleShoppingItem({
     );
     if (!result) return false;
 
+    // A resolved error-union member (ValidationError/ConflictError/…) doesn't
+    // fire the mutation `onError`, so surface + revert it here — same
+    // post-result guard recordPurchase uses. When `result.error` is set,
+    // `onError` already ran and decided (network errors keep the flip for the
+    // queue's retry; other errors reverted + alerted) — don't second-guess it.
+    // 'queued' (null payload, offline) keeps the optimistic flip.
+    if (
+      !result.error &&
+      classifyCreateResult(
+        result,
+        'toggleShoppingListItemPurchased',
+        'ToggleShoppingListItemPurchasedPayload',
+      ) === 'rejected'
+    ) {
+      revert();
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
+      return false;
+    }
+
     const payload = result.data?.toggleShoppingListItemPurchased;
     return isSuccessPayload(payload, 'ToggleShoppingListItemPurchasedPayload')
       ? payload.shoppingListItem
       : false;
   };
 
-  return { toggleItem };
+  /**
+   * Mark an item purchased AND record the actual quantity/price the user entered
+   * at purchase time. Mirrors toggleItem's optimistic move-to-purchased +
+   * offline persistence, but fires updateShoppingListItem with `purchaseTracking`
+   * (the toggle input can't carry amounts). `purchasedPrice` is omitted when null
+   * so the server falls back to its own auto-derivation.
+   */
+  const recordPurchase = async (
+    itemId: string,
+    amounts: { purchasedQuantity: number; purchasedPrice: number | null },
+  ) => {
+    if (!listId) return false;
+
+    const cacheId = client.cache.identify({
+      __typename: 'ShoppingListItem',
+      id: itemId,
+    });
+    if (!cacheId) return false;
+
+    const snapshot =
+      client.cache.readFragment<UseToggleShoppingItem_ItemFragment>({
+        id: cacheId,
+        fragment: UseToggleShoppingItem_ItemFragmentDoc,
+        fragmentName: 'useToggleShoppingItem_item',
+      });
+    if (!snapshot) return false;
+
+    const previousIsPurchased = snapshot.purchaseInfo?.isPurchased ?? false;
+    const previousUpdatedAt = snapshot.updatedAt;
+    const now = new Date().toISOString();
+
+    // 1. Optimistically mark purchased (same as toggleItem). The entered amounts
+    //    ride on the mutation's purchaseTracking; the detail screen's
+    //    cache-and-network query reflects the server's recorded values.
+    client.cache.modify<UseToggleShoppingItem_ItemFragment>({
+      id: cacheId,
+      fields: {
+        purchaseInfo(existing) {
+          return { ...existing, isPurchased: true };
+        },
+        updatedAt: () => now,
+      },
+    });
+    moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
+    const clearPersistence = optimisticDataPersistence.track(
+      'ShoppingListItem',
+      itemId,
+      'isPurchased',
+      true,
+    );
+
+    const revert = () => {
+      client.cache.modify<UseToggleShoppingItem_ItemFragment>({
+        id: cacheId,
+        fields: {
+          purchaseInfo(existing) {
+            return { ...existing, isPurchased: previousIsPurchased };
+          },
+          updatedAt: () => previousUpdatedAt,
+        },
+      });
+      if (!previousIsPurchased) {
+        moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
+      }
+      clearPersistence();
+    };
+
+    const result = await executeMutation(
+      () =>
+        updatePurchaseMutation({
+          variables: {
+            input: {
+              id: itemId,
+              version: snapshot.version,
+              purchaseTracking: {
+                isPurchased: true,
+                purchasedQuantity: amounts.purchasedQuantity,
+                ...(amounts.purchasedPrice != null && {
+                  purchasedPrice: amounts.purchasedPrice,
+                }),
+              },
+            },
+          },
+          context: { localFirst: true },
+          onCompleted: data => {
+            if (
+              isSuccessPayload(
+                data?.updateShoppingListItem,
+                'UpdateShoppingListItemPayload',
+              )
+            ) {
+              clearPersistence();
+            }
+          },
+          onError: error => {
+            if (isNetworkError(error)) {
+              logger.debug('Record purchase queued for retry (network error)');
+              return;
+            }
+            revert();
+            handleMutationError(error, { operation: 'Record Purchase' });
+            refetch();
+          },
+        }),
+      'Record purchase error:',
+    );
+    if (!result) return false;
+
+    // Same contract as toggleItem's guard: only handle the resolved
+    // error-union case here; `result.error` was already routed by `onError`.
+    if (
+      !result.error &&
+      classifyCreateResult(
+        result,
+        'updateShoppingListItem',
+        'UpdateShoppingListItemPayload',
+      ) === 'rejected'
+    ) {
+      revert();
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
+      return false;
+    }
+    return true;
+  };
+
+  return { toggleItem, recordPurchase };
 }

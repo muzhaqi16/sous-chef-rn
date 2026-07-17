@@ -56,6 +56,8 @@ export interface UsePantryItemDetailActionsResult {
   setAdjustModalVisible: (v: boolean) => void;
   correctWeightVisible: boolean;
   setCorrectWeightVisible: (v: boolean) => void;
+  /** Server unreachable — correcting net weight has no offline replay path. */
+  correctWeightUnavailable: boolean;
   handleDelete: () => void;
   handleAddToShoppingList: () => void;
   handleDiscardExpired: () => void;
@@ -133,28 +135,35 @@ export function usePantryItemDetailActions({
     AddItemToShoppingListFromPantryItemDocument,
     {
       update: (cache, { data: mutationData }, { variables }) => {
-        const payload = mutationData?.addItemToShoppingList;
+        const payload = mutationData?.addItemsToShoppingList;
         if (
-          payload?.__typename !== 'AddItemToShoppingListPayload' ||
+          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
           !selectedShoppingListId ||
           !variables
         ) {
           return;
         }
-        const shoppingListItem = payload.shoppingListItem;
+        // Single add via the batch mutation — the created/merged row is the one
+        // entry in `results`. Null when that item failed.
+        const shoppingListItem = payload.results[0]?.item;
+        if (!shoppingListItem) return;
         // Swallows its own errors internally, so no try/catch is needed here
         // (wrapping would bail the React Compiler out of this hook).
         reconcileShoppingItemCreateUpdate(
           cache,
           selectedShoppingListId,
           shoppingListItem,
-          variables.input.id,
+          variables.input.items[0]?.id,
         );
       },
     },
   );
 
-  const { convertExpiredToWaste } = useConvertExpiredToWaste();
+  const { convertExpiredToWaste } = useConvertExpiredToWaste({
+    onSuccess: () => {
+      alertService.alert(t('labels.done'), t('success.expiredItemDiscarded'));
+    },
+  });
 
   const { convertExpiredBatches } = useConvertExpiredBatchesToWaste({
     onSuccess: () => {
@@ -166,7 +175,8 @@ export function usePantryItemDetailActions({
   });
 
   const { adjustQuantity } = useAdjustPantryItemQuantity();
-  const { correctWeight } = useCorrectPantryItemWeight();
+  const { correctWeight, isApiUnavailable: correctWeightUnavailable } =
+    useCorrectPantryItemWeight();
 
   const handleDelete = () => {
     alertService.alert(
@@ -243,12 +253,17 @@ export function usePantryItemDetailActions({
         const result = await addToShoppingList({
           variables: {
             input: {
-              id,
               shoppingListId: selectedShoppingListId,
-              itemId: catalogItemId,
-              quantity,
-              unit: unitInput,
-              itemName,
+              items: [
+                {
+                  id,
+                  item: catalogItemId
+                    ? { itemId: catalogItemId }
+                    : { itemName },
+                  quantity,
+                  unit: unitInput,
+                },
+              ],
             },
           },
           context: { localFirst: true },
@@ -317,23 +332,7 @@ export function usePantryItemDetailActions({
           {
             text: 'Discard',
             style: 'destructive',
-            onPress: () =>
-              executeMutation(
-                async () => {
-                  await convertExpiredToWaste(item.id);
-                  alertService.alert(
-                    'Done',
-                    'Expired item has been discarded.',
-                  );
-                },
-                (error: unknown) =>
-                  alertService.alert(
-                    'Error',
-                    error instanceof Error
-                      ? error.message
-                      : 'Failed to discard expired item',
-                  ),
-              ),
+            onPress: () => convertExpiredToWaste(item.id),
           },
         ],
       );
@@ -376,6 +375,7 @@ export function usePantryItemDetailActions({
     setAdjustModalVisible,
     correctWeightVisible,
     setCorrectWeightVisible,
+    correctWeightUnavailable,
     handleDelete,
     handleAddToShoppingList,
     handleDiscardExpired,

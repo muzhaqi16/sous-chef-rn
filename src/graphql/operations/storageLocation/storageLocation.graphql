@@ -189,10 +189,10 @@ mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {
   }
 }
 
-mutation SetDefaultStorageLocation($input: SetDefaultStorageLocationInput!) {
-  setDefaultStorageLocation(input: $input) {
+mutation MarkStorageLocationAsDefault($input: MarkStorageLocationAsDefaultInput!) {
+  markStorageLocationAsDefault(input: $input) {
     __typename
-    ... on SetDefaultStorageLocationPayload {
+    ... on MarkStorageLocationAsDefaultPayload {
       storageLocation {
         id
         name

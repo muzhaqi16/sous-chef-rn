@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { screen, act } from '@testing-library/react-native';
+import { screen, act, fireEvent } from '@testing-library/react-native';
+import { executeMutation } from '#/utils/compilerSafeWrappers';
 import CollaboratorPermissionsBottomSheet, {
   type CollaboratorPermissionsBottomSheetRef,
 } from '../CollaboratorPermissionsBottomSheet';
@@ -132,5 +133,33 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     });
     expect(screen.getByText('Update')).toBeTruthy();
     expect(screen.getByText('Cancel')).toBeTruthy();
+  });
+
+  it('renders the granular permission toggles after opening', () => {
+    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
+    renderWithProviders(
+      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+    );
+    act(() => {
+      ref.current?.open(makeCollaborator());
+    });
+    expect(screen.getByText('Custom Permissions')).toBeTruthy();
+    expect(screen.getByText('Can add items')).toBeTruthy();
+    expect(screen.getByText('Can mark purchased')).toBeTruthy();
+  });
+
+  it('fires the permissions mutation when a toggle changes', () => {
+    const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
+    renderWithProviders(
+      <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+    );
+    act(() => {
+      ref.current?.open(makeCollaborator());
+    });
+    const switches = screen.getAllByRole('switch');
+    act(() => {
+      fireEvent(switches[0], 'valueChange', false);
+    });
+    expect(executeMutation).toHaveBeenCalled();
   });
 });

@@ -187,6 +187,45 @@ function shouldPreservePageInfo(
 }
 
 /**
+ * Preserve un-replayed local creates when an authoritative first page replaces
+ * a connection. Keeps only existing edges whose `node.id` still has a PENDING
+ * mutation in the offline queue and is absent from the incoming page — so an
+ * offline create survives a refetch that wins the race against the queue drain,
+ * while a genuinely server-deleted node (no pending op) is still dropped. Falls
+ * straight through to `incoming` once the queue drains (pendingIds empty).
+ * Shared by {@link itemsConnectionFieldPolicy} and
+ * {@link mergeConnectionByNodeId} so the guard is encoded in one place.
+ */
+function preservePendingEdges(
+  existing: CachedConnection,
+  incoming: CachedConnection,
+  readField: ReadField,
+): CachedConnection {
+  const pendingIds = queueStore.getPendingClientIds();
+  if (pendingIds.size === 0) return incoming;
+  const incomingIds = new Set<string>();
+  for (const edge of incoming.edges || []) {
+    const id = readEdgeNodeId(edge, readField);
+    if (id) incomingIds.add(id);
+  }
+  const preservedEdges = (existing.edges || []).filter(edge => {
+    const id = readEdgeNodeId(edge, readField);
+    return id != null && pendingIds.has(id) && !incomingIds.has(id);
+  });
+  if (preservedEdges.length === 0) return incoming;
+  if (__DEV__) {
+    logger.debug(
+      `🛡️ [Cache] preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
+    );
+  }
+  return {
+    ...incoming,
+    edges: [...preservedEdges, ...(incoming.edges || [])],
+    totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
+  };
+}
+
+/**
  * Connection merge for non-paginated-window lists where fresh server data
  * should win on duplicate node IDs.
  *
@@ -198,9 +237,9 @@ function shouldPreservePageInfo(
  * {@link itemsConnectionFieldPolicy} instead — its dedup strategy preserves
  * existing edge positions and bounds the window via MAX_WINDOW_EDGES.
  */
-function mergeConnectionByNodeId() {
+function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
   return {
-    keyArgs: ['filters'] as string[],
+    keyArgs,
     // Same self-healing read as itemsConnectionFieldPolicy — drop dangling
     // `edge.node` refs (post-eviction) and decrement totalCount accordingly.
     // See the read() comment in itemsConnectionFieldPolicy for context.
@@ -230,7 +269,13 @@ function mergeConnectionByNodeId() {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) return incoming;
+      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
+        // Preserve un-replayed local creates over an authoritative first page.
+        // An offline-created node (favorite, meal template, …) lives in
+        // `existing` until the queue replays it; a refetch that wins the race
+        // would otherwise drop it. Mirrors itemsConnectionFieldPolicy's guard.
+        return preservePendingEdges(existing, incoming, readField);
+      }
 
       const edgeMap = new Map<string, CachedEdge>();
       const existingEdges = existing.edges || [];
@@ -373,28 +418,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         // server-deleted item has no pending op and is still dropped, so the page
         // stays authoritative. Falls straight through to `return incoming` once
         // the queue drains (pendingIds empty).
-        const pendingIds = queueStore.getPendingClientIds();
-        if (pendingIds.size === 0) return incoming;
-        const incomingIds = new Set<string>();
-        for (const edge of incoming.edges || []) {
-          const id = readEdgeNodeId(edge, readField);
-          if (id) incomingIds.add(id);
-        }
-        const preservedEdges = (existing.edges || []).filter(edge => {
-          const id = readEdgeNodeId(edge, readField);
-          return id != null && pendingIds.has(id) && !incomingIds.has(id);
-        });
-        if (preservedEdges.length === 0) return incoming;
-        if (__DEV__) {
-          logger.debug(
-            `🛡️ [Cache] itemsConnection: preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
-          );
-        }
-        return {
-          ...incoming,
-          edges: [...preservedEdges, ...(incoming.edges || [])],
-          totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
-        };
+        return preservePendingEdges(existing, incoming, readField);
       }
 
       // Append-only: keep existing edges in place, add only new incoming edges
@@ -514,6 +538,10 @@ export function makeCache(): InMemoryCache {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
           },
+          // Purchase history is a cursor-paginated connection; merge pages by
+          // node id (keyed on orderBy only, so first/after don't fragment the
+          // cache entry) so `fetchMore` appends instead of replacing.
+          purchasesConnection: mergeConnectionByNodeId(['orderBy']),
         },
       },
       ShoppingList: {
@@ -564,9 +592,6 @@ export function makeCache(): InMemoryCache {
         fields: {
           unit: {
             merge: false, // Always replace unit with incoming data, never merge
-          },
-          batches: {
-            merge: false, // Always replace batches array with incoming data
           },
         },
       },
@@ -655,6 +680,13 @@ export function makeCache(): InMemoryCache {
             },
           },
           savedRecipesConnection: mergeConnectionByNodeId(),
+          // Keyed on filters + orderBy so the unread-badge query and the filtered
+          // history feed keep separate paginated lists; edges merge by node id
+          // so fetchMore appends pages.
+          notificationsConnection: mergeConnectionByNodeId([
+            'filters',
+            'orderBy',
+          ]),
         },
       },
       Query: {
@@ -740,6 +772,13 @@ export function makeCache(): InMemoryCache {
             },
           },
           homes: mergeConnectionByNodeId(),
+          // Batches for a pantry item are a Relay connection keyed by the item
+          // (and optional status filter), so each item — and each active/all
+          // view — keeps its own cached edge list; edges merge by node id.
+          pantryItemBatchesConnection: mergeConnectionByNodeId([
+            'pantryItemId',
+            'status',
+          ]),
           storageLocations: {
             // Different homes have different storage locations - cache separately
             keyArgs: ['homeId'],
@@ -787,7 +826,11 @@ export function makeCache(): InMemoryCache {
           },
           recipes: {
             ...mergeConnectionByNodeId(),
-            keyArgs: ['category', 'difficulty'],
+            // MyRecipes passes category/difficulty nested inside `filters:` —
+            // keying on the whole input object keeps each filter set in its
+            // own entry (variable-less cache.updateQuery writers collapse to
+            // the same `filters: {}` key on both write and read paths).
+            keyArgs: ['filters'],
           },
           mealPlans: {
             ...mergeConnectionByNodeId(),

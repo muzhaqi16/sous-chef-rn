@@ -6,7 +6,29 @@ mutation MarkAllNotificationsAsRead {
   markAllNotificationsAsRead {
     __typename
     ... on MarkAllNotificationsAsReadPayload {
-      count
+      summary {
+        total
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
+# Bulk delete by id — used by "Clear read" to remove only the already-read
+# notifications (pass their ids), preserving unread ones.
+mutation DeleteMultipleNotifications($input: DeleteMultipleNotificationsInput!) {
+  deleteMultipleNotifications(input: $input) {
+    __typename
+    ... on DeleteMultipleNotificationsPayload {
+      summary {
+        total
+      }
+      notifications {
+        id
+      }
     }
     ... on Error {
       code

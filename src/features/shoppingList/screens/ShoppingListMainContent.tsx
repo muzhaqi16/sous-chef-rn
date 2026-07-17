@@ -60,9 +60,9 @@ export interface ShoppingListMainContentProps {
   screenData: ReturnType<typeof useShoppingListScreen>;
 }
 
-// NOTE: Not wrapped in React.memo — the screenData prop is a new object each render
-// from useShoppingListScreen(), which defeats shallow comparison. The parent
-// ShoppingListMainScreen is React.memo'd, which is the effective optimization boundary.
+// Not wrapped in React.memo — the React Compiler memoizes this element at its
+// parent call site (`ShoppingListMain`), so a manual memo boundary is redundant
+// (and would be defeated anyway by `screenData` being a fresh object each render).
 export const ShoppingListMainContent: React.FC<
   ShoppingListMainContentProps
 > = ({ screenData }) => {
@@ -102,7 +102,8 @@ export const ShoppingListMainContent: React.FC<
   } = screenData;
 
   // Get modal actions from context (provided by ShoppingListModalsProvider)
-  const { addItemSheet, quantityEdit, moveToPantry } = useShoppingListModals();
+  const { addItemSheet, quantityEdit, purchaseAmount, moveToPantry } =
+    useShoppingListModals();
 
   const { toBarcode, toListSettings, toShoppingListItemDetail, toEditItem } =
     useAppNavigation();
@@ -173,9 +174,25 @@ export const ShoppingListMainContent: React.FC<
     setSearchQuery,
   });
 
+  // Intercept the checkbox tap: marking an UNpurchased item purchased opens the
+  // pre-filled purchase-amount sheet (Confirm records actual qty/price; Cancel
+  // leaves it unpurchased). Un-purchasing an already-purchased item toggles
+  // directly with no sheet.
+  const handleTogglePurchaseWithSheet = (itemId: string) => {
+    const isUnpurchased = rawUnpurchasedItems.some(item => item.id === itemId);
+    if (isUnpurchased) {
+      purchaseAmount.openForItem(itemId);
+      return;
+    }
+    handleTogglePurchase(itemId);
+  };
+
   // --- Batch Move to Pantry Hook ---
-  const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
-    useBatchMoveToPantry({ currentListId });
+  const {
+    batchMoveToPantry,
+    loading: batchMoveToPantryLoading,
+    isApiUnavailable: batchMoveToPantryUnavailable,
+  } = useBatchMoveToPantry({ currentListId });
 
   // --- Reordering Hook ---
   const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -294,7 +311,7 @@ export const ShoppingListMainContent: React.FC<
 
   const customListProps = {
     // Actions
-    onTogglePurchase: handleTogglePurchase,
+    onTogglePurchase: handleTogglePurchaseWithSheet,
     onMoveToPantry: moveToPantry.openForItem,
     onQuantityPress: quantityEdit.openForItem,
     onSortOrderUpdate: handleSortOrderUpdate,
@@ -315,6 +332,7 @@ export const ShoppingListMainContent: React.FC<
     disabled: !!searchQuery.trim(),
     isTransitioning,
     batchMoveToPantryLoading,
+    batchMoveToPantryUnavailable,
     // Data
     unpurchasedItems,
     purchasedItems,

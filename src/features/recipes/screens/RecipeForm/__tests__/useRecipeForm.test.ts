@@ -239,6 +239,23 @@ describe('useRecipeForm', () => {
     expect(input.instructions).toHaveLength(1);
   });
 
+  it('buildUpdateInput carries tips, tags, and attribution', () => {
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.updateField('name', 'R');
+      result.current.updateField('tips', 'Chill the dough.');
+      result.current.updateField('tags', 'quick, vegan , ');
+      result.current.updateField('originalAuthor', 'Grandma');
+    });
+
+    const input = result.current.buildUpdateInput();
+    expect(input.tips).toBe('Chill the dough.');
+    // Comma field is split, trimmed, and empties dropped.
+    expect(input.tags).toEqual(['quick', 'vegan']);
+    expect(input.attribution).toEqual({ originalAuthor: 'Grandma' });
+  });
+
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 
@@ -256,22 +273,34 @@ describe('useRecipeForm', () => {
       category: RecipeCategory.MainCourse,
       cuisine: 'Italian',
       status: RecipeStatus.Published,
-      ingredients: [
-        {
-          __typename: 'RecipeIngredient',
-          id: 'ing-1',
-          name: 'Salt',
-          quantity: 1,
-          image: null,
-          unit: null,
-          item: null,
-          preparation: null,
-          section: null,
-          notes: null,
-          isOptional: false,
-          sortOrder: 0,
-        },
-      ],
+      diets: [Diet.Keto],
+      healthGoals: [HealthGoal.HighProtein],
+      intolerances: [Intolerance.Dairy],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [
+          {
+            __typename: 'RecipeIngredientEdge',
+            node: {
+              __typename: 'RecipeIngredient',
+              id: 'ing-1',
+              name: 'Salt',
+              quantity: 1,
+              image: null,
+              unit: null,
+              item: null,
+              preparation: null,
+              section: null,
+              notes: null,
+              isOptional: false,
+              sortOrder: 0,
+            },
+          },
+        ],
+      },
       instructions: [{ text: 'Add salt' }],
       notes: 'A note',
     };
@@ -285,6 +314,11 @@ describe('useRecipeForm', () => {
     expect(result.current.state.ingredients).toHaveLength(1);
     expect(result.current.state.steps).toHaveLength(1);
     expect(result.current.state.steps[0].instruction).toBe('Add salt');
+    // Regression: editing a recipe must preserve its dietary classification
+    // (previously hardcoded to [] on populate, wiping tags on the next save).
+    expect(result.current.state.diets).toEqual([Diet.Keto]);
+    expect(result.current.state.healthGoals).toEqual([HealthGoal.HighProtein]);
+    expect(result.current.state.intolerances).toEqual([Intolerance.Dairy]);
   });
 
   it('populateFromRecipe handles { number, step } instruction format', () => {
@@ -304,7 +338,16 @@ describe('useRecipeForm', () => {
       category: RecipeCategory.MainCourse,
       cuisine: null,
       status: RecipeStatus.Published,
-      ingredients: [],
+      diets: [],
+      healthGoals: [],
+      intolerances: [],
+      tips: null,
+      originalAuthor: null,
+      tags: [],
+      ingredientsConnection: {
+        __typename: 'RecipeIngredientConnection',
+        edges: [],
+      },
       instructions: [
         { number: 1, step: 'Boil the water' },
         { number: 2, step: 'Cook the pasta' },

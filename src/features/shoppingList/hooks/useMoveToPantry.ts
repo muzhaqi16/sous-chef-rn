@@ -11,6 +11,9 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -140,10 +143,17 @@ export function useMoveToPantry({
   /**
    * Move a shopping list item to pantry
    */
+  const isApiUnavailable = useIsApiUnavailable();
+
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     const result = await executeMutation(
       () =>
         moveShoppingItemToPantry({
@@ -177,5 +187,6 @@ export function useMoveToPantry({
   return {
     moveToPantry,
     loading,
+    isApiUnavailable,
   };
 }

@@ -577,10 +577,30 @@ export function reconcileShoppingCreate(
 ): 'kept' | 'reverted' {
   const outcome = classifyCreateResult(
     result,
-    'addItemToShoppingList',
-    'AddItemToShoppingListPayload',
+    'addItemsToShoppingList',
+    'AddItemsToShoppingListPayload',
   );
-  if (outcome === 'rejected') {
+  // Each add fires the batch mutation with a single item. The batch can resolve
+  // successfully while that one item fails (`results[0].success === false`, e.g.
+  // a per-item validation error reported inside the batch rather than as a
+  // top-level error member). Revert the optimistic row in that case too.
+  const payload = (
+    result as
+      | {
+          data?: {
+            addItemsToShoppingList?: {
+              __typename?: string;
+              results?: Array<{ success: boolean }>;
+            };
+          };
+        }
+      | null
+      | undefined
+  )?.data?.addItemsToShoppingList;
+  const itemFailed =
+    payload?.__typename === 'AddItemsToShoppingListPayload' &&
+    payload.results?.[0]?.success === false;
+  if (outcome === 'rejected' || itemFailed) {
     executeCacheUpdate(
       () => revertOptimisticShoppingListItem(cache, listId, optimisticId),
       'Revert rejected Shopping List Item',

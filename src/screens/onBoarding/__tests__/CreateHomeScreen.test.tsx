@@ -140,7 +140,7 @@ const noHomesAndNoInvites = {
       edges: [],
       pageInfo: { hasNextPage: false, endCursor: null },
     },
-    me: { id: 'u1', pendingHomeInvites: [] },
+    me: { id: 'u1', pendingHomeInvitesConnection: { edges: [] } },
   }),
 };
 

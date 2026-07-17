@@ -146,7 +146,7 @@ function buildMocks() {
   const profile = recordMock(UpdateUserProfileDocument, {
     data: {
       updateProfile: {
-        __typename: 'UserProfilePayload',
+        __typename: 'UpdateProfilePayload',
         success: true,
         message: '',
         code: 'SUCCESS',
@@ -176,7 +176,7 @@ function buildMocks() {
   const settings = recordMock(UpdateUserPreferencesDocument, {
     data: {
       updateSettings: {
-        __typename: 'UserSettingsPayload',
+        __typename: 'UpdateSettingsPayload',
         success: true,
         message: '',
         code: 'SUCCESS',

@@ -23,6 +23,39 @@ module.exports = {
   // TypeScript-specific overrides with type-checked rules
   overrides: [
     {
+      // Lint GraphQL operation documents against the schema pulled from the live
+      // API (codegen writes it to src/graphql/generated/schema.graphql). This
+      // surfaces a deprecated field/arg/enum value or a selection that no longer
+      // exists on its type at `npm run lint` time — continuously, one at a time —
+      // instead of as a surprise `npm run codegen` batch failure when the API
+      // evolves. The generated SDL itself is excluded via top-level ignorePatterns.
+      files: ['**/*.graphql'],
+      parser: '@graphql-eslint/eslint-plugin',
+      parserOptions: {
+        schema: './src/graphql/generated/schema.graphql',
+      },
+      plugins: ['@graphql-eslint'],
+      rules: {
+        // Selecting a field/arg the schema doesn't have (e.g. after a result
+        // type becomes a union, or a field is renamed/removed) — always a bug.
+        '@graphql-eslint/fields-on-correct-type': 'error',
+        // Using a field/arg/enum value the API marked @deprecated — forces the
+        // switch to the replacement while the old one still exists, rather than
+        // discovering it only once the API removes it. Lower to 'warn' if a
+        // deprecation lands faster than the client can migrate.
+        '@graphql-eslint/no-deprecated': 'error',
+        // The base config's JS/TS rules don't understand the GraphQL AST; turn
+        // off the ones that traverse it so they don't error on .graphql files.
+        'no-barrel-files/no-barrel-files': 'off',
+        'react-compiler/react-compiler': 'off',
+        'react-hooks/rules-of-hooks': 'off',
+        'react-hooks/todo': 'off',
+        'no-restricted-syntax': 'off',
+        'no-restricted-imports': 'off',
+        'import/no-restricted-paths': 'off',
+      },
+    },
+    {
       // Test files legitimately use `as any` for mocks/fixtures, so the
       // production-oriented no-restricted-syntax selectors (the `as any`/
       // `as unknown` cast ban, scheduleOnRN/shadow/style hygiene, etc.) are

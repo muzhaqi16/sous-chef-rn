@@ -354,34 +354,41 @@ function buildGetMyPendingInvitesMock(): MockedResponse {
         me: {
           __typename: 'User',
           id: 'user-1',
-          pendingHomeInvites: mockPendingInvites.map(invite => ({
-            __typename: 'HomeInvite',
-            id: invite.id,
-            token: invite.token,
-            role: invite.role,
-            home: invite.home
-              ? {
-                  __typename: 'Home',
-                  id: `home-for-${invite.id}`,
-                  name: invite.home.name,
-                }
-              : null,
-            inviter: invite.inviter
-              ? {
-                  __typename: 'User',
-                  id: `inviter-for-${invite.id}`,
-                  email: invite.inviter.email ?? null,
-                  profile: invite.inviter.profile
-                    ? {
-                        __typename: 'UserProfile',
-                        id: `profile-for-${invite.id}`,
-                        displayName: invite.inviter.profile.displayName ?? null,
-                        avatar: null,
-                      }
-                    : null,
-                }
-              : null,
-          })),
+          pendingHomeInvitesConnection: {
+            __typename: 'HomeInviteConnection',
+            edges: mockPendingInvites.map(invite => ({
+              __typename: 'HomeInviteEdge',
+              node: {
+                __typename: 'HomeInvite',
+                id: invite.id,
+                token: invite.token,
+                role: invite.role,
+                home: invite.home
+                  ? {
+                      __typename: 'Home',
+                      id: `home-for-${invite.id}`,
+                      name: invite.home.name,
+                    }
+                  : null,
+                inviter: invite.inviter
+                  ? {
+                      __typename: 'User',
+                      id: `inviter-for-${invite.id}`,
+                      email: invite.inviter.email ?? null,
+                      profile: invite.inviter.profile
+                        ? {
+                            __typename: 'UserProfile',
+                            id: `profile-for-${invite.id}`,
+                            displayName:
+                              invite.inviter.profile.displayName ?? null,
+                            avatar: null,
+                          }
+                        : null,
+                    }
+                  : null,
+              },
+            })),
+          },
         },
       },
     }),

@@ -9,6 +9,8 @@ import {
   createAddToQueryConnectionUpdater,
   createAddToParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { t } from '#/i18n/t';
 
 const addToShoppingLists = createAddToQueryConnectionUpdater(
   'shoppingLists',
@@ -43,9 +45,15 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     },
   );
 
+  const isApiUnavailable = useIsApiUnavailable();
+
   const generateShoppingList = async (
     input: Omit<GenerateShoppingListFromMealPlanInput, 'mealPlanId'>,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return null;
+    }
     if (!mealPlanId) return null;
     const result = await executeMutation(
       () =>
@@ -93,5 +101,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
   return {
     generateShoppingList,
     loading,
+    isApiUnavailable,
   };
 }

@@ -1,0 +1,12 @@
+# Snapshot/write shape for useShoppingListReminder's optimistic writes: the
+# reminder fields the screen sets plus the version/updatedAt pair the revert
+# restores. Every field must be selected by the reading query
+# (GetShoppingListDetails) so the snapshot reads complete — otherwise the
+# optimistic write silently skips.
+fragment useShoppingListReminder_list on ShoppingList {
+  id
+  reminderEnabled
+  reminderDate
+  version
+  updatedAt
+}

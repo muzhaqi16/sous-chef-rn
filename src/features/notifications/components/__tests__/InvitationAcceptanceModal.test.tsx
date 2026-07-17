@@ -98,7 +98,7 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
-  createRemoveFromParentArrayUpdater: jest.fn(() => jest.fn()),
+  createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
 }));
 
@@ -135,39 +135,20 @@ const defaultProps = {
   onReject: jest.fn(),
 };
 
-// Refetch query mocks (component declares refetchQueries in useMutation options;
-// MockedProvider matches them by document so we provide harmless empty payloads).
-function homesRefetchMock(): MockedResponse {
-  return recordMock(
-    require('#operations/home/home.generated').GetHomesDocument,
-    {
-      data: { homes: [] },
-    },
-  ).mock;
-}
-
-function pendingInvitesRefetchMock(): MockedResponse {
-  return recordMock(
-    require('#operations/home/home.generated').GetMyPendingInvitesDocument,
-    {
-      data: {
-        me: {
-          __typename: 'User',
-          id: 'u1',
-          pendingHomeInvites: [],
-        },
-      },
-    },
-  ).mock;
-}
-
+// The component has no `refetchQueries` — it updates the cache via `update`
+// callbacks. Its one imperative fetch is `client.query(MyShoppingListInvites)`
+// in `resolveToken()`, taken only when a shopping-list invite arrives without a
+// token. This mock supplies a harmless empty payload so that branch has a match.
 function myShoppingListInvitesRefetchMock(): MockedResponse {
   return recordMock(MyShoppingListInvitesDocument, {
     data: {
       me: {
         __typename: 'User',
         id: 'u1',
-        pendingCollaborationInvites: [],
+        pendingCollaborationInvitesConnection: {
+          __typename: 'ShoppingListCollaboratorConnection',
+          edges: [],
+        },
       },
     },
   }).mock;
@@ -351,7 +332,10 @@ function noTokenLookupMock(): MockedResponse {
       me: {
         __typename: 'User',
         id: 'u1',
-        pendingCollaborationInvites: [],
+        pendingCollaborationInvitesConnection: {
+          __typename: 'ShoppingListCollaboratorConnection',
+          edges: [],
+        },
       },
     },
   }).mock;
@@ -438,11 +422,7 @@ describe('InvitationAcceptanceModal', () => {
     const acceptMock = acceptHomeOk();
 
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [
-        acceptMock.mock,
-        homesRefetchMock(),
-        pendingInvitesRefetchMock(),
-      ],
+      operationMocks: [acceptMock.mock],
     });
 
     await user.press(screen.getByText('Accept'));
@@ -610,7 +590,7 @@ describe('InvitationAcceptanceModal', () => {
     const declineMock = declineHomeOk();
 
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [declineMock.mock, pendingInvitesRefetchMock()],
+      operationMocks: [declineMock.mock],
     });
 
     await act(async () => {
@@ -833,11 +813,7 @@ describe('InvitationAcceptanceModal', () => {
     const acceptMock = acceptHomeOk({ hasMembership: false });
 
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />, {
-      operationMocks: [
-        acceptMock.mock,
-        homesRefetchMock(),
-        pendingInvitesRefetchMock(),
-      ],
+      operationMocks: [acceptMock.mock],
     });
 
     await act(async () => {

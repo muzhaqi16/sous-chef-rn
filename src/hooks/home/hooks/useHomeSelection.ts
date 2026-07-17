@@ -9,10 +9,11 @@
 
 import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
+import { t } from '#/i18n/t';
 import { useMutation } from '@apollo/client/react';
 import {
-  SetDefaultHomeDocument,
-  type SetDefaultHomeMutation,
+  MarkHomeAsDefaultDocument,
+  type MarkHomeAsDefaultMutation,
 } from '#operations/home/userSettings.generated';
 import type { GetHomesQuery } from '#operations/home/home.generated';
 import type { Reference } from '@apollo/client';
@@ -80,12 +81,12 @@ export function useHomeSelection({
   // Ref to track if initial home auto-selection has been attempted
   const hasInitializedDefaultHome = useRef(false);
 
-  const [setDefaultHomeMutation] = useMutation(SetDefaultHomeDocument, {
+  const [setDefaultHomeMutation] = useMutation(MarkHomeAsDefaultDocument, {
     // Optimistic response for instant UI updates (especially offline)
-    optimisticResponse: (variables): SetDefaultHomeMutation => ({
+    optimisticResponse: (variables): MarkHomeAsDefaultMutation => ({
       __typename: 'Mutation',
-      setDefaultHome: {
-        __typename: 'SetDefaultHomePayload',
+      markHomeAsDefault: {
+        __typename: 'MarkHomeAsDefaultPayload',
         settings: {
           __typename: 'UserSettings',
           id: variables.input.homeId,
@@ -216,14 +217,16 @@ export function useHomeSelection({
         // Rollback on error and re-enable queries
         setHomeAndPantry(previousHomeId, previousPantryId);
         setIsHomeSelectionReady(true);
-        alertService.alert('Error', 'Failed to set default home');
+        alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
       },
     );
     if (!result) return false;
 
-    if (result.data?.setDefaultHome?.__typename === 'SetDefaultHomePayload') {
+    if (
+      result.data?.markHomeAsDefault?.__typename === 'MarkHomeAsDefaultPayload'
+    ) {
       // Update pantry from server response (server is source of truth)
-      const serverPantry = result.data.setDefaultHome.defaultPantry;
+      const serverPantry = result.data.markHomeAsDefault.defaultPantry;
       if (serverPantry?.id) {
         setSelectedPantryId(serverPantry.id);
       }
@@ -232,9 +235,13 @@ export function useHomeSelection({
       return true;
     }
 
-    // Mutation returned no data - rollback and re-enable queries
+    // A resolved `*Error` union member (or no data) doesn't throw under
+    // errorPolicy:'all', so the executeMutation error callback above never
+    // fired. Roll back, re-enable queries, and surface it (mirrors the throw
+    // path; the early `if (!result) return false` keeps the two exclusive).
     setHomeAndPantry(previousHomeId, previousPantryId);
     setIsHomeSelectionReady(true);
+    alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
     return false;
   };
 

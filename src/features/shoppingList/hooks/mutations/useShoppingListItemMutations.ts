@@ -35,12 +35,16 @@ export function useShoppingListItemMutations(
   const { addItem } = useAddShoppingItem({ listId, refetch });
   const { updateItem } = useUpdateShoppingItem({ listId, refetch });
   const { removeItem } = useRemoveShoppingItem({ listId, refetch });
-  const { toggleItem } = useToggleShoppingItem({ listId, refetch });
+  const { toggleItem, recordPurchase } = useToggleShoppingItem({
+    listId,
+    refetch,
+  });
 
   return {
     addItem,
     updateItem,
     removeItem,
     toggleItem,
+    recordPurchase,
   };
 }

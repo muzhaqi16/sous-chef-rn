@@ -3,7 +3,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { ClearShoppingListItemsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 jest.mock('#/utils/compilerSafeWrappers');
@@ -43,7 +43,7 @@ function createClearMock(
 ): MockedResponse {
   return {
     request: {
-      query: ClearShoppingListItemsDocument,
+      query: RemoveItemsFromShoppingListDocument,
       variables: vars => {
         recorded.push(vars);
         return true;
@@ -51,7 +51,22 @@ function createClearMock(
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
     delay,
-    result: { data: { clearShoppingListItems: true } },
+    result: {
+      data: {
+        removeItemsFromShoppingList: {
+          __typename: 'RemoveItemsFromShoppingListPayload',
+          summary: {
+            __typename: 'BulkSummary',
+            total: 1,
+            succeeded: 1,
+            failed: 0,
+            skipped: 0,
+            executionTime: 0,
+          },
+          shoppingListItems: [{ __typename: 'ShoppingListItem', id: 'item-1' }],
+        },
+      },
+    },
   };
 }
 
@@ -143,10 +158,12 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
+    // P2-16: the mutation replays the exact captured ids (matching the
+    // optimistically-cleared set), not a re-evaluated `purchased` filter.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
-        purchased: true,
+        ids: ['item-1', 'item-3'],
       },
     });
   });
@@ -179,10 +196,11 @@ describe('useClearShoppingListItems', () => {
       ['item-1', 'item-3'],
     );
 
+    // P2-16: id-based replay, matching the optimistically-cleared set.
     expect(recorded).toContainEqual({
       input: {
         shoppingListId: 'list-1',
-        purchased: false,
+        ids: ['item-1', 'item-3'],
       },
     });
   });

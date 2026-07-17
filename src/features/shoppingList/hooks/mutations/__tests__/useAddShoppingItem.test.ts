@@ -5,52 +5,47 @@ import { addOptimisticShoppingListItem } from '#/apollo/utils/shoppingListCacheU
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 // Run the optimistic cache update synchronously; don't fire the real mutation.
+// The mocked result mirrors the real batch payload the hook reads
+// (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
+// it as a success and keeps the optimistic row.
 jest.mock('#/utils/compilerSafeWrappers', () => ({
   executeCacheUpdate: jest.fn((fn: () => void) => fn()),
   executeMutation: jest.fn(async () => ({
     data: {
-      addItemToShoppingList: {
-        __typename: 'AddItemToShoppingListPayload',
-        shoppingListItem: { id: 'srv-1' },
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [
+          {
+            __typename: 'BatchAddShoppingListItemResult',
+            success: true,
+            item: { __typename: 'ShoppingListItem', id: 'srv-1' },
+          },
+        ],
       },
     },
   })),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
-  const { classifyCreateResult } = jest.requireActual(
-    '#/apollo/utils/classifyCreateResult',
-  );
-  const revertOptimisticShoppingListItem = jest.fn();
+  const actual = jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters');
   return {
+    // Keep the REAL reconcileShoppingCreate (and the classifyCreateResult it
+    // calls) so the keep/revert decision under test is production's — a
+    // hand-copied reconciler drifts from the operation names it hard-codes.
+    ...actual,
+    // Leaf cache writers are stubbed so the hook runs without a live cache.
     addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
-    revertOptimisticShoppingListItem,
+    revertOptimisticShoppingListItem: jest.fn(),
     addOptimisticShoppingListItem: jest.fn(),
-    // New signature: (id, fields) => entity (the cuid is baked straight in).
+    reconcileShoppingItemCreateUpdate: jest.fn(),
+    // Signature: (id, fields) => entity (the cuid is baked straight in).
     createOptimisticShoppingListItem: jest.fn(
       (id: string, fields: { itemName?: string }) => ({
         __typename: 'ShoppingListItem',
         id,
         itemName: fields?.itemName ?? '',
       }),
-    ),
-    // Mirror the real reconciler (real classify + mocked revert) so the
-    // keep/revert decision under test matches production.
-    reconcileShoppingCreate: jest.fn(
-      (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (
-          classifyCreateResult(
-            result,
-            'addItemToShoppingList',
-            'AddItemToShoppingListPayload',
-          ) === 'rejected'
-        ) {
-          revertOptimisticShoppingListItem(cache, listId, id);
-          return 'reverted';
-        }
-        return 'kept';
-      },
     ),
   };
 });

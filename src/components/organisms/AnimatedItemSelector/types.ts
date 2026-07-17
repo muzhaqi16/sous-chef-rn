@@ -22,6 +22,9 @@ export interface SelectorConfig<T extends SelectableItem> {
   displayProperty: keyof T;
   actions: ActionButtonConfig[];
   headerRight?: React.ReactNode;
+  // Optional node rendered above the list (and above the empty state, so a
+  // filter UI stays reachable when a filter yields no matches).
+  listHeader?: React.ReactNode;
   loading?: boolean;
   emptyMessage?: string;
   keyExtractor?: (item: T) => string;

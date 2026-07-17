@@ -4,7 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import {
+  usePanGesture,
+  usePinchGesture,
+  useSimultaneousGestures,
+  GestureDetector,
+} from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
   useAnimatedStyle,
@@ -92,22 +97,27 @@ export const ImageCropScreen: React.FC<
   };
 
   // Create pinch gesture
-  const pinch = Gesture.Pinch()
-    .onStart(() => {
+  const pinch = usePinchGesture({
+    onActivate: () => {
+      'worklet';
       startScale.set(scale.get());
-    })
-    .onUpdate(e => {
+    },
+    onUpdate: e => {
+      'worklet';
       scale.set(clamp(startScale.get() * e.scale, 0.5, 3));
-    });
+    },
+  });
 
   // Create pan gesture
-  const pan = Gesture.Pan()
-    .averageTouches(true)
-    .onStart(() => {
+  const pan = usePanGesture({
+    averageTouches: true,
+    onActivate: () => {
+      'worklet';
       const currentOffset = offset.get();
       startOffset.set({ x: currentOffset.x, y: currentOffset.y });
-    })
-    .onUpdate(e => {
+    },
+    onUpdate: e => {
+      'worklet';
       // Calculate bounds based on current scale and image size
       const scaledWidth = (imageSize.width || CROP_SIZE) * scale.get();
       const scaledHeight = (imageSize.height || CROP_SIZE) * scale.get();
@@ -120,10 +130,11 @@ export const ImageCropScreen: React.FC<
       const newY = clamp(currentStartOffset.y + e.translationY, -maxY, maxY);
 
       offset.set({ x: newX, y: newY });
-    });
+    },
+  });
 
   // Compose gestures
-  const composed = Gesture.Simultaneous(pan, pinch);
+  const composed = useSimultaneousGestures(pan, pinch);
 
   // Animated style
   const animatedStyle = useAnimatedStyle(() => {

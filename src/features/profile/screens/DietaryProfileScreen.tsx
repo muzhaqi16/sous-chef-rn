@@ -144,14 +144,14 @@ export const DietaryProfileScreen: React.FC = () => {
 
   // Cuisine handlers
   const handleAddCuisine = async (cuisine: Cuisine) => {
-    const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
+    const currentCuisines = profile?.preferredCuisines ?? [];
     return await updateDietaryProfile({
       preferredCuisines: [...currentCuisines, cuisine],
     });
   };
 
   const handleRemoveCuisine = async (cuisine: Cuisine) => {
-    const currentCuisines = (profile?.preferredCuisines || []) as Cuisine[];
+    const currentCuisines = profile?.preferredCuisines ?? [];
     await updateDietaryProfile({
       preferredCuisines: currentCuisines.filter(c => c !== cuisine),
     });
@@ -262,7 +262,7 @@ export const DietaryProfileScreen: React.FC = () => {
         </Text>
         <View style={styles.sectionCard}>
           <CuisineSelector
-            selectedCuisines={(profile.preferredCuisines || []) as Cuisine[]}
+            selectedCuisines={profile.preferredCuisines}
             onAdd={handleAddCuisine}
             onRemove={handleRemoveCuisine}
           />
