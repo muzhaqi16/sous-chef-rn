@@ -25,6 +25,7 @@ import {
   MealPlanItemActions_RecipeRefFragmentDoc,
   type MealPlanItemActions_RecipeRefFragment,
 } from './useMealPlanItemActions.generated';
+import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';
 import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
@@ -69,7 +70,7 @@ type OptimisticMealPlanItem = {
   customMealName: string | null;
   servings: number | null;
   calories: number | null;
-  usedPantryItems: JsonValue;
+  usedPantryItems: MealPlanItemCard_ItemFragment['usedPantryItems'];
   notes: string | null;
   isCompleted: boolean;
   completedAt: string | null;

@@ -4,7 +4,10 @@ fragment MealPlanItemCard_item on MealPlanItem {
   customMealName
   servings
   calories
-  usedPantryItems
+  usedPantryItems {
+    pantryItemId
+    quantityUsed
+  }
   recipe {
     id
     name

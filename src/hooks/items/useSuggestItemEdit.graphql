@@ -48,8 +48,8 @@ mutation CreateItemSuggestion($input: CreateItemSuggestionInput!) {
 # Direct write. Used only when the item's viewer-scoped `canEdit` is true (its
 # creator, or an admin); updateItem is ownership-gated and ForbiddenErrors
 # otherwise. UpdateItemInput is a superset of SuggestibleItemChangesInput plus
-# { id, editReason }, so the SAME diff object spreads straight into it and there
-# is no separate update mapper.
+# { id }, so the SAME diff object spreads straight into it and there is no
+# separate update mapper.
 mutation UpdateItem($input: UpdateItemInput!) {
   updateItem(input: $input) {
     __typename

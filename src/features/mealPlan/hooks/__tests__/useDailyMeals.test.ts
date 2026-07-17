@@ -27,7 +27,7 @@ const makeItem = (
     calories: 300,
     isCompleted: false,
     servings: null,
-    usedPantryItems: null,
+    usedPantryItems: [],
     recipe:
       recipe === undefined
         ? {

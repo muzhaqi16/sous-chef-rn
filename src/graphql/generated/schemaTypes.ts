@@ -18,7 +18,6 @@ export type Scalars = {
   FlexibleQuantity: { input: string | number; output: string; }
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: { input: JsonInput; output: JsonValue; }
-  Upload: { input: { uri: string; type: string; name: string }; output: { uri: string; type: string; name: string }; }
 };
 
 export type AcceptHomeInviteInput = {
@@ -198,13 +197,6 @@ export type AddRestrictionPayload = {
 };
 
 export type AddRestrictionResult = AddRestrictionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AddRestrictionsInput = {
-  reason: Scalars['String']['input'];
-  restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
-  restrictions: Array<ModerationRestriction>;
-  userId: Scalars['ID']['input'];
-};
 
 export type AddTemplateItemInput = {
   dayOffset: Scalars['Int']['input'];
@@ -719,11 +711,6 @@ export enum BackgroundJobState {
   WaitingChildren = 'WAITING_CHILDREN'
 }
 
-export type BanUserInput = {
-  reason: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
-};
-
 export enum BaseDimension {
   Count = 'COUNT',
   Mass = 'MASS',
@@ -1042,11 +1029,16 @@ export type BulkUpdateItemFieldsInput = {
   categoryOps?: InputMaybe<CategoryOpsInput>;
   classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  editReason?: InputMaybe<Scalars['String']['input']>;
   healthInfo?: InputMaybe<HealthInfoInput>;
   media?: InputMaybe<MediaAssetsInput>;
-  mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
-  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Client-settable item metadata. Deliberately narrower than the stored
+   * `Item.metadata`: the moderation and audit keys on that column
+   * (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+   * and are not accepted here — while this was `JSON`, a client could set or
+   * forge any of them.
+   */
+  metadata?: InputMaybe<ItemMetadataInput>;
   name?: InputMaybe<Scalars['String']['input']>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   packageInfo?: InputMaybe<PackageInfoInput>;
@@ -1414,19 +1406,6 @@ export type ConsumptionFailure = {
   requestedQuantity: Scalars['Float']['output'];
 };
 
-/** Consumption rate for an item or pantry */
-export type ConsumptionRate = {
-  __typename: 'ConsumptionRate';
-  averageDailyConsumption: Scalars['Float']['output'];
-  dataPoints: Scalars['Int']['output'];
-  daysUntilEmpty: Maybe<Scalars['Float']['output']>;
-  itemId: Maybe<Scalars['ID']['output']>;
-  itemName: Maybe<Scalars['String']['output']>;
-  periodEnd: Scalars['DateTime']['output'];
-  periodStart: Scalars['DateTime']['output'];
-  unitName: Maybe<Scalars['String']['output']>;
-};
-
 /** Conversion availability result */
 export type ConversionAvailability = {
   __typename: 'ConversionAvailability';
@@ -1574,7 +1553,6 @@ export type CookingLogEvent = {
 /** Order by options for cooking logs */
 export type CookingLogOrderBy = {
   cookedAt?: InputMaybe<SortOrder>;
-  createdAt?: InputMaybe<SortOrder>;
 };
 
 /** Subtype discriminator for cooking-log domain events. */
@@ -1660,21 +1638,6 @@ export type CreateCurrencyPayload = {
 
 export type CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
 
-export type CreateDeviceInput = {
-  appVersion?: InputMaybe<Scalars['String']['input']>;
-  details?: InputMaybe<DeviceDetailsInput>;
-  deviceId: Scalars['String']['input'];
-  deviceName?: InputMaybe<Scalars['String']['input']>;
-  deviceType?: InputMaybe<DeviceType>;
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
-  isTrusted?: InputMaybe<Scalars['Boolean']['input']>;
-  isVerified?: InputMaybe<Scalars['Boolean']['input']>;
-  location?: InputMaybe<NetworkLocationInput>;
-  platform?: InputMaybe<MobilePlatform>;
-  pushToken?: InputMaybe<Scalars['String']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
 export type CreateFromTemplateInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   plannedShopDate?: InputMaybe<Scalars['DateTime']['input']>;
@@ -1734,7 +1697,14 @@ export type CreateItemInput = {
   externalSources?: InputMaybe<Array<ExternalSourceMappingInput>>;
   healthInfo?: InputMaybe<HealthInfoInput>;
   media?: InputMaybe<MediaAssetsInput>;
-  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Client-settable item metadata. Deliberately narrower than the stored
+   * `Item.metadata`: the moderation and audit keys on that column
+   * (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+   * and are not accepted here — while this was `JSON`, a client could set or
+   * forge any of them.
+   */
+  metadata?: InputMaybe<ItemMetadataInput>;
   name: Scalars['String']['input'];
   netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
@@ -1930,18 +1900,6 @@ export type CreateNotificationPayload = {
 };
 
 export type CreateNotificationResult = ConflictError | CreateNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
-
-export type CreatePantryActivityInput = {
-  action: PantryActivityType;
-  description: Scalars['String']['input'];
-  itemName?: InputMaybe<Scalars['String']['input']>;
-  metadata?: InputMaybe<Scalars['JSON']['input']>;
-  newValue?: InputMaybe<Scalars['String']['input']>;
-  oldValue?: InputMaybe<Scalars['String']['input']>;
-  pantryId: Scalars['ID']['input'];
-  quantity?: InputMaybe<Scalars['Float']['input']>;
-  userId: Scalars['ID']['input'];
-};
 
 export type CreatePantryInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -2865,7 +2823,7 @@ export type Device = {
   __typename: 'Device';
   apiLevel: Maybe<Scalars['Int']['output']>;
   appVersion: Maybe<Scalars['String']['output']>;
-  availableLocationProviders: Maybe<Scalars['String']['output']>;
+  availableLocationProviders: Maybe<Scalars['JSON']['output']>;
   batteryLevel: Maybe<Scalars['Float']['output']>;
   brand: Maybe<Scalars['String']['output']>;
   browserName: Maybe<Scalars['String']['output']>;
@@ -2880,7 +2838,7 @@ export type Device = {
   freeDiskStorage: Maybe<Scalars['String']['output']>;
   hasDynamicIsland: Maybe<Scalars['Boolean']['output']>;
   hasNotch: Maybe<Scalars['Boolean']['output']>;
-  hostNames: Maybe<Scalars['String']['output']>;
+  hostNames: Array<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isActive: Scalars['Boolean']['output'];
   isAirplaneMode: Maybe<Scalars['Boolean']['output']>;
@@ -2904,11 +2862,11 @@ export type Device = {
   osName: Maybe<Scalars['String']['output']>;
   osVersion: Maybe<Scalars['String']['output']>;
   platform: Maybe<MobilePlatform>;
-  powerState: Maybe<Scalars['String']['output']>;
+  powerState: Maybe<Scalars['JSON']['output']>;
   readableVersion: Maybe<Scalars['String']['output']>;
   screenResolution: Maybe<Scalars['String']['output']>;
-  supportedAbis: Maybe<Scalars['String']['output']>;
-  supportedMediaTypes: Maybe<Scalars['String']['output']>;
+  supportedAbis: Array<Scalars['String']['output']>;
+  supportedMediaTypes: Array<Scalars['String']['output']>;
   systemVersion: Maybe<Scalars['String']['output']>;
   timezone: Maybe<Scalars['String']['output']>;
   totalDiskCapacity: Maybe<Scalars['String']['output']>;
@@ -2957,16 +2915,22 @@ export type DeviceConnection = Connection & {
 
 /** Composite sub-input for all device details */
 export type DeviceDetailsInput = {
+  /**
+   * Provider→availability map on Android; the platform's shape. Open for the
+   * same reason as powerState.
+   */
   availableLocationProviders?: InputMaybe<Scalars['JSON']['input']>;
   browserOs?: InputMaybe<BrowserOsDetailsInput>;
   characteristics?: InputMaybe<DeviceCharacteristicsInput>;
   connectivity?: InputMaybe<ConnectivityInput>;
   hardware?: InputMaybe<DeviceHardwareInput>;
-  hostNames?: InputMaybe<Scalars['JSON']['input']>;
+  /** Host names the device reports. */
+  hostNames?: InputMaybe<Array<Scalars['String']['input']>>;
   identification?: InputMaybe<DeviceIdentificationInput>;
   peripherals?: InputMaybe<DevicePeripheralsDetailsInput>;
   power?: InputMaybe<PowerStatusInput>;
-  supportedMediaTypes?: InputMaybe<Scalars['JSON']['input']>;
+  /** Media types the device can play. */
+  supportedMediaTypes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
 export type DeviceEdge = Edge & {
@@ -3012,19 +2976,12 @@ export type DeviceFilters = {
   userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type DeviceHardwareInfoInput = {
-  freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
-  maxMemory?: InputMaybe<Scalars['String']['input']>;
-  totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
-  totalMemory?: InputMaybe<Scalars['String']['input']>;
-  usedMemory?: InputMaybe<Scalars['String']['input']>;
-};
-
 /** Sub-input for device hardware specs */
 export type DeviceHardwareInput = {
   freeDiskStorage?: InputMaybe<Scalars['String']['input']>;
   maxMemory?: InputMaybe<Scalars['String']['input']>;
-  supportedAbis?: InputMaybe<Scalars['JSON']['input']>;
+  /** CPU ABIs the device reports, e.g. ["arm64-v8a"]. */
+  supportedAbis?: InputMaybe<Array<Scalars['String']['input']>>;
   totalDiskCapacity?: InputMaybe<Scalars['String']['input']>;
   totalMemory?: InputMaybe<Scalars['String']['input']>;
   usedMemory?: InputMaybe<Scalars['String']['input']>;
@@ -3064,14 +3021,6 @@ export type DeviceOrderBy = {
 
 /** Sub-input for device peripherals (automation detection) */
 export type DevicePeripheralsDetailsInput = {
-  isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isMouseConnected?: InputMaybe<Scalars['Boolean']['input']>;
-  isWiredHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type DevicePeripheralsInput = {
   isBluetoothHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   isHeadphonesConnected?: InputMaybe<Scalars['Boolean']['input']>;
   isKeyboardConnected?: InputMaybe<Scalars['Boolean']['input']>;
@@ -3285,19 +3234,6 @@ export type Edge = {
   cursor: Scalars['String']['output'];
 };
 
-/** Effective usage rate: consumed / (consumed + wasted) */
-export type EffectiveUsageRate = {
-  __typename: 'EffectiveUsageRate';
-  effectiveRate: Scalars['Float']['output'];
-  itemId: Maybe<Scalars['ID']['output']>;
-  itemName: Maybe<Scalars['String']['output']>;
-  periodEnd: Scalars['DateTime']['output'];
-  periodStart: Scalars['DateTime']['output'];
-  totalConsumed: Scalars['Float']['output'];
-  totalWasted: Scalars['Float']['output'];
-  unitName: Maybe<Scalars['String']['output']>;
-};
-
 export type EnableHomeJoinLinkInput = {
   /** ID of the home to enable the join link for. */
   id: Scalars['ID']['input'];
@@ -3436,26 +3372,6 @@ export enum ExpirationNotificationType {
   WeeklyDigest = 'WEEKLY_DIGEST'
 }
 
-/** Expiration risk summary for a pantry */
-export type ExpirationRisk = {
-  __typename: 'ExpirationRisk';
-  daysThreshold: Scalars['Int']['output'];
-  items: Array<ExpirationRiskItem>;
-  totalAtRisk: Scalars['Int']['output'];
-};
-
-/** Items at risk of expiring within a given threshold */
-export type ExpirationRiskItem = {
-  __typename: 'ExpirationRiskItem';
-  condition: ItemCondition;
-  daysUntilExpiry: Scalars['Int']['output'];
-  expiresAt: Scalars['DateTime']['output'];
-  itemName: Scalars['String']['output'];
-  pantryItemId: Scalars['ID']['output'];
-  quantity: Scalars['Float']['output'];
-  unitName: Maybe<Scalars['String']['output']>;
-};
-
 export enum ExternalSource {
   Allrecipes = 'ALLRECIPES',
   BarcodeLookup = 'BARCODE_LOOKUP',
@@ -3468,12 +3384,58 @@ export enum ExternalSource {
   UserCreated = 'USER_CREATED'
 }
 
+/**
+ * Product identifiers as reported by one external source.
+ *
+ * Every member is a String — these are opaque codes, not quantities — and that is
+ * measured, not assumed: all 7 keys present on prod hold string values, fdcId
+ * (78,077 rows) included, despite being numeric in USDA's own API.
+ *
+ * The key space is the Prisma comment UNION what prod actually holds, because
+ * neither alone was right:
+ *   - gtinUpc (72,374 prod rows) and foodCode (5,363) are written and were
+ *     missing from the comment. They were briefly missing from this type too, so
+ *     the coercion silently dropped them — a read regression this type caused and
+ *     a prod measurement caught.
+ *   - ean and gtin are named by the comment and written by nobody (0 rows in any
+ *     environment). Kept: a declared-but-unwritten shape is exactly what the
+ *     schema is allowed to assert ahead of its writers.
+ */
+export type ExternalSourceIdentifiers = {
+  __typename: 'ExternalSourceIdentifiers';
+  ean: Maybe<Scalars['String']['output']>;
+  fdcId: Maybe<Scalars['String']['output']>;
+  foodCode: Maybe<Scalars['String']['output']>;
+  gtin: Maybe<Scalars['String']['output']>;
+  gtinUpc: Maybe<Scalars['String']['output']>;
+  ndbNumber: Maybe<Scalars['String']['output']>;
+  productId: Maybe<Scalars['String']['output']>;
+  sku: Maybe<Scalars['String']['output']>;
+  upc: Maybe<Scalars['String']['output']>;
+};
+
+/**
+ * Product identifiers for one external source. Key space fixed by the Prisma
+ * schema; see the ExternalSourceIdentifiers output twin for why each is a String.
+ */
+export type ExternalSourceIdentifiersInput = {
+  ean?: InputMaybe<Scalars['String']['input']>;
+  fdcId?: InputMaybe<Scalars['String']['input']>;
+  foodCode?: InputMaybe<Scalars['String']['input']>;
+  gtin?: InputMaybe<Scalars['String']['input']>;
+  gtinUpc?: InputMaybe<Scalars['String']['input']>;
+  ndbNumber?: InputMaybe<Scalars['String']['input']>;
+  productId?: InputMaybe<Scalars['String']['input']>;
+  sku?: InputMaybe<Scalars['String']['input']>;
+  upc?: InputMaybe<Scalars['String']['input']>;
+};
+
 export type ExternalSourceMapping = {
   __typename: 'ExternalSourceMapping';
-  allergens: Maybe<Scalars['JSON']['output']>;
+  allergens: Maybe<SourceAllergens>;
   availability: Maybe<Scalars['JSON']['output']>;
   brandInfo: Maybe<Scalars['JSON']['output']>;
-  categories: Maybe<Scalars['JSON']['output']>;
+  categories: Maybe<Array<Scalars['String']['output']>>;
   confidence: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
   data: Maybe<Scalars['JSON']['output']>;
@@ -3482,7 +3444,7 @@ export type ExternalSourceMapping = {
   externalName: Maybe<Scalars['String']['output']>;
   externalType: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
-  identifiers: Maybe<Scalars['JSON']['output']>;
+  identifiers: Maybe<ExternalSourceIdentifiers>;
   images: Maybe<Scalars['JSON']['output']>;
   isPrimary: Scalars['Boolean']['output'];
   item: Item;
@@ -3501,17 +3463,25 @@ export type ExternalSourceMapping = {
 };
 
 export type ExternalSourceMappingInput = {
-  allergens?: InputMaybe<Scalars['JSON']['input']>;
+  allergens?: InputMaybe<SourceAllergensInput>;
   availability?: InputMaybe<Scalars['JSON']['input']>;
   brandInfo?: InputMaybe<Scalars['JSON']['input']>;
-  categories?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Categories as this source reports them.
+   *
+   * Typed on data, not on a consumer: 523,102 elements across prod and staging
+   * are strings and **not one is an object**. The Prisma comment used to say
+   * "strings or objects" and has been corrected — it described a possibility no
+   * row ever exercised.
+   */
+  categories?: InputMaybe<Array<Scalars['String']['input']>>;
   confidence?: InputMaybe<Scalars['Float']['input']>;
   data?: InputMaybe<Scalars['JSON']['input']>;
   externalDescription?: InputMaybe<Scalars['String']['input']>;
   externalId: Scalars['String']['input'];
   externalName?: InputMaybe<Scalars['String']['input']>;
   externalType?: InputMaybe<Scalars['String']['input']>;
-  identifiers?: InputMaybe<Scalars['JSON']['input']>;
+  identifiers?: InputMaybe<ExternalSourceIdentifiersInput>;
   images?: InputMaybe<Scalars['JSON']['input']>;
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
   location?: InputMaybe<Scalars['JSON']['input']>;
@@ -3524,14 +3494,6 @@ export type ExternalSourceMappingInput = {
   retailInfo?: InputMaybe<Scalars['JSON']['input']>;
   source: ExternalSource;
   storage?: InputMaybe<Scalars['JSON']['input']>;
-};
-
-export type FacetValue = {
-  __typename: 'FacetValue';
-  count: Scalars['Int']['output'];
-  label: Scalars['String']['output'];
-  selected: Maybe<Scalars['Boolean']['output']>;
-  value: Scalars['String']['output'];
 };
 
 export type FailedIpStat = {
@@ -4117,16 +4079,6 @@ export enum ImageUploadPurpose {
   ProfileCover = 'PROFILE_COVER'
 }
 
-export type IngredientInput = {
-  isActive?: InputMaybe<Scalars['Boolean']['input']>;
-  isGMO?: InputMaybe<Scalars['Boolean']['input']>;
-  isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
-  name: Scalars['String']['input'];
-  order?: InputMaybe<Scalars['Int']['input']>;
-  percentage?: InputMaybe<Scalars['Float']['input']>;
-  subIngredients?: InputMaybe<Array<IngredientInput>>;
-};
-
 /** Input for ingredient usage when marking recipe as cooked */
 export type IngredientUsageInput = {
   actualQuantity: Scalars['Float']['input'];
@@ -4140,8 +4092,6 @@ export type InlineItemInput = {
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['ID']['input']>;
-  imageUrl?: InputMaybe<Scalars['String']['input']>;
-  images?: InputMaybe<Scalars['JSON']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
   netWeights?: InputMaybe<Array<ItemNetWeightInput>>;
@@ -4401,10 +4351,45 @@ export type Item = {
   isDeleted: Scalars['Boolean']['output'];
   isUserCreated: Scalars['Boolean']['output'];
   matchedVariation: Maybe<ProductVariation>;
+  /**
+   * Sparse per-item flags and enrichment summary (dietary booleans, aggregation
+   * completeness, etc.).
+   *
+   * **Admin-gated projection.** Server-written moderation/audit keys
+   * (`rejectionReason`, `flagReason`, `mergedFrom`) are stripped for non-admin
+   * callers and returned only to ADMIN/SUPER_ADMIN roles; every other key is
+   * returned to all callers. This is a deliberate, documented projection (not the
+   * raw column) — the read-side counterpart to `ItemMetadataInput` narrowing the
+   * write surface to four dietary booleans. See docs/api/json-open-shape-register.md.
+   *
+   * Pinned `maxAge: 0, scope: PRIVATE`: the projection is viewer-dependent, so the
+   * type's `maxAge: 1800, scope: PUBLIC` MUST NOT cache an admin response and
+   * replay its moderation keys to a non-admin (cf. `convertedNetWeight`/`canEdit`).
+   */
   metadata: Maybe<Scalars['JSON']['output']>;
   name: Scalars['String']['output'];
   needsApproval: Scalars['Boolean']['output'];
   netWeight: Maybe<Scalars['Float']['output']>;
+  /**
+   * Structured nutrition for this item — one row per item, values in canonical
+   * units (kcal for energy, g for macros, mg for sodium/cholesterol/potassium,
+   * mcg for vitamin D). The columns are plain Floats with no unit of their own,
+   * so those units are a contract the normalizers enforce on the way in
+   * (services/aggregation/normalizers/units.ts), not a property of the storage.
+   *
+   * Null for an item that has never been aggregated. Note it currently lags
+   * `nutritions` slightly: measured on prod, 51,155 items have a row and 2,954
+   * have `nutritions` without one.
+   */
+  nutritionFacts: Maybe<NutritionFacts>;
+  /**
+   * Nutrition as aggregated from this item's sources, in the legacy Json mirror.
+   *
+   * Prefer `nutritionFacts`, which is the same data in the structured table
+   * item.prisma groups under "Structured data relations (replacing Json fields
+   * over time)". This column stays authoritative for now and carries any key the
+   * table has no column for.
+   */
   nutritions: Maybe<Scalars['JSON']['output']>;
   /** Number of PENDING community edit suggestions for this item. */
   pendingSuggestionCount: Scalars['Int']['output'];
@@ -4680,6 +4665,17 @@ export enum ItemMatchType {
   Variation = 'VARIATION'
 }
 
+/**
+ * Client-settable subset of an item's metadata. The stored column also carries
+ * server-written moderation and merge-audit keys, which are not settable here.
+ */
+export type ItemMetadataInput = {
+  isDairyFree?: InputMaybe<Scalars['Boolean']['input']>;
+  isGlutenFree?: InputMaybe<Scalars['Boolean']['input']>;
+  isOrganic?: InputMaybe<Scalars['Boolean']['input']>;
+  isVegan?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
 /** Manufacturer-provided net weight in a specific unit (e.g., 3.4 oz or 96g) */
 export type ItemNetWeightInput = {
   unitId?: InputMaybe<Scalars['ID']['input']>;
@@ -4708,9 +4704,12 @@ export type ItemPriceHistory = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   item: Item;
-  metadata: Maybe<Scalars['JSON']['output']>;
   price: Scalars['Float']['output'];
-  source: Scalars['String']['output'];
+  /**
+   * Where this price came from. Backed by the Prisma `PriceSource` enum —
+   * previously typed `String!`, which hid a closed set behind a scalar.
+   */
+  source: PriceSource;
 };
 
 export type ItemPriceHistoryConnection = Connection & {
@@ -5520,13 +5519,6 @@ export type MarkSuggestionDismissedPayload = {
 
 export type MarkSuggestionDismissedResult = ConflictError | ForbiddenError | MarkSuggestionDismissedPayload | NotFoundError | ValidationError;
 
-export enum MatchType {
-  Category = 'CATEGORY',
-  Exact = 'EXACT',
-  Fuzzy = 'FUZZY',
-  Partial = 'PARTIAL'
-}
-
 /**
  * Meal plan for organizing meals over a period
  * Cache: 5 minutes - plans change occasionally
@@ -5643,7 +5635,12 @@ export type MealPlanItem = {
   protein: Maybe<Scalars['Float']['output']>;
   recipe: Maybe<Recipe>;
   servings: Maybe<Scalars['Int']['output']>;
-  usedPantryItems: Scalars['JSON']['output'];
+  /**
+   * Pantry items consumed for this meal, with the quantity taken from each.
+   * Empty when nothing has been deducted — never null (the column is NOT NULL
+   * with a [] default).
+   */
+  usedPantryItems: Array<UsedPantryItem>;
 };
 
 /** Aggregated nutrition data for a meal plan */
@@ -5852,34 +5849,6 @@ export type MembershipEdge = Edge & {
   node: Membership;
 };
 
-export enum MembershipJoinMethod {
-  DirectAdd = 'DIRECT_ADD',
-  Invite = 'INVITE',
-  JoinCode = 'JOIN_CODE'
-}
-
-export type MembershipJoinedPayload = {
-  __typename: 'MembershipJoinedPayload';
-  homeId: Scalars['ID']['output'];
-  joinMethod: MembershipJoinMethod;
-  membership: Membership;
-  userId: Scalars['ID']['output'];
-};
-
-export enum MembershipLeftMethod {
-  Removed = 'REMOVED',
-  Suspended = 'SUSPENDED',
-  Voluntary = 'VOLUNTARY'
-}
-
-export type MembershipLeftPayload = {
-  __typename: 'MembershipLeftPayload';
-  homeId: Scalars['ID']['output'];
-  leftMethod: MembershipLeftMethod;
-  membership: Membership;
-  userId: Scalars['ID']['output'];
-};
-
 export enum MembershipMutationType {
   Created = 'CREATED',
   Left = 'LEFT',
@@ -5944,14 +5913,6 @@ export type MembershipStatusStats = {
   left: Scalars['Int']['output'];
   removed: Scalars['Int']['output'];
   suspended: Scalars['Int']['output'];
-};
-
-export type MembershipUpdatePayload = {
-  __typename: 'MembershipUpdatePayload';
-  mutation: MembershipMutationType;
-  node: Maybe<Membership>;
-  updatedFields: Maybe<Array<Scalars['String']['output']>>;
-  userId: Scalars['ID']['output'];
 };
 
 /**
@@ -9755,13 +9716,203 @@ export enum NutritionCategory {
   Vitamin = 'VITAMIN'
 }
 
+/**
+ * One nutrition fact, as it appears on a label: which nutrient, how much, and in
+ * what unit.
+ *
+ * This is a **source shape** — the same kind of unit-bearing list Spoonacular
+ * sends — not a rival to `NutritionFacts`. It is normalized on the way in
+ * (each fact's `unit` converted to the field's canonical unit) and stored as one
+ * `NutritionFacts` row, so writing facts and reading `Item.nutritionFacts`
+ * returns your own values back, converted.
+ */
 export type NutritionFactInput = {
+  /** Grouping hint only; the field itself determines how a value is stored. */
   category?: InputMaybe<NutritionCategory>;
+  /** Percent of daily value, if the label states one. Not stored today. */
   dailyValue?: InputMaybe<Scalars['Float']['input']>;
-  name: Scalars['String']['input'];
+  /**
+   * Which nutrient this fact is for.
+   *
+   * Was `name: String!`, which could not say which names were understood —
+   * an unrecognised one was silently dropped. The set is closed and knowable:
+   * it is exactly the fields the unit contract declares.
+   */
+  field: NutritionField;
+  /**
+   * The unit as the label states it (`g`, `mg`, `mcg`, `µg`, `kcal`, `kJ`).
+   * Converted to the field's canonical unit on write.
+   *
+   * Omit only if the value is already in the canonical unit — an omitted unit is
+   * trusted, which is the one case where a wrong number passes silently. A unit
+   * that cannot be converted (notably `IU`, whose factor is per-substance) drops
+   * the fact rather than storing an unconverted number.
+   */
   unit?: InputMaybe<Scalars['String']['input']>;
+  /** The amount, in `unit`. */
   value: Scalars['Float']['input'];
 };
+
+/**
+ * Structured nutrition facts for an item — the typed replacement for the
+ * `Item.nutritions` Json column, per item.prisma's "Structured data relations
+ * (replacing Json fields over time)".
+ *
+ * Every field mirrors a column on the `NutritionFacts` model one-for-one, and
+ * the two names that disagree with the Json mirror are called out below —
+ * a spread would have dropped both silently.
+ *
+ * **Units are a contract, not a property of the storage.** The columns are plain
+ * `Float?` with no unit column, so a number here is only meaningful because
+ * every writer converges on one canonical unit per field before storing it
+ * (`services/aggregation/normalizers/units.ts`): kcal for energy, g for
+ * macronutrients, mg for sodium/cholesterol/calcium/iron/potassium, mcg for
+ * vitamin D. A value that could not be converted is dropped rather than stored
+ * raw — an unconverted 0.32 g in a mg field is indistinguishable from a real
+ * 0.32 mg and under-reports by 1000x.
+ */
+export type NutritionFacts = {
+  __typename: 'NutritionFacts';
+  /** Grams. */
+  addedSugars: Maybe<Scalars['Float']['output']>;
+  /** Milligrams. */
+  calcium: Maybe<Scalars['Float']['output']>;
+  /** Energy, kcal. */
+  calories: Maybe<Scalars['Float']['output']>;
+  /** Milligrams. */
+  cholesterol: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  dietaryFiber: Maybe<Scalars['Float']['output']>;
+  id: Scalars['ID']['output'];
+  /** Milligrams. */
+  iron: Maybe<Scalars['Float']['output']>;
+  item: Item;
+  itemId: Scalars['ID']['output'];
+  /** Milligrams. */
+  potassium: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  protein: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  saturatedFat: Maybe<Scalars['Float']['output']>;
+  /** Serving size, in `servingUnit`. Named `servingSizeGrams` in the Json mirror. */
+  servingSize: Maybe<Scalars['Float']['output']>;
+  /** The unit `servingSize` is expressed in — the one unit this model states. */
+  servingUnit: Maybe<Scalars['String']['output']>;
+  /** Milligrams. */
+  sodium: Maybe<Scalars['Float']['output']>;
+  /** Grams. Named `carbohydrates` in the Json mirror. */
+  totalCarbs: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  totalFat: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  totalSugars: Maybe<Scalars['Float']['output']>;
+  /** Grams. */
+  transFat: Maybe<Scalars['Float']['output']>;
+  /** Micrograms. */
+  vitaminD: Maybe<Scalars['Float']['output']>;
+};
+
+/**
+ * The nutrients this API can store, and the canonical unit each is stored in.
+ *
+ * Generated from `services/aggregation/normalizers/units.ts` — the same
+ * contract every source normalizer converges on — so this enum and the storage
+ * cannot drift. The docstring on each member is its canonical unit.
+ */
+export enum NutritionField {
+  /** g */
+  AddedSugars = 'ADDED_SUGARS',
+  /** g */
+  Alcohol = 'ALCOHOL',
+  /** mg */
+  Caffeine = 'CAFFEINE',
+  /** mg */
+  Calcium = 'CALCIUM',
+  /** kcal */
+  Calories = 'CALORIES',
+  /** kcal */
+  CaloriesFromFat = 'CALORIES_FROM_FAT',
+  /** mg */
+  Cholesterol = 'CHOLESTEROL',
+  /** mcg */
+  Chromium = 'CHROMIUM',
+  /** mg */
+  Copper = 'COPPER',
+  /** g */
+  DietaryFiber = 'DIETARY_FIBER',
+  /** g */
+  InsolubleFiber = 'INSOLUBLE_FIBER',
+  /** mcg */
+  Iodine = 'IODINE',
+  /** mg */
+  Iron = 'IRON',
+  /** mg */
+  Magnesium = 'MAGNESIUM',
+  /** mg */
+  Manganese = 'MANGANESE',
+  /** mcg */
+  Molybdenum = 'MOLYBDENUM',
+  /** g */
+  MonounsaturatedFat = 'MONOUNSATURATED_FAT',
+  /** g */
+  Omega3 = 'OMEGA3',
+  /** g */
+  Omega6 = 'OMEGA6',
+  /** mg */
+  Phosphorus = 'PHOSPHORUS',
+  /** g */
+  PolyunsaturatedFat = 'POLYUNSATURATED_FAT',
+  /** mg */
+  Potassium = 'POTASSIUM',
+  /** g */
+  Protein = 'PROTEIN',
+  /** g */
+  SaturatedFat = 'SATURATED_FAT',
+  /** mcg */
+  Selenium = 'SELENIUM',
+  /** mg */
+  Sodium = 'SODIUM',
+  /** g */
+  SolubleFiber = 'SOLUBLE_FIBER',
+  /** g */
+  SugarAlcohols = 'SUGAR_ALCOHOLS',
+  /** g */
+  TotalCarbohydrates = 'TOTAL_CARBOHYDRATES',
+  /** g */
+  TotalFat = 'TOTAL_FAT',
+  /** g */
+  TotalSugars = 'TOTAL_SUGARS',
+  /** g */
+  TransFat = 'TRANS_FAT',
+  /** mcg */
+  VitaminA = 'VITAMIN_A',
+  /** mg */
+  VitaminB1 = 'VITAMIN_B1',
+  /** mg */
+  VitaminB2 = 'VITAMIN_B2',
+  /** mg */
+  VitaminB3 = 'VITAMIN_B3',
+  /** mg */
+  VitaminB5 = 'VITAMIN_B5',
+  /** mg */
+  VitaminB6 = 'VITAMIN_B6',
+  /** mcg */
+  VitaminB7 = 'VITAMIN_B7',
+  /** mcg */
+  VitaminB9 = 'VITAMIN_B9',
+  /** mcg */
+  VitaminB12 = 'VITAMIN_B12',
+  /** mg */
+  VitaminC = 'VITAMIN_C',
+  /** mcg */
+  VitaminD = 'VITAMIN_D',
+  /** mg */
+  VitaminE = 'VITAMIN_E',
+  /** mcg */
+  VitaminK = 'VITAMIN_K',
+  /** mg */
+  Zinc = 'ZINC'
+}
 
 /** Progress toward nutrition goals from dietary profile */
 export type NutritionGoalProgress = {
@@ -9789,18 +9940,6 @@ export enum NutritionSource {
   Manual = 'MANUAL',
   Partial = 'PARTIAL'
 }
-
-export type OfferInput = {
-  brand?: InputMaybe<Scalars['String']['input']>;
-  image?: InputMaybe<Scalars['String']['input']>;
-  offerId: Scalars['String']['input'];
-  offerType?: InputMaybe<Scalars['String']['input']>;
-  rewardInfo: Scalars['String']['input'];
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  title: Scalars['String']['input'];
-  validFrom?: InputMaybe<Scalars['DateTime']['input']>;
-  validUntil?: InputMaybe<Scalars['DateTime']['input']>;
-};
 
 /** Input for opening a specific batch */
 export type OpenPantryItemBatchInput = {
@@ -9991,35 +10130,6 @@ export type PantryUsageAnalyticsArgs = {
 export type PantryWasteAnalyticsArgs = {
   filters?: InputMaybe<AnalyticsFilters>;
 };
-
-export type PantryActivity = {
-  __typename: 'PantryActivity';
-  action: PantryActivityType;
-  createdAt: Scalars['DateTime']['output'];
-  description: Scalars['String']['output'];
-  id: Scalars['ID']['output'];
-  itemName: Maybe<Scalars['String']['output']>;
-  metadata: Maybe<Scalars['JSON']['output']>;
-  newValue: Maybe<Scalars['String']['output']>;
-  oldValue: Maybe<Scalars['String']['output']>;
-  pantry: Pantry;
-  pantryId: Scalars['ID']['output'];
-  quantity: Maybe<Scalars['Float']['output']>;
-  user: User;
-  userId: Scalars['ID']['output'];
-};
-
-export enum PantryActivityType {
-  ItemAdded = 'ITEM_ADDED',
-  ItemExpired = 'ITEM_EXPIRED',
-  ItemRemoved = 'ITEM_REMOVED',
-  ItemUpdated = 'ITEM_UPDATED',
-  ItemUsed = 'ITEM_USED',
-  PantryCreated = 'PANTRY_CREATED',
-  PantryDeleted = 'PANTRY_DELETED',
-  PantryUpdated = 'PANTRY_UPDATED',
-  QuantityUpdated = 'QUANTITY_UPDATED'
-}
 
 export type PantryConnection = Connection & {
   __typename: 'PantryConnection';
@@ -10468,14 +10578,6 @@ export type PantryUsageStats = {
   lowStockItemCount: Scalars['Int']['output'];
 };
 
-export type ParentCategorySuggestion = {
-  __typename: 'ParentCategorySuggestion';
-  id: Scalars['ID']['output'];
-  name: Scalars['String']['output'];
-  slug: Maybe<Scalars['String']['output']>;
-  type: CategoryType;
-};
-
 /**
  * Outcome of a password-flow action (bulk-operation-standard sibling: replaces
  * the flat {success,code,message} status types). Anti-enumeration is preserved
@@ -10518,6 +10620,12 @@ export type PlatformStat = {
 export type PowerStatusInput = {
   batteryLevel?: InputMaybe<Scalars['Float']['input']>;
   isBatteryCharging?: InputMaybe<Scalars['Boolean']['input']>;
+  /**
+   * Power info exactly as the platform reports it. Stays JSON on purpose: the
+   * shape is react-native-device-info's, the Prisma schema declares no more than
+   * "JSON power info", and no row has ever been populated — so there is nothing
+   * to type it from. Registered in the open-shape register.
+   */
   powerState?: InputMaybe<Scalars['JSON']['input']>;
 };
 
@@ -10540,15 +10648,6 @@ export type PriceEstimate = {
   lowest: Maybe<Scalars['Float']['output']>;
 };
 
-export type PriceRangeFacet = {
-  __typename: 'PriceRangeFacet';
-  count: Scalars['Int']['output'];
-  label: Scalars['String']['output'];
-  max: Scalars['Float']['output'];
-  min: Scalars['Float']['output'];
-  selected: Maybe<Scalars['Boolean']['output']>;
-};
-
 /** Price range filter bounds */
 export type PriceRangeInput = {
   includeNull?: InputMaybe<Scalars['Boolean']['input']>;
@@ -10556,13 +10655,27 @@ export type PriceRangeInput = {
   min?: InputMaybe<Scalars['Float']['input']>;
 };
 
+/**
+ * Where a price came from. Mirrors the Prisma `PriceSource` enum, which is the
+ * authority for this set — every value the column can hold must be declared here
+ * or a row carrying it cannot be serialized.
+ */
 export enum PriceSource {
+  /** From other users */
   CrowdSource = 'CROWD_SOURCE',
+  /** Estimated rather than observed (Spoonacular ingredient price, shopping-list estimate) */
+  Estimate = 'ESTIMATE',
+  /** User entered */
   Manual = 'MANUAL',
+  /** From price matching */
   PriceMatch = 'PRICE_MATCH',
+  /** From an actual purchase */
   Purchase = 'PURCHASE',
+  /** From receipt scanning */
   ReceiptScan = 'RECEIPT_SCAN',
+  /** From a store's API */
   StoreApi = 'STORE_API',
+  /** From web scraping */
   WebScraping = 'WEB_SCRAPING'
 }
 
@@ -10743,11 +10856,6 @@ export type PurchaseTrackingInput = {
   purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
 };
 
-export type PutUnderReviewInput = {
-  reason?: InputMaybe<Scalars['String']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
 export type QuantityBreakdown = {
   __typename: 'QuantityBreakdown';
   /** The content unit (e.g., can) */
@@ -10781,7 +10889,12 @@ export type QuantityDisplay = {
 export type QuantityDisplayInput = {
   alwaysShowFractions?: InputMaybe<Scalars['Boolean']['input']>;
   maxDecimalPlaces?: InputMaybe<Scalars['Int']['input']>;
-  preferredFractionSet?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Fraction **denominators** to round quantities to — 4 means quarters. Inverse
+   * of `Unit.commonFractions`, which holds decimals. See the UserSettings
+   * output twin.
+   */
+  preferredFractionSet?: InputMaybe<Array<Scalars['Int']['input']>>;
   quantityDisplayPreference?: InputMaybe<QuantityDisplayPreference>;
 };
 
@@ -10890,8 +11003,16 @@ export type Query = {
   /** Fetch a single home by its ID. */
   home: Maybe<Home>;
   /**
-   * Fetch a single home by its join code. Reachable anonymously so a
-   * not-yet-signed-up recipient of a join link can preview the home.
+   * Fetch a single home by its join code.
+   *
+   * Requires authentication: you must be signed in to join a home, so there is
+   * no anonymous use for this. It was previously reachable anonymously to let a
+   * not-yet-signed-up recipient preview a join link, but that returned a full
+   * Home — including its stat fields — to anyone holding a code.
+   *
+   * The anonymous pre-join preview is `resolveShareLink`, which is purpose-built
+   * for it and returns a curated payload (name, member count, alreadyMember)
+   * rather than a whole Home.
    */
   homeByJoinCode: Maybe<Home>;
   /** Fetch a home invite by its token for the acceptance flow. */
@@ -11454,7 +11575,6 @@ export type QueryRecipesArgs = {
 
 export type QueryRecommendedItemsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
-  userId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 
@@ -12195,11 +12315,6 @@ export enum ReligiousDiet {
   Kosher = 'KOSHER'
 }
 
-export type RemoveCollaboratorInput = {
-  email?: InputMaybe<Scalars['String']['input']>;
-  shoppingListId: Scalars['ID']['input'];
-};
-
 export type RemoveItemFromCategoryInput = {
   categoryId: Scalars['ID']['input'];
   itemId: Scalars['ID']['input'];
@@ -12307,11 +12422,6 @@ export type RemoveRestrictionPayload = {
 
 export type RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload | ValidationError;
 
-export type RemoveRestrictionsInput = {
-  restrictions: Array<ModerationRestriction>;
-  userId: Scalars['ID']['input'];
-};
-
 export type RemoveShoppingListCollaboratorInput = {
   id: Scalars['ID']['input'];
 };
@@ -12357,11 +12467,6 @@ export type ResendVerificationEmailPayload = {
 };
 
 export type ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError;
-
-export type ResetPasswordInput = {
-  password: Scalars['String']['input'];
-  token: Scalars['String']['input'];
-};
 
 export type ResetPasswordPayload = {
   __typename: 'ResetPasswordPayload';
@@ -12423,18 +12528,6 @@ export type RestockPantryItemPayload = {
 
 export type RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemPayload | ValidationError;
 
-/** Restocking frequency for an item or pantry */
-export type RestockingFrequency = {
-  __typename: 'RestockingFrequency';
-  averageDaysBetweenRestocks: Scalars['Float']['output'];
-  itemId: Maybe<Scalars['ID']['output']>;
-  itemName: Maybe<Scalars['String']['output']>;
-  lastRestockedAt: Maybe<Scalars['DateTime']['output']>;
-  periodEnd: Scalars['DateTime']['output'];
-  periodStart: Scalars['DateTime']['output'];
-  totalRestocks: Scalars['Int']['output'];
-};
-
 export type RestoreItemInput = {
   id: Scalars['ID']['input'];
 };
@@ -12452,12 +12545,6 @@ export enum RestrictionSeverity {
   Intolerance = 'INTOLERANCE',
   Preference = 'PREFERENCE'
 }
-
-export type ReviewAppealInput = {
-  approved: Scalars['Boolean']['input'];
-  reviewNotes?: InputMaybe<Scalars['String']['input']>;
-  userId: Scalars['ID']['input'];
-};
 
 export type ReviewHelpful = {
   __typename: 'ReviewHelpful';
@@ -12539,17 +12626,6 @@ export type SavedRecipeOrderBy = {
   savedAt?: InputMaybe<SortOrder>;
 };
 
-export type SearchFacets = {
-  __typename: 'SearchFacets';
-  brands: Array<FacetValue>;
-  categories: Array<FacetValue>;
-  priceRanges: Array<PriceRangeFacet>;
-  storageStates: Array<FacetValue>;
-  stores: Array<FacetValue>;
-  tags: Array<FacetValue>;
-  types: Array<FacetValue>;
-};
-
 export type SendTestNotificationInput = {
   type: NotificationType;
 };
@@ -12590,7 +12666,6 @@ export enum ShareLinkTargetType {
 export type ShareShoppingListInput = {
   id: Scalars['ID']['input'];
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
-  shareCode?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type ShareShoppingListPayload = {
@@ -12828,16 +12903,6 @@ export type ShoppingListCollaborator = {
   status: CollaboratorStatus;
   statusChangedAt: Maybe<Scalars['DateTime']['output']>;
   token: Maybe<Scalars['String']['output']>;
-};
-
-export type ShoppingListCollaboratorChangedPayload = {
-  __typename: 'ShoppingListCollaboratorChangedPayload';
-  collaborator: ShoppingListCollaborator;
-  listId: Scalars['ID']['output'];
-  mutation: MutationType;
-  originatorClientId: Maybe<Scalars['ID']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
 };
 
 export type ShoppingListCollaboratorConnection = Connection & {
@@ -13198,6 +13263,30 @@ export enum SortOrder {
   Asc = 'ASC',
   Desc = 'DESC'
 }
+
+/**
+ * Allergens exactly as one external source buckets them.
+ *
+ * Deliberately NOT the [AllergenInfo!]! shape used by Item.allergens. A source
+ * reports two flat name lists; Item.allergens is a per-allergen list carrying
+ * contains/mayContain booleans. ItemAggregationService.mergeAllergens converts
+ * between them, and that conversion is the boundary where the two structures are
+ * meant to meet — see prisma "allergens Json? // Allergen data in source format".
+ */
+export type SourceAllergens = {
+  __typename: 'SourceAllergens';
+  contains: Array<Scalars['String']['output']>;
+  mayContain: Array<Scalars['String']['output']>;
+};
+
+/**
+ * Allergens in a source's own bucketed form. This is NOT [AllergenInput!] — that
+ * is Item.allergens' per-allergen shape. See the SourceAllergens output twin.
+ */
+export type SourceAllergensInput = {
+  contains?: InputMaybe<Array<Scalars['String']['input']>>;
+  mayContain?: InputMaybe<Array<Scalars['String']['input']>>;
+};
 
 export type SpoonacularCaloricBreakdownInput = {
   percentCarbs?: InputMaybe<Scalars['Float']['input']>;
@@ -13692,11 +13781,6 @@ export type StoreTopItem = {
   revenue: Scalars['Float']['output'];
 };
 
-export type SubmitAppealInput = {
-  appealNotes: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
-};
-
 export type Subscription = {
   __typename: 'Subscription';
   /**
@@ -13877,12 +13961,6 @@ export type SuggestionUnit = {
   symbol: Scalars['String']['output'];
 };
 
-export type SuspendUserInput = {
-  reason: Scalars['String']['input'];
-  suspendedUntil: Scalars['DateTime']['input'];
-  userId: Scalars['ID']['input'];
-};
-
 export type SuspiciousActivity = {
   __typename: 'SuspiciousActivity';
   failedFromSameIP: Array<FailedIpStat>;
@@ -13893,19 +13971,6 @@ export type SuspiciousActivity = {
   riskyLogins: Array<LoginHistory>;
   suspiciousActivity: Scalars['Boolean']['output'];
   unusualTimeLogins: Array<LoginHistory>;
-};
-
-export type SuspiciousActivitySummary = {
-  __typename: 'SuspiciousActivitySummary';
-  actionsBreakdown: InviteActionStats;
-  timeWindow: Scalars['Int']['output'];
-  totalSuspiciousActions: Scalars['Int']['output'];
-};
-
-export type SuspiciousInviteActivity = {
-  __typename: 'SuspiciousInviteActivity';
-  logs: Array<InviteLog>;
-  summary: SuspiciousActivitySummary;
 };
 
 /** Information about a sync conflict */
@@ -13930,6 +13995,23 @@ export type SyncDeleteShoppingListItemInput = {
   clientId: Scalars['ID']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
+
+export type SyncItemPopularityInput = {
+  /** Reconcile a single item synchronously. Omit to enqueue a full backfill of all items. */
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SyncItemPopularityPayload = {
+  __typename: 'SyncItemPopularityPayload';
+  /** True when a full ITEM_POPULARITY_RECALC backfill was enqueued instead of a single-item recompute. */
+  enqueued: Scalars['Boolean']['output'];
+  /** The item reconciled synchronously, or null when a full backfill was enqueued. */
+  itemId: Maybe<Scalars['ID']['output']>;
+  /** The item's reconciled popularity, when a single itemId was supplied. */
+  popularity: Maybe<Scalars['Int']['output']>;
+};
+
+export type SyncItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | SyncItemPopularityPayload | ValidationError;
 
 export type SyncMoveShoppingListItemInput = {
   afterId?: InputMaybe<Scalars['ID']['input']>;
@@ -13983,6 +14065,23 @@ export type SyncPantryItemResult = {
   operation: SyncOperation;
   serverId: Maybe<Scalars['ID']['output']>;
 };
+
+export type SyncRecipeRatingsInput = {
+  /** Reconcile a single recipe synchronously. Omit to enqueue a full backfill of all recipes. */
+  recipeId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+export type SyncRecipeRatingsPayload = {
+  __typename: 'SyncRecipeRatingsPayload';
+  averageRating: Maybe<Scalars['Float']['output']>;
+  /** True when a full RECIPE_RATING_RECALC backfill was enqueued instead of a single-recipe recompute. */
+  enqueued: Scalars['Boolean']['output'];
+  /** The recipe reconciled synchronously, or null when a full backfill was enqueued. */
+  recipeId: Maybe<Scalars['ID']['output']>;
+  totalReviews: Maybe<Scalars['Int']['output']>;
+};
+
+export type SyncRecipeRatingsResult = ConflictError | ForbiddenError | NotFoundError | SyncRecipeRatingsPayload | ValidationError;
 
 /** Sub-input for sync settings */
 export type SyncSettingsInput = {
@@ -14156,7 +14255,16 @@ export type Unit = {
   autoConvertToUnitId: Maybe<Scalars['ID']['output']>;
   baseUnit: Maybe<UnitRef>;
   baseUnitId: Maybe<Scalars['ID']['output']>;
-  commonFractions: Maybe<Scalars['JSON']['output']>;
+  /**
+   * Fractions this unit is commonly shown in, as decimals (0.25 = a quarter).
+   * Was `JSON` here while the identical field on `RankedUnit` was already
+   * `[Float!]` — the Prisma column's own default
+   * (`[0.125, 0.25, 0.333, 0.5, 0.666, 0.75]`) settles which is right.
+   *
+   * Note these are decimals, whereas `QuantityDisplayInput.preferredFractionSet`
+   * holds *denominators* (4 = a quarter). The two are inverses.
+   */
+  commonFractions: Maybe<Array<Scalars['Float']['output']>>;
   conversionFactor: Scalars['Float']['output'];
   createdAt: Scalars['DateTime']['output'];
   displayAsFraction: Scalars['Boolean']['output'];
@@ -14473,7 +14581,7 @@ export type UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFou
 export type UpdateExternalSourceInput = {
   externalName?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
-  identifiers?: InputMaybe<Scalars['JSON']['input']>;
+  identifiers?: InputMaybe<ExternalSourceIdentifiersInput>;
   images?: InputMaybe<Scalars['JSON']['input']>;
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
   netWeight?: InputMaybe<Scalars['Float']['input']>;
@@ -14539,12 +14647,17 @@ export type UpdateItemInput = {
   categoryOps?: InputMaybe<CategoryOpsInput>;
   classification?: InputMaybe<ItemClassificationInput>;
   description?: InputMaybe<Scalars['String']['input']>;
-  editReason?: InputMaybe<Scalars['String']['input']>;
   healthInfo?: InputMaybe<HealthInfoInput>;
   id: Scalars['ID']['input'];
   media?: InputMaybe<MediaAssetsInput>;
-  mergeMetadata?: InputMaybe<Scalars['Boolean']['input']>;
-  metadata?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Client-settable item metadata. Deliberately narrower than the stored
+   * `Item.metadata`: the moderation and audit keys on that column
+   * (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+   * and are not accepted here — while this was `JSON`, a client could set or
+   * forge any of them.
+   */
+  metadata?: InputMaybe<ItemMetadataInput>;
   name?: InputMaybe<Scalars['String']['input']>;
   nutritionFacts?: InputMaybe<Array<NutritionFactInput>>;
   packageInfo?: InputMaybe<PackageInfoInput>;
@@ -14563,14 +14676,6 @@ export type UpdateItemInput = {
 export type UpdateItemPayload = {
   __typename: 'UpdateItemPayload';
   item: Item;
-};
-
-/** Input for updating an item's price */
-export type UpdateItemPriceInput = {
-  itemId: Scalars['ID']['input'];
-  price: Scalars['Float']['input'];
-  source?: InputMaybe<Scalars['String']['input']>;
-  storeId?: InputMaybe<Scalars['ID']['input']>;
 };
 
 export type UpdateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateItemPayload | ValidationError;
@@ -14639,8 +14744,12 @@ export type UpdateMealPlanItemInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   protein?: InputMaybe<Scalars['Float']['input']>;
   servings?: InputMaybe<Scalars['Int']['input']>;
-  /** Pantry items used for this meal: [{pantryItemId, quantityUsed}] */
-  usedPantryItems?: InputMaybe<Scalars['JSON']['input']>;
+  /**
+   * Pantry items used for this meal. Omit to leave unchanged; pass an empty
+   * list (or null) to record that nothing was used — the stored value is never
+   * null, since the column is NOT NULL with a [] default.
+   */
+  usedPantryItems?: InputMaybe<Array<UsedPantryItemInput>>;
 };
 
 export type UpdateMealPlanItemPayload = {
@@ -15212,16 +15321,6 @@ export type UpdateUserAppealPayload = {
 
 export type UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError;
 
-export type UpdateUserModerationInput = {
-  moderatorNotes?: InputMaybe<Scalars['String']['input']>;
-  restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
-  restrictionReason?: InputMaybe<Scalars['String']['input']>;
-  restrictions?: InputMaybe<Array<ModerationRestriction>>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  status?: InputMaybe<ModerationStatus>;
-  trustLevel?: InputMaybe<TrustLevel>;
-};
-
 /** Input for managing restrictions (add and/or remove in one call). */
 export type UpdateUserRestrictionsInput = {
   /** Restrictions to add */
@@ -15384,6 +15483,19 @@ export enum UsageSource {
   Transfer = 'TRANSFER',
   Waste = 'WASTE'
 }
+
+/** One pantry item consumed by a meal-plan item, and how much of it was used. */
+export type UsedPantryItem = {
+  __typename: 'UsedPantryItem';
+  pantryItemId: Scalars['ID']['output'];
+  quantityUsed: Scalars['Float']['output'];
+};
+
+/** One pantry item consumed by a meal-plan item, and how much of it was used. */
+export type UsedPantryItemInput = {
+  pantryItemId: Scalars['ID']['input'];
+  quantityUsed: Scalars['Float']['input'];
+};
 
 /**
  * User account type
@@ -15717,14 +15829,6 @@ export type UserAddressOrderBy = {
   isDefault?: InputMaybe<SortOrder>;
 };
 
-export type UserAuthPayload = {
-  __typename: 'UserAuthPayload';
-  authType: Scalars['String']['output'];
-  deviceInfo: Maybe<Scalars['JSON']['output']>;
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
-};
-
 export type UserConnection = Connection & {
   __typename: 'UserConnection';
   edges: Array<UserEdge>;
@@ -15912,7 +16016,16 @@ export type UserSettings = {
   offlineMode: Scalars['Boolean']['output'];
   personalizedAds: Scalars['Boolean']['output'];
   preferredCurrency: Scalars['String']['output'];
-  preferredFractionSet: Maybe<Scalars['JSON']['output']>;
+  /**
+   * Fraction **denominators** the user wants quantities rounded to — 4 means
+   * quarters. Note the inverse of `Unit.commonFractions`, which holds decimals
+   * (0.25 = a quarter).
+   *
+   * Int, not Float: a denominator is a count of parts, so 2.5 is meaningless.
+   * Measured across all 5,893 populated rows / 23,572 elements — every one an
+   * integer, drawn from exactly {2, 3, 4, 8}.
+   */
+  preferredFractionSet: Maybe<Array<Scalars['Int']['output']>>;
   preferredUnitSystem: UnitSystem;
   quantityDisplayPreference: QuantityDisplayPreference;
   shareUsageData: Scalars['Boolean']['output'];
@@ -15922,14 +16035,6 @@ export type UserSettings = {
   timezone: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   user: User;
-};
-
-export type UserSocialPayload = {
-  __typename: 'UserSocialPayload';
-  action: Scalars['String']['output'];
-  targetUserId: Scalars['ID']['output'];
-  timestamp: Scalars['DateTime']['output'];
-  userId: Scalars['ID']['output'];
 };
 
 /**

@@ -1310,6 +1310,20 @@
       "ShoppingListCollaborator",
       "ShoppingListItem"
     ],
+    "SyncItemPopularityResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncItemPopularityPayload",
+      "ValidationError"
+    ],
+    "SyncRecipeRatingsResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncRecipeRatingsPayload",
+      "ValidationError"
+    ],
     "Timestamped": [
       "Notification"
     ],

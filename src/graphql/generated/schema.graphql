@@ -373,13 +373,6 @@ type AddRestrictionPayload {
 
 union AddRestrictionResult = AddRestrictionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-input AddRestrictionsInput {
-  reason: String!
-  restrictedUntil: DateTime
-  restrictions: [ModerationRestriction!]!
-  userId: ID!
-}
-
 input AddTemplateItemInput {
   dayOffset: Int!
   """
@@ -878,11 +871,6 @@ enum BackgroundJobState {
   WAITING_CHILDREN
 }
 
-input BanUserInput {
-  reason: String!
-  userId: ID!
-}
-
 enum BaseDimension {
   COUNT
   MASS
@@ -1190,11 +1178,16 @@ input BulkUpdateItemFieldsInput {
   categoryOps: CategoryOpsInput
   classification: ItemClassificationInput
   description: String
-  editReason: String
   healthInfo: HealthInfoInput
   media: MediaAssetsInput
-  mergeMetadata: Boolean
-  metadata: JSON
+  """
+  Client-settable item metadata. Deliberately narrower than the stored
+  `Item.metadata`: the moderation and audit keys on that column
+  (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+  and are not accepted here — while this was `JSON`, a client could set or
+  forge any of them.
+  """
+  metadata: ItemMetadataInput
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
@@ -1546,18 +1539,6 @@ type ConsumptionFailure {
   requestedQuantity: Float!
 }
 
-"""Consumption rate for an item or pantry"""
-type ConsumptionRate {
-  averageDailyConsumption: Float!
-  dataPoints: Int!
-  daysUntilEmpty: Float
-  itemId: ID
-  itemName: String
-  periodEnd: DateTime!
-  periodStart: DateTime!
-  unitName: String
-}
-
 """Conversion availability result"""
 type ConversionAvailability {
   available: Boolean!
@@ -1693,7 +1674,6 @@ type CookingLogEvent {
 """Order by options for cooking logs"""
 input CookingLogOrderBy {
   cookedAt: SortOrder
-  createdAt: SortOrder
 }
 
 """Subtype discriminator for cooking-log domain events."""
@@ -1776,21 +1756,6 @@ type CreateCurrencyPayload {
 
 union CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | NotFoundError | ValidationError
 
-input CreateDeviceInput {
-  appVersion: String
-  details: DeviceDetailsInput
-  deviceId: String!
-  deviceName: String
-  deviceType: DeviceType = UNKNOWN
-  isActive: Boolean = true
-  isTrusted: Boolean = false
-  isVerified: Boolean = false
-  location: NetworkLocationInput
-  platform: MobilePlatform
-  pushToken: String
-  userId: ID!
-}
-
 input CreateFromTemplateInput {
   name: String
   plannedShopDate: DateTime
@@ -1849,7 +1814,14 @@ input CreateItemInput {
   externalSources: [ExternalSourceMappingInput!]
   healthInfo: HealthInfoInput
   media: MediaAssetsInput
-  metadata: JSON
+  """
+  Client-settable item metadata. Deliberately narrower than the stored
+  `Item.metadata`: the moderation and audit keys on that column
+  (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+  and are not accepted here — while this was `JSON`, a client could set or
+  forge any of them.
+  """
+  metadata: ItemMetadataInput
   name: String!
   netWeights: [ItemNetWeightInput!]
   nutritionFacts: [NutritionFactInput!]
@@ -2045,18 +2017,6 @@ type CreateNotificationPayload {
 }
 
 union CreateNotificationResult = ConflictError | CreateNotificationPayload | ForbiddenError | NotFoundError | ValidationError
-
-input CreatePantryActivityInput {
-  action: PantryActivityType!
-  description: String!
-  itemName: String
-  metadata: JSON
-  newValue: String
-  oldValue: String
-  pantryId: ID!
-  quantity: Float
-  userId: ID!
-}
 
 input CreatePantryInput {
   description: String
@@ -2940,7 +2900,7 @@ User device information - contains sensitive device fingerprinting data
 type Device {
   apiLevel: Int
   appVersion: String
-  availableLocationProviders: String
+  availableLocationProviders: JSON
   batteryLevel: Float
   brand: String
   browserName: String
@@ -2955,7 +2915,7 @@ type Device {
   freeDiskStorage: String
   hasDynamicIsland: Boolean
   hasNotch: Boolean
-  hostNames: String
+  hostNames: [String!]!
   id: ID!
   isActive: Boolean!
   isAirplaneMode: Boolean
@@ -2979,11 +2939,11 @@ type Device {
   osName: String
   osVersion: String
   platform: MobilePlatform
-  powerState: String
+  powerState: JSON
   readableVersion: String
   screenResolution: String
-  supportedAbis: String
-  supportedMediaTypes: String
+  supportedAbis: [String!]!
+  supportedMediaTypes: [String!]!
   systemVersion: String
   timezone: String
   totalDiskCapacity: String
@@ -3029,16 +2989,22 @@ type DeviceConnection implements Connection {
 
 """Composite sub-input for all device details"""
 input DeviceDetailsInput {
+  """
+  Provider→availability map on Android; the platform's shape. Open for the
+  same reason as powerState.
+  """
   availableLocationProviders: JSON
   browserOs: BrowserOsDetailsInput
   characteristics: DeviceCharacteristicsInput
   connectivity: ConnectivityInput
   hardware: DeviceHardwareInput
-  hostNames: JSON
+  """Host names the device reports."""
+  hostNames: [String!]
   identification: DeviceIdentificationInput
   peripherals: DevicePeripheralsDetailsInput
   power: PowerStatusInput
-  supportedMediaTypes: JSON
+  """Media types the device can play."""
+  supportedMediaTypes: [String!]
 }
 
 type DeviceEdge implements Edge {
@@ -3082,19 +3048,12 @@ input DeviceFilters {
   userId: ID
 }
 
-input DeviceHardwareInfoInput {
-  freeDiskStorage: String
-  maxMemory: String
-  totalDiskCapacity: String
-  totalMemory: String
-  usedMemory: String
-}
-
 """Sub-input for device hardware specs"""
 input DeviceHardwareInput {
   freeDiskStorage: String
   maxMemory: String
-  supportedAbis: JSON
+  """CPU ABIs the device reports, e.g. ["arm64-v8a"]."""
+  supportedAbis: [String!]
   totalDiskCapacity: String
   totalMemory: String
   usedMemory: String
@@ -3134,14 +3093,6 @@ input DeviceOrderBy {
 
 """Sub-input for device peripherals (automation detection)"""
 input DevicePeripheralsDetailsInput {
-  isBluetoothHeadphonesConnected: Boolean
-  isHeadphonesConnected: Boolean
-  isKeyboardConnected: Boolean
-  isMouseConnected: Boolean
-  isWiredHeadphonesConnected: Boolean
-}
-
-input DevicePeripheralsInput {
   isBluetoothHeadphonesConnected: Boolean
   isHeadphonesConnected: Boolean
   isKeyboardConnected: Boolean
@@ -3357,18 +3308,6 @@ interface Edge {
   cursor: String!
 }
 
-"""Effective usage rate: consumed / (consumed + wasted)"""
-type EffectiveUsageRate {
-  effectiveRate: Float!
-  itemId: ID
-  itemName: String
-  periodEnd: DateTime!
-  periodStart: DateTime!
-  totalConsumed: Float!
-  totalWasted: Float!
-  unitName: String
-}
-
 input EnableHomeJoinLinkInput {
   """ID of the home to enable the join link for."""
   id: ID!
@@ -3506,24 +3445,6 @@ enum ExpirationNotificationType {
   WEEKLY_DIGEST
 }
 
-"""Expiration risk summary for a pantry"""
-type ExpirationRisk {
-  daysThreshold: Int!
-  items: [ExpirationRiskItem!]!
-  totalAtRisk: Int!
-}
-
-"""Items at risk of expiring within a given threshold"""
-type ExpirationRiskItem {
-  condition: ItemCondition!
-  daysUntilExpiry: Int!
-  expiresAt: DateTime!
-  itemName: String!
-  pantryItemId: ID!
-  quantity: Float!
-  unitName: String
-}
-
 enum ExternalSource {
   ALLRECIPES
   BARCODE_LOOKUP
@@ -3536,11 +3457,56 @@ enum ExternalSource {
   USER_CREATED
 }
 
+"""
+Product identifiers as reported by one external source.
+
+Every member is a String — these are opaque codes, not quantities — and that is
+measured, not assumed: all 7 keys present on prod hold string values, fdcId
+(78,077 rows) included, despite being numeric in USDA's own API.
+
+The key space is the Prisma comment UNION what prod actually holds, because
+neither alone was right:
+  - gtinUpc (72,374 prod rows) and foodCode (5,363) are written and were
+    missing from the comment. They were briefly missing from this type too, so
+    the coercion silently dropped them — a read regression this type caused and
+    a prod measurement caught.
+  - ean and gtin are named by the comment and written by nobody (0 rows in any
+    environment). Kept: a declared-but-unwritten shape is exactly what the
+    schema is allowed to assert ahead of its writers.
+"""
+type ExternalSourceIdentifiers {
+  ean: String
+  fdcId: String
+  foodCode: String
+  gtin: String
+  gtinUpc: String
+  ndbNumber: String
+  productId: String
+  sku: String
+  upc: String
+}
+
+"""
+Product identifiers for one external source. Key space fixed by the Prisma
+schema; see the ExternalSourceIdentifiers output twin for why each is a String.
+"""
+input ExternalSourceIdentifiersInput {
+  ean: String
+  fdcId: String
+  foodCode: String
+  gtin: String
+  gtinUpc: String
+  ndbNumber: String
+  productId: String
+  sku: String
+  upc: String
+}
+
 type ExternalSourceMapping {
-  allergens: JSON
+  allergens: SourceAllergens
   availability: JSON
   brandInfo: JSON
-  categories: JSON
+  categories: [String!]
   confidence: Float
   createdAt: DateTime!
   data: JSON
@@ -3549,7 +3515,7 @@ type ExternalSourceMapping {
   externalName: String
   externalType: String
   id: ID!
-  identifiers: JSON
+  identifiers: ExternalSourceIdentifiers
   images: JSON
   isPrimary: Boolean!
   item: Item!
@@ -3568,17 +3534,25 @@ type ExternalSourceMapping {
 }
 
 input ExternalSourceMappingInput {
-  allergens: JSON
+  allergens: SourceAllergensInput
   availability: JSON
   brandInfo: JSON
-  categories: JSON
+  """
+  Categories as this source reports them.
+  
+  Typed on data, not on a consumer: 523,102 elements across prod and staging
+  are strings and **not one is an object**. The Prisma comment used to say
+  "strings or objects" and has been corrected — it described a possibility no
+  row ever exercised.
+  """
+  categories: [String!]
   confidence: Float
   data: JSON
   externalDescription: String
   externalId: String!
   externalName: String
   externalType: String
-  identifiers: JSON
+  identifiers: ExternalSourceIdentifiersInput
   images: JSON
   isPrimary: Boolean
   location: JSON
@@ -3591,13 +3565,6 @@ input ExternalSourceMappingInput {
   retailInfo: JSON
   source: ExternalSource!
   storage: JSON
-}
-
-type FacetValue {
-  count: Int!
-  label: String!
-  selected: Boolean
-  value: String!
 }
 
 type FailedIPStat {
@@ -4075,16 +4042,6 @@ enum ImageUploadPurpose {
   PROFILE_COVER
 }
 
-input IngredientInput {
-  isActive: Boolean
-  isGMO: Boolean
-  isOrganic: Boolean
-  name: String!
-  order: Int
-  percentage: Float
-  subIngredients: [IngredientInput!]
-}
-
 """Input for ingredient usage when marking recipe as cooked"""
 input IngredientUsageInput {
   actualQuantity: Float!
@@ -4098,8 +4055,6 @@ input InlineItemInput {
   category: String
   description: String
   displayUnitId: ID
-  imageUrl: String
-  images: JSON
   name: String
   netWeight: Float
   netWeights: [ItemNetWeightInput!]
@@ -4357,10 +4312,45 @@ type Item {
   isDeleted: Boolean!
   isUserCreated: Boolean!
   matchedVariation: ProductVariation
+  """
+  Sparse per-item flags and enrichment summary (dietary booleans, aggregation
+  completeness, etc.).
+  
+  **Admin-gated projection.** Server-written moderation/audit keys
+  (`rejectionReason`, `flagReason`, `mergedFrom`) are stripped for non-admin
+  callers and returned only to ADMIN/SUPER_ADMIN roles; every other key is
+  returned to all callers. This is a deliberate, documented projection (not the
+  raw column) — the read-side counterpart to `ItemMetadataInput` narrowing the
+  write surface to four dietary booleans. See docs/api/json-open-shape-register.md.
+  
+  Pinned `maxAge: 0, scope: PRIVATE`: the projection is viewer-dependent, so the
+  type's `maxAge: 1800, scope: PUBLIC` MUST NOT cache an admin response and
+  replay its moderation keys to a non-admin (cf. `convertedNetWeight`/`canEdit`).
+  """
   metadata: JSON
   name: String!
   needsApproval: Boolean!
   netWeight: Float
+  """
+  Structured nutrition for this item — one row per item, values in canonical
+  units (kcal for energy, g for macros, mg for sodium/cholesterol/potassium,
+  mcg for vitamin D). The columns are plain Floats with no unit of their own,
+  so those units are a contract the normalizers enforce on the way in
+  (services/aggregation/normalizers/units.ts), not a property of the storage.
+  
+  Null for an item that has never been aggregated. Note it currently lags
+  `nutritions` slightly: measured on prod, 51,155 items have a row and 2,954
+  have `nutritions` without one.
+  """
+  nutritionFacts: NutritionFacts
+  """
+  Nutrition as aggregated from this item's sources, in the legacy Json mirror.
+  
+  Prefer `nutritionFacts`, which is the same data in the structured table
+  item.prisma groups under "Structured data relations (replacing Json fields
+  over time)". This column stays authoritative for now and carries any key the
+  table has no column for.
+  """
   nutritions: JSON
   """Number of PENDING community edit suggestions for this item."""
   pendingSuggestionCount: Int!
@@ -4583,6 +4573,17 @@ enum ItemMatchType {
 }
 
 """
+Client-settable subset of an item's metadata. The stored column also carries
+server-written moderation and merge-audit keys, which are not settable here.
+"""
+input ItemMetadataInput {
+  isDairyFree: Boolean
+  isGlutenFree: Boolean
+  isOrganic: Boolean
+  isVegan: Boolean
+}
+
+"""
 Manufacturer-provided net weight in a specific unit (e.g., 3.4 oz or 96g)
 """
 input ItemNetWeightInput {
@@ -4611,9 +4612,12 @@ type ItemPriceHistory {
   createdAt: DateTime!
   id: ID!
   item: Item!
-  metadata: JSON
   price: Float!
-  source: String!
+  """
+  Where this price came from. Backed by the Prisma `PriceSource` enum —
+  previously typed `String!`, which hid a closed set behind a scalar.
+  """
+  source: PriceSource!
 }
 
 type ItemPriceHistoryConnection implements Connection {
@@ -5388,13 +5392,6 @@ type MarkSuggestionDismissedPayload {
 
 union MarkSuggestionDismissedResult = ConflictError | ForbiddenError | MarkSuggestionDismissedPayload | NotFoundError | ValidationError
 
-enum MatchType {
-  CATEGORY
-  EXACT
-  FUZZY
-  PARTIAL
-}
-
 """
 Meal plan for organizing meals over a period
 Cache: 5 minutes - plans change occasionally
@@ -5506,7 +5503,12 @@ type MealPlanItem {
   protein: Float
   recipe: Recipe
   servings: Int
-  usedPantryItems: JSON!
+  """
+  Pantry items consumed for this meal, with the quantity taken from each.
+  Empty when nothing has been deducted — never null (the column is NOT NULL
+  with a [] default).
+  """
+  usedPantryItems: [UsedPantryItem!]!
 }
 
 """Aggregated nutrition data for a meal plan"""
@@ -5716,32 +5718,6 @@ type MembershipEdge implements Edge {
   node: Membership!
 }
 
-enum MembershipJoinMethod {
-  DIRECT_ADD
-  INVITE
-  JOIN_CODE
-}
-
-type MembershipJoinedPayload {
-  homeId: ID!
-  joinMethod: MembershipJoinMethod!
-  membership: Membership!
-  userId: ID!
-}
-
-enum MembershipLeftMethod {
-  REMOVED
-  SUSPENDED
-  VOLUNTARY
-}
-
-type MembershipLeftPayload {
-  homeId: ID!
-  leftMethod: MembershipLeftMethod!
-  membership: Membership!
-  userId: ID!
-}
-
 enum MembershipMutationType {
   CREATED
   LEFT
@@ -5802,13 +5778,6 @@ type MembershipStatusStats {
   left: Int!
   removed: Int!
   suspended: Int!
-}
-
-type MembershipUpdatePayload {
-  mutation: MembershipMutationType!
-  node: Membership
-  updatedFields: [String!]
-  userId: ID!
 }
 
 """
@@ -6963,12 +6932,205 @@ enum NutritionCategory {
   VITAMIN
 }
 
+"""
+One nutrition fact, as it appears on a label: which nutrient, how much, and in
+what unit.
+
+This is a **source shape** — the same kind of unit-bearing list Spoonacular
+sends — not a rival to `NutritionFacts`. It is normalized on the way in
+(each fact's `unit` converted to the field's canonical unit) and stored as one
+`NutritionFacts` row, so writing facts and reading `Item.nutritionFacts`
+returns your own values back, converted.
+"""
 input NutritionFactInput {
+  """Grouping hint only; the field itself determines how a value is stored."""
   category: NutritionCategory
+  """Percent of daily value, if the label states one. Not stored today."""
   dailyValue: Float
-  name: String!
+  """
+  Which nutrient this fact is for.
+  
+  Was `name: String!`, which could not say which names were understood —
+  an unrecognised one was silently dropped. The set is closed and knowable:
+  it is exactly the fields the unit contract declares.
+  """
+  field: NutritionField!
+  """
+  The unit as the label states it (`g`, `mg`, `mcg`, `µg`, `kcal`, `kJ`).
+  Converted to the field's canonical unit on write.
+  
+  Omit only if the value is already in the canonical unit — an omitted unit is
+  trusted, which is the one case where a wrong number passes silently. A unit
+  that cannot be converted (notably `IU`, whose factor is per-substance) drops
+  the fact rather than storing an unconverted number.
+  """
   unit: String
+  """The amount, in `unit`."""
   value: Float!
+}
+
+"""
+Structured nutrition facts for an item — the typed replacement for the
+`Item.nutritions` Json column, per item.prisma's "Structured data relations
+(replacing Json fields over time)".
+
+Every field mirrors a column on the `NutritionFacts` model one-for-one, and
+the two names that disagree with the Json mirror are called out below —
+a spread would have dropped both silently.
+
+**Units are a contract, not a property of the storage.** The columns are plain
+`Float?` with no unit column, so a number here is only meaningful because
+every writer converges on one canonical unit per field before storing it
+(`services/aggregation/normalizers/units.ts`): kcal for energy, g for
+macronutrients, mg for sodium/cholesterol/calcium/iron/potassium, mcg for
+vitamin D. A value that could not be converted is dropped rather than stored
+raw — an unconverted 0.32 g in a mg field is indistinguishable from a real
+0.32 mg and under-reports by 1000x.
+"""
+type NutritionFacts {
+  """Grams."""
+  addedSugars: Float
+  """Milligrams."""
+  calcium: Float
+  """Energy, kcal."""
+  calories: Float
+  """Milligrams."""
+  cholesterol: Float
+  """Grams."""
+  dietaryFiber: Float
+  id: ID!
+  """Milligrams."""
+  iron: Float
+  item: Item!
+  itemId: ID!
+  """Milligrams."""
+  potassium: Float
+  """Grams."""
+  protein: Float
+  """Grams."""
+  saturatedFat: Float
+  """
+  Serving size, in `servingUnit`. Named `servingSizeGrams` in the Json mirror.
+  """
+  servingSize: Float
+  """
+  The unit `servingSize` is expressed in — the one unit this model states.
+  """
+  servingUnit: String
+  """Milligrams."""
+  sodium: Float
+  """Grams. Named `carbohydrates` in the Json mirror."""
+  totalCarbs: Float
+  """Grams."""
+  totalFat: Float
+  """Grams."""
+  totalSugars: Float
+  """Grams."""
+  transFat: Float
+  """Micrograms."""
+  vitaminD: Float
+}
+
+"""
+The nutrients this API can store, and the canonical unit each is stored in.
+
+Generated from `services/aggregation/normalizers/units.ts` — the same
+contract every source normalizer converges on — so this enum and the storage
+cannot drift. The docstring on each member is its canonical unit.
+"""
+enum NutritionField {
+  """g"""
+  ADDED_SUGARS
+  """g"""
+  ALCOHOL
+  """mg"""
+  CAFFEINE
+  """mg"""
+  CALCIUM
+  """kcal"""
+  CALORIES
+  """kcal"""
+  CALORIES_FROM_FAT
+  """mg"""
+  CHOLESTEROL
+  """mcg"""
+  CHROMIUM
+  """mg"""
+  COPPER
+  """g"""
+  DIETARY_FIBER
+  """g"""
+  INSOLUBLE_FIBER
+  """mcg"""
+  IODINE
+  """mg"""
+  IRON
+  """mg"""
+  MAGNESIUM
+  """mg"""
+  MANGANESE
+  """mcg"""
+  MOLYBDENUM
+  """g"""
+  MONOUNSATURATED_FAT
+  """g"""
+  OMEGA3
+  """g"""
+  OMEGA6
+  """mg"""
+  PHOSPHORUS
+  """g"""
+  POLYUNSATURATED_FAT
+  """mg"""
+  POTASSIUM
+  """g"""
+  PROTEIN
+  """g"""
+  SATURATED_FAT
+  """mcg"""
+  SELENIUM
+  """mg"""
+  SODIUM
+  """g"""
+  SOLUBLE_FIBER
+  """g"""
+  SUGAR_ALCOHOLS
+  """g"""
+  TOTAL_CARBOHYDRATES
+  """g"""
+  TOTAL_FAT
+  """g"""
+  TOTAL_SUGARS
+  """g"""
+  TRANS_FAT
+  """mcg"""
+  VITAMIN_A
+  """mg"""
+  VITAMIN_B1
+  """mg"""
+  VITAMIN_B2
+  """mg"""
+  VITAMIN_B3
+  """mg"""
+  VITAMIN_B5
+  """mg"""
+  VITAMIN_B6
+  """mcg"""
+  VITAMIN_B7
+  """mcg"""
+  VITAMIN_B9
+  """mcg"""
+  VITAMIN_B12
+  """mg"""
+  VITAMIN_C
+  """mcg"""
+  VITAMIN_D
+  """mg"""
+  VITAMIN_E
+  """mcg"""
+  VITAMIN_K
+  """mg"""
+  ZINC
 }
 
 """Progress toward nutrition goals from dietary profile"""
@@ -6995,18 +7157,6 @@ enum NutritionSource {
   AUTO
   MANUAL
   PARTIAL
-}
-
-input OfferInput {
-  brand: String
-  image: String
-  offerId: String!
-  offerType: String
-  rewardInfo: String!
-  tags: [String!]
-  title: String!
-  validFrom: DateTime
-  validUntil: DateTime
 }
 
 """Input for opening a specific batch"""
@@ -7101,34 +7251,6 @@ type Pantry {
   usageStats: PantryUsageStats
   version: Int!
   wasteAnalytics(filters: AnalyticsFilters): WasteAnalytics!
-}
-
-type PantryActivity {
-  action: PantryActivityType!
-  createdAt: DateTime!
-  description: String!
-  id: ID!
-  itemName: String
-  metadata: JSON
-  newValue: String
-  oldValue: String
-  pantry: Pantry!
-  pantryId: ID!
-  quantity: Float
-  user: User!
-  userId: ID!
-}
-
-enum PantryActivityType {
-  ITEM_ADDED
-  ITEM_EXPIRED
-  ITEM_REMOVED
-  ITEM_UPDATED
-  ITEM_USED
-  PANTRY_CREATED
-  PANTRY_DELETED
-  PANTRY_UPDATED
-  QUANTITY_UPDATED
 }
 
 type PantryConnection implements Connection {
@@ -7538,13 +7660,6 @@ type PantryUsageStats {
   lowStockItemCount: Int!
 }
 
-type ParentCategorySuggestion {
-  id: ID!
-  name: String!
-  slug: String
-  type: CategoryType!
-}
-
 """
 Outcome of a password-flow action (bulk-operation-standard sibling: replaces
 the flat {success,code,message} status types). Anti-enumeration is preserved
@@ -7588,6 +7703,12 @@ type PlatformStat {
 input PowerStatusInput {
   batteryLevel: Float
   isBatteryCharging: Boolean
+  """
+  Power info exactly as the platform reports it. Stays JSON on purpose: the
+  shape is react-native-device-info's, the Prisma schema declares no more than
+  "JSON power info", and no row has ever been populated — so there is nothing
+  to type it from. Registered in the open-shape register.
+  """
   powerState: JSON
 }
 
@@ -7609,14 +7730,6 @@ type PriceEstimate {
   lowest: Float
 }
 
-type PriceRangeFacet {
-  count: Int!
-  label: String!
-  max: Float!
-  min: Float!
-  selected: Boolean
-}
-
 """Price range filter bounds"""
 input PriceRangeInput {
   includeNull: Boolean
@@ -7624,13 +7737,29 @@ input PriceRangeInput {
   min: Float
 }
 
+"""
+Where a price came from. Mirrors the Prisma `PriceSource` enum, which is the
+authority for this set — every value the column can hold must be declared here
+or a row carrying it cannot be serialized.
+"""
 enum PriceSource {
+  """From other users"""
   CROWD_SOURCE
+  """
+  Estimated rather than observed (Spoonacular ingredient price, shopping-list estimate)
+  """
+  ESTIMATE
+  """User entered"""
   MANUAL
+  """From price matching"""
   PRICE_MATCH
+  """From an actual purchase"""
   PURCHASE
+  """From receipt scanning"""
   RECEIPT_SCAN
+  """From a store's API"""
   STORE_API
+  """From web scraping"""
   WEB_SCRAPING
 }
 
@@ -7807,11 +7936,6 @@ input PurchaseTrackingInput {
   purchasedQuantity: Float
 }
 
-input PutUnderReviewInput {
-  reason: String
-  userId: ID!
-}
-
 type QuantityBreakdown {
   """The content unit (e.g., can)"""
   contentUnit: Unit
@@ -7843,7 +7967,12 @@ type QuantityDisplay {
 input QuantityDisplayInput {
   alwaysShowFractions: Boolean
   maxDecimalPlaces: Int
-  preferredFractionSet: JSON
+  """
+  Fraction **denominators** to round quantities to — 4 means quarters. Inverse
+  of `Unit.commonFractions`, which holds decimals. See the UserSettings
+  output twin.
+  """
+  preferredFractionSet: [Int!]
   quantityDisplayPreference: QuantityDisplayPreference
 }
 
@@ -7951,8 +8080,16 @@ type Query {
   """Fetch a single home by its ID."""
   home(id: ID!): Home
   """
-  Fetch a single home by its join code. Reachable anonymously so a
-  not-yet-signed-up recipient of a join link can preview the home.
+  Fetch a single home by its join code.
+  
+  Requires authentication: you must be signed in to join a home, so there is
+  no anonymous use for this. It was previously reachable anonymously to let a
+  not-yet-signed-up recipient preview a join link, but that returned a full
+  Home — including its stat fields — to anyone holding a code.
+  
+  The anonymous pre-join preview is `resolveShareLink`, which is purpose-built
+  for it and returns a curated payload (name, member count, alreadyMember)
+  rather than a whole Home.
   """
   homeByJoinCode(joinCode: String!): Home
   """Fetch a home invite by its token for the acceptance flow."""
@@ -8033,7 +8170,7 @@ type Query {
   recipeSuggestions(after: String, before: String, first: Int, last: Int): RecipeConnection!
   recipes(after: String, before: String, filters: RecipeFilters, first: Int, last: Int): RecipeConnection!
   """Fetch personalized item recommendations for a user."""
-  recommendedItems(limit: Int, userId: ID): [ItemSuggestion!]!
+  recommendedItems(limit: Int): [ItemSuggestion!]!
   """
   Resolve an anyone-with-link code (home join code or list share code)
   without knowing its type. Returns null when the code matches nothing.
@@ -8653,11 +8790,6 @@ enum ReligiousDiet {
   KOSHER
 }
 
-input RemoveCollaboratorInput {
-  email: String
-  shoppingListId: ID!
-}
-
 input RemoveItemFromCategoryInput {
   categoryId: ID!
   itemId: ID!
@@ -8762,11 +8894,6 @@ type RemoveRestrictionPayload {
 
 union RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload | ValidationError
 
-input RemoveRestrictionsInput {
-  restrictions: [ModerationRestriction!]!
-  userId: ID!
-}
-
 input RemoveShoppingListCollaboratorInput {
   id: ID!
 }
@@ -8808,11 +8935,6 @@ type ResendVerificationEmailPayload {
 }
 
 union ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError
-
-input ResetPasswordInput {
-  password: String!
-  token: String!
-}
 
 type ResetPasswordPayload {
   message: String!
@@ -8875,17 +8997,6 @@ type RestockPantryItemPayload {
 
 union RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemPayload | ValidationError
 
-"""Restocking frequency for an item or pantry"""
-type RestockingFrequency {
-  averageDaysBetweenRestocks: Float!
-  itemId: ID
-  itemName: String
-  lastRestockedAt: DateTime
-  periodEnd: DateTime!
-  periodStart: DateTime!
-  totalRestocks: Int!
-}
-
 input RestoreItemInput {
   id: ID!
 }
@@ -8901,12 +9012,6 @@ enum RestrictionSeverity {
   GOAL
   INTOLERANCE
   PREFERENCE
-}
-
-input ReviewAppealInput {
-  approved: Boolean!
-  reviewNotes: String
-  userId: ID!
 }
 
 type ReviewHelpful {
@@ -8984,16 +9089,6 @@ input SavedRecipeOrderBy {
   savedAt: SortOrder
 }
 
-type SearchFacets {
-  brands: [FacetValue!]!
-  categories: [FacetValue!]!
-  priceRanges: [PriceRangeFacet!]!
-  storageStates: [FacetValue!]!
-  stores: [FacetValue!]!
-  tags: [FacetValue!]!
-  types: [FacetValue!]!
-}
-
 input SendTestNotificationInput {
   type: NotificationType!
 }
@@ -9032,7 +9127,6 @@ enum ShareLinkTargetType {
 input ShareShoppingListInput {
   id: ID!
   isPublic: Boolean
-  shareCode: String
 }
 
 type ShareShoppingListPayload {
@@ -9207,15 +9301,6 @@ type ShoppingListCollaborator {
   status: CollaboratorStatus!
   statusChangedAt: DateTime
   token: String
-}
-
-type ShoppingListCollaboratorChangedPayload {
-  collaborator: ShoppingListCollaborator!
-  listId: ID!
-  mutation: MutationType!
-  originatorClientId: ID
-  timestamp: DateTime!
-  userId: ID!
 }
 
 type ShoppingListCollaboratorConnection implements Connection {
@@ -9549,6 +9634,29 @@ type SkippedLowStockItem {
 enum SortOrder {
   ASC
   DESC
+}
+
+"""
+Allergens exactly as one external source buckets them.
+
+Deliberately NOT the [AllergenInfo!]! shape used by Item.allergens. A source
+reports two flat name lists; Item.allergens is a per-allergen list carrying
+contains/mayContain booleans. ItemAggregationService.mergeAllergens converts
+between them, and that conversion is the boundary where the two structures are
+meant to meet — see prisma "allergens Json? // Allergen data in source format".
+"""
+type SourceAllergens {
+  contains: [String!]!
+  mayContain: [String!]!
+}
+
+"""
+Allergens in a source's own bucketed form. This is NOT [AllergenInput!] — that
+is Item.allergens' per-allergen shape. See the SourceAllergens output twin.
+"""
+input SourceAllergensInput {
+  contains: [String!]
+  mayContain: [String!]
 }
 
 input SpoonacularCaloricBreakdownInput {
@@ -9989,11 +10097,6 @@ type StoreTopItem {
   revenue: Float!
 }
 
-input SubmitAppealInput {
-  appealNotes: String!
-  userId: ID!
-}
-
 type Subscription {
   """
   Subscribe to create / update / delete events for a single cooking log.
@@ -10126,12 +10229,6 @@ type SuggestionUnit {
   symbol: String!
 }
 
-input SuspendUserInput {
-  reason: String!
-  suspendedUntil: DateTime!
-  userId: ID!
-}
-
 type SuspiciousActivity {
   failedFromSameIP: [FailedIPStat!]!
   multipleAccountsFromIP: [FailedIPStat!]!
@@ -10141,17 +10238,6 @@ type SuspiciousActivity {
   riskyLogins: [LoginHistory!]!
   suspiciousActivity: Boolean!
   unusualTimeLogins: [LoginHistory!]!
-}
-
-type SuspiciousActivitySummary {
-  actionsBreakdown: InviteActionStats!
-  timeWindow: Int!
-  totalSuspiciousActions: Int!
-}
-
-type SuspiciousInviteActivity {
-  logs: [InviteLog!]!
-  summary: SuspiciousActivitySummary!
 }
 
 """Information about a sync conflict"""
@@ -10175,6 +10261,28 @@ input SyncDeleteShoppingListItemInput {
   clientId: ID!
   version: Int
 }
+
+input SyncItemPopularityInput {
+  """
+  Reconcile a single item synchronously. Omit to enqueue a full backfill of all items.
+  """
+  itemId: ID
+}
+
+type SyncItemPopularityPayload {
+  """
+  True when a full ITEM_POPULARITY_RECALC backfill was enqueued instead of a single-item recompute.
+  """
+  enqueued: Boolean!
+  """
+  The item reconciled synchronously, or null when a full backfill was enqueued.
+  """
+  itemId: ID
+  """The item's reconciled popularity, when a single itemId was supplied."""
+  popularity: Int
+}
+
+union SyncItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | SyncItemPopularityPayload | ValidationError
 
 input SyncMoveShoppingListItemInput {
   afterId: ID
@@ -10227,6 +10335,28 @@ type SyncPantryItemResult {
   operation: SyncOperation!
   serverId: ID
 }
+
+input SyncRecipeRatingsInput {
+  """
+  Reconcile a single recipe synchronously. Omit to enqueue a full backfill of all recipes.
+  """
+  recipeId: ID
+}
+
+type SyncRecipeRatingsPayload {
+  averageRating: Float
+  """
+  True when a full RECIPE_RATING_RECALC backfill was enqueued instead of a single-recipe recompute.
+  """
+  enqueued: Boolean!
+  """
+  The recipe reconciled synchronously, or null when a full backfill was enqueued.
+  """
+  recipeId: ID
+  totalReviews: Int
+}
+
+union SyncRecipeRatingsResult = ConflictError | ForbiddenError | NotFoundError | SyncRecipeRatingsPayload | ValidationError
 
 """Sub-input for sync settings"""
 input SyncSettingsInput {
@@ -10398,7 +10528,16 @@ type Unit {
   autoConvertToUnitId: ID
   baseUnit: UnitRef
   baseUnitId: ID
-  commonFractions: JSON
+  """
+  Fractions this unit is commonly shown in, as decimals (0.25 = a quarter).
+  Was `JSON` here while the identical field on `RankedUnit` was already
+  `[Float!]` — the Prisma column's own default
+  (`[0.125, 0.25, 0.333, 0.5, 0.666, 0.75]`) settles which is right.
+  
+  Note these are decimals, whereas `QuantityDisplayInput.preferredFractionSet`
+  holds *denominators* (4 = a quarter). The two are inverses.
+  """
+  commonFractions: [Float!]
   conversionFactor: Float!
   createdAt: DateTime!
   displayAsFraction: Boolean!
@@ -10710,7 +10849,7 @@ union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundErro
 input UpdateExternalSourceInput {
   externalName: String
   id: ID!
-  identifiers: JSON
+  identifiers: ExternalSourceIdentifiersInput
   images: JSON
   isPrimary: Boolean
   netWeight: Float
@@ -10773,12 +10912,17 @@ input UpdateItemInput {
   categoryOps: CategoryOpsInput
   classification: ItemClassificationInput
   description: String
-  editReason: String
   healthInfo: HealthInfoInput
   id: ID!
   media: MediaAssetsInput
-  mergeMetadata: Boolean
-  metadata: JSON
+  """
+  Client-settable item metadata. Deliberately narrower than the stored
+  `Item.metadata`: the moderation and audit keys on that column
+  (`rejectionReason`, `flagReason`, `mergedFrom`) are written by the server
+  and are not accepted here — while this was `JSON`, a client could set or
+  forge any of them.
+  """
+  metadata: ItemMetadataInput
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
@@ -10796,14 +10940,6 @@ input UpdateItemInput {
 
 type UpdateItemPayload {
   item: Item!
-}
-
-"""Input for updating an item's price"""
-input UpdateItemPriceInput {
-  itemId: ID!
-  price: Float!
-  source: String
-  storeId: ID
 }
 
 union UpdateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateItemPayload | ValidationError
@@ -10873,8 +11009,12 @@ input UpdateMealPlanItemInput {
   notes: String
   protein: Float
   servings: Int
-  """Pantry items used for this meal: [{pantryItemId, quantityUsed}]"""
-  usedPantryItems: JSON
+  """
+  Pantry items used for this meal. Omit to leave unchanged; pass an empty
+  list (or null) to record that nothing was used — the stored value is never
+  null, since the column is NOT NULL with a [] default.
+  """
+  usedPantryItems: [UsedPantryItemInput!]
 }
 
 type UpdateMealPlanItemPayload {
@@ -11420,16 +11560,6 @@ type UpdateUserAppealPayload {
 
 union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
 
-input UpdateUserModerationInput {
-  moderatorNotes: String
-  restrictedUntil: DateTime
-  restrictionReason: String
-  restrictions: [ModerationRestriction!]
-  riskScore: Float
-  status: ModerationStatus
-  trustLevel: TrustLevel
-}
-
 """Input for managing restrictions (add and/or remove in one call)."""
 input UpdateUserRestrictionsInput {
   """Restrictions to add"""
@@ -11446,8 +11576,6 @@ type UpdateUserRestrictionsPayload {
 }
 
 union UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError
-
-scalar Upload
 
 type UploadFormField {
   name: String!
@@ -11592,6 +11720,22 @@ enum UsageSource {
 }
 
 """
+One pantry item consumed by a meal-plan item, and how much of it was used.
+"""
+type UsedPantryItem {
+  pantryItemId: ID!
+  quantityUsed: Float!
+}
+
+"""
+One pantry item consumed by a meal-plan item, and how much of it was used.
+"""
+input UsedPantryItemInput {
+  pantryItemId: ID!
+  quantityUsed: Float!
+}
+
+"""
 User account type
 Cache: 5 minutes - user data changes occasionally, always private
 """
@@ -11676,13 +11820,6 @@ type UserAddressEdge implements Edge {
 input UserAddressOrderBy {
   createdAt: SortOrder
   isDefault: SortOrder
-}
-
-type UserAuthPayload {
-  authType: String!
-  deviceInfo: JSON
-  timestamp: DateTime!
-  userId: ID!
 }
 
 type UserConnection implements Connection {
@@ -11863,7 +12000,16 @@ type UserSettings {
   offlineMode: Boolean!
   personalizedAds: Boolean!
   preferredCurrency: String!
-  preferredFractionSet: JSON
+  """
+  Fraction **denominators** the user wants quantities rounded to — 4 means
+  quarters. Note the inverse of `Unit.commonFractions`, which holds decimals
+  (0.25 = a quarter).
+  
+  Int, not Float: a denominator is a count of parts, so 2.5 is meaningless.
+  Measured across all 5,893 populated rows / 23,572 elements — every one an
+  integer, drawn from exactly {2, 3, 4, 8}.
+  """
+  preferredFractionSet: [Int!]
   preferredUnitSystem: UnitSystem!
   quantityDisplayPreference: QuantityDisplayPreference!
   shareUsageData: Boolean!
@@ -11873,13 +12019,6 @@ type UserSettings {
   timezone: String!
   updatedAt: DateTime!
   user: User!
-}
-
-type UserSocialPayload {
-  action: String!
-  targetUserId: ID!
-  timestamp: DateTime!
-  userId: ID!
 }
 
 """

@@ -100,7 +100,6 @@ export function useSuggestItemEdit() {
               input: {
                 id: original.id,
                 ...changes,
-                editReason: note || undefined,
               },
             },
           }),

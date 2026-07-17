@@ -310,7 +310,7 @@ describe('useSuggestItemEdit', () => {
       expect(outcome).toEqual({ status: 'updated' });
       await waitFor(() =>
         expect(fired).toContainEqual({
-          input: { id: 'item-1', name: 'Skim Milk', editReason: NOTE },
+          input: { id: 'item-1', name: 'Skim Milk' },
         }),
       );
     });

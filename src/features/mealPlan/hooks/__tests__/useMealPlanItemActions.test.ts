@@ -29,7 +29,7 @@ const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
       notes: null,
       customMealName: null,
       calories: null,
-      usedPantryItems: null,
+      usedPantryItems: [],
       mealType: 'DINNER',
       date: '2025-06-15',
       recipe: {
