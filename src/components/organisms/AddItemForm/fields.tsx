@@ -30,10 +30,10 @@ export const isEditMode = (mode: AddItemFormMode): boolean =>
   mode === 'edit' || mode === 'directEdit';
 
 /**
- * Only the review path needs a note. `CreateItemSuggestionInput.note` is `String!`
- * and the admin has nothing else to judge the diff against, whereas
- * `UpdateItemInput.editReason` is optional and nobody reviews a direct edit —
- * requiring one there would block Save on an explanation addressed to nobody.
+ * Only the review path needs — or can send — a note. `CreateItemSuggestionInput.note`
+ * is `String!` and the admin has nothing else to judge the diff against. A direct
+ * edit has no reviewer and `UpdateItemInput` no longer accepts a note, so its form
+ * omits the field entirely.
  */
 export const requiresEditNote = (mode: AddItemFormMode): boolean =>
   mode === 'edit';
@@ -270,19 +270,16 @@ export const buildTabFieldGroups = (
     component: FormCheckbox,
     props: { componentType: 'checkbox' },
   };
-  // Required on the review path and addressed to the admin; optional on the
-  // direct-edit path, where it is only an audit note on the item's history.
+  // Shown only on the review path, where the note is the admin's sole context
+  // for the diff (required). The direct-edit path writes straight through and
+  // the server no longer accepts a note there, so the field is omitted below.
   const noteRequired = requiresEditNote(mode);
   const editReasonField: FieldDef<CreateItemFormData> = {
     name: 'editReason',
-    label: noteRequired
-      ? t('addItemForm.fields.editNote.label')
-      : t('addItemForm.fields.directEditNote.label'),
-    placeholder: noteRequired
-      ? t('addItemForm.fields.editNote.placeholder')
-      : t('addItemForm.fields.directEditNote.placeholder'),
+    label: t('addItemForm.fields.editNote.label'),
+    placeholder: t('addItemForm.fields.editNote.placeholder'),
     component: FormTextArea,
-    props: { numberOfLines: 3, required: noteRequired },
+    props: { numberOfLines: 3, required: true },
   };
 
   const editing = isEditMode(mode);
@@ -301,9 +298,9 @@ export const buildTabFieldGroups = (
 
   return {
     Basics: {
-      // The note leads in edit modes. Where it's required, burying it on the
-      // last tab inside "More options" would block submit with no visible cause.
-      primary: editing
+      // The note leads on the review path — burying a required field on the last
+      // tab inside "More options" would block submit with no visible cause.
+      primary: noteRequired
         ? [editReasonField, nameField, descriptionField, vendorField]
         : [nameField, descriptionField, vendorField],
       advanced: [],

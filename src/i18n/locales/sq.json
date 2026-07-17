@@ -2694,10 +2694,6 @@
       "editNote": {
         "label": "Çfarë duhet korrigjuar?",
         "placeholder": "Tregoji shqyrtuesit çfarë nuk shkon (p.sh. pesha neto e gabuar në etiketë)"
-      },
-      "directEditNote": {
-        "label": "Shënim (opsional)",
-        "placeholder": "Shto një shënim për atë që ndryshove"
       }
     }
   },

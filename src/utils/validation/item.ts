@@ -246,10 +246,9 @@ export type CreateItemFormData = InferType<typeof createItemSchema>;
  * `CreateItemSuggestionInput.note` is `String!`, and the reviewing admin has nothing
  * but the note to judge the diff against.
  *
- * Only for the suggestion path. The direct-edit path writes through
- * `UpdateItemInput.editReason`, which is optional and has no reviewer to read
- * it, so it keeps `createItemSchema` — requiring a note there would block Save
- * on an explanation addressed to nobody.
+ * Only for the suggestion path. The direct-edit path has no reviewer and the
+ * server no longer accepts a note on `UpdateItemInput`, so it keeps
+ * `createItemSchema` and its form omits the note field entirely.
  */
 export const suggestItemEditSchema = createItemSchema.shape({
   editReason: editReasonRequiredRule,

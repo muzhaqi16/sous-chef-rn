@@ -182,18 +182,16 @@ describe('AddItemForm', () => {
   });
 
   // CreateItemSuggestionInput.note is String! and an admin reads it, so the review
-  // path mandates it. UpdateItemInput.editReason is optional and nobody reviews
-  // a direct edit — requiring one there blocked Save on a note addressed to
-  // nobody, under a subtitle promising the change goes live immediately.
+  // path mandates it. A direct edit has no reviewer and the server no longer
+  // accepts a note on UpdateItemInput, so the field is omitted there entirely.
   describe('edit note requirement', () => {
     it('addresses the note to the reviewer on the suggestion path', () => {
       render(<AddItemForm {...defaultProps} mode="edit" />);
       expect(screen.getByText('What needs fixing?')).toBeTruthy();
     });
 
-    it('marks the note optional on the direct-edit path', () => {
+    it('omits the note field on the direct-edit path', () => {
       render(<AddItemForm {...defaultProps} mode="directEdit" />);
-      expect(screen.getByText('Note (optional)')).toBeTruthy();
       expect(screen.queryByText('What needs fixing?')).toBeNull();
     });
   });

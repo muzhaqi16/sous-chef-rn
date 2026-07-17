@@ -2694,10 +2694,6 @@
       "editNote": {
         "label": "Cosa c'è da correggere?",
         "placeholder": "Indica al revisore cosa non va (es. peso netto sbagliato sull'etichetta)"
-      },
-      "directEditNote": {
-        "label": "Nota (facoltativa)",
-        "placeholder": "Aggiungi una nota su cosa hai modificato"
       }
     }
   },

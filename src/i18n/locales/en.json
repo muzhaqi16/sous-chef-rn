@@ -2694,10 +2694,6 @@
       "editNote": {
         "label": "What needs fixing?",
         "placeholder": "Tell the reviewer what is wrong (e.g., wrong net weight on the label)"
-      },
-      "directEditNote": {
-        "label": "Note (optional)",
-        "placeholder": "Add a note about what you changed"
       }
     }
   },

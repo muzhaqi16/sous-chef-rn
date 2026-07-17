@@ -2694,10 +2694,6 @@
       "editNote": {
         "label": "¿Qué hay que corregir?",
         "placeholder": "Indica al revisor qué está mal (p. ej., el peso neto de la etiqueta es incorrecto)"
-      },
-      "directEditNote": {
-        "label": "Nota (opcional)",
-        "placeholder": "Añade una nota sobre lo que cambiaste"
       }
     }
   },
