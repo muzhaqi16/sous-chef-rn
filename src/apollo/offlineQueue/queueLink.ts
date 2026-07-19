@@ -8,6 +8,7 @@ import { useStore } from '#store';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { hasSyncMapping } from './convertToSyncMutation';
+import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueuedMutation, QueueStatus } from './types';
 
 /**
@@ -45,8 +46,9 @@ const NEVER_QUEUE_OPERATIONS = [
  *   ghost-execute the change on reconnect (reviews, invites, etc.).
  * - **Online but the request fails with a NETWORK error** (API unreachable while
  *   the device still reports "online" — API down, timeout, captive portal): queue
- *   the mutation for replay instead of surfacing the error — but ONLY when the
- *   mutation opts in via `context.localFirst`. Un-migrated mutations keep their
+ *   the mutation for replay instead of surfacing the error — but ONLY for the same
+ *   replay allowlist as the offline path (`context.localFirst` opt-ins or
+ *   `Sync*`-mapped idempotent operations). Un-migrated mutations keep their
  *   current behavior (blocking alert + revert). Creates are safe to queue because
  *   each carries a client-generated permanent id (CUID v1) as its primary key, so
  *   a re-sent create resolves to the same row server-side (find-by-id → update)
@@ -78,22 +80,26 @@ export const createQueueLink = () => {
 
     const state = useStore.getState();
     const localFirst = operation.getContext().localFirst === true;
+    // Replay allowlist: local-first opt-ins (their hooks already wrote the change
+    // to the cache and treat the queued result as success) and Sync*-mapped
+    // operations (idempotent upserts, safe to auto-replay even without the
+    // opt-in). Applied identically to the offline and breaker-open paths below.
+    const replayable =
+      localFirst || hasSyncMapping(operation.operationName ?? '');
 
-    // Device offline — queue only mutations the queue can replay correctly:
-    // local-first opt-ins and Sync*-mapped operations. Anything else fails fast
-    // with a network-shaped error (instant honest toast, no doomed request, and
-    // no ghost replay on reconnect).
+    // Device offline — queue only mutations on the replay allowlist. Anything
+    // else fails fast with a network-shaped error (instant honest toast, no
+    // doomed request, and no ghost replay on reconnect).
     if (!state.isOnline) {
-      if (!localFirst && !hasSyncMapping(operation.operationName ?? '')) {
+      if (!replayable) {
         logger.info(
           `Queue Link: Offline, rejecting online-only mutation ${operation.operationName}`,
         );
         return new Observable(observer => {
-          observer.error(
-            new Error(
-              `Network unavailable: device is offline and ${operation.operationName} cannot be queued for replay`,
-            ),
-          );
+          // A named error so the reachability breaker and network-error
+          // telemetry can skip it — this preemptive rejection never touched the
+          // network and proves nothing about the API.
+          observer.error(new OfflineRejectedError(operation.operationName));
         });
       }
       logger.info(
@@ -105,12 +111,12 @@ export const createQueueLink = () => {
     }
 
     // API unreachable while the device is online (reachability circuit breaker
-    // open) — queue local-first mutations immediately instead of firing a doomed
-    // request. Non-local-first mutations fall through and fire (and surface their
-    // error) as before; they aren't safe to auto-replay.
-    if (state.apiReachable === false && localFirst) {
+    // open) — queue replay-allowlisted mutations immediately instead of firing a
+    // doomed request, matching the offline path. Everything else falls through
+    // and fires (and surfaces its error) as before; it isn't safe to auto-replay.
+    if (state.apiReachable === false && replayable) {
       logger.info(
-        `Queue Link: API unreachable, queuing local-first mutation ${operation.operationName}`,
+        `Queue Link: API unreachable, queuing replayable mutation ${operation.operationName}`,
       );
       return new Observable(observer => {
         enqueueAndComplete(operation, observer, 'api-unreachable');

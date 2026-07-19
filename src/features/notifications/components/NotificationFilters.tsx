@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
@@ -16,20 +17,15 @@ interface NotificationFiltersProps {
 const ALL_TAB = 'all';
 type FilterTabId = NotificationCategory | typeof ALL_TAB;
 
-// 'HOME' → 'Home', 'SHOPPING_LIST' → 'Shopping List'
-const titleCase = (value: string): string =>
-  value
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(' ');
-
-const TABS: FilterTabConfig<FilterTabId>[] = [
-  { id: ALL_TAB, label: 'All' },
-  ...NOTIFICATION_CATEGORIES.map(category => ({
-    id: category,
-    label: titleCase(category),
-  })),
-];
+// Static category → locale key map so the label lookup can't drift from the
+// enum (a new category is a compile error until it gets a key).
+const CATEGORY_LABEL_KEYS: Record<NotificationCategory, string> = {
+  [NotificationCategory.Home]: 'notifications.categoryHome',
+  [NotificationCategory.Pantry]: 'notifications.categoryPantry',
+  [NotificationCategory.Recipe]: 'notifications.categoryRecipe',
+  [NotificationCategory.Shopping]: 'notifications.categoryShopping',
+  [NotificationCategory.System]: 'notifications.categorySystem',
+};
 
 /**
  * Category filter row for the notifications list. Delegates to the shared
@@ -41,10 +37,21 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
   selectedCategory,
   onCategoryChange,
 }) => {
+  const { t } = useTranslation();
+
+  // Resolve labels at render time so a language switch re-labels the tabs.
+  const tabs: FilterTabConfig<FilterTabId>[] = [
+    { id: ALL_TAB, label: t('notifications.categoryAll') },
+    ...NOTIFICATION_CATEGORIES.map(category => ({
+      id: category,
+      label: t(CATEGORY_LABEL_KEYS[category]),
+    })),
+  ];
+
   return (
     <View style={styles.container}>
       <FilterTabs<FilterTabId>
-        tabs={TABS}
+        tabs={tabs}
         activeTabId={selectedCategory ?? ALL_TAB}
         onTabChange={id =>
           onCategoryChange(id === ALL_TAB ? null : (id as NotificationCategory))

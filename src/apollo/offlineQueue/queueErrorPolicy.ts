@@ -96,10 +96,25 @@ export function classifyError(error: unknown): QueueError {
   const message = err.message || String(error);
   const code = err.extensions?.code || err.code;
 
+  // Resource-access errors. FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't
+  // have access to the resource — not an auth issue, so a token refresh won't
+  // help. Match errorLink's policy: treat them as permanent failures rather
+  // than retrying behind a refresh. AUTHZ_FORBIDDEN is the API's current code;
+  // FORBIDDEN is the legacy alias still emitted by some resolvers.
+  if (code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN') {
+    return {
+      type: 'unknown',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+  }
+
   // Auth errors
   if (
     code === 'UNAUTHENTICATED' ||
-    code === 'FORBIDDEN' ||
+    code === 'AUTH_TOKEN_EXPIRED' ||
     message.toLowerCase().includes('expired') ||
     message.toLowerCase().includes('unauthorized')
   ) {

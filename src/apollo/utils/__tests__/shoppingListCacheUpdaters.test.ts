@@ -9,6 +9,7 @@ import {
   createOptimisticShoppingListItem,
   adoptServerShoppingListItemId,
   revertOptimisticShoppingListItem,
+  buildAddItemsReconcileUpdate,
 } from '../shoppingListCacheUpdaters';
 
 // Also test the unexported clearAllUnpurchasedItemsFromCache indirectly
@@ -1140,5 +1141,97 @@ describe('revertOptimisticShoppingListItem', () => {
     revertOptimisticShoppingListItem(cache, 'list-1', 'cuid-1');
     expect(invokeFieldModifier(cache, 'totalItems', 0, {})).toBe(0);
     expect(invokeFieldModifier(cache, 'completionRate', 0, {})).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildAddItemsReconcileUpdate
+// ---------------------------------------------------------------------------
+
+describe('buildAddItemsReconcileUpdate', () => {
+  const successData = {
+    data: {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        results: [{ item: { id: 'sli-server' } }],
+      },
+    },
+  };
+  const variables = {
+    variables: { input: { items: [{ id: 'sli-client' }] } },
+  };
+
+  it('reconciles the created item into the closure-provided list', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      successData,
+      variables,
+    );
+    expect(cache.modify).toHaveBeenCalled();
+    expect(cache.identify).toHaveBeenCalledWith({
+      __typename: 'ShoppingList',
+      id: 'sl-closure',
+    });
+  });
+
+  it('falls back to variables.input.shoppingListId when no listId is given', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({})(cache, successData, {
+      variables: {
+        input: {
+          items: [{ id: 'sli-client' }],
+          shoppingListId: 'sl-from-vars',
+        },
+      },
+    });
+    expect(cache.identify).toHaveBeenCalledWith({
+      __typename: 'ShoppingList',
+      id: 'sl-from-vars',
+    });
+  });
+
+  it('is a no-op for a non-success payload typename', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      { data: { addItemsToShoppingList: { __typename: 'ValidationError' } } },
+      variables,
+    );
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when the payload has no result item', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({ listId: 'sl-closure' })(
+      cache,
+      {
+        data: {
+          addItemsToShoppingList: {
+            __typename: 'AddItemsToShoppingListPayload',
+            results: [],
+          },
+        },
+      },
+      variables,
+    );
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op when no list id can be resolved', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({})(cache, successData, {
+      variables: { input: { items: [{ id: 'sli-client' }] } },
+    });
+    expect(cache.modify).not.toHaveBeenCalled();
+  });
+
+  it('still reconciles when wrapped in executeCacheUpdate', () => {
+    const cache = createMockCache();
+    buildAddItemsReconcileUpdate({
+      listId: 'sl-closure',
+      wrap: { message: 'Cache update failed:' },
+    })(cache, successData, variables);
+    expect(cache.modify).toHaveBeenCalled();
   });
 });

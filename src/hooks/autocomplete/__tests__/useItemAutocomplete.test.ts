@@ -9,17 +9,32 @@ import {
 } from '#operations/item/item.generated';
 import { useItemAutocomplete } from '../useItemAutocomplete';
 import type { RootState } from '#store/index';
+import { ItemType, type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
+const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
+  __typename: 'ItemSuggestion',
+  id,
+  name,
+  type: ItemType.Food,
+  brands: [],
+  category: null,
+  defaultUnit: null,
+  displayUnit: null,
+  imageUrl: null,
+  netWeight: null,
+});
+
 let mockIsOnline = true;
+let mockCachedItemSuggestions: ItemSuggestion[] = [];
 const mockAddCachedItemSuggestions = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const getState = () =>
     ({
       isOnline: mockIsOnline,
-      cachedItemSuggestions: [],
+      cachedItemSuggestions: mockCachedItemSuggestions,
       addCachedItemSuggestions: mockAddCachedItemSuggestions,
     } as Partial<RootState> as RootState);
   return {
@@ -65,6 +80,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockCachedItemSuggestions = [];
 });
 
 afterEach(() => {
@@ -191,5 +207,32 @@ describe('useItemAutocomplete', () => {
     const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it('offline cold-start: serves persisted seen-items as fallback suggestions', () => {
+    // Simulates a cold start where the persisted LRU (cachedItemSuggestions)
+    // was rehydrated but there is no network. With localFirst active offline,
+    // a matching cached item must surface without any query firing.
+    mockIsOnline = false;
+    mockCachedItemSuggestions = [
+      makeSuggestion('i1', 'Milk'),
+      makeSuggestion('i2', 'Bread'),
+    ];
+
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
+
+    act(() => {
+      result.current.handleSearchTermChange('mil');
+    });
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(result.current.displayItems).toContainEqual(
+      expect.objectContaining({ id: 'i1', name: 'Milk' }),
+    );
+    expect(result.current.displayItems).not.toContainEqual(
+      expect.objectContaining({ id: 'i2' }),
+    );
   });
 });

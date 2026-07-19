@@ -1,3 +1,6 @@
+import { t } from '#/i18n/t';
+import { getI18n } from '#/i18n/config';
+
 /**
  * Version Conflict Error Details
  */
@@ -73,33 +76,47 @@ export function isVersionConflictPayload(payload: {
 const CONFLICT_CODES = new Set(['CONFLICT', 'VERSION_CONFLICT']);
 
 /**
- * Detect a `ConflictError` union member resolved inside a mutation's `data`
- * (errors-as-data), as opposed to a thrown GraphQL error. Under
- * `errorPolicy: 'all'` a conflict resolves as a truthy `data` member and never
- * throws, so this is how the update path reaches the version-conflict refresh
- * UX instead of a generic alert. Returns the member's message (or `null`) when a
- * conflict member is present, otherwise `null` for the whole result.
+ * The `*Error` union member resolved inside a mutation's `data` (errors-as-data)
+ * as opposed to a thrown GraphQL error. Under `errorPolicy: 'all'` an error
+ * resolves as a truthy `data` member and never throws; a single-mutation payload
+ * holds at most one such member. Walks the payload's field values and returns
+ * the first whose `__typename` ends in `Error`, exposing its `typename`, `code`,
+ * and `message` (each `null` when absent), or `null` when none is present.
  */
-export function findConflictDataMember(
+export function findFirstErrorMember(
   data: unknown,
-): { message: string | null } | null {
+): { typename: string; code: string | null; message: string | null } | null {
   if (!data || typeof data !== 'object') return null;
   for (const value of Object.values(data as Record<string, unknown>)) {
     if (!value || typeof value !== 'object') continue;
     const typename = (value as { __typename?: unknown }).__typename;
+    if (typeof typename !== 'string' || !typename.endsWith('Error')) continue;
     const code = (value as { code?: unknown }).code;
-    const isConflict =
-      typename === 'ConflictError' ||
-      (typeof typename === 'string' &&
-        typename.endsWith('Error') &&
-        typeof code === 'string' &&
-        CONFLICT_CODES.has(code));
-    if (isConflict) {
-      const message = (value as { message?: unknown }).message;
-      return { message: typeof message === 'string' ? message : null };
-    }
+    const message = (value as { message?: unknown }).message;
+    return {
+      typename,
+      code: typeof code === 'string' ? code : null,
+      message: typeof message === 'string' ? message : null,
+    };
   }
   return null;
+}
+
+/**
+ * Detect a `ConflictError` union member resolved inside a mutation's `data`,
+ * so the update path can reach the version-conflict refresh UX instead of a
+ * generic alert. Returns the member's message (or `null`) when the resolved
+ * error member is a conflict, otherwise `null`.
+ */
+export function findConflictDataMember(
+  data: unknown,
+): { message: string | null } | null {
+  const member = findFirstErrorMember(data);
+  if (!member) return null;
+  const isConflict =
+    member.typename === 'ConflictError' ||
+    (member.code !== null && CONFLICT_CODES.has(member.code));
+  return isConflict ? { message: member.message } : null;
 }
 
 /**
@@ -158,10 +175,12 @@ export function getVersionConflictMessage(error: unknown): string {
   const details = getVersionConflictDetails(error);
 
   if (!details) {
-    return 'This item was updated by another user. Please refresh and try again.';
+    return t('errors.entityUpdatedBody');
   }
 
-  return `This ${details.resourceType.toLowerCase()} was updated by another user. Please refresh and try again.`;
+  return getI18n().t('errors.entityUpdatedBodyTyped', {
+    entity: details.resourceType.toLowerCase(),
+  });
 }
 
 /**

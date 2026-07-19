@@ -4,6 +4,8 @@ import {
   getVersionConflictDetails,
   getVersionConflictMessage,
   handleVersionConflict,
+  findFirstErrorMember,
+  findConflictDataMember,
 } from '../versionConflict';
 
 const makeApolloError = (
@@ -155,6 +157,74 @@ describe('versionConflict', () => {
       expect(
         isVersionConflictPayload({ success: false, code: 'NOT_FOUND' }),
       ).toBe(false);
+    });
+  });
+
+  describe('findFirstErrorMember', () => {
+    it('returns the error member typename, code, and message', () => {
+      expect(
+        findFirstErrorMember({
+          updateItem: {
+            __typename: 'ValidationError',
+            code: 'INVALID',
+            message: 'Name is required',
+          },
+        }),
+      ).toEqual({
+        typename: 'ValidationError',
+        code: 'INVALID',
+        message: 'Name is required',
+      });
+    });
+
+    it('reports null code and message when the member lacks them', () => {
+      expect(
+        findFirstErrorMember({ deletePantry: { __typename: 'NotFoundError' } }),
+      ).toEqual({ typename: 'NotFoundError', code: null, message: null });
+    });
+
+    it('returns null for a success payload with no error member', () => {
+      expect(
+        findFirstErrorMember({
+          updateItem: { __typename: 'UpdateItemPayload', id: '1' },
+        }),
+      ).toBeNull();
+    });
+
+    it('returns null for non-object data', () => {
+      expect(findFirstErrorMember(null)).toBeNull();
+      expect(findFirstErrorMember(undefined)).toBeNull();
+      expect(findFirstErrorMember('nope')).toBeNull();
+    });
+  });
+
+  describe('findConflictDataMember', () => {
+    it('detects a ConflictError member by typename', () => {
+      expect(
+        findConflictDataMember({
+          updateItem: { __typename: 'ConflictError', message: 'Stale' },
+        }),
+      ).toEqual({ message: 'Stale' });
+    });
+
+    it('detects a coded conflict on another error typename', () => {
+      expect(
+        findConflictDataMember({
+          updateItem: {
+            __typename: 'MutationError',
+            code: 'VERSION_CONFLICT',
+            message: null,
+          },
+        }),
+      ).toEqual({ message: null });
+    });
+
+    it('returns null for a non-conflict error member', () => {
+      expect(
+        findConflictDataMember({
+          updateItem: { __typename: 'ValidationError', code: 'INVALID' },
+        }),
+      ).toBeNull();
     });
   });
 });

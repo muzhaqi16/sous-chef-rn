@@ -300,6 +300,69 @@ describe('QueueManager', () => {
   });
 
   // -------------------------------------------------------------------------
+  // drain halts on transient defer
+  // -------------------------------------------------------------------------
+  describe('drain halts on transient defer', () => {
+    beforeEach(() => {
+      // Device online and the reachability breaker closed — the drain would
+      // otherwise keep going; only a per-mutation transient defer should stop it.
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+        apiReachable: true,
+      });
+      manager['validateTokenBeforeReplay'] = jest.fn().mockResolvedValue(true);
+    });
+
+    it('stops the drain when a mutation defers, leaving the tail PENDING and in order', async () => {
+      // createA fails with a one-off 5xx and is deferred back to PENDING;
+      // updateA depends on createA, so replaying it (or createB) ahead of the
+      // un-synced createA would be out-of-order.
+      const createA = makeMutation({
+        id: 'mut-create-a',
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'a' } },
+      });
+      const updateA = makeMutation({
+        id: 'mut-update-a',
+        operationName: 'AdjustPantryItemQuantity',
+        variables: { input: { itemId: 'a' } },
+      });
+      const createB = makeMutation({
+        id: 'mut-create-b',
+        operationName: 'CreatePantryItem',
+        variables: { input: { id: 'b' } },
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        createA,
+        updateA,
+        createB,
+      ]);
+
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          if (mutation.id === 'mut-create-a') {
+            return { success: false, deferred: true, mutationId: mutation.id };
+          }
+          return { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      // Only createA was attempted; the drain broke before updateA/createB, so
+      // they were never dequeued — they stay PENDING for the next drain, in order.
+      expect(processed).toEqual(['mut-create-a']);
+      expect(processed).not.toContain('mut-update-a');
+      expect(processed).not.toContain('mut-create-b');
+      expect(manager['processMutation']).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // classifyError (tested through handleMutationError behavior)
   // -------------------------------------------------------------------------
   describe('classifyError', () => {
@@ -315,13 +378,22 @@ describe('QueueManager', () => {
       expect(result.retryable).toBe(true);
     });
 
-    it('classifies FORBIDDEN as auth error', () => {
+    it('classifies FORBIDDEN as a non-retryable resource-access error, not auth', () => {
       const result = classifyError({
         message: 'Forbidden',
         extensions: { code: 'FORBIDDEN' },
       });
-      expect(result.type).toBe('auth');
-      expect(result.retryable).toBe(true);
+      expect(result.type).not.toBe('auth');
+      expect(result.retryable).toBe(false);
+    });
+
+    it('classifies AUTHZ_FORBIDDEN as a non-retryable resource-access error, not auth', () => {
+      const result = classifyError({
+        message: 'Forbidden',
+        extensions: { code: 'AUTHZ_FORBIDDEN' },
+      });
+      expect(result.type).not.toBe('auth');
+      expect(result.retryable).toBe(false);
     });
 
     it('classifies "expired" message as auth error', () => {
@@ -428,6 +500,9 @@ describe('QueueManager', () => {
       const result = await handleMutationError(mutation, error);
 
       expect(result.success).toBe(false);
+      // The defer is signalled to the drain loop so it stops rather than
+      // replaying later (possibly dependent) mutations ahead of this one.
+      expect(result.deferred).toBe(true);
       // A transient network error must NOT permanently fail the mutation — it
       // stays PENDING (reset retryCount) for the next drain/recovery.
       expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
@@ -597,6 +672,8 @@ describe('QueueManager', () => {
           'ShoppingListItem',
           'cuid-b',
         );
+        // One snapshot for the whole batch, not one per entity id.
+        expect(client.cache.extract).toHaveBeenCalledTimes(1);
       });
 
       it('clears on idempotent convergence too', async () => {

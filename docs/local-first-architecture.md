@@ -392,6 +392,12 @@ parent exists — ordering is correct by construction, no special-casing.
   (`flushCachePersistence`, §1/§6) writes the raw cache snapshot before a kill, and `OptimisticDataPersistence`'s
   microtask flush covers the numeric/toggle ops; in the worst case the **queue replays** the change on next
   launch regardless.
+- **Collaborator-connection staleness window (accepted)** — the shopping-list subscriptions
+  (`useShoppingListSubscriptions.ts`) live-maintain `collaboratorsConnection` membership for the **active
+  list only**. Other lists' collaborator/membership connections are not patched from subscription events;
+  they self-correct via `cache-and-network` on the next visit. With the persisted MMKV cache this means a
+  non-active list can show a briefly stale collaborator set until it is reopened — an expected, accepted
+  window, not a bug (it mirrors the `pantryEvents` active-container-only maintenance).
 
 ## 13. Divergences from the original plan (for the record)
 

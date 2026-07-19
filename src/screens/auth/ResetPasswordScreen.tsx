@@ -43,9 +43,7 @@ async function performPasswordReset(
   successMessage: string,
   defaultErrorMessage: string,
 ): Promise<void> {
-  logger.info('Attempting password reset', {
-    tokenPrefix: token.substring(0, 8) + '...',
-  });
+  logger.info('Attempting password reset');
 
   const result = await resetPassword({
     variables: { input: { token, newPassword } },

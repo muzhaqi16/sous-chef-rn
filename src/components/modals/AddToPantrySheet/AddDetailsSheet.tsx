@@ -19,6 +19,7 @@ import { StoragePage } from './StoragePage';
 import { StockSettingsPage } from './StockSettingsPage';
 import { Text } from '#components/atoms/Text';
 import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
+import { makeIdNameHandler } from '../makeIdNameHandler';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
@@ -171,10 +172,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const [condition, setCondition] = useState<ItemCondition>(ItemCondition.Good);
   const [tags, setTags] = useState('');
   const [brand, setBrand] = useState('');
-  const [, setSelectedBrandId] = useState<string | null>(null);
-  // Brand suggestions are not populated in this form; kept as a stable empty
-  // list for the MainDetailsPage prop contract.
-  const [suggestedBrands] = useState<{ id: string; name: string }[]>([]);
 
   // Form state - Page 4 (Stock + Purchase)
   const [minQuantity, setMinQuantity] = useState('');
@@ -186,41 +183,21 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     AcquisitionMethod.Purchased,
   );
 
-  // Handle store selection (PurchaseInfoInput stores by id; free text isn't sent)
-  const handleStoreSelected = (id: string | null, name: string | null) => {
-    setStoreId(id);
-    if (name) setStoreName(name);
-  };
-
-  // Handle unit selection
-  const handleUnitSelected = (id: string | null, name: string | null) => {
-    setUnitId(id);
-    if (name) setUnit(name);
-  };
-
-  // Handle content unit selection
-  const handleContentUnitSelected = (
-    id: string | null,
-    name: string | null,
-  ) => {
-    setContentUnitId(id);
-    if (name) setContentUnit(name);
-  };
-
-  // Handle pantry net weight unit selection
-  const handlePantryNetWeightUnitSelected = (
-    id: string | null,
-    name: string | null,
-  ) => {
-    setPantryNetWeightUnitId(id);
-    if (name) setPantryNetWeightUnit(name);
-  };
-
-  // Handle weight unit selection
-  const handleWeightUnitSelected = (id: string | null, name: string | null) => {
-    setWeightUnitId(id);
-    if (name) setWeightUnit(name);
-  };
+  // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
+  const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
+  const handleUnitSelected = makeIdNameHandler(setUnitId, setUnit);
+  const handleContentUnitSelected = makeIdNameHandler(
+    setContentUnitId,
+    setContentUnit,
+  );
+  const handlePantryNetWeightUnitSelected = makeIdNameHandler(
+    setPantryNetWeightUnitId,
+    setPantryNetWeightUnit,
+  );
+  const handleWeightUnitSelected = makeIdNameHandler(
+    setWeightUnitId,
+    setWeightUnit,
+  );
 
   // Handle storage location selection
   const handleStorageLocationSelected = (
@@ -242,11 +219,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const handleAddNewLocation = (name: string) => {
     setStorageLocation(name);
     setSelectedStorageLocationId(null);
-  };
-
-  // Handle brand selection
-  const handleBrandSelected = (brandId: string | null) => {
-    setSelectedBrandId(brandId);
   };
 
   // Handle page change
@@ -321,8 +293,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           setItemName={setItemName}
           brand={brand}
           setBrand={setBrand}
-          suggestedBrands={suggestedBrands}
-          handleBrandSelected={handleBrandSelected}
           category={category}
           setCategory={setCategory}
           expirationDate={expirationDate}

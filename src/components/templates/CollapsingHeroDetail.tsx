@@ -6,6 +6,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -143,6 +144,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
   children,
   testID,
 }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const hasHero = !!renderHero;
   const heroHeight = HERO_IMAGE_HEIGHT + insets.top;
@@ -253,6 +255,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
               icon: 'arrow-back',
               onPress: onBack,
               tone: 'textPrimary',
+              accessibilityLabel: t('labels.goBack'),
             }}
           />
           {/* Always mounted; the interpolated opacity (and pointerEvents

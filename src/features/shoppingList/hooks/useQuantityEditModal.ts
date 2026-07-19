@@ -6,6 +6,7 @@ import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { t } from '#/i18n/t';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -108,7 +109,7 @@ export function useQuantityEditModal(
   const selectedItem: QuantityEditItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
-        itemName: selectedItemRaw.itemName || 'Item',
+        itemName: selectedItemRaw.itemName || t('labels.item'),
         quantity: selectedItemRaw.quantity ?? 0,
         unitName:
           selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,

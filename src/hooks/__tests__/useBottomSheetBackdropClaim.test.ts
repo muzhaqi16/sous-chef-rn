@@ -18,9 +18,10 @@ jest.mock('#components/providers/OverlayBackdropProvider', () => ({
 }));
 
 // Capture the release reaction's `react` callback so tests can simulate the
-// sheet's `animatedIndex` settling at the closed anchor (-1) — which is what
-// drives release in v3 (no longer gorhom's `onChange(-1)`). `scheduleOnRN` is
-// auto-mocked to invoke its function synchronously
+// sheet's `animatedIndex` settling at the closed anchor (-1). That reaction is
+// the BACKSTOP release for interrupted closes; the primary, reliable release for
+// a BottomSheetModal is gorhom's `onChange(-1)` (asserted separately below).
+// `scheduleOnRN` is auto-mocked to invoke its function synchronously
 // (__mocks__/react-native-worklets.js).
 let reactToClose:
   | ((closed: boolean, previous: boolean | null) => void)

@@ -20,6 +20,7 @@ import {
 } from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
 import { t } from '#/i18n/t';
+import { getI18n } from '#/i18n/config';
 
 export interface VersionConflictConfig {
   /** Name of the item being updated (e.g., "Item", "Home", "Recipe"). */
@@ -81,10 +82,14 @@ export const handleVersionConflictAlert = (
 export const alertVersionConflict = (
   config: VersionConflictConfig = {},
 ): void => {
-  const { itemName = 'Item', onRefresh, customMessage } = config;
+  const { itemName, onRefresh, customMessage } = config;
+  // Parameterized so the entity + word order localize per language (some read
+  // "Updated {entity}", not "{entity} Updated"). Callers pass an already-
+  // translated entity label; the default is the generic localized "item".
+  const entity = itemName ?? t('errors.entityItem');
 
   alertService.alert(
-    `${itemName} ${t('labels.updated')}`,
+    getI18n().t('errors.entityUpdatedTitle', { entity }),
     customMessage || getVersionConflictMessage(undefined),
     [
       { text: t('labels.refresh'), onPress: () => onRefresh?.() },

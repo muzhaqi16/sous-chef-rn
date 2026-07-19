@@ -6,6 +6,7 @@ import {
   resetPasswordSchema,
   changePasswordSchema,
 } from '../auth';
+import { changeLanguage } from '#/i18n/config';
 
 describe('loginSchema', () => {
   it('validates a correct login', async () => {
@@ -91,10 +92,9 @@ describe('forgotPasswordSchema', () => {
 });
 
 describe('getEmailVerificationValidationSchema', () => {
-  // Identity translator — error messages surface as their i18n keys.
-  const emailVerificationSchema = getEmailVerificationValidationSchema(
-    key => key,
-  );
+  // No translate function is threaded in; the schema resolves its messages
+  // lazily from the active locale (English in tests).
+  const emailVerificationSchema = getEmailVerificationValidationSchema();
 
   it('validates 6-digit code', async () => {
     await expect(
@@ -105,19 +105,19 @@ describe('getEmailVerificationValidationSchema', () => {
   it('rejects non-6-digit code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: '12345' }),
-    ).rejects.toThrow('auth.codeMustBeSixDigits');
+    ).rejects.toThrow('6 digits');
   });
 
   it('rejects non-numeric code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: 'abcdef' }),
-    ).rejects.toThrow('auth.codeMustBeSixDigits');
+    ).rejects.toThrow('6 digits');
   });
 
   it('rejects empty code', async () => {
     await expect(
       emailVerificationSchema.validate({ code: '' }),
-    ).rejects.toThrow('auth.codeRequired');
+    ).rejects.toThrow('code is required');
   });
 });
 
@@ -166,5 +166,33 @@ describe('changePasswordSchema', () => {
     await expect(
       changePasswordSchema.validate({ ...valid, currentPassword: '' }),
     ).rejects.toThrow();
+  });
+});
+
+describe('lazy localization across language switches', () => {
+  afterEach(async () => {
+    await changeLanguage('en');
+  });
+
+  it('resolves a schema message in the language active at validation time', async () => {
+    // The schemas are built once at module import (English active). The lazy
+    // msg() lookup must reflect a later language switch, not the import-time
+    // language.
+    await changeLanguage('es');
+    await expect(
+      signUpSchema.validate({
+        name: 'John Doe',
+        email: 'john@example.com',
+        password: 'Pass1234',
+        confirmPassword: 'Different1',
+      }),
+    ).rejects.toThrow('deben coincidir');
+  });
+
+  it('resolves a shared common rule message in the active language', async () => {
+    await changeLanguage('it');
+    await expect(
+      loginSchema.validate({ email: 'notanemail', password: 'Pass1234' }),
+    ).rejects.toThrow('indirizzo email valido');
   });
 });

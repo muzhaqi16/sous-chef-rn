@@ -22,7 +22,7 @@ import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
@@ -124,39 +124,19 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   const [addItemMutation, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
     {
-      update(cache, { data }, { variables }) {
-        const payload = data?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !shoppingListId ||
-          !variables
-        ) {
-          return;
-        }
-        // Single add via the batch mutation — the created/merged row is the one
-        // entry in `results`. Null when that item failed.
-        const newItem = payload.results[0]?.item;
-        if (!newItem) return;
-        executeCacheUpdate(
-          () =>
-            reconcileShoppingItemCreateUpdate(
-              cache,
-              shoppingListId,
-              newItem,
-              variables.input.items[0]?.id,
-            ),
-          'Cache update failed for addItem:',
-        );
-      },
+      update: buildAddItemsReconcileUpdate({
+        listId: shoppingListId,
+        wrap: { message: 'Cache update failed for addItem:' },
+      }),
     },
   );
 
   // Keep the sheet "open" across the barcode navigation so the user lands
-  // back on it if they cancel. useStandardBottomSheet's dismissOnBlur
-  // (default true) dismisses the underlying BottomSheetModal on screen blur
-  // and re-presents it on refocus, keeping the global backdrop's ref-count
-  // clean. Calling onClose() here would flip visible to false before blur,
-  // short-circuiting that cleanup and leaving the backdrop stuck on return.
+  // back on it if they cancel. useStandardBottomSheet dismisses the underlying
+  // BottomSheetModal when the screen blurs but preserves `visible`, so its
+  // focus effect re-presents the sheet on return. Calling onClose() here would
+  // flip `visible` to false before the blur, so the sheet would stay closed on
+  // return instead of restoring.
   const handleScanPress = () => {
     toBarcode({
       source: 'shoppingList',

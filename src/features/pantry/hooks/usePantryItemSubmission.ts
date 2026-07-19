@@ -15,6 +15,7 @@ import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   getPantryItemDuplicateFromResult,
@@ -347,10 +348,29 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
               }),
             'Restock pantry item error:',
           );
-          if (!restockResult) {
+          // executeMutation returns false only when the call threw; under
+          // errorPolicy 'all' a transport/GraphQL error instead resolves as
+          // `{ error }`. restockPantryItem has no `onError`, so surface both the
+          // throw and the resolved-error cases here.
+          if (!restockResult || restockResult.error) {
             alertService.alert(
-              'Error',
-              'Failed to restock item. Please try again.',
+              t('labels.error'),
+              t('errors.restockFailedRetry'),
+            );
+            return;
+          }
+          // A resolved non-success union member carries no `error`, so classify
+          // it — a bare falsy check would treat the refusal as success.
+          if (
+            classifyCreateResult(
+              restockResult,
+              'restockPantryItem',
+              'RestockPantryItemPayload',
+            ) === 'rejected'
+          ) {
+            alertRejectedMutation(
+              restockResult,
+              t('errors.restockFailedRetry'),
             );
             return;
           }
@@ -368,8 +388,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           );
           if (!retryResult) {
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
             return;
           }
@@ -380,8 +400,8 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
             onSuccess();
           } else {
             alertService.alert(
-              'Error',
-              'Failed to add item. Please try again.',
+              t('labels.error'),
+              t('errors.addItemFailedRetry'),
             );
           }
         },

@@ -9,6 +9,14 @@ import { Text } from '#components/atoms/Text';
 import { getSpoonacularIngredientImageUrl } from '#services/recipeApi/utils';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 
+// Estimated ingredient prices are in US dollars (see the price field below).
+// Format through Intl so the symbol and placement follow the active locale
+// instead of a hard-coded `$` prefix.
+const priceFormatter = new Intl.NumberFormat(undefined, {
+  style: 'currency',
+  currency: 'USD',
+});
+
 interface IngredientCardProps {
   ingredient: DisplayIngredient;
   isAdded: boolean;
@@ -76,7 +84,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
           style={styles.price}
           numberOfLines={1}
         >
-          ${estimatedPrice.toFixed(2)}
+          {priceFormatter.format(estimatedPrice)}
         </Text>
       ) : null}
       {isAdded ? (

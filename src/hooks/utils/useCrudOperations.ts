@@ -29,7 +29,10 @@ import {
   handleMutationErrorAlert,
   alertVersionConflict,
 } from '#/utils/errorHandlers';
-import { findConflictDataMember } from '#/utils/errors/versionConflict';
+import {
+  findConflictDataMember,
+  findFirstErrorMember,
+} from '#/utils/errors/versionConflict';
 import { t } from '#/i18n/t';
 
 /**
@@ -37,32 +40,20 @@ import { t } from '#/i18n/t';
  *
  * These CRUD helpers are type-erased (they don't know the success typename), so
  * unlike call sites they can't use `classifyCreateResult`. Detect the `*Error`
- * union member by its typename suffix — under `errorPolicy:'all'` it resolves as
- * truthy `data` and would otherwise be treated as success. Returns true (and
- * alerts + reports) when an error was surfaced.
+ * union member via the shared `findFirstErrorMember` scanner — under
+ * `errorPolicy:'all'` it resolves as truthy `data` and would otherwise be
+ * treated as success. Returns true (and alerts + reports) when an error was
+ * surfaced.
  */
 function surfaceCrudDataError(data: unknown, operationName: string): boolean {
-  if (!data || typeof data !== 'object') return false;
-  for (const value of Object.values(data as Record<string, unknown>)) {
-    if (
-      value &&
-      typeof value === 'object' &&
-      typeof (value as { __typename?: unknown }).__typename === 'string' &&
-      (value as { __typename: string }).__typename.endsWith('Error')
-    ) {
-      const raw = (value as { message?: unknown }).message;
-      const message =
-        typeof raw === 'string' && raw.length > 0
-          ? raw
-          : t('errors.somethingWentWrong');
-      alertService.alert(t('labels.error'), message);
-      errorService.reportError(new Error(`${operationName}: ${message}`), {
-        operation: operationName,
-      });
-      return true;
-    }
-  }
-  return false;
+  const member = findFirstErrorMember(data);
+  if (!member) return false;
+  const message = member.message || t('errors.somethingWentWrong');
+  alertService.alert(t('labels.error'), message);
+  errorService.reportError(new Error(`${operationName}: ${message}`), {
+    operation: operationName,
+  });
+  return true;
 }
 
 /**
@@ -362,7 +353,7 @@ async function executeRemoveImpl<TResult>(
     return result.data;
   }
 
-  alertService.alert('Error', `Failed to ${operationName.toLowerCase()}`);
+  alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
   return false;
 }
 

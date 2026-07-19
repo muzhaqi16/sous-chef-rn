@@ -73,7 +73,18 @@
     "invalidOperation": "Invalid operation",
     "invalidUnitTitle": "Invalid Unit",
     "addItemFailedRetry": "Failed to add item. Please try again.",
-    "restockFailedRetry": "Failed to restock item. Please try again."
+    "restockFailedRetry": "Failed to restock item. Please try again.",
+    "adjustQuantityFailed": "Could not adjust the quantity.",
+    "openBatchFailed": "Could not open this batch.",
+    "wasteBatchFailed": "Could not mark this as wasted.",
+    "updateShoppingItemFailed": "Could not update the item.",
+    "entityUpdatedTitle": "{{entity}} Updated",
+    "entityUpdatedBody": "This item was updated by another user. Please refresh and try again.",
+    "entityUpdatedBodyTyped": "This {{entity}} was updated by another user. Please refresh and try again.",
+    "entityItem": "Item",
+    "entityHome": "Home",
+    "entityMember": "Member",
+    "entityInvite": "Invite"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -177,7 +188,10 @@
     "enableNow": "Enable Now",
     "refresh": "Refresh",
     "updated": "Updated",
-    "validationError": "Validation Error"
+    "validationError": "Validation Error",
+    "item": "Item",
+    "addNamed": "Add {{name}}",
+    "dismissNamed": "Dismiss {{name}}"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -287,7 +301,12 @@
     "legalNotice": "By continuing, you agree to our",
     "termsLink": "Terms & Conditions",
     "legalAnd": "and",
-    "privacyLink": "Privacy Policy"
+    "privacyLink": "Privacy Policy",
+    "fullNameRequired": "Full name is required",
+    "fullNameMin": "Full name must be at least 2 characters",
+    "newPasswordConfirmRequired": "Please confirm your new password",
+    "currentPasswordRequired": "Current password is required",
+    "newPasswordMustDiffer": "New password must be different from current password"
   },
   "recipes": {
     "name": "Recipe Name",
@@ -577,7 +596,14 @@
       "SULFITE": "Sulfite",
       "TREE_NUT": "Tree Nut",
       "WHEAT": "Wheat"
-    }
+    },
+    "macroCalories": "Calories",
+    "macroProtein": "Protein",
+    "macroCarbohydrates": "Carbohydrates",
+    "macroFat": "Fat",
+    "macroFiber": "Fiber",
+    "macroSugar": "Sugar",
+    "macroSodium": "Sodium"
   },
   "recipeFilters": {
     "title": "Filters",
@@ -702,6 +728,7 @@
     "failedToComplete": "Failed to update list status",
     "failedToReactivate": "Failed to reactivate list",
     "failedToArchive": "Failed to archive list",
+    "failedToClear": "Failed to clear items",
     "failedToSetDefault": "Failed to set default list",
     "recurringSection": "Recurring",
     "recurringPatternLabel": "Repeats",
@@ -1220,7 +1247,13 @@
       "expiresInDays": "{{name}} expires in {{days}} days",
       "qualifierOpened": "{{name}} (opened {{date}})",
       "qualifierAdded": "{{name}} (added {{date}})"
-    }
+    },
+    "categoryAll": "All",
+    "categoryHome": "Home",
+    "categoryPantry": "Pantry",
+    "categoryRecipe": "Recipe",
+    "categoryShopping": "Shopping",
+    "categorySystem": "System"
   },
   "settings": {
     "appSettings": "App Settings",
@@ -1770,7 +1803,12 @@
     "selectListLabel": "Select a list",
     "noLists": "No shopping lists found",
     "generatingMessage": "Generating shopping list...",
-    "itemsCount": "{{count}} items"
+    "itemsCount": "{{count}} items",
+    "readyNothingToAdd": "\"{{name}}\" is ready — nothing to add.",
+    "createdSuccess_one": "Shopping list \"{{name}}\" created with {{count}} item{{shared}}",
+    "createdSuccess_other": "Shopping list \"{{name}}\" created with {{count}} items{{shared}}",
+    "sharedSuffix": " (shared with {{homeName}})",
+    "generateFailed": "Failed to generate shopping list"
   },
   "saveAsTemplate": {
     "title": "Save as Template",
@@ -2011,7 +2049,12 @@
     "removeFromShoppingDesc": "Turn off to keep the item in your shopping list",
     "stateAmbient": "Ambient",
     "stateRefrigerated": "Refrigerated",
-    "stateFrozen": "Frozen"
+    "stateFrozen": "Frozen",
+    "noListSelected": "No shopping list selected",
+    "movedItems_one": "Moved {{count}} item to pantry{{skipped}}",
+    "movedItems_other": "Moved {{count}} items to pantry{{skipped}}",
+    "skippedSuffix": " ({{skippedCount}} skipped)",
+    "noItemsMoved": "No items could be moved to pantry"
   },
   "pantryAction": {
     "useByDefault": "Use by",
@@ -2772,5 +2815,32 @@
     "avatarUpdateFailedBody": "Failed to update profile avatar",
     "coverUpdateFailedBody": "Failed to update profile cover",
     "itemImageUpdateFailedBody": "Failed to update item image"
+  },
+  "mealTemplateActions": {
+    "planCreated": "Meal plan created from template!",
+    "savedAsTemplate": "Meal plan saved as template!",
+    "templateDeleted": "Template deleted",
+    "templateDuplicated": "Template duplicated!"
+  },
+  "accountEvents": {
+    "removedFromHome": "You were removed from a home",
+    "addedToHome": "You were added to a new home",
+    "removedFromShoppingList": "You were removed from a shopping list",
+    "addedToShoppingList": "You were added to a shopping list",
+    "accountBanned": "Your account has been banned{{reason}}",
+    "accountSuspended": "Your account has been suspended{{reason}}",
+    "reasonSuffix": ": {{reason}}",
+    "warningReceived": "You received a warning from a moderator"
+  },
+  "commonValidation": {
+    "emailInvalid": "Please enter a valid email address",
+    "emailRequired": "Email is required",
+    "passwordRequired": "Password is required",
+    "passwordMin": "Password must be at least 8 characters",
+    "passwordLetter": "At least one letter required",
+    "passwordNumber": "At least one number required",
+    "nameMin": "Name must be at least 2 characters",
+    "nameMax": "Name must be less than 50 characters",
+    "nameChars": "Name can only contain letters, spaces, hyphens, and apostrophes"
   }
 }

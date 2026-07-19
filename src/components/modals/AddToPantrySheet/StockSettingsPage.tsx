@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { StyleSheet } from 'react-native-unistyles';
+import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
@@ -128,16 +129,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  page: {
-    flex: 1,
-    minHeight: '100%',
-    flexGrow: 1,
-  },
-  pageContent: {
-    padding: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-    flexGrow: 1,
-  },
+  ...detailsPageBaseStyles(theme),
   sectionTitle: {
     marginBottom: theme.spacing.xs,
   },
@@ -151,8 +143,5 @@ const styles = StyleSheet.create(theme => ({
   purchaseTitle: {
     marginTop: theme.spacing.xl,
     marginBottom: theme.spacing.md,
-  },
-  section: {
-    marginBottom: theme.spacing.sm,
   },
 }));

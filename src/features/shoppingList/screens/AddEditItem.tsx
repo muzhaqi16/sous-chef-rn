@@ -35,7 +35,7 @@ import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
@@ -115,25 +115,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const [addItem] = useMutation(AddItemToShoppingListDocument, {
     // Reconcile the server response with the item written into the cache before
     // the create fired.
-    update: (cache, { data: mutationData }, { variables }) => {
-      const payload = mutationData?.addItemsToShoppingList;
-      if (
-        payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-        !variables
-      ) {
-        return;
-      }
-      // Single add via the batch mutation — the created/merged row is the one
-      // entry in `results`. Null when that item failed.
-      const newItem = payload.results[0]?.item;
-      if (!newItem) return;
-      reconcileShoppingItemCreateUpdate(
-        cache,
-        listId,
-        newItem,
-        variables.input.items[0]?.id,
-      );
-    },
+    update: buildAddItemsReconcileUpdate({ listId }),
     onError: error => {
       errorService.reportError(error, {
         operation: 'ShoppingListItem.addItem',

@@ -60,8 +60,8 @@ export const NotificationDetailScreen: React.FC<
 
           <View style={styles.content}>
             <Text variant="body" lineHeight="relaxed" style={styles.message}>
-              {payload.message ||
-                getNotificationDisplayMessage(notification, t) ||
+              {getNotificationDisplayMessage(notification, t) ||
+                payload.message ||
                 t('notifications.noMessageAvailable')}
             </Text>
 

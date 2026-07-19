@@ -6,7 +6,7 @@ import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 
 interface NutrientRow {
-  label: string;
+  labelKey: string;
   value: string;
 }
 
@@ -18,15 +18,19 @@ function asRecord(x: unknown): Record<string, unknown> | null {
     : null;
 }
 
-const MACRO_ORDER = [
-  'Calories',
-  'Protein',
-  'Carbohydrates',
-  'Fat',
-  'Fiber',
-  'Sugar',
-  'Sodium',
-];
+// Keys are the Spoonacular nutrient `name` values (matched against the blob);
+// values are the i18n keys whose label is resolved at render time so the macro
+// names follow the active language.
+const MACRO_LABEL_KEYS: Record<string, string> = {
+  Calories: 'recipes.macroCalories',
+  Protein: 'recipes.macroProtein',
+  Carbohydrates: 'recipes.macroCarbohydrates',
+  Fat: 'recipes.macroFat',
+  Fiber: 'recipes.macroFiber',
+  Sugar: 'recipes.macroSugar',
+  Sodium: 'recipes.macroSodium',
+};
+const MACRO_ORDER = Object.keys(MACRO_LABEL_KEYS);
 
 /** Pull the common macros out of a Spoonacular-style `{ nutrients: [...] }` blob. */
 function parseNutrition(data: unknown): NutrientRow[] {
@@ -42,7 +46,7 @@ function parseNutrition(data: unknown): NutrientRow[] {
     if (Number.isNaN(amount)) continue;
     const unit = typeof rec.unit === 'string' ? rec.unit : '';
     rows.push({
-      label: name,
+      labelKey: MACRO_LABEL_KEYS[name],
       value: `${Math.round(amount)}${unit ? ` ${unit}` : ''}`,
     });
   }
@@ -97,12 +101,12 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
               </View>
             )}
             {nutrients.map(row => (
-              <View key={row.label} style={styles.nutrientCell}>
+              <View key={row.labelKey} style={styles.nutrientCell}>
                 <Text size="sm" weight="semibold">
                   {row.value}
                 </Text>
                 <Text size="xs" tone="secondary">
-                  {row.label}
+                  {t(row.labelKey)}
                 </Text>
               </View>
             ))}

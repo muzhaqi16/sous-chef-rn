@@ -252,7 +252,22 @@ jest.mock('#features/registry', () => ({
   FEATURE_REGISTRY: [],
 }));
 
-import { Navigation } from '../RootNavigator';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { Navigation, featureDetailOptions } from '../RootNavigator';
+
+// The static config passed to the (mocked) navigator factory. `createNativeStackScreen`
+// is mocked as identity, so each screen entry is its raw `{ screen, options, linking }`
+// config. Captured once here at import time because beforeEach's `clearAllMocks`
+// wipes `mock.calls`.
+const rootStackConfig = (createNativeStackNavigator as jest.Mock).mock
+  .calls[0][0] as {
+  groups: Record<
+    string,
+    {
+      screens: Record<string, { options?: unknown; linking?: unknown }>;
+    }
+  >;
+};
 
 describe('Navigation (RootNavigator)', () => {
   beforeEach(() => {
@@ -346,5 +361,49 @@ describe('Navigation (RootNavigator)', () => {
     // In main_app the biometric gate is not rendered (it's its own screen under
     // the biometric_setup state, not an overlay), so nothing biometric appears.
     expect(queryByTestId('biometric-prompt')).toBeNull();
+  });
+});
+
+describe('deep-link safety — lifted feature screens', () => {
+  // The lifted feature detail/sub screens all share the `featureDetailOptions`
+  // reference. The app enables deep linking with only `prefixes` (no
+  // `enabled: 'auto'`), so a screen is deep-linkable purely by what it declares.
+  // Every lifted screen must therefore declare an explicit `linking` intent —
+  // `linking: null` to opt out, or a path string to keep a shared link working.
+  // This locks the invariant against future screen additions that forget it.
+  it('every lifted feature screen declares an explicit linking intent', () => {
+    const mainAppScreens = rootStackConfig.groups.MainApp.screens;
+    const liftedScreens = Object.entries(mainAppScreens).filter(
+      ([, config]) => config.options === featureDetailOptions,
+    );
+
+    // Sanity: the reference filter actually matched the lifted screens (guards
+    // against featureDetailOptions being refactored out from under the test).
+    expect(liftedScreens.length).toBeGreaterThanOrEqual(19);
+
+    for (const [name, config] of liftedScreens) {
+      const declaresIntent =
+        config.linking === null ||
+        (typeof config.linking === 'string' && config.linking.length > 0);
+
+      // Object form so a failure names the offending screen and its value.
+      expect({ screen: name, linking: config.linking, declaresIntent }).toEqual(
+        expect.objectContaining({ declaresIntent: true }),
+      );
+    }
+  });
+
+  it('lifted feature screens are not deep-linkable (all opt out with linking: null)', () => {
+    const mainAppScreens = rootStackConfig.groups.MainApp.screens;
+    const liftedScreens = Object.entries(mainAppScreens).filter(
+      ([, config]) => config.options === featureDetailOptions,
+    );
+
+    for (const [name, config] of liftedScreens) {
+      expect({ screen: name, linking: config.linking }).toEqual({
+        screen: name,
+        linking: null,
+      });
+    }
   });
 });

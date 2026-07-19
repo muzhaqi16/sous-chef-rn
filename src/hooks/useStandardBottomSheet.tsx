@@ -198,6 +198,12 @@ export function useStandardBottomSheet({
   }, [navigation]);
 
   const isPresentedRef = useRef(false);
+  // Set when the upcoming dismiss is caused purely by the screen losing focus
+  // (the consumer still wants the sheet open, `visible` is still true). Read and
+  // cleared in `safeOnDismiss` so a blur-close doesn't notify the consumer —
+  // otherwise `visible` would be cleared and the sheet couldn't re-present on
+  // refocus.
+  const blurDismissRef = useRef(false);
   useEffect(() => {
     if (visible === undefined) return;
     const active = visible && isFocused;
@@ -206,6 +212,11 @@ export function useStandardBottomSheet({
       ref.current?.present();
     } else if (!active && isPresentedRef.current) {
       isPresentedRef.current = false;
+      // `!active` with `visible` still true means the screen blurred (not a
+      // consumer close) — flag it so `safeOnDismiss` preserves `visible`.
+      if (visible) {
+        blurDismissRef.current = true;
+      }
       ref.current?.dismiss();
     }
   }, [visible, isFocused]);
@@ -269,6 +280,13 @@ export function useStandardBottomSheet({
     // wedge gorhom and break the next `present()`.
     isPresentedRef.current = false;
     handleBackdrop(-1);
+    // A blur-triggered dismiss releases the backdrop (above) but must NOT notify
+    // the consumer: keeping `visible` true lets the focus effect re-present the
+    // sheet with its typed state when the screen regains focus.
+    if (blurDismissRef.current) {
+      blurDismissRef.current = false;
+      return;
+    }
     onDismiss();
   };
 

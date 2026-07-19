@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
+import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
@@ -194,19 +195,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  page: {
-    flex: 1,
-    minHeight: '100%',
-    flexGrow: 1,
-  },
-  pageContent: {
-    padding: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-    flexGrow: 1,
-  },
-  section: {
-    marginBottom: theme.spacing.sm,
-  },
+  ...detailsPageBaseStyles(theme),
   sectionDescription: {
     marginBottom: theme.spacing.md,
   },

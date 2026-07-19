@@ -1,20 +1,14 @@
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 /**
  * Whether the server can't currently be reached — drives the persistent
  * offline indicator (`OfflineStatusPill`) and transition toaster
  * (`OfflineTransitionToaster`) via `useOfflineStatus`.
  *
- * Covers all three "offline" cases so callers don't have to reassemble them:
- * device offline, API breaker open while the device is online, and
- * user-toggled offline mode.
+ * Reuses the shared `isApiUnavailable` selector (device offline OR the API
+ * reachability breaker being open) and adds the user-toggled offline mode, so
+ * the banner condition stays in step with the rest of the offline policy.
  */
-export const useIsOfflineBannerVisible = (): boolean => {
-  const isOnline = useIsOnline();
-  const apiReachable = useAppStore(state => state.apiReachable);
-  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
-  // Covers both "can't reach the server" cases — device offline AND API down
-  // while the device is online (reachability breaker open) — plus the
-  // user-toggled offline mode.
-  return !isOnline || apiReachable === false || offlineModeEnabled;
-};
+export const useIsOfflineBannerVisible = (): boolean =>
+  useAppStore(state => isApiUnavailable(state) || state.offlineModeEnabled);

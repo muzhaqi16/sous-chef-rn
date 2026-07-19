@@ -52,7 +52,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   return {
     addNewItemToShoppingListCache: jest.fn(),
     adoptServerShoppingListItemId: jest.fn(),
-    reconcileShoppingItemCreateUpdate: jest.fn(),
+    buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
     revertOptimisticShoppingListItem,
     addOptimisticShoppingListItem: jest.fn(),
     createOptimisticShoppingListItem: jest.fn((id: string) => ({

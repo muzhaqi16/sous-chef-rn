@@ -34,6 +34,8 @@ import { UserSubtype } from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { t } from '#/i18n/t';
+import { getI18n } from '#/i18n/config';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 
@@ -70,12 +72,12 @@ function handleRemovedFromHome(
     store.setSelectedShoppingListId(null);
   }
 
-  toastService.error('You were removed from a home');
+  toastService.error(t('accountEvents.removedFromHome'));
 }
 
 function handleAddedToHome(client: SubscriptionApolloClient) {
   client.refetchQueries({ include: [GetHomesDocument] });
-  toastService.success('You were added to a new home');
+  toastService.success(t('accountEvents.addedToHome'));
 }
 
 function handleRemovedFromShoppingList(
@@ -92,20 +94,25 @@ function handleRemovedFromShoppingList(
     store.setSelectedShoppingListId(null);
   }
 
-  toastService.error('You were removed from a shopping list');
+  toastService.error(t('accountEvents.removedFromShoppingList'));
 }
 
 function handleAddedToShoppingList() {
-  toastService.success('You were added to a shopping list');
+  toastService.success(t('accountEvents.addedToShoppingList'));
 }
 
 function handleBannedOrSuspended(
   payload: UserEventPayload,
   subtype: UserSubtype,
 ) {
-  const label = subtype === UserSubtype.Banned ? 'banned' : 'suspended';
-  const reason = payload.reason ? `: ${payload.reason}` : '';
-  toastService.error(`Your account has been ${label}${reason}`);
+  const reason = payload.reason
+    ? getI18n().t('accountEvents.reasonSuffix', { reason: payload.reason })
+    : '';
+  const message =
+    subtype === UserSubtype.Banned
+      ? getI18n().t('accountEvents.accountBanned', { reason })
+      : getI18n().t('accountEvents.accountSuspended', { reason });
+  toastService.error(message);
   authService.logout();
 }
 
@@ -160,7 +167,7 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Warned:
           toastService.error(
-            payload.reason || 'You received a warning from a moderator',
+            payload.reason || t('accountEvents.warningReceived'),
           );
           break;
 

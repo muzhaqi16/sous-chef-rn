@@ -19,7 +19,8 @@ import {
   type RemoveItemsFromShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
@@ -33,7 +34,7 @@ type ClearMutationFn = (options: {
   variables: RemoveItemsFromShoppingListMutationVariables;
   update?: () => void;
   context?: { localFirst: boolean };
-}) => Promise<unknown>;
+}) => Promise<{ data?: unknown; error?: unknown }>;
 
 // The hook only reads `id` and the array length from the item lists.
 interface ClearableItem {
@@ -94,13 +95,16 @@ async function executeClearItems(
 
   // 'queued' (null payload, no error) keeps the cleared cache — the clear
   // replays later. A rejection means the server refused it: the evicted items
-  // still exist server-side, so refetch to restore them.
-  const outcome = classifyCreateResult(
-    result as { data?: unknown; error?: unknown },
-    'removeItemsFromShoppingList',
-    'RemoveItemsFromShoppingListPayload',
-  );
-  if (outcome === 'rejected') {
+  // still exist server-side, so alert (the eviction would otherwise snap back
+  // silently) and refetch to restore them.
+  if (
+    alertIfRejected(
+      result,
+      'removeItemsFromShoppingList',
+      'RemoveItemsFromShoppingListPayload',
+      t('shoppingListScreens.failedToClear'),
+    )
+  ) {
     await refetch();
   }
 }

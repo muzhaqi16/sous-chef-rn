@@ -157,10 +157,10 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   };
 
   // Keep the sheet "open" across the barcode / identify navigation so the
-  // user lands back on it if they cancel. useStandardBottomSheet's
-  // dismissOnBlur (default true) dismisses the underlying BottomSheetModal
-  // on screen blur and re-presents it on refocus, keeping the global
-  // backdrop's ref-count clean.
+  // user lands back on it if they cancel. useStandardBottomSheet dismisses the
+  // underlying BottomSheetModal when the screen blurs but preserves `visible`,
+  // so its focus effect re-presents the sheet (with the user's typed state) on
+  // return.
   const handleScanPress = () => {
     toBarcode({
       source: 'pantry',

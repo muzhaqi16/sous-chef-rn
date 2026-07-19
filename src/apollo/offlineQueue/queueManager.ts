@@ -193,6 +193,17 @@ export class QueueManager {
         const result = await this.processMutation(mutation);
         if (result.success) succeeded++;
         else failed++;
+
+        // A transient defer left this mutation PENDING. Stop the drain so a
+        // later mutation (which may depend on this one) can't replay ahead of
+        // it — the whole tail stays PENDING for the next drain, preserving
+        // FIFO order. Mirrors the isApiUnavailable break above.
+        if (result.deferred) {
+          logger.info(
+            '🕓 Queue: Mutation deferred (transient), pausing drain to preserve order',
+          );
+          break;
+        }
       } catch (error) {
         failed++;
         logger.error('Queue: Unexpected error processing mutation:', error);
@@ -476,6 +487,7 @@ export class QueueManager {
       );
       return {
         success: false,
+        deferred: true,
         mutationId: mutation.id,
         error: queueError,
       };
@@ -573,7 +585,12 @@ export class QueueManager {
     entityId: string | null;
   } {
     const entityId = this.getEntityId(mutation);
-    return { entityType: this.findCachedTypename(entityId), entityId };
+    if (!entityId) return { entityType: null, entityId: null };
+    const snapshot = this.extractCacheSnapshot();
+    return {
+      entityType: this.findCachedTypename(entityId, snapshot),
+      entityId,
+    };
   }
 
   /**
@@ -602,20 +619,35 @@ export class QueueManager {
    * restore, so skipping it is correct.
    */
   private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
-    for (const entityId of this.getAllEntityIds(mutation)) {
-      const entityType = this.findCachedTypename(entityId);
+    const entityIds = this.getAllEntityIds(mutation);
+    if (entityIds.length === 0) return;
+    // One cache snapshot for every entity this mutation touched — a batch
+    // create scans the single normalized map instead of re-extracting it per id.
+    const snapshot = this.extractCacheSnapshot();
+    for (const entityId of entityIds) {
+      const entityType = this.findCachedTypename(entityId, snapshot);
       if (entityType) {
         optimisticDataPersistence.clearEntity(entityType, entityId);
       }
     }
   }
 
-  private findCachedTypename(entityId: string | null): string | null {
+  /**
+   * A single normalized-cache snapshot. `InMemoryCache.extract()` returns the
+   * entity map keyed by `TypeName:id`; the generic ApolloCache type erases that
+   * to `unknown`. Extract once per mutation and scan the result — the map is
+   * large, so re-extracting per entity id is wasteful.
+   */
+  private extractCacheSnapshot(): Record<string, unknown> {
+    return client.cache.extract() as Record<string, unknown>;
+  }
+
+  private findCachedTypename(
+    entityId: string | null,
+    snapshot: Record<string, unknown>,
+  ): string | null {
     if (!entityId) return null;
     const suffix = `:${entityId}`;
-    // InMemoryCache.extract() returns the normalized entity map keyed by
-    // `TypeName:id`; the generic ApolloCache type erases that to `unknown`.
-    const snapshot = client.cache.extract() as Record<string, unknown>;
     const key = Object.keys(snapshot).find(k => k.endsWith(suffix));
     return key ? key.slice(0, key.length - suffix.length) : null;
   }

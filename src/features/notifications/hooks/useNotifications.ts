@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
@@ -57,12 +57,13 @@ interface NotificationConfig {
 }
 
 /**
- * useNotificationListener — opens the NotificationCreated / NotificationUpdated
- * subscriptions and processes incoming events into the notification store.
+ * useNotificationListener — opens the consolidated `NotificationEvents`
+ * subscription (CREATED + UPDATED on one stream, routed by `subtype`) and
+ * processes incoming events into the notification store.
  *
  * Must be mounted exactly ONCE (by NotificationProvider). The server caps
  * concurrent subscriptions per client and Apollo does not dedupe identical
- * subscriptions, so a second mount opens two more server subscriptions and
+ * subscriptions, so a second mount opens another server subscription and
  * double-processes every event. Screens that need notification state should
  * use `useNotifications` instead — it reads the store without subscribing.
  */
@@ -187,8 +188,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
 
     addNotification(processedNotification);
 
-    // Show push notification if enabled, app is not active, and not quiet time
+    // Show push notification if enabled, app is not active, and not quiet time.
+    // Android only: on iOS the OS already draws the APNs alert for the same
+    // event, so an in-app Notifee draw here would double the tray entry.
     if (
+      Platform.OS === 'android' &&
       finalConfig.showPushNotifications &&
       appStateRef.current !== 'active' &&
       !isQuietTime()
@@ -297,14 +301,20 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // Route taps on OS-auto-displayed pushes (background tap + cold-launch): FCM
   // on Android, APNs on iOS. Each is platform-guarded, so both are safe to call.
   // Taps on data-only pushes we drew ourselves route through Notifee's handlers.
+  //
+  // Gated on authentication: registering synchronously consumes the one-shot
+  // cold-start tap, so running it while logged out would drop a launch tap
+  // before there is a session to route it into. The tap stays cached and is
+  // consumed once the user is authenticated and this effect re-runs.
   useEffect(() => {
+    if (config.skip || !user?.id) return;
     const unsubscribeFcm = registerFcmTapHandlers();
     const unsubscribeApns = registerIosPushTapHandlers();
     return () => {
       unsubscribeFcm();
       unsubscribeApns();
     };
-  }, []);
+  }, [config.skip, user?.id]);
 
   // Cleanup on logout
   useEffect(() => {

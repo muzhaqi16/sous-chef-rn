@@ -21,7 +21,20 @@
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
+// Keep the real MMKV module (zustandStorage, STORAGE_KEY) but make the
+// recovery-instance signal controllable so the plaintext-token guard in
+// partialize can be exercised without provoking a real device-key failure.
+jest.mock('#/storage/mmkv', () => ({
+  ...jest.requireActual('#/storage/mmkv'),
+  isRecoveryStorage: jest.fn(() => false),
+}));
+
 import { useStore, PERSISTED_KEYS } from '#store';
+import { isRecoveryStorage } from '#/storage/mmkv';
+
+afterEach(() => {
+  (isRecoveryStorage as jest.Mock).mockReturnValue(false);
+});
 
 const partializedKeys = (): string[] => {
   const { partialize } = useStore.persist.getOptions();
@@ -34,6 +47,17 @@ describe('store persist options', () => {
   describe('partialize', () => {
     it('emits exactly the PERSISTED_KEYS allowlist', () => {
       expect(partializedKeys().sort()).toEqual([...PERSISTED_KEYS].sort());
+    });
+
+    it('persists the offline autocomplete caches, including the seen-items LRU', () => {
+      const keys = partializedKeys();
+      expect(keys).toContain('cachedUnits');
+      expect(keys).toContain('cachedStores');
+      expect(keys).toContain('cachedBrands');
+      expect(keys).toContain('cachedCategories');
+      // The seen-items LRU must survive cold start so offline item autocomplete
+      // keeps its fallback suggestions.
+      expect(keys).toContain('cachedItemSuggestions');
     });
 
     it('emits no functions (the old spread serialized every store action per write)', () => {
@@ -88,6 +112,26 @@ describe('store persist options', () => {
       >;
       expect(confirmed).not.toHaveProperty('accessToken');
       expect(confirmed).not.toHaveProperty('refreshToken');
+    });
+
+    it('never persists tokens to the unencrypted recovery instance', () => {
+      const { partialize } = useStore.persist.getOptions();
+      (isRecoveryStorage as jest.Mock).mockReturnValue(true);
+
+      // Same doubly-degraded preconditions that would otherwise trip the
+      // keychain-fallback: unconfirmed keychain copy + both tokens present.
+      useStore.setState({
+        accessToken: 'access-1',
+        refreshToken: 'refresh-1',
+        sessionTokensInKeychain: false,
+      });
+      const persisted = partialize!(useStore.getState()) as Record<
+        string,
+        unknown
+      >;
+
+      expect(persisted).not.toHaveProperty('accessToken');
+      expect(persisted).not.toHaveProperty('refreshToken');
     });
   });
 

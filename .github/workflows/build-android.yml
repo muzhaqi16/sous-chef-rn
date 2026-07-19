@@ -287,8 +287,12 @@ jobs:
             fi
           done
 
+      # Release artifacts publish only from a release tag or a manual dispatch
+      # run whose ref is a protected branch (github.ref_protected). This blocks
+      # a workflow_dispatch from an arbitrary unprotected branch from pushing a
+      # release build to S3, while keeping the tag-push release path intact.
       - name: Upload Play Store AAB to S3
-        if: env.IS_PLAYSTORE == 'true' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        if: env.IS_PLAYSTORE == 'true' && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.ref_protected))
         run: |
           mcli cp \
             android/app/build/outputs/bundle/release/app-release.aab \
@@ -296,7 +300,7 @@ jobs:
           echo "Uploaded AAB to sous-chef-app-prod/android/${{ github.ref_name }}/"
 
       - name: Upload APKs to S3
-        if: env.IS_PLAYSTORE != 'true' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        if: env.IS_PLAYSTORE != 'true' && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.ref_protected))
         run: |
           BUCKET="sous-chef-app-${{ env.BUILD_ENV }}"
           APK_DIR="android/app/build/outputs/apk/${{ env.BUILD_ENV == 'stg' && 'staging' || 'release' }}"

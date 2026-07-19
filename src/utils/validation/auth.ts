@@ -1,5 +1,14 @@
 import { object, string, ref } from 'yup';
 import { emailRule, passwordRule } from './common';
+import { getI18n } from '#/i18n/config';
+
+/**
+ * These schemas are built once at module scope, so a message resolved eagerly
+ * would freeze whichever language was active at import time. Yup calls the
+ * function when the rule fails, so the lookup lands after any language change.
+ */
+const msg = (key: string, options?: Record<string, unknown>) => (): string =>
+  getI18n().t(`auth.${key}`, options);
 
 // ----------------------------------------------------------------------------
 
@@ -21,14 +30,12 @@ export const getLoginValidationSchema = () => loginSchema;
 
 // 2) sign-up (email + password + confirmPassword)
 export const signUpSchema = object({
-  name: string()
-    .required('Full name is required')
-    .min(2, 'Full name must be at least 2 characters'),
+  name: string().required(msg('fullNameRequired')).min(2, msg('fullNameMin')),
   email: emailRule,
   password: passwordRule,
   confirmPassword: string()
-    .oneOf([ref('password')], 'Passwords must match')
-    .required('Please confirm your password'),
+    .oneOf([ref('password')], msg('passwordsMustMatch'))
+    .required(msg('passwordConfirmRequired')),
 });
 
 // usage in SignUpForm:
@@ -57,19 +64,17 @@ export const getForgotPasswordValidationSchema = () => forgotPasswordSchema;
 // ----------------------------------------------------------------------------
 
 // 4) email-verification (6-digit code)
-type TranslateFn = (key: string) => string;
-
 // usage in CodeVerificationScreen:
 // const { control, handleSubmit, formState } = useForm({
-//   resolver: yupResolver(getEmailVerificationValidationSchema(t)),
+//   resolver: yupResolver(getEmailVerificationValidationSchema()),
 //   defaultValues: { code: '' },
 // })
 
-export const getEmailVerificationValidationSchema = (t: TranslateFn) =>
+export const getEmailVerificationValidationSchema = () =>
   object({
     code: string()
-      .required(t('auth.codeRequired'))
-      .matches(/^\d{6}$/, t('auth.codeMustBeSixDigits')),
+      .required(msg('codeRequired'))
+      .matches(/^\d{6}$/, msg('codeMustBeSixDigits')),
   });
 
 // ----------------------------------------------------------------------------
@@ -78,8 +83,8 @@ export const getEmailVerificationValidationSchema = (t: TranslateFn) =>
 export const resetPasswordSchema = object({
   password: passwordRule,
   confirmPassword: string()
-    .oneOf([ref('password')], 'Passwords must match')
-    .required('Please confirm your new password'),
+    .oneOf([ref('password')], msg('passwordsMustMatch'))
+    .required(msg('newPasswordConfirmRequired')),
 });
 
 // usage in ResetPasswordScreen:
@@ -94,14 +99,14 @@ export const getResetPasswordValidationSchema = () => resetPasswordSchema;
 
 // 6) change-password (current password + new password + confirm)
 export const changePasswordSchema = object({
-  currentPassword: string().required('Current password is required'),
+  currentPassword: string().required(msg('currentPasswordRequired')),
   newPassword: passwordRule.notOneOf(
     [ref('currentPassword')],
-    'New password must be different from current password',
+    msg('newPasswordMustDiffer'),
   ),
   confirmPassword: string()
-    .oneOf([ref('newPassword')], 'Passwords must match')
-    .required('Please confirm your new password'),
+    .oneOf([ref('newPassword')], msg('passwordsMustMatch'))
+    .required(msg('newPasswordConfirmRequired')),
 });
 
 // usage in ChangePasswordScreen:

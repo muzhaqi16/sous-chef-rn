@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -56,6 +57,7 @@ export const SuggestionListItem = ({
   onExitComplete,
   showImage = true,
 }: SuggestionListItemProps) => {
+  const { t } = useTranslation();
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(1);
 
@@ -160,6 +162,7 @@ export const SuggestionListItem = ({
             disabled={isExiting}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
+            accessibilityLabel={t('labels.dismissNamed', { name: title })}
             testID={testID ? `${testID}-dismiss` : undefined}
           >
             <Icon
@@ -175,6 +178,8 @@ export const SuggestionListItem = ({
             onPress={onQuickAdd}
             disabled={disabled}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('labels.addNamed', { name: title })}
           >
             <Icon
               name="add"

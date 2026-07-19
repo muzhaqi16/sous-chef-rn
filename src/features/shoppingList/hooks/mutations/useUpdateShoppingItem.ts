@@ -20,6 +20,7 @@ import {
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import type { ShoppingListItemUpdate } from './types';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 
@@ -125,7 +126,7 @@ export function useUpdateShoppingItem({
     if (outcome === 'rejected') {
       revertSnapshot();
       // Alerts only for a union-payload rejection; onError handles error cases.
-      alertRejectedMutation(result, 'Could not update the item.');
+      alertRejectedMutation(result, t('errors.updateShoppingItemFailed'));
       return false;
     }
     return true;

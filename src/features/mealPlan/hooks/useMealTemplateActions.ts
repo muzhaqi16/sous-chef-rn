@@ -117,7 +117,7 @@ export function useMealTemplateActions() {
     if (!result) return null;
     const data = result.data?.createMealPlanFromTemplate;
     if (data?.__typename === 'CreateMealPlanPayload') {
-      toastService.success('Meal plan created from template!');
+      toastService.success(t('mealTemplateActions.planCreated'));
       Telemetry.trackEvent('meal_plan_created_from_template', {
         template_id: input.templateId,
       });
@@ -139,7 +139,7 @@ export function useMealTemplateActions() {
     if (!result) return null;
     const data = result.data?.createTemplateFromMealPlan;
     if (data?.__typename === 'CreateTemplateFromMealPlanPayload') {
-      toastService.success('Meal plan saved as template!');
+      toastService.success(t('mealTemplateActions.savedAsTemplate'));
       Telemetry.trackEvent('template_created_from_meal_plan', {
         meal_plan_id: input.mealPlanId,
       });
@@ -201,7 +201,7 @@ export function useMealTemplateActions() {
     }
 
     // 'created' (online) or 'queued' (offline) — both keep the optimistic remove.
-    toastService.success('Template deleted');
+    toastService.success(t('mealTemplateActions.templateDeleted'));
     return true;
   };
 
@@ -218,7 +218,7 @@ export function useMealTemplateActions() {
     if (!result) return null;
     const data = result.data?.duplicateTemplate;
     if (data?.__typename === 'DuplicateTemplatePayload') {
-      toastService.success('Template duplicated!');
+      toastService.success(t('mealTemplateActions.templateDuplicated'));
     }
     return data ?? null;
   };

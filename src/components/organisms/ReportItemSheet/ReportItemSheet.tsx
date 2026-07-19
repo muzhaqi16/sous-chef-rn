@@ -127,6 +127,7 @@ export const ReportItemSheet: React.FC<ReportItemSheetProps> = ({
             value={reason}
             onChangeText={setReason}
             placeholder={t('reportItem.reasonPlaceholder')}
+            accessibilityLabel={t('reportItem.reasonLabel')}
             multiline
             numberOfLines={3}
             editable={!loading}

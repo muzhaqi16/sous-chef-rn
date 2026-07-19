@@ -27,6 +27,11 @@ let secureStorageInstance: MMKV | null = IS_TEST
   : null;
 let initPromise: Promise<MMKV> | null = null;
 
+// True once the device encryption key proved unavailable and the session fell
+// back to the unencrypted RECOVERY_STORAGE_KEY instance. Read by the store's
+// partialize so plaintext token persistence is skipped in that degraded state.
+let usingRecoveryInstance = false;
+
 /**
  * Run DeviceKeyManager's full fetch (which retries keychain access
  * internally) up to KEY_FETCH_CYCLES times before giving up, so a brief
@@ -85,6 +90,7 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
         )
         .catch(() => {});
       instance = createMMKV({ id: RECOVERY_STORAGE_KEY });
+      usingRecoveryInstance = true;
     }
 
     secureStorageInstance = instance;
@@ -134,6 +140,15 @@ export const storage: MMKV = new Proxy({} as MMKV, {
 
 export function isStorageReady(): boolean {
   return secureStorageInstance !== null;
+}
+
+/**
+ * Whether the active MMKV instance is the unencrypted recovery fallback (opened
+ * because the device encryption key was unavailable). When true, callers must
+ * not write secrets to persisted storage — the file is plaintext at rest.
+ */
+export function isRecoveryStorage(): boolean {
+  return usingRecoveryInstance;
 }
 
 export const zustandStorage: StateStorage = {

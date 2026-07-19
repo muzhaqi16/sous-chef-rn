@@ -44,6 +44,9 @@ describe('NotificationDetailScreen', () => {
     expect(screen.getByText('Notification not found')).toBeTruthy();
   });
 
+  // The detail screen prefers getNotificationDisplayMessage (the localized /
+  // top-level message) over the raw payload.message. With a placeholder payload
+  // that lacks the expiry fields, the display falls back to notification.message.
   it('renders notification with expiry type', () => {
     const notification = {
       id: '1',
@@ -56,7 +59,7 @@ describe('NotificationDetailScreen', () => {
     } as DetailParams['notification'];
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);
     expect(screen.getByText('Items Expiring Soon')).toBeTruthy();
-    expect(screen.getByText('Milk is expiring soon')).toBeTruthy();
+    expect(screen.getByText('Test message')).toBeTruthy();
   });
 
   it('renders notification with object payload', () => {
@@ -71,6 +74,6 @@ describe('NotificationDetailScreen', () => {
     } as DetailParams['notification'];
     render(<NotificationDetailScreen route={makeRoute({ notification })} />);
     expect(screen.getByText('Low Stock Alert')).toBeTruthy();
-    expect(screen.getByText('Low stock detected')).toBeTruthy();
+    expect(screen.getByText('Stock alert')).toBeTruthy();
   });
 });

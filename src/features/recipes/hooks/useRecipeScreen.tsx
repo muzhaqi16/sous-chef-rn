@@ -471,6 +471,7 @@ async function executeRecipeIngredientSearch(
   setLoading: (v: boolean) => void,
   setSearchPerformed: (v: boolean) => void,
   setDisplayResults: (v: DisplayItem[]) => void,
+  shouldCommit: () => boolean,
 ): Promise<void> {
   setLoading(true);
   setSearchPerformed(true);
@@ -481,6 +482,10 @@ async function executeRecipeIngredientSearch(
   const cached = cacheStore.getCached(cacheKey);
 
   if (cached) {
+    // A newer search (text or ingredient) was fired mid-flight — discard so this
+    // stale response can't clobber the fresher results or clear the loading flag
+    // the newer search now owns. Mirrors executeRecipeTextSearch's guard.
+    if (!shouldCommit()) return;
     setDisplayResults(toSpoonacularDisplayItems(cached.results));
     setLoading(false);
     return;
@@ -495,14 +500,18 @@ async function executeRecipeIngredientSearch(
         ranking: 1,
         ignorePantry: true,
       });
-      setDisplayResults(toSpoonacularDisplayItems(results));
+      // The results are valid for this ingredient key regardless of staleness,
+      // so warm the cache unconditionally; only the visible commit is guarded.
       cacheStore.setCached(cacheKey, results);
+      if (shouldCommit()) {
+        setDisplayResults(toSpoonacularDisplayItems(results));
+      }
       return results;
     },
     error => handleSearchError(error, 'Ingredient search error'),
   );
 
-  setLoading(false);
+  if (shouldCommit()) setLoading(false);
 }
 
 // ── Facade hook ──
@@ -750,11 +759,16 @@ export function useRecipeScreen() {
     // text-search pagination so the list doesn't try to "load more".
     setSearchPagination(EMPTY_PAGINATION);
 
+    // Join the generation scheme: bump so any in-flight text search is
+    // superseded, and capture so a text search fired after this one supersedes
+    // this ingredient search's commit.
+    const generation = (searchGenerationRef.current += 1);
     await executeRecipeIngredientSearch(
       ingredientString,
       setSearchLoading,
       setSearchPerformed,
       setDisplayResults,
+      () => generation === searchGenerationRef.current,
     );
   };
 
@@ -785,6 +799,9 @@ export function useRecipeScreen() {
     setSearchQuery('');
     setSearchPerformed(false);
     setSearchData({ items: [], pagination: EMPTY_PAGINATION });
+    // Clear the loading flag too — a search cleared mid-flight would otherwise
+    // leave the empty state stuck on the "searching…" spinner.
+    setSearchLoading(false);
   };
 
   // ── Empty state ──

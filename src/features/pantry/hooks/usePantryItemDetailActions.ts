@@ -15,7 +15,7 @@ import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
@@ -134,28 +134,9 @@ export function usePantryItemDetailActions({
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromPantryItemDocument,
     {
-      update: (cache, { data: mutationData }, { variables }) => {
-        const payload = mutationData?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !selectedShoppingListId ||
-          !variables
-        ) {
-          return;
-        }
-        // Single add via the batch mutation — the created/merged row is the one
-        // entry in `results`. Null when that item failed.
-        const shoppingListItem = payload.results[0]?.item;
-        if (!shoppingListItem) return;
-        // Swallows its own errors internally, so no try/catch is needed here
-        // (wrapping would bail the React Compiler out of this hook).
-        reconcileShoppingItemCreateUpdate(
-          cache,
-          selectedShoppingListId,
-          shoppingListItem,
-          variables.input.items[0]?.id,
-        );
-      },
+      // Reconcile swallows its own errors internally, so no wrap is needed here
+      // (wrapping would bail the React Compiler out of this hook).
+      update: buildAddItemsReconcileUpdate({ listId: selectedShoppingListId }),
     },
   );
 

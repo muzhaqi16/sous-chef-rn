@@ -26,6 +26,7 @@ import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAd
 import { alertService } from '#/services/alertService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { makeIdNameHandler } from '../makeIdNameHandler';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -100,23 +101,12 @@ export const ShoppingListDetailsStep: React.FC<
     updateField('selectedUnitId', unitId);
   };
 
-  const handleBrandSelected = (id: string | null, name: string | null) => {
-    setBrandId(id);
-    if (name) setBrand(name);
-  };
-
-  const handleNetWeightUnitSelected = (
-    id: string | null,
-    name: string | null,
-  ) => {
-    setNetWeightUnitId(id);
-    if (name) setNetWeightUnit(name);
-  };
-
-  const handleStoreSelected = (id: string | null, name: string | null) => {
-    setStoreId(id);
-    if (name) setStoreName(name);
-  };
+  const handleBrandSelected = makeIdNameHandler(setBrandId, setBrand);
+  const handleNetWeightUnitSelected = makeIdNameHandler(
+    setNetWeightUnitId,
+    setNetWeightUnit,
+  );
+  const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
 
   const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
 

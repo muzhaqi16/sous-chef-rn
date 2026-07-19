@@ -16,6 +16,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -96,7 +97,7 @@ export function useOpenPantryItemBatch({
       );
       clearPersistence();
       // onError covers transport errors; a non-success union payload has none.
-      alertRejectedMutation(result, 'Could not open this batch.');
+      alertRejectedMutation(result, t('errors.openBatchFailed'));
       return false;
     }
 

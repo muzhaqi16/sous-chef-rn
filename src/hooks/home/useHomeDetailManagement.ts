@@ -146,7 +146,7 @@ export function useHomeDetailManagement(homeId: string) {
         operation: 'Remove Member',
         checks: [
           versionConflictCheck({
-            itemName: 'Member',
+            itemName: t('errors.entityMember'),
             onRefresh: () => refetch(),
           }),
         ],
@@ -179,7 +179,7 @@ export function useHomeDetailManagement(homeId: string) {
         operation: 'Revoke Invitation',
         checks: [
           versionConflictCheck({
-            itemName: 'Invite',
+            itemName: t('errors.entityInvite'),
             onRefresh: () => refetch(),
           }),
         ],

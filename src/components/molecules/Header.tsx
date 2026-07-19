@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -90,6 +91,7 @@ export const Header: React.FC<HeaderProps> = ({
   transparent = false,
   borderless = false,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ transparent, borderless });
 
   // Apply variant presets
@@ -108,6 +110,8 @@ export const Header: React.FC<HeaderProps> = ({
         onPress={action.onPress}
         disabled={action.disabled || action.loading}
         testID={action.testID}
+        accessibilityRole="button"
+        accessibilityLabel={action.accessibilityLabel}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <HeaderActionIcon action={action} />
@@ -138,6 +142,8 @@ export const Header: React.FC<HeaderProps> = ({
           <AppPressable
             style={styles.action}
             onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={t('labels.close')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-close-button"
           >
@@ -148,6 +154,8 @@ export const Header: React.FC<HeaderProps> = ({
           <AppPressable
             style={styles.action}
             onPress={onBack}
+            accessibilityRole="button"
+            accessibilityLabel={t('labels.goBack')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="header-back-button"
           >

@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
+import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
@@ -108,17 +109,5 @@ export const StoragePage: React.FC<StoragePageProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  page: {
-    flex: 1,
-    minHeight: '100%',
-    flexGrow: 1,
-  },
-  pageContent: {
-    padding: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-    flexGrow: 1,
-  },
-  section: {
-    marginBottom: theme.spacing.sm,
-  },
+  ...detailsPageBaseStyles(theme),
 }));

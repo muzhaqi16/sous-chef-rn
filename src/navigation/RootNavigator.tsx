@@ -132,7 +132,9 @@ function RootLayout({ children }: { children: React.ReactNode }) {
 // Shared options for the feature detail/sub screens lifted out of the tab
 // stacks — mirrors the per-feature stack `screenOptions` they previously
 // inherited (full-screen swipe-back + 250ms slide) so their UX is unchanged.
-const featureDetailOptions = {
+// Exported so RootNavigator.test.tsx can identify the lifted screens by this
+// shared reference and assert each declares an explicit `linking` intent.
+export const featureDetailOptions = {
   fullScreenGestureEnabled: true,
   animationDuration: 250,
 };
@@ -288,87 +290,108 @@ const RootStack = createNativeStackNavigator({
         // ── Feature detail/sub screens (lifted out of the tab stacks) ──
         // Siblings of `Home`, so the floating tab bar is never in their tree.
         // Not deep-linkable: the app's deep links are auth/invite/join entry
-        // points only (see useDeepLinkRouter), never in-app detail screens.
+        // points only (see useDeepLinkRouter), never in-app detail screens. Each
+        // declares `linking: null` so React Navigation can't infer a path from
+        // the route name — enforced by RootNavigator.test.tsx.
         // Hero screens opt out of the top inset to draw edge-to-edge.
         PantryItem: createNativeStackScreen({
           screen: PantryItemScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         PantryItemDetail: createNativeStackScreen({
           screen: PantryItemDetail,
           layout: noInsetScreenLayout,
           options: featureDetailOptions,
+          linking: null,
         }),
         FilteredPantryItems: createNativeStackScreen({
           screen: FilteredPantryItems,
           options: featureDetailOptions,
+          linking: null,
         }),
         PantrySettings: createNativeStackScreen({
           screen: PantrySettings,
           options: featureDetailOptions,
+          linking: null,
         }),
         PantryAnalytics: createNativeStackScreen({
           screen: PantryAnalytics,
           options: featureDetailOptions,
+          linking: null,
         }),
         NutritionScreen: createNativeStackScreen({
           screen: NutritionScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         // Single shared RecipeDetail — reached from Pantry, Recipe and MealPlan.
         RecipeDetail: createNativeStackScreen({
           screen: RecipeDetail,
           layout: noInsetScreenLayout,
           options: featureDetailOptions,
+          linking: null,
         }),
         ListSettings: createNativeStackScreen({
           screen: ListSettings,
           options: featureDetailOptions,
+          linking: null,
         }),
         ShareList: createNativeStackScreen({
           screen: ShareList,
           options: featureDetailOptions,
+          linking: null,
         }),
         AddItem: createNativeStackScreen({
           screen: AddEditItem,
           options: featureDetailOptions,
+          linking: null,
         }),
         EditItem: createNativeStackScreen({
           screen: AddEditItem,
           options: featureDetailOptions,
+          linking: null,
         }),
         ItemDetail: createNativeStackScreen({
           screen: ShoppingListItemDetail,
           layout: noInsetScreenLayout,
           options: featureDetailOptions,
+          linking: null,
         }),
         PurchaseHistory: createNativeStackScreen({
           screen: PurchaseHistoryScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         RecipeCreate: createNativeStackScreen({
           screen: RecipeFormScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         RecipeEdit: createNativeStackScreen({
           screen: RecipeFormScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         SavedRecipes: createNativeStackScreen({
           screen: SavedRecipes,
           options: featureDetailOptions,
+          linking: null,
         }),
         MyRecipes: createNativeStackScreen({
           screen: MyRecipes,
           options: featureDetailOptions,
+          linking: null,
         }),
         CreateMealPlan: createNativeStackScreen({
           screen: CreateMealPlanScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
         MealTemplateBuilder: createNativeStackScreen({
           screen: MealTemplateBuilderScreen,
           options: featureDetailOptions,
+          linking: null,
         }),
       },
     },
