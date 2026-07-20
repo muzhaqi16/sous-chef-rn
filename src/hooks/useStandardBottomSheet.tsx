@@ -209,6 +209,11 @@ export function useStandardBottomSheet({
     const active = visible && isFocused;
     if (active && !isPresentedRef.current) {
       isPresentedRef.current = true;
+      // Re-presenting makes any pending blur-dismiss moot. If the blur-path
+      // close never settled (rapid blur → refocus interrupts it, so gorhom
+      // never fires onDismiss), a stale flag here would swallow the NEXT
+      // genuine dismiss's onDismiss — clear it so that can't happen.
+      blurDismissRef.current = false;
       ref.current?.present();
     } else if (!active && isPresentedRef.current) {
       isPresentedRef.current = false;

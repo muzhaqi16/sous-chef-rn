@@ -277,10 +277,10 @@ function createUpdateOperationImpl<TInput, TResult>(
           },
         }),
       error => {
-        // Handle version conflicts
+        // Handle version conflicts. No itemName: the alert resolves the
+        // localized errors.entityItem default for the generic CRUD path.
         if (
           handleVersionConflictAlert(error, {
-            itemName: 'Item',
             onRefresh: onVersionConflict,
           })
         ) {

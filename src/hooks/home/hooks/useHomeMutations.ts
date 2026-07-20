@@ -8,7 +8,8 @@
  */
 
 import type { ErrorLike } from '@apollo/client';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateHomeDocument,
@@ -147,7 +148,7 @@ export function useHomeMutations({
       },
       onCompleted: data => {
         if (data?.updateHome?.__typename === 'UpdateHomePayload') {
-          alertService.alert('Success', 'Home updated successfully');
+          toastService.success(t('success.homeUpdated'));
         }
       },
       onError: (error: ErrorLike) => {
@@ -155,7 +156,7 @@ export function useHomeMutations({
           operation: 'Update Home',
           checks: [
             versionConflictCheck({
-              itemName: 'Home',
+              itemName: t('errors.entityHome'),
               onRefresh: () => refetch(),
             }),
           ],

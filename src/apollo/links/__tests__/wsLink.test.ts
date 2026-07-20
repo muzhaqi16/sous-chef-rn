@@ -22,13 +22,20 @@ type WsLifecycleHandlers = {
   closed: (event: unknown) => void;
 };
 let onHandlers: WsLifecycleHandlers;
+// Captured in beforeAll for the same reason as onHandlers.
+let connectionParams: () => Record<string, string | undefined>;
 
 beforeAll(() => {
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
     wsUrl: 'ws://localhost:4000/graphql',
   });
   const { createClient } = require('graphql-ws');
-  onHandlers = createClient.mock.calls[0][0].on as WsLifecycleHandlers;
+  const config = createClient.mock.calls[0][0];
+  onHandlers = config.on as WsLifecycleHandlers;
+  connectionParams = config.connectionParams as () => Record<
+    string,
+    string | undefined
+  >;
 });
 
 // Mock errorSerialization
@@ -258,6 +265,61 @@ describe('wsLink', () => {
       // A connection that stays open past CONNECTION_STABLE_MS clears it.
       onHandlers.connected({}, undefined);
       jest.advanceTimersByTime(11000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+  });
+
+  describe('client identity', () => {
+    it('sends the client name and native version in connectionParams', () => {
+      expect(connectionParams()).toMatchObject({
+        'apollographql-client-name': 'sous-chef-app',
+        // getVersion() is mocked to '1.0.0' in the device-info test mock.
+        'apollographql-client-version': '1.0.0',
+      });
+    });
+  });
+
+  // 4411 means the server refuses this build's version. Reconnecting sends the
+  // same version, so the cycle must stop rather than back off.
+  describe('client upgrade required (close 4411)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('does not schedule a reconnect', () => {
+      onHandlers.connected({}, undefined);
+      onHandlers.closed({
+        code: 4411,
+        reason: 'Client upgrade required: 5.0.0',
+        wasClean: true,
+      });
+
+      jest.advanceTimersByTime(31000);
+
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+
+    it('stops reconnecting on subsequent closes for the rest of the session', () => {
+      onHandlers.closed({
+        code: 4411,
+        reason: 'Client upgrade required',
+        wasClean: true,
+      });
+      // A later transport-level drop must not restart the cycle either — the
+      // build is still the same build.
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      jest.advanceTimersByTime(31000);
+
       expect(getWebSocketState().reconnectAttempts).toBe(0);
     });
   });

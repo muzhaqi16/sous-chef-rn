@@ -10,7 +10,7 @@ import { createLink } from './links/index';
 import { registerApolloClient } from './links/refreshToken';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
-import packageJson from '../../package.json';
+import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 
 // Lazy histogram emit — defers loading of the telemetry singleton (which
 // touches Environment + device ID at module init) so this module remains
@@ -83,9 +83,11 @@ function initializeClient() {
   const client = new ApolloClient({
     link,
     cache,
+    // Sent as apollographql-client-name / -version headers on every HTTP
+    // request. The WebSocket half sends the same pair by hand — see wsLink.
     clientAwareness: {
-      name: 'sous-chef-app',
-      version: packageJson.version,
+      name: CLIENT_NAME,
+      version: CLIENT_VERSION,
     },
     dataMasking: true,
     defaultOptions: {

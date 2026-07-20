@@ -51,7 +51,7 @@ export interface ApolloErrorConfig {
  * try {
  *   await updateMutation(...);
  * } catch (error) {
- *   if (handleVersionConflictAlert(error, { itemName: 'Item', onRefresh: refetch })) {
+ *   if (handleVersionConflictAlert(error, { onRefresh: refetch })) {
  *     return false;
  *   }
  *   // ...handle other errors

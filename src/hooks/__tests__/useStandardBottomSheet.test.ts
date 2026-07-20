@@ -245,6 +245,53 @@ describe('useStandardBottomSheet', () => {
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
+  it('an interrupted blur-close does not swallow the next real dismiss', () => {
+    const fake = createFakeBottomSheetModal();
+    const navListeners: Record<string, Array<() => void>> = {};
+    const navigation = {
+      isFocused: () => true,
+      addListener: (event: string, cb: () => void) => {
+        (navListeners[event] ??= []).push(cb);
+        return () => {};
+      },
+    } as unknown as NavigationProp<ParamListBase>;
+
+    const onDismiss = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible, onDismiss }),
+      {
+        initialProps: { visible: false },
+        wrapper: ({ children }) =>
+          React.createElement(
+            NavigationContext.Provider,
+            { value: navigation },
+            children,
+          ),
+      },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = fake;
+
+    rerender({ visible: true });
+    expect(fake.onScreen).toBe(true);
+
+    // Blur starts a dismiss and arms the blur-dismiss flag …
+    act(() => navListeners.blur?.forEach(cb => cb()));
+    expect(fake.onScreen).toBe(false);
+
+    // … but the screen refocuses and the sheet re-presents BEFORE gorhom ever
+    // fired onDismiss for that close (the close was interrupted, so its
+    // onDismiss never arrives). Re-presenting must disarm the stale flag.
+    act(() => navListeners.focus?.forEach(cb => cb()));
+    expect(fake.onScreen).toBe(true);
+
+    // The user now genuinely closes the sheet while focused — this dismiss
+    // must reach the consumer, not be swallowed by the leftover blur flag.
+    fake.selfClose();
+    act(() => result.current.modalProps.onDismiss?.());
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   it('includes animation configs in modalProps', () => {
     const { result } = renderHook(() => useStandardBottomSheet(defaultOptions));
 

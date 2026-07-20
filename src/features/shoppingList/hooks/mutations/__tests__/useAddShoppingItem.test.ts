@@ -38,7 +38,6 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
     adoptServerShoppingListItemId: jest.fn(),
     revertOptimisticShoppingListItem: jest.fn(),
     addOptimisticShoppingListItem: jest.fn(),
-    reconcileShoppingItemCreateUpdate: jest.fn(),
     // Signature: (id, fields) => entity (the cuid is baked straight in).
     createOptimisticShoppingListItem: jest.fn(
       (id: string, fields: { itemName?: string }) => ({

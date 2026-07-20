@@ -253,8 +253,9 @@ Both cases behave identically because `isApiUnavailable` is read by everything:
 - **`offlineModeLink`** (first in chain) short-circuits queries → serves the cache Apollo already read; no
   spinner, no error, and blocked queries never reach `retryLink`/`errorLink` (no doomed requests, no retry
   storm).
-- **`queueLink`** queues `localFirst` mutations immediately instead of firing doomed requests (non-`localFirst`
-  mutations still fire and surface their error — they aren't safe to auto-replay).
+- **`queueLink`** queues replay-allowlisted mutations (`localFirst` opt-ins or `Sync*`-mapped) immediately
+  instead of firing doomed requests, matching the offline path's allowlist (mutations outside the allowlist
+  still fire and surface their error — they aren't safe to auto-replay).
 - **`queueManager.processQueue`** skips replay (a replay to a down API would just fail and re-trip the breaker);
   recovery (`requestDrain` on breaker close) re-drains.
 
