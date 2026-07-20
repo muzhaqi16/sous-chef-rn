@@ -9,10 +9,13 @@ import { errorLink } from './errorLink';
 import { retryLink } from './retryLink';
 import { httpLink } from './httpLink';
 import { wsLink } from './wsLink';
+import { persistedQueryLink } from './persistedQueryLink';
 import { createQueueLink } from '../offlineQueue/queueLink';
 
-// Simplified HTTP transport (let Apollo handle retries naturally)
-const httpTransport = httpLink;
+// HTTP transport with APQ / operation-safelist hashes. The persisted-query
+// link sits on the HTTP branch only: subscriptions ride graphql-ws where the
+// APQ protocol (and the server's safelist plugin) does not apply.
+const httpTransport = ApolloLink.from([persistedQueryLink, httpLink]);
 
 // Transport link routing:
 // • Subscriptions → WebSocket

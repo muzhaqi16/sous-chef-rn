@@ -6,22 +6,14 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import {
-  CreatePantryItemDocument,
   UpdatePantryItemDocument,
   DeletePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { VersionedEntity } from '#/apollo/utils/createOptimisticResponse';
-import type { PantryItemInput, PantryItemUpdate } from '../types';
+import type { PantryItemUpdate } from '../types';
 import { usePantryItemMutations } from '../usePantryItemMutations';
 
-/** Minimal config shapes the mocked CRUD operations read at call time. */
-interface MockAddConfig {
-  transformInput: (input: PantryItemInput) => Record<string, unknown>;
-  mutation: (options: {
-    variables: { input: Record<string, unknown> };
-  }) => Promise<unknown>;
-}
+/** Minimal config shape the mocked CRUD operation reads at call time. */
 interface MockUpdateConfig {
   itemId: string;
   mutation: (options: {
@@ -75,12 +67,6 @@ jest.mock('#/utils/errors/versionConflict', () => ({
 
 jest.mock('#/hooks/utils/useCrudOperations', () => ({
   useCrudOperations: () => ({
-    createAddOperation: jest.fn(
-      (config: MockAddConfig) => async (input: PantryItemInput) => {
-        const transformed = config.transformInput(input);
-        await config.mutation({ variables: { input: transformed } });
-      },
-    ),
     createUpdateOperation: jest.fn(
       (config: MockUpdateConfig) => async (updates: PantryItemUpdate) => {
         await config.mutation({
@@ -118,20 +104,6 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function createMock() {
-  return recordMock(CreatePantryItemDocument, {
-    data: {
-      createPantryItem: {
-        __typename: 'PantryItemPayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        pantryItem: { __typename: 'PantryItem', id: 'new-1' },
-      },
-    },
-  });
-}
-
 function updateMock() {
   return recordMock(UpdatePantryItemDocument, {
     data: {
@@ -167,14 +139,17 @@ function deleteErrorMock() {
 }
 
 describe('usePantryItemMutations', () => {
-  it('returns addItem, updateItem, and removeItem', () => {
+  it('returns updateItem and removeItem (adds live on the dedicated add surfaces)', () => {
     const { result } = renderHookWithApollo(() =>
       usePantryItemMutations(defaultOptions),
     );
 
-    expect(typeof result.current.addItem).toBe('function');
     expect(typeof result.current.updateItem).toBe('function');
     expect(typeof result.current.removeItem).toBe('function');
+    // The caller-less addItem was removed: it bypassed the
+    // DuplicatePantryItemError recovery flow the contract requires on every
+    // add path.
+    expect((result.current as Record<string, unknown>).addItem).toBeUndefined();
   });
 
   it('removeItem registers pending delete before mutation', async () => {
@@ -273,25 +248,6 @@ describe('usePantryItemMutations', () => {
     await act(async () => {
       await result.current.updateItem('item-1', {
         itemName: 'Updated Milk',
-      });
-    });
-
-    expect(m.fired.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('addItem calls createAddOperation with transformed input', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => usePantryItemMutations(defaultOptions),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.addItem({
-        itemName: 'Bread',
-        quantity: 2,
-        unitId: 'unit-1',
-        storageState: StorageState.Refrigerated,
       });
     });
 

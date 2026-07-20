@@ -11,6 +11,7 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { logger } from '#/utils/environment';
 
 interface UseRecipeCookingActionsOptions {
   recipeId: string | undefined;
@@ -63,6 +64,19 @@ export function useRecipeCookingActions({
         errorService.reportError(error, { operation: 'markRecipeAsCooked' });
       },
     );
+
+    // Replay diagnostics: `converged: true` means this client-minted cooking-log
+    // id already existed (an idempotent replay), not a fresh cook.
+    const payload = result ? result.data?.markRecipeAsCooked : undefined;
+    if (
+      payload?.__typename === 'MarkRecipeAsCookedPayload' &&
+      payload.converged
+    ) {
+      logger.info('markRecipeAsCooked converged — replay of a committed cook', {
+        recipeId: vars.recipeId,
+        cookingLogId: id,
+      });
+    }
 
     // A falsy result (the call threw) classifies as 'rejected'.
     return classifyCreateResult(

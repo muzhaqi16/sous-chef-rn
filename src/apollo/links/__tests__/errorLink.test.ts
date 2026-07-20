@@ -21,6 +21,12 @@ jest.mock('../refreshToken', () => ({
   attemptTokenRefresh: jest.fn(),
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
+const mockClearAuth = jest.fn();
+jest.mock('#store', () => ({
+  useStore: {
+    getState: jest.fn(() => ({ clearAuth: mockClearAuth })),
+  },
+}));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { Observable } from 'rxjs';
@@ -362,5 +368,36 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
     ]).catch(() => undefined);
 
     expect(attemptTokenRefresh).toHaveBeenCalled();
+  });
+
+  // The @auth directive rejects every field for a suspended/deleted account
+  // with FORBIDDEN + a reason. The session must end (the user can do nothing),
+  // while ordinary resource-level FORBIDDEN stays non-fatal.
+  describe('suspended/deleted account (FORBIDDEN + reason)', () => {
+    it('ends the session', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: {
+            code: 'FORBIDDEN',
+            reason: 'User account has been suspended or deleted',
+          },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+    });
+
+    it('plain resource FORBIDDEN does NOT end the session', async () => {
+      await runWithError([
+        {
+          message: 'Access denied',
+          extensions: { code: 'FORBIDDEN' },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).not.toHaveBeenCalled();
+    });
   });
 });

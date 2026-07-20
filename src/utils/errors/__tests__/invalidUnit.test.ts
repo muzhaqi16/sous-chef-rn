@@ -136,22 +136,12 @@ describe('invalidUnit', () => {
   });
 
   describe('isInvalidUnitPayload', () => {
-    it('returns true for payload with UNIT_INVALID code and success false', () => {
-      expect(
-        isInvalidUnitPayload({ success: false, code: 'UNIT_INVALID' }),
-      ).toBe(true);
+    it('returns true for the UNIT_INVALID code', () => {
+      expect(isInvalidUnitPayload('UNIT_INVALID')).toBe(true);
     });
 
-    it('returns false for successful payload with UNIT_INVALID code', () => {
-      expect(
-        isInvalidUnitPayload({ success: true, code: 'UNIT_INVALID' }),
-      ).toBe(false);
-    });
-
-    it('returns false for failed payload with different code', () => {
-      expect(
-        isInvalidUnitPayload({ success: false, code: 'VALIDATION_ERROR' }),
-      ).toBe(false);
+    it('returns false for other codes', () => {
+      expect(isInvalidUnitPayload('VALIDATION_ERROR')).toBe(false);
     });
   });
 });

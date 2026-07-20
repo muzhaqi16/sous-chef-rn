@@ -56,12 +56,14 @@ export function getTopLevelGraphQLError(
   };
 }
 
-// Codes the API returns when a read is rejected because access was revoked:
-// AUTHZ_FORBIDDEN — the API's current code (e.g. a collaborator on a list that
-// became home-linked; collaborators are ignored on home-linked lists).
-// FORBIDDEN — legacy alias still emitted by some resolvers. A deleted/unshared
-// record is NOT here: by-id queries now resolve to null data (not a NOT_FOUND
-// error), so callers detect that case via a null field, not this helper.
+// Codes the API returns when a read is rejected because access was revoked.
+// Both are current, on different channels: AUTHZ_FORBIDDEN is the top-level
+// `extensions.code` on rejected reads (e.g. a collaborator on a list that
+// became home-linked; collaborators are ignored on home-linked lists);
+// FORBIDDEN is the code the @auth directive and mutation result-union members
+// emit. A deleted/unshared record is NOT here: by-id queries now resolve to
+// null data (not a NOT_FOUND error), so callers detect that case via a null
+// field, not this helper.
 const RESOURCE_ACCESS_LOST_CODES = new Set(['AUTHZ_FORBIDDEN', 'FORBIDDEN']);
 
 /** True when a query error means the requesting user has lost access to a

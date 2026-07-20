@@ -2,8 +2,14 @@
 
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
+import {
+  NotificationEventsDocument,
+  GetUnreadNotificationsDocument,
+} from '#features/notifications/graphql/notifications.generated';
 import {
   NotificationType,
   NotificationCategory,
@@ -150,6 +156,7 @@ function buildNotificationSubscriptionMock(
           mutation: isCreated ? MutationType.Created : MutationType.Updated,
           actorUserId: null,
           timestamp: '2024-01-01T00:00:00Z',
+          affectedCount: null,
           node: {
             __typename: 'Notification',
             id: notification.id,
@@ -172,6 +179,70 @@ function buildNotificationSubscriptionMock(
     },
   };
 }
+
+// Status-transition / aggregate event mock. READ and DISMISSED carry a node
+// (only the id is needed by the handler); BULK_* subtypes carry a null node
+// and an affectedCount, mirroring the server's aggregate publisher.
+function buildTransitionEventMock(
+  subtype: NotificationSubtype,
+  nodeId: string | null,
+  affectedCount: number | null = null,
+): MockedResponse {
+  return {
+    request: {
+      query: NotificationEventsDocument,
+    },
+    result: {
+      data: {
+        notificationEvents: {
+          __typename: 'NotificationEvent',
+          subtype,
+          mutation: MutationType.Updated,
+          timestamp: '2024-01-01T00:00:00Z',
+          affectedCount,
+          node:
+            nodeId === null
+              ? null
+              : {
+                  __typename: 'Notification',
+                  id: nodeId,
+                  type: NotificationType.LowStock,
+                  status: NotificationStatus.Read,
+                  priority: Priority.Normal,
+                  title: 'Low Stock Alert',
+                  message: 'Milk is running low',
+                  payload: null,
+                  category: NotificationCategory.System,
+                  sentAt: '2024-01-01T00:00:00Z',
+                  expiresAt: null,
+                  sourceId: null,
+                  sourceType: null,
+                  actionUrl: null,
+                  readAt: '2024-01-01T00:01:00Z',
+                },
+        },
+      },
+    },
+  };
+}
+
+const unreadFeedData = {
+  me: {
+    __typename: 'User',
+    id: 'user-1',
+    unreadNotificationCount: 0,
+    hasUrgentNotifications: false,
+    notificationsConnection: {
+      __typename: 'NotificationConnection',
+      edges: [],
+      pageInfo: {
+        __typename: 'PageInfo',
+        hasNextPage: false,
+        endCursor: null,
+      },
+    },
+  },
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -274,6 +345,55 @@ describe('useNotificationListener', () => {
         }),
       );
     });
+  });
+
+  it('READ subtype marks the notification read locally', async () => {
+    renderHookWithApollo(() => useNotificationListener(), {
+      operationMocks: [
+        buildTransitionEventMock(NotificationSubtype.Read, 'notif-1'),
+      ],
+    });
+
+    await waitFor(() => {
+      expect(mockMarkAsRead).toHaveBeenCalledWith('notif-1');
+    });
+    expect(mockRemoveNotification).not.toHaveBeenCalled();
+    expect(mockAddNotification).not.toHaveBeenCalled();
+  });
+
+  it('DISMISSED subtype removes the notification locally', async () => {
+    renderHookWithApollo(() => useNotificationListener(), {
+      operationMocks: [
+        buildTransitionEventMock(NotificationSubtype.Dismissed, 'notif-2'),
+      ],
+    });
+
+    await waitFor(() => {
+      expect(mockRemoveNotification).toHaveBeenCalledWith('notif-2');
+    });
+    expect(mockMarkAsRead).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    NotificationSubtype.BulkRead,
+    NotificationSubtype.BulkCleared,
+    NotificationSubtype.BulkExpired,
+  ])('%s event (null node) re-queries the unread feed', async subtype => {
+    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
+      data: unreadFeedData,
+    });
+
+    renderHookWithApollo(() => useNotificationListener(), {
+      operationMocks: [buildTransitionEventMock(subtype, null, 4), mock],
+    });
+
+    // The aggregate event's rows are unknown client-side — the handler must
+    // fall back to a server re-sync instead of touching the local store.
+    await waitFor(() => {
+      expect(fired.length).toBeGreaterThan(0);
+    });
+    expect(mockMarkAsRead).not.toHaveBeenCalled();
+    expect(mockRemoveNotification).not.toHaveBeenCalled();
   });
 
   it('registers push tap handlers when authenticated', async () => {

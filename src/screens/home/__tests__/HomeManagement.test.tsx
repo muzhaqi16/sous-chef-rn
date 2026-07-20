@@ -75,8 +75,22 @@ jest.mock('#/components/organisms/home/CreateHomeForm', () => ({
   CreateHomeForm: () => null,
 }));
 
+// Captures every render's props so tests can assert the gating computed by the
+// screen (the card itself is presentation-only here).
+const mockHomeCardProps: Array<{
+  homeRef?: { name?: string };
+  canDelete?: boolean;
+  canInvite?: boolean;
+}> = [];
 jest.mock('#/components/organisms/home/HomeCard', () => ({
-  HomeCard: ({ homeRef }: { homeRef?: { name?: string } }) => homeRef?.name,
+  HomeCard: (props: {
+    homeRef?: { name?: string };
+    canDelete?: boolean;
+    canInvite?: boolean;
+  }) => {
+    mockHomeCardProps.push(props);
+    return props.homeRef?.name;
+  },
 }));
 
 jest.mock('#/services/toastService', () => ({
@@ -104,6 +118,7 @@ jest.mock('#/components/base/SousChefLoader', () => ({
 describe('HomeManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHomeCardProps.length = 0;
   });
 
   it('renders the home management screen', () => {
@@ -352,5 +367,63 @@ describe('HomeManagement', () => {
 
     const tree = render(<HomeManagement />);
     expect(tree.toJSON()).toBeTruthy();
+  });
+
+  // deleteHome is @requireAccess(Home, OWNER) server-side. ADMINs hold
+  // canManageHome by default, so gating Delete on that flag showed them an
+  // affordance that could only return FORBIDDEN.
+  describe('Delete gating follows the OWNER role', () => {
+    const baseReturn = {
+      defaultHomeId: null,
+      initialLoading: false,
+      creating: false,
+      joiningByCode: false,
+      loadingPreview: false,
+      previewHome: null,
+      createHome: jest.fn(),
+      deleteHome: jest.fn(),
+      setDefaultHome: jest.fn(),
+      inviteUserToHome: jest.fn(),
+      joinHomeByCode: jest.fn(),
+      previewHomeByCode: jest.fn(),
+      stats: { totalHomes: 1, totalMembers: 1, totalPantries: 0 },
+      refetch: jest.fn(),
+    };
+
+    const homeWithMembership = (membership: {
+      role: string;
+      canManageHome: boolean;
+    }) => ({
+      id: 'home-1',
+      name: 'Gated Home',
+      members: [{ user: { id: 'user-1' }, role: membership.role }],
+      myMembership: membership,
+    });
+
+    it('ADMIN with canManageHome does NOT see Delete', () => {
+      const { useHomeManagement } = jest.requireMock(
+        '#hooks/home/hooks/useHomeManagement',
+      );
+      useHomeManagement.mockReturnValue({
+        ...baseReturn,
+        homes: [homeWithMembership({ role: 'ADMIN', canManageHome: true })],
+      });
+
+      render(<HomeManagement />);
+      expect(mockHomeCardProps.at(-1)?.canDelete).toBe(false);
+    });
+
+    it('OWNER sees Delete', () => {
+      const { useHomeManagement } = jest.requireMock(
+        '#hooks/home/hooks/useHomeManagement',
+      );
+      useHomeManagement.mockReturnValue({
+        ...baseReturn,
+        homes: [homeWithMembership({ role: 'OWNER', canManageHome: true })],
+      });
+
+      render(<HomeManagement />);
+      expect(mockHomeCardProps.at(-1)?.canDelete).toBe(true);
+    });
   });
 });

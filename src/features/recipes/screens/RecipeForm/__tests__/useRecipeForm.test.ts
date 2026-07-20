@@ -256,6 +256,29 @@ describe('useRecipeForm', () => {
     expect(input.attribution).toEqual({ originalAuthor: 'Grandma' });
   });
 
+  it('buildUpdateInput carries nutrition and dietary edits', () => {
+    // Regression: the update input used to omit nutrition/dietary entirely, so
+    // calories and diet edits made in edit mode were silently discarded on
+    // save (create sent them, update did not).
+    const { result } = renderHook(() => useRecipeForm());
+
+    act(() => {
+      result.current.updateField('name', 'R');
+      result.current.updateField('caloriesPerServing', '320');
+      result.current.updateField('diets', [Diet.Keto]);
+      result.current.updateField('healthGoals', [HealthGoal.HighProtein]);
+      result.current.updateField('intolerances', [Intolerance.Dairy]);
+    });
+
+    const input = result.current.buildUpdateInput();
+    expect(input.nutrition).toEqual({ caloriesPerServing: 320 });
+    expect(input.dietary).toEqual({
+      diets: [Diet.Keto],
+      healthGoals: [HealthGoal.HighProtein],
+      intolerances: [Intolerance.Dairy],
+    });
+  });
+
   it('populateFromRecipe fills form from recipe data', () => {
     const { result } = renderHook(() => useRecipeForm());
 

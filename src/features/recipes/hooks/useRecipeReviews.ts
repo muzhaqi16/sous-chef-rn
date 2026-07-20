@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { generateEntityId } from '#/utils/generateEntityId';
 import {
   CreateRecipeReviewDocument,
   UpdateRecipeReviewDocument,
@@ -168,7 +169,15 @@ export function useRecipeReviews({
   const createReview = async (rating: number, comment?: string) => {
     const result = await createReviewMutation({
       variables: {
-        input: { recipeId, rating, comment: comment || undefined },
+        // Client-minted id: a lost-response retry replays with the same id and
+        // surfaces as IDEMPOTENT_REPLAY (converged) instead of an
+        // indistinguishable "already reviewed" CONFLICT.
+        input: {
+          id: generateEntityId(),
+          recipeId,
+          rating,
+          comment: comment || undefined,
+        },
       },
     });
     const payload = result.data?.createRecipeReview;

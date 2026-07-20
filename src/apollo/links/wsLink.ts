@@ -70,6 +70,30 @@ const CONNECTION_STABLE_MS = 10_000;
 // Close code the server uses to refuse a build below its configured minimum
 // version. Terminal: the same build reconnecting sends the same version.
 const WS_CLOSE_CLIENT_UPGRADE_REQUIRED = 4411;
+// Mid-stream session re-validation close. Reason is "Session expired" (refresh
+// the token, then reconnect) or "Session revoked" (re-authenticate) — plain
+// reconnection sends the same rejected token and closes identically.
+const WS_CLOSE_SESSION_AUTH = 4403;
+// The server recycles sockets that exceed its max subscription duration.
+// Operational, not an error: reconnect immediately without backoff.
+const WS_CLOSE_DURATION_EXCEEDED = 4410;
+// One-shot guard for 4403: set when a close already triggered a token refresh,
+// cleared once a connection proves stable. A second 4403 while set means the
+// freshly refreshed token was rejected too — the session is revoked.
+let sessionAuthRefreshAttempted = false;
+
+// The 4403 recovery needs proactiveTokenRefresh, but refreshToken.ts already
+// statically imports this module (reconnectWebSocket) — importing it back
+// would be a cycle. refreshToken.ts registers the function here at its module
+// init instead; it is always loaded before any socket exists (errorLink pulls
+// it into the link chain).
+let sessionAuthTokenRefresh: (() => Promise<string | null>) | null = null;
+export const registerSessionAuthRefresh = (
+  refresh: () => Promise<string | null>,
+): void => {
+  sessionAuthTokenRefresh = refresh;
+};
+
 let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearConnectionStableTimer = () => {
@@ -226,6 +250,9 @@ const createWsClient = () => {
         connectionStableTimeoutId = setTimeout(() => {
           connectionStableTimeoutId = null;
           reconnectAttempts = 0;
+          // The connection held with the current token — a future 4403 is a
+          // fresh expiry, so the refresh-then-reconnect recovery re-arms.
+          sessionAuthRefreshAttempted = false;
         }, CONNECTION_STABLE_MS);
 
         if (__DEV__) {
@@ -258,6 +285,41 @@ const createWsClient = () => {
           logger.error(
             `🔌 WebSocket closed: client upgrade required (app version ${CLIENT_VERSION}): ${reason}`,
           );
+          return;
+        }
+
+        // Mid-stream session-auth close. First 4403: refresh the token — a
+        // successful refresh reconnects the socket itself (performTokenRefresh
+        // → reconnectWebSocket), so nothing else is scheduled here. Repeated
+        // 4403 before the connection ever proved stable: the refreshed token
+        // was rejected too, i.e. the session is revoked — end the session
+        // instead of hot-looping reconnects the server will keep closing.
+        if (code === WS_CLOSE_SESSION_AUTH) {
+          if (!sessionAuthRefreshAttempted) {
+            sessionAuthRefreshAttempted = true;
+            logger.info(
+              `🔌 WebSocket closed: session auth (4403: ${reason}) — refreshing token`,
+            );
+            sessionAuthTokenRefresh?.().catch(() => {
+              // Refresh failed — reactive HTTP refresh recovers on the next
+              // request and reconnects the socket then.
+            });
+          } else {
+            logger.error(
+              '🔌 WebSocket closed: repeated 4403 — session revoked, signing out',
+            );
+            useStore.getState().clearAuth();
+          }
+          return;
+        }
+
+        // Duration recycle: dial straight back (reset the backoff counter so
+        // the reconnect lands at the base delay, not an escalated one).
+        if (code === WS_CLOSE_DURATION_EXCEEDED) {
+          if (shouldAutoReconnect) {
+            reconnectAttempts = 0;
+            scheduleReconnect();
+          }
           return;
         }
 
@@ -418,6 +480,7 @@ export const disableAutoReconnect = () => {
   }
   clearConnectionStableTimer();
   reconnectAttempts = 0;
+  sessionAuthRefreshAttempted = false;
 };
 
 /**

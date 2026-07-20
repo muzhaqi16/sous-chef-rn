@@ -173,13 +173,12 @@ export function usePantryItemActions({
       typeof payload.message === 'string'
         ? (payload.message as string)
         : 'Something went wrong';
-    const errorShape = { success: false, code, message };
 
     if (isNotFoundErrorPayload(payload)) {
       const resource =
         typeof payload.resource === 'string' ? payload.resource : undefined;
       alertService.alert('Not Found', getNotFoundMessage(resource));
-    } else if (isInvalidUnitPayload(errorShape)) {
+    } else if (isInvalidUnitPayload(code)) {
       const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
       const validList = Array.isArray(rawValidUnits)
         ? (rawValidUnits as string[]).join(', ')
@@ -188,7 +187,7 @@ export function usePantryItemActions({
         ? `${message}\n\nValid units: ${validList}`
         : message;
       alertService.alert('Invalid Unit', detail);
-    } else if (isVersionConflictPayload(errorShape)) {
+    } else if (isVersionConflictPayload(code)) {
       alertService.alert('Item Updated', message);
     } else {
       alertService.alert('Error', message);
@@ -253,10 +252,7 @@ export function usePantryItemActions({
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert(
-              'Item Updated',
-              getVersionConflictMessage(error),
-            );
+            alertService.alert('Item Updated', getVersionConflictMessage());
             return;
           }
           if (isInvalidUnitError(error)) {
@@ -334,10 +330,7 @@ export function usePantryItemActions({
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert(
-              'Item Updated',
-              getVersionConflictMessage(error),
-            );
+            alertService.alert('Item Updated', getVersionConflictMessage());
             return;
           }
           if (isInvalidUnitError(error)) {
@@ -443,10 +436,7 @@ export function usePantryItemActions({
         revertOptimistic();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert(
-              'Item Updated',
-              getVersionConflictMessage(error),
-            );
+            alertService.alert('Item Updated', getVersionConflictMessage());
             return;
           }
           if (isInvalidUnitError(error)) {

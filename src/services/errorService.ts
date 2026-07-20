@@ -304,7 +304,7 @@ export class ErrorService {
       // Check for version conflict errors
       else if (isVersionConflictError(error)) {
         errorCode = 'VERSION_CONFLICT';
-        errorMessage = getVersionConflictMessage(error);
+        errorMessage = getVersionConflictMessage();
       }
       // Apollo error types
       else if (CombinedGraphQLErrors.is(error)) {

@@ -1,17 +1,21 @@
 /**
- * usePantryItemMutations - CRUD mutations for pantry items
+ * usePantryItemMutations - update/remove mutations for pantry items
  *
  * Single responsibility:
- * - Add, update, remove mutations
+ * - Update and remove mutations
  * - Optimistic responses for instant UI
  * - Cache updates for offline-first support
+ *
+ * Adds do NOT live here: every add surface goes through `AddToPantrySheet` /
+ * `usePantryItemSubmission` / `useCreatePantryItem`, which own the
+ * DuplicatePantryItemError restock/force-add recovery flow the contract
+ * requires on every add path.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { Unmasked } from '@apollo/client/masking';
 import type { IgnoreModifier } from '@apollo/client/cache';
 import {
-  CreatePantryItemDocument,
   UpdatePantryItemDocument,
   DeletePantryItemDocument,
   type UpdatePantryItemMutation,
@@ -24,22 +28,19 @@ import {
   enhanceWithVersion,
   buildOptimisticMutationResponse,
 } from '#/apollo/utils/createOptimisticResponse';
-import { buildOptimisticPantryItem } from './buildOptimisticPantryItem';
 import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { addToPantryItemsCache, removeFromPantryItemsCache } from './utils';
+import { removeFromPantryItemsCache } from './utils';
 import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
-import type { PantryItemInput, PantryItemUpdate } from './types';
+import type { PantryItemUpdate } from './types';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
@@ -47,11 +48,11 @@ interface UsePantryItemMutationsOptions {
 }
 
 /**
- * Hook for pantry item CRUD operations
+ * Hook for pantry item update/remove operations
  *
  * @example
  * ```tsx
- * const { addItem, updateItem, removeItem } = usePantryItemMutations({
+ * const { updateItem, removeItem } = usePantryItemMutations({
  *   pantryId,
  *   refetch,
  * });
@@ -63,36 +64,6 @@ export function usePantryItemMutations({
 }: UsePantryItemMutationsOptions) {
   const { createUpdateOperation } = useCrudOperations();
   const client = useApolloClient();
-
-  // ADD MUTATION. `addItem` writes the new item into the cache (keyed by a
-  // client-generated id) before this fires and leaves it there, so it shows
-  // instantly and stays if the create is queued offline or the API is
-  // unreachable. The server stores `input.id` as the primary key and the queue
-  // replays the create keyed by that same id, so they land on one row. An
-  // `optimisticResponse` can't be used: Apollo would roll it back the moment the
-  // request is queued (null result). (Pantry items never merge into an existing
-  // catalog row, so the returned id always equals the one we sent.)
-  const [addItemMutation] = useMutation(CreatePantryItemDocument, {
-    onError: error => {
-      // Network/transient error: queueLink queued the create for replay — keep
-      // the optimistic item; do NOT alert.
-      if (isNetworkError(error)) return;
-      handleMutationError(error, { operation: 'Add Pantry Item' });
-    },
-    update: (cache, { data }) => {
-      const payload = data?.createPantryItem;
-      if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId) {
-        return;
-      }
-      // Server confirmed: re-add (idempotent — same id) so the connection holds
-      // the authoritative entity.
-      executeCacheUpdate(
-        () => addToPantryItemsCache(cache, pantryId, payload.pantryItem),
-        'Cache update failed for addItem, will refetch:',
-        refetch,
-      );
-    },
-  });
 
   // UPDATE MUTATION
   const [updateItemMutation] = useMutation(UpdatePantryItemDocument, {
@@ -169,92 +140,6 @@ export function usePantryItemMutations({
 
   // WRAPPED OPERATIONS
 
-  const addItem = async (input: PantryItemInput) => {
-    if (!pantryId) return undefined;
-
-    // Local-first: mint the permanent id client-side (cuid2). The server stores
-    // it as the PK; queue replay sends it as `clientId` → idempotent re-sends.
-    const id = generateEntityId();
-
-    const createInput = {
-      id,
-      pantryId,
-      quantity: input.quantity,
-      item: {
-        name: input.itemName,
-        ...(input.category && { category: input.category }),
-        ...(input.barcode && { upc: input.barcode }),
-        ...(input.brand && { brand: input.brand }),
-      },
-      ...(input.unitId && { unit: { unitId: input.unitId } }),
-      storage: {
-        storageState: input.storageState,
-        ...(input.location && { storageLocationName: input.location }),
-        ...(input.notes && { storageNotes: input.notes }),
-      },
-      ...(input.expirationDate && { expiresAt: input.expirationDate }),
-    };
-
-    // Write the item into the cache before firing, so it shows immediately and
-    // stays if the create is queued offline (the queue replays it, keyed by this
-    // id).
-    executeCacheUpdate(
-      () =>
-        addToPantryItemsCache(
-          client.cache,
-          pantryId,
-          buildOptimisticPantryItem(id, {
-            pantryId,
-            itemName: input.itemName ?? '',
-            quantity: input.quantity,
-            itemId: input.barcode,
-            unitId: input.unitId,
-            unitName: input.unit,
-            storageState: input.storageState,
-            expiresAt: input.expirationDate,
-            location: input.location,
-          }),
-        ),
-      'Add Pantry Item (optimistic)',
-    );
-
-    const result = await executeMutation(
-      () =>
-        addItemMutation({
-          variables: { input: createInput },
-          context: { localFirst: true },
-        }),
-      'Add Pantry Item error:',
-    );
-    if (!result) return undefined;
-
-    // A non-success payload (e.g. duplicate / validation) resolves under
-    // errorPolicy:'all' with no thrown error, so `onError` never fires — evict
-    // the optimistic item on a real rejection so it doesn't linger. A queued
-    // create (offline / API down) stays and replays. (Pantry has no parent stat
-    // scalar to revert; the connection totalCount self-heals on the evict.)
-    if (
-      classifyCreateResult(
-        result,
-        'createPantryItem',
-        'CreatePantryItemPayload',
-      ) === 'rejected'
-    ) {
-      executeCacheUpdate(
-        () =>
-          removeFromPantryItemsCache(client.cache, pantryId, id, {
-            evictItem: true,
-          }),
-        'Revert rejected Pantry Item',
-      );
-      return undefined;
-    }
-    const payload = result.data?.createPantryItem;
-    return payload?.__typename === 'CreatePantryItemPayload'
-      ? payload.pantryItem
-      : undefined;
-  };
-
   const updateItem = async (itemId: string, updates: PantryItemUpdate) => {
     const operation = createUpdateOperation({
       mutation: updateItemMutation,
@@ -312,7 +197,6 @@ export function usePantryItemMutations({
   };
 
   return {
-    addItem,
     updateItem,
     removeItem,
   };

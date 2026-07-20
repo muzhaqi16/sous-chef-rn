@@ -378,7 +378,11 @@ export const HomeManagement: React.FC = () => {
                     home.myMembership.canInviteOthers,
                   )
                 : false;
-              const userCanDelete = home.myMembership?.canManageHome ?? false;
+              // deleteHome is @requireAccess(Home, OWNER) server-side — the
+              // OWNER role, not the canManageHome flag (which ADMINs hold by
+              // default). Gating on the flag showed ADMINs a Delete that could
+              // only ever return FORBIDDEN.
+              const userCanDelete = home.myMembership?.role === 'OWNER';
 
               return (
                 <Animated.View

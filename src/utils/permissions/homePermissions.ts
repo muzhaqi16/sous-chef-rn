@@ -4,12 +4,12 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
  * Get the roles that a user can invite to a home based on their own role
  * and the granular `canInviteOthers` permission field.
  *
- * Permission rules:
- * - If `canInviteOthers` is explicitly false, the user cannot invite anyone
+ * Permission rules (mirrors the API's HomeAccessControl invite check —
+ * OWNER/ADMIN may always invite; `canInviteOthers` only escalates MEMBER):
  * - GUEST: Cannot invite anyone (regardless of canInviteOthers)
  * - MEMBER: Can invite if canInviteOthers !== false (only MEMBER role)
- * - ADMIN: Can invite MEMBER or ADMIN
- * - OWNER: Can invite GUEST, MEMBER, or ADMIN (but not another OWNER)
+ * - ADMIN: Can invite MEMBER or ADMIN (even with canInviteOthers false)
+ * - OWNER: Can invite GUEST, MEMBER, or ADMIN (even with canInviteOthers false)
  *
  * Note: OWNER role is reserved for home creators and cannot be assigned via invitation
  */
@@ -17,22 +17,18 @@ export function getInvitableRoles(
   userRole: MembershipRole,
   canInviteOthers?: boolean,
 ): MembershipRole[] {
-  // If permission is explicitly denied, no invitations allowed
-  if (canInviteOthers === false) {
-    return [];
-  }
-
   switch (userRole) {
     case MembershipRole.Guest:
       // Guests cannot invite anyone
       return [];
 
     case MembershipRole.Member:
-      // Members can invite if canInviteOthers is not explicitly false
-      return [MembershipRole.Member];
+      // The flag is a MEMBER escalator: explicitly false blocks member invites
+      return canInviteOthers === false ? [] : [MembershipRole.Member];
 
     case MembershipRole.Admin:
-      // Admins can invite members and other admins
+      // Admins can invite members and other admins — the API permits this
+      // unconditionally, so the flag is ignored for admins
       return [MembershipRole.Member, MembershipRole.Admin];
 
     case MembershipRole.Owner:

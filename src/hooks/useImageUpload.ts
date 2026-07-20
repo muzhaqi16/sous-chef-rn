@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { alertService } from '#/services/alertService';
-import { validateImageFile, getMimeTypeFromUri } from '#utils/imageValidation';
+import {
+  validateImageFile,
+  getMimeTypeFromUri,
+  normalizeImageMimeType,
+} from '#utils/imageValidation';
 import { useMutation } from '@apollo/client/react';
 import {
   CreateImageUploadUrlDocument,
@@ -224,9 +228,13 @@ export const useImageUpload = () => {
 
         onProgress?.(10);
 
-        // Step 1: Get presigned URL
-        const mimeType =
-          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri);
+        // Step 1: Get presigned URL. The picker's raw type may be the
+        // non-standard 'image/jpg' (some Android providers) — normalize to
+        // the API-accepted set before the mutation or the server rejects it
+        // with a ValidationError.
+        const mimeType = normalizeImageMimeType(
+          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
+        );
         const { data: uploadData } = await createUploadUrl({
           variables: {
             input: {

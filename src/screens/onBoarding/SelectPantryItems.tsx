@@ -32,6 +32,8 @@ import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
+import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -171,9 +173,9 @@ export const SelectPantryItems = () => {
       executeWithLoadingState(
         async () => {
           await Promise.all([
-            ...itemsToAdd.map(item => {
+            ...itemsToAdd.map(async item => {
               const id = generateEntityId();
-              return addItemToPantry({
+              const result = await addItemToPantry({
                 variables: {
                   input: {
                     id,
@@ -194,6 +196,23 @@ export const SelectPantryItems = () => {
                 },
                 context: { localFirst: true },
               });
+              // The list is pre-filtered by existingCatalogIds, but a race
+              // (another device adding the same item) can still surface the
+              // DuplicatePantryItemError member. The item is already in the
+              // pantry — exactly the onboarding goal — so classify it as a
+              // per-item success-skip rather than leaving it unexamined.
+              if (
+                getPantryItemDuplicateFromResult(
+                  result.data?.createPantryItem,
+                  result.error,
+                )
+              ) {
+                logger.info(
+                  'SelectPantryItems: item already in pantry — skipped',
+                  { itemId: item.id },
+                );
+              }
+              return result;
             }),
             ...itemsToRemove.map(catalogId => {
               const pantryItemId = existingItemMap.get(catalogId)!;

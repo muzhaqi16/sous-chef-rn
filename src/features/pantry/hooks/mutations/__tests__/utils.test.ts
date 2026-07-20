@@ -330,17 +330,45 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ netWeight: { netWeight: null } });
     });
 
-    it('includes netWeightUnitId when dirty', () => {
+    it('pairs a dirty netWeightUnitId with the effective weight value', () => {
+      // API rule on update: a unit without a value is rejected. Changing only
+      // the unit must still send the current weight value alongside it.
       const result = buildDirtyUpdateInput(
         baseFormData,
         { netWeightUnitId: true },
         null,
         null,
       );
-      expect(result).toEqual({ netWeight: { netWeightUnitId: 'nw-unit-1' } });
+      expect(result).toEqual({
+        netWeight: { netWeight: 1.5, netWeightUnitId: 'nw-unit-1' },
+      });
+    });
+
+    it('drops a dirty netWeightUnitId when there is no weight value to pair', () => {
+      const formData = { ...baseFormData, netWeight: '' };
+      const result = buildDirtyUpdateInput(
+        formData,
+        { netWeightUnitId: true },
+        null,
+        null,
+      );
+      // Nothing to attach the unit to — sending it alone would be rejected.
+      expect(result).toEqual({});
+    });
+
+    it('drops the unit but keeps the cleared value when both are dirty and value is blank', () => {
+      const formData = { ...baseFormData, netWeight: '' };
+      const result = buildDirtyUpdateInput(
+        formData,
+        { netWeight: true, netWeightUnitId: true },
+        null,
+        null,
+      );
+      expect(result).toEqual({ netWeight: { netWeight: null } });
     });
 
     it('sets netWeightUnitId to null when empty', () => {
+      // Clearing the unit alone is allowed (value-without-unit is valid).
       const formData = { ...baseFormData, netWeightUnitId: '' };
       const result = buildDirtyUpdateInput(
         formData,

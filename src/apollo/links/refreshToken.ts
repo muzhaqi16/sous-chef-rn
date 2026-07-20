@@ -6,7 +6,11 @@ import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
-import { reconnectWebSocket, isWebSocketReconnecting } from './wsLink';
+import {
+  reconnectWebSocket,
+  isWebSocketReconnecting,
+  registerSessionAuthRefresh,
+} from './wsLink';
 
 // The Apollo client singleton is injected after creation rather than imported
 // directly, which would form a circular dependency:
@@ -386,3 +390,9 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
     resetRefreshState();
   }
 };
+
+// Hand the WS layer its 4403 (session expired) recovery: refresh the token,
+// which on success reconnects the socket itself (performTokenRefresh →
+// reconnectWebSocket). Registered here because wsLink cannot import this
+// module back without a cycle.
+registerSessionAuthRefresh(proactiveTokenRefresh);

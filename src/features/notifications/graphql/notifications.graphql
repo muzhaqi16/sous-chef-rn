@@ -2,17 +2,20 @@
 # SUBSCRIPTIONS
 # ============================================
 
-# Consolidated notification stream. One subscription carries both created and
-# updated events, discriminated by `subtype` (CREATED / UPDATED). Keeps the
-# per-user concurrent-subscription count low (the server caps it cluster-wide).
-# No self-echo filtering: notifications originate from the system rather than a
-# user action, so the handler routes purely on `subtype` and never needs an
-# originator id.
+# Consolidated notification stream. One subscription carries every event kind,
+# discriminated by `subtype`: CREATED / UPDATED plus the dedicated status
+# transitions READ / DISMISSED and the aggregate BULK_READ / BULK_CLEARED /
+# BULK_EXPIRED (which arrive with a null `node` and only `affectedCount`).
+# Keeps the per-user concurrent-subscription count low (the server caps it
+# cluster-wide). No self-echo filtering: notifications originate from the
+# system rather than a user action, so the handler routes purely on `subtype`
+# and never needs an originator id.
 subscription NotificationEvents {
   notificationEvents {
     subtype
     mutation
     timestamp
+    affectedCount
     node {
       id
       ...useNotifications_notification

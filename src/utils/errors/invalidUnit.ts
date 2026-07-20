@@ -56,15 +56,12 @@ export function isInvalidUnitError(error: unknown): boolean {
 }
 
 /**
- * Check if a mutation payload indicates a UNIT_INVALID error.
- * Use this to detect unit errors returned as payload fields (success: false, code: 'UNIT_INVALID')
- * rather than thrown GraphQL errors.
+ * Check if an errors-as-data member's `code` marks a UNIT_INVALID error. The
+ * union member carries only `code` + `message` (+ `validUnits`) — pass the
+ * member's code directly (there is no `success` field on current payloads).
  */
-export function isInvalidUnitPayload(payload: {
-  success: boolean;
-  code: string;
-}): boolean {
-  return !payload.success && payload.code === 'UNIT_INVALID';
+export function isInvalidUnitPayload(code: string): boolean {
+  return code === 'UNIT_INVALID';
 }
 
 /**

@@ -518,6 +518,9 @@ mutation ConfirmRecipeConsumption(
   confirmRecipeConsumption(input: $input) {
     __typename
     ... on ConfirmRecipeConsumptionPayload {
+      # Replay signal: false = a partial crash already finished the leftover
+      # items; true = idempotent replay of a completed confirmation.
+      converged
       totalConsumed
       totalFailed
       cookingLog {
@@ -540,6 +543,9 @@ mutation MarkRecipeAsCooked(
   markRecipeAsCooked(input: $input) {
     __typename
     ... on MarkRecipeAsCookedPayload {
+      # Replay signal: true = the client-minted cooking-log id already existed
+      # (idempotent replay), false = a fresh log row was created.
+      converged
       cookingLog {
         id
         servingsMade

@@ -2,7 +2,10 @@
 
 import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ConfirmItemImageUploadDocument,
@@ -284,6 +287,37 @@ describe('useImageUpload', () => {
       const uploaded = await runUpload();
 
       expect(uploaded).toBe('https://cdn.test/a.jpg');
+    });
+
+    it("normalizes a picker-reported 'image/jpg' to 'image/jpeg' in the presign mime", async () => {
+      // Some Android providers report the non-standard 'image/jpg'; the API
+      // accepts only image/jpeg | image/png | image/webp and rejects the raw
+      // value with a ValidationError.
+      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
+        data: {
+          createImageUploadUrl: {
+            __typename: 'CreateImageUploadUrlPayload',
+            url: 'https://storage.test/bucket',
+            key: 'items/i1/a',
+            fields: PRESIGN_FIELDS,
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [mock, buildConfirmItemMock('https://cdn.test/a.jpg')],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(
+          { ...file, type: 'image/jpg' },
+          'item-1',
+        );
+      });
+
+      expect(fired).toContainEqual({
+        input: expect.objectContaining({ mime: 'image/jpeg' }),
+      });
     });
   });
 

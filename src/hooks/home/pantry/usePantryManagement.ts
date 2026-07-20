@@ -54,8 +54,9 @@ export function usePantryManagement(
     storageLocationCounts: stats?.storageLocationCounts ?? [],
   });
 
-  // Mutations hook - CRUD operations
-  const { addItem, updateItem, removeItem } = usePantryItemMutations({
+  // Mutations hook - update/remove operations (adds go through the dedicated
+  // add surfaces, which own the duplicate-recovery flow)
+  const { updateItem, removeItem } = usePantryItemMutations({
     pantryId,
     refetch,
   });
@@ -75,7 +76,6 @@ export function usePantryManagement(
     },
     actions: {
       loadMore,
-      addItem,
       updateItem,
       removeItem,
       refetch,

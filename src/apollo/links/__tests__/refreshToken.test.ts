@@ -30,6 +30,7 @@ jest.mock('#/utils/isNetworkError', () => ({
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),
   isWebSocketReconnecting: jest.fn(() => false),
+  registerSessionAuthRefresh: jest.fn(),
 }));
 
 // Mock Apollo client

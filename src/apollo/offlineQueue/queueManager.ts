@@ -163,6 +163,11 @@ export class QueueManager {
     // not live work. Reset to PENDING so this drain picks them up.
     queueStore.resetProcessingToPending(userId);
 
+    // Never replay past the server's 90-day idempotency-dedup horizon — the
+    // dedup record is pruned by then, so a replay would double-apply instead
+    // of classifying as IDEMPOTENT_REPLAY. Expired entries surface as FAILED.
+    queueStore.expireStalePending(userId);
+
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
@@ -330,6 +335,7 @@ export class QueueManager {
         payload?.__typename ?? 'Error',
         payload?.message ??
           `${mutation.operationName} was rejected by the server on replay`,
+        payload?.code ?? null,
       );
     }
 

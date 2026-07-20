@@ -43,6 +43,7 @@ jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
+    expireStalePending: jest.fn(() => 0),
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),

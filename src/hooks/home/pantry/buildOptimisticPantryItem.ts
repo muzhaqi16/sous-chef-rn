@@ -1,8 +1,8 @@
 /**
  * buildOptimisticPantryItem — shared optimistic entity builder for pantry creates.
  *
- * Every pantry "create" site (the primary `usePantryItemMutations.addItem`, the
- * two add sheets, the form-submission hooks, onboarding) writes the new item to
+ * Every pantry "create" site (the two add sheets, the form-submission hooks,
+ * onboarding) writes the new item to
  * the cache PERMANENTLY before firing the mutation so it survives a fully-offline
  * / API-down create (the queue replays via SyncPantryItem(clientId = id)). They
  * all need the same complete `PantryItem` shape — a single source of truth here

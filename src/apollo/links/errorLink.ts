@@ -15,6 +15,7 @@ import { CLIENT_VERSION } from '../clientIdentity';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
 
 // Utility functions for error detection
 // Note: FORBIDDEN is intentionally NOT included here - it's a resource access error, not an auth error
@@ -27,8 +28,10 @@ const isAuthError = (code: string, msg: string) =>
   );
 
 // FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't have access to the resource
-// — not an auth issue (no token refresh). AUTHZ_FORBIDDEN is the API's current
-// code; FORBIDDEN is the legacy alias still emitted by some resolvers.
+// — not an auth issue (no token refresh). Both codes are current, on different
+// channels: FORBIDDEN is what the mutation result-union member (errors-as-data)
+// and the @auth directive emit; AUTHZ_FORBIDDEN is the top-level
+// `extensions.code` on rejected reads. Both branches are load-bearing.
 const isResourceAccessError = (code: string) =>
   code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN';
 
@@ -82,6 +85,20 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       }
 
       if (isResourceAccessError(code)) {
+        // The @auth directive rejects EVERY field for a suspended/deleted
+        // account with FORBIDDEN + this reason. Staying "logged in" would
+        // strand the user on cached data with all requests failing — end the
+        // session so they land on sign-in. Defensive substring match on the
+        // server's reason string (a dedicated code is requested upstream);
+        // ordinary resource-level FORBIDDEN stays non-fatal below.
+        const reason = String(err.extensions?.reason || '');
+        if (/suspended or deleted/i.test(reason)) {
+          logger.error(
+            `Account inactive (${operation.operationName}) — ending session`,
+          );
+          useStore.getState().clearAuth();
+          return;
+        }
         logger.warn(`Access denied for ${operation.operationName}: ${message}`);
         continue;
       }
