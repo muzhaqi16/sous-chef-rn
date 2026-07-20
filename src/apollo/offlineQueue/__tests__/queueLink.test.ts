@@ -4,6 +4,7 @@ import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
 import { queueStore } from '../queueStore';
+import { OfflineRejectedError } from '../OfflineRejectedError';
 import { useStore } from '#store';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { gql } from '@apollo/client';
@@ -434,6 +435,9 @@ describe('createQueueLink', () => {
         },
         error(err) {
           // The hook's error path shows an honest failure; nothing replays later.
+          // It is the named OfflineRejectedError (so the breaker/telemetry can
+          // skip it) yet still reads as network-shaped for the hook.
+          expect(err).toBeInstanceOf(OfflineRejectedError);
           expect(isNetworkError(err)).toBe(true);
           expect((err as Error).message).toContain('CreateRecipeReview');
           expect(forward).not.toHaveBeenCalled();
@@ -522,6 +526,35 @@ describe('createQueueLink', () => {
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);
           expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
+    it('queues a Sync*-mapped operation WITHOUT localFirst (matches the offline allowlist)', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        apiReachable: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'UpdatePantryItem',
+        variables: { input: { id: 'item-1', quantity: 2 } },
+        // no localFirst — allowlisted via SYNC_REGISTRY, same as the offline path
+      });
+      const forward = makeForward();
+
+      link.request(operation, forward)!.subscribe({
+        next(result) {
+          expect(result.extensions).toEqual({
+            queued: true,
+            queuedReason: 'api-unreachable',
+          });
+        },
+        complete() {
+          expect(forward).not.toHaveBeenCalled();
+          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
           done();
         },
       });

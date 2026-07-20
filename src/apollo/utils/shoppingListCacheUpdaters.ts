@@ -445,6 +445,75 @@ export function reconcileShoppingItemCreateUpdate(
   addNewItemToShoppingListCache(cache, listId, serverItem, false);
 }
 
+// Structural slices of the add-items mutation result/variables the builder
+// below reads. Kept loose so every add-to-shopping-list mutation document
+// (plain, from-pantry-item, from-filtered-pantry) satisfies the shape.
+interface AddItemsReconcilePayloadLike {
+  __typename?: string;
+  results?: readonly ({ item?: { id: string } | null } | null)[] | null;
+}
+
+interface AddItemsReconcileDataLike {
+  addItemsToShoppingList?: AddItemsReconcilePayloadLike | null;
+}
+
+interface AddItemsReconcileVariablesLike {
+  input: {
+    items?: readonly ({ id?: string | null } | null)[] | null;
+    shoppingListId?: string | null;
+  };
+}
+
+interface BuildAddItemsReconcileUpdateOptions {
+  /** Target list id; when omitted, read from `variables.input.shoppingListId`. */
+  listId?: string | null;
+  /**
+   * When set, wrap the reconcile in `executeCacheUpdate` with this failure
+   * message and optional refetch fallback. Omit to apply the reconcile directly.
+   */
+  wrap?: { message: string; refetch?: () => void };
+}
+
+/**
+ * Builds the mutation `update` callback shared by every add-to-shopping-list
+ * entry point: guard the `AddItemsToShoppingListPayload`, take the single
+ * created/merged row, adopt the server id over the client id, and reconcile it
+ * into the target list's cache. The list id comes from `listId` when supplied,
+ * otherwise from the mutation's own `variables.input.shoppingListId`.
+ */
+export function buildAddItemsReconcileUpdate({
+  listId,
+  wrap,
+}: BuildAddItemsReconcileUpdateOptions) {
+  return (
+    cache: ApolloCache,
+    { data }: { data?: AddItemsReconcileDataLike | null },
+    { variables }: { variables?: AddItemsReconcileVariablesLike },
+  ): void => {
+    const payload = data?.addItemsToShoppingList;
+    const targetListId = listId ?? variables?.input.shoppingListId;
+    if (
+      payload?.__typename !== 'AddItemsToShoppingListPayload' ||
+      !targetListId ||
+      !variables
+    ) {
+      return;
+    }
+    // Single add via the batch mutation — the created/merged row is the one
+    // entry in `results`. Null when that item failed.
+    const item = payload.results?.[0]?.item;
+    if (!item) return;
+    const clientId = variables.input.items?.[0]?.id;
+    const run = () =>
+      reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
+    if (wrap) {
+      executeCacheUpdate(run, wrap.message, wrap.refetch);
+    } else {
+      run();
+    }
+  };
+}
+
 /**
  * Local-first optimistic add: write a new ShoppingListItem to the cache
  * PERMANENTLY (full entity + connection edge + recomputed list stats) BEFORE the

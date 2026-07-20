@@ -63,7 +63,7 @@ import {
   hydrateOfflineModeFromStorage,
   NetworkState,
 } from './slices/networkSlice';
-import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
+import { zustandStorage, STORAGE_KEY, isRecoveryStorage } from '#/storage/mmkv';
 import {
   loadSessionTokens,
   pickFresherSessionTokens,
@@ -330,6 +330,10 @@ const PERSISTED_KEYS = classifyKeys(
   'cachedCategories',
   'cachedBrands',
   'cachedStores',
+  // Seen-items LRU — persisted so offline cold-start item autocomplete keeps
+  // its fallback suggestions (no freshness stamp: it's a usage LRU, not a
+  // fetched catalog slice).
+  'cachedItemSuggestions',
   'lastFetchedAt',
   'lastUnitsFetchedAt',
   'lastCategoriesFetchedAt',
@@ -488,11 +492,15 @@ export const useStore = create<RootState>()(
 
           // Losing both token tiers logs the user out, so the pair stays in
           // the MMKV blob while the keychain copy is unconfirmed (migration
-          // writes, transient keychain failures).
+          // writes, transient keychain failures). Never on the recovery
+          // instance, though — that file is unencrypted at rest, so persisting
+          // the tokens there would defeat the fail-closed contract. In that
+          // doubly-degraded case the user re-logs in on next launch.
           if (
             !state.sessionTokensInKeychain &&
             state.accessToken &&
-            state.refreshToken
+            state.refreshToken &&
+            !isRecoveryStorage()
           ) {
             return {
               ...persisted,

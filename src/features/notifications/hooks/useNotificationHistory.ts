@@ -35,6 +35,9 @@ export function useNotificationHistory(
   const addMultipleNotifications = useAppStore(
     state => state.addMultipleNotifications,
   );
+  const setServerNotificationCounts = useAppStore(
+    state => state.setServerNotificationCounts,
+  );
 
   const { data, error, loading, fetchMore, networkStatus } = useQuery(
     GetNotificationsDocument,
@@ -50,27 +53,45 @@ export function useNotificationHistory(
 
   useApolloErrorLogger('GetNotifications', error);
 
-  const connection = data?.me?.notificationsConnection;
+  const me = data?.me;
+  const connection = me?.notificationsConnection;
 
   useEffect(() => {
+    if (!me) return;
     const edges = connection?.edges;
-    if (!edges || edges.length === 0) return;
-    const items = edges
-      .map(edge =>
-        client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
-          {
-            fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-            fragmentName: 'useNotificationsOnLaunch_notification',
-            from: { __typename: 'Notification', id: edge.node.id },
-          },
-        ),
-      )
-      .filter(
-        (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
-      )
-      .map(mapNotificationToStore);
-    if (items.length > 0) addMultipleNotifications(items);
-  }, [connection, client, addMultipleNotifications]);
+    if (edges && edges.length > 0) {
+      const items = edges
+        .map(edge =>
+          client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
+            {
+              fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+              fragmentName: 'useNotificationsOnLaunch_notification',
+              from: { __typename: 'Notification', id: edge.node.id },
+            },
+          ),
+        )
+        .filter(
+          (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
+        )
+        .map(mapNotificationToStore);
+      if (items.length > 0) addMultipleNotifications(items);
+    }
+
+    // Seed the badge from the server's authoritative totals AFTER the list
+    // materializes — addMultipleNotifications recomputes counts from the local
+    // list, which would clobber a seed written first. Mirrors
+    // useNotificationsOnLaunch so history and launch agree on the count.
+    setServerNotificationCounts(
+      me.unreadNotificationCount,
+      me.hasUrgentNotifications,
+    );
+  }, [
+    me,
+    connection,
+    client,
+    addMultipleNotifications,
+    setServerNotificationCounts,
+  ]);
 
   const hasMore = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor ?? null;

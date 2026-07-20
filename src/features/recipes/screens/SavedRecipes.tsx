@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { FlashList } from '@shopify/flash-list';
@@ -24,14 +23,8 @@ import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { type Reference } from '@apollo/client';
-import {
-  RemoveRecipeFromFavoritesDocument,
-  MySavedRecipesDocument,
-  type MySavedRecipesQuery,
-} from '#features/recipes/graphql/recipe.generated';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
+import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
 import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
@@ -137,95 +130,20 @@ export const SavedRecipes: React.FC = () => {
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    const recipeCacheId = client.cache.identify({
-      __typename: 'Recipe',
-      id: recipeId,
-    });
-
-    // Snapshot for revert, then write the un-save optimistically so it sticks
-    // even fully offline (the queued mutation replays later).
-    const savedRecipesSnapshot = client.cache.readQuery<MySavedRecipesQuery>({
-      query: MySavedRecipesDocument,
-    });
-    let savedDetailsSnapshot: Reference | null = null;
-
-    client.cache.updateQuery<MySavedRecipesQuery>(
-      { query: MySavedRecipesDocument },
-      existing => {
-        if (!existing?.me) return existing;
-        return {
-          ...existing,
-          me: {
-            ...existing.me,
-            savedRecipesConnection: {
-              ...existing.me.savedRecipesConnection,
-              edges: existing.me.savedRecipesConnection.edges.filter(
-                edge => edge.node.recipe.id !== recipeId,
-              ),
-              totalCount: Math.max(
-                0,
-                (existing.me.savedRecipesConnection.totalCount ?? 0) - 1,
-              ),
-            },
-          },
-        };
-      },
-    );
-    if (recipeCacheId) {
-      client.cache.modify<{ savedDetails: Reference | null }>({
-        id: recipeCacheId,
-        fields: {
-          savedDetails(existing) {
-            savedDetailsSnapshot = existing;
-            return null;
-          },
-        },
-      });
-    }
-
-    const revert = () => {
-      if (savedRecipesSnapshot) {
-        client.cache.writeQuery({
-          query: MySavedRecipesDocument,
-          data: savedRecipesSnapshot,
-        });
-      }
-      if (recipeCacheId) {
-        client.cache.modify<{ savedDetails: Reference | null }>({
-          id: recipeCacheId,
-          fields: { savedDetails: () => savedDetailsSnapshot },
-        });
-      }
-    };
-
-    const result = await executeMutation(
-      () =>
+    await performOptimisticUnfavorite({
+      client,
+      recipeId,
+      mutate: () =>
         unfavoriteRecipeMutation({
           variables: { input: { recipeId } },
           // Local-first: queue + replay (idempotent) when the API is
           // unreachable instead of surfacing a blocking error.
           context: { localFirst: true },
         }),
-      (error: unknown) => {
-        revert();
-        errorService.reportError(error, { operation: 'removeSavedRecipe' });
-        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
-      },
-    );
-    if (!result) return; // threw -> already reverted above
-
-    // A resolved rejection (error union member / transport error) reverts;
-    // 'queued' (offline / API down) keeps the optimistic removal — it replays.
-    if (
-      classifyCreateResult(
-        result,
-        'removeRecipeFromFavorites',
-        'RemoveRecipeFromFavoritesPayload',
-      ) === 'rejected'
-    ) {
-      revert();
-      alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed'));
-    }
+      operation: 'removeSavedRecipe',
+      reportFailure: () =>
+        alertService.alert(t('labels.error'), t('recipes.removeRecipeFailed')),
+    });
   };
 
   const handleItemPress = (recipeId: string) => {

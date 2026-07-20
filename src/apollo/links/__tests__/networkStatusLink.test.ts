@@ -3,8 +3,10 @@ import type { ApolloClient } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createNetworkStatusLink } from '../networkStatusLink';
 import { apiReachabilityBreaker } from '../apiReachabilityBreaker';
+import { OfflineRejectedError } from '../../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 
 jest.mock('../apiReachabilityBreaker', () => ({
@@ -186,6 +188,32 @@ describe('createNetworkStatusLink', () => {
     );
     expect(recordFailure).toHaveBeenCalledTimes(1);
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('ignores queueLink’s offline fast-fail rejection (never touched the network)', () => {
+    // The offline rejection proves nothing about API reachability — counting it
+    // would feed the breaker a preemptive decision. The guard short-circuits
+    // BEFORE the network-error branch (so isNetworkError is never consulted) and
+    // still propagates the error so the hook surfaces its honest offline failure.
+    const err = new OfflineRejectedError('AddItem');
+    let propagated: unknown;
+    link
+      .request(
+        operation(),
+        forwardEmitting(o => o.error(err)),
+      )
+      ?.subscribe({
+        next: () => {},
+        error: e => {
+          propagated = e;
+        },
+        complete: () => {},
+      });
+
+    expect(recordFailure).not.toHaveBeenCalled();
+    expect(recordSuccess).not.toHaveBeenCalled();
+    expect(isNetworkError).not.toHaveBeenCalled();
+    expect(propagated).toBe(err);
   });
 
   it('ignores a non-network error (does not touch the breaker)', () => {

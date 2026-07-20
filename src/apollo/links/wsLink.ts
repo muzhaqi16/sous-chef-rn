@@ -6,6 +6,7 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
+import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
 // pick the right WebSocket constructor
@@ -65,6 +66,10 @@ let reconnectDeferredUntilOnline = false;
 // Deferring the reset until the socket proves stable means such a cycle keeps
 // escalating the backoff and eventually stops, instead of hammering the server.
 const CONNECTION_STABLE_MS = 10_000;
+
+// Close code the server uses to refuse a build below its configured minimum
+// version. Terminal: the same build reconnecting sends the same version.
+const WS_CLOSE_CLIENT_UPGRADE_REQUIRED = 4411;
 let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearConnectionStableTimer = () => {
@@ -165,6 +170,14 @@ const createWsClient = () => {
 
       const params: Record<string, string | undefined> = {};
 
+      // Identify the build. Apollo's clientAwareness config only produces HTTP
+      // headers, and the socket upgrade carries none — so the same name/version
+      // pair is sent by hand here. Without it the server can't tell this build
+      // apart from an outdated one and closes with 4411 once a minimum version
+      // is configured.
+      params['apollographql-client-name'] = CLIENT_NAME;
+      params['apollographql-client-version'] = CLIENT_VERSION;
+
       // Always include API key if available
       if (apiKey) {
         params['x-api-key'] = apiKey;
@@ -235,6 +248,18 @@ const createWsClient = () => {
         const code = closeEvent?.code;
         const reason =
           typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
+
+        // This build is below the server's minimum version. Reconnecting sends
+        // the same version and closes identically, so stop the cycle entirely
+        // rather than backing off — only a store update can clear it. The HTTP
+        // half surfaces the same refusal as CLIENT_UPGRADE_REQUIRED.
+        if (code === WS_CLOSE_CLIENT_UPGRADE_REQUIRED) {
+          shouldAutoReconnect = false;
+          logger.error(
+            `🔌 WebSocket closed: client upgrade required (app version ${CLIENT_VERSION}): ${reason}`,
+          );
+          return;
+        }
 
         // Auth error detection: 4500 (legacy), 4401 (new), or 1006+401
         const isAuthCode = code === 4500 || code === 4401;

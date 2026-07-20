@@ -33,7 +33,7 @@ import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import {
@@ -329,25 +329,7 @@ export const FilteredPantryItems: React.FC<
       // Add the created item to the list connection so it appears when the list
       // comes into view (the mutation returns the full item). Reads the list id
       // from the mutation's own variables to stay correct across re-renders.
-      update: (cache, { data }, { variables }) => {
-        const payload = data?.addItemsToShoppingList;
-        if (
-          payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-          !variables
-        ) {
-          return;
-        }
-        // Single add via the batch mutation — the created/merged row is the one
-        // entry in `results`. Null when that item failed.
-        const item = payload.results[0]?.item;
-        if (!item) return;
-        reconcileShoppingItemCreateUpdate(
-          cache,
-          variables.input.shoppingListId,
-          item,
-          variables.input.items[0]?.id,
-        );
-      },
+      update: buildAddItemsReconcileUpdate({}),
     },
   );
 

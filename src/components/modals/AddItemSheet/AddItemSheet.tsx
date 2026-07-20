@@ -378,8 +378,10 @@ export function AddItemSheet<
                   </View>
                 ) : (
                   <>
-                    {/* Render suggestion sections in priority order */}
-                    {config.suggestionGroups
+                    {/* Render suggestion sections in priority order. Copy
+                        before sorting — `.sort()` mutates in place, and the
+                        array belongs to the caller's `config` prop. */}
+                    {[...config.suggestionGroups]
                       .sort((a, b) => a.priority - b.priority)
                       .map(renderSuggestionSection)}
                   </>

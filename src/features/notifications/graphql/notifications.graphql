@@ -62,6 +62,11 @@ query GetNotifications(
 ) {
   me {
     id
+    # Server-authoritative counts — re-seed the badge after the history loads so
+    # it stays correct even when more are unread than this page holds (the local
+    # list-recompute alone under-counts), mirroring GetUnreadNotifications.
+    unreadNotificationCount
+    hasUrgentNotifications
     notificationsConnection(
       filters: $filter
       first: $first

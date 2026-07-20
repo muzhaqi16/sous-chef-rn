@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useLayoutEffect, useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -119,15 +119,23 @@ export const SegmentedControl = <T extends string>({
     [selectedIndex, tabWidth],
   );
 
-  const [prevIndex, setPrevIndex] = useState(selectedIndex);
-  if (prevIndex !== selectedIndex) {
-    const fromDelta = (prevIndex - selectedIndex) * tabWidth;
-    setPrevIndex(selectedIndex);
+  // Slide the pill from the previously-selected segment to the new one. Seeded
+  // in a layout effect (not the render body) so no SharedValue is written during
+  // render; keyed on the selected index. The previous index lives in a
+  // SharedValue — writing it never re-renders, and reading it in the effect
+  // avoids a setState-in-effect cascade. The resting position stays derived
+  // (indicatorX above), so first paint / cold boot is correct even before this
+  // ever runs — this only adds the transient slide on a selection change.
+  const prevIndexSV = useSharedValue(selectedIndex);
+  useLayoutEffect(() => {
+    const fromIndex = prevIndexSV.get();
+    if (fromIndex === selectedIndex) return;
+    prevIndexSV.set(selectedIndex);
     if (tabWidth > 0) {
-      offset.set(fromDelta);
+      offset.set((fromIndex - selectedIndex) * tabWidth);
       offset.set(withSpring(0, SPRING.GENTLE));
     }
-  }
+  }, [selectedIndex, tabWidth, offset, prevIndexSV]);
 
   const animatedTheme = useAnimatedTheme();
 

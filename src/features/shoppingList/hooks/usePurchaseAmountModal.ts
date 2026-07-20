@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
+import { t } from '#/i18n/t';
 
 /**
  * Transformed item for PurchaseAmountSheet
@@ -106,7 +107,7 @@ export function usePurchaseAmountModal(
   const selectedItem: PurchaseAmountItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
-        itemName: selectedItemRaw.itemName || 'Item',
+        itemName: selectedItemRaw.itemName || t('labels.item'),
         requestedQuantity: selectedItemRaw.quantity ?? 1,
         unitName:
           selectedItemRaw.unit?.symbol || selectedItemRaw.unitName || null,

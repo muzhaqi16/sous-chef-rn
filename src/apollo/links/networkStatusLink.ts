@@ -4,6 +4,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { apiReachabilityBreaker } from './apiReachabilityBreaker';
 
 const describeError = (error: unknown): string => {
@@ -90,6 +91,13 @@ export const createNetworkStatusLink = () =>
           observer.next(result);
         },
         error: error => {
+          // queueLink's offline fast-fail proves nothing about API reachability —
+          // it never touched the network. Propagate it (the hook still surfaces
+          // the honest offline failure) but keep it out of the breaker.
+          if (isOfflineRejectedError(error)) {
+            observer.error(error);
+            return;
+          }
           if (isNetworkError(error)) {
             apiReachabilityBreaker.recordFailure(
               `${operationName} (${operationKind}): ${describeError(error)}`,

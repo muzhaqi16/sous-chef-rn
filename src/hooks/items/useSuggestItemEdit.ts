@@ -3,16 +3,12 @@ import { useMutation } from '@apollo/client/react';
 import {
   CreateItemSuggestionDocument,
   UpdateItemDocument,
-  type CreateItemSuggestionMutation,
   type UpdateItemMutation,
 } from './useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
+import { alertMutationFailure } from './alertMutationFailure';
 import {
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
@@ -28,10 +24,17 @@ export type ItemEditResult =
   | { status: 'readOnly' }
   | { status: 'failed' };
 
-type SuggestPayload = CreateItemSuggestionMutation['createItemSuggestion'];
-type UpdatePayload = UpdateItemMutation['updateItem'];
-
 const FAILED: ItemEditResult = { status: 'failed' };
+
+// The 5-pending cap is the only CONFLICT either mutation raises, so the
+// typename alone identifies it. Should a second conflict appear, key on
+// `payload.code` instead — this copy would be actively wrong for it.
+const SUGGEST_FAILURE_CASES: Record<
+  string,
+  { titleKey: string; bodyKey: string }
+> = {
+  ConflictError: { titleKey: 'pendingCapTitle', bodyKey: 'pendingCapBody' },
+};
 
 /**
  * The slice of an Apollo mutation result the helpers below read. Structural on
@@ -108,7 +111,7 @@ export function useSuggestItemEdit() {
 
       // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
       if (result === false) {
-        alertFailure(t);
+        alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
         return FAILED;
       }
 
@@ -126,7 +129,12 @@ export function useSuggestItemEdit() {
       // published, or ownership changed), so do what the server asked and fall
       // through to the suggestion path.
       if (outcome !== 'forbidden') {
-        alertFailure(t, result, result.data?.updateItem);
+        alertMutationFailure(t, {
+          keyPrefix: 'suggestItemEdit',
+          result,
+          payload: result.data?.updateItem,
+          extraCases: SUGGEST_FAILURE_CASES,
+        });
         return FAILED;
       }
     }
@@ -155,7 +163,7 @@ export function useSuggestItemEdit() {
     );
 
     if (result === false) {
-      alertFailure(t);
+      alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
       return FAILED;
     }
 
@@ -181,7 +189,12 @@ export function useSuggestItemEdit() {
       return { status: collapsed ? 'duplicate' : 'suggested' };
     }
 
-    alertFailure(t, result, payload);
+    alertMutationFailure(t, {
+      keyPrefix: 'suggestItemEdit',
+      result,
+      payload,
+      extraCases: SUGGEST_FAILURE_CASES,
+    });
     return FAILED;
   };
 
@@ -208,52 +221,4 @@ function interpretUpdate(
   if (payload?.__typename === 'UpdateItemPayload') return 'updated';
   if (payload?.__typename === 'ForbiddenError') return 'forbidden';
   return null;
-}
-
-type TFunc = ReturnType<typeof useTranslation>['t'];
-
-function alertFailure(
-  t: TFunc,
-  result?: MutationResult<unknown>,
-  payload?: SuggestPayload | UpdatePayload,
-): void {
-  // The 10/hour cap is a TOP-LEVEL GraphQL error, never a union member — check
-  // it before falling through to the union branches.
-  if (result && isRateLimitError(result.error)) {
-    alertService.alert(
-      t('suggestItemEdit.rateLimitedTitle'),
-      getRateLimitMessage(result.error),
-    );
-    return;
-  }
-
-  switch (payload?.__typename) {
-    // The 5-pending cap is the only CONFLICT either mutation raises, so the
-    // typename alone identifies it. Should a second conflict appear, switch on
-    // `payload.code` instead — this copy would be actively wrong for it.
-    case 'ConflictError':
-      alertService.alert(
-        t('suggestItemEdit.pendingCapTitle'),
-        t('suggestItemEdit.pendingCapBody'),
-      );
-      return;
-    case 'NotFoundError':
-      alertService.alert(
-        t('suggestItemEdit.notFoundTitle'),
-        t('suggestItemEdit.notFoundBody'),
-      );
-      return;
-    case 'ValidationError':
-      // Server-authored and field-specific — the most useful thing we have.
-      alertService.alert(
-        t('suggestItemEdit.rejectedTitle'),
-        payload.message || t('suggestItemEdit.failedBody'),
-      );
-      return;
-    default:
-      alertService.alert(
-        t('suggestItemEdit.failedTitle'),
-        t('suggestItemEdit.failedBody'),
-      );
-  }
 }

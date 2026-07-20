@@ -6678,6 +6678,15 @@ export type Mutation = {
    * graphql-operation-conventions.md §5). NOTE: this input's id argument is
    * `storeId` while UpdateStoreInput uses `id`; unify to `id` in the next
    * coordinated breaking cutover.
+   *
+   * Community-editable by design: any authenticated user may contribute or
+   * OVERWRITE these shared contact fields, with no moderation gate (unlike the
+   * admin-gated updateStore, and unlike item suggestions which queue for review).
+   * Accepted risk: shared-contact-field vandalism — e.g. pointing a store's
+   * `website` at a phishing page for all users. This is a logged, accepted
+   * posture, not an oversight; overwrite hardening (moderate/queue, moderator-only
+   * overwrite of populated fields, or per-store rate limiting) is DEFERRED and
+   * tracked separately (PR #184 re-review R9 / action-plan C2).
    */
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */

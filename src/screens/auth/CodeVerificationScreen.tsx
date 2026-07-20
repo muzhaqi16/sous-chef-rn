@@ -27,12 +27,12 @@ import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
-function extractVerificationToken(url: string): string | null {
+export function extractVerificationToken(url: string): string | null {
   try {
     const parsed = new URL(url);
     if (!parsed.pathname.includes('verify-email')) return null;
     const token = parsed.searchParams.get('token');
-    if (!token || !/^[0-9a-fA-F]{32 }$/.test(token)) return null;
+    if (!token || !/^[0-9a-fA-F]{32}$/.test(token)) return null;
     return token;
   } catch {
     return null;
@@ -117,7 +117,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     handleSubmit,
     formState: { errors },
   } = useForm({
-    resolver: yupResolver(getEmailVerificationValidationSchema(t)),
+    resolver: yupResolver(getEmailVerificationValidationSchema()),
     defaultValues: { code: '' },
   });
 

@@ -34,6 +34,13 @@ function handleRegister(deviceToken: string): void {
   refreshListeners.forEach(listener => listener(deviceToken));
 }
 
+function handleRegistrationError(error: unknown): void {
+  logger.error('APNs registration failed:', error);
+  // No token is coming — settle every pending getToken() with null now instead
+  // of leaving it to expire on the TOKEN_WAIT_MS timeout.
+  [...pendingResolvers].forEach(settle => settle(null));
+}
+
 /**
  * Attaches the persistent APNs event listeners exactly once, so a token that
  * arrives between requestPermission() and getToken() is not missed.
@@ -43,9 +50,10 @@ function ensureListeners(): void {
   listenersReady = true;
   try {
     PushNotificationIOS.addEventListener('register', handleRegister);
-    PushNotificationIOS.addEventListener('registrationError', error => {
-      logger.error('APNs registration failed:', error);
-    });
+    PushNotificationIOS.addEventListener(
+      'registrationError',
+      handleRegistrationError,
+    );
   } catch (error) {
     listenersReady = false;
     logger.error('APNs listener registration failed:', error);

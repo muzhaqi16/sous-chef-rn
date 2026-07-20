@@ -1331,14 +1331,21 @@ describe('useRecipeScreen', () => {
         searchDone = result.current.handleTextSearch('soup');
       });
 
+      // The search is in flight, so the spinner is showing.
+      expect(result.current.searchLoading).toBe(true);
+
       // User clears the search before the in-flight response lands.
       act(() => {
         result.current.clearSearch();
       });
       expect(result.current.searchResults).toEqual([]);
       expect(result.current.searchPerformed).toBe(false);
+      // Clearing mid-flight must drop the loading flag — otherwise the empty
+      // state stays stuck on the "searching…" spinner.
+      expect(result.current.searchLoading).toBe(false);
 
-      // The stale response resolves — the cleared list must stay empty.
+      // The stale response resolves — the cleared list must stay empty and the
+      // superseded search must not resurrect the loading flag.
       await act(async () => {
         resolvePending(spoonResponse(3333, 'Tomato Soup'));
         await searchDone;
@@ -1346,6 +1353,101 @@ describe('useRecipeScreen', () => {
 
       expect(result.current.searchResults).toEqual([]);
       expect(result.current.searchPerformed).toBe(false);
+      expect(result.current.searchLoading).toBe(false);
+    });
+
+    it('discards an in-flight text search superseded by an ingredient search', async () => {
+      // The text search's Spoonacular half is deferred so it resolves LAST; an
+      // ingredient search fired after it must win and the stale text response
+      // must not clobber the ingredient results.
+      let resolveText!: (v: unknown) => void;
+      const textPending = new Promise(res => {
+        resolveText = res;
+      });
+      mockSearchRecipes.mockImplementation((params: { query?: string }) =>
+        params.query === 'pasta'
+          ? textPending
+          : Promise.resolve(emptySpoonacularResponse),
+      );
+      mockSearchRecipesByIngredients.mockResolvedValueOnce(
+        sampleIngredientSearchResponse,
+      );
+
+      const { result } = renderRecipeScreen();
+      act(() => {
+        result.current.toggleIngredient('Tomato');
+      });
+
+      let textDone!: Promise<void>;
+      await act(async () => {
+        textDone = result.current.handleTextSearch('pasta');
+      });
+      expect(result.current.searchLoading).toBe(true);
+
+      // The ingredient search supersedes the in-flight text search and commits.
+      await act(async () => {
+        await result.current.handleIngredientSearch();
+      });
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-8001',
+      ]);
+
+      // The stale text response resolves last — it must be discarded.
+      await act(async () => {
+        resolveText(spoonResponse(1111, 'Pasta'));
+        await textDone;
+      });
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-8001',
+      ]);
+      expect(result.current.searchLoading).toBe(false);
+    });
+
+    it('discards an in-flight ingredient search superseded by a text search', async () => {
+      // The ingredient search's Spoonacular half is deferred so it resolves
+      // LAST; a text search fired after it must win and the stale ingredient
+      // response must not clobber the text results.
+      let resolveIngredient!: (v: unknown) => void;
+      const ingredientPending = new Promise(res => {
+        resolveIngredient = res;
+      });
+      mockSearchRecipesByIngredients.mockImplementation(
+        () => ingredientPending,
+      );
+      mockSearchRecipes.mockImplementation((params: { query?: string }) =>
+        params.query === 'pizza'
+          ? Promise.resolve(spoonResponse(7002, 'Margherita Pizza'))
+          : Promise.resolve(emptySpoonacularResponse),
+      );
+
+      const { result } = renderRecipeScreen();
+      act(() => {
+        result.current.toggleIngredient('Tomato');
+      });
+
+      let ingredientDone!: Promise<void>;
+      await act(async () => {
+        ingredientDone = result.current.handleIngredientSearch();
+      });
+      expect(result.current.searchLoading).toBe(true);
+
+      // The text search supersedes the in-flight ingredient search and commits.
+      await act(async () => {
+        await result.current.handleTextSearch('pizza');
+      });
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-7002',
+      ]);
+
+      // The stale ingredient response resolves last — it must be discarded.
+      await act(async () => {
+        resolveIngredient(sampleIngredientSearchResponse);
+        await ingredientDone;
+      });
+      expect(result.current.searchResults.map(r => r.id)).toEqual([
+        'spoonacular-7002',
+      ]);
+      expect(result.current.searchLoading).toBe(false);
     });
   });
 });

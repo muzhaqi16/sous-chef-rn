@@ -23,9 +23,23 @@ const mockRemoveNotification = jest.fn();
 const mockClearAll = jest.fn();
 const mockGetNotificationsByCategory = jest.fn().mockReturnValue([]);
 
+// Mutable so a test can simulate a logged-out session. Prefixed `mock` so the
+// jest.mock factory below may reference it.
+let mockUser: { id: string } | null = { id: 'user-1' };
+
+const mockRegisterFcmTapHandlers = jest.fn(() => jest.fn());
+const mockRegisterIosPushTapHandlers = jest.fn(() => jest.fn());
+
+jest.mock('#/services/push/nativePushMessaging', () => ({
+  registerFcmTapHandlers: () => mockRegisterFcmTapHandlers(),
+}));
+jest.mock('#/services/push/iosPushMessaging', () => ({
+  registerIosPushTapHandlers: () => mockRegisterIosPushTapHandlers(),
+}));
+
 type MockNotificationsState = {
   notifications: unknown[];
-  user: { id: string };
+  user: { id: string } | null;
   addNotification: jest.Mock;
   markAsRead: jest.Mock;
   removeNotification: jest.Mock;
@@ -37,7 +51,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: (s: MockNotificationsState) => unknown) =>
     selector({
       notifications: [],
-      user: { id: 'user-1' },
+      user: mockUser,
       addNotification: mockAddNotification,
       markAsRead: mockMarkAsRead,
       removeNotification: mockRemoveNotification,
@@ -161,6 +175,7 @@ function buildNotificationSubscriptionMock(
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockUser = { id: 'user-1' };
 });
 
 describe('useNotifications', () => {
@@ -259,5 +274,36 @@ describe('useNotificationListener', () => {
         }),
       );
     });
+  });
+
+  it('registers push tap handlers when authenticated', async () => {
+    renderHookWithApollo(() => useNotificationListener());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockRegisterFcmTapHandlers).toHaveBeenCalledTimes(1);
+    expect(mockRegisterIosPushTapHandlers).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not register push tap handlers (consuming the cold-start tap) when logged out', async () => {
+    mockUser = null;
+    renderHookWithApollo(() => useNotificationListener());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
+    expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
+  });
+
+  it('does not register push tap handlers when config.skip is true', async () => {
+    renderHookWithApollo(() => useNotificationListener({ skip: true }));
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mockRegisterFcmTapHandlers).not.toHaveBeenCalled();
+    expect(mockRegisterIosPushTapHandlers).not.toHaveBeenCalled();
   });
 });

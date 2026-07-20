@@ -45,14 +45,12 @@ export function getPushTokenProvider(): PushTokenProvider {
 }
 
 /**
- * Acquire a push token, gated on the user's `pushEnabled` preference and OS
- * permission. Returns null (no token registered) when push is disabled, denied,
- * or the platform provider is the no-op default.
+ * Acquire a push token, gated on OS permission. Returns null (no token
+ * registered) when permission is denied or the platform provider is the no-op
+ * default. The server-side `pushEnabled` preference is enforced by the server at
+ * send time, so a registered token is harmless when push is disabled there.
  */
-export async function acquirePushToken(options?: {
-  pushEnabled?: boolean;
-}): Promise<string | null> {
-  if (options?.pushEnabled === false) return null;
+export async function acquirePushToken(): Promise<string | null> {
   const granted = await activeProvider.requestPermission();
   if (!granted) return null;
   return activeProvider.getToken();

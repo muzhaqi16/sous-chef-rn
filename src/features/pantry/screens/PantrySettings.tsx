@@ -13,9 +13,7 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/base/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
-import type { ApolloCache, Reference } from '@apollo/client';
-import type { ModifierDetails } from '@apollo/client/cache';
-import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
   UpdatePantryDocument,
@@ -31,7 +29,6 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { errorService } from '#/services/errorService';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   executeCacheUpdate,
@@ -39,6 +36,7 @@ import {
   executeAsyncWithCleanup,
 } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   addPantryToHomeCache,
@@ -65,48 +63,7 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
     if (!deletePayload?.pantry || !variables?.input?.id || !selectedHomeId)
       return;
     try {
-      const deletedPantryId = variables.input.id;
-      const homeCacheId = cache.identify({
-        __typename: 'Home',
-        id: selectedHomeId,
-      });
-      if (!homeCacheId) return;
-
-      cache.modify({
-        id: homeCacheId,
-        fields: {
-          pantries(
-            existingPantries: readonly Reference[] = [],
-            { readField }: ModifierDetails,
-          ) {
-            return existingPantries.filter(
-              pantryRef => readField('id', pantryRef) !== deletedPantryId,
-            );
-          },
-          pantriesConnection(
-            existingConnection: ConnectionData | null = null,
-            { readField }: ModifierDetails,
-          ) {
-            if (!existingConnection?.edges) return existingConnection;
-            const filteredEdges = existingConnection.edges.filter(
-              edge => readField('id', edge?.node) !== deletedPantryId,
-            );
-            return {
-              ...existingConnection,
-              edges: filteredEdges,
-              totalCount: Math.max(
-                0,
-                (existingConnection.totalCount ?? filteredEdges.length) -
-                  (filteredEdges.length < existingConnection.edges.length
-                    ? 1
-                    : 0),
-              ),
-            };
-          },
-        },
-      });
-
-      safeEvict(cache, 'Pantry', deletedPantryId);
+      removeOptimisticPantry(cache, selectedHomeId, variables.input.id);
     } catch (error) {
       console.warn('Cache update failed for deletePantry:', error);
     }
@@ -342,11 +299,14 @@ export const PantrySettings: React.FC<
                 removeOptimisticPantry(apolloClient.cache, selectedHomeId, id),
               'Revert rejected Pantry create',
             );
+            // The mutation's onError already alerts on a transport error
+            // (`result.error`); alert here only for a resolved error-union
+            // payload so exactly one alert fires.
             const payload = result.data?.createPantry;
             const message =
               payload && 'message' in payload ? payload.message : null;
-            alertService.alert(
-              t('labels.error'),
+            alertRejectedMutation(
+              result,
               message ?? t('pantrySettings.createFailed'),
             );
             return;

@@ -73,7 +73,18 @@
     "invalidOperation": "Operación no válida",
     "invalidUnitTitle": "Unidad no válida",
     "addItemFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",
-    "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo."
+    "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo.",
+    "adjustQuantityFailed": "No se pudo ajustar la cantidad.",
+    "openBatchFailed": "No se pudo abrir este lote.",
+    "wasteBatchFailed": "No se pudo marcar como desperdiciado.",
+    "updateShoppingItemFailed": "No se pudo actualizar el artículo.",
+    "entityUpdatedTitle": "{{entity}} actualizado",
+    "entityUpdatedBody": "Otro usuario actualizó este elemento. Actualiza e inténtalo de nuevo.",
+    "entityUpdatedBodyTyped": "Otro usuario actualizó este {{entity}}. Actualiza e inténtalo de nuevo.",
+    "entityItem": "Elemento",
+    "entityHome": "Hogar",
+    "entityMember": "Miembro",
+    "entityInvite": "Invitación"
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -177,7 +188,10 @@
     "enableNow": "Activar ahora",
     "refresh": "Actualizar",
     "updated": "Actualizado",
-    "validationError": "Error de validación"
+    "validationError": "Error de validación",
+    "item": "Artículo",
+    "addNamed": "Añadir {{name}}",
+    "dismissNamed": "Descartar {{name}}"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -287,7 +301,12 @@
     "legalNotice": "Al continuar, aceptas nuestros",
     "termsLink": "Términos y condiciones",
     "legalAnd": "y",
-    "privacyLink": "Política de privacidad"
+    "privacyLink": "Política de privacidad",
+    "fullNameRequired": "El nombre completo es obligatorio",
+    "fullNameMin": "El nombre completo debe tener al menos 2 caracteres",
+    "newPasswordConfirmRequired": "Por favor confirma tu nueva contraseña",
+    "currentPasswordRequired": "La contraseña actual es obligatoria",
+    "newPasswordMustDiffer": "La nueva contraseña debe ser diferente de la actual"
   },
   "recipes": {
     "name": "Nombre de la receta",
@@ -577,7 +596,14 @@
       "SULFITE": "Sulfito",
       "TREE_NUT": "Frutos secos",
       "WHEAT": "Trigo"
-    }
+    },
+    "macroCalories": "Calorías",
+    "macroProtein": "Proteínas",
+    "macroCarbohydrates": "Carbohidratos",
+    "macroFat": "Grasas",
+    "macroFiber": "Fibra",
+    "macroSugar": "Azúcar",
+    "macroSodium": "Sodio"
   },
   "recipeFilters": {
     "title": "Filtros",
@@ -702,6 +728,7 @@
     "failedToComplete": "No se pudo actualizar el estado de la lista",
     "failedToReactivate": "No se pudo reactivar la lista",
     "failedToArchive": "No se pudo archivar la lista",
+    "failedToClear": "No se pudieron borrar los artículos",
     "failedToSetDefault": "No se pudo establecer la lista predeterminada",
     "recurringSection": "Recurrente",
     "recurringPatternLabel": "Se repite",
@@ -1220,7 +1247,13 @@
       "expiresInDays": "{{name}} vence en {{days}} días",
       "qualifierOpened": "{{name}} (abierto el {{date}})",
       "qualifierAdded": "{{name}} (añadido el {{date}})"
-    }
+    },
+    "categoryAll": "Todas",
+    "categoryHome": "Hogar",
+    "categoryPantry": "Despensa",
+    "categoryRecipe": "Recetas",
+    "categoryShopping": "Compras",
+    "categorySystem": "Sistema"
   },
   "settings": {
     "appSettings": "Ajustes de la app",
@@ -1770,7 +1803,12 @@
     "selectListLabel": "Selecciona una lista",
     "noLists": "No se encontraron listas de la compra",
     "generatingMessage": "Generando lista de la compra...",
-    "itemsCount": "{{count}} artículos"
+    "itemsCount": "{{count}} artículos",
+    "readyNothingToAdd": "\"{{name}}\" está lista — nada que añadir.",
+    "createdSuccess_one": "Lista de la compra \"{{name}}\" creada con {{count}} artículo{{shared}}",
+    "createdSuccess_other": "Lista de la compra \"{{name}}\" creada con {{count}} artículos{{shared}}",
+    "sharedSuffix": " (compartida con {{homeName}})",
+    "generateFailed": "No se pudo generar la lista de la compra"
   },
   "saveAsTemplate": {
     "title": "Guardar como plantilla",
@@ -2011,7 +2049,12 @@
     "removeFromShoppingDesc": "Desactívalo para mantener el artículo en tu lista de la compra",
     "stateAmbient": "Ambiente",
     "stateRefrigerated": "Refrigerado",
-    "stateFrozen": "Congelado"
+    "stateFrozen": "Congelado",
+    "noListSelected": "No hay ninguna lista de la compra seleccionada",
+    "movedItems_one": "Se movió {{count}} artículo a la despensa{{skipped}}",
+    "movedItems_other": "Se movieron {{count}} artículos a la despensa{{skipped}}",
+    "skippedSuffix": " ({{skippedCount}} omitidos)",
+    "noItemsMoved": "No se pudo mover ningún artículo a la despensa"
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
@@ -2772,5 +2815,32 @@
     "itemImageUpdateFailedBody": "No se pudo actualizar la imagen del artículo",
     "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
     "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro."
+  },
+  "mealTemplateActions": {
+    "planCreated": "¡Plan de comidas creado a partir de la plantilla!",
+    "savedAsTemplate": "¡Plan de comidas guardado como plantilla!",
+    "templateDeleted": "Plantilla eliminada",
+    "templateDuplicated": "¡Plantilla duplicada!"
+  },
+  "accountEvents": {
+    "removedFromHome": "Se te ha eliminado de un hogar",
+    "addedToHome": "Se te ha añadido a un nuevo hogar",
+    "removedFromShoppingList": "Se te ha eliminado de una lista de la compra",
+    "addedToShoppingList": "Se te ha añadido a una lista de la compra",
+    "accountBanned": "Tu cuenta ha sido bloqueada{{reason}}",
+    "accountSuspended": "Tu cuenta ha sido suspendida{{reason}}",
+    "reasonSuffix": ": {{reason}}",
+    "warningReceived": "Has recibido una advertencia de un moderador"
+  },
+  "commonValidation": {
+    "emailInvalid": "Por favor introduce una dirección de correo válida",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "passwordRequired": "La contraseña es obligatoria",
+    "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+    "passwordLetter": "Se requiere al menos una letra",
+    "passwordNumber": "Se requiere al menos un número",
+    "nameMin": "El nombre debe tener al menos 2 caracteres",
+    "nameMax": "El nombre debe tener menos de 50 caracteres",
+    "nameChars": "El nombre solo puede contener letras, espacios, guiones y apóstrofos"
   }
 }

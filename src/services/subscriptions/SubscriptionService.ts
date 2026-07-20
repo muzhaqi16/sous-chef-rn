@@ -50,6 +50,7 @@ import {
   isTimerCircularStructureError,
 } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { isExpectedNetworkTransitionError } from '#/utils/subscriptionErrorHandler';
 import { logger } from '#/utils/environment';
 
 /**
@@ -378,19 +379,15 @@ export class SubscriptionService {
     config: SubscriptionConfig<TData>,
   ): SubscriptionHandlers['onError'] {
     return (error: ErrorLike) => {
-      // Check if this is a network-related error that will be auto-recovered
       const errorMessage = error?.message?.toLowerCase() || '';
-      const isSocketClosed = errorMessage.includes('socket closed');
-      const isNetworkError =
-        errorMessage.includes('network') ||
-        errorMessage.includes('connection') ||
-        errorMessage.includes('websocket');
 
-      // Socket closed errors are expected during network transitions — debug
-      // level: one WS drop interrupts EVERY active subscription at once, so a
-      // warn here multiplies into a wall of identical lines per disconnect
-      // (wsLink already warns once per socket event).
-      if (isSocketClosed || isNetworkError) {
+      // Socket-closed / network-transition errors are expected during network
+      // churn and auto-recover — debug level: one WS drop interrupts EVERY
+      // active subscription at once, so a warn here multiplies into a wall of
+      // identical lines per disconnect (wsLink already warns once per socket
+      // event). Uses the shared predicate so the "expected transition" rule
+      // stays in one place.
+      if (isExpectedNetworkTransitionError(error?.message)) {
         this.log(config, LogLevel.DEBUG, 'WebSocket connection interrupted', {
           error: errorMessage,
           hint: 'WebSocket will attempt auto-reconnect if enabled',

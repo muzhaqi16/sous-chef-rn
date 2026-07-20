@@ -19,6 +19,7 @@ import { useAppStore, useSelectedShoppingListId } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
 import { addNewItemToShoppingListCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import {
@@ -208,7 +209,7 @@ export function useRecipeShoppingList({
         if (isBackendRecipe) {
           // Generate the new item's id so a create that gets queued (offline /
           // API down) replays idempotently, keyed by this id.
-          await addRecipeIngredientMutation({
+          const result = await addRecipeIngredientMutation({
             variables: {
               input: {
                 id: generateEntityId(),
@@ -218,6 +219,20 @@ export function useRecipeShoppingList({
             },
             context: { localFirst: true },
           });
+
+          // This mutation has no onError, so a resolved error-union payload or a
+          // transport error would otherwise fall through to the success toast.
+          // Classify and report once on rejection; 'created'/'queued' confirm.
+          if (
+            classifyCreateResult(
+              result,
+              'createShoppingListItemFromRecipeIngredient',
+              'CreateShoppingListItemFromRecipeIngredientPayload',
+            ) === 'rejected'
+          ) {
+            toastService.error(t('recipes.addIngredientToListFailed'));
+            return;
+          }
         } else if ('amount' in ingredient) {
           // Single ingredient goes through the same batch mutation as a
           // one-element `items` array — there is no separate single-add op.
@@ -252,14 +267,21 @@ export function useRecipeShoppingList({
             context: { localFirst: true },
           });
 
-          // Mirror addAllIngredientsToList: a transport error is surfaced by the
-          // mutation onError, so skip the success toast for it. A success
-          // payload or an offline-queued result (no data, no error) confirm.
-          const payload = result.data?.addItemsToShoppingList;
+          // A resolved error-union payload or a transport error must not fall
+          // through to the success toast. Classify: 'created'/'queued' confirm;
+          // 'rejected' reports and returns. The mutation's onError already
+          // toasts on a transport error, so toast here only for the resolved
+          // error-union case — exactly one toast either way.
           if (
-            payload?.__typename !== 'AddItemsToShoppingListPayload' &&
-            result.error
+            classifyCreateResult(
+              result,
+              'addItemsToShoppingList',
+              'AddItemsToShoppingListPayload',
+            ) === 'rejected'
           ) {
+            if (!result.error) {
+              toastService.error(t('recipes.addIngredientToListFailed'));
+            }
             return;
           }
         }

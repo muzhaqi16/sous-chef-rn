@@ -153,7 +153,7 @@ describe('useStandardBottomSheet', () => {
     });
   });
 
-  it('reopens after a blur-close → focus cycle', () => {
+  it('reopens after a blur-close → focus cycle with onDismiss wired to clear visible', () => {
     const fake = createFakeBottomSheetModal();
     const navListeners: Record<string, Array<() => void>> = {};
     const navigation = {
@@ -164,11 +164,19 @@ describe('useStandardBottomSheet', () => {
       },
     } as unknown as NavigationProp<ParamListBase>;
 
+    // Real consumers wire `onDismiss` to clear their own `visible` state. If a
+    // blur-triggered dismiss ran that callback, `visible` would go false and the
+    // sheet could never re-present — the hook must suppress onDismiss on blur.
+    let visible = false;
+    const onDismiss = jest.fn(() => {
+      visible = false;
+    });
+
     const { result, rerender } = renderHook(
-      ({ visible }: { visible: boolean }) =>
-        useStandardBottomSheet({ ...defaultOptions, visible }),
+      ({ visible: v }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible: v, onDismiss }),
       {
-        initialProps: { visible: false },
+        initialProps: { visible },
         wrapper: ({ children }) =>
           React.createElement(
             NavigationContext.Provider,
@@ -180,13 +188,108 @@ describe('useStandardBottomSheet', () => {
     // Attach the fake BEFORE the first present (render visible=false first).
     (result.current.ref as React.RefObject<unknown>).current = fake;
 
-    rerender({ visible: true }); // open on the attached fake
+    visible = true;
+    rerender({ visible }); // open on the attached fake
     expect(fake.onScreen).toBe(true);
 
-    act(() => navListeners.blur?.forEach(cb => cb())); // blur → dismiss
+    // Blur dismisses the sheet; gorhom then fires onDismiss once the close
+    // settles (the fake doesn't auto-fire it, so drive it like the real portal).
+    act(() => navListeners.blur?.forEach(cb => cb()));
     expect(fake.onScreen).toBe(false);
-    act(() => navListeners.focus?.forEach(cb => cb())); // focus → re-present
+    act(() => result.current.modalProps.onDismiss?.());
+
+    // The blur-close must NOT notify the consumer, so `visible` survives.
+    expect(onDismiss).not.toHaveBeenCalled();
+    expect(visible).toBe(true);
+
+    // Refocus re-presents the sheet with its state intact.
+    act(() => navListeners.focus?.forEach(cb => cb()));
     expect(fake.onScreen).toBe(true);
+  });
+
+  it('a focused (non-blur) dismiss still notifies the consumer', () => {
+    const fake = createFakeBottomSheetModal();
+    const navListeners: Record<string, Array<() => void>> = {};
+    const navigation = {
+      isFocused: () => true,
+      addListener: (event: string, cb: () => void) => {
+        (navListeners[event] ??= []).push(cb);
+        return () => {};
+      },
+    } as unknown as NavigationProp<ParamListBase>;
+
+    const onDismiss = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible, onDismiss }),
+      {
+        initialProps: { visible: false },
+        wrapper: ({ children }) =>
+          React.createElement(
+            NavigationContext.Provider,
+            { value: navigation },
+            children,
+          ),
+      },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = fake;
+
+    rerender({ visible: true });
+    expect(fake.onScreen).toBe(true);
+
+    // User closes the sheet while the screen is focused (swipe / backdrop tap):
+    // gorhom self-closes then fires onDismiss. This is NOT a blur, so the
+    // consumer must be notified so it can clear its own visible state.
+    fake.selfClose();
+    act(() => result.current.modalProps.onDismiss?.());
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('an interrupted blur-close does not swallow the next real dismiss', () => {
+    const fake = createFakeBottomSheetModal();
+    const navListeners: Record<string, Array<() => void>> = {};
+    const navigation = {
+      isFocused: () => true,
+      addListener: (event: string, cb: () => void) => {
+        (navListeners[event] ??= []).push(cb);
+        return () => {};
+      },
+    } as unknown as NavigationProp<ParamListBase>;
+
+    const onDismiss = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ visible }: { visible: boolean }) =>
+        useStandardBottomSheet({ ...defaultOptions, visible, onDismiss }),
+      {
+        initialProps: { visible: false },
+        wrapper: ({ children }) =>
+          React.createElement(
+            NavigationContext.Provider,
+            { value: navigation },
+            children,
+          ),
+      },
+    );
+    (result.current.ref as React.RefObject<unknown>).current = fake;
+
+    rerender({ visible: true });
+    expect(fake.onScreen).toBe(true);
+
+    // Blur starts a dismiss and arms the blur-dismiss flag …
+    act(() => navListeners.blur?.forEach(cb => cb()));
+    expect(fake.onScreen).toBe(false);
+
+    // … but the screen refocuses and the sheet re-presents BEFORE gorhom ever
+    // fired onDismiss for that close (the close was interrupted, so its
+    // onDismiss never arrives). Re-presenting must disarm the stale flag.
+    act(() => navListeners.focus?.forEach(cb => cb()));
+    expect(fake.onScreen).toBe(true);
+
+    // The user now genuinely closes the sheet while focused — this dismiss
+    // must reach the consumer, not be swallowed by the leftover blur flag.
+    fake.selfClose();
+    act(() => result.current.modalProps.onDismiss?.());
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it('includes animation configs in modalProps', () => {

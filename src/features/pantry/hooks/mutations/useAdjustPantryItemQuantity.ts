@@ -30,6 +30,7 @@ import {
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n/t';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -135,7 +136,7 @@ export function useAdjustPantryItemQuantity({
         );
       }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-      alertRejectedMutation(result, 'Could not adjust the quantity.');
+      alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
       return false;
     }
 

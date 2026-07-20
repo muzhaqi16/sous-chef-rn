@@ -32,14 +32,6 @@ describe('pushTokenProvider', () => {
     expect(await acquirePushToken()).toBe('tok-123');
   });
 
-  it('returns null (no token) when push is disabled by preference', async () => {
-    const provider = makeProvider();
-    setPushTokenProvider(provider);
-    expect(await acquirePushToken({ pushEnabled: false })).toBeNull();
-    // Gated before touching the OS/provider.
-    expect(provider.requestPermission).not.toHaveBeenCalled();
-  });
-
   it('returns null when OS permission is denied', async () => {
     setPushTokenProvider(
       makeProvider({ requestPermission: jest.fn().mockResolvedValue(false) }),

@@ -5,6 +5,7 @@ import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n/t';
+import { getI18n } from '#/i18n/config';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -113,7 +114,7 @@ export function useBatchMoveToPantry({
     }
 
     if (!currentListId) {
-      toastService.error('No shopping list selected');
+      toastService.error(t('moveToPantry.noListSelected'));
       return;
     }
 
@@ -140,14 +141,15 @@ export function useBatchMoveToPantry({
     const skippedCount = payload.summary.skipped;
 
     if (movedCount > 0) {
-      const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
+      const skipped =
+        skippedCount > 0
+          ? getI18n().t('moveToPantry.skippedSuffix', { skippedCount })
+          : '';
       toastService.success(
-        `Moved ${movedCount} item${
-          movedCount !== 1 ? 's' : ''
-        } to pantry${skippedText}`,
+        getI18n().t('moveToPantry.movedItems', { count: movedCount, skipped }),
       );
     } else {
-      toastService.info('No items could be moved to pantry');
+      toastService.info(t('moveToPantry.noItemsMoved'));
     }
 
     Telemetry.trackEvent('batch_move_purchased_to_pantry', {

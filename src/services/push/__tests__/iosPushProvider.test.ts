@@ -25,6 +25,14 @@ const getRegisterHandler = (): ((token: string) => void) => {
   return call?.[1] as (token: string) => void;
 };
 
+/** The persistent 'registrationError' handler the provider attached. */
+const getRegistrationErrorHandler = (): ((error: unknown) => void) => {
+  const call = mockAddEventListener.mock.calls.find(
+    c => c[0] === 'registrationError',
+  );
+  return call?.[1] as (error: unknown) => void;
+};
+
 describe('iosPushProvider', () => {
   let provider: PushTokenProvider;
 
@@ -98,6 +106,14 @@ describe('iosPushProvider', () => {
       await provider.requestPermission();
       const pending = provider.getToken();
       jest.advanceTimersByTime(10000);
+      await expect(pending).resolves.toBeNull();
+    });
+
+    it('resolves null immediately on registrationError, without waiting out the timeout', async () => {
+      await provider.requestPermission();
+      const pending = provider.getToken();
+      // No timer advance — the error settles the pending resolver right away.
+      getRegistrationErrorHandler()(new Error('APNs registration failed'));
       await expect(pending).resolves.toBeNull();
     });
   });

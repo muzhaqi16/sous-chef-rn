@@ -23,7 +23,7 @@ import {
 } from '#features/recipes/hooks/useRecipeManagement';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -136,14 +136,17 @@ export const MyRecipes: React.FC = () => {
         alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
       },
     );
-    // A rejection means the recipe still exists server-side — refetch to
-    // restore the authoritative list. A queued result keeps the removal and
-    // replays later.
-    const rejected =
-      !result ||
-      classifyCreateResult(result, 'deleteRecipe', 'DeleteRecipePayload') ===
-        'rejected';
-    if (rejected) {
+    // A rejection means the recipe still exists server-side — alert (the silent
+    // revert would otherwise just snap the recipe back) and refetch to restore
+    // the authoritative list. A queued result keeps the removal and replays
+    // later. A null result (transport throw) already alerted via onError above.
+    const wasRejected = alertIfRejected(
+      result,
+      'deleteRecipe',
+      'DeleteRecipePayload',
+      t('recipes.deleteRecipeFailed'),
+    );
+    if (!result || wasRejected) {
       await refetch();
     }
   };

@@ -97,6 +97,10 @@ export interface ProcessingResult {
   mutationId: string;
   error?: QueueError;
   serverResponse?: Record<string, unknown>;
+  // Set when a transient (network/server) error returned the mutation to
+  // PENDING. Signals the drain loop to stop rather than replay later
+  // mutations ahead of this un-synced one.
+  deferred?: boolean;
 }
 
 /**

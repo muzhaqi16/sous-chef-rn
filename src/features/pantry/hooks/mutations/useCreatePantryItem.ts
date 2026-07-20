@@ -25,6 +25,7 @@ import { addToPantryItemsCache } from './utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -249,14 +250,36 @@ export function useCreatePantryItem({
                 }),
               'Restock pantry item error:',
             );
-            if (!restockResult) {
+            // executeMutation returns false only when the call threw; under
+            // errorPolicy 'all' a transport/GraphQL error instead resolves as
+            // `{ error }`. restockMutation has no `onError`, so surface both the
+            // throw and the resolved-error cases here.
+            if (!restockResult || restockResult.error) {
               alertService.alert(
-                'Error',
-                'Failed to restock item. Please try again.',
+                t('labels.error'),
+                t('errors.restockFailedRetry'),
               );
               resolve(false);
               return;
             }
+            // A resolved non-success union member (ValidationError / ConflictError
+            // / …) carries no `error`, so classifyCreateResult catches it where a
+            // bare falsy check would treat the refusal as success.
+            if (
+              classifyCreateResult(
+                restockResult,
+                'restockPantryItem',
+                'RestockPantryItemPayload',
+              ) === 'rejected'
+            ) {
+              alertRejectedMutation(
+                restockResult,
+                t('errors.restockFailedRetry'),
+              );
+              resolve(false);
+              return;
+            }
+            // Success payload, or queued offline (replays later) — both succeed.
             onSuccess?.();
             resolve(true);
           },
@@ -272,8 +295,8 @@ export function useCreatePantryItem({
             );
             if (!retryResult) {
               alertService.alert(
-                'Error',
-                'Failed to add item. Please try again.',
+                t('labels.error'),
+                t('errors.addItemFailedRetry'),
               );
               resolve(false);
               return;
@@ -288,8 +311,8 @@ export function useCreatePantryItem({
               resolve(true);
             } else {
               alertService.alert(
-                'Error',
-                'Failed to add item. Please try again.',
+                t('labels.error'),
+                t('errors.addItemFailedRetry'),
               );
               resolve(false);
             }

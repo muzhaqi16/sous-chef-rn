@@ -4,9 +4,14 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { alertService } from '#/services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
 jest.mock('#/utils/compilerSafeWrappers');
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   clearAllPurchasedItemsFromCache: jest.fn(),
@@ -64,6 +69,26 @@ function createClearMock(
             executionTime: 0,
           },
           shoppingListItems: [{ __typename: 'ShoppingListItem', id: 'item-1' }],
+        },
+      },
+    },
+  };
+}
+
+function createRejectedClearMock(): MockedResponse {
+  return {
+    request: {
+      query: RemoveItemsFromShoppingListDocument,
+      variables: () => true,
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: {
+        removeItemsFromShoppingList: {
+          __typename: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: 'nope',
+          field: 'ids',
         },
       },
     },
@@ -234,5 +259,29 @@ describe('useClearShoppingListItems', () => {
     await firstCall;
 
     expect(recorded).toHaveLength(1);
+  });
+
+  it('alerts and refetches when the clear is rejected (union error)', async () => {
+    const { result } = renderHookWithApollo(
+      () =>
+        useClearShoppingListItems({
+          listId: 'list-1',
+          unpurchasedItems: [],
+          purchasedItems: [
+            createItem({ id: 'item-1', purchaseInfo: { isPurchased: true } }),
+          ],
+          refetch: mockRefetch,
+        }),
+      { operationMocks: [createRejectedClearMock()] },
+    );
+
+    await act(async () => {
+      await result.current.clearItems(true);
+    });
+
+    // A server refusal surfaces one alert (no longer a silent revert) and
+    // refetches to restore the evicted items.
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 });

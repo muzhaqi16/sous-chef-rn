@@ -54,7 +54,6 @@ async function performVerificationImpl(
   await executeMutation(
     async () => {
       logger.info('Attempting email verification', {
-        tokenPrefix: token.substring(0, 8) + '...',
         userId: user?.id,
       });
 

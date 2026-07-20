@@ -73,7 +73,18 @@
     "invalidOperation": "Veprim i pavlefshëm",
     "invalidUnitTitle": "Njësi e pavlefshme",
     "addItemFailedRetry": "Artikulli nuk u shtua dot. Provo përsëri.",
-    "restockFailedRetry": "Artikulli nuk u rifurnizua dot. Provo përsëri."
+    "restockFailedRetry": "Artikulli nuk u rifurnizua dot. Provo përsëri.",
+    "adjustQuantityFailed": "Sasia nuk mund të rregullohej.",
+    "openBatchFailed": "Ky grumbull nuk mund të hapej.",
+    "wasteBatchFailed": "Nuk mund të shënohej si i mbetur.",
+    "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
+    "entityUpdatedTitle": "{{entity}} u përditësua",
+    "entityUpdatedBody": "Ky artikull u përditësua nga një përdorues tjetër. Rifreskoni dhe provoni përsëri.",
+    "entityUpdatedBodyTyped": "Ky {{entity}} u përditësua nga një përdorues tjetër. Rifreskoni dhe provoni përsëri.",
+    "entityItem": "Artikull",
+    "entityHome": "Shtëpia",
+    "entityMember": "Anëtar",
+    "entityInvite": "Ftesë"
   },
   "success": {
     "itemAdded": "Artikulli u shtua",
@@ -177,7 +188,10 @@
     "enableNow": "Aktivizo tani",
     "refresh": "Rifresko",
     "updated": "Përditësuar",
-    "validationError": "Gabim validimi"
+    "validationError": "Gabim validimi",
+    "item": "Artikull",
+    "addNamed": "Shto {{name}}",
+    "dismissNamed": "Hiq {{name}}"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -287,7 +301,12 @@
     "legalNotice": "Duke vazhduar, ju pranoni",
     "termsLink": "Kushtet & rregullat",
     "legalAnd": "dhe",
-    "privacyLink": "Politika e privatësisë"
+    "privacyLink": "Politika e privatësisë",
+    "fullNameRequired": "Emri i plotë është i detyrueshëm",
+    "fullNameMin": "Emri i plotë duhet të ketë të paktën 2 karaktere",
+    "newPasswordConfirmRequired": "Të lutemi konfirmo fjalëkalimin e ri",
+    "currentPasswordRequired": "Fjalëkalimi aktual është i detyrueshëm",
+    "newPasswordMustDiffer": "Fjalëkalimi i ri duhet të jetë i ndryshëm nga ai aktual"
   },
   "recipes": {
     "name": "Emri i recetës",
@@ -577,7 +596,14 @@
       "SULFITE": "Sulfit",
       "TREE_NUT": "Arra",
       "WHEAT": "Grurë"
-    }
+    },
+    "macroCalories": "Kalori",
+    "macroProtein": "Proteina",
+    "macroCarbohydrates": "Karbohidrate",
+    "macroFat": "Yndyra",
+    "macroFiber": "Fibra",
+    "macroSugar": "Sheqer",
+    "macroSodium": "Natrium"
   },
   "recipeFilters": {
     "title": "Filtrat",
@@ -702,6 +728,7 @@
     "failedToComplete": "Nuk u përditësua statusi i listës",
     "failedToReactivate": "Nuk u riaktivizua lista",
     "failedToArchive": "Nuk u arkivua lista",
+    "failedToClear": "Nuk u pastruan dot artikujt",
     "failedToSetDefault": "Nuk u vendos lista e parazgjedhur",
     "recurringSection": "E përsëritshme",
     "recurringPatternLabel": "Përsëritet",
@@ -1220,7 +1247,13 @@
       "expiresInDays": "{{name}} skadon për {{days}} ditë",
       "qualifierOpened": "{{name}} (hapur më {{date}})",
       "qualifierAdded": "{{name}} (shtuar më {{date}})"
-    }
+    },
+    "categoryAll": "Të gjitha",
+    "categoryHome": "Shtëpia",
+    "categoryPantry": "Qilari",
+    "categoryRecipe": "Recetat",
+    "categoryShopping": "Blerjet",
+    "categorySystem": "Sistemi"
   },
   "settings": {
     "appSettings": "Cilësimet e aplikacionit",
@@ -1770,7 +1803,12 @@
     "selectListLabel": "Zgjidh një listë",
     "noLists": "Nuk u gjet asnjë listë blerjesh",
     "generatingMessage": "Po gjenerohet lista e blerjeve...",
-    "itemsCount": "{{count}} artikuj"
+    "itemsCount": "{{count}} artikuj",
+    "readyNothingToAdd": "\"{{name}}\" është gati — asgjë për të shtuar.",
+    "createdSuccess_one": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikull{{shared}}",
+    "createdSuccess_other": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikuj{{shared}}",
+    "sharedSuffix": " (e ndarë me {{homeName}})",
+    "generateFailed": "Krijimi i listës së blerjeve dështoi"
   },
   "saveAsTemplate": {
     "title": "Ruaj si model",
@@ -2011,7 +2049,12 @@
     "removeFromShoppingDesc": "Çaktivizoje për ta mbajtur artikullin në listën tënde të blerjeve",
     "stateAmbient": "Ambient",
     "stateRefrigerated": "Në frigorifer",
-    "stateFrozen": "I ngrirë"
+    "stateFrozen": "I ngrirë",
+    "noListSelected": "Asnjë listë blerjesh e zgjedhur",
+    "movedItems_one": "U zhvendos {{count}} artikull te qilari{{skipped}}",
+    "movedItems_other": "U zhvendosën {{count}} artikuj te qilari{{skipped}}",
+    "skippedSuffix": " ({{skippedCount}} të anashkaluar)",
+    "noItemsMoved": "Asnjë artikull nuk u zhvendos te qilari"
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
@@ -2772,5 +2815,32 @@
     "itemImageUpdateFailedBody": "Nuk u përditësua dot imazhi i artikullit",
     "itemTooLargeBody": "Imazhi është shumë i madh. Fotot e artikujve duhet të jenë nën {{size}} MB.",
     "unreadableBody": "Nuk arritëm ta lexojmë atë skedar imazhi. Provo një tjetër."
+  },
+  "mealTemplateActions": {
+    "planCreated": "Plani i vakteve u krijua nga modeli!",
+    "savedAsTemplate": "Plani i vakteve u ruajt si model!",
+    "templateDeleted": "Modeli u fshi",
+    "templateDuplicated": "Modeli u dyfishua!"
+  },
+  "accountEvents": {
+    "removedFromHome": "Je hequr nga një shtëpi",
+    "addedToHome": "Je shtuar në një shtëpi të re",
+    "removedFromShoppingList": "Je hequr nga një listë blerjesh",
+    "addedToShoppingList": "Je shtuar në një listë blerjesh",
+    "accountBanned": "Llogaria jote është bllokuar{{reason}}",
+    "accountSuspended": "Llogaria jote është pezulluar{{reason}}",
+    "reasonSuffix": ": {{reason}}",
+    "warningReceived": "Ke marrë një paralajmërim nga një moderator"
+  },
+  "commonValidation": {
+    "emailInvalid": "Të lutemi shkruaj një adresë emaili të vlefshme",
+    "emailRequired": "Emaili është i detyrueshëm",
+    "passwordRequired": "Fjalëkalimi është i detyrueshëm",
+    "passwordMin": "Fjalëkalimi duhet të ketë të paktën 8 karaktere",
+    "passwordLetter": "Kërkohet të paktën një shkronjë",
+    "passwordNumber": "Kërkohet të paktën një numër",
+    "nameMin": "Emri duhet të ketë të paktën 2 karaktere",
+    "nameMax": "Emri duhet të ketë më pak se 50 karaktere",
+    "nameChars": "Emri mund të përmbajë vetëm shkronja, hapësira, viza dhe apostrofa"
   }
 }

@@ -136,6 +136,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               keyboardType="decimal-pad"
               selectTextOnFocus
               maxLength={10}
+              accessibilityLabel={t('purchaseAmountSheet.quantity')}
               testID="purchase-quantity-input"
             />
             {item?.unitName ? (
@@ -168,6 +169,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               selectTextOnFocus
               maxLength={10}
               placeholder={t('purchaseAmountSheet.pricePlaceholder')}
+              accessibilityLabel={t('purchaseAmountSheet.price')}
               testID="purchase-price-input"
             />
           </View>

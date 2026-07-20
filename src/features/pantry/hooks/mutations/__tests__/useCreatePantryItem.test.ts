@@ -2,8 +2,12 @@ import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreatePantryItemDocument,
+  RestockPantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import {
@@ -500,5 +504,130 @@ describe('useCreatePantryItem', () => {
     expect(promptPantryDuplicate).toHaveBeenCalled();
     // onCancel resolves the recovery promise to false.
     expect(success!).toBe(false);
+  });
+
+  // ── Restock recovery: classify the restock mutation result ──
+  // The create returns a duplicate, and the prompt immediately chooses restock.
+  // Each case drives a different restock outcome.
+  function makeDuplicateCreateMock() {
+    (getPantryItemDuplicateInfoFromPayload as jest.Mock).mockReturnValueOnce({
+      existingPantryItemId: 'existing-1',
+      existingPantryItemIds: ['existing-1'],
+    });
+    (promptPantryDuplicate as jest.Mock).mockImplementationOnce(
+      ({ onRestock }: { onRestock?: () => void }) => {
+        void onRestock?.();
+      },
+    );
+    return recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'DuplicatePantryItemError',
+          code: 'PANTRY_ITEM_ALREADY_EXISTS',
+          message: 'Already in your pantry',
+          existingPantryItemIds: ['existing-1'],
+          suggestion: 'RESTOCK_EXISTING',
+        },
+      },
+    });
+  }
+
+  async function runRestock(restockMock: { mock: MockedResponse }) {
+    const onSuccess = jest.fn();
+    const createDup = makeDuplicateCreateMock();
+    const { result } = renderHookWithApollo(
+      () => useCreatePantryItem({ pantryId: 'pantry-1', onSuccess }),
+      { operationMocks: [createDup.mock, restockMock.mock] },
+    );
+
+    let success: boolean;
+    await act(async () => {
+      success = await result.current.createPantryItem({
+        input: createFormInput(),
+        pantryId: 'pantry-1',
+        quantityValue: 1,
+        unitId: null,
+        selectedLocationId: null,
+        selectedCategoryId: null,
+      });
+    });
+    return { success: success!, onSuccess };
+  }
+
+  it('restock: alerts and resolves false on a resolved error-union payload', async () => {
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: {
+          __typename: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid quantity',
+          field: 'quantity',
+        },
+      },
+    });
+
+    const { success, onSuccess } = await runRestock(restock);
+
+    expect(success).toBe(false);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to restock item. Please try again.',
+    );
+  });
+
+  it('restock: alerts and resolves false on a transport error', async () => {
+    const restock = recordMock(RestockPantryItemDocument, {
+      error: new Error('network down'),
+    });
+
+    const { success, onSuccess } = await runRestock(restock);
+
+    expect(success).toBe(false);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to restock item. Please try again.',
+    );
+  });
+
+  it('restock: resolves true without alerting when queued offline', async () => {
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: { restockPantryItem: null },
+    });
+
+    const { success, onSuccess } = await runRestock(restock);
+
+    expect(success).toBe(true);
+    expect(onSuccess).toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  it('restock: resolves true and calls onSuccess on a clean success', async () => {
+    const restock = recordMock(RestockPantryItemDocument, {
+      data: {
+        restockPantryItem: {
+          __typename: 'RestockPantryItemPayload',
+          pantryItemUsage: {
+            __typename: 'PantryItemUsage',
+            id: 'usage-1',
+            quantityUsed: '1',
+            purpose: 'RESTOCK',
+            costPerUnit: null,
+            totalCost: null,
+            pantryItem: {
+              __typename: 'PantryItem',
+              id: 'existing-1',
+            },
+          },
+        },
+      },
+    });
+
+    const { success, onSuccess } = await runRestock(restock);
+
+    expect(success).toBe(true);
+    expect(onSuccess).toHaveBeenCalled();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

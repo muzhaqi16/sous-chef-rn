@@ -23,7 +23,7 @@ import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
-  reconcileShoppingItemCreateUpdate,
+  buildAddItemsReconcileUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
@@ -42,32 +42,15 @@ export function useAddShoppingItem({
   const client = useApolloClient();
 
   const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    update(cache, { data }, { variables }) {
-      const payload = data?.addItemsToShoppingList;
-      if (
-        payload?.__typename !== 'AddItemsToShoppingListPayload' ||
-        !listId ||
-        !variables
-      ) {
-        return;
-      }
-      // Single add via the batch mutation — the created/merged row is the one
-      // entry in `results`. Null when that item failed (then reconcileShoppingCreate
-      // reverts the optimistic row below).
-      const item = payload.results[0]?.item;
-      if (!item) return;
-      executeCacheUpdate(
-        () =>
-          reconcileShoppingItemCreateUpdate(
-            cache,
-            listId,
-            item,
-            variables.input.items[0]?.id,
-          ),
-        'Cache update failed for addItem, will refetch:',
+    // Reconcile the server response with the item written into the cache before
+    // the create fired; on a cache-update failure fall back to a refetch.
+    update: buildAddItemsReconcileUpdate({
+      listId,
+      wrap: {
+        message: 'Cache update failed for addItem, will refetch:',
         refetch,
-      );
-    },
+      },
+    }),
     onError: error => {
       // Network/transient error: queueLink queued the create for replay — keep
       // the optimistic item; do NOT alert.

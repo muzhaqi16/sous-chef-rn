@@ -73,7 +73,18 @@
     "invalidOperation": "Operazione non valida",
     "invalidUnitTitle": "Unità non valida",
     "addItemFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
-    "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova."
+    "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova.",
+    "adjustQuantityFailed": "Impossibile regolare la quantità.",
+    "openBatchFailed": "Impossibile aprire questo lotto.",
+    "wasteBatchFailed": "Impossibile contrassegnare come sprecato.",
+    "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
+    "entityUpdatedTitle": "{{entity}} aggiornato",
+    "entityUpdatedBody": "Questo elemento è stato aggiornato da un altro utente. Aggiorna e riprova.",
+    "entityUpdatedBodyTyped": "Questo {{entity}} è stato aggiornato da un altro utente. Aggiorna e riprova.",
+    "entityItem": "Elemento",
+    "entityHome": "Casa",
+    "entityMember": "Membro",
+    "entityInvite": "Invito"
   },
   "success": {
     "itemAdded": "Articolo aggiunto",
@@ -177,7 +188,10 @@
     "enableNow": "Attiva ora",
     "refresh": "Aggiorna",
     "updated": "Aggiornato",
-    "validationError": "Errore di convalida"
+    "validationError": "Errore di convalida",
+    "item": "Articolo",
+    "addNamed": "Aggiungi {{name}}",
+    "dismissNamed": "Ignora {{name}}"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -287,7 +301,12 @@
     "legalNotice": "Continuando, accetti i nostri",
     "termsLink": "Termini e condizioni",
     "legalAnd": "e",
-    "privacyLink": "Informativa sulla privacy"
+    "privacyLink": "Informativa sulla privacy",
+    "fullNameRequired": "Il nome completo è obbligatorio",
+    "fullNameMin": "Il nome completo deve contenere almeno 2 caratteri",
+    "newPasswordConfirmRequired": "Conferma la tua nuova password",
+    "currentPasswordRequired": "La password attuale è obbligatoria",
+    "newPasswordMustDiffer": "La nuova password deve essere diversa da quella attuale"
   },
   "recipes": {
     "name": "Nome della ricetta",
@@ -577,7 +596,14 @@
       "SULFITE": "Solfito",
       "TREE_NUT": "Frutta a guscio",
       "WHEAT": "Grano"
-    }
+    },
+    "macroCalories": "Calorie",
+    "macroProtein": "Proteine",
+    "macroCarbohydrates": "Carboidrati",
+    "macroFat": "Grassi",
+    "macroFiber": "Fibre",
+    "macroSugar": "Zuccheri",
+    "macroSodium": "Sodio"
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -702,6 +728,7 @@
     "failedToComplete": "Impossibile aggiornare lo stato della lista",
     "failedToReactivate": "Impossibile riattivare la lista",
     "failedToArchive": "Impossibile archiviare la lista",
+    "failedToClear": "Impossibile svuotare gli articoli",
     "failedToSetDefault": "Impossibile impostare la lista predefinita",
     "recurringSection": "Ricorrente",
     "recurringPatternLabel": "Si ripete",
@@ -1220,7 +1247,13 @@
       "expiresInDays": "{{name}} scade tra {{days}} giorni",
       "qualifierOpened": "{{name}} (aperto il {{date}})",
       "qualifierAdded": "{{name}} (aggiunto il {{date}})"
-    }
+    },
+    "categoryAll": "Tutte",
+    "categoryHome": "Casa",
+    "categoryPantry": "Dispensa",
+    "categoryRecipe": "Ricette",
+    "categoryShopping": "Spesa",
+    "categorySystem": "Sistema"
   },
   "settings": {
     "appSettings": "Impostazioni app",
@@ -1770,7 +1803,12 @@
     "selectListLabel": "Seleziona una lista",
     "noLists": "Nessuna lista della spesa trovata",
     "generatingMessage": "Generazione lista della spesa...",
-    "itemsCount": "{{count}} articoli"
+    "itemsCount": "{{count}} articoli",
+    "readyNothingToAdd": "\"{{name}}\" è pronta — niente da aggiungere.",
+    "createdSuccess_one": "Lista della spesa \"{{name}}\" creata con {{count}} articolo{{shared}}",
+    "createdSuccess_other": "Lista della spesa \"{{name}}\" creata con {{count}} articoli{{shared}}",
+    "sharedSuffix": " (condivisa con {{homeName}})",
+    "generateFailed": "Impossibile generare la lista della spesa"
   },
   "saveAsTemplate": {
     "title": "Salva come modello",
@@ -2011,7 +2049,12 @@
     "removeFromShoppingDesc": "Disattiva per mantenere l'articolo nella lista della spesa",
     "stateAmbient": "Ambiente",
     "stateRefrigerated": "Refrigerato",
-    "stateFrozen": "Congelato"
+    "stateFrozen": "Congelato",
+    "noListSelected": "Nessuna lista della spesa selezionata",
+    "movedItems_one": "Spostato {{count}} articolo in dispensa{{skipped}}",
+    "movedItems_other": "Spostati {{count}} articoli in dispensa{{skipped}}",
+    "skippedSuffix": " ({{skippedCount}} saltati)",
+    "noItemsMoved": "Nessun articolo è stato spostato in dispensa"
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",
@@ -2772,5 +2815,32 @@
     "itemImageUpdateFailedBody": "Impossibile aggiornare l'immagine dell'articolo",
     "itemTooLargeBody": "Immagine troppo grande. Le foto degli articoli devono essere inferiori a {{size}} MB.",
     "unreadableBody": "Non siamo riusciti a leggere questo file immagine. Provane un altro."
+  },
+  "mealTemplateActions": {
+    "planCreated": "Piano dei pasti creato dal modello!",
+    "savedAsTemplate": "Piano dei pasti salvato come modello!",
+    "templateDeleted": "Modello eliminato",
+    "templateDuplicated": "Modello duplicato!"
+  },
+  "accountEvents": {
+    "removedFromHome": "Sei stato rimosso da una casa",
+    "addedToHome": "Sei stato aggiunto a una nuova casa",
+    "removedFromShoppingList": "Sei stato rimosso da una lista della spesa",
+    "addedToShoppingList": "Sei stato aggiunto a una lista della spesa",
+    "accountBanned": "Il tuo account è stato bannato{{reason}}",
+    "accountSuspended": "Il tuo account è stato sospeso{{reason}}",
+    "reasonSuffix": ": {{reason}}",
+    "warningReceived": "Hai ricevuto un avviso da un moderatore"
+  },
+  "commonValidation": {
+    "emailInvalid": "Inserisci un indirizzo email valido",
+    "emailRequired": "L'email è obbligatoria",
+    "passwordRequired": "La password è obbligatoria",
+    "passwordMin": "La password deve contenere almeno 8 caratteri",
+    "passwordLetter": "È richiesta almeno una lettera",
+    "passwordNumber": "È richiesto almeno un numero",
+    "nameMin": "Il nome deve contenere almeno 2 caratteri",
+    "nameMax": "Il nome deve contenere meno di 50 caratteri",
+    "nameChars": "Il nome può contenere solo lettere, spazi, trattini e apostrofi"
   }
 }

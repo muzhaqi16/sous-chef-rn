@@ -5,6 +5,7 @@ import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { isExpectedNetworkTransitionError } from '#/utils/subscriptionErrorHandler';
+import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { useStore } from '#store';
 
 interface GraphQLTiming {
@@ -197,6 +198,18 @@ export const createTelemetryLink = () => {
                 error_message: serializedError.message,
                 duration_ms: duration,
                 network_error: true,
+              });
+            } else if (isOfflineRejectedError(error)) {
+              // A preemptive offline rejection — a real user-facing failure, but
+              // it never touched the network. Keep it out of
+              // graphql_network_errors_total so the error dashboards reflect
+              // actual API failures, not offline UX.
+              Telemetry.warn(`${operationName} rejected: device offline`, {
+                operation_name: operationName,
+                operation_type: operationType,
+                error_message: serializedError.message,
+                duration_ms: duration,
+                network_error: false,
               });
             } else {
               Telemetry.error(`GraphQL Network Error in ${operationName}`, {

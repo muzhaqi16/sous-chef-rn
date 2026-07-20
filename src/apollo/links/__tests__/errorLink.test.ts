@@ -22,6 +22,8 @@ jest.mock('../refreshToken', () => ({
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
 
+import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
+import { Observable } from 'rxjs';
 import {
   CombinedGraphQLErrors,
   CombinedProtocolErrors,
@@ -289,5 +291,76 @@ describe('errorLink middleware', () => {
     };
     const gqlError = new CombinedGraphQLErrors(result);
     expect(CombinedGraphQLErrors.is(gqlError)).toBe(true);
+  });
+});
+
+// A build below the server's minimum version is refused permanently. Refreshing
+// the token succeeds and then fails identically, so the link must not start a
+// refresh cycle over it.
+describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
+  const query = gql`
+    query TestOp {
+      me {
+        id
+      }
+    }
+  `;
+
+  // ApolloLink.execute needs a client on its context, so the chain gets a
+  // throwaway one — it never reaches the network, the failing link below
+  // terminates the chain.
+  const client = new ApolloClient({
+    cache: new InMemoryCache(),
+    link: ApolloLink.empty(),
+  });
+
+  const runWithError = (
+    errors: FormattedExecutionResult['errors'],
+  ): Promise<unknown> =>
+    new Promise((resolve, reject) => {
+      const failing = new ApolloLink(
+        () =>
+          new Observable(observer => {
+            observer.error(new CombinedGraphQLErrors({ errors }));
+          }),
+      );
+
+      ApolloLink.execute(
+        ApolloLink.from([errorLink, failing]),
+        { query, variables: {} },
+        { client },
+      ).subscribe({
+        next: resolve,
+        error: reject,
+        complete: () => resolve(undefined),
+      });
+    });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('does not attempt a token refresh', async () => {
+    await expect(
+      runWithError([
+        {
+          message: 'Client upgrade required: 5.0.0',
+          extensions: {
+            code: 'CLIENT_UPGRADE_REQUIRED',
+            minimumVersion: '5.0.0',
+          },
+        },
+      ]),
+    ).rejects.toBeDefined();
+
+    expect(attemptTokenRefresh).not.toHaveBeenCalled();
+  });
+
+  it('still refreshes for a genuine auth error (guards the early bail)', async () => {
+    await runWithError([
+      { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
+    ]).catch(() => undefined);
+
+    expect(attemptTokenRefresh).toHaveBeenCalled();
   });
 });

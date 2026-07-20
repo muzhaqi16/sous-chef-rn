@@ -146,10 +146,10 @@ export const useImageUpload = () => {
           resolve();
         } else {
           // 400 here is a policy violation — oversized body or a mime that
-          // doesn't match the one the presign was issued for.
-          logger.error(
-            `Image upload failed: status=${xhr.status}, url=${uploadData.url}, response=${xhr.responseText}`,
-          );
+          // doesn't match the one the presign was issued for. Log the status
+          // only: the presigned URL and the response body can carry signed
+          // request context, so they stay out of the logs.
+          logger.error(`Image upload failed: status=${xhr.status}`);
           const statusText = xhr.statusText ? ` ${xhr.statusText}` : '';
           reject(new Error(`Upload failed: ${xhr.status}${statusText}`));
         }

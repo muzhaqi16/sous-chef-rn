@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
+import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
@@ -17,8 +18,8 @@ export interface MainDetailsPageProps {
   setItemName: (value: string) => void;
   brand: string;
   setBrand: (value: string) => void;
-  suggestedBrands: { id: string; name: string }[];
-  handleBrandSelected: (
+  suggestedBrands?: { id: string; name: string }[];
+  handleBrandSelected?: (
     brandId: string | null,
     brandName: string | null,
   ) => void;
@@ -129,17 +130,5 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  page: {
-    flex: 1,
-    minHeight: '100%',
-    flexGrow: 1,
-  },
-  pageContent: {
-    padding: theme.spacing.md,
-    paddingTop: theme.spacing.sm,
-    flexGrow: 1,
-  },
-  section: {
-    marginBottom: theme.spacing.sm,
-  },
+  ...detailsPageBaseStyles(theme),
 }));

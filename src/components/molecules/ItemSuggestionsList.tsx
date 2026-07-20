@@ -134,7 +134,12 @@ const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
   const { t } = useTranslation();
 
   return (
-    <AppPressable style={styles.reportOption} onPress={onPress}>
+    <AppPressable
+      style={styles.reportOption}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={t('reportItem.footer')}
+    >
       <Icon name="alert-circle-outline" size={18} tone="secondary" />
       <Text size="sm" tone="secondary">
         {t('reportItem.footer')}

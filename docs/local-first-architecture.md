@@ -253,8 +253,9 @@ Both cases behave identically because `isApiUnavailable` is read by everything:
 - **`offlineModeLink`** (first in chain) short-circuits queries → serves the cache Apollo already read; no
   spinner, no error, and blocked queries never reach `retryLink`/`errorLink` (no doomed requests, no retry
   storm).
-- **`queueLink`** queues `localFirst` mutations immediately instead of firing doomed requests (non-`localFirst`
-  mutations still fire and surface their error — they aren't safe to auto-replay).
+- **`queueLink`** queues replay-allowlisted mutations (`localFirst` opt-ins or `Sync*`-mapped) immediately
+  instead of firing doomed requests, matching the offline path's allowlist (mutations outside the allowlist
+  still fire and surface their error — they aren't safe to auto-replay).
 - **`queueManager.processQueue`** skips replay (a replay to a down API would just fail and re-trip the breaker);
   recovery (`requestDrain` on breaker close) re-drains.
 
@@ -392,6 +393,12 @@ parent exists — ordering is correct by construction, no special-casing.
   (`flushCachePersistence`, §1/§6) writes the raw cache snapshot before a kill, and `OptimisticDataPersistence`'s
   microtask flush covers the numeric/toggle ops; in the worst case the **queue replays** the change on next
   launch regardless.
+- **Collaborator-connection staleness window (accepted)** — the shopping-list subscriptions
+  (`useShoppingListSubscriptions.ts`) live-maintain `collaboratorsConnection` membership for the **active
+  list only**. Other lists' collaborator/membership connections are not patched from subscription events;
+  they self-correct via `cache-and-network` on the next visit. With the persisted MMKV cache this means a
+  non-active list can show a briefly stale collaborator set until it is reopened — an expected, accepted
+  window, not a bug (it mirrors the `pantryEvents` active-container-only maintenance).
 
 ## 13. Divergences from the original plan (for the record)
 

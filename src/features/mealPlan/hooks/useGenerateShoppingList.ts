@@ -11,6 +11,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n/t';
+import { getI18n } from '#/i18n/config';
 
 const addToShoppingLists = createAddToQueryConnectionUpdater(
   'shoppingLists',
@@ -76,12 +77,22 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         // Plan generated but nothing to buy — pantry already covers it, or the
         // recipes have no linked catalog items. Surface it instead of a
         // misleading "created with 0 items" success.
-        toastService.info(`"${shoppingList.name}" is ready — nothing to add.`);
+        toastService.info(
+          getI18n().t('generateShoppingList.readyNothingToAdd', {
+            name: shoppingList.name,
+          }),
+        );
       } else {
         const homeName = shoppingList.home?.name;
-        const baseMsg = `Shopping list "${shoppingList.name}" created with ${itemCount} items`;
+        const shared = homeName
+          ? getI18n().t('generateShoppingList.sharedSuffix', { homeName })
+          : '';
         toastService.success(
-          homeName ? `${baseMsg} (shared with ${homeName})` : baseMsg,
+          getI18n().t('generateShoppingList.createdSuccess', {
+            name: shoppingList.name,
+            count: itemCount,
+            shared,
+          }),
         );
       }
       Telemetry.trackEvent('shopping_list_generated_from_meal_plan', {
@@ -93,7 +104,9 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       // Result-union error member (ValidationError for an empty plan,
       // Forbidden/NotFound/Conflict). `message` comes from the `Error`
       // interface selected in the mutation document.
-      toastService.error(data.message ?? 'Failed to generate shopping list');
+      toastService.error(
+        data.message ?? t('generateShoppingList.generateFailed'),
+      );
     }
     return data ?? null;
   };

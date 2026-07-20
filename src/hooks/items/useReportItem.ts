@@ -1,17 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@apollo/client/react';
-import {
-  MarkItemForReviewDocument,
-  type MarkItemForReviewMutation,
-} from '#operations/item/item.generated';
+import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import {
-  getRateLimitMessage,
-  isRateLimitError,
-} from '#/utils/errors/rateLimit';
-
-type ReportPayload = MarkItemForReviewMutation['markItemForReview'];
+import { alertMutationFailure } from './alertMutationFailure';
 
 /**
  * Flags a catalog item for admin moderation with a free-text reason.
@@ -39,7 +31,7 @@ export function useReportItem() {
 
     // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
     if (result === false) {
-      alertFailure(t);
+      alertMutationFailure(t, { keyPrefix: 'reportItem' });
       return false;
     }
 
@@ -60,50 +52,9 @@ export function useReportItem() {
       return true;
     }
 
-    alertFailure(t, result, payload);
+    alertMutationFailure(t, { keyPrefix: 'reportItem', result, payload });
     return false;
   };
 
   return { reportItem, loading };
-}
-
-// Minimal structural type for the translation function so this doesn't depend
-// on i18next's generic `TFunction` namespace typing.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
-
-function alertFailure(
-  t: Translate,
-  result?: { error?: unknown },
-  payload?: ReportPayload,
-): void {
-  // Per-operation rate limits arrive as a TOP-LEVEL GraphQL error, never a
-  // union member — check before falling through to the union branches.
-  if (result && isRateLimitError(result.error)) {
-    alertService.alert(
-      t('reportItem.rateLimitedTitle'),
-      getRateLimitMessage(result.error),
-    );
-    return;
-  }
-
-  switch (payload?.__typename) {
-    case 'NotFoundError':
-      alertService.alert(
-        t('reportItem.notFoundTitle'),
-        t('reportItem.notFoundBody'),
-      );
-      return;
-    case 'ValidationError':
-      // Server-authored and field-specific — the most useful thing we have.
-      alertService.alert(
-        t('reportItem.rejectedTitle'),
-        payload.message || t('reportItem.failedBody'),
-      );
-      return;
-    default:
-      alertService.alert(
-        t('reportItem.failedTitle'),
-        t('reportItem.failedBody'),
-      );
-  }
 }

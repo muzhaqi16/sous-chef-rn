@@ -11,6 +11,7 @@ import {
   isRateLimitError,
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
+import { CLIENT_VERSION } from '../clientIdentity';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
@@ -61,6 +62,19 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
     for (const err of error.errors) {
       const code = String(err.extensions?.code || '');
       const message = String(err.message || '');
+
+      // The build is below the server's minimum version. Terminal by
+      // definition — a retry sends the same version, and a token refresh
+      // succeeds and then fails identically — so bail out of the whole handler
+      // before anything downstream tries to recover from it.
+      if (code === 'CLIENT_UPGRADE_REQUIRED') {
+        logger.error(
+          `App version ${CLIENT_VERSION} is below the server minimum (${String(
+            err.extensions?.minimumVersion ?? 'unknown',
+          )}); ${operation.operationName} refused until the app is updated`,
+        );
+        return;
+      }
 
       if (isApiKeyError(code, message)) {
         logger.error('API Key error:', message);
