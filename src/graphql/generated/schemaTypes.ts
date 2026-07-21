@@ -811,6 +811,12 @@ export type Brand = {
   itemCount: Scalars['Int']['output'];
   name: Scalars['String']['output'];
   parent: Maybe<Brand>;
+  /**
+   * Rows that reference this brand, and what deleting it permanently would do
+   * to each. Admin-only; query it before a permanent delete to see the blast
+   * radius. Not cached — the counts move with every write.
+   */
+  references: BrandReferences;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
 };
@@ -857,6 +863,20 @@ export type BrandOrderBy = {
 export type BrandReferenceInput = {
   brandId?: InputMaybe<Scalars['ID']['input']>;
   brandName?: InputMaybe<Scalars['String']['input']>;
+};
+
+/**
+ * What a permanent brand delete would detach. User-owned rows are never
+ * deleted — they keep their row with brandId cleared.
+ */
+export type BrandReferences = {
+  __typename: 'BrandReferences';
+  /** Catalog links (ItemBrand), removed outright. */
+  itemLinks: Scalars['Int']['output'];
+  /** User-owned pantry rows, kept with brandId cleared. */
+  pantryItems: Scalars['Int']['output'];
+  /** User-owned shopping-list rows, kept with brandId cleared. */
+  shoppingListItems: Scalars['Int']['output'];
 };
 
 export type BrandSuggestion = {
@@ -1143,6 +1163,12 @@ export type Category = {
   itemCount: Scalars['Int']['output'];
   name: Scalars['String']['output'];
   parent: Maybe<Category>;
+  /**
+   * Rows that reference this category, and what deleting it permanently would
+   * do to each. Admin-only; query it before a permanent delete to see the blast
+   * radius. Not cached — the counts move with every write.
+   */
+  references: CategoryReferences;
   slug: Scalars['String']['output'];
   sortOrder: Scalars['Int']['output'];
   type: CategoryType;
@@ -1182,6 +1208,16 @@ export type CategoryOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   name?: InputMaybe<SortOrder>;
   sortOrder?: InputMaybe<SortOrder>;
+};
+
+/**
+ * What a permanent category delete would detach. Nothing user-owned points at a
+ * category, so only catalog links are affected — the items themselves survive.
+ */
+export type CategoryReferences = {
+  __typename: 'CategoryReferences';
+  /** Catalog links (ItemCategory), removed outright; the items survive. */
+  itemLinks: Scalars['Int']['output'];
 };
 
 export enum CategorySource {
@@ -2444,22 +2480,49 @@ export type DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNoti
 
 export type DeleteBrandInput = {
   id: Scalars['ID']['input'];
+  /**
+   * Permanently remove the brand instead of soft-deleting it.
+   *
+   * References are DETACHED, never deleted: pantry and shopping-list items keep
+   * their rows with brandId cleared, and ItemBrand catalog links are removed.
+   * Query Brand.references first to see the blast radius. Irreversible — a soft
+   * delete can be undone with restoreBrand, this cannot.
+   */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type DeleteBrandPayload = {
   __typename: 'DeleteBrandPayload';
   brand: Brand;
+  /**
+   * What a permanent delete detached. Null for a soft delete, which detaches
+   * nothing.
+   */
+  detached: Maybe<BrandReferences>;
 };
 
 export type DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCategoryInput = {
   id: Scalars['ID']['input'];
+  /**
+   * Permanently remove the category instead of soft-deleting it.
+   *
+   * The items assigned to it are DETACHED, never deleted — they lose one
+   * categorization and nothing else. Query Category.references first to see the
+   * blast radius. Irreversible.
+   */
+  permanent?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 export type DeleteCategoryPayload = {
   __typename: 'DeleteCategoryPayload';
   category: Category;
+  /**
+   * What a permanent delete detached. Null for a soft delete, which detaches
+   * nothing.
+   */
+  detached: Maybe<CategoryReferences>;
 };
 
 export type DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError | ValidationError;

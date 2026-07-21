@@ -970,6 +970,12 @@ type Brand {
   itemCount: Int!
   name: String!
   parent: Brand
+  """
+  Rows that reference this brand, and what deleting it permanently would do
+  to each. Admin-only; query it before a permanent delete to see the blast
+  radius. Not cached — the counts move with every write.
+  """
+  references: BrandReferences!
   updatedAt: DateTime!
   version: Int!
 }
@@ -1016,6 +1022,19 @@ Reusable sub-input for referencing a brand by ID or name (find-or-create)
 input BrandReferenceInput {
   brandId: ID
   brandName: String
+}
+
+"""
+What a permanent brand delete would detach. User-owned rows are never
+deleted — they keep their row with brandId cleared.
+"""
+type BrandReferences {
+  """Catalog links (ItemBrand), removed outright."""
+  itemLinks: Int!
+  """User-owned pantry rows, kept with brandId cleared."""
+  pantryItems: Int!
+  """User-owned shopping-list rows, kept with brandId cleared."""
+  shoppingListItems: Int!
 }
 
 type BrandSuggestion {
@@ -1286,6 +1305,12 @@ type Category {
   itemCount: Int!
   name: String!
   parent: Category
+  """
+  Rows that reference this category, and what deleting it permanently would
+  do to each. Admin-only; query it before a permanent delete to see the blast
+  radius. Not cached — the counts move with every write.
+  """
+  references: CategoryReferences!
   slug: String!
   sortOrder: Int!
   type: CategoryType!
@@ -1323,6 +1348,15 @@ input CategoryOrderBy {
   createdAt: SortOrder
   name: SortOrder
   sortOrder: SortOrder
+}
+
+"""
+What a permanent category delete would detach. Nothing user-owned points at a
+category, so only catalog links are affected — the items themselves survive.
+"""
+type CategoryReferences {
+  """Catalog links (ItemCategory), removed outright; the items survive."""
+  itemLinks: Int!
 }
 
 enum CategorySource {
@@ -2551,20 +2585,47 @@ union DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificati
 
 input DeleteBrandInput {
   id: ID!
+  """
+  Permanently remove the brand instead of soft-deleting it.
+  
+  References are DETACHED, never deleted: pantry and shopping-list items keep
+  their rows with brandId cleared, and ItemBrand catalog links are removed.
+  Query Brand.references first to see the blast radius. Irreversible — a soft
+  delete can be undone with restoreBrand, this cannot.
+  """
+  permanent: Boolean
 }
 
 type DeleteBrandPayload {
   brand: Brand!
+  """
+  What a permanent delete detached. Null for a soft delete, which detaches
+  nothing.
+  """
+  detached: BrandReferences
 }
 
 union DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCategoryInput {
   id: ID!
+  """
+  Permanently remove the category instead of soft-deleting it.
+  
+  The items assigned to it are DETACHED, never deleted — they lose one
+  categorization and nothing else. Query Category.references first to see the
+  blast radius. Irreversible.
+  """
+  permanent: Boolean
 }
 
 type DeleteCategoryPayload {
   category: Category!
+  """
+  What a permanent delete detached. Null for a soft delete, which detaches
+  nothing.
+  """
+  detached: CategoryReferences
 }
 
 union DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError | ValidationError
