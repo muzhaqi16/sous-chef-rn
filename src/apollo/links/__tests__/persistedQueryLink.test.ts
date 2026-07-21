@@ -12,10 +12,13 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
+import { print } from 'graphql';
+import { sha256 } from 'js-sha256';
 import { Observable } from 'rxjs';
 import { persistedQueryLink } from '../persistedQueryLink';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetHomeDocument } from '#operations/home/home.generated';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -37,6 +40,8 @@ const manifest: { operations: ManifestOperation[] } = JSON.parse(
 interface CapturedRequest {
   name: string;
   sha256Hash: string | undefined;
+  /** Exactly what HttpLink would serialize into the request's `query` field. */
+  body: string;
 }
 
 function buildCapturingClient(captured: CapturedRequest[]) {
@@ -47,6 +52,7 @@ function buildCapturingClient(captured: CapturedRequest[]) {
     captured.push({
       name: operation.operationName ?? '',
       sha256Hash: persisted?.sha256Hash,
+      body: print(operation.query),
     });
     return new Observable(observer => {
       observer.next({ data: null });
@@ -76,6 +82,14 @@ describe('persistedQueryLink ↔ manifest identity', () => {
       document: GetPantryDocument as import('graphql').DocumentNode,
       variables: { id: 'pantry-1' },
     },
+    {
+      // Codegen emits this one's fragments in an order that differs from the
+      // sorted order, so it only agrees with the manifest once the document
+      // reaching HttpLink has been sorted.
+      operationName: 'GetHome',
+      document: GetHomeDocument as import('graphql').DocumentNode,
+      variables: { id: 'home-1' },
+    },
   ];
 
   it.each(CASES)(
@@ -100,6 +114,32 @@ describe('persistedQueryLink ↔ manifest identity', () => {
 
       expect(captured.length).toBeGreaterThan(0);
       expect(captured[0].sha256Hash).toBe(manifestEntry!.id);
+    },
+  );
+
+  it.each(CASES)(
+    'body sent for $operationName hashes to the hash sent beside it',
+    async ({ operationName, document, variables }) => {
+      // APQ registration: when the hash-only request misses, the retry carries
+      // the full body and the server recomputes sha256 over it. A body that
+      // hashes to anything else is rejected with "provided sha does not match
+      // query" and the operation never completes.
+      const captured: CapturedRequest[] = [];
+      const client = buildCapturingClient(captured);
+
+      await client
+        .query({
+          query: document,
+          variables,
+          fetchPolicy: 'no-cache',
+          errorPolicy: 'ignore',
+        })
+        .catch(() => undefined);
+
+      expect(sha256(captured[0].body)).toBe(captured[0].sha256Hash);
+      expect(captured[0].body).toBe(
+        manifest.operations.find(op => op.name === operationName)!.body,
+      );
     },
   );
 

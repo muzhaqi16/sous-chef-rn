@@ -1,0 +1,50 @@
+diff --git a/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.android.tsx b/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.android.tsx
+index 4871395..2e63d2c 100644
+--- a/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.android.tsx
++++ b/node_modules/react-native-gesture-handler/src/components/GestureHandlerRootView.android.tsx
+@@ -3,12 +3,36 @@ import * as React from 'react';
+ import { StyleSheet } from 'react-native';
+ 
+ import GestureHandlerRootViewContext from '../GestureHandlerRootViewContext';
++import RNGestureHandlerModule from '../RNGestureHandlerModule';
+ import type { RootViewNativeProps } from '../specs/RNGestureHandlerRootViewNativeComponent';
+ import GestureHandlerRootViewNativeComponent from '../specs/RNGestureHandlerRootViewNativeComponent';
+ 
+ export interface GestureHandlerRootViewProps
+   extends PropsWithChildren<RootViewNativeProps> {}
+ 
++function getModuleId(): number {
++  if (globalThis._RNGH_MODULE_ID === undefined) {
++    // Reading the native module creates its TurboModule, which installs the
++    // JSI bindings that define `_RNGH_MODULE_ID` and registers the matching
++    // native gesture registry under that id.
++    //
++    // TurboModules are created lazily, on first access from JS. Nothing else
++    // in this file touches the native module, so when a bundler defers module
++    // evaluation until first use (Metro's `inlineRequires`, off by default)
++    // this component can mount before anything has read it. `moduleId` then
++    // arrives undefined, the Android view keeps its `-1` default, and
++    // RNGestureHandlerRootHelper throws "Tried to access a non-existent
++    // registry" on the main thread, killing the app on launch.
++    if (!RNGestureHandlerModule) {
++      throw new Error(
++        '[react-native-gesture-handler] native module is unavailable.'
++      );
++    }
++  }
++
++  return globalThis._RNGH_MODULE_ID;
++}
++
+ export default function GestureHandlerRootView({
+   style,
+   ...rest
+@@ -18,7 +42,7 @@ export default function GestureHandlerRootView({
+       <GestureHandlerRootViewNativeComponent
+         style={style ?? styles.container}
+         {...rest}
+-        moduleId={globalThis._RNGH_MODULE_ID} // Ensure moduleId is set
++        moduleId={getModuleId()} // Ensure moduleId is set
+       />
+     </GestureHandlerRootViewContext>
+   );
