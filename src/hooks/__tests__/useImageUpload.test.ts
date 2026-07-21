@@ -289,6 +289,46 @@ describe('useImageUpload', () => {
       expect(uploaded).toBe('https://cdn.test/a.jpg');
     });
 
+    // Creating an upload target is rate limited per user. That refusal is a
+    // top-level GraphQL error, not a member of the result union, so it reaches
+    // the hook with no payload — the generic "upload failed" copy would throw
+    // away the retryAfter the user needs to know when to try again.
+    it('surfaces the presign rate limit with its retry window', async () => {
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [
+          {
+            request: {
+              query: CreateImageUploadUrlDocument,
+              variables: () => true,
+            },
+            result: {
+              errors: [
+                {
+                  message: 'Too many requests',
+                  extensions: {
+                    code: 'OPERATION_RATE_LIMITED',
+                    retryAfter: 30,
+                  },
+                },
+              ],
+            },
+          } as MockedResponse,
+        ],
+      });
+
+      let uploaded: ItemUploadResult = null;
+      await act(async () => {
+        uploaded = await result.current.uploadItemImage(file, 'item-1');
+      });
+
+      expect(uploaded).toBeNull();
+      expect(mockXhr.open).not.toHaveBeenCalled();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('30'),
+      );
+    });
+
     it("normalizes a picker-reported 'image/jpg' to 'image/jpeg' in the presign mime", async () => {
       // Some Android providers report the non-standard 'image/jpg'; the API
       // accepts only image/jpeg | image/png | image/webp and rejects the raw

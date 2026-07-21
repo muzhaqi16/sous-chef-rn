@@ -397,6 +397,26 @@ describe('QueueManager', () => {
       expect(result.retryable).toBe(false);
     });
 
+    it('classifies AUTH_ACCOUNT_SUSPENDED as non-retryable, not auth', () => {
+      const result = classifyError({
+        message: 'User account is not active',
+        extensions: { code: 'AUTH_ACCOUNT_SUSPENDED' },
+      });
+      expect(result.type).not.toBe('auth');
+      expect(result.retryable).toBe(false);
+    });
+
+    // The code must win over the message heuristics: a refresh cannot revive a
+    // dead account, so this must not come back retryable.
+    it('classifies AUTH_ACCOUNT_SUSPENDED by code even when the message reads as auth', () => {
+      const result = classifyError({
+        message: 'unauthorized: account suspended',
+        extensions: { code: 'AUTH_ACCOUNT_SUSPENDED' },
+      });
+      expect(result.type).not.toBe('auth');
+      expect(result.retryable).toBe(false);
+    });
+
     it('classifies "expired" message as auth error', () => {
       const result = classifyError({ message: 'Token expired' });
       expect(result.type).toBe('auth');

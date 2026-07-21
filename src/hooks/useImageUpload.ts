@@ -22,7 +22,24 @@ import {
 } from '#utils/imageValidation';
 import { useStore } from '#store';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  isRateLimitError,
+  getRateLimitMessage,
+} from '#/utils/errors/rateLimit';
 import { logger } from '#/utils/environment';
+
+/**
+ * An upload failure whose message is already localized and safe to show. Used
+ * for the presign rate limit, where the server's `retryAfter` is the whole
+ * point of the message and the generic copy would discard it.
+ */
+class UserFacingUploadError extends Error {
+  readonly userMessage: string;
+  constructor(userMessage: string) {
+    super(userMessage);
+    this.userMessage = userMessage;
+  }
+}
 
 // Minimal structural type for the translation function so this doesn't depend
 // on i18next's generic `TFunction` namespace typing.
@@ -49,6 +66,10 @@ const uploadErrorMessage = (
   error: unknown,
   isProfileImage: boolean,
 ): string => {
+  // Already-localized copy wins — it carries detail (like a retry countdown)
+  // that none of the code branches below can reconstruct.
+  if (error instanceof UserFacingUploadError) return error.userMessage;
+
   const code = (error as Partial<ImageValidationError> | null)?.code;
   switch (code) {
     case 'INVALID_TYPE':
@@ -235,18 +256,28 @@ export const useImageUpload = () => {
         const mimeType = normalizeImageMimeType(
           fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
         );
-        const { data: uploadData } = await createUploadUrl({
-          variables: {
-            input: {
-              mime: mimeType,
-              purpose: purpose,
-              itemId: itemId,
+        const { data: uploadData, error: uploadUrlError } =
+          await createUploadUrl({
+            variables: {
+              input: {
+                mime: mimeType,
+                purpose: purpose,
+                itemId: itemId,
+              },
             },
-          },
-        });
+          });
 
         const uploadPayload = uploadData?.createImageUploadUrl;
         if (uploadPayload?.__typename !== 'CreateImageUploadUrlPayload') {
+          // Presign has its own per-user ceiling, and it arrives as a top-level
+          // GraphQL error rather than a member of the result union — so it
+          // lands here with no payload. Without this branch the user is told
+          // the upload simply failed and the server's retryAfter is discarded.
+          if (isRateLimitError(uploadUrlError)) {
+            throw new UserFacingUploadError(
+              getRateLimitMessage(uploadUrlError),
+            );
+          }
           throw new Error('Failed to get upload URL');
         }
         const uploadResult = uploadPayload;

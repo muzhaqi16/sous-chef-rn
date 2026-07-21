@@ -370,11 +370,39 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
     expect(attemptTokenRefresh).toHaveBeenCalled();
   });
 
-  // The @auth directive rejects every field for a suspended/deleted account
-  // with FORBIDDEN + a reason. The session must end (the user can do nothing),
-  // while ordinary resource-level FORBIDDEN stays non-fatal.
-  describe('suspended/deleted account (FORBIDDEN + reason)', () => {
-    it('ends the session', async () => {
+  // The @auth directive rejects every field for a suspended/banned/deleted
+  // account. The session must end (the user can do nothing), while ordinary
+  // resource-level FORBIDDEN stays non-fatal.
+  describe('suspended/deleted account', () => {
+    it('ends the session on the AUTH_ACCOUNT_SUSPENDED code alone', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: { code: 'AUTH_ACCOUNT_SUSPENDED' },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+    });
+
+    it('ends the session without a reason string present', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: {
+            code: 'AUTH_ACCOUNT_SUSPENDED',
+            field: 'pantries',
+            http: { status: 403 },
+          },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+    });
+
+    // Servers predating the dedicated code send FORBIDDEN + a prose reason.
+    it('ends the session on the legacy FORBIDDEN + reason shape', async () => {
       await runWithError([
         {
           message: 'User account is not active',

@@ -114,7 +114,7 @@ Example:
 type User {
   email: String! @auth
   settings: UserSettings @ownerOnly
-  notifications: [Notification!]! @ownerOnly
+  notificationsConnection: NotificationConnection! @ownerOnly
 }
 
 type Recipe {
@@ -11332,7 +11332,6 @@ union UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | Up
 
 input UpdateShoppingListInput {
   description: String
-  homeId: ID
   id: ID!
   isCompleted: Boolean
   isDefault: Boolean

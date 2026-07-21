@@ -35,6 +35,18 @@ const isAuthError = (code: string, msg: string) =>
 const isResourceAccessError = (code: string) =>
   code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN';
 
+// The @auth directive rejects EVERY field for a suspended, banned, or deleted
+// account: the credentials are valid but the account may not transact. That is
+// not a resource-access denial, so it gets its own code and ends the session.
+//
+// `AUTH_ACCOUNT_SUSPENDED` is the current signal. Servers predating it emit
+// FORBIDDEN with a prose `reason` instead, which the second branch matches so
+// the session still ends against an older API. The server documents that
+// wording as non-contractual, so drop the fallback once every deployed
+// environment serves the code.
+const isAccountInactiveError = (code: string, reason: string) =>
+  code === 'AUTH_ACCOUNT_SUSPENDED' || /suspended or deleted/i.test(reason);
+
 const isApiKeyError = (code: string, msg: string) =>
   ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
   msg.toLowerCase().includes('api key');
@@ -84,21 +96,19 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         continue;
       }
 
+      // Checked before the resource-access branch: the legacy fallback arrives
+      // as FORBIDDEN, so testing it after that branch would `continue` past it.
+      // Staying "logged in" would strand the user on cached data with every
+      // request failing, so end the session and land them on sign-in.
+      if (isAccountInactiveError(code, String(err.extensions?.reason || ''))) {
+        logger.error(
+          `Account inactive (${operation.operationName}) — ending session`,
+        );
+        useStore.getState().clearAuth();
+        return;
+      }
+
       if (isResourceAccessError(code)) {
-        // The @auth directive rejects EVERY field for a suspended/deleted
-        // account with FORBIDDEN + this reason. Staying "logged in" would
-        // strand the user on cached data with all requests failing — end the
-        // session so they land on sign-in. Defensive substring match on the
-        // server's reason string (a dedicated code is requested upstream);
-        // ordinary resource-level FORBIDDEN stays non-fatal below.
-        const reason = String(err.extensions?.reason || '');
-        if (/suspended or deleted/i.test(reason)) {
-          logger.error(
-            `Account inactive (${operation.operationName}) — ending session`,
-          );
-          useStore.getState().clearAuth();
-          return;
-        }
         logger.warn(`Access denied for ${operation.operationName}: ${message}`);
         continue;
       }

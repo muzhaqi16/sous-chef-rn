@@ -125,7 +125,17 @@ export function classifyError(error: unknown): QueueError {
   // than retrying behind a refresh. Both codes are current, on different
   // channels: FORBIDDEN is the mutation result-union member's code
   // (errors-as-data), AUTHZ_FORBIDDEN is the top-level `extensions.code`.
-  if (code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN') {
+  // AUTH_ACCOUNT_SUSPENDED joins them: the account is suspended, banned, or
+  // deleted, so no replay of this entry can ever succeed and a token refresh
+  // cannot revive it. Classified here rather than left to the default so the
+  // message heuristics in the auth branch below can never see it — server
+  // wording that happened to contain "unauthorized" would otherwise mark a
+  // permanently dead account retryable and spin the queue against it.
+  if (
+    code === 'FORBIDDEN' ||
+    code === 'AUTHZ_FORBIDDEN' ||
+    code === 'AUTH_ACCOUNT_SUSPENDED'
+  ) {
     return {
       type: 'unknown',
       message,

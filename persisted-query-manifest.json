@@ -573,10 +573,10 @@
       "body": "query GetNotificationStats($filters: NotificationFilters) {\n  notificationStats(filters: $filters) {\n    total\n    unread\n    read\n    dismissed\n    expired\n    byCategory {\n      category\n      count\n      unreadCount\n      __typename\n    }\n    byPriority {\n      priority\n      count\n      unreadCount\n      __typename\n    }\n    byType {\n      type\n      count\n      unreadCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "3dfb279cae70a450e7c9d5e18e05ad60b15af760e49c1cf06b0b58234153952a",
+      "id": "830ae198e9dae6557b7834dd83a1d4d74b3448421fb61a93c80120234a033a22",
       "name": "GetNotifications",
       "type": "query",
-      "body": "query GetNotifications($filter: NotificationFilters, $first: Int = 30, $after: String) {\n  me {\n    id\n    unreadNotificationCount\n    hasUrgentNotifications\n    notificationsConnection(\n      filters: $filter\n      first: $first\n      after: $after\n      orderBy: SENT_AT_DESC\n    ) {\n      edges {\n        node {\n          id\n          ...useNotificationsOnLaunch_notification\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotificationsOnLaunch_notification on Notification {\n  id\n  type\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  __typename\n}"
+      "body": "query GetNotifications($filter: NotificationFilters, $first: Int = 30, $after: String) {\n  me {\n    id\n    unreadNotificationCount\n    hasUrgentNotifications\n    notificationsConnection(\n      filters: $filter\n      first: $first\n      after: $after\n      orderBy: SENT_AT_DESC\n    ) {\n      edges {\n        node {\n          id\n          ...useNotificationsOnLaunch_notification\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotificationsOnLaunch_notification on Notification {\n  id\n  type\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  status\n  __typename\n}"
     },
     {
       "id": "8a82348b7205cd473922ac3ec90c8d6641a11538e60712beb7831ba62d53ec42",
@@ -723,10 +723,10 @@
       "body": "query GetUnitBySymbol($symbol: String!) {\n  unitBySymbol(symbol: $symbol) {\n    id\n    name\n    symbol\n    type\n    isMetric\n    baseUnitId\n    conversionFactor\n    notes\n    isCommon\n    sortOrder\n    createdAt\n    updatedAt\n    baseUnit {\n      id\n      name\n      symbol\n      type\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "d161cde808aa669def72085502248bfea36b1cd9cf7301748774baf1462520b7",
+      "id": "ff06385328bbd10eaa61fbc2d9b65badd1f0db9fc1282cdf1ac5e95261bddc3b",
       "name": "GetUnreadNotifications",
       "type": "query",
-      "body": "query GetUnreadNotifications {\n  me {\n    id\n    unreadNotificationCount\n    hasUrgentNotifications\n    notificationsConnection(\n      filters: {unreadOnly: true}\n      first: 50\n      orderBy: SENT_AT_DESC\n    ) {\n      edges {\n        node {\n          id\n          ...useNotificationsOnLaunch_notification\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotificationsOnLaunch_notification on Notification {\n  id\n  type\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  __typename\n}"
+      "body": "query GetUnreadNotifications {\n  me {\n    id\n    unreadNotificationCount\n    hasUrgentNotifications\n    notificationsConnection(\n      filters: {unreadOnly: true}\n      first: 50\n      orderBy: SENT_AT_DESC\n    ) {\n      edges {\n        node {\n          id\n          ...useNotificationsOnLaunch_notification\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotificationsOnLaunch_notification on Notification {\n  id\n  type\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  status\n  __typename\n}"
     },
     {
       "id": "f1dadda05eb76834afed9dfc182d46ddcb897d75ff9a8006fa1e8578c6eae61a",

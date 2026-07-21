@@ -1,8 +1,7 @@
 /**
  * Map a `useNotificationsOnLaunch_notification` fragment (server shape) into the
- * Zustand store's `NotificationItem` shape (minus `isRead`, which the store
- * derives from `readAt`). Shared by the launch fetch and the paginated history
- * fetch so the two can't drift.
+ * Zustand store's `NotificationItem` shape. Shared by the launch fetch and the
+ * paginated history fetch so the two can't drift.
  */
 
 import {
@@ -13,6 +12,7 @@ import {
 } from '#store/slices/notificationSlice';
 import {
   NotificationCategory,
+  NotificationStatus,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -31,9 +31,25 @@ function toStorePriority(p: Priority | null | undefined): NotificationPriority {
     : NotificationPriority.MEDIUM;
 }
 
+/**
+ * A notification is awaiting the user only while PENDING or SENT; READ,
+ * CLICKED, DISMISSED, EXPIRED, and FAILED are all terminal. This mirrors the
+ * server's definition, which drives `unreadNotificationCount` and the
+ * `unreadOnly` feed filter, so the locally recomputed badge agrees with the
+ * seeded one.
+ *
+ * Listed positively so a status added to the enum later reads as terminal
+ * rather than silently inflating every badge — the same reason the server
+ * expresses it this way.
+ */
+const UNREAD_STATUSES: readonly NotificationStatus[] = [
+  NotificationStatus.Pending,
+  NotificationStatus.Sent,
+];
+
 export function mapNotificationToStore(
   n: UseNotificationsOnLaunch_NotificationFragment,
-): Omit<NotificationItem, 'isRead'> {
+): Omit<NotificationItem, 'isRead'> & { isRead: boolean } {
   const type = n.type;
   const payload: NotificationPayload = isNotificationPayload(n.payload)
     ? n.payload
@@ -54,6 +70,7 @@ export function mapNotificationToStore(
     sourceType: n.sourceType,
     actionUrl: n.actionUrl,
     readAt: n.readAt,
+    isRead: !UNREAD_STATUSES.includes(n.status),
     requiresAction,
     actionType,
     actionData: payload,

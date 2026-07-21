@@ -15083,7 +15083,6 @@ export type UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundErro
 
 export type UpdateShoppingListInput = {
   description?: InputMaybe<Scalars['String']['input']>;
-  homeId?: InputMaybe<Scalars['ID']['input']>;
   id: Scalars['ID']['input'];
   isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;

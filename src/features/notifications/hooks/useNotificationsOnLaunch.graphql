@@ -12,4 +12,5 @@ fragment useNotificationsOnLaunch_notification on Notification {
   sourceType
   actionUrl
   readAt
+  status
 }
