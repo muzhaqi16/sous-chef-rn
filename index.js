@@ -61,10 +61,29 @@ registerFcmBackgroundHandler();
 /**
  * @format
  */
-import { AppRegistry } from 'react-native';
+import { AppRegistry, TurboModuleRegistry } from 'react-native';
 import { enableScreens, enableFreeze } from 'react-native-screens';
 import './src/theme/unistyles';
 import { initializeSecureStorage } from './src/storage/mmkv';
+
+// Create the gesture-handler native module before any GestureHandlerRootView
+// mounts. Creating it is what installs the JSI bindings that define
+// `globalThis._RNGH_MODULE_ID` and registers the native gesture registry under
+// that id. GestureHandlerRootView reads that global, but nothing in its own
+// import chain touches the native module — and `experimentalImportSupport` in
+// metro.config.js lets Metro inline default imports, so the module can still be
+// unloaded when the root view mounts. `moduleId` then arrives undefined, the
+// Android view keeps its -1 default, and RNGestureHandlerRootHelper throws
+// "Tried to access a non-existent registry" on the main thread at launch.
+TurboModuleRegistry.get('RNGestureHandlerModule');
+
+if (__DEV__ && global._RNGH_MODULE_ID === undefined) {
+  console.error(
+    '[startup] RNGestureHandlerModule did not install _RNGH_MODULE_ID. ' +
+      'The native module name above is likely stale — Android will crash on ' +
+      'launch with "Tried to access a non-existent registry".',
+  );
+}
 
 // Activate native screen reuse and inactive-screen freezing.
 // On the New Architecture this is the explicit opt-in for native screen
