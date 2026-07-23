@@ -257,30 +257,6 @@ export const ShoppingListItemDetail: React.FC<
             </Text>
           </DetailRow>
         )}
-        {item.priceEstimate?.lastKnown != null && (
-          <DetailRow label={t('shoppingListScreens.lastPaidPrice')}>
-            <Text size="sm" weight="medium">
-              {`$${item.priceEstimate.lastKnown.toFixed(2)}`}
-            </Text>
-          </DetailRow>
-        )}
-        {item.priceEstimate?.average != null && (
-          <DetailRow label={t('shoppingListScreens.averagePrice')}>
-            <Text size="sm" weight="medium">
-              {`$${item.priceEstimate.average.toFixed(2)}`}
-            </Text>
-          </DetailRow>
-        )}
-        {item.priceEstimate?.lowest != null &&
-          item.priceEstimate?.highest != null && (
-            <DetailRow label={t('shoppingListScreens.priceRange')}>
-              <Text size="sm" weight="medium">
-                {`$${item.priceEstimate.lowest.toFixed(
-                  2,
-                )} – $${item.priceEstimate.highest.toFixed(2)}`}
-              </Text>
-            </DetailRow>
-          )}
         {!!item.purchaseInfo?.isPurchased &&
           item.purchaseInfo.purchasedQuantity != null && (
             <DetailRow label={t('shoppingListScreens.purchased')}>

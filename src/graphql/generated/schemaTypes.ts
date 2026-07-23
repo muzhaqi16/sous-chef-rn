@@ -30,6 +30,11 @@ export type AcceptHomeInvitePayload = {
   membership: Membership;
 };
 
+/**
+ * Result of AcceptHomeInvite. Select on AcceptHomeInvitePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AcceptHomeInviteResult = AcceptHomeInvitePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AcceptShoppingListInviteInput = {
@@ -42,6 +47,11 @@ export type AcceptShoppingListInvitePayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of AcceptShoppingListInvite. Select on AcceptShoppingListInvitePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AcceptShoppingListInviteResult = AcceptShoppingListInvitePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -90,6 +100,11 @@ export type AddItemToCategoryPayload = {
   itemCategory: ItemCategory;
 };
 
+/**
+ * Result of AddItemToCategory. Select on AddItemToCategoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddItemToCategoryResult = AddItemToCategoryPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddItemsToShoppingListInput = {
@@ -108,6 +123,11 @@ export type AddItemsToShoppingListPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AddItemsToShoppingList. Select on AddItemsToShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddItemsToShoppingListResult = AddItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddLowStockItemsToShoppingListInput = {
@@ -122,6 +142,11 @@ export type AddLowStockItemsToShoppingListPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AddLowStockItemsToShoppingList. Select on AddLowStockItemsToShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddLowStockItemsToShoppingListResult = AddLowStockItemsToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddPantryItemToShoppingListInput = {
@@ -135,6 +160,11 @@ export type AddPantryItemToShoppingListPayload = {
   shoppingListItemId: Scalars['ID']['output'];
 };
 
+/**
+ * Result of AddPantryItemToShoppingList. Select on AddPantryItemToShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddPantryItemToShoppingListResult = AddPantryItemToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddRecipeToFavoritesInput = {
@@ -164,6 +194,11 @@ export type AddRecipeToFavoritesPayload = {
   savedRecipe: SavedRecipe;
 };
 
+/**
+ * Result of AddRecipeToFavorites. Select on AddRecipeToFavoritesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for adding recipe ingredients to a shopping list */
@@ -179,6 +214,11 @@ export type AddRecipeToShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of AddRecipeToShoppingList. Select on AddRecipeToShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddRecipeToShoppingListResult = AddRecipeToShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddRestrictionInput = {
@@ -196,6 +236,11 @@ export type AddRestrictionPayload = {
   dietaryRestriction: DietaryRestriction;
 };
 
+/**
+ * Result of AddRestriction. Select on AddRestrictionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddRestrictionResult = AddRestrictionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddTemplateItemInput = {
@@ -214,6 +259,11 @@ export type AddTemplateItemPayload = {
   mealTemplateItem: MealTemplateItem;
 };
 
+/**
+ * Result of AddTemplateItem. Select on AddTemplateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddTemplateItemResult = AddTemplateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddUserAddressInput = {
@@ -233,6 +283,11 @@ export type AddUserAddressPayload = {
   userAddress: UserAddress;
 };
 
+/**
+ * Result of AddUserAddress. Select on AddUserAddressPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AddWarningInput = {
@@ -245,6 +300,11 @@ export type AddWarningPayload = {
   userModeration: UserModeration;
 };
 
+/**
+ * Result of AddWarning. Select on AddWarningPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AddWarningResult = AddWarningPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export enum AddedContext {
@@ -298,6 +358,11 @@ export type AdjustPantryItemQuantityPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of AdjustPantryItemQuantity. Select on AdjustPantryItemQuantityPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -322,6 +387,11 @@ export type AdjustPantryItemWeightPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of AdjustPantryItemWeight. Select on AdjustPantryItemWeightPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminBulkDeleteItemsInput = {
@@ -336,6 +406,11 @@ export type AdminBulkDeleteItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AdminBulkDeleteItems. Select on AdminBulkDeleteItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -364,13 +439,18 @@ export type AdminDeleteImagesPayload = {
   /** Number of images successfully deleted from storage. */
   deletedFromStorage: Scalars['Int']['output'];
   /** Storage deletion failures with error details. */
-  failedStorage: Array<ImageDeletionError>;
+  failedStorage: Array<ImageDeletionFailure>;
   /** Job ID if the operation was queued for background processing. */
   jobId: Maybe<Scalars['String']['output']>;
   /** Total number of images requested for deletion. */
   totalRequested: Scalars['Int']['output'];
 };
 
+/**
+ * Result of AdminDeleteImages. Select on AdminDeleteImagesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteItemInput = {
@@ -383,6 +463,11 @@ export type AdminDeleteItemPayload = {
   item: Maybe<Item>;
 };
 
+/**
+ * Result of AdminDeleteItem. Select on AdminDeleteItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteRecipeInput = {
@@ -395,6 +480,11 @@ export type AdminDeleteRecipePayload = {
   recipe: Maybe<Recipe>;
 };
 
+/**
+ * Result of AdminDeleteRecipe. Select on AdminDeleteRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteRecipeReviewInput = {
@@ -406,6 +496,11 @@ export type AdminDeleteRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
+/**
+ * Result of AdminDeleteRecipeReview. Select on AdminDeleteRecipeReviewPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminDeleteUserInput = {
@@ -419,6 +514,11 @@ export type AdminDeleteUserPayload = {
   user: Maybe<User>;
 };
 
+/**
+ * Result of AdminDeleteUser. Select on AdminDeleteUserPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Paginated result for admin item unit conversion listing */
@@ -446,6 +546,11 @@ export type AdminPurgeHomesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AdminPurgeHomes. Select on AdminPurgeHomesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminPurgeHomesResult = AdminPurgeHomesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -467,6 +572,11 @@ export type AdminPurgePantryItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AdminPurgePantryItems. Select on AdminPurgePantryItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -488,6 +598,11 @@ export type AdminPurgeShoppingListItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of AdminPurgeShoppingListItems. Select on AdminPurgeShoppingListItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminUpdateItemPayload = {
@@ -495,6 +610,11 @@ export type AdminUpdateItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of AdminUpdateItem. Select on AdminUpdateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminUpdateItemResult = AdminUpdateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type AdminUpdateRecipePayload = {
@@ -502,6 +622,11 @@ export type AdminUpdateRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of AdminUpdateRecipe. Select on AdminUpdateRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminUpdateRecipeResult = AdminUpdateRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -525,6 +650,11 @@ export type AdminUpdateUserPayload = {
   user: User;
 };
 
+/**
+ * Result of AdminUpdateUser. Select on AdminUpdateUserPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type AdminUpdateUserResult = AdminUpdateUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Result of quantity aggregation (add/subtract) */
@@ -606,6 +736,11 @@ export type ApproveAndMergePayload = {
   item: Item;
 };
 
+/**
+ * Result of ApproveAndMerge. Select on ApproveAndMergePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ApproveItemInput = {
@@ -617,8 +752,18 @@ export type ApproveItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of ApproveItem. Select on ApproveItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Result of ApproveItemSuggestion. Select on ReviewItemSuggestionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
 
 /** Sub-input for attribution data */
@@ -821,16 +966,29 @@ export type Brand = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * A page of Brand results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type BrandConnection = Connection & {
   __typename: 'BrandConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<BrandEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Brand in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type BrandEdge = Edge & {
   __typename: 'BrandEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Brand this edge wraps. */
   node: Brand;
 };
 
@@ -915,6 +1073,11 @@ export type BulkCreateItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkCreateItems. Select on BulkCreateItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkCreatePurchasesInput = {
@@ -927,6 +1090,11 @@ export type BulkCreatePurchasesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkCreatePurchases. Select on BulkCreatePurchasesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkCreatePurchasesResult = BulkCreatePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkCreateStoresInput = {
@@ -939,6 +1107,11 @@ export type BulkCreateStoresPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkCreateStores. Select on BulkCreateStoresPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkCreateStoresResult = BulkCreateStoresPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkDeleteItemsInput = {
@@ -952,6 +1125,11 @@ export type BulkDeleteItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkDeleteItems. Select on BulkDeleteItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkDeleteItemsResult = BulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkDeletePurchasesInput = {
@@ -968,6 +1146,11 @@ export type BulkDeletePurchasesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkDeletePurchases. Select on BulkDeletePurchasesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkDeletePurchasesResult = BulkDeletePurchasesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1002,6 +1185,11 @@ export type BulkSendNotificationsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkSendNotifications. Select on BulkSendNotificationsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1037,6 +1225,11 @@ export type BulkUpdateDevicesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkUpdateDevices. Select on BulkUpdateDevicesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkUpdateDevicesResult = BulkUpdateDevicesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1086,6 +1279,11 @@ export type BulkUpdateItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkUpdateItems. Select on BulkUpdateItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkUpdateLoginHistoriesInput = {
@@ -1099,6 +1297,11 @@ export type BulkUpdateLoginHistoriesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkUpdateLoginHistories. Select on BulkUpdateLoginHistoriesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkUpsertItemsByExternalSourceInput = {
@@ -1116,6 +1319,11 @@ export type BulkUpsertItemsByExternalSourcePayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of BulkUpsertItemsByExternalSource. Select on BulkUpsertItemsByExternalSourcePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type BulkUpsertItemsByExternalSourceResult = BulkUpsertItemsByExternalSourcePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1143,6 +1351,11 @@ export type CancelRecurringPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of CancelRecurring. Select on CancelRecurringPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CancelRecurringResult = CancelRecurringPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1178,16 +1391,29 @@ export type Category = {
   visibility: Visibility;
 };
 
+/**
+ * A page of Category results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type CategoryConnection = Connection & {
   __typename: 'CategoryConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<CategoryEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Category in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type CategoryEdge = Edge & {
   __typename: 'CategoryEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Category this edge wraps. */
   node: Category;
 };
 
@@ -1259,6 +1485,11 @@ export type ChangePasswordPayload = {
   status: PasswordActionStatus;
 };
 
+/**
+ * Result of ChangePassword. Select on ChangePasswordPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ChangePasswordResult = ChangePasswordPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Source of the change for audit purposes */
@@ -1330,6 +1561,11 @@ export type CompleteOnboardingPayload = {
   user: User;
 };
 
+/**
+ * Result of CompleteOnboarding. Select on CompleteOnboardingPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CompleteOnboardingResult = CompleteOnboardingPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CompleteShoppingListInput = {
@@ -1343,6 +1579,11 @@ export type CompleteShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of CompleteShoppingList. Select on CompleteShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CompleteShoppingListResult = CompleteShoppingListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConfirmItemImageUploadInput = {
@@ -1355,6 +1596,11 @@ export type ConfirmItemImageUploadPayload = {
   url: Maybe<Scalars['String']['output']>;
 };
 
+/**
+ * Result of ConfirmItemImageUpload. Select on ConfirmItemImageUploadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ConfirmItemImageUploadResult = ConfirmItemImageUploadPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConfirmProfileImageUploadInput = {
@@ -1366,6 +1612,11 @@ export type ConfirmProfileImageUploadPayload = {
   url: Maybe<Scalars['String']['output']>;
 };
 
+/**
+ * Result of ConfirmProfileImageUpload. Select on ConfirmProfileImageUploadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ConfirmProfileImageUploadResult = ConfirmProfileImageUploadPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for confirming recipe ingredient consumption from pantry */
@@ -1400,6 +1651,11 @@ export type ConfirmRecipeConsumptionPayload = {
   totalFailed: Scalars['Int']['output'];
 };
 
+/**
+ * Result of ConfirmRecipeConsumption. Select on ConfirmRecipeConsumptionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ConfirmRecipeConsumptionResult = ConfirmRecipeConsumptionPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConfirmedIngredientConsumptionInput = {
@@ -1507,6 +1763,11 @@ export type ConvertExpiredBatchesToWastePayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of ConvertExpiredBatchesToWaste. Select on ConvertExpiredBatchesToWastePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ConvertExpiredBatchesToWasteResult = ConflictError | ConvertExpiredBatchesToWastePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConvertExpiredToWasteInput = {
@@ -1520,6 +1781,11 @@ export type ConvertExpiredToWastePayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of ConvertExpiredToWaste. Select on ConvertExpiredToWastePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ConvertExpiredToWasteResult = ConflictError | ConvertExpiredToWastePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type ConvertedUnitValue = {
@@ -1557,16 +1823,29 @@ export type CookingLog = {
   wouldMakeAgain: Maybe<Scalars['Boolean']['output']>;
 };
 
+/**
+ * A page of CookingLog results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type CookingLogConnection = Connection & {
   __typename: 'CookingLogConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<CookingLogEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One CookingLog in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type CookingLogEdge = Edge & {
   __typename: 'CookingLogEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The CookingLog this edge wraps. */
   node: CookingLog;
 };
 
@@ -1617,6 +1896,11 @@ export type CreateBrandPayload = {
   brand: Brand;
 };
 
+/**
+ * Result of CreateBrand. Select on CreateBrandPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateBrandResult = ConflictError | CreateBrandPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCategoryInput = {
@@ -1635,6 +1919,11 @@ export type CreateCategoryPayload = {
   category: Category;
 };
 
+/**
+ * Result of CreateCategory. Select on CreateCategoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateCategoryResult = ConflictError | CreateCategoryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCookingLogInput = {
@@ -1658,6 +1947,11 @@ export type CreateCookingLogPayload = {
   recipe: Maybe<Recipe>;
 };
 
+/**
+ * Result of CreateCookingLog. Select on CreateCookingLogPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateCookingLogResult = ConflictError | CreateCookingLogPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateCurrencyInput = {
@@ -1672,6 +1966,11 @@ export type CreateCurrencyPayload = {
   currency: Currency;
 };
 
+/**
+ * Result of CreateCurrency. Select on CreateCurrencyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateCurrencyResult = ConflictError | CreateCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateFromTemplateInput = {
@@ -1686,6 +1985,11 @@ export type CreateFromTemplatePayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of CreateFromTemplate. Select on CreateFromTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateFromTemplateResult = ConflictError | CreateFromTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateHomeInput = {
@@ -1709,6 +2013,11 @@ export type CreateHomePayload = {
   home: Home;
 };
 
+/**
+ * Result of CreateHome. Select on CreateHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateHomeResult = ConflictError | CreateHomePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateImageUploadUrlInput = {
@@ -1724,6 +2033,11 @@ export type CreateImageUploadUrlPayload = {
   url: Scalars['String']['output'];
 };
 
+/**
+ * Result of CreateImageUploadUrl. Select on CreateImageUploadUrlPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateImageUploadUrlResult = ConflictError | CreateImageUploadUrlPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateItemInput = {
@@ -1757,6 +2071,11 @@ export type CreateItemPayload = {
   matchType: Maybe<ItemMatchType>;
 };
 
+/**
+ * Result of CreateItem. Select on CreateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateItemResult = ConflictError | CreateItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -1774,6 +2093,11 @@ export type CreateItemSuggestionPayload = {
   suggestion: ItemEditSuggestion;
 };
 
+/**
+ * Result of CreateItemSuggestion. Select on CreateItemSuggestionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateItemSuggestionResult = ConflictError | CreateItemSuggestionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for creating a meal plan from a template */
@@ -1849,6 +2173,11 @@ export type CreateMealPlanItemPayload = {
   mealPlanItem: MealPlanItem;
 };
 
+/**
+ * Result of CreateMealPlanItem. Select on CreateMealPlanItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateMealPlanItemResult = ConflictError | CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateMealPlanPayload = {
@@ -1857,6 +2186,11 @@ export type CreateMealPlanPayload = {
   mealPlan: MealPlan;
 };
 
+/**
+ * Result of CreateMealPlan. Select on CreateMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateMealPlanResult = ConflictError | CreateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateMealTemplateInput = {
@@ -1883,6 +2217,11 @@ export type CreateMealTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
+/**
+ * Result of CreateMealTemplate. Select on CreateMealTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateMealTemplateResult = ConflictError | CreateMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateMembershipInput = {
@@ -1904,6 +2243,11 @@ export type CreateMembershipPayload = {
   membership: Membership;
 };
 
+/**
+ * Result of CreateMembership. Select on CreateMembershipPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateModerationRecordPayload = {
@@ -1911,6 +2255,11 @@ export type CreateModerationRecordPayload = {
   userModeration: UserModeration;
 };
 
+/**
+ * Result of CreateModerationRecord. Select on CreateModerationRecordPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateModerationRecordResult = ConflictError | CreateModerationRecordPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateNotificationInput = {
@@ -1935,6 +2284,11 @@ export type CreateNotificationPayload = {
   notification: Maybe<Notification>;
 };
 
+/**
+ * Result of CreateNotification. Select on CreateNotificationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateNotificationResult = ConflictError | CreateNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryInput = {
@@ -1985,6 +2339,11 @@ export type CreatePantryItemPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of CreatePantryItem. Select on CreatePantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreatePantryItemResult = ConflictError | CreatePantryItemPayload | DuplicatePantryItemError | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryItemUsageInput = {
@@ -2010,6 +2369,11 @@ export type CreatePantryItemUsagePayload = {
   pantryItemUsage: PantryItemUsage;
 };
 
+/**
+ * Result of CreatePantryItemUsage. Select on CreatePantryItemUsagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePantryPayload = {
@@ -2018,6 +2382,11 @@ export type CreatePantryPayload = {
   pantry: Pantry;
 };
 
+/**
+ * Result of CreatePantry. Select on CreatePantryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreatePantryResult = ConflictError | CreatePantryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateProfileInput = {
@@ -2045,6 +2414,11 @@ export type CreateProfilePayload = {
   userProfile: UserProfile;
 };
 
+/**
+ * Result of CreateProfile. Select on CreateProfilePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateProfileResult = ConflictError | CreateProfilePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreatePurchaseInput = {
@@ -2073,6 +2447,11 @@ export type CreatePurchasePayload = {
   store: Maybe<Store>;
 };
 
+/**
+ * Result of CreatePurchase. Select on CreatePurchasePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreatePurchaseResult = ConflictError | CreatePurchasePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateRecipeInput = {
@@ -2103,6 +2482,11 @@ export type CreateRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of CreateRecipe. Select on CreateRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateRecipeResult = ConflictError | CreateRecipePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateRecipeReviewInput = {
@@ -2124,6 +2508,11 @@ export type CreateRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
+/**
+ * Result of CreateRecipeReview. Select on CreateRecipeReviewPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateRecipeReviewResult = ConflictError | CreateRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateRecurringShoppingListInput = {
@@ -2138,6 +2527,11 @@ export type CreateRecurringShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of CreateRecurringShoppingList. Select on CreateRecurringShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateRecurringShoppingListResult = ConflictError | CreateRecurringShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateShoppingListInput = {
@@ -2176,6 +2570,11 @@ export type CreateShoppingListItemFromRecipeIngredientPayload = {
   wasUpdated: Scalars['Boolean']['output'];
 };
 
+/**
+ * Result of CreateShoppingListItemFromRecipeIngredient. Select on CreateShoppingListItemFromRecipeIngredientPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateShoppingListItemInput = {
@@ -2222,6 +2621,11 @@ export type CreateShoppingListItemsFromRecipePayload = {
   updatedItems: Array<ShoppingListItem>;
 };
 
+/**
+ * Result of CreateShoppingListItemsFromRecipe. Select on CreateShoppingListItemsFromRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateShoppingListItemsFromRecipeResult = ConflictError | CreateShoppingListItemsFromRecipePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateShoppingListPayload = {
@@ -2229,6 +2633,11 @@ export type CreateShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of CreateShoppingList. Select on CreateShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateShoppingListResult = ConflictError | CreateShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for creating a new storage location */
@@ -2269,6 +2678,11 @@ export type CreateStorageLocationPayload = {
   storageLocation: StorageLocation;
 };
 
+/**
+ * Result of CreateStorageLocation. Select on CreateStorageLocationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateStoreInput = {
@@ -2285,6 +2699,11 @@ export type CreateStorePayload = {
   store: Store;
 };
 
+/**
+ * Result of CreateStore. Select on CreateStorePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateStoreResult = ConflictError | CreateStorePayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for creating a template from an existing meal plan */
@@ -2302,6 +2721,11 @@ export type CreateTemplateFromMealPlanPayload = {
   mealTemplate: MealTemplate;
 };
 
+/**
+ * Result of CreateTemplateFromMealPlan. Select on CreateTemplateFromMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateTemplateFromMealPlanResult = ConflictError | CreateTemplateFromMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateUnitConversionInput = {
@@ -2315,6 +2739,11 @@ export type CreateUnitConversionPayload = {
   unit: Unit;
 };
 
+/**
+ * Result of CreateUnitConversion. Select on CreateUnitConversionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateUnitConversionResult = ConflictError | CreateUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateUnitInput = {
@@ -2334,6 +2763,11 @@ export type CreateUnitPayload = {
   unit: Unit;
 };
 
+/**
+ * Result of CreateUnit. Select on CreateUnitPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateUserModerationInput = {
@@ -2442,6 +2876,11 @@ export type DeclineHomeInvitePayload = {
   homeInvite: HomeInvite;
 };
 
+/**
+ * Result of DeclineHomeInvite. Select on DeclineHomeInvitePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeclineHomeInviteResult = ConflictError | DeclineHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeclineShoppingListInviteInput = {
@@ -2454,6 +2893,11 @@ export type DeclineShoppingListInvitePayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of DeclineShoppingListInvite. Select on DeclineShoppingListInvitePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeclineShoppingListInviteResult = ConflictError | DeclineShoppingListInvitePayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Method used to deduct ingredients from pantry */
@@ -2468,6 +2912,11 @@ export type DeleteAccountPayload = {
   user: Maybe<User>;
 };
 
+/**
+ * Result of DeleteAccount. Select on DeleteAccountPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteAllReadNotificationsPayload = {
@@ -2476,6 +2925,11 @@ export type DeleteAllReadNotificationsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of DeleteAllReadNotifications. Select on DeleteAllReadNotificationsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteBrandInput = {
@@ -2501,6 +2955,11 @@ export type DeleteBrandPayload = {
   detached: Maybe<BrandReferences>;
 };
 
+/**
+ * Result of DeleteBrand. Select on DeleteBrandPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteBrandResult = ConflictError | DeleteBrandPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCategoryInput = {
@@ -2525,6 +2984,11 @@ export type DeleteCategoryPayload = {
   detached: Maybe<CategoryReferences>;
 };
 
+/**
+ * Result of DeleteCategory. Select on DeleteCategoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteCategoryResult = ConflictError | DeleteCategoryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCookingLogInput = {
@@ -2537,6 +3001,11 @@ export type DeleteCookingLogPayload = {
   recipe: Maybe<Recipe>;
 };
 
+/**
+ * Result of DeleteCookingLog. Select on DeleteCookingLogPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteCookingLogResult = ConflictError | DeleteCookingLogPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteCurrencyInput = {
@@ -2548,6 +3017,11 @@ export type DeleteCurrencyPayload = {
   currency: Currency;
 };
 
+/**
+ * Result of DeleteCurrency. Select on DeleteCurrencyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteCurrencyResult = ConflictError | DeleteCurrencyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteDeviceInput = {
@@ -2561,6 +3035,11 @@ export type DeleteDevicePayload = {
   device: Device;
 };
 
+/**
+ * Result of DeleteDevice. Select on DeleteDevicePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteDeviceResult = ConflictError | DeleteDevicePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteExpiredNotificationsPayload = {
@@ -2569,6 +3048,11 @@ export type DeleteExpiredNotificationsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of DeleteExpiredNotifications. Select on DeleteExpiredNotificationsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteExternalSourceInput = {
@@ -2580,6 +3064,11 @@ export type DeleteExternalSourcePayload = {
   externalSourceMapping: ExternalSourceMapping;
 };
 
+/**
+ * Result of DeleteExternalSource. Select on DeleteExternalSourcePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteExternalSourceResult = ConflictError | DeleteExternalSourcePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteHomeInput = {
@@ -2596,6 +3085,11 @@ export type DeleteHomeInvitePayload = {
   homeInvite: HomeInvite;
 };
 
+/**
+ * Result of DeleteHomeInvite. Select on DeleteHomeInvitePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteHomeInviteResult = ConflictError | DeleteHomeInvitePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteHomePayload = {
@@ -2603,6 +3097,11 @@ export type DeleteHomePayload = {
   home: Home;
 };
 
+/**
+ * Result of DeleteHome. Select on DeleteHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteHomeResult = ConflictError | DeleteHomePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteItemInput = {
@@ -2614,6 +3113,11 @@ export type DeleteItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of DeleteItem. Select on DeleteItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for deleting an item unit conversion (admin only) */
@@ -2626,6 +3130,11 @@ export type DeleteItemUnitConversionPayload = {
   unitConversion: ItemUnitConversion;
 };
 
+/**
+ * Result of DeleteItemUnitConversion. Select on DeleteItemUnitConversionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealPlanInput = {
@@ -2642,6 +3151,11 @@ export type DeleteMealPlanItemPayload = {
   mealPlanItem: MealPlanItem;
 };
 
+/**
+ * Result of DeleteMealPlanItem. Select on DeleteMealPlanItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteMealPlanItemResult = ConflictError | DeleteMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealPlanPayload = {
@@ -2650,6 +3164,11 @@ export type DeleteMealPlanPayload = {
   mealPlan: MealPlan;
 };
 
+/**
+ * Result of DeleteMealPlan. Select on DeleteMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteMealPlanResult = ConflictError | DeleteMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealTemplateInput = {
@@ -2662,6 +3181,11 @@ export type DeleteMealTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
+/**
+ * Result of DeleteMealTemplate. Select on DeleteMealTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteMealTemplateResult = ConflictError | DeleteMealTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMultipleNotificationsInput = {
@@ -2674,6 +3198,11 @@ export type DeleteMultipleNotificationsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of DeleteMultipleNotifications. Select on DeleteMultipleNotificationsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteMultipleNotificationsResult = ConflictError | DeleteMultipleNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteNotificationInput = {
@@ -2685,6 +3214,11 @@ export type DeleteNotificationPayload = {
   notification: Notification;
 };
 
+/**
+ * Result of DeleteNotification. Select on DeleteNotificationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteNotificationResult = ConflictError | DeleteNotificationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePantryInput = {
@@ -2701,6 +3235,11 @@ export type DeletePantryItemPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of DeletePantryItem. Select on DeletePantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePantryPayload = {
@@ -2709,6 +3248,11 @@ export type DeletePantryPayload = {
   pantry: Pantry;
 };
 
+/**
+ * Result of DeletePantry. Select on DeletePantryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeletePantryResult = ConflictError | DeletePantryPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeletePurchaseInput = {
@@ -2721,6 +3265,11 @@ export type DeletePurchasePayload = {
   store: Maybe<Store>;
 };
 
+/**
+ * Result of DeletePurchase. Select on DeletePurchasePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeletePurchaseResult = ConflictError | DeletePurchasePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeFolderInput = {
@@ -2736,6 +3285,11 @@ export type DeleteRecipeFolderPayload = {
   movedCount: Scalars['Int']['output'];
 };
 
+/**
+ * Result of DeleteRecipeFolder. Select on DeleteRecipeFolderPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteRecipeFolderResult = ConflictError | DeleteRecipeFolderPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeInput = {
@@ -2747,6 +3301,11 @@ export type DeleteRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of DeleteRecipe. Select on DeleteRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteRecipeResult = ConflictError | DeleteRecipePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteRecipeReviewInput = {
@@ -2759,6 +3318,11 @@ export type DeleteRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
+/**
+ * Result of DeleteRecipeReview. Select on DeleteRecipeReviewPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteRecipeReviewResult = ConflictError | DeleteRecipeReviewPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteShoppingListInput = {
@@ -2777,6 +3341,11 @@ export type DeleteShoppingListItemsPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of DeleteShoppingListItems. Select on DeleteShoppingListItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteShoppingListItemsResult = ConflictError | DeleteShoppingListItemsPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteShoppingListPayload = {
@@ -2793,8 +3362,18 @@ export type DeleteShoppingListReminderPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of DeleteShoppingListReminder. Select on DeleteShoppingListReminderPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteShoppingListReminderResult = ConflictError | DeleteShoppingListReminderPayload | ForbiddenError | NotFoundError | ValidationError;
 
+/**
+ * Result of DeleteShoppingList. Select on DeleteShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for device cleanup operations */
@@ -2815,6 +3394,11 @@ export type DeleteStaleDevicesPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of DeleteStaleDevices. Select on DeleteStaleDevicesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteStorageLocationInput = {
@@ -2827,6 +3411,11 @@ export type DeleteStorageLocationPayload = {
   storageLocation: StorageLocation;
 };
 
+/**
+ * Result of DeleteStorageLocation. Select on DeleteStorageLocationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteStorageLocationResult = ConflictError | DeleteStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteStoreInput = {
@@ -2838,6 +3427,11 @@ export type DeleteStorePayload = {
   store: Store;
 };
 
+/**
+ * Result of DeleteStore. Select on DeleteStorePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteStoreResult = ConflictError | DeleteStorePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteUnitInput = {
@@ -2849,6 +3443,11 @@ export type DeleteUnitPayload = {
   unit: Unit;
 };
 
+/**
+ * Result of DeleteUnit. Select on DeleteUnitPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteUnitResult = ConflictError | DeleteUnitPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteUserAddressInput = {
@@ -2860,6 +3459,11 @@ export type DeleteUserAddressPayload = {
   userAddress: UserAddress;
 };
 
+/**
+ * Result of DeleteUserAddress. Select on DeleteUserAddressPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /** Input for deleted device cleanup */
@@ -2969,10 +3573,17 @@ export type DeviceCharacteristicsInput = {
   isTablet?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/**
+ * A page of Device results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type DeviceConnection = Connection & {
   __typename: 'DeviceConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<DeviceEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -2996,9 +3607,15 @@ export type DeviceDetailsInput = {
   supportedMediaTypes?: InputMaybe<Array<Scalars['String']['input']>>;
 };
 
+/**
+ * One Device in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type DeviceEdge = Edge & {
   __typename: 'DeviceEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Device this edge wraps. */
   node: Device;
 };
 
@@ -3262,6 +3879,11 @@ export type DuplicateMealPlanPayload = {
   mealPlan: MealPlan;
 };
 
+/**
+ * Result of DuplicateMealPlan. Select on DuplicateMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DuplicateMealPlanResult = ConflictError | DuplicateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
 
 /**
@@ -3291,6 +3913,11 @@ export type DuplicateTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
+/**
+ * Result of DuplicateTemplate. Select on DuplicateTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type DuplicateTemplateResult = ConflictError | DuplicateTemplatePayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type Edge = {
@@ -3401,16 +4028,29 @@ export type ExpirationNotification = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A page of ExpirationNotification results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ExpirationNotificationConnection = Connection & {
   __typename: 'ExpirationNotificationConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ExpirationNotificationEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ExpirationNotification in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ExpirationNotificationEdge = Edge & {
   __typename: 'ExpirationNotificationEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ExpirationNotification this edge wraps. */
   node: ExpirationNotification;
 };
 
@@ -3607,6 +4247,11 @@ export type ForgotPasswordPayload = {
   status: PasswordActionStatus;
 };
 
+/**
+ * Result of ForgotPassword. Select on ForgotPasswordPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError;
 
 export type ForkRecipeInput = {
@@ -3625,6 +4270,11 @@ export type ForkRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of ForkRecipe. Select on ForkRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ForkRecipeResult = ConflictError | ForbiddenError | ForkRecipePayload | NotFoundError | ValidationError;
 
 export type GenerateNextRecurringListInput = {
@@ -3636,6 +4286,11 @@ export type GenerateNextRecurringListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of GenerateNextRecurringList. Select on GenerateNextRecurringListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type GenerateNextRecurringListResult = ConflictError | ForbiddenError | GenerateNextRecurringListPayload | NotFoundError | ValidationError;
 
 export type GenerateShoppingListFromMealPlanInput = {
@@ -3653,6 +4308,11 @@ export type GenerateShoppingListFromMealPlanPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of GenerateShoppingListFromMealPlan. Select on GenerateShoppingListFromMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type GenerateShoppingListFromMealPlanResult = ConflictError | ForbiddenError | GenerateShoppingListFromMealPlanPayload | NotFoundError | ValidationError;
 
 /** Progress toward a single nutrition goal */
@@ -3853,16 +4513,29 @@ export type HomeShoppingListsConnectionArgs = {
   last?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * A page of Home results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type HomeConnection = Connection & {
   __typename: 'HomeConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<HomeEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Home in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type HomeEdge = Edge & {
   __typename: 'HomeEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Home this edge wraps. */
   node: Home;
 };
 
@@ -3939,16 +4612,29 @@ export type HomeInviteLogsArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * A page of HomeInvite results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type HomeInviteConnection = Connection & {
   __typename: 'HomeInviteConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<HomeInviteEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One HomeInvite in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type HomeInviteEdge = Edge & {
   __typename: 'HomeInviteEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The HomeInvite this edge wraps. */
   node: HomeInvite;
 };
 
@@ -3983,16 +4669,29 @@ export type HomeOwnership = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A page of HomeOwnership results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type HomeOwnershipConnection = Connection & {
   __typename: 'HomeOwnershipConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<HomeOwnershipEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One HomeOwnership in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type HomeOwnershipEdge = Edge & {
   __typename: 'HomeOwnershipEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The HomeOwnership this edge wraps. */
   node: HomeOwnership;
 };
 
@@ -4055,8 +4754,8 @@ export type IpStat = {
 };
 
 /** Error details for a failed image deletion */
-export type ImageDeletionError = {
-  __typename: 'ImageDeletionError';
+export type ImageDeletionFailure = {
+  __typename: 'ImageDeletionFailure';
   /** Error message describing the failure */
   error: Scalars['String']['output'];
   /** The S3/MinIO key (path) of the image (may be null if extraction failed) */
@@ -4097,7 +4796,7 @@ export type ImageDeletionResult = {
   /** Number of images successfully deleted from S3/MinIO storage */
   deletedFromStorage: Scalars['Int']['output'];
   /** List of storage deletion failures with error details */
-  failedStorage: Array<ImageDeletionError>;
+  failedStorage: Array<ImageDeletionFailure>;
   /**
    * Job ID if the operation was queued for background processing.
    * Use adminGetImageDeletionJobStatus to check progress.
@@ -4242,16 +4941,29 @@ export type InviteLog = {
   oldStatus: Maybe<InviteStatus>;
 };
 
+/**
+ * A page of InviteLog results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type InviteLogConnection = Connection & {
   __typename: 'InviteLogConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<InviteLogEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One InviteLog in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type InviteLogEdge = Edge & {
   __typename: 'InviteLogEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The InviteLog this edge wraps. */
   node: InviteLog;
 };
 
@@ -4295,6 +5007,11 @@ export type InviteToHomePayload = {
   homeInvite: HomeInvite;
 };
 
+/**
+ * Result of InviteToHome. Select on InviteToHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type InviteToHomeResult = ConflictError | ForbiddenError | InviteToHomePayload | NotFoundError | ValidationError;
 
 export type InviteToShoppingListInput = {
@@ -4318,6 +5035,11 @@ export type InviteToShoppingListPayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of InviteToShoppingList. Select on InviteToShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type InviteToShoppingListResult = ConflictError | ForbiddenError | InviteToShoppingListPayload | NotFoundError | ValidationError;
 
 /**
@@ -4496,7 +5218,9 @@ export type ItemImagesArgs = {
  */
 export type ItemPriceHistoryArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ItemPriceHistoryOrderBy>;
 };
 
@@ -4507,7 +5231,9 @@ export type ItemPriceHistoryArgs = {
  */
 export type ItemStoreSkusArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ItemStoreSkuOrderBy>;
 };
 
@@ -4579,10 +5305,17 @@ export enum ItemCondition {
   Spoiled = 'SPOILED'
 }
 
+/**
+ * A page of Item results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ItemConnection = Connection & {
   __typename: 'ItemConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ItemEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -4612,9 +5345,15 @@ export type ItemDuplicateClusterPage = {
   totalCount: Scalars['Int']['output'];
 };
 
+/**
+ * One Item in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ItemEdge = Edge & {
   __typename: 'ItemEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Item this edge wraps. */
   node: Item;
 };
 
@@ -4653,16 +5392,29 @@ export type ItemEditSuggestion = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/**
+ * A page of ItemEditSuggestion results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ItemEditSuggestionConnection = Connection & {
   __typename: 'ItemEditSuggestionConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ItemEditSuggestionEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ItemEditSuggestion in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ItemEditSuggestionEdge = Edge & {
   __typename: 'ItemEditSuggestionEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ItemEditSuggestion this edge wraps. */
   node: ItemEditSuggestion;
 };
 
@@ -4775,16 +5527,29 @@ export type ItemPriceHistory = {
   source: PriceSource;
 };
 
+/**
+ * A page of ItemPriceHistory results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ItemPriceHistoryConnection = Connection & {
   __typename: 'ItemPriceHistoryConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ItemPriceHistoryEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ItemPriceHistory in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ItemPriceHistoryEdge = Edge & {
   __typename: 'ItemPriceHistoryEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ItemPriceHistory this edge wraps. */
   node: ItemPriceHistory;
 };
 
@@ -4836,16 +5601,29 @@ export type ItemStoreSku = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * A page of ItemStoreSku results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ItemStoreSkuConnection = Connection & {
   __typename: 'ItemStoreSkuConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ItemStoreSkuEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ItemStoreSku in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ItemStoreSkuEdge = Edge & {
   __typename: 'ItemStoreSkuEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ItemStoreSku this edge wraps. */
   node: ItemStoreSku;
 };
 
@@ -4958,16 +5736,29 @@ export type ItemUnitConversion = {
   verifiedBy: Maybe<User>;
 };
 
+/**
+ * A page of ItemUnitConversion results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ItemUnitConversionConnection = Connection & {
   __typename: 'ItemUnitConversionConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ItemUnitConversionEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ItemUnitConversion in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ItemUnitConversionEdge = Edge & {
   __typename: 'ItemUnitConversionEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ItemUnitConversion this edge wraps. */
   node: ItemUnitConversion;
 };
 
@@ -5002,11 +5793,38 @@ export type ItemUnitSuggestion = {
   type: UnitType;
 };
 
-export type ItemValidationError = {
-  __typename: 'ItemValidationError';
-  code: Scalars['String']['output'];
+/** A condition that makes an Item invalid. Reported per field. */
+export type ItemValidationIssue = {
+  __typename: 'ItemValidationIssue';
+  /** The Item field the issue is about. */
   field: Scalars['String']['output'];
+  /** Human-readable description of what is wrong. */
   message: Scalars['String']['output'];
+};
+
+/**
+ * Outcome of validating a single Item, returned by the validateItem query.
+ *
+ * Named *Report rather than *Result deliberately: in this schema the *Result
+ * suffix means a union of a success payload with its error members, and this is
+ * an ordinary object type. Scoped to Item because it validates nothing else.
+ */
+export type ItemValidationReport = {
+  __typename: 'ItemValidationReport';
+  errors: Array<ItemValidationIssue>;
+  isValid: Scalars['Boolean']['output'];
+  warnings: Array<ItemValidationWarning>;
+};
+
+/** A condition worth surfacing that does not make the Item invalid. */
+export type ItemValidationWarning = {
+  __typename: 'ItemValidationWarning';
+  /** The Item field the warning is about. */
+  field: Scalars['String']['output'];
+  /** Human-readable description of the concern. */
+  message: Scalars['String']['output'];
+  /** Recommended remedy, when one can be suggested. */
+  suggestion: Maybe<Scalars['String']['output']>;
 };
 
 export type JoinHomeByCodeInput = {
@@ -5019,6 +5837,11 @@ export type JoinHomeByCodePayload = {
   membership: Membership;
 };
 
+/**
+ * Result of JoinHomeByCode. Select on JoinHomeByCodePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type JoinHomeByCodeResult = ConflictError | ForbiddenError | JoinHomeByCodePayload | NotFoundError | ValidationError;
 
 export type JoinShoppingListByShareCodeInput = {
@@ -5030,6 +5853,11 @@ export type JoinShoppingListByShareCodePayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of JoinShoppingListByShareCode. Select on JoinShoppingListByShareCodePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type JoinShoppingListByShareCodeResult = ConflictError | ForbiddenError | JoinShoppingListByShareCodePayload | NotFoundError | ValidationError;
 
 export type LeaveHomeInput = {
@@ -5042,6 +5870,11 @@ export type LeaveHomePayload = {
   membership: Membership;
 };
 
+/**
+ * Result of LeaveHome. Select on LeaveHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type LeaveHomeResult = ConflictError | ForbiddenError | LeaveHomePayload | NotFoundError | ValidationError;
 
 /** Comprehensive ledger analytics combining additions and consumption */
@@ -5104,6 +5937,11 @@ export type LinkItemToExternalSourcePayload = {
   externalSourceMapping: ExternalSourceMapping;
 };
 
+/**
+ * Result of LinkItemToExternalSource. Select on LinkItemToExternalSourcePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type LinkItemToExternalSourceResult = ConflictError | ForbiddenError | LinkItemToExternalSourcePayload | NotFoundError | ValidationError;
 
 export enum ListActivityType {
@@ -5152,7 +5990,7 @@ export type LoginEvent = {
   /** Whether the login requires MFA (RISKY). */
   requiresMfa: Maybe<Scalars['Boolean']['output']>;
   /** Redacted on delivery — always empty. */
-  riskFactors: Maybe<Array<Scalars['String']['output']>>;
+  riskFactors: Array<Scalars['String']['output']>;
   /** Authoritative risk score (RISKY / SUSPICIOUS). */
   riskScore: Maybe<Scalars['Float']['output']>;
   subtype: LoginSubtype;
@@ -5253,16 +6091,29 @@ export type LoginHistoryBreakdown = {
   uniqueIPs: Array<IpStat>;
 };
 
+/**
+ * A page of LoginHistory results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type LoginHistoryConnection = Connection & {
   __typename: 'LoginHistoryConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<LoginHistoryEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One LoginHistory in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type LoginHistoryEdge = Edge & {
   __typename: 'LoginHistoryEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The LoginHistory this edge wraps. */
   node: LoginHistory;
 };
 
@@ -5282,6 +6133,11 @@ export type LoginHistoryPeriod = {
 export type LoginHistoryQueryFilters = {
   failuresOnly?: InputMaybe<Scalars['Boolean']['input']>;
   fromDate?: InputMaybe<Scalars['DateTime']['input']>;
+  /**
+   * Convenience window: return records from the last N hours. Ignored when
+   * fromDate is supplied. Clamped to a maximum of 2160 hours (90 days); a
+   * non-positive value is ignored and the default window applies.
+   */
   hours?: InputMaybe<Scalars['Int']['input']>;
   ipAddress?: InputMaybe<Scalars['String']['input']>;
   method?: InputMaybe<LoginMethod>;
@@ -5366,6 +6222,11 @@ export type MarkAllNotificationsAsReadPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of MarkAllNotificationsAsRead. Select on MarkAllNotificationsAsReadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkAllNotificationsAsReadResult = ConflictError | ForbiddenError | MarkAllNotificationsAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkAsTemplateInput = {
@@ -5379,6 +6240,11 @@ export type MarkAsTemplatePayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of MarkAsTemplate. Select on MarkAsTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkAsTemplateResult = ConflictError | ForbiddenError | MarkAsTemplatePayload | NotFoundError | ValidationError;
 
 export type MarkExpirationActionInput = {
@@ -5392,6 +6258,11 @@ export type MarkExpirationActionPayload = {
   pantryItem: Maybe<PantryItem>;
 };
 
+/**
+ * Result of MarkExpirationAction. Select on MarkExpirationActionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkExpirationActionResult = ConflictError | ForbiddenError | MarkExpirationActionPayload | NotFoundError | ValidationError;
 
 export type MarkExpirationNotificationAsReadInput = {
@@ -5404,6 +6275,11 @@ export type MarkExpirationNotificationAsReadPayload = {
   pantryItem: Maybe<PantryItem>;
 };
 
+/**
+ * Result of MarkExpirationNotificationAsRead. Select on MarkExpirationNotificationAsReadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkExpirationNotificationAsReadResult = ConflictError | ForbiddenError | MarkExpirationNotificationAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkHomeAsDefaultInput = {
@@ -5416,6 +6292,11 @@ export type MarkHomeAsDefaultPayload = {
   settings: UserSettings;
 };
 
+/**
+ * Result of MarkHomeAsDefault. Select on MarkHomeAsDefaultPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkHomeAsDefaultResult = ConflictError | ForbiddenError | MarkHomeAsDefaultPayload | NotFoundError | ValidationError;
 
 export type MarkItemForReviewInput = {
@@ -5428,6 +6309,11 @@ export type MarkItemForReviewPayload = {
   item: Item;
 };
 
+/**
+ * Result of MarkItemForReview. Select on MarkItemForReviewPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkItemForReviewResult = ConflictError | ForbiddenError | MarkItemForReviewPayload | NotFoundError | ValidationError;
 
 export type MarkNotificationAsReadInput = {
@@ -5439,6 +6325,11 @@ export type MarkNotificationAsReadPayload = {
   notification: Notification;
 };
 
+/**
+ * Result of MarkNotificationAsRead. Select on MarkNotificationAsReadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkNotificationAsReadResult = ConflictError | ForbiddenError | MarkNotificationAsReadPayload | NotFoundError | ValidationError;
 
 export type MarkNotificationUnreadInput = {
@@ -5450,6 +6341,11 @@ export type MarkNotificationUnreadPayload = {
   notification: Notification;
 };
 
+/**
+ * Result of MarkNotificationUnread. Select on MarkNotificationUnreadPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkNotificationUnreadResult = ConflictError | ForbiddenError | MarkNotificationUnreadPayload | NotFoundError | ValidationError;
 
 export type MarkPantryAsDefaultInput = {
@@ -5462,6 +6358,11 @@ export type MarkPantryAsDefaultPayload = {
   pantry: Pantry;
 };
 
+/**
+ * Result of MarkPantryAsDefault. Select on MarkPantryAsDefaultPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsDefaultPayload | NotFoundError | ValidationError;
 
 export type MarkPantryItemExpiredInput = {
@@ -5475,6 +6376,11 @@ export type MarkPantryItemExpiredPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of MarkPantryItemExpired. Select on MarkPantryItemExpiredPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError | ValidationError;
 
 /** Input for marking a recipe as cooked */
@@ -5506,6 +6412,11 @@ export type MarkRecipeAsCookedPayload = {
   recipe: Maybe<Recipe>;
 };
 
+/**
+ * Result of MarkRecipeAsCooked. Select on MarkRecipeAsCookedPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkRecipeAsCookedResult = ConflictError | ForbiddenError | MarkRecipeAsCookedPayload | NotFoundError | ValidationError;
 
 export type MarkShoppingListActiveInput = {
@@ -5517,6 +6428,11 @@ export type MarkShoppingListActivePayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of MarkShoppingListActive. Select on MarkShoppingListActivePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkShoppingListActiveResult = ConflictError | ForbiddenError | MarkShoppingListActivePayload | NotFoundError | ValidationError;
 
 export type MarkShoppingListAsDefaultInput = {
@@ -5528,6 +6444,11 @@ export type MarkShoppingListAsDefaultPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of MarkShoppingListAsDefault. Select on MarkShoppingListAsDefaultPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkShoppingListAsDefaultResult = ConflictError | ForbiddenError | MarkShoppingListAsDefaultPayload | NotFoundError | ValidationError;
 
 export type MarkStorageLocationAsDefaultInput = {
@@ -5540,6 +6461,11 @@ export type MarkStorageLocationAsDefaultPayload = {
   storageLocation: StorageLocation;
 };
 
+/**
+ * Result of MarkStorageLocationAsDefault. Select on MarkStorageLocationAsDefaultPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkStorageLocationAsDefaultResult = ConflictError | ForbiddenError | MarkStorageLocationAsDefaultPayload | NotFoundError | ValidationError;
 
 /** Input to restore a previously-dismissed item so it can be suggested again. */
@@ -5560,6 +6486,11 @@ export type MarkSuggestionActivePayload = {
   surface: SuggestionSurface;
 };
 
+/**
+ * Result of MarkSuggestionActive. Select on MarkSuggestionActivePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkSuggestionActiveResult = ConflictError | ForbiddenError | MarkSuggestionActivePayload | NotFoundError | ValidationError;
 
 /** Input to hide a catalog item from a user's suggestions on a given surface. */
@@ -5580,6 +6511,11 @@ export type MarkSuggestionDismissedPayload = {
   surface: SuggestionSurface;
 };
 
+/**
+ * Result of MarkSuggestionDismissed. Select on MarkSuggestionDismissedPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MarkSuggestionDismissedResult = ConflictError | ForbiddenError | MarkSuggestionDismissedPayload | NotFoundError | ValidationError;
 
 /**
@@ -5623,16 +6559,29 @@ export type MealPlan = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * A page of MealPlan results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type MealPlanConnection = Connection & {
   __typename: 'MealPlanConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<MealPlanEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One MealPlan in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type MealPlanEdge = Edge & {
   __typename: 'MealPlanEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The MealPlan this edge wraps. */
   node: MealPlan;
 };
 
@@ -5658,6 +6607,10 @@ export type MealPlanEvent = {
   updatedFields: Array<Scalars['String']['output']>;
 };
 
+/**
+ * The entity a meal-plan event refers to. Branch on __typename to learn which
+ * part of the plan or template changed.
+ */
 export type MealPlanEventNode = MealPlan | MealPlanItem | MealTemplate | MealTemplateItem;
 
 export type MealPlanFilters = {
@@ -5788,16 +6741,29 @@ export type MealTemplate = {
   user: User;
 };
 
+/**
+ * A page of MealTemplate results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type MealTemplateConnection = Connection & {
   __typename: 'MealTemplateConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<MealTemplateEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One MealTemplate in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type MealTemplateEdge = Edge & {
   __typename: 'MealTemplateEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The MealTemplate this edge wraps. */
   node: MealTemplate;
 };
 
@@ -5899,16 +6865,29 @@ export type Membership = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * A page of Membership results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type MembershipConnection = Connection & {
   __typename: 'MembershipConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<MembershipEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Membership in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type MembershipEdge = Edge & {
   __typename: 'MembershipEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Membership this edge wraps. */
   node: Membership;
 };
 
@@ -5992,6 +6971,11 @@ export type MergeItemsPayload = {
   item: Item;
 };
 
+/**
+ * Result of MergeItems. Select on MergeItemsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MergeItemsResult = ConflictError | ForbiddenError | MergeItemsPayload | NotFoundError | ValidationError;
 
 export enum MfaMethod {
@@ -6043,6 +7027,11 @@ export type MovePurchasedItemsToPantryPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of MovePurchasedItemsToPantry. Select on MovePurchasedItemsToPantryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MovePurchasedItemsToPantryResult = ConflictError | ForbiddenError | MovePurchasedItemsToPantryPayload | NotFoundError | ValidationError;
 
 /**
@@ -6083,6 +7072,11 @@ export type MoveShoppingItemToPantryPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of MoveShoppingItemToPantry. Select on MoveShoppingItemToPantryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MoveShoppingItemToPantryResult = ConflictError | ForbiddenError | MoveShoppingItemToPantryPayload | NotFoundError | ValidationError;
 
 export type MoveShoppingListItemInput = {
@@ -6097,6 +7091,11 @@ export type MoveShoppingListItemPayload = {
   shoppingListItem: ShoppingListItem;
 };
 
+/**
+ * Result of MoveShoppingListItem. Select on MoveShoppingListItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemPayload | NotFoundError | ValidationError;
 
 /**
@@ -6189,6 +7188,7 @@ export type Mutation = {
   bulkCreateItems: BulkCreateItemsResult;
   /** Create multiple purchase records at once. */
   bulkCreatePurchases: BulkCreatePurchasesResult;
+  /** Create several stores in one call, for seeding a region's chains. */
   bulkCreateStores: BulkCreateStoresResult;
   /** Delete multiple items */
   bulkDeleteItems: BulkDeleteItemsResult;
@@ -6284,6 +7284,10 @@ export type Mutation = {
   createProfile: CreateProfileResult;
   /** Create a new purchase record. */
   createPurchase: CreatePurchaseResult;
+  /**
+   * Create a recipe, either entered manually or carried over from an external
+   * source.
+   */
   createRecipe: CreateRecipeResult;
   /** Create a review for a published recipe. */
   createRecipeReview: CreateRecipeReviewResult;
@@ -6314,6 +7318,10 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   createStorageLocation: CreateStorageLocationResult;
+  /**
+   * Create a store. Requires a moderator: a store is shared reference data that
+   * every user sees.
+   */
   createStore: CreateStoreResult;
   /**
    * Create a template from an existing meal plan.
@@ -6369,6 +7377,10 @@ export type Mutation = {
   deletePantryItem: DeletePantryItemResult;
   /** Delete a purchase record. */
   deletePurchase: DeletePurchaseResult;
+  /**
+   * Soft-delete a recipe the caller owns. Cooking logs referencing it are
+   * retained.
+   */
   deleteRecipe: DeleteRecipeResult;
   /** Delete a recipe folder and optionally move its recipes. */
   deleteRecipeFolder: DeleteRecipeFolderResult;
@@ -6391,6 +7403,10 @@ export type Mutation = {
    * Requires user to have edit permissions in the home
    */
   deleteStorageLocation: DeleteStorageLocationResult;
+  /**
+   * Delete a store. Soft-deletes when purchases reference it so that purchase
+   * history stays intact; hard-deletes only when nothing references it.
+   */
   deleteStore: DeleteStoreResult;
   /** Delete a unit of measurement. */
   deleteUnit: DeleteUnitResult;
@@ -6408,6 +7424,11 @@ export type Mutation = {
   enableHomeJoinLink: UpdateHomeResult;
   /** Request a password reset email */
   forgotPassword: ForgotPasswordResult;
+  /**
+   * Create an editable copy of a recipe the caller does not own — an external
+   * import or another user's. The fork is owned by the caller and carries a
+   * reference back to its origin.
+   */
   forkRecipe: ForkRecipeResult;
   /** Generate the next recurring shopping list instance. */
   generateNextRecurringList: GenerateNextRecurringListResult;
@@ -6696,7 +7717,15 @@ export type Mutation = {
   updateProfile: UpdateProfileResult;
   /** Update an existing purchase record. */
   updatePurchase: UpdatePurchaseResult;
+  /**
+   * Update a recipe the caller owns. Ingredients are managed separately by
+   * updateRecipeIngredients.
+   */
   updateRecipe: UpdateRecipeResult;
+  /**
+   * Replace a recipe's ingredient list. Separate from updateRecipe because the
+   * ingredients are a collection edited as a whole rather than field by field.
+   */
   updateRecipeIngredients: UpdateRecipeIngredientsResult;
   /** Update an existing recipe review (author only). */
   updateRecipeReview: UpdateRecipeReviewResult;
@@ -6763,6 +7792,11 @@ export type Mutation = {
    * Consolidates: submitAppeal, reviewAppeal.
    */
   updateUserAppeal: UpdateUserAppealResult;
+  /**
+   * Import a recipe from an external source, matching on source plus external
+   * id. Returns the existing recipe when one already matches rather than
+   * creating a duplicate, so replaying an import is safe.
+   */
   upsertExternalRecipe: UpsertExternalRecipeResult;
   /** Create or update an item based on its external source ID. */
   upsertItemByExternalSource: UpsertItemByExternalSourceResult;
@@ -9521,7 +10555,7 @@ export type NotFoundError = Error & {
  * Notification type for user alerts and messages
  * Cache: None - notifications must be real-time
  */
-export type Notification = Timestamped & {
+export type Notification = {
   __typename: 'Notification';
   /** Deep link or CTA destination for this notification. */
   actionUrl: Maybe<Scalars['String']['output']>;
@@ -9576,10 +10610,17 @@ export type NotificationChannelsInput = {
   smsEnabled?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/**
+ * A page of Notification results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type NotificationConnection = Connection & {
   __typename: 'NotificationConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<NotificationEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -9592,9 +10633,15 @@ export enum NotificationDeliveryStatus {
   Sent = 'SENT'
 }
 
+/**
+ * One Notification in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type NotificationEdge = Edge & {
   __typename: 'NotificationEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Notification this edge wraps. */
   node: Notification;
 };
 
@@ -10025,6 +11072,11 @@ export type OpenPantryItemBatchPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of OpenPantryItemBatch. Select on OpenPantryItemBatchPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemBatchPayload | ValidationError;
 
 export type OpenPantryItemInput = {
@@ -10039,6 +11091,11 @@ export type OpenPantryItemPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of OpenPantryItem. Select on OpenPantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type OpenPantryItemResult = ConflictError | ForbiddenError | NotFoundError | OpenPantryItemPayload | ValidationError;
 
 export type OperatingSystemStat = {
@@ -10203,10 +11260,17 @@ export type PantryWasteAnalyticsArgs = {
   filters?: InputMaybe<AnalyticsFilters>;
 };
 
+/**
+ * A page of Pantry results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PantryConnection = Connection & {
   __typename: 'PantryConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PantryEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -10222,9 +11286,15 @@ export type PantryDeficit = {
   unit: Unit;
 };
 
+/**
+ * One Pantry in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PantryEdge = Edge & {
   __typename: 'PantryEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Pantry this edge wraps. */
   node: Pantry;
 };
 
@@ -10243,6 +11313,10 @@ export type PantryEvent = {
   timestamp: Scalars['DateTime']['output'];
 };
 
+/**
+ * The entity a pantry event refers to. Branch on __typename to learn which
+ * part of the pantry changed.
+ */
 export type PantryEventNode = ExpirationNotification | Pantry | PantryItem | PantryItemUsage;
 
 /** Parent resource IDs for cache updates without refetch. */
@@ -10343,7 +11417,9 @@ export type PantryItemLedgerArgs = {
 /** Real-time collaborative type - never cache */
 export type PantryItemUsageRecordsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PantryItemUsageOrderBy>;
 };
 
@@ -10375,16 +11451,29 @@ export type PantryItemBatch = {
   wasteReason: Maybe<WasteReason>;
 };
 
+/**
+ * A page of PantryItemBatch results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PantryItemBatchConnection = Connection & {
   __typename: 'PantryItemBatchConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PantryItemBatchEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One PantryItemBatch in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PantryItemBatchEdge = Edge & {
   __typename: 'PantryItemBatchEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The PantryItemBatch this edge wraps. */
   node: PantryItemBatch;
 };
 
@@ -10415,29 +11504,55 @@ export type PantryItemChange = {
   source: ChangeSource;
 };
 
+/**
+ * A page of PantryItemChange results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PantryItemChangeConnection = Connection & {
   __typename: 'PantryItemChangeConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PantryItemChangeEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One PantryItemChange in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PantryItemChangeEdge = Edge & {
   __typename: 'PantryItemChangeEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The PantryItemChange this edge wraps. */
   node: PantryItemChange;
 };
 
+/**
+ * A page of PantryItem results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PantryItemConnection = Connection & {
   __typename: 'PantryItemConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PantryItemEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One PantryItem in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PantryItemEdge = Edge & {
   __typename: 'PantryItemEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The PantryItem this edge wraps. */
   node: PantryItem;
 };
 
@@ -10551,16 +11666,29 @@ export type PantryItemUsage = {
   wasteReason: Maybe<WasteReason>;
 };
 
+/**
+ * A page of PantryItemUsage results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PantryItemUsageConnection = Connection & {
   __typename: 'PantryItemUsageConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PantryItemUsageEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One PantryItemUsage in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PantryItemUsageEdge = Edge & {
   __typename: 'PantryItemUsageEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The PantryItemUsage this edge wraps. */
   node: PantryItemUsage;
 };
 
@@ -10704,20 +11832,10 @@ export type PowerStatusInput = {
 /** Price estimate information for a shopping list item */
 export type PriceEstimate = {
   __typename: 'PriceEstimate';
-  /** Average price from purchase history */
-  average: Maybe<Scalars['Float']['output']>;
   /** User-provided budget limit */
   budget: Maybe<Scalars['Float']['output']>;
   /** User-provided estimated price */
   estimated: Maybe<Scalars['Float']['output']>;
-  /** Highest price seen */
-  highest: Maybe<Scalars['Float']['output']>;
-  /** Last known actual price from purchase history */
-  lastKnown: Maybe<Scalars['Float']['output']>;
-  /** When price data was last updated */
-  lastUpdated: Maybe<Scalars['DateTime']['output']>;
-  /** Lowest price seen */
-  lowest: Maybe<Scalars['Float']['output']>;
 };
 
 /** Price range filter bounds */
@@ -10856,16 +11974,29 @@ export type Purchase = {
   version: Scalars['Int']['output'];
 };
 
+/**
+ * A page of Purchase results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type PurchaseConnection = Connection & {
   __typename: 'PurchaseConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<PurchaseEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Purchase in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type PurchaseEdge = Edge & {
   __typename: 'PurchaseEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Purchase this edge wraps. */
   node: Purchase;
 };
 
@@ -11111,6 +12242,10 @@ export type Query = {
    * Supports filtering by date range, device, success/failure, and method.
    */
   loginHistories: LoginHistoryConnection;
+  /**
+   * Match a recipe's ingredients against a pantry's contents, so the caller can
+   * confirm what would be consumed before marking the recipe as cooked.
+   */
   matchRecipeIngredientsToPantry: Array<RecipeIngredientMatch>;
   /** Fetch the currently authenticated user. */
   me: Maybe<User>;
@@ -11131,6 +12266,11 @@ export type Query = {
    * the admin queue, scoped to the caller — there is no arg to widen that scope.
    */
   myItemSuggestions: ItemEditSuggestionConnection;
+  /**
+   * The calling user's own moderation status. A deliberately limited view: it
+   * reports the state and its effect on the account, not the moderator identity
+   * or internal notes.
+   */
   myModeration: Maybe<MyModerationStatus>;
   /** Fetch a single notification by its ID. */
   notification: Maybe<Notification>;
@@ -11159,10 +12299,23 @@ export type Query = {
   purchase: Maybe<Purchase>;
   /** List purchases with filtering and cursor-based pagination. */
   purchases: PurchaseConnection;
+  /**
+   * A single recipe by id. Anonymous callers see published recipes only;
+   * authenticated callers also see their own private recipes when they own them.
+   * Returns null when no readable recipe has that id.
+   */
   recipe: Maybe<Recipe>;
   /** List cooking logs for a specific recipe with cursor-based pagination. */
   recipeCookingLogs: CookingLogConnection;
+  /**
+   * Recipe suggestions for the current user, drawn from their pantry contents
+   * and dietary profile.
+   */
   recipeSuggestions: RecipeConnection;
+  /**
+   * The calling user's own recipes — both those they created and those they
+   * saved.
+   */
   recipes: RecipeConnection;
   /** Fetch personalized item recommendations for a user. */
   recommendedItems: Array<ItemSuggestion>;
@@ -11192,8 +12345,19 @@ export type Query = {
    * Items without a cached embedding are excluded; the catalog has been
    * backfilled, and new or edited items are embedded asynchronously by the
    * ITEM_EMBEDDING job. Auth-gated to bound embedding-service spend.
+   *
+   * Forward pagination only, via first. Vector-distance ordering does not
+   * compose with id-based cursors, and backward pagination has no meaningful
+   * semantics over a relevance ranking, so after, before and last are not
+   * offered rather than being accepted and rejected at runtime.
    */
   searchItemsSemantic: ItemConnection;
+  /**
+   * Search all recipes (global search). Anonymous callers see published recipes
+   * only; authenticated callers also see their own private recipes. Filter
+   * criteria (diets, intolerances, category, cuisine, maxReadyTime) are grouped
+   * under the RecipeFilters object.
+   */
   searchRecipes: RecipeConnection;
   /**
    * Search units by name or symbol.
@@ -11265,7 +12429,7 @@ export type Query = {
   /** Fetch a single user by their ID. */
   user: Maybe<User>;
   /** Validate item data integrity (read-only check) */
-  validateItem: ValidationResult;
+  validateItem: ItemValidationReport;
   /** Validate a UPC barcode string. */
   validateUpc: UpcValidation;
 };
@@ -11677,11 +12841,8 @@ export type QuerySearchItemsArgs = {
 
 
 export type QuerySearchItemsSemanticArgs = {
-  after?: InputMaybe<Scalars['String']['input']>;
-  before?: InputMaybe<Scalars['String']['input']>;
   filters?: InputMaybe<ItemFilters>;
   first?: InputMaybe<Scalars['Int']['input']>;
-  last?: InputMaybe<Scalars['Int']['input']>;
   maxDistance?: InputMaybe<Scalars['Float']['input']>;
   prompt: Scalars['String']['input'];
 };
@@ -11919,7 +13080,9 @@ export type Recipe = {
  */
 export type RecipeCookingLogsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<CookingLogOrderBy>;
 };
 
@@ -11955,7 +13118,9 @@ export type RecipeIngredientsConnectionArgs = {
  */
 export type RecipeReviewsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<RecipeReviewOrderBy>;
 };
 
@@ -11981,10 +13146,17 @@ export enum RecipeCategory {
   Snack = 'SNACK'
 }
 
+/**
+ * A page of Recipe results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type RecipeConnection = Connection & {
   __typename: 'RecipeConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<RecipeEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -12004,9 +13176,15 @@ export type RecipeContextInput = {
   recipeIngredientId?: InputMaybe<Scalars['ID']['input']>;
 };
 
+/**
+ * One Recipe in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type RecipeEdge = Edge & {
   __typename: 'RecipeEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Recipe this edge wraps. */
   node: Recipe;
 };
 
@@ -12037,16 +13215,29 @@ export type RecipeFilters = {
   maxReadyTime?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * A page of Recipe results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type RecipeForkConnection = Connection & {
   __typename: 'RecipeForkConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<RecipeForkEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One Recipe in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type RecipeForkEdge = Edge & {
   __typename: 'RecipeForkEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Recipe this edge wraps. */
   node: Recipe;
 };
 
@@ -12069,16 +13260,29 @@ export type RecipeIngredient = {
   unit: Maybe<Unit>;
 };
 
+/**
+ * A page of RecipeIngredient results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type RecipeIngredientConnection = Connection & {
   __typename: 'RecipeIngredientConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<RecipeIngredientEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One RecipeIngredient in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type RecipeIngredientEdge = Edge & {
   __typename: 'RecipeIngredientEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The RecipeIngredient this edge wraps. */
   node: RecipeIngredient;
 };
 
@@ -12181,16 +13385,29 @@ export type RecipeReview = {
   verified: Scalars['Boolean']['output'];
 };
 
+/**
+ * A page of RecipeReview results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type RecipeReviewConnection = Connection & {
   __typename: 'RecipeReviewConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<RecipeReviewEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One RecipeReview in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type RecipeReviewEdge = Edge & {
   __typename: 'RecipeReviewEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The RecipeReview this edge wraps. */
   node: RecipeReview;
 };
 
@@ -12228,6 +13445,11 @@ export type RecordItemPopularityPayload = {
   item: Item;
 };
 
+/**
+ * Result of RecordItemPopularity. Select on RecordItemPopularityPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RecordItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | RecordItemPopularityPayload | ValidationError;
 
 /**
@@ -12263,6 +13485,11 @@ export type RecordLoginPayload = {
   loginHistory: LoginHistory;
 };
 
+/**
+ * Result of RecordLogin. Select on RecordLoginPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RecordLoginResult = ConflictError | ForbiddenError | NotFoundError | RecordLoginPayload | ValidationError;
 
 /** Input for recording a price observation (historical tracking) */
@@ -12280,6 +13507,11 @@ export type RecordPriceObservationPayload = {
   store: Maybe<Store>;
 };
 
+/**
+ * Result of RecordPriceObservation. Select on RecordPriceObservationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundError | RecordPriceObservationPayload | ValidationError;
 
 export type RecordRecipeCookedInput = {
@@ -12293,6 +13525,11 @@ export type RecordRecipeCookedPayload = {
   savedRecipe: SavedRecipe;
 };
 
+/**
+ * Result of RecordRecipeCooked. Select on RecordRecipeCookedPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RecordRecipeCookedResult = ConflictError | ForbiddenError | NotFoundError | RecordRecipeCookedPayload | ValidationError;
 
 export enum RecurringPattern {
@@ -12338,6 +13575,11 @@ export type RegisterDevicePayload = {
   device: Maybe<Device>;
 };
 
+/**
+ * Result of RegisterDevice. Select on RegisterDevicePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RegisterDeviceResult = ConflictError | ForbiddenError | NotFoundError | RegisterDevicePayload | ValidationError;
 
 export type RegisterInput = {
@@ -12353,6 +13595,11 @@ export type RegisterPayload = {
   status: RegistrationStatus;
 };
 
+/**
+ * Result of Register. Select on RegisterPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RegisterResult = ConflictError | ForbiddenError | NotFoundError | RegisterPayload | ValidationError;
 
 /**
@@ -12378,8 +13625,18 @@ export type RejectItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of RejectItem. Select on RejectItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError;
 
+/**
+ * Result of RejectItemSuggestion. Select on ReviewItemSuggestionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
 
 export enum ReligiousDiet {
@@ -12397,6 +13654,11 @@ export type RemoveItemFromCategoryPayload = {
   itemCategory: ItemCategory;
 };
 
+/**
+ * Result of RemoveItemFromCategory. Select on RemoveItemFromCategoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveItemFromCategoryResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromCategoryPayload | ValidationError;
 
 export type RemoveItemFromShoppingListInput = {
@@ -12409,6 +13671,11 @@ export type RemoveItemFromShoppingListPayload = {
   shoppingListItem: ShoppingListItem;
 };
 
+/**
+ * Result of RemoveItemFromShoppingList. Select on RemoveItemFromShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload | ValidationError;
 
 export type RemoveItemImageInput = {
@@ -12420,6 +13687,11 @@ export type RemoveItemImagePayload = {
   item: Item;
 };
 
+/**
+ * Result of RemoveItemImage. Select on RemoveItemImagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveItemImageResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemImagePayload | ValidationError;
 
 /**
@@ -12447,6 +13719,11 @@ export type RemoveItemsFromShoppingListPayload = {
   summary: BulkSummary;
 };
 
+/**
+ * Result of RemoveItemsFromShoppingList. Select on RemoveItemsFromShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveItemsFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemsFromShoppingListPayload | ValidationError;
 
 export type RemoveMemberInput = {
@@ -12459,6 +13736,11 @@ export type RemoveMemberPayload = {
   membership: Membership;
 };
 
+/**
+ * Result of RemoveMember. Select on RemoveMemberPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveMemberResult = ConflictError | ForbiddenError | NotFoundError | RemoveMemberPayload | ValidationError;
 
 export type RemoveRecipeFromFavoritesInput = {
@@ -12480,6 +13762,11 @@ export type RemoveRecipeFromFavoritesPayload = {
   savedRecipe: Maybe<SavedRecipe>;
 };
 
+/**
+ * Result of RemoveRecipeFromFavorites. Select on RemoveRecipeFromFavoritesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveRecipeFromFavoritesResult = ConflictError | ForbiddenError | NotFoundError | RemoveRecipeFromFavoritesPayload | ValidationError;
 
 export type RemoveRestrictionInput = {
@@ -12492,6 +13779,11 @@ export type RemoveRestrictionPayload = {
   dietaryRestriction: DietaryRestriction;
 };
 
+/**
+ * Result of RemoveRestriction. Select on RemoveRestrictionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveRestrictionResult = ConflictError | ForbiddenError | NotFoundError | RemoveRestrictionPayload | ValidationError;
 
 export type RemoveShoppingListCollaboratorInput = {
@@ -12504,6 +13796,11 @@ export type RemoveShoppingListCollaboratorPayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of RemoveShoppingListCollaborator. Select on RemoveShoppingListCollaboratorPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveShoppingListCollaboratorResult = ConflictError | ForbiddenError | NotFoundError | RemoveShoppingListCollaboratorPayload | ValidationError;
 
 export type RemoveTemplateItemInput = {
@@ -12516,6 +13813,11 @@ export type RemoveTemplateItemPayload = {
   mealTemplateItem: MealTemplateItem;
 };
 
+/**
+ * Result of RemoveTemplateItem. Select on RemoveTemplateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload | ValidationError;
 
 export type RemoveUnitConversionInput = {
@@ -12527,6 +13829,11 @@ export type RemoveUnitConversionPayload = {
   unit: Unit;
 };
 
+/**
+ * Result of RemoveUnitConversion. Select on RemoveUnitConversionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError;
 
 export type ResendVerificationEmailInput = {
@@ -12538,6 +13845,11 @@ export type ResendVerificationEmailPayload = {
   user: Maybe<User>;
 };
 
+/**
+ * Result of ResendVerificationEmail. Select on ResendVerificationEmailPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError;
 
 export type ResetPasswordPayload = {
@@ -12546,6 +13858,11 @@ export type ResetPasswordPayload = {
   status: PasswordActionStatus;
 };
 
+/**
+ * Result of ResetPassword. Select on ResetPasswordPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError;
 
 export type ResetPasswordWithTokenInput = {
@@ -12598,6 +13915,11 @@ export type RestockPantryItemPayload = {
   pantryItemUsage: PantryItemUsage;
 };
 
+/**
+ * Result of RestockPantryItem. Select on RestockPantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RestockPantryItemResult = ConflictError | ForbiddenError | NotFoundError | RestockPantryItemPayload | ValidationError;
 
 export type RestoreItemInput = {
@@ -12609,6 +13931,11 @@ export type RestoreItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of RestoreItem. Select on RestoreItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type RestoreItemResult = ConflictError | ForbiddenError | NotFoundError | RestoreItemPayload | ValidationError;
 
 export enum RestrictionSeverity {
@@ -12679,16 +14006,29 @@ export type SavedRecipe = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A page of SavedRecipe results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type SavedRecipeConnection = Connection & {
   __typename: 'SavedRecipeConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<SavedRecipeEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One SavedRecipe in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type SavedRecipeEdge = Edge & {
   __typename: 'SavedRecipeEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The SavedRecipe this edge wraps. */
   node: SavedRecipe;
 };
 
@@ -12707,6 +14047,11 @@ export type SendTestNotificationPayload = {
   notification: Maybe<Notification>;
 };
 
+/**
+ * Result of SendTestNotification. Select on SendTestNotificationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type SendTestNotificationResult = ConflictError | ForbiddenError | NotFoundError | SendTestNotificationPayload | ValidationError;
 
 /** Sub-input for session info */
@@ -12745,6 +14090,11 @@ export type ShareShoppingListPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of ShareShoppingList. Select on ShareShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError;
 
 /**
@@ -12927,16 +14277,29 @@ export type ShoppingListActivity = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A page of ShoppingListActivity results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ShoppingListActivityConnection = Connection & {
   __typename: 'ShoppingListActivityConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ShoppingListActivityEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ShoppingListActivity in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ShoppingListActivityEdge = Edge & {
   __typename: 'ShoppingListActivityEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ShoppingListActivity this edge wraps. */
   node: ShoppingListActivity;
 };
 
@@ -12977,29 +14340,55 @@ export type ShoppingListCollaborator = {
   token: Maybe<Scalars['String']['output']>;
 };
 
+/**
+ * A page of ShoppingListCollaborator results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ShoppingListCollaboratorConnection = Connection & {
   __typename: 'ShoppingListCollaboratorConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ShoppingListCollaboratorEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ShoppingListCollaborator in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ShoppingListCollaboratorEdge = Edge & {
   __typename: 'ShoppingListCollaboratorEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ShoppingListCollaborator this edge wraps. */
   node: ShoppingListCollaborator;
 };
 
+/**
+ * A page of ShoppingList results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ShoppingListConnection = Connection & {
   __typename: 'ShoppingListConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ShoppingListEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ShoppingList in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ShoppingListEdge = Edge & {
   __typename: 'ShoppingListEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ShoppingList this edge wraps. */
   node: ShoppingList;
 };
 
@@ -13036,6 +14425,10 @@ export type ShoppingListEvent = {
   updatedFields: Array<Scalars['String']['output']>;
 };
 
+/**
+ * The entity a shopping-list event refers to. Branch on __typename to learn
+ * which part of the list changed.
+ */
 export type ShoppingListEventNode = ShoppingList | ShoppingListCollaborator | ShoppingListItem;
 
 export type ShoppingListFilters = {
@@ -13108,16 +14501,29 @@ export type ShoppingListItemPurchasesConnectionArgs = {
   orderBy?: InputMaybe<PurchaseOrderBy>;
 };
 
+/**
+ * A page of ShoppingListItem results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ShoppingListItemConnection = Connection & {
   __typename: 'ShoppingListItemConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ShoppingListItemEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ShoppingListItem in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ShoppingListItemEdge = Edge & {
   __typename: 'ShoppingListItemEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ShoppingListItem this edge wraps. */
   node: ShoppingListItem;
 };
 
@@ -13209,16 +14615,29 @@ export type ShoppingListOwnership = {
   userId: Scalars['ID']['output'];
 };
 
+/**
+ * A page of ShoppingListOwnership results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type ShoppingListOwnershipConnection = Connection & {
   __typename: 'ShoppingListOwnershipConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<ShoppingListOwnershipEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One ShoppingListOwnership in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type ShoppingListOwnershipEdge = Edge & {
   __typename: 'ShoppingListOwnershipEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The ShoppingListOwnership this edge wraps. */
   node: ShoppingListOwnership;
 };
 
@@ -13502,10 +14921,17 @@ export type StorageLocation = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
+/**
+ * A page of StorageLocation results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type StorageLocationConnection = Connection & {
   __typename: 'StorageLocationConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<StorageLocationEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -13518,9 +14944,15 @@ export type StorageLocationCount = {
   type: StorageType;
 };
 
+/**
+ * One StorageLocation in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type StorageLocationEdge = Edge & {
   __typename: 'StorageLocationEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The StorageLocation this edge wraps. */
   node: StorageLocation;
 };
 
@@ -13642,7 +15074,9 @@ export type Store = {
  */
 export type StorePantryItemsArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PantryItemOrderBy>;
 };
 
@@ -13653,7 +15087,9 @@ export type StorePantryItemsArgs = {
  */
 export type StorePriceHistoryArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ItemPriceHistoryOrderBy>;
 };
 
@@ -13664,7 +15100,9 @@ export type StorePriceHistoryArgs = {
  */
 export type StorePurchasesArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<PurchaseOrderBy>;
 };
 
@@ -13675,14 +15113,23 @@ export type StorePurchasesArgs = {
  */
 export type StoreStoreSkusArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<ItemStoreSkuOrderBy>;
 };
 
+/**
+ * A page of Store results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type StoreConnection = Connection & {
   __typename: 'StoreConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<StoreEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
@@ -13696,9 +15143,15 @@ export type StoreCostBreakdown = {
   totalSpent: Scalars['Float']['output'];
 };
 
+/**
+ * One Store in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type StoreEdge = Edge & {
   __typename: 'StoreEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The Store this edge wraps. */
   node: Store;
 };
 
@@ -14083,6 +15536,11 @@ export type SyncItemPopularityPayload = {
   popularity: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * Result of SyncItemPopularity. Select on SyncItemPopularityPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type SyncItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | SyncItemPopularityPayload | ValidationError;
 
 export type SyncMoveShoppingListItemInput = {
@@ -14153,6 +15611,11 @@ export type SyncRecipeRatingsPayload = {
   totalReviews: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * Result of SyncRecipeRatings. Select on SyncRecipeRatingsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type SyncRecipeRatingsResult = ConflictError | ForbiddenError | NotFoundError | SyncRecipeRatingsPayload | ValidationError;
 
 /** Sub-input for sync settings */
@@ -14255,10 +15718,6 @@ export type TimeSeriesDataPoint = {
   value: Scalars['Float']['output'];
 };
 
-export type Timestamped = {
-  createdAt: Scalars['DateTime']['output'];
-};
-
 export type ToggleReviewHelpfulInput = {
   isHelpful: Scalars['Boolean']['input'];
   reviewId: Scalars['ID']['input'];
@@ -14270,6 +15729,11 @@ export type ToggleReviewHelpfulPayload = {
   reviewHelpful: ReviewHelpful;
 };
 
+/**
+ * Result of ToggleReviewHelpful. Select on ToggleReviewHelpfulPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ToggleReviewHelpfulResult = ConflictError | ForbiddenError | NotFoundError | ToggleReviewHelpfulPayload | ValidationError;
 
 /** Input for toggling the purchased state of a shopping list item */
@@ -14285,6 +15749,11 @@ export type ToggleShoppingListItemPurchasedPayload = {
   shoppingListItem: ShoppingListItem;
 };
 
+/**
+ * Result of ToggleShoppingListItemPurchased. Select on ToggleShoppingListItemPurchasedPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ToggleShoppingListItemPurchasedResult = ConflictError | ForbiddenError | NotFoundError | ToggleShoppingListItemPurchasedPayload | ValidationError;
 
 export type TransferHomeOwnershipInput = {
@@ -14298,6 +15767,11 @@ export type TransferHomeOwnershipPayload = {
   homeOwnership: HomeOwnership;
 };
 
+/**
+ * Result of TransferHomeOwnership. Select on TransferHomeOwnershipPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type TransferHomeOwnershipResult = ConflictError | ForbiddenError | NotFoundError | TransferHomeOwnershipPayload | ValidationError;
 
 export enum TrustLevel {
@@ -14481,6 +15955,11 @@ export type UpdateAccountPayload = {
   user: User;
 };
 
+/**
+ * Result of UpdateAccount. Select on UpdateAccountPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError;
 
 export type UpdateBrandInput = {
@@ -14495,6 +15974,11 @@ export type UpdateBrandPayload = {
   brand: Brand;
 };
 
+/**
+ * Result of UpdateBrand. Select on UpdateBrandPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateBrandResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandPayload | ValidationError;
 
 export type UpdateCategoryInput = {
@@ -14515,6 +15999,11 @@ export type UpdateCategoryPayload = {
   category: Category;
 };
 
+/**
+ * Result of UpdateCategory. Select on UpdateCategoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateCategoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateCategoryPayload | ValidationError;
 
 export type UpdateCollaboratorPermissionsFullInput = {
@@ -14540,6 +16029,11 @@ export type UpdateCollaboratorPermissionsPayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of UpdateCollaboratorPermissions. Select on UpdateCollaboratorPermissionsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateCollaboratorPermissionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateCollaboratorPermissionsPayload | ValidationError;
 
 /** Input for updating a collaborator's role */
@@ -14555,6 +16049,11 @@ export type UpdateCollaboratorRolePayload = {
   shoppingList: Maybe<ShoppingList>;
 };
 
+/**
+ * Result of UpdateCollaboratorRole. Select on UpdateCollaboratorRolePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateCollaboratorRoleResult = ConflictError | ForbiddenError | NotFoundError | UpdateCollaboratorRolePayload | ValidationError;
 
 export type UpdateCookingLogInput = {
@@ -14575,6 +16074,11 @@ export type UpdateCookingLogPayload = {
   recipe: Maybe<Recipe>;
 };
 
+/**
+ * Result of UpdateCookingLog. Select on UpdateCookingLogPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateCookingLogResult = ConflictError | ForbiddenError | NotFoundError | UpdateCookingLogPayload | ValidationError;
 
 export type UpdateCurrencyInput = {
@@ -14591,6 +16095,11 @@ export type UpdateCurrencyPayload = {
   currency: Currency;
 };
 
+/**
+ * Result of UpdateCurrency. Select on UpdateCurrencyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateCurrencyResult = ConflictError | ForbiddenError | NotFoundError | UpdateCurrencyPayload | ValidationError;
 
 /**
@@ -14624,6 +16133,11 @@ export type UpdateDevicePayload = {
   device: Maybe<Device>;
 };
 
+/**
+ * Result of UpdateDevice. Select on UpdateDevicePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateDeviceResult = ConflictError | ForbiddenError | NotFoundError | UpdateDevicePayload | ValidationError;
 
 export type UpdateDietaryProfileInput = {
@@ -14648,6 +16162,11 @@ export type UpdateDietaryProfilePayload = {
   dietaryProfile: DietaryProfile;
 };
 
+/**
+ * Result of UpdateDietaryProfile. Select on UpdateDietaryProfilePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfilePayload | ValidationError;
 
 export type UpdateExternalSourceInput = {
@@ -14666,6 +16185,11 @@ export type UpdateExternalSourcePayload = {
   externalSourceMapping: ExternalSourceMapping;
 };
 
+/**
+ * Result of UpdateExternalSource. Select on UpdateExternalSourcePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpdateExternalSourcePayload | ValidationError;
 
 export type UpdateFavoriteRecipeInput = {
@@ -14682,6 +16206,11 @@ export type UpdateFavoriteRecipePayload = {
   savedRecipe: SavedRecipe;
 };
 
+/**
+ * Result of UpdateFavoriteRecipe. Select on UpdateFavoriteRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateFavoriteRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpdateFavoriteRecipePayload | ValidationError;
 
 export type UpdateHomeInput = {
@@ -14707,6 +16236,11 @@ export type UpdateHomePayload = {
   home: Home;
 };
 
+/**
+ * Result of UpdateHome. Select on UpdateHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateHomeResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError;
 
 /**
@@ -14750,6 +16284,11 @@ export type UpdateItemPayload = {
   item: Item;
 };
 
+/**
+ * Result of UpdateItem. Select on UpdateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateItemPayload | ValidationError;
 
 export type UpdateLoginHistoryInput = {
@@ -14778,6 +16317,11 @@ export type UpdateLoginHistoryPayload = {
   loginHistory: LoginHistory;
 };
 
+/**
+ * Result of UpdateLoginHistory. Select on UpdateLoginHistoryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateLoginHistoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateLoginHistoryPayload | ValidationError;
 
 export type UpdateMealPlanInput = {
@@ -14830,6 +16374,11 @@ export type UpdateMealPlanItemPayload = {
   mealPlanItem: MealPlanItem;
 };
 
+/**
+ * Result of UpdateMealPlanItem. Select on UpdateMealPlanItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateMealPlanItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealPlanItemPayload | ValidationError;
 
 export type UpdateMealPlanPayload = {
@@ -14838,6 +16387,11 @@ export type UpdateMealPlanPayload = {
   mealPlan: MealPlan;
 };
 
+/**
+ * Result of UpdateMealPlan. Select on UpdateMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateMealPlanResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealPlanPayload | ValidationError;
 
 export type UpdateMealTemplateInput = {
@@ -14856,6 +16410,11 @@ export type UpdateMealTemplatePayload = {
   mealTemplate: MealTemplate;
 };
 
+/**
+ * Result of UpdateMealTemplate. Select on UpdateMealTemplatePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateMealTemplateResult = ConflictError | ForbiddenError | NotFoundError | UpdateMealTemplatePayload | ValidationError;
 
 export type UpdateMembershipInput = {
@@ -14876,6 +16435,11 @@ export type UpdateMembershipPayload = {
   membership: Membership;
 };
 
+/**
+ * Result of UpdateMembership. Select on UpdateMembershipPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateMembershipResult = ConflictError | ForbiddenError | NotFoundError | UpdateMembershipPayload | ValidationError;
 
 /**
@@ -14903,6 +16467,11 @@ export type UpdateModerationPayload = {
   userModeration: Maybe<UserModeration>;
 };
 
+/**
+ * Result of UpdateModeration. Select on UpdateModerationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateModerationResult = ConflictError | ForbiddenError | NotFoundError | UpdateModerationPayload | ValidationError;
 
 export type UpdateNotificationInput = {
@@ -14937,8 +16506,18 @@ export type UpdateNotificationPreferencesPayload = {
   notificationPreferences: NotificationPreferences;
 };
 
+/**
+ * Result of UpdateNotificationPreferences. Select on UpdateNotificationPreferencesPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateNotificationPreferencesResult = ConflictError | ForbiddenError | NotFoundError | UpdateNotificationPreferencesPayload | ValidationError;
 
+/**
+ * Result of UpdateNotification. Select on UpdateNotificationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateNotificationResult = ConflictError | ForbiddenError | NotFoundError | UpdateNotificationPayload | ValidationError;
 
 export type UpdatePantryInput = {
@@ -14983,6 +16562,11 @@ export type UpdatePantryItemLocationPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of UpdatePantryItemLocation. Select on UpdatePantryItemLocationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdatePantryItemLocationResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemLocationPayload | ValidationError;
 
 export type UpdatePantryItemPayload = {
@@ -15005,8 +16589,18 @@ export type UpdatePantryItemQuantityPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of UpdatePantryItemQuantity. Select on UpdatePantryItemQuantityPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdatePantryItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemQuantityPayload | ValidationError;
 
+/**
+ * Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdatePantryItemResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError;
 
 export type UpdatePantryPayload = {
@@ -15015,6 +16609,11 @@ export type UpdatePantryPayload = {
   pantry: Pantry;
 };
 
+/**
+ * Result of UpdatePantry. Select on UpdatePantryPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdatePantryResult = ConflictError | ForbiddenError | NotFoundError | UpdatePantryPayload | ValidationError;
 
 export type UpdateProfileInput = {
@@ -15038,6 +16637,11 @@ export type UpdateProfilePayload = {
   userProfile: UserProfile;
 };
 
+/**
+ * Result of UpdateProfile. Select on UpdateProfilePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateProfilePayload | ValidationError;
 
 export type UpdatePurchaseInput = {
@@ -15059,6 +16663,11 @@ export type UpdatePurchasePayload = {
   store: Maybe<Store>;
 };
 
+/**
+ * Result of UpdatePurchase. Select on UpdatePurchasePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdatePurchaseResult = ConflictError | ForbiddenError | NotFoundError | UpdatePurchasePayload | ValidationError;
 
 export type UpdateRecipeIngredientsInput = {
@@ -15071,6 +16680,11 @@ export type UpdateRecipeIngredientsPayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of UpdateRecipeIngredients. Select on UpdateRecipeIngredientsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateRecipeIngredientsResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeIngredientsPayload | ValidationError;
 
 export type UpdateRecipeInput = {
@@ -15097,6 +16711,11 @@ export type UpdateRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of UpdateRecipe. Select on UpdateRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipePayload | ValidationError;
 
 export type UpdateRecipeReviewInput = {
@@ -15111,6 +16730,11 @@ export type UpdateRecipeReviewPayload = {
   recipeReview: RecipeReview;
 };
 
+/**
+ * Result of UpdateRecipeReview. Select on UpdateRecipeReviewPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateRecipeReviewResult = ConflictError | ForbiddenError | NotFoundError | UpdateRecipeReviewPayload | ValidationError;
 
 export type UpdateRestrictionInput = {
@@ -15125,6 +16749,11 @@ export type UpdateRestrictionPayload = {
   dietaryRestriction: DietaryRestriction;
 };
 
+/**
+ * Result of UpdateRestriction. Select on UpdateRestrictionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateRestrictionResult = ConflictError | ForbiddenError | NotFoundError | UpdateRestrictionPayload | ValidationError;
 
 export type UpdateSettingsInput = {
@@ -15142,6 +16771,11 @@ export type UpdateSettingsPayload = {
   userSettings: UserSettings;
 };
 
+/**
+ * Result of UpdateSettings. Select on UpdateSettingsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | UpdateSettingsPayload | ValidationError;
 
 export type UpdateShoppingListInput = {
@@ -15193,8 +16827,18 @@ export type UpdateShoppingListItemQuantityPayload = {
   shoppingListItem: ShoppingListItem;
 };
 
+/**
+ * Result of UpdateShoppingListItemQuantity. Select on UpdateShoppingListItemQuantityPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateShoppingListItemQuantityResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListItemQuantityPayload | ValidationError;
 
+/**
+ * Result of UpdateShoppingListItem. Select on UpdateShoppingListItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListItemPayload | ValidationError;
 
 export type UpdateShoppingListPayload = {
@@ -15213,8 +16857,18 @@ export type UpdateShoppingListReminderPayload = {
   shoppingList: ShoppingList;
 };
 
+/**
+ * Result of UpdateShoppingListReminder. Select on UpdateShoppingListReminderPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateShoppingListReminderResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListReminderPayload | ValidationError;
 
+/**
+ * Result of UpdateShoppingList. Select on UpdateShoppingListPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateShoppingListResult = ConflictError | ForbiddenError | NotFoundError | UpdateShoppingListPayload | ValidationError;
 
 /**
@@ -15268,6 +16922,11 @@ export type UpdateStorageLocationOrderPayload = {
   storageLocation: StorageLocation;
 };
 
+/**
+ * Result of UpdateStorageLocationOrder. Select on UpdateStorageLocationOrderPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateStorageLocationOrderResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorageLocationOrderPayload | ValidationError;
 
 export type UpdateStorageLocationPayload = {
@@ -15276,6 +16935,11 @@ export type UpdateStorageLocationPayload = {
   storageLocation: StorageLocation;
 };
 
+/**
+ * Result of UpdateStorageLocation. Select on UpdateStorageLocationPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateStorageLocationResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorageLocationPayload | ValidationError;
 
 /** Input for updating store information */
@@ -15294,6 +16958,11 @@ export type UpdateStoreInfoPayload = {
   store: Store;
 };
 
+/**
+ * Result of UpdateStoreInfo. Select on UpdateStoreInfoPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateStoreInfoResult = ConflictError | ForbiddenError | NotFoundError | UpdateStoreInfoPayload | ValidationError;
 
 export type UpdateStoreInput = {
@@ -15311,6 +16980,11 @@ export type UpdateStorePayload = {
   store: Store;
 };
 
+/**
+ * Result of UpdateStore. Select on UpdateStorePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateStoreResult = ConflictError | ForbiddenError | NotFoundError | UpdateStorePayload | ValidationError;
 
 export type UpdateTemplateItemInput = {
@@ -15332,6 +17006,11 @@ export type UpdateTemplateItemPayload = {
   mealTemplateItem: MealTemplateItem;
 };
 
+/**
+ * Result of UpdateTemplateItem. Select on UpdateTemplateItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | UpdateTemplateItemPayload | ValidationError;
 
 export type UpdateUnitInput = {
@@ -15352,6 +17031,11 @@ export type UpdateUnitPayload = {
   unit: Unit;
 };
 
+/**
+ * Result of UpdateUnit. Select on UpdateUnitPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateUnitResult = ConflictError | ForbiddenError | NotFoundError | UpdateUnitPayload | ValidationError;
 
 export type UpdateUserAddressInput = {
@@ -15372,6 +17056,11 @@ export type UpdateUserAddressPayload = {
   userAddress: UserAddress;
 };
 
+/**
+ * Result of UpdateUserAddress. Select on UpdateUserAddressPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateUserAddressResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAddressPayload | ValidationError;
 
 /** Input for managing appeals (submit or review). */
@@ -15390,6 +17079,11 @@ export type UpdateUserAppealPayload = {
   userModeration: Maybe<UserModeration>;
 };
 
+/**
+ * Result of UpdateUserAppeal. Select on UpdateUserAppealPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError;
 
 /** Input for managing restrictions (add and/or remove in one call). */
@@ -15408,6 +17102,11 @@ export type UpdateUserRestrictionsPayload = {
   userModeration: Maybe<UserModeration>;
 };
 
+/**
+ * Result of UpdateUserRestrictions. Select on UpdateUserRestrictionsPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError;
 
 export type UploadFormField = {
@@ -15424,6 +17123,11 @@ export type UpsertExternalRecipePayload = {
   recipe: Recipe;
 };
 
+/**
+ * Result of UpsertExternalRecipe. Select on UpsertExternalRecipePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpsertExternalRecipeResult = ConflictError | ForbiddenError | NotFoundError | UpsertExternalRecipePayload | ValidationError;
 
 export type UpsertItemByExternalSourceInput = {
@@ -15444,6 +17148,11 @@ export type UpsertItemByExternalSourcePayload = {
   mapping: ExternalSourceMapping;
 };
 
+/**
+ * Result of UpsertItemByExternalSource. Select on UpsertItemByExternalSourcePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpsertItemByExternalSourceResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemByExternalSourcePayload | ValidationError;
 
 /**
@@ -15469,6 +17178,11 @@ export type UpsertItemUnitConversionPayload = {
   unitConversion: ItemUnitConversion;
 };
 
+/**
+ * Result of UpsertItemUnitConversion. Select on UpsertItemUnitConversionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type UpsertItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | UpsertItemUnitConversionPayload | ValidationError;
 
 /** Comprehensive usage analytics for a pantry */
@@ -15616,7 +17330,6 @@ export type User = {
   settings: Maybe<UserSettings>;
   shoppingListInvitesConnection: ShoppingListCollaboratorConnection;
   shoppingListOwnershipsConnection: ShoppingListOwnershipConnection;
-  statistics: Maybe<UserStatistics>;
   suspiciousLoginActivity: SuspiciousActivity;
   timezone: Maybe<Scalars['String']['output']>;
   unreadNotificationCount: Scalars['Int']['output'];
@@ -15669,7 +17382,9 @@ export type UserCookingLogsConnectionArgs = {
  */
 export type UserDevicesConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<DeviceOrderBy>;
 };
 
@@ -15719,7 +17434,9 @@ export type UserInviteLogsConnectionArgs = {
  */
 export type UserLoginHistoryConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<LoginHistoryOrderBy>;
 };
 
@@ -15748,7 +17465,9 @@ export type UserMembershipInHomeArgs = {
  */
 export type UserMembershipsConnectionArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
   orderBy?: InputMaybe<MembershipOrderBy>;
 };
 
@@ -15882,16 +17601,29 @@ export type UserAddress = {
   street: Scalars['String']['output'];
 };
 
+/**
+ * A page of UserAddress results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type UserAddressConnection = Connection & {
   __typename: 'UserAddressConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<UserAddressEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One UserAddress in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type UserAddressEdge = Edge & {
   __typename: 'UserAddressEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The UserAddress this edge wraps. */
   node: UserAddress;
 };
 
@@ -15900,16 +17632,29 @@ export type UserAddressOrderBy = {
   isDefault?: InputMaybe<SortOrder>;
 };
 
+/**
+ * A page of User results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type UserConnection = Connection & {
   __typename: 'UserConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<UserEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One User in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type UserEdge = Edge & {
   __typename: 'UserEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The User this edge wraps. */
   node: User;
 };
 
@@ -16006,16 +17751,29 @@ export type UserModeration = {
   warningCount: Scalars['Int']['output'];
 };
 
+/**
+ * A page of UserModeration results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
 export type UserModerationConnection = Connection & {
   __typename: 'UserModerationConnection';
+  /** The rows in this page, in the connection's sort order. */
   edges: Array<UserModerationEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
   pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
+/**
+ * One UserModeration in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
 export type UserModerationEdge = Edge & {
   __typename: 'UserModerationEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
   cursor: Scalars['String']['output'];
+  /** The UserModeration this edge wraps. */
   node: UserModeration;
 };
 
@@ -16109,31 +17867,6 @@ export type UserSettings = {
 };
 
 /**
- * User activity statistics
- * Cache: 3 minutes - stats update with user activity, always private
- */
-export type UserStatistics = {
-  __typename: 'UserStatistics';
-  averageRatingGiven: Maybe<Scalars['Float']['output']>;
-  helpfulVotesReceived: Scalars['Int']['output'];
-  id: Scalars['ID']['output'];
-  lastCalculatedAt: Scalars['DateTime']['output'];
-  streakDays: Scalars['Int']['output'];
-  totalAmountSpent: Scalars['Float']['output'];
-  totalCollaborations: Scalars['Int']['output'];
-  totalCookingSessions: Scalars['Int']['output'];
-  totalItemsAdded: Scalars['Int']['output'];
-  totalMealPlans: Scalars['Int']['output'];
-  totalPurchases: Scalars['Int']['output'];
-  totalRecipesCreated: Scalars['Int']['output'];
-  totalReviewsGiven: Scalars['Int']['output'];
-  totalShoppingLists: Scalars['Int']['output'];
-  totalWasteReduced: Scalars['Float']['output'];
-  user: User;
-  userId: Scalars['ID']['output'];
-};
-
-/**
  * Subtype discriminator for the consolidated userEvents stream.
  * Carries the account/profile mutation subtypes plus every per-user
  * lifecycle transition (home/shopping-list membership + moderation), so a
@@ -16164,6 +17897,11 @@ export type ValidatePasswordResetTokenPayload = {
   userId: Maybe<Scalars['ID']['output']>;
 };
 
+/**
+ * Result of ValidatePasswordResetToken. Select on ValidatePasswordResetTokenPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type ValidatePasswordResetTokenResult = ConflictError | ForbiddenError | NotFoundError | ValidatePasswordResetTokenPayload | ValidationError;
 
 /**
@@ -16176,20 +17914,6 @@ export type ValidationError = Error & {
   /** Dotted path to the offending field, when the error is field-specific. */
   field: Maybe<Scalars['String']['output']>;
   message: Scalars['String']['output'];
-};
-
-export type ValidationResult = {
-  __typename: 'ValidationResult';
-  errors: Array<ItemValidationError>;
-  isValid: Scalars['Boolean']['output'];
-  warnings: Array<ValidationWarning>;
-};
-
-export type ValidationWarning = {
-  __typename: 'ValidationWarning';
-  field: Scalars['String']['output'];
-  message: Scalars['String']['output'];
-  suggestion: Maybe<Scalars['String']['output']>;
 };
 
 /** Brand information for a product variation */
@@ -16218,6 +17942,11 @@ export type VerifyEmailPayload = {
   user: User;
 };
 
+/**
+ * Result of VerifyEmail. Select on VerifyEmailPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload;
 
 /** Input for verifying an item unit conversion (admin only) */
@@ -16232,6 +17961,11 @@ export type VerifyItemUnitConversionPayload = {
   unitConversion: ItemUnitConversion;
 };
 
+/**
+ * Result of VerifyItemUnitConversion. Select on VerifyItemUnitConversionPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyItemUnitConversionPayload;
 
 export type VerifyUserEmailInput = {
@@ -16243,6 +17977,11 @@ export type VerifyUserEmailPayload = {
   user: User;
 };
 
+/**
+ * Result of VerifyUserEmail. Select on VerifyUserEmailPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyUserEmailPayload;
 
 export enum Visibility {
@@ -16306,6 +18045,11 @@ export type WastePantryItemBatchPayload = {
   pantryItem: PantryItem;
 };
 
+/**
+ * Result of WastePantryItemBatch. Select on WastePantryItemBatchPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
 export type WastePantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | WastePantryItemBatchPayload;
 
 /** Describes the reason why a pantry item was wasted or discarded */

@@ -1324,9 +1324,6 @@
       "SyncRecipeRatingsPayload",
       "ValidationError"
     ],
-    "Timestamped": [
-      "Notification"
-    ],
     "ToggleReviewHelpfulResult": [
       "ConflictError",
       "ForbiddenError",
