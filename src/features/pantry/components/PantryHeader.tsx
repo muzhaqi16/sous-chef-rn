@@ -223,7 +223,10 @@ const styles = StyleSheet.create(theme => ({
     width: 10,
     height: 10,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.error,
+    // Accent (primary) so the unread dot tracks the user's App Color instead of
+    // always being red. It's a standalone host View, so the ShadowTree pushes
+    // the color update on theme/App-Color change without a re-render.
+    backgroundColor: theme.colors.primary,
     borderWidth: 2,
     borderColor: theme.colors.background,
   },
