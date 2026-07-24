@@ -3503,8 +3503,6 @@ export type Device = {
   deviceName: Maybe<Scalars['String']['output']>;
   deviceType: DeviceType;
   freeDiskStorage: Maybe<Scalars['String']['output']>;
-  hasDynamicIsland: Maybe<Scalars['Boolean']['output']>;
-  hasNotch: Maybe<Scalars['Boolean']['output']>;
   hostNames: Array<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   isActive: Scalars['Boolean']['output'];
@@ -3812,7 +3810,7 @@ export type DietaryProfile = {
   maxCookTimeMinutes: Maybe<Scalars['Int']['output']>;
   maxPrepTimeMinutes: Maybe<Scalars['Int']['output']>;
   mealsPerDay: Scalars['Int']['output'];
-  preferredCuisines: Array<Scalars['String']['output']>;
+  preferredCuisines: Array<Cuisine>;
   proteinTarget: Maybe<Scalars['Int']['output']>;
   restrictions: Array<DietaryRestriction>;
   snacksPerDay: Scalars['Int']['output'];
@@ -4136,32 +4134,22 @@ export type ExternalSourceIdentifiersInput = {
 export type ExternalSourceMapping = {
   __typename: 'ExternalSourceMapping';
   allergens: Maybe<SourceAllergens>;
-  availability: Maybe<Scalars['JSON']['output']>;
-  brandInfo: Maybe<Scalars['JSON']['output']>;
   categories: Maybe<Array<Scalars['String']['output']>>;
   confidence: Maybe<Scalars['Float']['output']>;
   createdAt: Scalars['DateTime']['output'];
-  data: Maybe<Scalars['JSON']['output']>;
   externalDescription: Maybe<Scalars['String']['output']>;
   externalId: Scalars['String']['output'];
   externalName: Maybe<Scalars['String']['output']>;
   externalType: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   identifiers: Maybe<ExternalSourceIdentifiers>;
-  images: Maybe<Scalars['JSON']['output']>;
   isPrimary: Scalars['Boolean']['output'];
   item: Item;
   lastSyncedAt: Scalars['DateTime']['output'];
-  location: Maybe<Scalars['JSON']['output']>;
-  metadata: Maybe<Scalars['JSON']['output']>;
   netWeight: Maybe<Scalars['Float']['output']>;
   netWeightUnit: Maybe<Scalars['String']['output']>;
-  nutritionData: Maybe<Scalars['JSON']['output']>;
   packageSize: Maybe<Scalars['String']['output']>;
-  pricing: Maybe<Scalars['JSON']['output']>;
-  retailInfo: Maybe<Scalars['JSON']['output']>;
   source: ExternalSource;
-  storage: Maybe<Scalars['JSON']['output']>;
   updatedAt: Scalars['DateTime']['output'];
 };
 
@@ -5269,7 +5257,7 @@ export type ItemBrand = {
 
 export type ItemCategory = {
   __typename: 'ItemCategory';
-  assignedAt: Maybe<Scalars['String']['output']>;
+  assignedAt: Maybe<Scalars['DateTime']['output']>;
   assignedBy: Maybe<User>;
   category: Category;
   confidence: Scalars['Float']['output'];
@@ -6023,7 +6011,6 @@ export type LoginHistory = {
   apiClient: Maybe<Scalars['String']['output']>;
   browserName: Maybe<Scalars['String']['output']>;
   browserVersion: Maybe<Scalars['String']['output']>;
-  campaign: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   device: Maybe<Device>;
   deviceId: Maybe<Scalars['String']['output']>;
@@ -6039,7 +6026,7 @@ export type LoginHistory = {
   ipCountry: Maybe<Scalars['String']['output']>;
   ipRegion: Maybe<Scalars['String']['output']>;
   isApiLogin: Scalars['Boolean']['output'];
-  isAutomated: Scalars['Boolean']['output'];
+  isAutomated: Maybe<Scalars['Boolean']['output']>;
   isMobileApp: Scalars['Boolean']['output'];
   isNewBrowser: Scalars['Boolean']['output'];
   isNewDevice: Scalars['Boolean']['output'];
@@ -6048,7 +6035,6 @@ export type LoginHistory = {
   isRisky: Scalars['Boolean']['output'];
   isTor: Maybe<Scalars['Boolean']['output']>;
   isVpn: Maybe<Scalars['Boolean']['output']>;
-  landingPage: Maybe<Scalars['String']['output']>;
   lastActivityAt: Maybe<Scalars['DateTime']['output']>;
   loggedInAt: Scalars['DateTime']['output'];
   loggedOutAt: Maybe<Scalars['DateTime']['output']>;
@@ -6058,14 +6044,12 @@ export type LoginHistory = {
   osName: Maybe<Scalars['String']['output']>;
   osVersion: Maybe<Scalars['String']['output']>;
   provider: Maybe<Scalars['String']['output']>;
-  referrer: Maybe<Scalars['String']['output']>;
   requiresMfa: Scalars['Boolean']['output'];
-  reviewed: Scalars['Boolean']['output'];
+  reviewed: Maybe<Scalars['Boolean']['output']>;
   reviewedAt: Maybe<Scalars['DateTime']['output']>;
   reviewedBy: Maybe<User>;
   reviewedById: Maybe<Scalars['ID']['output']>;
   sessionDuration: Maybe<Scalars['Int']['output']>;
-  source: Maybe<Scalars['String']['output']>;
   success: Scalars['Boolean']['output'];
   timezoneDiff: Maybe<Scalars['Int']['output']>;
   updatedAt: Scalars['DateTime']['output'];

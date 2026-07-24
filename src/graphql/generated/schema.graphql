@@ -3584,8 +3584,6 @@ type Device {
   deviceName: String
   deviceType: DeviceType!
   freeDiskStorage: String
-  hasDynamicIsland: Boolean
-  hasNotch: Boolean
   hostNames: [String!]!
   id: ID!
   isActive: Boolean!
@@ -3895,7 +3893,7 @@ type DietaryProfile {
   maxCookTimeMinutes: Int
   maxPrepTimeMinutes: Int
   mealsPerDay: Int!
-  preferredCuisines: [String!]!
+  preferredCuisines: [Cuisine!]!
   proteinTarget: Int
   restrictions: [DietaryRestriction!]!
   snacksPerDay: Int!
@@ -4215,32 +4213,22 @@ input ExternalSourceIdentifiersInput {
 
 type ExternalSourceMapping {
   allergens: SourceAllergens
-  availability: JSON
-  brandInfo: JSON
   categories: [String!]
   confidence: Float
   createdAt: DateTime!
-  data: JSON
   externalDescription: String
   externalId: String!
   externalName: String
   externalType: String
   id: ID!
   identifiers: ExternalSourceIdentifiers
-  images: JSON
   isPrimary: Boolean!
   item: Item!
   lastSyncedAt: DateTime!
-  location: JSON
-  metadata: JSON
   netWeight: Float
   netWeightUnit: String
-  nutritionData: JSON
   packageSize: String
-  pricing: JSON
-  retailInfo: JSON
   source: ExternalSource!
-  storage: JSON
   updatedAt: DateTime!
 }
 
@@ -5195,7 +5183,7 @@ type ItemBrand {
 }
 
 type ItemCategory {
-  assignedAt: String
+  assignedAt: DateTime
   assignedBy: User
   category: Category!
   confidence: Float!
@@ -5937,7 +5925,6 @@ type LoginHistory {
   apiClient: String
   browserName: String
   browserVersion: String
-  campaign: String
   createdAt: DateTime!
   device: Device
   deviceId: String
@@ -5953,7 +5940,7 @@ type LoginHistory {
   ipCountry: String
   ipRegion: String
   isApiLogin: Boolean!
-  isAutomated: Boolean!
+  isAutomated: Boolean
   isMobileApp: Boolean!
   isNewBrowser: Boolean!
   isNewDevice: Boolean!
@@ -5962,7 +5949,6 @@ type LoginHistory {
   isRisky: Boolean!
   isTor: Boolean
   isVpn: Boolean
-  landingPage: String
   lastActivityAt: DateTime
   loggedInAt: DateTime!
   loggedOutAt: DateTime
@@ -5972,14 +5958,12 @@ type LoginHistory {
   osName: String
   osVersion: String
   provider: String
-  referrer: String
   requiresMfa: Boolean!
-  reviewed: Boolean!
+  reviewed: Boolean
   reviewedAt: DateTime
   reviewedBy: User
   reviewedById: ID
   sessionDuration: Int
-  source: String
   success: Boolean!
   timezoneDiff: Int
   updatedAt: DateTime!
