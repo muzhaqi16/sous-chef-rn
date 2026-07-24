@@ -90,7 +90,7 @@ npm run tag:stg
 
 **What happens:**
 1. Tag `stg-v1.7.1` matches pattern `stg-v*`
-2. Triggers `build-android-staging.yml` workflow
+2. Triggers `build-android.yml` workflow
 3. Workflow declares `environment: stg`
 4. GitHub loads variables from `stg` environment:
    - `API_URL` → `https://stg-api.souschef.dev/graphql`
@@ -104,14 +104,14 @@ npm run tag:stg
 ### Example Flow: Production Build
 
 ```bash
-npm run tag:release
-# Creates tag: release-v1.7.1
+npm run tag:prod
+# Creates tag: prod-v1.7.1 (+ ios-v1.7.1)
 # Pushes to GitHub
 ```
 
 **What happens:**
-1. Tag `release-v1.7.1` matches pattern `release-v*`
-2. Triggers `build-android-release.yml` workflow
+1. Tag `prod-v1.7.1` matches pattern `prod-v*`
+2. Triggers `build-android.yml` workflow
 3. Workflow declares `environment: prod`
 4. GitHub loads variables from `prod` environment:
    - `API_URL` → `https://api.souschef.dev/graphql`

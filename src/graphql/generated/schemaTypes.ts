@@ -2272,7 +2272,7 @@ export type CreateNotificationInput = {
   payload: Scalars['JSON']['input'];
   priority?: InputMaybe<Priority>;
   sourceId?: InputMaybe<Scalars['String']['input']>;
-  sourceType?: InputMaybe<Scalars['String']['input']>;
+  sourceType?: InputMaybe<NotificationSourceType>;
   status?: InputMaybe<NotificationStatus>;
   title?: InputMaybe<Scalars['String']['input']>;
   type: NotificationType;
@@ -4580,7 +4580,7 @@ export type HomeInvite = {
   id: Scalars['ID']['output'];
   invitedUser: Maybe<User>;
   invitedUserId: Maybe<Scalars['ID']['output']>;
-  inviter: User;
+  inviter: Maybe<User>;
   lastReminderAt: Maybe<Scalars['DateTime']['output']>;
   logs: Array<InviteLog>;
   message: Maybe<Scalars['String']['output']>;
@@ -6015,26 +6015,17 @@ export type LoginHistory = {
   device: Maybe<Device>;
   deviceId: Maybe<Scalars['String']['output']>;
   deviceType: Maybe<DeviceType>;
-  failureDetails: Maybe<Scalars['String']['output']>;
   failureReason: Maybe<LoginFailureReason>;
-  flaggedAt: Maybe<Scalars['DateTime']['output']>;
-  flaggedBy: Maybe<User>;
-  flaggedById: Maybe<Scalars['ID']['output']>;
-  flaggedReason: Maybe<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   ipCity: Maybe<Scalars['String']['output']>;
   ipCountry: Maybe<Scalars['String']['output']>;
   ipRegion: Maybe<Scalars['String']['output']>;
   isApiLogin: Scalars['Boolean']['output'];
-  isAutomated: Maybe<Scalars['Boolean']['output']>;
   isMobileApp: Scalars['Boolean']['output'];
   isNewBrowser: Scalars['Boolean']['output'];
   isNewDevice: Scalars['Boolean']['output'];
   isNewLocation: Scalars['Boolean']['output'];
-  isProxy: Maybe<Scalars['Boolean']['output']>;
   isRisky: Scalars['Boolean']['output'];
-  isTor: Maybe<Scalars['Boolean']['output']>;
-  isVpn: Maybe<Scalars['Boolean']['output']>;
   lastActivityAt: Maybe<Scalars['DateTime']['output']>;
   loggedInAt: Scalars['DateTime']['output'];
   loggedOutAt: Maybe<Scalars['DateTime']['output']>;
@@ -6045,13 +6036,8 @@ export type LoginHistory = {
   osVersion: Maybe<Scalars['String']['output']>;
   provider: Maybe<Scalars['String']['output']>;
   requiresMfa: Scalars['Boolean']['output'];
-  reviewed: Maybe<Scalars['Boolean']['output']>;
-  reviewedAt: Maybe<Scalars['DateTime']['output']>;
-  reviewedBy: Maybe<User>;
-  reviewedById: Maybe<Scalars['ID']['output']>;
   sessionDuration: Maybe<Scalars['Int']['output']>;
   success: Scalars['Boolean']['output'];
-  timezoneDiff: Maybe<Scalars['Int']['output']>;
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   userAgent: Maybe<Scalars['String']['output']>;
@@ -10558,13 +10544,13 @@ export type Notification = {
   readAt: Maybe<Scalars['DateTime']['output']>;
   sentAt: Scalars['DateTime']['output'];
   /**
-   * ID of the entity that triggered this notification (e.g. a HomeInvite ID).
-   * Use this to correlate a notification back to its source entity.
-   * Convention: sourceType="HOME_INVITE" means sourceId is a HomeInvite.id.
+   * ID of the entity that triggered this notification. Use it with sourceType
+   * to correlate a notification back to its source row: sourceType names the
+   * model, sourceId is that model's id. Both are set together or neither is.
    */
   sourceId: Maybe<Scalars['String']['output']>;
-  /** Type label for the source entity. Known values: HOME_INVITE, MEMBERSHIP_INVITE, COLLABORATION_INVITE. */
-  sourceType: Maybe<Scalars['String']['output']>;
+  /** Which model sourceId is an id of. Null on notifications with no source row. */
+  sourceType: Maybe<NotificationSourceType>;
   status: NotificationStatus;
   title: Maybe<Scalars['String']['output']>;
   type: NotificationType;
@@ -10662,7 +10648,7 @@ export type NotificationFilters = {
   category?: InputMaybe<NotificationCategory>;
   dateRange?: InputMaybe<DateRangeInput>;
   priority?: InputMaybe<Priority>;
-  sourceType?: InputMaybe<Scalars['String']['input']>;
+  sourceType?: InputMaybe<NotificationSourceType>;
   status?: InputMaybe<NotificationStatus>;
   type?: InputMaybe<NotificationType>;
   unreadOnly?: InputMaybe<Scalars['Boolean']['input']>;
@@ -10721,6 +10707,26 @@ export type NotificationPriorityCount = {
   priority: Priority;
   unreadCount: Scalars['Int']['output'];
 };
+
+/**
+ * Which model a notification's sourceId is an id of.
+ *
+ * Producers always set sourceId and sourceType together, so a notification can
+ * be correlated back to the row that triggered it. Pair the member with the
+ * matching by-id query to fetch the source entity.
+ */
+export enum NotificationSourceType {
+  /** sourceId is a HomeInvite.id. */
+  HomeInvite = 'HOME_INVITE',
+  /** sourceId is a PantryItem.id. */
+  PantryItem = 'PANTRY_ITEM',
+  /** sourceId is a PantryItemBatch.id. */
+  PantryItemBatch = 'PANTRY_ITEM_BATCH',
+  /** sourceId is a ShoppingList.id. */
+  ShoppingList = 'SHOPPING_LIST',
+  /** sourceId is a ShoppingListCollaborator.id. */
+  ShoppingListCollaborator = 'SHOPPING_LIST_COLLABORATOR'
+}
 
 /**
  * Notification statistics
@@ -17298,7 +17304,6 @@ export type User = {
   loginHistoryStats: LoginHistoryStats;
   membershipInHome: Maybe<Membership>;
   membershipsConnection: MembershipConnection;
-  moderation: Maybe<UserModeration>;
   notificationPreferences: Maybe<NotificationPreferences>;
   notificationsConnection: NotificationConnection;
   onBoarded: Scalars['Boolean']['output'];

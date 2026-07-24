@@ -5,6 +5,34 @@ schema {
 }
 
 """
+Mark an OBJECT-TYPE field whose value only an admin may read.
+
+Unlike `@adminSurface` (which widens where a root operation is reachable),
+this NARROWS who may read a value, and it has real build-time behavior:
+`removeAdminFields` strips every `@adminOnly` field from `publicSchema`, so a
+client on the public port cannot even name it. `adminSchema` keeps it.
+
+Removal is defense in depth, not the gate — the same argument the root-field
+split makes: a regression in the resolver check cannot be exploited from the
+public endpoint because the field is not there. The gate itself is an
+`isAdmin(context)` guard in the field resolver, which throws
+`AuthorizationError` for a non-admin caller reaching the field on the admin
+port. Marking a field WITHOUT that guard leaves it readable there; the pair is
+covered by test, not by the type system.
+
+Because the value is either the real one or an error — never a placeholder
+null — an `@adminOnly` field keeps the nullability its column has. Do not
+loosen `T!` to `T` to make room for a soft-null; that publishes a permanently
+null field to every caller and lies about the data.
+
+Example:
+  type LoginHistory {
+    isAutomated: Boolean! @adminOnly
+  }
+"""
+directive @adminOnly on FIELD_DEFINITION
+
+"""
 Mark a root Query/Mutation field as intentionally reachable on the ADMIN
 schema (`:4100`, private network) even though it is not `@requireSystemRole`.
 
@@ -12,8 +40,13 @@ This is a BUILD-TIME SPLIT MARKER ONLY — it has no runtime behavior. No
 directive transformer reads it; the sole consumer is `keepOnlyAdminRootFields`
 in `splitSchema.ts`, which keeps a field on `adminSchema` when it is
 `@requireSystemRole` OR `@adminSurface`. The public schema is unaffected
-(`removeAdminRootFields` still keys on `@requireSystemRole` alone), so a
+(`removeAdminFields` keys on `@requireSystemRole` for root fields), so a
 `@adminSurface` field stays on the public API too.
+
+ROOT FIELDS ONLY, and it WIDENS reach rather than restricting it. For the
+opposite axis — an object-type field whose VALUE only admins may read — use
+`@adminOnly`. Applying `@adminSurface` to an object field does nothing:
+`keepOnlyAdminRootFields` never visits those.
 
 It is NOT an authorization posture and never substitutes for one: a field
 tagged `@adminSurface` MUST still carry `@auth`/`@optionalAuth`/`@public`/
@@ -2394,7 +2427,7 @@ input CreateNotificationInput {
   payload: JSON!
   priority: Priority
   sourceId: String
-  sourceType: String
+  sourceType: NotificationSourceType
   status: NotificationStatus
   title: String
   type: NotificationType!
@@ -4568,7 +4601,7 @@ type HomeInvite {
   id: ID!
   invitedUser: User
   invitedUserId: ID
-  inviter: User!
+  inviter: User
   lastReminderAt: DateTime
   logs(limit: Int): [InviteLog!]!
   message: String
@@ -5929,26 +5962,17 @@ type LoginHistory {
   device: Device
   deviceId: String
   deviceType: DeviceType
-  failureDetails: String
   failureReason: LoginFailureReason
-  flaggedAt: DateTime
-  flaggedBy: User
-  flaggedById: ID
-  flaggedReason: String
   id: ID!
   ipCity: String
   ipCountry: String
   ipRegion: String
   isApiLogin: Boolean!
-  isAutomated: Boolean
   isMobileApp: Boolean!
   isNewBrowser: Boolean!
   isNewDevice: Boolean!
   isNewLocation: Boolean!
-  isProxy: Boolean
   isRisky: Boolean!
-  isTor: Boolean
-  isVpn: Boolean
   lastActivityAt: DateTime
   loggedInAt: DateTime!
   loggedOutAt: DateTime
@@ -5959,13 +5983,8 @@ type LoginHistory {
   osVersion: String
   provider: String
   requiresMfa: Boolean!
-  reviewed: Boolean
-  reviewedAt: DateTime
-  reviewedBy: User
-  reviewedById: ID
   sessionDuration: Int
   success: Boolean!
-  timezoneDiff: Int
   updatedAt: DateTime!
   user: User!
   userAgent: String
@@ -7804,15 +7823,15 @@ type Notification {
   readAt: DateTime
   sentAt: DateTime!
   """
-  ID of the entity that triggered this notification (e.g. a HomeInvite ID).
-  Use this to correlate a notification back to its source entity.
-  Convention: sourceType="HOME_INVITE" means sourceId is a HomeInvite.id.
+  ID of the entity that triggered this notification. Use it with sourceType
+  to correlate a notification back to its source row: sourceType names the
+  model, sourceId is that model's id. Both are set together or neither is.
   """
   sourceId: String
   """
-  Type label for the source entity. Known values: HOME_INVITE, MEMBERSHIP_INVITE, COLLABORATION_INVITE.
+  Which model sourceId is an id of. Null on notifications with no source row.
   """
-  sourceType: String
+  sourceType: NotificationSourceType
   status: NotificationStatus!
   title: String
   type: NotificationType!
@@ -7908,7 +7927,7 @@ input NotificationFilters {
   category: NotificationCategory
   dateRange: DateRangeInput
   priority: Priority
-  sourceType: String
+  sourceType: NotificationSourceType
   status: NotificationStatus
   type: NotificationType
   unreadOnly: Boolean
@@ -7964,6 +7983,26 @@ type NotificationPriorityCount {
   count: Int!
   priority: Priority!
   unreadCount: Int!
+}
+
+"""
+Which model a notification's sourceId is an id of.
+
+Producers always set sourceId and sourceType together, so a notification can
+be correlated back to the row that triggered it. Pair the member with the
+matching by-id query to fetch the source entity.
+"""
+enum NotificationSourceType {
+  """sourceId is a HomeInvite.id."""
+  HOME_INVITE
+  """sourceId is a PantryItem.id."""
+  PANTRY_ITEM
+  """sourceId is a PantryItemBatch.id."""
+  PANTRY_ITEM_BATCH
+  """sourceId is a ShoppingList.id."""
+  SHOPPING_LIST
+  """sourceId is a ShoppingListCollaborator.id."""
+  SHOPPING_LIST_COLLABORATOR
 }
 
 """
@@ -13590,7 +13629,6 @@ type User {
   loginHistoryStats(days: Int = 30): LoginHistoryStats!
   membershipInHome(homeId: ID!): Membership
   membershipsConnection(after: String, before: String, first: Int, last: Int, orderBy: MembershipOrderBy): MembershipConnection!
-  moderation: UserModeration
   notificationPreferences: NotificationPreferences
   notificationsConnection(after: String, before: String, filters: NotificationFilters, first: Int, last: Int, orderBy: NotificationOrderBy): NotificationConnection!
   onBoarded: Boolean!
