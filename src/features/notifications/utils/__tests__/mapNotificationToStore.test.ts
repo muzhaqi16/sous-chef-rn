@@ -1,6 +1,7 @@
 import { mapNotificationToStore } from '../mapNotificationToStore';
 import {
   NotificationCategory,
+  NotificationSourceType,
   NotificationStatus,
   NotificationType,
   Priority,
@@ -20,7 +21,7 @@ const base = {
   sentAt: '2026-01-01T00:00:00Z',
   expiresAt: null,
   sourceId: 'item-9',
-  sourceType: 'PantryItem',
+  sourceType: NotificationSourceType.PantryItem,
   actionUrl: null,
   readAt: null,
 };
