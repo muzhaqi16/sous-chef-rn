@@ -1,4 +1,5 @@
 import React from 'react';
+import type { PressableStateCallbackType } from 'react-native';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -23,7 +24,7 @@ export const NavigationButton: React.FC<NavigationButtonProps> = ({
     <AnimatedPressable
       onPress={action.onPress}
       disabled={action.disabled}
-      style={({ pressed }) => [
+      style={({ pressed }: PressableStateCallbackType) => [
         styles.button,
         !!action.backgroundColor && {
           backgroundColor: action.backgroundColor,

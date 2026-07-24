@@ -338,9 +338,16 @@ const collectAdditionalInfo = async () => {
   const additionalInfo: Partial<DeviceInformation> = {};
 
   try {
-    // Media capabilities for fingerprinting
-    additionalInfo.supportedMediaTypes =
-      await DeviceInfo.getSupportedMediaTypeList().catch(() => undefined);
+    // Media capabilities for fingerprinting. The platform returns one entry per
+    // codec instance, so the raw list repeats each MIME type many times
+    // (video/avc, video/hevc, etc.). This field is a capability set, so collapse
+    // to unique types before reporting.
+    const mediaTypes = await DeviceInfo.getSupportedMediaTypeList().catch(
+      () => undefined,
+    );
+    additionalInfo.supportedMediaTypes = mediaTypes
+      ? [...new Set(mediaTypes)]
+      : undefined;
   } catch (error) {
     logger.warn('Error collecting additional info:', error);
   }

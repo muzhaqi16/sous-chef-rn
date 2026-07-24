@@ -123,9 +123,14 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
         }
       : undefined,
     onTogglePurchase: onTogglePurchase
-      ? (id: string) => {
-          flashListRef.current?.prepareForLayoutAnimationRender();
-          onTogglePurchase(id);
+      ? (id: string, opts?: { withDetails?: boolean }) => {
+          // A long-press ({ withDetails }) opens the purchase-amount sheet and
+          // leaves the row in place, so only arm the layout animation for the
+          // plain toggle, which moves the row to the other tab immediately.
+          if (!opts?.withDetails) {
+            flashListRef.current?.prepareForLayoutAnimationRender();
+          }
+          onTogglePurchase(id, opts);
         }
       : undefined,
     onMoveToPantry,

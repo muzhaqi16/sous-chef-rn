@@ -1,6 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export). This badge is nested inside
+// the row's RNGH Swipeable/Pressable; RNGH's native button captures the tap so
+// it doesn't also fire the row's onPress. An RN Pressable here lives in a
+// separate gesture system and the tap fires both (edit quantity + row navigate).
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { formatQuantity } from '#/utils/formatQuantity';

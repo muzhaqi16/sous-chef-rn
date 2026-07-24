@@ -10,7 +10,11 @@ import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
 import { HapticService } from '#services/haptic/HapticService';
 import { standardEasing, TIMING } from '#/constants/animations';
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export). This checkbox is nested
+// inside the row's RNGH Swipeable/Pressable; RNGH's native button captures the
+// tap so it doesn't propagate to the row's onPress. An RN Pressable here lives
+// in a separate gesture system and the tap fires both (toggle + row navigate).
+import { Pressable } from 'react-native-gesture-handler';
 
 type AnimatedCheckboxProps = {
   checked: boolean;

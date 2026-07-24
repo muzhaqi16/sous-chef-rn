@@ -1,6 +1,9 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
+// RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
+// the row's RNGH Swipeable, so RNGH's native button captures the tap and it
+// doesn't also fire the row's onPress (which would navigate to details).
+import { Pressable } from 'react-native-gesture-handler';
 import { useFragment } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -229,7 +232,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         collapsable={false}
         onLayout={isTutorialArchiveTarget ? handleArchiveIconLayout : undefined}
       >
-        <AppPressable
+        <Pressable
           onPress={() => {
             onMoveToPantry(itemId);
             tutorialActions?.notifyMoveToPantryTapped();
@@ -238,7 +241,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           hitSlop={HIT_SLOP}
         >
           <Icon name="archive-outline" size={24} color={themeColors?.primary} />
-        </AppPressable>
+        </Pressable>
       </View>
     );
 
@@ -287,25 +290,16 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <AnimatedCheckbox
         checked={isPurchased}
         itemId={itemId}
-        // Un-purchasing applies immediately, so let the box flip optimistically.
-        // Marking purchased is a confirmed (deferred) action — don't pre-check
-        // the box; it follows the real state once the purchase is confirmed.
-        optimistic={isPurchased}
         onPress={() => {
-          if (isPurchased) {
-            // Un-purchasing moves the row to the other tab right away — slide it
-            // out, then apply the toggle after the animation.
-            triggerSlide(-1, () => {
-              onTogglePurchase(itemId);
-              tutorialActions?.notifyCheckboxTapped();
-            });
-          } else {
-            // Marking purchased opens a confirmation step; don't remove the row
-            // on tap. The list animates it out when the item actually moves on
-            // confirm (cancel leaves it in place).
+          // A tap toggles purchase immediately: marks the item purchased with
+          // default values, or un-purchases it. Either way the row moves to the
+          // other tab — slide it out first, then apply the toggle after the
+          // animation. Recording actual qty/price is done via a long-press
+          // (opens the purchase-amount sheet), not a tap.
+          triggerSlide(-1, () => {
             onTogglePurchase(itemId);
             tutorialActions?.notifyCheckboxTapped();
-          }
+          });
         }}
         size={28}
         testID={`shopping-item-checkbox-${itemId}`}
@@ -354,7 +348,16 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       <SwipeableItem
         itemId={itemId}
         onPress={onItemPress ? () => onItemPress(itemId) : undefined}
-        onLongPress={onItemPress ? () => onItemPress(itemId) : undefined}
+        // Press-and-hold an unpurchased item to open the purchase-amount sheet
+        // (mark purchased with actual qty/price). Falls back to opening details
+        // for already-purchased rows or when the user can't mark purchased.
+        onLongPress={
+          !isPurchased && canMarkPurchased && onTogglePurchase
+            ? () => onTogglePurchase(itemId, { withDetails: true })
+            : onItemPress
+            ? () => onItemPress(itemId)
+            : undefined
+        }
         onEdit={
           canEditItems && onItemEdit ? () => onItemEdit(itemId) : undefined
         }

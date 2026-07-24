@@ -1,7 +1,12 @@
 import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export). This is the draggable card
+// surface inside RNGH's Swipeable; RN's Pressable doesn't register with RNGH's
+// gesture system, so under v3 it captures the touch and the swipe pan never
+// activates. Matches SwipeActionButton, which uses RNGH's Pressable for the
+// same reason.
+import { Pressable } from 'react-native-gesture-handler';
 import { RIPPLE } from '#constants/ripple';
 
 interface SwipeableContentProps {

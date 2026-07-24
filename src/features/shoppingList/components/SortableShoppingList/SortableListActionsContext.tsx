@@ -16,7 +16,13 @@ export interface SortableListActions {
   onItemPress?: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
+  /**
+   * Toggle an item's purchased state. A plain call marks it purchased with
+   * default values (or un-purchases). Passing `{ withDetails: true }` (from a
+   * long-press) opens the purchase-amount sheet to record actual qty/price
+   * instead — only meaningful for unpurchased items.
+   */
+  onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
@@ -117,7 +123,8 @@ export const SortableListActionsProvider: React.FC<
     onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
     onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
     onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-    onTogglePurchase: (id: string) => actionsRef.current.onTogglePurchase?.(id),
+    onTogglePurchase: (id: string, opts?: { withDetails?: boolean }) =>
+      actionsRef.current.onTogglePurchase?.(id, opts),
     onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
     onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
     onSwipeableWillOpen: (ref: SwipeableRef) =>

@@ -5,7 +5,7 @@ import { env } from '#/config/env';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceId } from '#/utils/deviceId';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
@@ -77,6 +77,12 @@ const WS_CLOSE_SESSION_AUTH = 4403;
 // The server recycles sockets that exceed its max subscription duration.
 // Operational, not an error: reconnect immediately without backoff.
 const WS_CLOSE_DURATION_EXCEEDED = 4410;
+// Deterministic graphql-ws protocol violations: malformed frame (4400),
+// subscribing before connection_ack (4401), unacceptable subprotocol (4406),
+// duplicate operation id (4409). All indicate a client bug — the next attempt
+// sends the same bad frame and closes identically, so reconnecting just
+// hot-loops. Never retry these; only a code change resolves them.
+const WS_CLOSE_PROTOCOL_ERROR_CODES = new Set([4400, 4401, 4406, 4409]);
 // One-shot guard for 4403: set when a close already triggered a token refresh,
 // cleared once a connection proves stable. A second 4403 while set means the
 // freshly refreshed token was rejected too — the session is revoked.
@@ -190,7 +196,13 @@ const createWsClient = () => {
     connectionParams: () => {
       const { accessToken: token } = useStore.getState();
       const apiKey = env.API_KEY;
-      const deviceId = getDeviceIdSync();
+      // Read the persisted id (not the nullable sync cache): this runs once
+      // per connect, and a stable per-install deviceId is what lets the server
+      // supersede our prior connection and reclaim its subscriptions on
+      // reconnect. A null/changing id here forfeits that and leaves the old
+      // subscriptions counting against the per-user cap until the heartbeat
+      // reaps them.
+      const deviceId = getDeviceId();
 
       const params: Record<string, string | undefined> = {};
 
@@ -218,10 +230,23 @@ const createWsClient = () => {
       // genuine auth failure and logs the user out. The socket carries only the
       // access token and reconnects with a fresh one after an HTTP refresh.
 
-      // Include deviceId for subscription self-echo filtering
-      // Server will include this in subscription payloads as originatorClientId
+      // deviceId does double duty: the server echoes it back as
+      // originatorClientId so we can skip our own mutations' subscription
+      // pushes, and it keys connection supersession — a new socket with this
+      // same id terminates the still-tracked predecessor (old socket sees 1006)
+      // and frees its subscriptions immediately.
       if (deviceId) {
         params.deviceId = deviceId;
+      }
+
+      if (__DEV__) {
+        // The deviceId here must be non-null and identical across reloads for
+        // the server to supersede the prior connection; a changing/absent value
+        // means orphaned subscriptions accumulate against the per-user cap.
+        logger.info('🔌 WebSocket connectionParams', {
+          deviceId: deviceId ?? '(none)',
+          hasToken: !!token,
+        });
       }
 
       return params;
@@ -323,8 +348,24 @@ const createWsClient = () => {
           return;
         }
 
-        // Auth error detection: 4500 (legacy), 4401 (new), or 1006+401
-        const isAuthCode = code === 4500 || code === 4401;
+        // Deterministic protocol violations (4400/4401/4406/4409): a client
+        // bug the next attempt reproduces exactly. Stop reconnecting entirely —
+        // backing off would just hot-loop against the same rejection.
+        if (
+          typeof code === 'number' &&
+          WS_CLOSE_PROTOCOL_ERROR_CODES.has(code)
+        ) {
+          shouldAutoReconnect = false;
+          logger.error(
+            `🔌 WebSocket closed: protocol error (${code}: ${reason}) — not retrying`,
+          );
+          return;
+        }
+
+        // Auth error detection: 4500 (connection-time auth rejection, masked as
+        // internal error) or 1006+401. 4401 is NOT auth — it's a protocol
+        // violation handled above.
+        const isAuthCode = code === 4500;
         const is401Rejection = code === 1006 && reason.includes('401');
 
         // Specific auth error reasons from server

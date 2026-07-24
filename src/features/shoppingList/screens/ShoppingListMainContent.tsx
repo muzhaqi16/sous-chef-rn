@@ -174,14 +174,20 @@ export const ShoppingListMainContent: React.FC<
     setSearchQuery,
   });
 
-  // Intercept the checkbox tap: marking an UNpurchased item purchased opens the
-  // pre-filled purchase-amount sheet (Confirm records actual qty/price; Cancel
-  // leaves it unpurchased). Un-purchasing an already-purchased item toggles
-  // directly with no sheet.
-  const handleTogglePurchaseWithSheet = (itemId: string) => {
-    const isUnpurchased = rawUnpurchasedItems.some(item => item.id === itemId);
-    if (isUnpurchased) {
-      purchaseAmount.openForItem(itemId);
+  // A plain checkbox tap marks the item purchased with default values (or
+  // un-purchases) — no sheet. A long-press ({ withDetails: true }) opens the
+  // pre-filled purchase-amount sheet so the user can record the actual
+  // qty/price (Confirm records them; Cancel leaves it unpurchased). The sheet
+  // only applies to unpurchased items; long-press is a no-op otherwise.
+  const handleTogglePurchaseAction = (
+    itemId: string,
+    opts?: { withDetails?: boolean },
+  ) => {
+    if (opts?.withDetails) {
+      const isUnpurchased = rawUnpurchasedItems.some(
+        item => item.id === itemId,
+      );
+      if (isUnpurchased) purchaseAmount.openForItem(itemId);
       return;
     }
     handleTogglePurchase(itemId);
@@ -311,7 +317,7 @@ export const ShoppingListMainContent: React.FC<
 
   const customListProps = {
     // Actions
-    onTogglePurchase: handleTogglePurchaseWithSheet,
+    onTogglePurchase: handleTogglePurchaseAction,
     onMoveToPantry: moveToPantry.openForItem,
     onQuantityPress: quantityEdit.openForItem,
     onSortOrderUpdate: handleSortOrderUpdate,
