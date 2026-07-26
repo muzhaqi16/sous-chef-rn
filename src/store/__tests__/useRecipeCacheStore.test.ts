@@ -67,6 +67,64 @@ describe('useRecipeCacheStore', () => {
     expect(useRecipeCacheStore.getState().getCached('text:old')).toBeNull();
   });
 
+  describe('getOrFetchResults (in-flight de-duplication)', () => {
+    it('runs a single fetch for concurrent callers of the same key', async () => {
+      const store = useRecipeCacheStore.getState();
+      let resolve!: (v: SearchRecipesResult[]) => void;
+      const fetcher = jest.fn(
+        () => new Promise<SearchRecipesResult[]>(r => (resolve = r)),
+      );
+
+      const p1 = store.getOrFetchResults('ingredient:egg', fetcher);
+      const p2 = store.getOrFetchResults('ingredient:egg', fetcher);
+
+      // Second caller latched onto the first request — no duplicate fetch.
+      expect(fetcher).toHaveBeenCalledTimes(1);
+
+      resolve(sampleResults);
+      await expect(p1).resolves.toEqual(sampleResults);
+      await expect(p2).resolves.toEqual(sampleResults);
+    });
+
+    it('re-fetches once the previous request has settled', async () => {
+      const store = useRecipeCacheStore.getState();
+      const fetcher = jest.fn().mockResolvedValue(sampleResults);
+
+      await store.getOrFetchResults('ingredient:egg', fetcher);
+      await store.getOrFetchResults('ingredient:egg', fetcher);
+
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not de-dupe across different keys', async () => {
+      const store = useRecipeCacheStore.getState();
+      const fetcher = jest.fn().mockResolvedValue(sampleResults);
+
+      await Promise.all([
+        store.getOrFetchResults('ingredient:egg', fetcher),
+        store.getOrFetchResults('random:none', fetcher),
+      ]);
+
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+
+    it('clears the in-flight entry on failure so the next call retries', async () => {
+      const store = useRecipeCacheStore.getState();
+      const fetcher = jest
+        .fn()
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(sampleResults);
+
+      await expect(
+        store.getOrFetchResults('ingredient:egg', fetcher),
+      ).rejects.toThrow('boom');
+      await expect(
+        store.getOrFetchResults('ingredient:egg', fetcher),
+      ).resolves.toEqual(sampleResults);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe('cache keys', () => {
     it('normalizes text search keys with sorted filters', () => {
       expect(

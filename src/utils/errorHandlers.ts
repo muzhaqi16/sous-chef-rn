@@ -65,7 +65,7 @@ export const handleVersionConflictAlert = (
   if (handleVersionConflict(error)) {
     alertVersionConflict({
       ...config,
-      customMessage: config.customMessage || getVersionConflictMessage(error),
+      customMessage: config.customMessage || getVersionConflictMessage(),
     });
     return true;
   }
@@ -90,7 +90,7 @@ export const alertVersionConflict = (
 
   alertService.alert(
     getI18n().t('errors.entityUpdatedTitle', { entity }),
-    customMessage || getVersionConflictMessage(undefined),
+    customMessage || getVersionConflictMessage(),
     [
       { text: t('labels.refresh'), onPress: () => onRefresh?.() },
       { text: t('labels.cancel'), style: 'cancel' },

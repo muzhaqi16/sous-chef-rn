@@ -1,9 +1,21 @@
+// 'image/jpg' is accepted from pickers (some Android providers report it) but
+// is NOT a valid upload mime — the API accepts only jpeg/png/webp. Normalize
+// via normalizeImageMimeType before sending to createImageUploadUrl.
 export const ALLOWED_IMAGE_TYPES = [
   'image/jpeg',
   'image/jpg',
   'image/png',
   'image/webp',
 ];
+
+/**
+ * Map a picker-reported mime to the API's accepted set (`image/jpeg`,
+ * `image/png`, `image/webp`). The server validates `createImageUploadUrl.mime`
+ * against exactly that set, so the non-standard `image/jpg` must become
+ * `image/jpeg` before the mutation.
+ */
+export const normalizeImageMimeType = (mimeType: string): string =>
+  mimeType === 'image/jpg' ? 'image/jpeg' : mimeType;
 export const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 export const MAX_PROFILE_SIZE = 2 * 1024 * 1024; // 2MB
 

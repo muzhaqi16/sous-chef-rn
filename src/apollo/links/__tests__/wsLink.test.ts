@@ -47,8 +47,13 @@ jest.mock('#/utils/errorSerialization', () => ({
 
 // Mock deviceId
 jest.mock('#/utils/deviceId', () => ({
+  getDeviceId: jest.fn(() => 'test-device-id'),
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
+
+// The 4403 close handler calls whatever refresh function was registered via
+// registerSessionAuthRefresh (in the app, refreshToken.ts registers
+// proactiveTokenRefresh at module init). Tests register their own mock.
 
 import {
   reconnectWebSocket,
@@ -59,6 +64,7 @@ import {
   getWebSocketState,
   resumeWebSocketAfterOnline,
   onWebSocketReconnected,
+  registerSessionAuthRefresh,
 } from '../wsLink';
 
 describe('wsLink', () => {
@@ -265,6 +271,132 @@ describe('wsLink', () => {
       // A connection that stays open past CONNECTION_STABLE_MS clears it.
       onHandlers.connected({}, undefined);
       jest.advanceTimersByTime(11000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+  });
+
+  // 4403 is the server's mid-stream session re-validation close ("Session
+  // expired" / "Session revoked"). Reconnecting with the same token would be
+  // rejected identically, so the handler must refresh first — and treat a
+  // repeated 4403 as a revoked session.
+  describe('session auth close (4403)', () => {
+    let mockSessionRefresh: jest.Mock;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+      mockSessionRefresh = jest.fn().mockResolvedValue('new-token');
+      registerSessionAuthRefresh(mockSessionRefresh);
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('first 4403 triggers a token refresh and schedules no raw reconnect', () => {
+      onHandlers.closed({
+        code: 4403,
+        reason: 'Session expired',
+        wasClean: true,
+      });
+
+      expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
+
+      // No backoff reconnect from this branch — a successful refresh
+      // reconnects the socket itself with the new token.
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+
+    it('repeated 4403 before a stable connection clears auth (revoked session)', () => {
+      const { useStore } = require('#store');
+      const clearAuth = jest.fn();
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        clearAuth,
+      });
+
+      onHandlers.closed({ code: 4403, reason: 'Session expired' });
+      expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
+
+      // The refreshed token was rejected too — the session is revoked.
+      onHandlers.closed({ code: 4403, reason: 'Session revoked' });
+      expect(clearAuth).toHaveBeenCalledTimes(1);
+      expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
+    });
+
+    it('a connection that survives the stability window re-arms the refresh recovery', () => {
+      const { useStore } = require('#store');
+      const clearAuth = jest.fn();
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        clearAuth,
+      });
+
+      onHandlers.closed({ code: 4403, reason: 'Session expired' });
+
+      // The refreshed token holds a stable connection…
+      onHandlers.connected({}, undefined);
+      jest.advanceTimersByTime(11000);
+
+      // …so a much later 4403 is a fresh expiry: refresh again, no sign-out.
+      onHandlers.closed({ code: 4403, reason: 'Session expired' });
+
+      expect(mockSessionRefresh).toHaveBeenCalledTimes(2);
+      expect(clearAuth).not.toHaveBeenCalled();
+    });
+  });
+
+  // 4410 is the server recycling a socket that exceeded its max subscription
+  // duration — operational, so the reconnect must land at the base delay
+  // instead of an escalated backoff.
+  describe('duration recycle (close 4410)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('reconnects at the base delay even when the backoff counter was escalated', () => {
+      // Escalate the counter via two connect→close cycles.
+      onHandlers.connected({}, undefined);
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+      jest.advanceTimersByTime(31000);
+      onHandlers.closed({ code: 1000, reason: '', wasClean: true });
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThan(1);
+
+      onHandlers.closed({
+        code: 4410,
+        reason: 'Subscription duration exceeded',
+        wasClean: true,
+      });
+
+      // Base delay is 1000ms + up to 25% jitter — the reconnect must fire
+      // within ~1.3s, which only happens if the counter was reset to 0.
+      jest.advanceTimersByTime(1300);
+      expect(getWebSocketState().reconnectAttempts).toBe(1);
+    });
+
+    it('does not reconnect after auto-reconnect is disabled (logout)', () => {
+      disableAutoReconnect();
+      onHandlers.closed({
+        code: 4410,
+        reason: 'Subscription duration exceeded',
+        wasClean: true,
+      });
+      jest.advanceTimersByTime(31000);
       expect(getWebSocketState().reconnectAttempts).toBe(0);
     });
   });

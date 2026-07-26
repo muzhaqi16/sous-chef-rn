@@ -13,6 +13,10 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = join(ROOT, 'src');
 const SKIP_DIRS = new Set(['node_modules', 'generated']);
+// `.generated.ts` files written by something other than graphql-codegen, so
+// they legitimately have no `.graphql` sibling. `env.generated.ts` comes from
+// `scripts/generate-env.js`.
+const SKIP_FILES = new Set([join(SRC, 'config', 'env.generated.ts')]);
 
 function walk(dir, out = []) {
   for (const entry of readdirSync(dir)) {
@@ -21,7 +25,7 @@ function walk(dir, out = []) {
     if (s.isDirectory()) {
       if (SKIP_DIRS.has(entry)) continue;
       walk(full, out);
-    } else if (entry.endsWith('.generated.ts')) {
+    } else if (entry.endsWith('.generated.ts') && !SKIP_FILES.has(full)) {
       out.push(full);
     }
   }

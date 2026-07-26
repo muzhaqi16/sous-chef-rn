@@ -106,7 +106,13 @@ class SpoonacularService {
 
       return data as T;
     } catch (error) {
-      logger.error('Spoonacular API request failed:', error);
+      // Aborts (screen unmount, superseded request) are expected, not failures.
+      // RN's fetch polyfill throws `Error: Aborted` rather than a DOMException
+      // named 'AbortError', so key off the signal the caller controls. Re-throw
+      // either way — callers gate on `signal?.aborted` to ignore the rejection.
+      if (!signal?.aborted) {
+        logger.error('Spoonacular API request failed:', error);
+      }
       throw error;
     }
   }

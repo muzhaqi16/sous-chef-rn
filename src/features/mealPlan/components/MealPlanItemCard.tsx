@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Pressable } from '#components/atoms/themedComponents';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
@@ -57,10 +57,10 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     Array.isArray(usedPantryItems) &&
     usedPantryItems.length > 0;
 
-  // Completion toggle. Uses RN's themed Pressable (like AnimatedCheckbox) — RN's
-  // touch-responder system gives the innermost pressable exclusive capture, so a
-  // tap toggles completion without also firing the row's onPress. (An RNGH
-  // Pressable here lives in a separate gesture system and double-fires both.)
+  // Completion toggle. Uses RNGH's Pressable (like AnimatedCheckbox) because the
+  // row's Swipeable is an RNGH gesture: RNGH's native button captures the tap so
+  // it toggles completion without also firing the row's onPress. An RN Pressable
+  // here lives in a separate gesture system and the tap fires both.
   const checkboxElement = onToggleCompleted ? (
     <Pressable
       onPress={() =>

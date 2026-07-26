@@ -320,6 +320,16 @@ export function useRecipeForm() {
         prepTimeMinutes: parseInt(state.prepTimeMinutes) || undefined,
         cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
       },
+      nutrition: {
+        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+      },
+      dietary: {
+        diets: state.diets.length > 0 ? state.diets : undefined,
+        healthGoals:
+          state.healthGoals.length > 0 ? state.healthGoals : undefined,
+        intolerances:
+          state.intolerances.length > 0 ? state.intolerances : undefined,
+      },
     };
   };
 

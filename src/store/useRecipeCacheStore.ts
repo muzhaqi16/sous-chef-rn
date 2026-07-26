@@ -29,6 +29,7 @@ interface RecipeCacheState {
     enrichment?: Record<number, RecipeInformation>,
     totalResults?: number | null,
   ) => void;
+  getOrFetchResults: <T>(key: string, fetcher: () => Promise<T>) => Promise<T>;
   updateEnrichment: (
     key: string,
     enrichment: Record<number, RecipeInformation>,
@@ -38,6 +39,11 @@ interface RecipeCacheState {
 }
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+// In-flight network requests keyed by cache key, so a second caller for the
+// same search latches onto the existing request instead of firing a duplicate.
+// Ephemeral (not reactive, not persisted) — cleared as each request settles.
+const inflightRequests = new Map<string, Promise<unknown>>();
 
 /** Build a normalized cache key for ingredient-based searches */
 export function ingredientCacheKey(ingredients: string): string {
@@ -132,6 +138,22 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
         });
       },
 
+      // De-dupe concurrent fetches for the same key. If a request for `key` is
+      // already in flight (e.g. the screen was unmounted and remounted before
+      // it resolved), return that same promise instead of starting a second
+      // network call. The request runs to completion regardless of unmount, so
+      // its caller can warm the cache — no wasted work, no wasted API quota.
+      getOrFetchResults: (key, fetcher) => {
+        const existing = inflightRequests.get(key);
+        if (existing) return existing as ReturnType<typeof fetcher>;
+
+        const promise = fetcher().finally(() => {
+          inflightRequests.delete(key);
+        });
+        inflightRequests.set(key, promise);
+        return promise;
+      },
+
       updateEnrichment: (key, enrichment) => {
         set(state => {
           const existing = state.cache[key];
@@ -154,10 +176,15 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
         });
       },
 
-      clearAllCache: () =>
+      clearAllCache: () => {
+        // Forget in-flight de-dupe tracking too: a full reset (e.g. logout)
+        // shouldn't let a stale pending request block a fresh fetch. This only
+        // drops the tracking entry — it can't cancel an already-issued request.
+        inflightRequests.clear();
         set(state => {
           state.cache = {};
-        }),
+        });
+      },
     })),
     {
       name: 'recipe-search-cache',

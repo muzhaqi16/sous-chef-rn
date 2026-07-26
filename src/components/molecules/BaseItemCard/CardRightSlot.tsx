@@ -1,6 +1,10 @@
 import React from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export): the counter/drag-handle
+// buttons can be rendered inside a BaseItemCard Swipeable, and RN's Pressable
+// doesn't coordinate with RNGH's gesture arena (swipe blocks / tap double-fires
+// the row). See the SwipeableItem convention in CLAUDE.md.
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import type { CardRightSlotProps } from './types';

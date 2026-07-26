@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { SelectPantryItems } from '../SelectPantryItems';
 
@@ -252,5 +252,43 @@ describe('SelectPantryItems', () => {
     expect(
       await screen.findByTestId('onboarding-select-pantry-items-screen'),
     ).toBeTruthy();
+  });
+
+  it('treats a DuplicatePantryItemError on the bulk add as a per-item skip', async () => {
+    // The list is pre-filtered against existing catalog ids, but a race
+    // (another device adding the same item) can still return the duplicate
+    // member. The item is already in the pantry — the onboarding goal — so
+    // the flow must proceed without surfacing an error.
+    const { useSelectableItems } = jest.requireMock(
+      '#hooks/useSelectableItems',
+    );
+    useSelectableItems.mockReturnValue({
+      items: mockItems,
+      selectedItems: [mockItems[0]],
+      toggleItem: jest.fn(),
+      isMaxReached: false,
+    });
+
+    renderWithApollo(<SelectPantryItems />, {
+      mocks: {
+        ...onboardingMocks,
+        Mutation: () => ({
+          createPantryItem: {
+            __typename: 'DuplicatePantryItemError',
+            message: 'Item already exists in this pantry',
+            code: 'PANTRY_ITEM_ALREADY_EXISTS',
+            existingPantryItemIds: ['existing-1'],
+          },
+        }),
+      },
+    });
+
+    fireEvent.press(await screen.findByTestId('action-button'));
+
+    await waitFor(() => {
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('SelectPantryItems');
+    });
+    const { errorService } = jest.requireMock('#/services/errorService');
+    expect(errorService.reportError).not.toHaveBeenCalled();
   });
 });

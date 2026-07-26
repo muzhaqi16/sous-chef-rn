@@ -35,12 +35,13 @@ const baseOptions = {
   fetch: createTimeoutFetch(apiConfig.timeout),
 };
 
-// GraphQL batching — opt-in via env flag (default off). When enabled, multiple
-// concurrent operations are coalesced into a single POST as a JSON array. The
-// server must support array-bodied POST requests at /graphql; if it doesn't,
-// every operation will fail. Subscriptions are unaffected (routed via wsLink).
-// File-upload mutations (if added later) need `context: { batchMax: 1 }` to
-// bypass batching and send a multipart request individually.
+// GraphQL batching — opt-in via env flag (default off). DO NOT ENABLE against
+// the sous-chef API: it sets `allowBatchedHttpRequests: false` (verified in
+// apps/api/src/main.ts — deliberate, for rate-limit integrity and a
+// Cache-Control leak in batched responses), so every array-bodied POST is
+// rejected. The bandwidth win is covered server-side by APQ (see
+// persistedQueryLink) + HTTP/2 multiplexing. The flag stays only for
+// hypothetical use against a server that accepts array bodies.
 const batchEnabled = env.GRAPHQL_BATCH_ENABLED === 'true';
 
 export const httpLink: ApolloLink = batchEnabled

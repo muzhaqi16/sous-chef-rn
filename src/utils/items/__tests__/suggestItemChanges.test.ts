@@ -184,8 +184,42 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changes.packageInfo).toEqual({ netWeight: 750 });
   });
 
-  // media.images is a set-replace that drops every row it omits, and photos
-  // already go live additively via confirmItemImageUpload.
+  // A unit the catalog doesn't have comes back from the picker with no unitId.
+  // The server resolves displayUnitName find-or-create, so the change has to
+  // travel by name or it is silently lost.
+  it('falls back to displayUnitName when the unit was free-typed', () => {
+    const diff = buildSuggestibleItemChanges(
+      snapshot(),
+      unchangedForm({ netWeights: [{ value: 500, unitName: 'punnet' }] }),
+    );
+
+    expect(diff.changes.packageInfo).toEqual({ displayUnitName: 'punnet' });
+    expect(diff.changedFields).toContain('packageInfo.displayUnitName');
+  });
+
+  it('prefers displayUnitId over the name when the picker resolved the unit', () => {
+    const diff = buildSuggestibleItemChanges(
+      snapshot(),
+      unchangedForm({
+        netWeights: [{ value: 500, unitName: 'ounce', unitId: 'unit-oz' }],
+      }),
+    );
+
+    expect(diff.changes.packageInfo).toEqual({ displayUnitId: 'unit-oz' });
+    expect(diff.changes.packageInfo).not.toHaveProperty('displayUnitName');
+  });
+
+  it('does not treat a re-typed identical unit name as a change', () => {
+    const diff = buildSuggestibleItemChanges(
+      snapshot(),
+      unchangedForm({ netWeights: [{ value: 500, unitName: 'gram' }] }),
+    );
+
+    expect(diff.hasChanges).toBe(false);
+  });
+
+  // Photos go live additively via confirmItemImageUpload without waiting for
+  // review, so the diff has no reason to carry them.
   it('never includes media, even when an image is present', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),

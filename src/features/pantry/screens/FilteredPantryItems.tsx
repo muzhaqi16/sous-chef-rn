@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
+// RNGH's Pressable (not AppPressable/RN) for the cart button: it's nested in
+// the row's RNGH Swipeable, so RNGH's native button captures the tap and it
+// doesn't also fire the row's onPress (which navigates to the item).
+import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -203,7 +206,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
 
   const cartButton =
     showCart && handleAddToList ? (
-      <AppPressable
+      <Pressable
         onPress={() =>
           handleAddToList(item.id, {
             itemName: item.itemName,
@@ -213,7 +216,7 @@ const FilteredRenderItemComponent: React.FC<FilteredRenderItemProps> = ({
         style={styles.actionButton}
       >
         <Icon name="cart-outline" size={20} tone="primary" />
-      </AppPressable>
+      </Pressable>
     ) : null;
 
   return (

@@ -5,7 +5,7 @@ import { env } from '#/config/env';
 import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
-import { getDeviceIdSync } from '#/utils/deviceId';
+import { getDeviceId } from '#/utils/deviceId';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
@@ -70,6 +70,36 @@ const CONNECTION_STABLE_MS = 10_000;
 // Close code the server uses to refuse a build below its configured minimum
 // version. Terminal: the same build reconnecting sends the same version.
 const WS_CLOSE_CLIENT_UPGRADE_REQUIRED = 4411;
+// Mid-stream session re-validation close. Reason is "Session expired" (refresh
+// the token, then reconnect) or "Session revoked" (re-authenticate) — plain
+// reconnection sends the same rejected token and closes identically.
+const WS_CLOSE_SESSION_AUTH = 4403;
+// The server recycles sockets that exceed its max subscription duration.
+// Operational, not an error: reconnect immediately without backoff.
+const WS_CLOSE_DURATION_EXCEEDED = 4410;
+// Deterministic graphql-ws protocol violations: malformed frame (4400),
+// subscribing before connection_ack (4401), unacceptable subprotocol (4406),
+// duplicate operation id (4409). All indicate a client bug — the next attempt
+// sends the same bad frame and closes identically, so reconnecting just
+// hot-loops. Never retry these; only a code change resolves them.
+const WS_CLOSE_PROTOCOL_ERROR_CODES = new Set([4400, 4401, 4406, 4409]);
+// One-shot guard for 4403: set when a close already triggered a token refresh,
+// cleared once a connection proves stable. A second 4403 while set means the
+// freshly refreshed token was rejected too — the session is revoked.
+let sessionAuthRefreshAttempted = false;
+
+// The 4403 recovery needs proactiveTokenRefresh, but refreshToken.ts already
+// statically imports this module (reconnectWebSocket) — importing it back
+// would be a cycle. refreshToken.ts registers the function here at its module
+// init instead; it is always loaded before any socket exists (errorLink pulls
+// it into the link chain).
+let sessionAuthTokenRefresh: (() => Promise<string | null>) | null = null;
+export const registerSessionAuthRefresh = (
+  refresh: () => Promise<string | null>,
+): void => {
+  sessionAuthTokenRefresh = refresh;
+};
+
 let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 const clearConnectionStableTimer = () => {
@@ -166,7 +196,13 @@ const createWsClient = () => {
     connectionParams: () => {
       const { accessToken: token } = useStore.getState();
       const apiKey = env.API_KEY;
-      const deviceId = getDeviceIdSync();
+      // Read the persisted id (not the nullable sync cache): this runs once
+      // per connect, and a stable per-install deviceId is what lets the server
+      // supersede our prior connection and reclaim its subscriptions on
+      // reconnect. A null/changing id here forfeits that and leaves the old
+      // subscriptions counting against the per-user cap until the heartbeat
+      // reaps them.
+      const deviceId = getDeviceId();
 
       const params: Record<string, string | undefined> = {};
 
@@ -194,10 +230,23 @@ const createWsClient = () => {
       // genuine auth failure and logs the user out. The socket carries only the
       // access token and reconnects with a fresh one after an HTTP refresh.
 
-      // Include deviceId for subscription self-echo filtering
-      // Server will include this in subscription payloads as originatorClientId
+      // deviceId does double duty: the server echoes it back as
+      // originatorClientId so we can skip our own mutations' subscription
+      // pushes, and it keys connection supersession — a new socket with this
+      // same id terminates the still-tracked predecessor (old socket sees 1006)
+      // and frees its subscriptions immediately.
       if (deviceId) {
         params.deviceId = deviceId;
+      }
+
+      if (__DEV__) {
+        // The deviceId here must be non-null and identical across reloads for
+        // the server to supersede the prior connection; a changing/absent value
+        // means orphaned subscriptions accumulate against the per-user cap.
+        logger.info('🔌 WebSocket connectionParams', {
+          deviceId: deviceId ?? '(none)',
+          hasToken: !!token,
+        });
       }
 
       return params;
@@ -226,6 +275,9 @@ const createWsClient = () => {
         connectionStableTimeoutId = setTimeout(() => {
           connectionStableTimeoutId = null;
           reconnectAttempts = 0;
+          // The connection held with the current token — a future 4403 is a
+          // fresh expiry, so the refresh-then-reconnect recovery re-arms.
+          sessionAuthRefreshAttempted = false;
         }, CONNECTION_STABLE_MS);
 
         if (__DEV__) {
@@ -261,8 +313,59 @@ const createWsClient = () => {
           return;
         }
 
-        // Auth error detection: 4500 (legacy), 4401 (new), or 1006+401
-        const isAuthCode = code === 4500 || code === 4401;
+        // Mid-stream session-auth close. First 4403: refresh the token — a
+        // successful refresh reconnects the socket itself (performTokenRefresh
+        // → reconnectWebSocket), so nothing else is scheduled here. Repeated
+        // 4403 before the connection ever proved stable: the refreshed token
+        // was rejected too, i.e. the session is revoked — end the session
+        // instead of hot-looping reconnects the server will keep closing.
+        if (code === WS_CLOSE_SESSION_AUTH) {
+          if (!sessionAuthRefreshAttempted) {
+            sessionAuthRefreshAttempted = true;
+            logger.info(
+              `🔌 WebSocket closed: session auth (4403: ${reason}) — refreshing token`,
+            );
+            sessionAuthTokenRefresh?.().catch(() => {
+              // Refresh failed — reactive HTTP refresh recovers on the next
+              // request and reconnects the socket then.
+            });
+          } else {
+            logger.error(
+              '🔌 WebSocket closed: repeated 4403 — session revoked, signing out',
+            );
+            useStore.getState().clearAuth();
+          }
+          return;
+        }
+
+        // Duration recycle: dial straight back (reset the backoff counter so
+        // the reconnect lands at the base delay, not an escalated one).
+        if (code === WS_CLOSE_DURATION_EXCEEDED) {
+          if (shouldAutoReconnect) {
+            reconnectAttempts = 0;
+            scheduleReconnect();
+          }
+          return;
+        }
+
+        // Deterministic protocol violations (4400/4401/4406/4409): a client
+        // bug the next attempt reproduces exactly. Stop reconnecting entirely —
+        // backing off would just hot-loop against the same rejection.
+        if (
+          typeof code === 'number' &&
+          WS_CLOSE_PROTOCOL_ERROR_CODES.has(code)
+        ) {
+          shouldAutoReconnect = false;
+          logger.error(
+            `🔌 WebSocket closed: protocol error (${code}: ${reason}) — not retrying`,
+          );
+          return;
+        }
+
+        // Auth error detection: 4500 (connection-time auth rejection, masked as
+        // internal error) or 1006+401. 4401 is NOT auth — it's a protocol
+        // violation handled above.
+        const isAuthCode = code === 4500;
         const is401Rejection = code === 1006 && reason.includes('401');
 
         // Specific auth error reasons from server
@@ -418,6 +521,7 @@ export const disableAutoReconnect = () => {
   }
   clearConnectionStableTimer();
   reconnectAttempts = 0;
+  sessionAuthRefreshAttempted = false;
 };
 
 /**

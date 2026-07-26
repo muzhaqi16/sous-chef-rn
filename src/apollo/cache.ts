@@ -527,7 +527,7 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
 export function makeCache(): InMemoryCache {
   const cache = new InMemoryCache({
     // Configure possibleTypes for proper fragment matching on interfaces
-    // This ensures Apollo can correctly normalize types implementing Node, Connection, Edge, Timestamped
+    // This ensures Apollo can correctly normalize types implementing Node, Connection, Edge
     possibleTypes: fragmentMatcherData.possibleTypes,
 
     typePolicies: {

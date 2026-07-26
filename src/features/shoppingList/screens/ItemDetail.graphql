@@ -17,10 +17,6 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   updatedAt
   priceEstimate {
     estimated
-    lastKnown
-    average
-    lowest
-    highest
   }
   storeInfo {
     preferredStore {

@@ -164,6 +164,37 @@ describe('SpoonacularService', () => {
       ).rejects.toThrow('Spoonacular API error');
     });
 
+    it('re-throws aborts without logging an error', async () => {
+      const controller = new AbortController();
+      controller.abort();
+      // RN's fetch polyfill rejects with `Error: Aborted`, not a DOMException.
+      mockFetch.mockRejectedValue(new Error('Aborted'));
+
+      await expect(
+        spoonacularService.searchRecipesByIngredients(
+          { ingredients: 'chicken' },
+          controller.signal,
+        ),
+      ).rejects.toThrow('Aborted');
+
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('logs genuine (non-abort) network failures', async () => {
+      mockFetch.mockRejectedValue(new Error('Network down'));
+
+      await expect(
+        spoonacularService.searchRecipesByIngredients({
+          ingredients: 'chicken',
+        }),
+      ).rejects.toThrow('Network down');
+
+      expect(logger.error).toHaveBeenCalledWith(
+        'Spoonacular API request failed:',
+        expect.any(Error),
+      );
+    });
+
     it('402 status sets isQuotaExceeded flag', async () => {
       mockFetch.mockResolvedValue({
         ok: false,

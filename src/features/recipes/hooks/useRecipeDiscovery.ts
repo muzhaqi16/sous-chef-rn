@@ -182,25 +182,31 @@ async function fetchPantryDiscovery(
 
   await executeWithLoadingState(
     async () => {
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients: ingredientNames,
-        number: DISCOVERY_FETCH_SIZE,
-        ranking: 1,
-        ignorePantry: true,
-      });
-      if (signal?.aborted) return;
+      // Run to completion (no abort signal) and de-dupe against any request
+      // already in flight for this key, so navigating away mid-fetch neither
+      // wastes the in-flight request nor lets a remount fire a duplicate.
+      const results = await cacheStore.getOrFetchResults(cacheKey, () =>
+        spoonacularService.searchRecipesByIngredients({
+          ingredients: ingredientNames,
+          number: DISCOVERY_FETCH_SIZE,
+          ranking: 1,
+          ignorePantry: true,
+        }),
+      );
 
-      // Cache the raw results (enrichment added later via updateEnrichment)
+      // Warm the shared cache before the abort guard: the result is valid for
+      // this key regardless of whether this mount still needs it, so a later
+      // visit gets a cache hit (enrichment added later via updateEnrichment).
       cacheStore.setCached(cacheKey, results);
 
+      // Only the on-screen state updates are gated on the signal — a late
+      // response must not overwrite what the current mount is showing.
+      if (signal?.aborted) return;
       onResults(results);
       updateState({ mode: 'pantry' });
     },
     guardedSetLoading,
     (error: unknown) => {
-      // Aborts are expected (screen unmount / dietary-tag change). The error
-      // name varies by fetch polyfill — RN's throws `Error: Aborted`, not a
-      // DOMException named 'AbortError' — so key off the signal, not the shape.
       if (signal?.aborted) return;
       errorService.reportError(error, {
         operation: 'fetchPantryBasedRecipes',
@@ -234,19 +240,24 @@ async function fetchRandomDiscovery(
 
   await executeWithLoadingState(
     async () => {
-      const results = await spoonacularService.getRandomRecipes(
-        { number: DISCOVERY_FETCH_SIZE, tags: dietaryTags },
-        signal,
+      // Complete in the background + de-dupe concurrent callers (see
+      // fetchPantryDiscovery). No abort signal: a client-side abort can't
+      // refund the Spoonacular quota already spent on the in-flight request,
+      // so discarding it would only pay a second unit on the next visit.
+      const results = await cacheStore.getOrFetchResults(cacheKey, () =>
+        spoonacularService.getRandomRecipes({
+          number: DISCOVERY_FETCH_SIZE,
+          tags: dietaryTags,
+        }),
       );
-      if (signal?.aborted) return;
 
       cacheStore.setCached(cacheKey, results);
+      if (signal?.aborted) return;
       onResults(results);
       updateState({ mode: 'random' });
     },
     guardedSetLoading,
     (error: unknown) => {
-      // See fetchPantryDiscovery: aborts are expected; key off the signal.
       if (signal?.aborted) return;
       errorService.reportError(error, { operation: 'fetchRandomRecipes' });
     },

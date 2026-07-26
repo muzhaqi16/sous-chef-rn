@@ -104,4 +104,35 @@ describe('classifyError — ReplayRejectedError', () => {
     expect(queueError.code).toBe('ValidationError');
     expect(queueError.message).toBe('the coupon has expired');
   });
+
+  it('defers a DEADLOCK conflict as a retryable server error', () => {
+    // The API documents DEADLOCK as a transient lock conflict ("safe to
+    // retry") — the entry must stay queued for the next drain instead of
+    // being reverted + dequeued like a genuine refusal.
+    const error = new ReplayRejectedError(
+      'ConflictError',
+      'Transient lock conflict, safe to retry',
+      'DEADLOCK',
+    );
+
+    const queueError = classifyError(error);
+
+    expect(queueError.type).toBe('server');
+    expect(queueError.retryable).toBe(true);
+    expect(queueError.code).toBe('DEADLOCK');
+  });
+
+  it('keeps a non-DEADLOCK ConflictError permanently rejected', () => {
+    const error = new ReplayRejectedError(
+      'ConflictError',
+      'You already reviewed this recipe',
+      'CONFLICT',
+    );
+
+    const queueError = classifyError(error);
+
+    expect(queueError.type).toBe('unknown');
+    expect(queueError.retryable).toBe(false);
+    expect(queueError.code).toBe('ConflictError');
+  });
 });

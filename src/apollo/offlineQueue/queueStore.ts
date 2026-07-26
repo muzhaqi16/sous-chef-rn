@@ -3,6 +3,7 @@ import { storage } from '#storage/mmkv';
 import {
   QueueCapacityError,
   QueuedMutation,
+  QueueError,
   QueueStats,
   QueueStatus,
 } from './types';
@@ -15,6 +16,13 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
 const MAX_QUEUE_SIZE = 100;
+
+// The server prunes its idempotency-dedup records after 90 days
+// (docs/api/offline-sync.md "Sync queued cumulative ops within 90 days").
+// Replaying an idempotency-keyed op past that horizon would double-apply —
+// the dedup row that would classify it IDEMPOTENT_REPLAY no longer exists —
+// so PENDING entries older than this are marked FAILED instead of replayed.
+const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 /**
  * On-disk shape of a queued mutation: identical to {@link QueuedMutation}
@@ -323,6 +331,52 @@ export class QueueStore {
       );
     }
     return reset;
+  }
+
+  /**
+   * Mark PENDING entries older than the server's 90-day idempotency-dedup
+   * horizon as FAILED so they surface through the normal failure UX instead
+   * of replaying into a potential double-apply. Runs at drain start (before
+   * replay ordering) — expiry is age-based, so a FIFO queue can only expire
+   * a prefix, never punch a hole mid dependency chain. Returns the number of
+   * entries expired.
+   */
+  expireStalePending(userId: string): number {
+    const queue = this.loadQueue();
+    const cutoff = Date.now() - MAX_PENDING_AGE_MS;
+    let expired = 0;
+    const updated = queue.map(m => {
+      if (
+        m.userId !== userId ||
+        m.status !== QueueStatus.PENDING ||
+        m.createdAt > cutoff
+      ) {
+        return m;
+      }
+      expired++;
+      const lastError: QueueError = {
+        type: 'unknown',
+        message:
+          'Queued change expired: older than the 90-day offline sync window',
+        code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
+        timestamp: Date.now(),
+        retryable: false,
+      };
+      return {
+        ...m,
+        status: QueueStatus.FAILED,
+        updatedAt: Date.now(),
+        lastError,
+      };
+    });
+
+    if (expired > 0) {
+      this.saveQueue(updated);
+      logger.warn(
+        `🧹 Queue: Expired ${expired} PENDING mutation(s) past the 90-day sync window`,
+      );
+    }
+    return expired;
   }
 
   /**

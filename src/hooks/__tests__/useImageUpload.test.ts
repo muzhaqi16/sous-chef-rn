@@ -2,7 +2,10 @@
 
 import { act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ConfirmItemImageUploadDocument,
@@ -284,6 +287,77 @@ describe('useImageUpload', () => {
       const uploaded = await runUpload();
 
       expect(uploaded).toBe('https://cdn.test/a.jpg');
+    });
+
+    // Creating an upload target is rate limited per user. That refusal is a
+    // top-level GraphQL error, not a member of the result union, so it reaches
+    // the hook with no payload — the generic "upload failed" copy would throw
+    // away the retryAfter the user needs to know when to try again.
+    it('surfaces the presign rate limit with its retry window', async () => {
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [
+          {
+            request: {
+              query: CreateImageUploadUrlDocument,
+              variables: () => true,
+            },
+            result: {
+              errors: [
+                {
+                  message: 'Too many requests',
+                  extensions: {
+                    code: 'OPERATION_RATE_LIMITED',
+                    retryAfter: 30,
+                  },
+                },
+              ],
+            },
+          } as MockedResponse,
+        ],
+      });
+
+      let uploaded: ItemUploadResult = null;
+      await act(async () => {
+        uploaded = await result.current.uploadItemImage(file, 'item-1');
+      });
+
+      expect(uploaded).toBeNull();
+      expect(mockXhr.open).not.toHaveBeenCalled();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.stringContaining('30'),
+      );
+    });
+
+    it("normalizes a picker-reported 'image/jpg' to 'image/jpeg' in the presign mime", async () => {
+      // Some Android providers report the non-standard 'image/jpg'; the API
+      // accepts only image/jpeg | image/png | image/webp and rejects the raw
+      // value with a ValidationError.
+      const { mock, fired } = recordMock(CreateImageUploadUrlDocument, {
+        data: {
+          createImageUploadUrl: {
+            __typename: 'CreateImageUploadUrlPayload',
+            url: 'https://storage.test/bucket',
+            key: 'items/i1/a',
+            fields: PRESIGN_FIELDS,
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [mock, buildConfirmItemMock('https://cdn.test/a.jpg')],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(
+          { ...file, type: 'image/jpg' },
+          'item-1',
+        );
+      });
+
+      expect(fired).toContainEqual({
+        input: expect.objectContaining({ mime: 'image/jpeg' }),
+      });
     });
   });
 

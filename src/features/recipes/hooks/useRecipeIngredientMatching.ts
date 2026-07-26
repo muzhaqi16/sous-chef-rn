@@ -233,6 +233,16 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       payload?.__typename === 'ConfirmRecipeConsumptionPayload'
         ? payload
         : null;
+    // Replay diagnostics: `converged: true` means this whole confirmation had
+    // already committed (idempotent replay). A fresh commit — including one
+    // that healed leftover items from a partially-crashed earlier attempt —
+    // reports false, so only `true` is logged.
+    if (data?.converged) {
+      logger.info(
+        'confirmRecipeConsumption converged — replay of a committed confirmation',
+        { recipeId },
+      );
+    }
     if (data) {
       toastService.success(
         data.totalFailed > 0

@@ -125,6 +125,18 @@ export function buildDirtyUpdateInput(
   if (dirtyFields.netWeightUnit || dirtyFields.netWeightUnitId) {
     netWeightInput.netWeightUnitId = data.netWeightUnitId || null;
   }
+  // API rule on update: a value without a unit is allowed, but a unit without
+  // a value is rejected. Setting a unit therefore always sends the effective
+  // weight value alongside it; with no value to attach it to, the unit change
+  // is dropped rather than sent alone.
+  if (netWeightInput.netWeightUnitId) {
+    if (netWeightInput.netWeight === undefined && data.netWeight) {
+      netWeightInput.netWeight = parseFloat(data.netWeight);
+    }
+    if (netWeightInput.netWeight == null) {
+      delete netWeightInput.netWeightUnitId;
+    }
+  }
   if (Object.keys(netWeightInput).length > 0) {
     input.netWeight = netWeightInput;
   }

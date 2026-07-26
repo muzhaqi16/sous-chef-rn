@@ -42,6 +42,7 @@ jest.mock('#/storage/mmkv');
 // Mock wsLink dynamic import
 jest.mock('../links/wsLink', () => ({
   disposeWebSocket: jest.fn(),
+  registerSessionAuthRefresh: jest.fn(),
 }));
 
 // ---------------------------------------------------------------------------

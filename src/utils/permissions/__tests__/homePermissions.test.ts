@@ -34,6 +34,39 @@ describe('getInvitableRoles', () => {
   it('returns empty array for unknown role', () => {
     expect(getInvitableRoles('UNKNOWN' as MembershipRole)).toEqual([]);
   });
+
+  // Mirrors the API's invite rule: OWNER/ADMIN may always invite; the
+  // canInviteOthers flag only escalates (or blocks) MEMBER.
+  describe('canInviteOthers flag', () => {
+    it('explicitly false blocks Member invites', () => {
+      expect(getInvitableRoles(MembershipRole.Member, false)).toEqual([]);
+    });
+
+    it('explicitly false does NOT block Admin invites', () => {
+      expect(getInvitableRoles(MembershipRole.Admin, false)).toEqual([
+        MembershipRole.Member,
+        MembershipRole.Admin,
+      ]);
+    });
+
+    it('explicitly false does NOT block Owner invites', () => {
+      expect(getInvitableRoles(MembershipRole.Owner, false)).toEqual([
+        MembershipRole.Guest,
+        MembershipRole.Member,
+        MembershipRole.Admin,
+      ]);
+    });
+
+    it('true grants Member invites', () => {
+      expect(getInvitableRoles(MembershipRole.Member, true)).toEqual([
+        MembershipRole.Member,
+      ]);
+    });
+
+    it('never grants Guest invites', () => {
+      expect(getInvitableRoles(MembershipRole.Guest, true)).toEqual([]);
+    });
+  });
 });
 
 describe('canInviteToHome', () => {

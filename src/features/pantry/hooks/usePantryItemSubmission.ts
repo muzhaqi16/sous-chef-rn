@@ -231,9 +231,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         storageNotes: storageNotes.trim() || undefined,
       },
       purchase,
-      expiresAt: expirationDate
-        ? expirationDate.toISOString().split('T')[0]
-        : undefined,
+      // Full ISO DateTime — the schema scalar is DateTime and every other
+      // write path sends the complete timestamp (a bare date relies on
+      // unspecified server coercion).
+      expiresAt: expirationDate ? expirationDate.toISOString() : undefined,
       tags: tags
         ? tags
             .split(',')

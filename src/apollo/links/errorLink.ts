@@ -15,6 +15,7 @@ import { CLIENT_VERSION } from '../clientIdentity';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
+import { useStore } from '#store';
 
 // Utility functions for error detection
 // Note: FORBIDDEN is intentionally NOT included here - it's a resource access error, not an auth error
@@ -27,10 +28,24 @@ const isAuthError = (code: string, msg: string) =>
   );
 
 // FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't have access to the resource
-// — not an auth issue (no token refresh). AUTHZ_FORBIDDEN is the API's current
-// code; FORBIDDEN is the legacy alias still emitted by some resolvers.
+// — not an auth issue (no token refresh). Both codes are current, on different
+// channels: FORBIDDEN is what the mutation result-union member (errors-as-data)
+// and the @auth directive emit; AUTHZ_FORBIDDEN is the top-level
+// `extensions.code` on rejected reads. Both branches are load-bearing.
 const isResourceAccessError = (code: string) =>
   code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN';
+
+// The @auth directive rejects EVERY field for a suspended, banned, or deleted
+// account: the credentials are valid but the account may not transact. That is
+// not a resource-access denial, so it gets its own code and ends the session.
+//
+// `AUTH_ACCOUNT_SUSPENDED` is the current signal. Servers predating it emit
+// FORBIDDEN with a prose `reason` instead, which the second branch matches so
+// the session still ends against an older API. The server documents that
+// wording as non-contractual, so drop the fallback once every deployed
+// environment serves the code.
+const isAccountInactiveError = (code: string, reason: string) =>
+  code === 'AUTH_ACCOUNT_SUSPENDED' || /suspended or deleted/i.test(reason);
 
 const isApiKeyError = (code: string, msg: string) =>
   ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
@@ -79,6 +94,18 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       if (isApiKeyError(code, message)) {
         logger.error('API Key error:', message);
         continue;
+      }
+
+      // Checked before the resource-access branch: the legacy fallback arrives
+      // as FORBIDDEN, so testing it after that branch would `continue` past it.
+      // Staying "logged in" would strand the user on cached data with every
+      // request failing, so end the session and land them on sign-in.
+      if (isAccountInactiveError(code, String(err.extensions?.reason || ''))) {
+        logger.error(
+          `Account inactive (${operation.operationName}) — ending session`,
+        );
+        useStore.getState().clearAuth();
+        return;
       }
 
       if (isResourceAccessError(code)) {

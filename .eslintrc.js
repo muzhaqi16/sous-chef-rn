@@ -249,6 +249,62 @@ module.exports = {
         'no-restricted-imports': 'off',
       },
     },
+    {
+      // The shared Swipeable surface must use ONLY RNGH's Pressable. RN's
+      // Pressable (the themedComponents re-export), AppPressable, and
+      // PressableScale all wrap RN's Pressable, which lives in a separate
+      // gesture system from RNGH — using them here blocks the swipe pan or
+      // double-fires the row (the exact 2026-05 regression). This override
+      // replaces the base no-restricted-imports for this leaf dir, so it
+      // re-declares the relevant base bans (RN touchables/StyleSheet/Text,
+      // useMemo/useCallback) and layers the RN-Pressable-wrapper bans on top.
+      files: ['src/components/molecules/SwipeableItem/**/*.{ts,tsx}'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: 'react-native',
+                importNames: [
+                  'StyleSheet',
+                  'Text',
+                  'Pressable',
+                  'TouchableOpacity',
+                  'TouchableHighlight',
+                  'TouchableNativeFeedback',
+                  'TouchableWithoutFeedback',
+                ],
+                message:
+                  "Use project re-exports/atoms: StyleSheet → 'react-native-unistyles'; Text → '#components/atoms/Text'. Inside a Swipeable, tappable surfaces MUST use RNGH's Pressable: import { Pressable } from 'react-native-gesture-handler'.",
+              },
+              {
+                name: 'react',
+                importNames: ['useMemo', 'useCallback'],
+                message:
+                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+              },
+              {
+                name: '#components/atoms/themedComponents',
+                importNames: ['Pressable'],
+                message:
+                  "themedComponents' Pressable is RN's Pressable — inside a Swipeable use RNGH's: import { Pressable } from 'react-native-gesture-handler'.",
+              },
+              {
+                name: '#components/atoms/AppPressable',
+                message:
+                  "AppPressable wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
+              },
+              {
+                name: '#components/atoms/PressableScale',
+                message:
+                  "PressableScale wraps RN's Pressable — inside a Swipeable use RNGH's Pressable from 'react-native-gesture-handler'.",
+              },
+            ],
+          },
+        ],
+      },
+    },
   ],
   rules: {
     // Prevent barrel file imports for better tree shaking
@@ -570,6 +626,18 @@ module.exports = {
         selector: 'CallExpression[callee.name="scheduleOnRN"][arguments.2]',
         message:
           'scheduleOnRN should have at most 2 arguments (function + one primitive). Functions cannot be serialized across the worklet boundary — capture them via RN-scope closure instead.',
+      },
+      {
+        // Interactive controls rendered lexically inside an RNGH Swipeable must
+        // use RNGH's Pressable, never AppPressable/PressableScale/Touchable* (all
+        // RN-based). RN touchables live in a separate gesture system from RNGH,
+        // so they block the swipe pan or double-fire the row's onPress. RN's own
+        // `Pressable` is already banned app-wide (see no-restricted-imports); this
+        // covers the RN-based atoms/touchables that name-alias around that ban.
+        selector:
+          'JSXElement[openingElement.name.name=/^(SwipeableItem|ReanimatedSwipeable)$/] JSXElement[openingElement.name.name=/^(AppPressable|PressableScale|TouchableOpacity|TouchableHighlight|TouchableWithoutFeedback|TouchableNativeFeedback)$/]',
+        message:
+          "Interactive controls inside a Swipeable must use RNGH's Pressable (`import { Pressable } from 'react-native-gesture-handler'`), not AppPressable/PressableScale/Touchable*. RN touchables don't coordinate with RNGH's gesture arena — they block the swipe or double-fire the row's onPress. See CLAUDE.md \"Pressable & Modal Convention\".",
       },
       {
         selector:

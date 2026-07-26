@@ -120,10 +120,13 @@ export function itemToEditableSnapshot(
  * to the reviewing admin as something the contributor wants changed.
  *
  * Fields deliberately excluded, and why:
- * - `media`         — `media.images` is a set-replace that drops every row you
- *                     omit. Photos are additive via `confirmItemImageUpload`
- *                     and go live without review, which is what the flow wants,
- *                     so nothing here needs `media.imageUrl` either.
+ * - `media`         — photos already go live additively through
+ *                     `confirmItemImageUpload` without waiting for review,
+ *                     which is what the flow wants, so nothing here needs
+ *                     `media.imageUrl` either. (On approval the server appends
+ *                     a suggestion's `media.images` rather than set-replacing
+ *                     them, so routing photos through the upload flow costs the
+ *                     item nothing — but it is still the faster path.)
  * - `tagOps`        — composes with `classification.tags` rather than replacing
  *                     it, but the form prefills the whole tag list, so a plain
  *                     set-replace via `classification.tags` says the same thing
@@ -132,7 +135,9 @@ export function itemToEditableSnapshot(
  *                     diff against.
  * - `unitConfig` / `unitOps` / `storeSkuOps` / `packageInfo.defaultConsume*` —
  *                     no round-trippable form surface; see the hidden fields in
- *                     AddItemForm's edit modes.
+ *                     AddItemForm's edit modes. An empty array on any of these
+ *                     is pruned server-side rather than treated as a change, so
+ *                     a payload carrying only one would be refused at submit.
  *
  * Clearing a value is not expressible: an absent key means "no change", so a
  * blanked description or UPC is ignored rather than sent as a deletion. Users
@@ -214,9 +219,20 @@ export function buildSuggestibleItemChanges(
     packageInfo.netWeight = netWeight.value;
     changedFields.push('packageInfo.netWeight');
   }
-  if (netWeight?.unitId && netWeight.unitId !== original.displayUnitId) {
-    packageInfo.displayUnitId = netWeight.unitId;
-    changedFields.push('packageInfo.displayUnitId');
+  // The unit picker leaves `unitId` undefined when the user free-types a unit
+  // the catalog doesn't have, so fall back to the by-name twin, which the
+  // server resolves find-or-create. An explicit id always wins. Sending the
+  // name was previously accepted and then dropped on approval, which is why
+  // only the id used to be diffed — a free-typed unit change vanished silently.
+  const unitName = norm(netWeight?.unitName);
+  if (netWeight?.unitId) {
+    if (netWeight.unitId !== original.displayUnitId) {
+      packageInfo.displayUnitId = netWeight.unitId;
+      changedFields.push('packageInfo.displayUnitId');
+    }
+  } else if (unitName && unitName !== norm(original.displayUnitName)) {
+    packageInfo.displayUnitName = unitName;
+    changedFields.push('packageInfo.displayUnitName');
   }
   if (
     formData.baseDimension &&

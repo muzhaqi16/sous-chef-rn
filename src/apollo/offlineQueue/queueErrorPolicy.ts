@@ -12,11 +12,22 @@ import type { QueueError } from './types';
  */
 export class ReplayRejectedError extends Error {
   readonly payloadTypename: string;
+  /**
+   * The error member's `code`, when the payload carried one. Lets
+   * {@link classifyError} branch on documented transient codes (`DEADLOCK`)
+   * without string-matching the free-text message.
+   */
+  readonly payloadCode: string | null;
 
-  constructor(payloadTypename: string, message: string) {
+  constructor(
+    payloadTypename: string,
+    message: string,
+    payloadCode?: string | null,
+  ) {
     super(message);
     this.name = 'ReplayRejectedError';
     this.payloadTypename = payloadTypename;
+    this.payloadCode = payloadCode ?? null;
   }
 }
 
@@ -74,10 +85,22 @@ export function classifyReplayResult(payload: unknown): ReplayOutcome {
  * in {@link QueueManager} so the heuristics are testable in isolation.
  */
 export function classifyError(error: unknown): QueueError {
-  // A rejected replay payload is classified by its typename, not its message —
-  // the message is server-authored free text and must not hit the string
-  // heuristics below.
+  // A rejected replay payload is classified by its typename/code, not its
+  // message — the message is server-authored free text and must not hit the
+  // string heuristics below.
   if (error instanceof ReplayRejectedError) {
+    // DEADLOCK is the one ConflictError code the API documents as a transient
+    // lock conflict ("safe to retry"): defer like a server error so the entry
+    // stays queued for the next drain instead of being reverted + dequeued.
+    if (error.payloadCode === 'DEADLOCK') {
+      return {
+        type: 'server',
+        message: error.message,
+        code: 'DEADLOCK',
+        timestamp: Date.now(),
+        retryable: true,
+      };
+    }
     return {
       type: 'unknown',
       message: error.message,
@@ -99,9 +122,20 @@ export function classifyError(error: unknown): QueueError {
   // Resource-access errors. FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't
   // have access to the resource — not an auth issue, so a token refresh won't
   // help. Match errorLink's policy: treat them as permanent failures rather
-  // than retrying behind a refresh. AUTHZ_FORBIDDEN is the API's current code;
-  // FORBIDDEN is the legacy alias still emitted by some resolvers.
-  if (code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN') {
+  // than retrying behind a refresh. Both codes are current, on different
+  // channels: FORBIDDEN is the mutation result-union member's code
+  // (errors-as-data), AUTHZ_FORBIDDEN is the top-level `extensions.code`.
+  // AUTH_ACCOUNT_SUSPENDED joins them: the account is suspended, banned, or
+  // deleted, so no replay of this entry can ever succeed and a token refresh
+  // cannot revive it. Classified here rather than left to the default so the
+  // message heuristics in the auth branch below can never see it — server
+  // wording that happened to contain "unauthorized" would otherwise mark a
+  // permanently dead account retryable and spin the queue against it.
+  if (
+    code === 'FORBIDDEN' ||
+    code === 'AUTHZ_FORBIDDEN' ||
+    code === 'AUTH_ACCOUNT_SUSPENDED'
+  ) {
     return {
       type: 'unknown',
       message,

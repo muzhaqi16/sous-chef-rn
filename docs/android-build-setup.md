@@ -2,14 +2,15 @@
 
 ## Overview
 
-This project uses separate GitHub Actions workflows for different build environments:
+A single GitHub Actions workflow (`build-android.yml`) handles every Android build
+environment, selected by the tag prefix that triggered it:
 
 | Command | Tag Pattern | Workflow | Environment | Keystore | Output |
 |---------|-------------|----------|-------------|----------|--------|
-| `npm run tag:dev` | `v*` | build-android.yml | dev | Dev keystore | APK (dev) |
-| `npm run tag:stg` | `stg-v*` | build-android-staging.yml | stg | Dev keystore | APK (staging) |
-| `npm run tag:release` | `release-v*` | build-android-release.yml | prod | Prod keystore | APK (prod) |
-| `npm run tag:playstore` | `playstore-v*` | playstore-release.yml | prod | Play Store keystore | AAB (prod) |
+| `npm run tag:dev` | `dev-v*` | build-android.yml | dev | Dev keystore | APK (dev) |
+| `npm run tag:stg` | `stg-v*` | build-android.yml | stg | Dev keystore | APK (staging) |
+| `npm run tag:prod` | `prod-v*` | build-android.yml | prod | Prod keystore | APK (prod) |
+| `npm run tag:playstore` | `playstore-v*` | build-android.yml | prod | Play Store keystore | AAB (prod) |
 
 ---
 
@@ -188,7 +189,7 @@ npm run tag:stg
 
 ```bash
 # 1. Create and push production APK tag
-npm run tag:release
+npm run tag:prod
 
 # 2. GitHub Actions automatically:
 #    - Builds with production environment (.env.production)
@@ -262,11 +263,11 @@ app-release.aab  # Android App Bundle for Play Store
 
 **Problem:** Pushing tag doesn't start build
 
-**Solution:** Check tag pattern matches workflow:
-- `v1.7.1` → triggers `build-android.yml` (dev)
-- `stg-v1.7.1` → triggers `build-android-staging.yml` (stg)
-- `release-v1.7.1` → triggers `build-android-release.yml` (prod APK)
-- `playstore-v1.7.1` → triggers `playstore-release.yml` (prod AAB)
+**Solution:** Check the tag prefix — all four are handled by `build-android.yml`:
+- `dev-v1.7.1` → dev
+- `stg-v1.7.1` → stg
+- `prod-v1.7.1` → prod APK
+- `playstore-v1.7.1` → prod AAB
 
 ### "APK won't install" or "App not signed"
 
@@ -314,10 +315,9 @@ app-release.aab  # Android App Bundle for Play Store
 
 ## Workflow File Locations
 
-- Development: `.github/workflows/build-android.yml`
-- Staging: `.github/workflows/build-android-staging.yml`
-- Production APK: `.github/workflows/build-android-release.yml`
-- Play Store AAB: `.github/workflows/playstore-release.yml`
+- All Android builds (dev / staging / prod APK / Play Store AAB):
+  `.github/workflows/build-android.yml`
+- iOS builds: `.github/workflows/build-ios.yml`
 
 ---
 

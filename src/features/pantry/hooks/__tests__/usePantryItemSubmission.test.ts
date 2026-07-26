@@ -331,9 +331,11 @@ describe('usePantryItemSubmission', () => {
       await result.current.handleConfirm();
     });
 
+    // Full ISO DateTime — the schema scalar is DateTime; a date-only string
+    // relied on unspecified server coercion.
     expect(m.fired).toContainEqual({
       input: expect.objectContaining({
-        expiresAt: '2025-06-15',
+        expiresAt: '2025-06-15T00:00:00.000Z',
       }),
     });
   });

@@ -219,10 +219,10 @@ gh workflow run e2e-nightly.yml
 **Usage:**
 ```bash
 # Using npm tag scripts (recommended)
-npm run tag:android:dev        # Dev APK
-npm run tag:android:stg        # Staging APK
-npm run tag:android:prod       # Production APK
-npm run tag:android:playstore  # Play Store AAB
+npm run tag:dev                # Dev APK
+npm run tag:stg                # Staging APK
+npm run tag:android:prod       # Production APK (Android only, skips the iOS tag)
+npm run tag:playstore          # Play Store AAB
 
 # Or using git tags manually
 git tag dev-v1.2.0 && git push origin dev-v1.2.0
@@ -298,19 +298,15 @@ The tag scripts read the version from `package.json`, create annotated git tags,
 # Both platforms (prod only — iOS is prod-only)
 npm run tag:prod          # Creates prod-v{version} (Android) + ios-v{version} (iOS)
 
-# Android only
+# Android only — dev, stg and playstore have no iOS equivalent, so these
+# already produce an Android-only tag
 npm run tag:dev           # Creates dev-v{version}
 npm run tag:stg           # Creates stg-v{version}
-npm run tag:prod          # Creates prod-v{version} + ios-v{version}
 npm run tag:playstore     # Creates playstore-v{version}
 
-# Android only (explicit)
-npm run tag:android:dev   # Creates dev-v{version}
-npm run tag:android:stg   # Creates stg-v{version}
+# prod is the only prefix that tags both platforms
+npm run tag:prod          # Creates prod-v{version} + ios-v{version}
 npm run tag:android:prod  # Creates prod-v{version} (skips iOS)
-npm run tag:android:playstore  # Creates playstore-v{version}
-
-# iOS only
 npm run tag:ios           # Creates ios-v{version} (always prod)
 ```
 
@@ -320,10 +316,7 @@ npm run tag:ios           # Creates ios-v{version} (always prod)
 | `npm run tag:stg` | `stg-v{version}` | Android staging build |
 | `npm run tag:prod` | `prod-v{version}` + `ios-v{version}` | Android prod + iOS prod |
 | `npm run tag:playstore` | `playstore-v{version}` | Android Play Store AAB |
-| `npm run tag:android:dev` | `dev-v{version}` | Android dev only |
-| `npm run tag:android:stg` | `stg-v{version}` | Android staging only |
 | `npm run tag:android:prod` | `prod-v{version}` | Android prod only (no iOS) |
-| `npm run tag:android:playstore` | `playstore-v{version}` | Android Play Store only |
 | `npm run tag:ios` | `ios-v{version}` | iOS prod only |
 
 If a tag already exists locally or on the remote, the script will prompt for confirmation before deleting and recreating it.

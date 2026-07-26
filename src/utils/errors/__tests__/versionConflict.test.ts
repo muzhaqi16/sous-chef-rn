@@ -1,7 +1,6 @@
 import {
   isVersionConflictError,
   isVersionConflictPayload,
-  getVersionConflictDetails,
   getVersionConflictMessage,
   handleVersionConflict,
   findFirstErrorMember,
@@ -29,12 +28,24 @@ const makeSingleError = (
 
 describe('versionConflict', () => {
   describe('isVersionConflictError', () => {
-    it('detects VERSION_CONFLICT in graphQLErrors', () => {
+    it('detects CONFLICT in graphQLErrors', () => {
       expect(isVersionConflictError(makeApolloError('CONFLICT'))).toBe(true);
     });
 
-    it('detects VERSION_CONFLICT in extensions', () => {
+    it('detects VERSION_CONFLICT in graphQLErrors', () => {
+      expect(isVersionConflictError(makeApolloError('VERSION_CONFLICT'))).toBe(
+        true,
+      );
+    });
+
+    it('detects CONFLICT in extensions', () => {
       expect(isVersionConflictError(makeSingleError('CONFLICT'))).toBe(true);
+    });
+
+    it('detects VERSION_CONFLICT in extensions', () => {
+      expect(isVersionConflictError(makeSingleError('VERSION_CONFLICT'))).toBe(
+        true,
+      );
     });
 
     it('returns false for other error codes', () => {
@@ -52,87 +63,25 @@ describe('versionConflict', () => {
     });
   });
 
-  describe('getVersionConflictDetails', () => {
-    it('extracts details from graphQLErrors', () => {
-      const error = makeApolloError('CONFLICT', {
-        resourceType: 'PantryItem',
-        currentVersion: 3,
-        expectedVersion: 2,
-      });
-      expect(getVersionConflictDetails(error)).toEqual({
-        resourceType: 'PantryItem',
-        currentVersion: 3,
-        expectedVersion: 2,
-      });
-    });
-
-    it('extracts details from single error extensions', () => {
-      const error = makeSingleError('CONFLICT', {
-        resourceType: 'ShoppingList',
-        currentVersion: 5,
-        expectedVersion: 4,
-      });
-      expect(getVersionConflictDetails(error)).toEqual({
-        resourceType: 'ShoppingList',
-        currentVersion: 5,
-        expectedVersion: 4,
-      });
-    });
-
-    it('returns null for non-version-conflict error', () => {
-      expect(
-        getVersionConflictDetails(makeApolloError('NOT_FOUND')),
-      ).toBeNull();
-    });
-
-    it('returns null when version fields are wrong types', () => {
-      const error = makeApolloError('CONFLICT', {
-        resourceType: 123,
-        currentVersion: 'bad',
-        expectedVersion: 'bad',
-      });
-      expect(getVersionConflictDetails(error)).toBeNull();
-    });
-
-    it('returns null when extensions missing version fields', () => {
-      const error = makeApolloError('CONFLICT');
-      expect(getVersionConflictDetails(error)).toBeNull();
-    });
-  });
-
   describe('getVersionConflictMessage', () => {
-    it('includes resource type in message', () => {
-      const error = makeApolloError('CONFLICT', {
-        resourceType: 'PantryItem',
-        currentVersion: 3,
-        expectedVersion: 2,
-      });
-      expect(getVersionConflictMessage(error)).toContain('pantryitem');
-    });
-
-    it('returns generic message when no details', () => {
-      const error = makeApolloError('CONFLICT');
-      expect(getVersionConflictMessage(error)).toContain(
-        'This item was updated',
-      );
-    });
-
-    it('returns generic message for non-version-conflict error', () => {
-      expect(getVersionConflictMessage(makeApolloError('NOT_FOUND'))).toContain(
-        'This item was updated',
-      );
+    // The union member carries only `code` + `message` — the API drops the
+    // version-number extensions in the union mapping, so the message is
+    // always the generic "updated elsewhere" body (no error argument).
+    it('returns the generic message', () => {
+      expect(getVersionConflictMessage()).toContain('This item was updated');
     });
   });
 
   describe('handleVersionConflict', () => {
     it('returns true for version conflict errors', () => {
-      const error = makeApolloError('CONFLICT', {
-        resourceType: 'PantryItem',
-        currentVersion: 3,
-        expectedVersion: 2,
-      });
-      expect(handleVersionConflict(error)).toBe(true);
+      expect(handleVersionConflict(makeApolloError('CONFLICT'))).toBe(true);
       expect(console.warn).toHaveBeenCalled();
+    });
+
+    it('returns true for VERSION_CONFLICT errors', () => {
+      expect(handleVersionConflict(makeApolloError('VERSION_CONFLICT'))).toBe(
+        true,
+      );
     });
 
     it('returns false for non-version-conflict errors', () => {
@@ -141,22 +90,17 @@ describe('versionConflict', () => {
   });
 
   describe('isVersionConflictPayload', () => {
-    it('returns true for payload with CONFLICT code and success false', () => {
-      expect(
-        isVersionConflictPayload({ success: false, code: 'CONFLICT' }),
-      ).toBe(true);
+    it('returns true for the CONFLICT code', () => {
+      expect(isVersionConflictPayload('CONFLICT')).toBe(true);
     });
 
-    it('returns false for successful payload with CONFLICT code', () => {
-      expect(
-        isVersionConflictPayload({ success: true, code: 'CONFLICT' }),
-      ).toBe(false);
+    it('returns true for the VERSION_CONFLICT code (optimistic-lock failures)', () => {
+      expect(isVersionConflictPayload('VERSION_CONFLICT')).toBe(true);
     });
 
-    it('returns false for failed payload with different code', () => {
-      expect(
-        isVersionConflictPayload({ success: false, code: 'NOT_FOUND' }),
-      ).toBe(false);
+    it('returns false for other codes', () => {
+      expect(isVersionConflictPayload('NOT_FOUND')).toBe(false);
+      expect(isVersionConflictPayload('IDEMPOTENT_REPLAY')).toBe(false);
     });
   });
 

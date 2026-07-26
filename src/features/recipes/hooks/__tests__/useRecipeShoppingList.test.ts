@@ -201,9 +201,14 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
       result.current.handleAddSingleIngredient(externalIngredient({ id: 7 }));
     });
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    // Wait on the rendered state, not on the toast mock: the toast is called
+    // synchronously right after setAddedIngredients, so it can be observed a
+    // render before `result.current` reflects the new set.
+    await waitFor(() =>
+      expect(result.current.addedIngredients.has(7)).toBe(true),
+    );
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(result.current.addedIngredients.has(7)).toBe(true);
   });
 });
 
@@ -259,8 +264,10 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (backend branch)',
       result.current.handleAddSingleIngredient(externalIngredient({ id: 9 }));
     });
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(result.current.addedIngredients.has(9)).toBe(true),
+    );
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
-    expect(result.current.addedIngredients.has(9)).toBe(true);
   });
 });

@@ -19,7 +19,7 @@ interface StaggeredTabContentProps {
   onItemPress: (id: string) => void;
   onItemEdit?: (id: string) => void;
   onItemDelete?: (id: string) => void;
-  onTogglePurchase?: (id: string) => void;
+  onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onQuantityPress?: (id: string) => void;
   onRefresh?: () => void | Promise<void>;
   refreshing?: boolean;

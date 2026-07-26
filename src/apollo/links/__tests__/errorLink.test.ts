@@ -21,6 +21,12 @@ jest.mock('../refreshToken', () => ({
   attemptTokenRefresh: jest.fn(),
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
+const mockClearAuth = jest.fn();
+jest.mock('#store', () => ({
+  useStore: {
+    getState: jest.fn(() => ({ clearAuth: mockClearAuth })),
+  },
+}));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { Observable } from 'rxjs';
@@ -362,5 +368,64 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
     ]).catch(() => undefined);
 
     expect(attemptTokenRefresh).toHaveBeenCalled();
+  });
+
+  // The @auth directive rejects every field for a suspended/banned/deleted
+  // account. The session must end (the user can do nothing), while ordinary
+  // resource-level FORBIDDEN stays non-fatal.
+  describe('suspended/deleted account', () => {
+    it('ends the session on the AUTH_ACCOUNT_SUSPENDED code alone', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: { code: 'AUTH_ACCOUNT_SUSPENDED' },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+    });
+
+    it('ends the session without a reason string present', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: {
+            code: 'AUTH_ACCOUNT_SUSPENDED',
+            field: 'pantries',
+            http: { status: 403 },
+          },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+    });
+
+    // Servers predating the dedicated code send FORBIDDEN + a prose reason.
+    it('ends the session on the legacy FORBIDDEN + reason shape', async () => {
+      await runWithError([
+        {
+          message: 'User account is not active',
+          extensions: {
+            code: 'FORBIDDEN',
+            reason: 'User account has been suspended or deleted',
+          },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(attemptTokenRefresh).not.toHaveBeenCalled();
+    });
+
+    it('plain resource FORBIDDEN does NOT end the session', async () => {
+      await runWithError([
+        {
+          message: 'Access denied',
+          extensions: { code: 'FORBIDDEN' },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockClearAuth).not.toHaveBeenCalled();
+    });
   });
 });

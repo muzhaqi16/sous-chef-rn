@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+// RNGH's Pressable (not the themed RN re-export): this mock card is mounted
+// inside a ReanimatedSwipeable in the swipe-hint tutorial, and RN's Pressable
+// doesn't coordinate with RNGH's gesture arena. See CLAUDE.md's Swipeable convention.
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';

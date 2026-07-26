@@ -2,7 +2,10 @@ import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
-import { NotificationEventsDocument } from '#features/notifications/graphql/notifications.generated';
+import {
+  NotificationEventsDocument,
+  GetUnreadNotificationsDocument,
+} from '#features/notifications/graphql/notifications.generated';
 import {
   UseNotifications_NotificationFragmentDoc,
   type UseNotifications_NotificationFragment,
@@ -233,8 +236,43 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
     skip: config.skip || !user?.id,
     onData: ({ data }) => {
       const event = data.data?.notificationEvents;
-      const maskedNotification = event?.node;
-      if (!event || !maskedNotification) return;
+      if (!event) return;
+
+      // Aggregate transitions (mark-all-read / clear-read / bulk-expire, e.g.
+      // performed on another device) arrive with a null `node` and only an
+      // `affectedCount` — the affected rows are unknown client-side, so
+      // re-sync the unread feed and re-seed the badge from the server instead
+      // of guessing which local entries changed.
+      if (
+        event.subtype === NotificationSubtype.BulkRead ||
+        event.subtype === NotificationSubtype.BulkCleared ||
+        event.subtype === NotificationSubtype.BulkExpired
+      ) {
+        client
+          .query({
+            query: GetUnreadNotificationsDocument,
+            fetchPolicy: 'network-only',
+          })
+          .catch(() => {
+            // Transient failure: the foreground / WS-reconnect re-query paths
+            // converge the feed later.
+          });
+        return;
+      }
+
+      const maskedNotification = event.node;
+      if (!maskedNotification) return;
+
+      // Dedicated read/dismiss transition subtypes only need the id — the
+      // server routes these as READ / DISMISSED, never as UPDATED.
+      if (event.subtype === NotificationSubtype.Read) {
+        markAsRead(maskedNotification.id);
+        return;
+      }
+      if (event.subtype === NotificationSubtype.Dismissed) {
+        removeNotification(maskedNotification.id);
+        return;
+      }
 
       const rawNotification =
         client.cache.readFragment<UseNotifications_NotificationFragment>({
@@ -276,11 +314,12 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
           rawNotification.category ?? NotificationCategory.System,
         );
       } else if (event.subtype === NotificationSubtype.Updated) {
-        // Status changes — read, dismissed, expired
+        // Read/dismiss arrive as the dedicated subtypes handled above; the
+        // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
         const status = rawNotification.status;
-        if (status === 'READ' || status === 'CLICKED') {
+        if (status === 'CLICKED') {
           markAsRead(rawNotification.id);
-        } else if (status === 'DISMISSED' || status === 'EXPIRED') {
+        } else if (status === 'EXPIRED') {
           removeNotification(rawNotification.id);
         }
       }

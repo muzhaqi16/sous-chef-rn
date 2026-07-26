@@ -544,6 +544,38 @@ describe('usePantryItemActions', () => {
       );
     });
 
+    it('shows version conflict alert on consume payload VERSION_CONFLICT (optimistic-lock code)', async () => {
+      // The API emits VERSION_CONFLICT (not CONFLICT) for optimistic-lock
+      // failures — this used to fall through to the generic Error alert.
+      const m = consumeMock({
+        __typename: 'ConflictError',
+        code: 'VERSION_CONFLICT',
+        message: 'Item was updated by another device',
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock], cache: seedPantryItems() },
+      );
+
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmConsume(
+          1,
+          '1',
+          'COOK' as UsagePurpose,
+          '',
+        );
+      });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Item Updated',
+        expect.stringContaining('updated by another device'),
+      );
+    });
+
     it('shows invalid unit alert on restock payload UNIT_INVALID', async () => {
       const m = restockMock({
         __typename: 'ValidationError',

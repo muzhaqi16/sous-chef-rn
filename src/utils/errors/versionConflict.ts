@@ -1,14 +1,13 @@
 import { t } from '#/i18n/t';
-import { getI18n } from '#/i18n/config';
 
 /**
- * Version Conflict Error Details
+ * Codes that mark an optimistic-concurrency conflict, whether the error arrives
+ * as a thrown/top-level GraphQL error (`extensions.code`) or a resolved
+ * errors-as-data union member (the member's own `code` field). The API emits
+ * `VERSION_CONFLICT` for optimistic-lock failures and `CONFLICT` for other
+ * uniqueness/state conflicts — both get the "updated elsewhere" treatment.
  */
-export interface VersionConflictDetails {
-  resourceType: string;
-  currentVersion: number;
-  expectedVersion: number;
-}
+const CONFLICT_CODES = new Set(['CONFLICT', 'VERSION_CONFLICT']);
 
 /**
  * Minimal shape of a GraphQL error carrying conflict metadata in `extensions`.
@@ -44,36 +43,28 @@ export function isVersionConflictError(error: unknown): boolean {
   }
 
   if (err.graphQLErrors) {
-    return err.graphQLErrors.some(
-      gqlErr => gqlErr.extensions?.code === 'CONFLICT',
-    );
+    return err.graphQLErrors.some(gqlErr => {
+      const code = gqlErr.extensions?.code;
+      return typeof code === 'string' && CONFLICT_CODES.has(code);
+    });
   }
 
   if (err.extensions) {
-    return err.extensions.code === 'CONFLICT';
+    const code = err.extensions.code;
+    return typeof code === 'string' && CONFLICT_CODES.has(code);
   }
 
   return false;
 }
 
 /**
- * Check if a mutation payload indicates a CONFLICT error.
- * Use this to detect version conflicts returned as payload fields (success: false, code: 'CONFLICT')
- * rather than thrown GraphQL errors.
+ * Check if an errors-as-data member's `code` marks a version conflict. The
+ * union member carries only `code` + `message` — pass the member's code
+ * directly (there is no `success` field on current payloads).
  */
-export function isVersionConflictPayload(payload: {
-  success: boolean;
-  code: string;
-}): boolean {
-  return !payload.success && payload.code === 'CONFLICT';
+export function isVersionConflictPayload(code: string): boolean {
+  return CONFLICT_CODES.has(code);
 }
-
-/**
- * Codes that mark an optimistic-concurrency conflict, whether the error arrives
- * as a thrown GraphQL error (`extensions.code`) or a resolved errors-as-data
- * union member (the member's own `code` field).
- */
-const CONFLICT_CODES = new Set(['CONFLICT', 'VERSION_CONFLICT']);
 
 /**
  * The `*Error` union member resolved inside a mutation's `data` (errors-as-data)
@@ -120,67 +111,16 @@ export function findConflictDataMember(
 }
 
 /**
- * Extract version conflict details from an error
+ * Get the user-friendly message for a version conflict.
  *
- * @param error - Error containing CONFLICT
- * @returns Version conflict details or null if not a version conflict
+ * The errors-as-data contract carries conflict context only in the member's
+ * `message` string — the API drops `currentVersion`/`expectedVersion`
+ * extensions when mapping to the union member, so there are no typed detail
+ * fields to read on either channel. Always the generic "updated elsewhere"
+ * body; callers that have the member's message show that instead.
  */
-export function getVersionConflictDetails(
-  error: unknown,
-): VersionConflictDetails | null {
-  const err = asConflictError(error);
-  if (!err) {
-    return null;
-  }
-
-  let versionError: GraphQLErrorLike | undefined;
-
-  if (err.graphQLErrors) {
-    versionError = err.graphQLErrors.find(
-      gqlErr => gqlErr.extensions?.code === 'CONFLICT',
-    );
-  } else if (err.extensions) {
-    versionError = err;
-  }
-
-  if (!versionError || !versionError.extensions) {
-    return null;
-  }
-
-  const { resourceType, currentVersion, expectedVersion } =
-    versionError.extensions;
-
-  if (
-    typeof resourceType === 'string' &&
-    typeof currentVersion === 'number' &&
-    typeof expectedVersion === 'number'
-  ) {
-    return {
-      resourceType,
-      currentVersion,
-      expectedVersion,
-    };
-  }
-
-  return null;
-}
-
-/**
- * Get a user-friendly message for a version conflict error
- *
- * @param error - Error containing CONFLICT
- * @returns User-friendly error message
- */
-export function getVersionConflictMessage(error: unknown): string {
-  const details = getVersionConflictDetails(error);
-
-  if (!details) {
-    return t('errors.entityUpdatedBody');
-  }
-
-  return getI18n().t('errors.entityUpdatedBodyTyped', {
-    entity: details.resourceType.toLowerCase(),
-  });
+export function getVersionConflictMessage(): string {
+  return t('errors.entityUpdatedBody');
 }
 
 /**
@@ -207,12 +147,8 @@ export function handleVersionConflict(error: unknown): boolean {
     return false;
   }
 
-  const message = getVersionConflictMessage(error);
-  const details = getVersionConflictDetails(error);
-
   console.warn('⚠️ Version conflict detected:', {
-    message,
-    details,
+    message: getVersionConflictMessage(),
     error,
   });
 

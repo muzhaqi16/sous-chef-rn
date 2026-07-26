@@ -792,4 +792,64 @@ describe('QueueStore', () => {
       );
     });
   });
+
+  // The server prunes idempotency-dedup rows after 90 days — replaying a
+  // PENDING op past that horizon would double-apply instead of classifying
+  // as IDEMPOTENT_REPLAY, so it must fail out of the queue instead.
+  describe('expireStalePending', () => {
+    const NINETY_ONE_DAYS_AGO = Date.now() - 91 * 24 * 60 * 60 * 1000;
+
+    it('marks PENDING entries older than 90 days as FAILED and never replays them', () => {
+      store.addMutation(
+        makeMutation({ id: 'stale-1', createdAt: NINETY_ONE_DAYS_AGO }),
+      );
+
+      const expired = store.expireStalePending('user-1');
+
+      expect(expired).toBe(1);
+      expect(store.getPendingMutationsForUser('user-1')).toEqual([]);
+      const failed = store.getMutation('stale-1');
+      expect(failed?.status).toBe(QueueStatus.FAILED);
+      expect(failed?.lastError?.code).toBe('OFFLINE_SYNC_WINDOW_EXPIRED');
+      expect(failed?.lastError?.retryable).toBe(false);
+    });
+
+    it('leaves fresh PENDING entries untouched', () => {
+      store.addMutation(makeMutation({ id: 'fresh-1' }));
+      store.addMutation(
+        makeMutation({
+          id: 'week-old',
+          createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000,
+        }),
+      );
+
+      const expired = store.expireStalePending('user-1');
+
+      expect(expired).toBe(0);
+      expect(store.getPendingMutationsForUser('user-1')).toHaveLength(2);
+    });
+
+    it('only expires the target user and PENDING status', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'other-user',
+          userId: 'user-2',
+          createdAt: NINETY_ONE_DAYS_AGO,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'already-failed',
+          status: QueueStatus.FAILED,
+          createdAt: NINETY_ONE_DAYS_AGO,
+        }),
+      );
+
+      const expired = store.expireStalePending('user-1');
+
+      expect(expired).toBe(0);
+      expect(store.getMutation('other-user')?.status).toBe(QueueStatus.PENDING);
+      expect(store.getMutation('already-failed')?.lastError).toBeUndefined();
+    });
+  });
 });

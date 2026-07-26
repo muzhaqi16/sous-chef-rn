@@ -1,6 +1,9 @@
 import { act, waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  recordMock,
+} from '#/test-utils/apolloMockProvider';
 import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   CreateRecipeReviewDocument,
@@ -339,6 +342,54 @@ describe('useRecipeReviews', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
+  });
+
+  it('createReview mints a client id so a lost-response retry converges', async () => {
+    const { mock, fired } = recordMock(CreateRecipeReviewDocument, {
+      data: {
+        createRecipeReview: {
+          __typename: 'CreateRecipeReviewPayload',
+          success: true,
+          message: 'OK',
+          code: 'OK',
+          recipeReview: buildReviewNode(
+            'rev-new',
+            5,
+            0,
+            '2025-01-03T00:00:00Z',
+            { id: 'user-1' },
+          ),
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          mock,
+          buildGetRecipeReviewsMock(),
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.actions.createReview(4, 'Solid');
+    });
+
+    // Without a client-minted id, a retried create collapses into an
+    // indistinguishable "already reviewed" CONFLICT (offline-sync contract).
+    expect(fired).toHaveLength(1);
+    const input = (fired[0] as { input: { id?: string } }).input;
+    expect(typeof input.id).toBe('string');
+    expect(input.id!.length).toBeGreaterThan(0);
   });
 
   it('deleteReview calls mutation and shows toast', async () => {

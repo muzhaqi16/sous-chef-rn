@@ -93,7 +93,27 @@ describe('SortableListActionsContext', () => {
       result.current.actions.onTogglePurchase?.('item-3');
     });
 
-    expect(defaultActions.onTogglePurchase).toHaveBeenCalledWith('item-3');
+    // Delegates the id plus the optional details flag (undefined for a plain tap).
+    expect(defaultActions.onTogglePurchase).toHaveBeenCalledWith(
+      'item-3',
+      undefined,
+    );
+  });
+
+  it('forwards the withDetails flag on onTogglePurchase (long-press)', () => {
+    const { result } = renderHook(() => useSortableListActions(), {
+      wrapper: wrapper(),
+    });
+
+    act(() => {
+      result.current.actions.onTogglePurchase?.('item-3', {
+        withDetails: true,
+      });
+    });
+
+    expect(defaultActions.onTogglePurchase).toHaveBeenCalledWith('item-3', {
+      withDetails: true,
+    });
   });
 
   it('delegates onSortOrderUpdate with all parameters', () => {

@@ -107,10 +107,6 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
     priceEstimate: {
       __typename: 'PriceEstimate',
       estimated: 4.59,
-      lastKnown: null,
-      average: null,
-      lowest: null,
-      highest: null,
     },
     storeInfo: {
       __typename: 'ShoppingListItemStoreInfo',
