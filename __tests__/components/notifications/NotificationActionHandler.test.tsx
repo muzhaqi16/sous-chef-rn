@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { Text } from '#components/atoms/Text';
 import type { ComponentProps } from 'react';
 import type { RootState } from '../../../src/store';
@@ -43,7 +43,7 @@ jest.mock('../../../src/store/useAppStore', () => ({
 
 describe('NotificationActionHandler', () => {
   it('renders children with render prop', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       <NotificationActionHandler>
         {() => <Text>Child Content</Text>}
       </NotificationActionHandler>,
@@ -53,7 +53,7 @@ describe('NotificationActionHandler', () => {
 
   it('provides showInvitationModal to children', () => {
     let receivedProps!: NotificationActionRenderProps;
-    render(
+    renderWithApollo(
       <NotificationActionHandler>
         {(props) => {
           receivedProps = props;
@@ -66,7 +66,7 @@ describe('NotificationActionHandler', () => {
 
   it('provides handleNotificationAction to children', () => {
     let receivedProps!: NotificationActionRenderProps;
-    render(
+    renderWithApollo(
       <NotificationActionHandler>
         {(props) => {
           receivedProps = props;

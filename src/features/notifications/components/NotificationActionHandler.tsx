@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
+import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { readExpiryReminderFields } from '#utils/notifications/notificationHelpers';
+import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
 import {
   InvitationAcceptanceModal,
   InvitationData,
@@ -17,7 +21,9 @@ interface NotificationActionHandlerProps {
   children: (props: {
     showInvitationModal: (notification: NotificationItem) => void;
     handleNotificationAction: (notification: NotificationItem) => void;
-    showExpirationActionSheet: (notification: NotificationItem) => void;
+    showExpirationActionSheet: (
+      notification: NotificationItem,
+    ) => Promise<void>;
   }) => React.ReactElement;
 }
 
@@ -35,11 +41,13 @@ export const NotificationActionHandler: React.FC<
   const [selectedExpirationNotification, setSelectedExpirationNotification] =
     useState<NotificationItem | null>(null);
   const { syncMarkAction, syncMarkRead } = useExpirationNotificationSync();
+  const client = useApolloClient();
 
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const removeNotification = useAppStore(state => state.removeNotification);
+  const linkExpirationData = useAppStore(state => state.linkExpirationData);
   const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
     if (
@@ -76,14 +84,54 @@ export const NotificationActionHandler: React.FC<
     }
   };
 
-  const showExpirationActionSheet = (notification: NotificationItem) => {
+  // Resolves the ExpirationNotification behind a tapped EXPIRY_REMINDER
+  // notification when the live subscription never linked it (e.g. loaded from
+  // launch/history rather than received while connected). pantryItemId comes
+  // from the payload rather than sourceId/sourceType, which alias either
+  // PantryItem or PantryItemBatch depending on which server path fired.
+  const resolveExpirationLink = async (notification: NotificationItem) => {
+    const pantryItemId = readExpiryReminderFields(
+      notification.payload,
+    )?.pantryItemId;
+    if (!pantryItemId) return null;
+
+    const result = await executeQuery(
+      () =>
+        client.query({
+          query: GetExpirationNotificationsForPantryItemDocument,
+          variables: { pantryItemId },
+          fetchPolicy: 'network-only',
+        }),
+      'resolveExpirationNotificationLink',
+    );
+
+    const edges = result?.data?.me?.expirationNotificationsConnection.edges;
+    const match = edges?.find(
+      edge => edge.node.genericNotificationId === notification.id,
+    );
+    return match?.node ?? null;
+  };
+
+  const showExpirationActionSheet = async (notification: NotificationItem) => {
     if (notification.expirationNotificationId) {
       // State-driven: setting this triggers ExpirationActionSheet visible prop
       setSelectedExpirationNotification(notification);
-    } else {
-      // Fallback: navigate to pantry if expiration data not yet linked
-      toPantryMain();
+      return;
     }
+
+    const resolved = await resolveExpirationLink(notification);
+    // No match (e.g. a synthetic test notification with no backing row) —
+    // nothing to show. The tap already marked the notification read.
+    if (!resolved) return;
+
+    const enrichment = {
+      expirationNotificationId: resolved.id,
+      daysUntilExpiry: resolved.daysUntilExpiry,
+      pantryItemName: resolved.pantryItem.item.name,
+      pantryItemImageUrl: resolved.pantryItem.item.imageUrl,
+    };
+    linkExpirationData(notification.id, enrichment);
+    setSelectedExpirationNotification({ ...notification, ...enrichment });
   };
 
   const handleExpirationAction = (
@@ -114,8 +162,6 @@ export const NotificationActionHandler: React.FC<
         break;
 
       case 'VIEW_EXPIRING_ITEMS':
-        // Show expiration action sheet if enriched data is available,
-        // otherwise navigate to pantry as fallback
         showExpirationActionSheet(notification);
         break;
 

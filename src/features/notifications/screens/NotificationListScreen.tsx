@@ -25,13 +25,8 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 export const NotificationListScreen: React.FC = () => {
   const { t } = useTranslation();
   useScreenTransition('NotificationListScreen');
-  const {
-    toPantryMain,
-    toShoppingListMain,
-    toNotificationDetail,
-    toNotificationSettings,
-    goBack,
-  } = useAppNavigation();
+  const { toPantryMain, toNotificationDetail, toNotificationSettings, goBack } =
+    useAppNavigation();
   const [filterCategory, setFilterCategory] =
     useState<NotificationCategory | null>(null);
 
@@ -100,18 +95,14 @@ export const NotificationListScreen: React.FC = () => {
         default:
           toNotificationDetail({ id: notification.id, notification });
       }
-    } else {
-      // Default navigation based on category
-      switch (notification.category) {
-        case NotificationCategory.Shopping:
-          toShoppingListMain();
-          break;
-        case NotificationCategory.Pantry:
-          toPantryMain();
-          break;
-        default:
-          toNotificationDetail({ id: notification.id, notification });
-      }
+    } else if (
+      notification.category !== NotificationCategory.Pantry &&
+      notification.category !== NotificationCategory.Shopping
+    ) {
+      // Pantry/Shopping notifications have no dedicated destination to jump
+      // to — tapping just marks them read (handled above). Other categories
+      // open the detail screen, which has real content to show.
+      toNotificationDetail({ id: notification.id, notification });
     }
   };
 
