@@ -1,0 +1,34 @@
+# Resolves the ExpirationNotification behind a historical EXPIRY_REMINDER
+# notification when the live `expirationNotificationChanged` subscription
+# never linked it (loaded from launch/history instead of received while
+# connected). Filtered by pantryItemId — always present in the payload for
+# both the batch-level and item-level reminder paths, unlike sourceId/
+# sourceType which alias either PantryItem or PantryItemBatch. The filter has
+# no genericNotificationId option, so matching the tapped notification
+# happens client-side against this page of results.
+query GetExpirationNotificationsForPantryItem($pantryItemId: ID!) {
+  me {
+    id
+    expirationNotificationsConnection(
+      filters: { pantryItemId: $pantryItemId }
+      first: 20
+      orderBy: { createdAt: DESC }
+    ) {
+      edges {
+        node {
+          id
+          genericNotificationId
+          daysUntilExpiry
+          pantryItem {
+            id
+            item {
+              id
+              name
+              imageUrl
+            }
+          }
+        }
+      }
+    }
+  }
+}

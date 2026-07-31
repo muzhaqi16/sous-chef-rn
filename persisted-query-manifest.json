@@ -483,6 +483,12 @@
       "body": "query GetDietaryProfile {\n  me {\n    id\n    dietaryProfile {\n      id\n      userId\n      preferredCuisines\n      dislikedIngredients\n      favoriteIngredients\n      calorieTarget\n      proteinTarget\n      carbsTarget\n      fatTarget\n      mealsPerDay\n      snacksPerDay\n      cookingSkillLevel\n      maxPrepTimeMinutes\n      maxCookTimeMinutes\n      budgetPerMeal\n      createdAt\n      updatedAt\n      restrictions {\n        id\n        diet\n        intolerance\n        healthGoal\n        severity\n        notes\n        appliesToHomeId\n        createdAt\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "444fd3f47c2c661425d251aac53c6901c29ed45e31bd72fad3b919e14548916f",
+      "name": "GetExpirationNotificationsForPantryItem",
+      "type": "query",
+      "body": "query GetExpirationNotificationsForPantryItem($pantryItemId: ID!) {\n  me {\n    id\n    expirationNotificationsConnection(\n      filters: {pantryItemId: $pantryItemId}\n      first: 20\n      orderBy: {createdAt: DESC}\n    ) {\n      edges {\n        node {\n          id\n          genericNotificationId\n          daysUntilExpiry\n          pantryItem {\n            id\n            item {\n              id\n              name\n              imageUrl\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "6ae31b8481249f29a4759b483afee0087c0f4c57c5682467a69cedc4922fb826",
       "name": "GetHome",
       "type": "query",

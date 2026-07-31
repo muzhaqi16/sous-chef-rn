@@ -108,18 +108,23 @@ export const getNotificationIcon = (
  * payloads. The payload arrives as an untyped JSON scalar, so each field is
  * read defensively — a legacy payload missing them yields `null`.
  */
-interface ExpiryReminderFields {
+export interface ExpiryReminderFields {
   itemName: string;
   daysUntilExpiry: number;
   isMultiBatch: boolean;
   batchOpenedAt: string | null;
   batchAddedAt: string | null;
+  // Always set by the server (see expirationCheckProcessor) for both the
+  // batch-level and item-level reminder paths — unlike sourceId/sourceType,
+  // which alias either PantryItem or PantryItemBatch depending on which path
+  // fired, this is unambiguously the pantry item id.
+  pantryItemId: string | null;
 }
 
-const readExpiryReminderFields = (
+export const readExpiryReminderFields = (
   payload: NotificationPayload,
 ): ExpiryReminderFields | null => {
-  const { itemName, daysUntilExpiry } = payload;
+  const { itemName, daysUntilExpiry, pantryItemId } = payload;
   if (typeof itemName !== 'string' || typeof daysUntilExpiry !== 'number') {
     return null;
   }
@@ -131,6 +136,7 @@ const readExpiryReminderFields = (
       typeof payload.batchOpenedAt === 'string' ? payload.batchOpenedAt : null,
     batchAddedAt:
       typeof payload.batchAddedAt === 'string' ? payload.batchAddedAt : null,
+    pantryItemId: typeof pantryItemId === 'string' ? pantryItemId : null,
   };
 };
 
