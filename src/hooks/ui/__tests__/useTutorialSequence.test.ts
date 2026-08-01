@@ -20,11 +20,6 @@ jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
   useTutorialResetSignal: () => false,
 }));
 
-const mockMarkSeen = jest.fn();
-jest.mock('#hooks/ui/markTutorialsSeen', () => ({
-  markTutorialsSeen: () => mockMarkSeen(),
-}));
-
 const rect: TargetRect = { x: 0, y: 0, width: 10, height: 10 };
 const steps = [
   { featureId: 'step_a', title: 'A', subtitle: 'a', rectKey: 'a' },
@@ -44,7 +39,6 @@ const renderSequence = () =>
 
 beforeEach(() => {
   mockStore.clear();
-  mockMarkSeen.mockClear();
   jest.useFakeTimers();
 });
 
@@ -52,8 +46,8 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-describe('useTutorialSequence — account-level completion', () => {
-  it('does not record completion until the final step is advanced', () => {
+describe('useTutorialSequence — per-step completion', () => {
+  it('records each step in MMKV as it is advanced, scoped to this sequence only', () => {
     const { result } = renderSequence();
 
     act(() => {
@@ -61,17 +55,19 @@ describe('useTutorialSequence — account-level completion', () => {
     });
 
     expect(mockStore.get('feature_hint_shown_user-1_step_a')).toBe(true);
-    expect(mockMarkSeen).not.toHaveBeenCalled();
+    expect(mockStore.get('user_show_tutorials')).toBeUndefined();
 
     act(() => {
       result.current.advance(); // step B is the last step
     });
 
     expect(mockStore.get('feature_hint_shown_user-1_step_b')).toBe(true);
-    expect(mockMarkSeen).toHaveBeenCalledTimes(1);
+    // Finishing this sequence must not touch the global tutorials-enabled
+    // flag — that flag is only set by the user via Settings.
+    expect(mockStore.get('user_show_tutorials')).toBeUndefined();
   });
 
-  it('records completion immediately when the user skips the whole sequence', () => {
+  it('records every step when the user skips the whole sequence, without touching the global flag', () => {
     const { result } = renderSequence();
 
     act(() => {
@@ -80,6 +76,6 @@ describe('useTutorialSequence — account-level completion', () => {
 
     expect(mockStore.get('feature_hint_shown_user-1_step_a')).toBe(true);
     expect(mockStore.get('feature_hint_shown_user-1_step_b')).toBe(true);
-    expect(mockMarkSeen).toHaveBeenCalledTimes(1);
+    expect(mockStore.get('user_show_tutorials')).toBeUndefined();
   });
 });

@@ -8,6 +8,7 @@ import {
   getSupportedBiometryType,
   setInternetCredentials,
   getInternetCredentials,
+  type SetOptions,
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
@@ -82,6 +83,36 @@ const processQueue = async () => {
 };
 
 /**
+ * Some Android emulators and low/mid-tier real devices have no hardware-backed
+ * keystore (no TEE/StrongBox), so a SECURE_HARDWARE key request throws
+ * CryptoFailedException ("Cannot generate keys with required security
+ * guarantees") instead of degrading on its own. Retry once with a
+ * software-backed key in that case — biometric gating (accessControl) is
+ * unaffected, only where the key material is generated.
+ */
+async function setGenericPasswordWithSecurityFallback(
+  username: string,
+  password: string,
+  options: SetOptions,
+): ReturnType<typeof setGenericPassword> {
+  try {
+    return await setGenericPassword(username, password, options);
+  } catch (error) {
+    if (options.securityLevel !== SECURITY_LEVEL.SECURE_HARDWARE) {
+      throw error;
+    }
+    logger.warn(
+      'Hardware-backed keystore unavailable, retrying with software-backed keys:',
+      error,
+    );
+    return setGenericPassword(username, password, {
+      ...options,
+      securityLevel: SECURITY_LEVEL.SECURE_SOFTWARE,
+    });
+  }
+}
+
+/**
  * Store an account's email & password in the native keystore/keychain under a
  * per-account policy that requires biometry to retrieve. Each account gets its
  * own slot, so enabling biometrics for one user never overwrites or exposes
@@ -99,15 +130,20 @@ export async function saveCredentials(
     await resetGenericPassword({ service: indicatorService });
 
     // Now save with a policy that forces a prompt on load
-    const success = await setGenericPassword(email, password, {
-      service,
-      // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
-      accessControl: ACCESS_CONTROL.BIOMETRY_ANY,
-      // On Android, insist on a hardware-backed keystore
-      securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
-      // Only accessible when device is unlocked
-      accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
-    });
+    const success = await setGenericPasswordWithSecurityFallback(
+      email,
+      password,
+      {
+        service,
+        // Allow either FaceID/TouchID (iOS) or any enrolled biometric (Android)
+        accessControl: ACCESS_CONTROL.BIOMETRY_ANY,
+        // On Android, prefer a hardware-backed keystore; falls back to
+        // software-backed when the device has no secure element.
+        securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
+        // Only accessible when device is unlocked
+        accessible: ACCESSIBLE.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+      },
+    );
 
     if (!success) {
       throw new Error("Keychain couldn't save credentials");

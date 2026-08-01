@@ -11,7 +11,6 @@ import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
-import { markTutorialsSeen } from '#hooks/ui/markTutorialsSeen';
 
 // ── Storage key helpers (compatible with useFeatureHint / resetAllFeatureHints) ──
 
@@ -31,9 +30,9 @@ function buildStorageKey(userId: string | undefined, featureId: string) {
 }
 
 // Completed if the interactive tutorial's flag (or an old static-tutorial flag)
-// is set in MMKV. Read both on mount and on a reset signal so the two reset
-// paths behave correctly: resetAllFeatureHints clears the flags (→ replay),
-// while markTutorialsSeen leaves them set (→ stays completed).
+// is set in MMKV. Read both on mount and on a reset signal so
+// resetAllFeatureHints (Settings → "Reset to Defaults") clears the flags and
+// the tutorial replays.
 function readCompletedFromStorage(userId: string | undefined): boolean {
   if (storage.getBoolean(buildStorageKey(userId, FEATURE_ID))) return true;
   for (const oldId of OLD_TUTORIAL_IDS) {
@@ -51,6 +50,7 @@ export enum ShoppingListTutorialStep {
   HINT_DISMISS_SHEET = 'HINT_DISMISS_SHEET',
   SPOTLIGHT_SWIPE_ACTIONS = 'SPOTLIGHT_SWIPE_ACTIONS',
   SPOTLIGHT_CHECKBOX = 'SPOTLIGHT_CHECKBOX',
+  SPOTLIGHT_LONG_PRESS_PRICE = 'SPOTLIGHT_LONG_PRESS_PRICE',
   SPOTLIGHT_PURCHASED_TAB = 'SPOTLIGHT_PURCHASED_TAB',
   SPOTLIGHT_MOVE_TO_PANTRY = 'SPOTLIGHT_MOVE_TO_PANTRY',
   COMPLETED = 'COMPLETED',
@@ -63,7 +63,7 @@ export type TutorialRectKey =
   | 'purchasedTab'
   | 'archiveIcon';
 
-export const TUTORIAL_TOTAL_STEPS = 7;
+export const TUTORIAL_TOTAL_STEPS = 8;
 
 export const TUTORIAL_STEP_CONFIG: Record<
   string,
@@ -92,17 +92,24 @@ export const TUTORIAL_STEP_CONFIG: Record<
     rectKey: 'checkbox',
     stepIndex: 4,
   },
+  [ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE]: {
+    title: 'Record the price',
+    subtitle:
+      'Press and hold an item to enter its actual quantity and price before marking it purchased',
+    rectKey: 'itemCard',
+    stepIndex: 5,
+  },
   [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]: {
     title: 'View purchased items',
     subtitle: 'Tap to see your purchased items',
     rectKey: 'purchasedTab',
-    stepIndex: 5,
+    stepIndex: 6,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY]: {
     title: 'Move to pantry',
     subtitle: 'Tap to move this item to your pantry',
     rectKey: 'archiveIcon',
-    stepIndex: 6,
+    stepIndex: 7,
   },
 };
 
@@ -127,6 +134,7 @@ interface ShoppingListTutorialActionsContextValue {
   notifySheetClosed: () => void;
   notifySwipeActionsSeen: () => void;
   notifyCheckboxTapped: () => void;
+  notifyLongPressPriceSeen: () => void;
   notifyPurchasedTabTapped: () => void;
   notifyMoveToPantryTapped: () => void;
 
@@ -216,8 +224,8 @@ export function ShoppingListTutorialProvider({
   }, []);
 
   // React to external resets (centralized signal hook). Re-derive completion
-  // from MMKV rather than forcing it false: resetAllFeatureHints clears the
-  // flags (→ replay) while markTutorialsSeen leaves them set (→ stays done).
+  // from MMKV rather than forcing it false, since resetAllFeatureHints is the
+  // only path that clears the flags (→ replay).
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
     setIsCompleted(readCompletedFromStorage(userId));
@@ -265,15 +273,16 @@ export function ShoppingListTutorialProvider({
   };
 
   const markComplete = () => {
+    // Scoped to this tutorial only — the "Show Tutorials" setting (which
+    // gates every screen's tutorial via tutorialsEnabled) is a separate,
+    // user-controlled flag and must not be flipped as a side effect of
+    // finishing one screen's guided tour.
     storage.set(buildStorageKey(userIdRef.current, FEATURE_ID), true);
     // Also mark the standalone swipe hint as shown so it never fires independently
     storage.set(
       buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
       true,
     );
-    // Record completion at the account level so the tutorial doesn't replay on
-    // the user's other devices.
-    markTutorialsSeen();
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
@@ -307,6 +316,12 @@ export function ShoppingListTutorialProvider({
 
   const notifyCheckboxTapped = () => {
     if (currentStep !== ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX) return;
+    advanceTo(ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE);
+  };
+
+  const notifyLongPressPriceSeen = () => {
+    if (currentStep !== ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE)
+      return;
     advanceTo(ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB);
   };
 
@@ -352,6 +367,8 @@ export function ShoppingListTutorialProvider({
       [ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS]:
         ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
       [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]:
+        ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
+      [ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE]:
         ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB,
       [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]:
         ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY,
@@ -390,6 +407,7 @@ export function ShoppingListTutorialProvider({
     notifySheetClosed,
     notifySwipeActionsSeen,
     notifyCheckboxTapped,
+    notifyLongPressPriceSeen,
     notifyPurchasedTabTapped,
     notifyMoveToPantryTapped,
     registerRect,

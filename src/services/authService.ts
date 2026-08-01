@@ -400,9 +400,12 @@ function bootstrapUserStore(user: LoginUserFragment): void {
   }
 
   // Seed the tutorials master switch from the account's server setting before
-  // any screen (and its tutorial hooks) mounts, so a returning user who already
-  // finished the tutorials doesn't see the coach marks flash on a new device.
-  // useShowTutorials reads this MMKV key; useAppSettings keeps it in sync later.
+  // any screen (and its tutorial hooks) mounts, so a user who explicitly
+  // disabled tutorials in Settings doesn't see a flash of coach marks on a
+  // new device. Per-screen completion itself is tracked locally per device
+  // (feature_hint_shown_*) and is never synced — only this explicit
+  // enabled/disabled preference is. useShowTutorials reads this MMKV key;
+  // useAppSettings keeps it in sync later.
   if (user.settings) {
     storage.set('user_show_tutorials', user.settings.showTutorials);
   }
