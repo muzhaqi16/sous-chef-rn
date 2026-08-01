@@ -15,7 +15,7 @@ import { useTabBarSetters } from '#/context/TabBarActionsContext';
  * @example
  * ```tsx
  * // Simple usage
- * useTabBarAddButton(() => navigate('AddItem'));
+ * useTabBarAddButton(() => setAddSheetVisible(true));
  *
  * // With disabled state
  * useTabBarAddButton(

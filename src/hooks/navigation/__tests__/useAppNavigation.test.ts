@@ -47,10 +47,13 @@ describe('useAppNavigation', () => {
   });
 
   describe('root-level screen helpers', () => {
-    it('toProfile navigates to Profile', () => {
+    it('toProfile navigates to Home > Pantry > Profile (nested)', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toProfile());
-      expect(mockNavigate).toHaveBeenCalledWith('Profile');
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'Profile', params: undefined },
+      });
     });
 
     it('toNotifications navigates to Notifications > NotificationList', () => {
@@ -61,7 +64,7 @@ describe('useAppNavigation', () => {
       });
     });
 
-    it('toImageCrop navigates with imageFile params', () => {
+    it('toImageCrop navigates to Onboarding > ImageCrop with imageFile params', () => {
       const { result } = renderHook(() => useAppNavigation());
       const imageFile = { uri: 'file://photo.jpg', fileName: 'photo.jpg' };
 
@@ -69,7 +72,24 @@ describe('useAppNavigation', () => {
         result.current.toImageCrop({ imageFile });
       });
 
-      expect(mockNavigate).toHaveBeenCalledWith('ImageCrop', { imageFile });
+      expect(mockNavigate).toHaveBeenCalledWith('Onboarding', {
+        screen: 'ImageCrop',
+        params: { imageFile },
+      });
+    });
+
+    it('toPantryImageCrop navigates to Home > Pantry > ImageCrop (nested)', () => {
+      const { result } = renderHook(() => useAppNavigation());
+      const imageFile = { uri: 'file://photo.jpg', fileName: 'photo.jpg' };
+
+      act(() => {
+        result.current.toPantryImageCrop({ imageFile });
+      });
+
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'ImageCrop', params: { imageFile } },
+      });
     });
   });
 
@@ -102,33 +122,43 @@ describe('useAppNavigation', () => {
     });
   });
 
-  // Feature detail/sub screens live at the root level (siblings of the tab
-  // navigator), so the facade navigates to them directly — not nested under
-  // `Home`. This keeps the floating tab bar off them entirely.
+  // Pantry's detail/sub screens are nested under Pantry's own stack (see
+  // PantryStack.tsx) so Pantry's Offscreen-pause boundary is isolated from
+  // the other 3 tabs — the facade dispatches a nested Home > Pantry > X
+  // navigate action for these. Other features' detail screens are still
+  // root-level siblings of `Home` pending their own migration phases.
   describe('root-level feature detail helpers', () => {
-    it('toPantryItem navigates directly to PantryItem', () => {
+    it('toPantryItem navigates nested to Home > Pantry > PantryItem', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryItem({ itemId: 'p1' }));
-      expect(mockNavigate).toHaveBeenCalledWith('PantryItem', {
-        itemId: 'p1',
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryItem', params: { itemId: 'p1' } },
       });
     });
 
     it('toPantryItem defaults to empty params when omitted', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryItem());
-      expect(mockNavigate).toHaveBeenCalledWith('PantryItem', {});
-    });
-
-    it('toPantryItemDetail navigates directly with itemId', () => {
-      const { result } = renderHook(() => useAppNavigation());
-      act(() => result.current.toPantryItemDetail({ itemId: 'item-1' }));
-      expect(mockNavigate).toHaveBeenCalledWith('PantryItemDetail', {
-        itemId: 'item-1',
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryItem', params: {} },
       });
     });
 
-    it('toNutritionScreen navigates directly with full params', () => {
+    it('toPantryItemDetail navigates nested with itemId', () => {
+      const { result } = renderHook(() => useAppNavigation());
+      act(() => result.current.toPantryItemDetail({ itemId: 'item-1' }));
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: {
+          screen: 'PantryItemDetail',
+          params: { itemId: 'item-1' },
+        },
+      });
+    });
+
+    it('toNutritionScreen navigates nested with full params', () => {
       const { result } = renderHook(() => useAppNavigation());
       const params = {
         itemId: 'i1',
@@ -137,10 +167,13 @@ describe('useAppNavigation', () => {
         actualServingGrams: 100,
       };
       act(() => result.current.toNutritionScreen(params));
-      expect(mockNavigate).toHaveBeenCalledWith('NutritionScreen', params);
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'Pantry',
+        params: { screen: 'NutritionScreen', params },
+      });
     });
 
-    it('toShoppingListItemDetail navigates directly to ItemDetail', () => {
+    it('toShoppingListItemDetail navigates nested to Home > ShoppingList > ItemDetail', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() =>
         result.current.toShoppingListItemDetail({
@@ -148,25 +181,34 @@ describe('useAppNavigation', () => {
           itemId: 'i1',
         }),
       );
-      expect(mockNavigate).toHaveBeenCalledWith('ItemDetail', {
-        listId: 'l1',
-        itemId: 'i1',
+      expect(mockNavigate).toHaveBeenCalledWith('Home', {
+        screen: 'ShoppingList',
+        params: {
+          screen: 'ItemDetail',
+          params: { listId: 'l1', itemId: 'i1' },
+        },
       });
     });
 
-    it('all three RecipeDetail aliases target the single root RecipeDetail', () => {
+    // Each of the three tabs that reach RecipeDetail (Pantry/Recipe/
+    // MealPlan) has its own nested copy now — no shared root-level copy
+    // left (see RootNavigator.tsx / MealPlanStack.tsx).
+    it('the three RecipeDetail aliases each target their own nested copy', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toRecipeDetail({ recipeId: 'r1' }));
       act(() => result.current.toPantryRecipeDetail({ recipeId: 'r2' }));
       act(() => result.current.toMealPlanRecipeDetail({ recipeId: 'r3' }));
-      expect(mockNavigate).toHaveBeenNthCalledWith(1, 'RecipeDetail', {
-        recipeId: 'r1',
+      expect(mockNavigate).toHaveBeenNthCalledWith(1, 'Home', {
+        screen: 'Recipe',
+        params: { screen: 'RecipeDetail', params: { recipeId: 'r1' } },
       });
-      expect(mockNavigate).toHaveBeenNthCalledWith(2, 'RecipeDetail', {
-        recipeId: 'r2',
+      expect(mockNavigate).toHaveBeenNthCalledWith(2, 'Home', {
+        screen: 'Pantry',
+        params: { screen: 'RecipeDetail', params: { recipeId: 'r2' } },
       });
-      expect(mockNavigate).toHaveBeenNthCalledWith(3, 'RecipeDetail', {
-        recipeId: 'r3',
+      expect(mockNavigate).toHaveBeenNthCalledWith(3, 'Home', {
+        screen: 'MealPlan',
+        params: { screen: 'RecipeDetail', params: { recipeId: 'r3' } },
       });
     });
   });

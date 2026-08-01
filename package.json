@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.1.17",
+  "version": "4.1.18",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -65,7 +65,7 @@
   "dependencies": {
     "@apollo/client": "~4.1.7",
     "@apollo/persisted-query-lists": "^1.1.0",
-    "@callstack/liquid-glass": "^0.7.0",
+    "@callstack/liquid-glass": "^0.7.1",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^5.2.2",
     "@notifee/react-native": "^9.1.8",
@@ -82,9 +82,9 @@
     "@react-native-vector-icons/common": "^12.4.0",
     "@react-native-vector-icons/ionicons": "^12.3.0",
     "@react-navigation/bottom-tabs": "8.0.0-alpha.41",
-    "@react-navigation/core": "8.0.0-alpha.26",
-    "@react-navigation/elements": "3.0.0-alpha.39",
-    "@react-navigation/native": "8.0.0-alpha.35",
+    "@react-navigation/core": "^8.0.0-alpha.26",
+    "@react-navigation/elements": "^3.0.0-alpha.39",
+    "@react-navigation/native": "^8.0.0-alpha.40",
     "@react-navigation/native-stack": "8.0.0-alpha.42",
     "@shopify/flash-list": "^2.3.2",
     "@shopify/react-native-skia": "^2.5.4",
@@ -120,7 +120,7 @@
     "react-native-performance": "^6.0.0",
     "react-native-permissions": "^5.6.1",
     "react-native-reanimated": "^4.5.3",
-    "react-native-safe-area-context": "^5.7.0",
+    "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.26.2",
     "react-native-svg": "^15.15.4",
     "react-native-tab-view": "^4.2.1",

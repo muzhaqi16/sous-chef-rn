@@ -48,6 +48,14 @@ export const HomeTabs = createBottomTabNavigator({
     // Crossfade between tabs instead of an instant cut. This is the most
     // repeated transition in the app; a hard swap reads as cheap.
     animation: 'fade',
+    // Default 'pause' (React 19 Activity/Offscreen) tears down every layout
+    // effect in a blurred tab's subtree and re-runs all of them
+    // synchronously on resume — confirmed (via a controlled A/B revert on
+    // PantryStack.tsx, see its identical comment) as the cause of a
+    // multi-second tab-switch freeze (23s+ "Layout effects" in the
+    // Profiler). Trades pause's idle memory/CPU savings for eliminating
+    // that resume storm. See CLAUDE.md's `inactiveBehavior` section.
+    inactiveBehavior: 'none',
   },
   screens: tabScreens,
 });

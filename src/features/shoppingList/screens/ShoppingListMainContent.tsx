@@ -472,6 +472,11 @@ export const ShoppingListMainContent: React.FC<
       {(() => {
         if (!tutorial?.isActive) return null;
         if (!isScreenFocused || isOverlayOpen) return null;
+        // Hide the spotlight while the purchase-amount sheet is open — it
+        // stays on SPOTLIGHT_LONG_PRESS_PRICE until the sheet closes (see
+        // ShoppingListModalsContext), so without this the coach mark would
+        // otherwise render on top of the open sheet the whole time.
+        if (purchaseAmount.visible) return null;
 
         const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
         if (!stepConfig) return null;

@@ -95,8 +95,10 @@ happen inside that factory.
   `<View style={[styles.x, callerStyle]} />` ([Unistyles "Merging styles"
   guide](https://www.unistyl.es/v3/guides/merging-styles/)). No wrapper or
   `'use no memo'` directive needed.
-- **Navigators use the default `inactiveBehavior: 'pause'`.** Historically the
-  app pinned `inactiveBehavior: 'none'` on every navigator because the default
+- **Navigators default to `inactiveBehavior: 'pause'`, EXCEPT `HomeTabs` and
+  the 4 feature stacks (`PantryStack`, `ShoppingListStack`, `RecipeStack`,
+  `MealPlanStack`), which explicitly set `inactiveBehavior: 'none'`.**
+  Historically the app pinned `'none'` on every navigator because the default
   `'pause'` (React 19 `React.Activity`, used by `@react-navigation/native-stack`
   v8 and `@react-navigation/bottom-tabs` v8 to freeze inactive screens) prevented
   Unistyles ShadowTree updates from reaching them — a theme change only applied
@@ -105,8 +107,26 @@ happen inside that factory.
   [#1212](https://github.com/jpudysz/react-native-unistyles/pull/1212)): unistyles
   now detects the React `Offscreen` fiber boundary and re-links + pushes a fresh
   ShadowTree update when a paused screen resumes, so `'pause'` applies theme
-  changes correctly. Do **not** re-add `inactiveBehavior: 'none'` — the default
-  `'pause'` is correct and reclaims the freeze-inactive-screens optimization.
+  changes correctly — the app moved back to the default everywhere.
+
+  A second, unrelated problem then surfaced (2026-08-01): navigating back to a
+  paused Pantry/ShoppingList/Recipe/MealPlan screen — by switching tabs, or by
+  pushing/popping a detail screen within one of their own stacks (e.g.
+  `PantryMain` → `HomeManagement` → back) — froze the JS thread for
+  multi-second stretches. React DevTools Profiler traced it to the resumed
+  commit's `Layout effects` phase (23,000+ ms observed on one capture, vs. a
+  34.6ms render phase): `'pause'` destroys every layout effect in a hidden
+  subtree, and resuming it re-runs *all* of them synchronously in one
+  commit — for these 4 screens that subtree is a FlashList plus every
+  currently-mounted item cell's own animation/gesture layout effects,
+  potentially hundreds firing back-to-back. Confirmed via a controlled A/B:
+  reverting just `PantryStack` back to `'pause'` reintroduced the freeze on
+  Pantry push/pop while the other 3 tabs (still `'none'`) stayed smooth.
+  `'none'` trades `'pause'`'s idle memory/CPU savings (these tabs' effects —
+  queries, animations — keep running while blurred) for eliminating the
+  resume storm. Other navigators (`BarcodeStack`, `AuthStack`,
+  `OnboardingStack`, `NotificationStack`, etc.) don't host FlashList-heavy
+  screens and should stay on the default `'pause'`.
 
 The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 (see `babel.config.js`); reversing the order produces compile errors.

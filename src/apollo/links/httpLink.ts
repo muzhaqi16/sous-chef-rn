@@ -4,12 +4,41 @@ import { env } from '#/config/env';
 import { Environment } from '#/utils/environment';
 
 /**
- * Create a fetch function with timeout support using AbortController
+ * Create a fetch function with timeout support using AbortController.
+ *
+ * Apollo's HttpLink passes its own `signal` in `init` — an AbortController
+ * it aborts when a query's observable is torn down (component unmounts,
+ * navigates away, or the query is otherwise cancelled). That signal must be
+ * forwarded into our own controller, not overwritten: without this, walking
+ * away from a screen mid-request never actually cancels the underlying
+ * fetch — it keeps running in the background, holding a connection, and
+ * competes with whatever the same query fires next time the screen is
+ * revisited. Left unfixed, this is exactly the mechanism that turns a single
+ * slow request into a growing pile of orphaned in-flight requests, some of
+ * which then stall long enough to hit this timeout and go through
+ * `retryLink`'s retries — the layered delay is what a hung `GetX` query
+ * spanning ~30s (10s timeout × up to 3 attempts, see retryLink.ts) actually
+ * traces back to.
  */
 const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
   return async (input, init) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    let timedOut = false;
+    const timeoutId = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, timeoutMs);
+
+    const incomingSignal = init?.signal;
+    if (incomingSignal) {
+      if (incomingSignal.aborted) {
+        controller.abort();
+      } else {
+        incomingSignal.addEventListener('abort', () => controller.abort(), {
+          once: true,
+        });
+      }
+    }
 
     try {
       const response = await fetch(input, {
@@ -19,7 +48,8 @@ const createTimeoutFetch = (timeoutMs: number): typeof fetch => {
       return response;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Request timeout after ${timeoutMs}ms`);
+        if (timedOut) throw new Error(`Request timeout after ${timeoutMs}ms`);
+        throw error; // cancelled by Apollo (query torn down), not a timeout
       }
       throw error;
     } finally {

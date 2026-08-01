@@ -62,7 +62,7 @@ registerFcmBackgroundHandler();
  * @format
  */
 import { AppRegistry, TurboModuleRegistry } from 'react-native';
-import { enableScreens, enableFreeze } from 'react-native-screens';
+import { enableScreens } from 'react-native-screens';
 import './src/theme/unistyles';
 import { initializeSecureStorage } from './src/storage/mmkv';
 
@@ -85,11 +85,25 @@ if (__DEV__ && global._RNGH_MODULE_ID === undefined) {
   );
 }
 
-// Activate native screen reuse and inactive-screen freezing.
-// On the New Architecture this is the explicit opt-in for native screen
-// containers + freeze-on-blur behavior.
+// Activate native screen reuse. Native-stack's own `inactiveBehavior`
+// (default 'pause') is driven by React's Activity/Offscreen primitive and
+// does NOT require `enableFreeze` — that's a separate, additional layer
+// (react-native-screens' integration with react-freeze, a Suspense-based
+// subtree freezer) that was likely enabled here under the assumption it was
+// required boilerplate alongside `enableScreens`. It isn't, and it has a
+// real history of causing exactly this app's symptom: react-native-screens
+// issue #2384 ("enableFreeze cause to bottom tab navigator unresponsive" —
+// tab presses silently stop changing the active screen) and
+// facebook/react-native#44044 (react-freeze's Suspense-based freezing
+// recreates native views on resume, leaking stale touch/pressed state onto
+// the new instance — a plausible mechanism for taps producing zero visual
+// feedback). Disabled here as a deliberate, reversible experiment — to
+// re-enable, restore `enableFreeze` in the import above and uncomment the
+// call below, and only do so if profiling later shows a real need for the
+// extra freezing layer that native-stack's own Activity mechanism doesn't
+// already provide.
 enableScreens(true);
-enableFreeze(true);
+// enableFreeze(true); // see comment above — deliberately disabled
 
 // Kick off encrypted MMKV initialization before any React code runs.
 // Zustand persist hydration awaits this internally via zustandStorage, and

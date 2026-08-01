@@ -18,6 +18,14 @@ import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet } from 'react-native-unistyles';
 import { SHEET } from '#constants/animations';
 import { Pressable } from '#components/atoms/themedComponents';
+import { logger } from '#/utils/environment';
+
+// DEBUG (temporary): how long a non-empty slot list must persist before the
+// watchdog warns a claim is likely stranded. A normal sheet open/close cycle
+// settles in well under 1s, so 5s is a wide margin — a stranded slot means
+// GlobalBackdrop's invisible Pressable is swallowing every touch app-wide,
+// including pull-to-refresh, until something incidentally clears it.
+const STRANDED_SLOT_WARN_MS = 5000;
 
 export interface BackdropClaimOptions {
   /** A fixed target opacity (provider creates + animates an internal SV via
@@ -180,6 +188,24 @@ export const OverlayBackdropProvider: React.FC<
   // fade-in/out window.
   const isVisible = slots.length > 0;
 
+  // DEBUG (temporary): a normal sheet/tray open+close settles in well under
+  // 1s. If `isVisible` stays true continuously past STRANDED_SLOT_WARN_MS,
+  // some claimant's release() never fired — GlobalBackdrop's invisible
+  // Pressable is then swallowing every touch app-wide (pull-to-refresh
+  // included) until something incidentally clears the slot.
+  useEffect(() => {
+    if (!isVisible) return;
+    const ids = slots.map(s => s.id);
+    const timer = setTimeout(() => {
+      logger.warn(
+        `⚠️ [OverlayBackdrop] slot(s) [${ids.join(
+          ', ',
+        )}] still claimed after ${STRANDED_SLOT_WARN_MS}ms — likely stranded. GlobalBackdrop is swallowing every touch app-wide until this clears.`,
+      );
+    }, STRANDED_SLOT_WARN_MS);
+    return () => clearTimeout(timer);
+  }, [isVisible]);
+
   // Latest claim owns the backdrop-tap handler.
   const onPress =
     slots.length > 0 ? slots[slots.length - 1].onPress ?? null : null;
@@ -220,9 +246,16 @@ export const OverlayBackdropProvider: React.FC<
       // (makeMutable SVs persist unless cancelled); leave external SVs alone.
       const entry = slotsRef.current.find(e => e.id === id);
       if (entry?.ownedByProvider) cancelAnimation(entry.sv);
-      setSlots(prev =>
-        prev.some(e => e.id === id) ? prev.filter(e => e.id !== id) : prev,
-      );
+      setSlots(prev => {
+        if (!prev.some(e => e.id === id)) return prev;
+        const next = prev.filter(e => e.id !== id);
+        if (__DEV__) {
+          logger.debug(
+            `🎭 [OverlayBackdrop] release id=${id} → ${next.length} slot(s) remaining`,
+          );
+        }
+        return next;
+      });
     };
 
     const claim = (opts?: BackdropClaimOptions): string => {
@@ -237,7 +270,15 @@ export const OverlayBackdropProvider: React.FC<
           ownedByProvider: false,
           onPress: opts.onPress,
         };
-        setSlots(prev => [...prev, entry]);
+        setSlots(prev => {
+          const next = [...prev, entry];
+          if (__DEV__) {
+            logger.debug(
+              `🎭 [OverlayBackdrop] claim id=${id} (external SV) → ${next.length} slot(s)`,
+            );
+          }
+          return next;
+        });
         return id;
       }
 
@@ -251,7 +292,15 @@ export const OverlayBackdropProvider: React.FC<
         ownedByProvider: true,
         onPress: opts?.onPress,
       };
-      setSlots(prev => [...prev, entry]);
+      setSlots(prev => {
+        const next = [...prev, entry];
+        if (__DEV__) {
+          logger.debug(
+            `🎭 [OverlayBackdrop] claim id=${id} (owned) → ${next.length} slot(s)`,
+          );
+        }
+        return next;
+      });
       return id;
     };
 
