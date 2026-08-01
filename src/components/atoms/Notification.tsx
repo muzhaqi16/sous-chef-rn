@@ -116,6 +116,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.textPrimary,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     flexDirection: 'row',
     alignItems: 'center',
   },

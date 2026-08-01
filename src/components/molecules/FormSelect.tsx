@@ -118,6 +118,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
@@ -144,6 +145,7 @@ const styles = StyleSheet.create(theme => ({
   modalContent: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing['5'],
     maxHeight: '80%',
     width: '90%',
@@ -159,6 +161,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   selectedOption: {
     backgroundColor: theme.colors.primaryLight,
@@ -177,6 +180,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignSelf: 'center',
   },
   closeButtonText: {

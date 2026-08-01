@@ -406,6 +406,7 @@ const styles = StyleSheet.create(theme => ({
     width: 56,
     height: 56,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
@@ -416,6 +417,7 @@ const styles = StyleSheet.create(theme => ({
     width: 56,
     height: 56,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.primary,
@@ -430,6 +432,7 @@ const styles = StyleSheet.create(theme => ({
         true: {
           borderWidth: 2,
           borderRadius: theme.radii.md,
+          borderCurve: 'continuous',
           paddingVertical: theme.spacing.xs,
           marginHorizontal: theme.spacing.md,
           borderColor: theme.colors.primary,

@@ -206,6 +206,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
     gap: theme.spacing.sm,

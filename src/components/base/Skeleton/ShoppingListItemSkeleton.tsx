@@ -58,6 +58,7 @@ const styles = StyleSheet.create(theme => ({
   wrapper: {
     marginHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   content: {
     flex: 1,

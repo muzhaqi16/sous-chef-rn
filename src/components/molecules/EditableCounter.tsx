@@ -168,6 +168,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.borderLight,
     borderStyle: 'solid',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.xs,
     variants: {
       focused: {
@@ -191,6 +192,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
   },

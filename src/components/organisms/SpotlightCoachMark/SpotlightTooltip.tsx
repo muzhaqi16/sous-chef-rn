@@ -102,6 +102,7 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.lg,
     boxShadow: [
       {
@@ -132,6 +133,7 @@ const styles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   nextButton: {
     alignSelf: 'flex-end',

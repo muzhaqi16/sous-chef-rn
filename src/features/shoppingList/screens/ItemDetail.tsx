@@ -394,6 +394,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.successLight,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   statusBadgeText: {
     marginLeft: theme.spacing.xs,

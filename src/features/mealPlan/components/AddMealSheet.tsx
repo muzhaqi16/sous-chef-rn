@@ -1,9 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-} from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -13,7 +9,9 @@ import {
 } from '#components/atoms/ChipScrollRow';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { FlashList } from '@shopify/flash-list';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
+import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Icon } from '#utils/iconUtils';
@@ -139,21 +137,26 @@ function searchSpoonacularWithCache(
   );
 }
 
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
+const keyExtractor = (savedRecipe: SavedRecipeNode) => savedRecipe.id;
+
 /**
  * Per-row leaf that subscribes to a single SavedRecipe via the colocated
  * `AddMealSheet_savedRecipe` fragment. `useFragment` reads these scalars
  * straight from the normalized cache (populated by the MySavedRecipes query),
  * so the row stays independent of the recipes feature's internal fragments.
+ *
+ * Search filtering is the parent's job — a row that rendered `null` would
+ * still occupy a slot in the list's item count and leave a blank gap.
  */
 interface SavedRecipeRowProps {
   savedRecipeRef: SavedRecipeNode;
-  searchQuery: string;
   onPress: (recipeId: string) => void;
 }
 
 const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
   savedRecipeRef,
-  searchQuery,
   onPress,
 }) => {
   const { t } = useTranslation();
@@ -164,12 +167,6 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
   });
 
   if (!complete) return null;
-
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    const name = (data.recipe.name ?? '').toLowerCase();
-    if (!name.includes(q)) return null;
-  }
 
   const { recipe } = data;
   return (
@@ -234,6 +231,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
   const [loadingItemId, setLoadingItemId] = useState<number | null>(null);
 
   const { preloadRecipe } = useRecipePreload();
+  const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const searchBarRef = useRef<BottomSheetSearchBarRef>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -286,10 +284,6 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     clearSearchResults(setSpoonacularResults, setSearchingApi);
   };
 
-  // Search filtering happens inside SavedRecipeRow via useFragment — the
-  // hook returns masked refs, so we can't read recipe.name at the parent
-  // level. Rows that don't match return null.
-
   const handleSelectRecipe = (recipeId: string) => {
     onAddRecipe(recipeId, selectedMealType);
     ref.current?.dismiss();
@@ -335,22 +329,25 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     );
   };
 
-  const handleScrollEndReached = (
-    e: NativeSyntheticEvent<NativeScrollEvent>,
-  ) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    const paddingToBottom = 100;
-    if (
-      layoutMeasurement.height + contentOffset.y >=
-      contentSize.height - paddingToBottom
-    ) {
-      if (hasMore && !searchQuery.trim()) {
-        loadMore();
-      }
+  // `loadMore` guards re-entry synchronously (usePagination's isFetchingMoreRef),
+  // so onEndReached firing repeatedly during a fling is safe.
+  const handleEndReached = () => {
+    if (hasMore && !searchQuery.trim()) {
+      loadMore();
     }
   };
 
   const hasQuery = searchQuery.trim().length > 0;
+
+  // Filtering moved up from the row so the list's item count matches what is
+  // actually rendered — a virtualized list can't absorb rows that return null.
+  const filteredRecipes = hasQuery
+    ? recipes.filter(savedRecipe =>
+        savedRecipe.recipe.name
+          .toLowerCase()
+          .includes(searchQuery.trim().toLowerCase()),
+      )
+    : recipes;
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPES.map(
     ({ type, labelKey }) => ({ key: type, label: t(labelKey) }),
@@ -390,115 +387,139 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           />
         </View>
 
-        <BottomSheetScrollView
-          contentContainerStyle={styles.listContent}
-          onScroll={handleScrollEndReached}
-        >
-          {/* Custom meal row */}
-          {hasQuery ? (
-            <AppPressable
-              onPress={handleAddCustomMeal}
-              style={styles.customMealRow}
-            >
-              <Icon name="add-circle-outline" size={24} tone="primary" />
-              <Text style={styles.customMealText} numberOfLines={1}>
-                {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
-              </Text>
-            </AppPressable>
-          ) : null}
-
-          {/* Your Recipes section — header only when NOT searching.
-              During search, rows filter themselves via useFragment (returning
-              null on mismatch), so the parent can't know the match count. */}
-          {!hasQuery && recipes.length > 0 ? (
-            <Text style={styles.sectionHeader}>
-              {t('addMealSheet.yourRecipes')}
-            </Text>
-          ) : null}
-
-          {recipes.map(savedRecipe => (
+        {/* Only the saved-recipe rows repeat; everything else is a fixed block
+            above or below them, so header/footer cover it without a mixed
+            item type. */}
+        <FlashList
+          renderScrollComponent={BottomSheetScrollable}
+          data={filteredRecipes}
+          keyExtractor={keyExtractor}
+          getItemType={getItemType}
+          renderItem={({ item }) => (
             <SavedRecipeRow
-              key={savedRecipe.id}
-              savedRecipeRef={savedRecipe}
-              searchQuery={searchQuery}
+              savedRecipeRef={item}
               onPress={handleSelectRecipe}
             />
-          ))}
-
-          {/* Additional search results */}
-          {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
+          )}
+          contentContainerStyle={styles.listContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={
+            FLASHLIST_DEFAULTS.bottomSheet.onEndReachedThreshold
+          }
+          drawDistance={FLASHLIST_DEFAULTS.bottomSheet.drawDistance}
+          maxItemsInRecyclePool={
+            FLASHLIST_DEFAULTS.bottomSheet.maxItemsInRecyclePool
+          }
+          ListHeaderComponent={
             <>
-              {searchingApi ? (
-                <View style={styles.loadingContainer}>
-                  <PrimaryActivityIndicator size="small" />
+              {/* Custom meal row */}
+              {hasQuery ? (
+                <AppPressable
+                  onPress={handleAddCustomMeal}
+                  style={styles.customMealRow}
+                >
+                  <Icon name="add-circle-outline" size={24} tone="primary" />
+                  <Text style={styles.customMealText} numberOfLines={1}>
+                    {t('addMealSheet.addCustom', { query: searchQuery.trim() })}
+                  </Text>
+                </AppPressable>
+              ) : null}
+
+              {/* Shown whenever there are rows beneath it, searching or not.
+                  During a search it separates saved matches from the API
+                  results that follow; with no matches there's no section to
+                  label, so it drops out. */}
+              {filteredRecipes.length > 0 ? (
+                <Text style={styles.sectionHeader}>
+                  {t('addMealSheet.yourRecipes')}
+                </Text>
+              ) : null}
+            </>
+          }
+          ListFooterComponent={
+            <>
+              {/* Additional search results */}
+              {hasQuery && (searchingApi || spoonacularResults.length > 0) ? (
+                <>
+                  {searchingApi ? (
+                    <View style={styles.loadingContainer}>
+                      <PrimaryActivityIndicator size="small" />
+                    </View>
+                  ) : null}
+
+                  {spoonacularResults.map(item => (
+                    <AppPressable
+                      key={item.id}
+                      onPress={() => handleSelectSpoonacularRecipe(item)}
+                      disabled={loadingItemId === item.spoonacularId}
+                      style={styles.recipeItem}
+                    >
+                      {item.imageUrl ? (
+                        <CachedImage
+                          uri={item.imageUrl}
+                          style={styles.recipeImage}
+                          displaySize={44}
+                        />
+                      ) : null}
+                      <View style={styles.recipeInfo}>
+                        <Text style={styles.recipeName} numberOfLines={1}>
+                          {item.title}
+                        </Text>
+                        {item.subtitle ? (
+                          <Text style={styles.recipeMeta} numberOfLines={1}>
+                            {item.subtitle}
+                          </Text>
+                        ) : null}
+                        {item.dietTags && item.dietTags.length > 0 ? (
+                          <View style={styles.dietTagsRow}>
+                            {item.dietTags.map(tag => (
+                              <View key={tag} style={styles.dietTag}>
+                                <Text style={styles.dietTagText}>
+                                  {t(DIET_TAG_LABEL_KEYS[tag])}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+                      </View>
+                      {loadingItemId === item.spoonacularId ? (
+                        <PrimaryActivityIndicator size="small" />
+                      ) : (
+                        <Icon
+                          name="add-circle-outline"
+                          size={24}
+                          tone="primary"
+                        />
+                      )}
+                    </AppPressable>
+                  ))}
+                </>
+              ) : null}
+
+              {/* Empty state */}
+              {!hasQuery && recipes.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>
+                    {t('addMealSheet.noSavedRecipes')}
+                  </Text>
                 </View>
               ) : null}
 
-              {spoonacularResults.map(item => (
-                <AppPressable
-                  key={item.id}
-                  onPress={() => handleSelectSpoonacularRecipe(item)}
-                  disabled={loadingItemId === item.spoonacularId}
-                  style={styles.recipeItem}
-                >
-                  {item.imageUrl ? (
-                    <CachedImage
-                      uri={item.imageUrl}
-                      style={styles.recipeImage}
-                      displaySize={44}
-                    />
-                  ) : null}
-                  <View style={styles.recipeInfo}>
-                    <Text style={styles.recipeName} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    {item.subtitle ? (
-                      <Text style={styles.recipeMeta} numberOfLines={1}>
-                        {item.subtitle}
-                      </Text>
-                    ) : null}
-                    {item.dietTags && item.dietTags.length > 0 ? (
-                      <View style={styles.dietTagsRow}>
-                        {item.dietTags.map(tag => (
-                          <View key={tag} style={styles.dietTag}>
-                            <Text style={styles.dietTagText}>
-                              {t(DIET_TAG_LABEL_KEYS[tag])}
-                            </Text>
-                          </View>
-                        ))}
-                      </View>
-                    ) : null}
-                  </View>
-                  {loadingItemId === item.spoonacularId ? (
-                    <PrimaryActivityIndicator size="small" />
-                  ) : (
-                    <Icon name="add-circle-outline" size={24} tone="primary" />
-                  )}
-                </AppPressable>
-              ))}
+              {hasQuery &&
+              filteredRecipes.length === 0 &&
+              !searchingApi &&
+              spoonacularResults.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyText}>
+                    {t('addMealSheet.noResults')}
+                  </Text>
+                </View>
+              ) : null}
             </>
-          ) : null}
-
-          {/* Empty state */}
-          {!hasQuery && recipes.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                {t('addMealSheet.noSavedRecipes')}
-              </Text>
-            </View>
-          ) : null}
-
-          {hasQuery &&
-          recipes.length === 0 &&
-          !searchingApi &&
-          spoonacularResults.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>
-                {t('addMealSheet.noResults')}
-              </Text>
-            </View>
-          ) : null}
-        </BottomSheetScrollView>
+          }
+        />
       </View>
     </BottomSheetModal>
   );
@@ -569,6 +590,7 @@ const styles = StyleSheet.create(theme => ({
     width: 44,
     height: 44,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
   },
   recipeInfo: {
@@ -595,6 +617,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs + 2,
     paddingVertical: 1,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   dietTagText: {
     fontSize: theme.fonts.size.xs,

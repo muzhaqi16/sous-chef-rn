@@ -97,6 +97,7 @@ const styles = StyleSheet.create(theme => ({
     width: 44,
     height: 44,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,
   },
   imagePlaceholder: {
@@ -122,6 +123,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs,
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.primaryLight,
   },
   trailingText: {

@@ -189,6 +189,7 @@ const styles = StyleSheet.create(theme => ({
 
   optionsList: {
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,

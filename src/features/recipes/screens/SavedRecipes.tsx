@@ -29,6 +29,8 @@ import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
 
 /**
  * Inline cell adapter — calls `useFragment` to read `name`/`description` for
@@ -262,6 +264,7 @@ export const SavedRecipes: React.FC = () => {
         <FlashList
           data={filteredRecipes}
           keyExtractor={keyExtractor}
+          getItemType={getItemType}
           renderItem={renderItem}
           onRefresh={handleRefresh}
           refreshing={false}

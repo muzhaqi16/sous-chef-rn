@@ -178,6 +178,7 @@ const styles = StyleSheet.create(theme => ({
   chip: {
     alignItems: 'center',
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     flexDirection: 'row',
     justifyContent: 'center',
     paddingVertical: 6,
@@ -188,6 +189,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.icon.md,
     height: theme.sizes.icon.md,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
   },
   label: {

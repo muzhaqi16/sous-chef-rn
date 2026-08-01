@@ -205,6 +205,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     borderWidth: 1,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
     paddingHorizontal: theme.spacing.md,

@@ -205,8 +205,14 @@ export function ShoppingListModalsProvider({
       <PurchaseAmountSheet
         visible={purchaseAmount.visible}
         item={purchaseAmount.selectedItem}
-        onClose={purchaseAmount.close}
-        onConfirm={purchaseAmount.confirm}
+        onClose={() => {
+          purchaseAmount.close();
+          tutorial?.notifyLongPressPriceSeen();
+        }}
+        onConfirm={async (quantity, price) => {
+          await purchaseAmount.confirm(quantity, price);
+          tutorial?.notifyLongPressPriceSeen();
+        }}
         loading={purchaseAmount.isLoading}
       />
     </ShoppingListModalsContext.Provider>

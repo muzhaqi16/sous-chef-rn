@@ -106,6 +106,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.sm,
     boxShadow: [
       {
@@ -121,6 +122,7 @@ const styles = StyleSheet.create(theme => ({
     width: 64,
     height: 64,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.xs,
     backgroundColor: theme.colors.surfaceVariant,
   },
@@ -128,6 +130,7 @@ const styles = StyleSheet.create(theme => ({
     width: 64,
     height: 64,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.xs,
     backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',

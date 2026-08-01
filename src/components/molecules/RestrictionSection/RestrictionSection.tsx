@@ -95,6 +95,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     borderWidth: 1.5,
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.chipSelectedBackground,

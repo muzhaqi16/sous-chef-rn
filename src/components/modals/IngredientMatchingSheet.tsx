@@ -216,6 +216,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 3,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     variants: {
       tone: {
         success: { backgroundColor: theme.colors.success + '20' },
@@ -248,6 +249,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: 'center',
@@ -256,6 +258,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 2,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.success,
     alignItems: 'center',
     justifyContent: 'center',

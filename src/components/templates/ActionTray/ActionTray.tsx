@@ -276,6 +276,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
   modal: {
     marginHorizontal: '2.5%', // Creates 95% width centered
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     boxShadow: [
@@ -291,6 +292,7 @@ const styles = UnistylesStyleSheet.create(theme => ({
   background: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
   },
   header: {
     flexDirection: 'row',

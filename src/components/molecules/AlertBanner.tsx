@@ -113,6 +113,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
     variants: {
       variant: {
@@ -139,6 +140,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.icon.lg,
     height: theme.sizes.icon.lg,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing['2.5'],

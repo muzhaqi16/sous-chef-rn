@@ -143,6 +143,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
   },
   detailsTitle: {
@@ -152,6 +153,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.primary,
     padding: theme.spacing.md,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   actionButtonText: {

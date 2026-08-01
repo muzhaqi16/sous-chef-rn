@@ -506,6 +506,17 @@ export const ShoppingListMainContent: React.FC<
             }
           } else if (
             tutorial.currentStep ===
+            ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE
+          ) {
+            // Opens the purchase-amount sheet; the tutorial advances only
+            // once that sheet actually closes (wired in
+            // ShoppingListModalsContext), not immediately on open.
+            const firstItemId = rawUnpurchasedItems?.[0]?.id;
+            if (firstItemId) {
+              purchaseAmount.openForItem(firstItemId);
+            }
+          } else if (
+            tutorial.currentStep ===
             ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB
           ) {
             tutorial.notifyPurchasedTabTapped();
@@ -524,9 +535,17 @@ export const ShoppingListMainContent: React.FC<
         const isSwipeStep =
           tutorial.currentStep ===
           ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
+        const isLongPressStep =
+          tutorial.currentStep ===
+          ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE;
 
-        // Don't show swipe spotlight until there is at least one item to swipe
-        if (isSwipeStep && rawUnpurchasedItems.length === 0) return null;
+        // Don't show the swipe/long-press spotlight until there is at least
+        // one unpurchased item to interact with
+        if (
+          (isSwipeStep || isLongPressStep) &&
+          rawUnpurchasedItems.length === 0
+        )
+          return null;
 
         const handleNext = () => {
           if (

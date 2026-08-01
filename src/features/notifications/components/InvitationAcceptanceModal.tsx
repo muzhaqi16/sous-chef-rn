@@ -467,6 +467,7 @@ const styles = StyleSheet.create(theme => ({
   modal: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     width: '100%',
     maxWidth: 400,
     overflow: 'hidden',
@@ -539,6 +540,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs,
     backgroundColor: theme.colors.error + '10',
     borderWidth: 1,
@@ -552,6 +554,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs,
     backgroundColor: theme.colors.primary,
   },

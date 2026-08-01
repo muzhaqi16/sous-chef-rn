@@ -292,6 +292,7 @@ const styles = StyleSheet.create(theme => ({
     margin: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.lg,
     width: '90%',
     maxHeight: '80%',
@@ -320,6 +321,7 @@ const styles = StyleSheet.create(theme => ({
   input: {
     borderWidth: 1,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.md,
     marginBottom: theme.spacing.sm,
@@ -335,6 +337,7 @@ const styles = StyleSheet.create(theme => ({
   roleOption: {
     borderWidth: 2,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     marginBottom: theme.spacing['3'],
     variants: {
@@ -417,6 +420,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     padding: theme.spacing['3'] + 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.input.md,
@@ -427,6 +431,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     padding: theme.spacing['3'] + 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.input.md,

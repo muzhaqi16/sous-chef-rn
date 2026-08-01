@@ -19,6 +19,8 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 
 const AutocompleteSeparator = () => <View style={styles.separator} />;
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
 
 interface BottomSheetAutocompleteInputProps<T> {
   // Input field props
@@ -289,6 +291,7 @@ export function BottomSheetAutocompleteInput<T>({
             renderScrollComponent={BottomSheetScrollable}
             data={data}
             keyExtractor={keyExtractor}
+            getItemType={getItemType}
             renderItem={renderAutocompleteItem}
             ItemSeparatorComponent={AutocompleteSeparator}
             keyboardShouldPersistTaps="handled"
@@ -312,6 +315,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
@@ -335,6 +339,7 @@ const styles = StyleSheet.create(theme => ({
   bottomSheetInput: {
     marginBottom: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     fontSize: theme.typography.fontSize.base,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.sm,

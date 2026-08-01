@@ -105,6 +105,7 @@ const styles = StyleSheet.create(theme => ({
     position: 'relative',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
   },
   formInputControl: {
     height: theme.sizes.input.lg + theme.spacing.sm,
@@ -144,6 +145,7 @@ const styles = StyleSheet.create(theme => ({
     right: '25%',
     height: 2,
     borderRadius: 1,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.primary,
   },
   pressed: {

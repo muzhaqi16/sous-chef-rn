@@ -44,6 +44,7 @@ export const RecipeCardSkeleton: React.FC<RecipeCardSkeletonProps> = ({
 const styles = StyleSheet.create(theme => ({
   wrapper: {
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   content: {
     flex: 1,

@@ -5,6 +5,7 @@ import {
   getSupportedBiometryType,
   setInternetCredentials,
   getInternetCredentials,
+  SECURITY_LEVEL,
 } from 'react-native-keychain';
 import {
   saveCredentials,
@@ -87,6 +88,54 @@ describe('keychain storage', () => {
 
       // Should clean up the credentials that were just saved
       expect(mockResetGenericPassword).toHaveBeenCalledTimes(3);
+    });
+
+    it('falls back to a software-backed key when hardware-backed key generation fails', async () => {
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetGenericPassword
+        // Hardware-backed attempt for the protected credentials throws
+        .mockRejectedValueOnce(
+          new Error(
+            'com.oblador.keychain.exceptions.CryptoFailedException: Cannot generate keys with required security guarantees',
+          ),
+        )
+        // Software-backed retry succeeds
+        .mockResolvedValueOnce(true)
+        // Indicator save succeeds
+        .mockResolvedValueOnce(true);
+
+      await saveCredentials('user@test.com', 'password123');
+
+      expect(mockSetGenericPassword).toHaveBeenCalledTimes(3);
+      expect(mockSetGenericPassword).toHaveBeenNthCalledWith(
+        1,
+        'user@test.com',
+        'password123',
+        expect.objectContaining({
+          securityLevel: SECURITY_LEVEL.SECURE_HARDWARE,
+        }),
+      );
+      expect(mockSetGenericPassword).toHaveBeenNthCalledWith(
+        2,
+        'user@test.com',
+        'password123',
+        expect.objectContaining({
+          securityLevel: SECURITY_LEVEL.SECURE_SOFTWARE,
+        }),
+      );
+    });
+
+    it('throws when both the hardware-backed and software-backed attempts fail', async () => {
+      mockResetGenericPassword.mockResolvedValue(true);
+      mockSetGenericPassword
+        .mockRejectedValueOnce(new Error('CryptoFailedException'))
+        .mockRejectedValueOnce(new Error('still failing'));
+
+      await expect(
+        saveCredentials('user@test.com', 'password123'),
+      ).rejects.toThrow('still failing');
+
+      expect(mockSetGenericPassword).toHaveBeenCalledTimes(2);
     });
   });
 

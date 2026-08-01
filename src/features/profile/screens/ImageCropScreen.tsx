@@ -440,6 +440,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
     borderWidth: 2,
     borderRadius: CROP_SIZE / 2,
+    borderCurve: 'continuous',
     zIndex: 2,
     backgroundColor: 'transparent',
     pointerEvents: 'none',
@@ -449,6 +450,7 @@ const styles = StyleSheet.create(theme => ({
     width: CROP_SIZE,
     height: CROP_SIZE,
     borderRadius: CROP_SIZE / 2,
+    borderCurve: 'continuous',
     backgroundColor: 'transparent',
   },
   animatedImageContainer: {
@@ -483,6 +485,7 @@ const styles = StyleSheet.create(theme => ({
   cropButton: {
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
   },

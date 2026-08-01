@@ -46,8 +46,6 @@ export function useAppNavigation() {
     goBack: () => {
       if (navigation.canGoBack()) navigation.goBack();
     },
-    /** True when the navigation stack has a previous screen to return to. */
-    canGoBack: navigation.canGoBack(),
 
     // ─── Auth flow ─────────────────────────────────────────────────────────
     toAuth: () => navigation.navigate('Auth'),

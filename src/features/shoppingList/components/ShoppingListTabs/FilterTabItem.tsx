@@ -92,6 +92,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'] + 2,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
   },
@@ -109,6 +110,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs + 3,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.filterTab.countBg,
   },
   countBadgeActive: {

@@ -183,6 +183,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     alignSelf: 'stretch',
   },
@@ -249,6 +250,7 @@ const styles = StyleSheet.create(theme => ({
     width: 8,
     height: 8,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.border,
     variants: {
       active: {
@@ -257,6 +259,7 @@ const styles = StyleSheet.create(theme => ({
           width: 10,
           height: 10,
           borderRadius: 5,
+          borderCurve: 'continuous',
         },
       },
     },

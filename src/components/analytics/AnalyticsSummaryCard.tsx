@@ -106,6 +106,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     minWidth: 100,
   },
   header: {

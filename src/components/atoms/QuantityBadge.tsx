@@ -109,6 +109,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     minWidth: 40,
     alignItems: 'center',
     justifyContent: 'center',

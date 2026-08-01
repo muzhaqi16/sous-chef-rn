@@ -252,6 +252,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,
   },
   picker: {
@@ -261,6 +262,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginTop: theme.spacing.sm,
   },
   chipContainer: {

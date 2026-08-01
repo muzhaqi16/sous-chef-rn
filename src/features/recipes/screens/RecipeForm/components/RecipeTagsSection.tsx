@@ -173,6 +173,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.md,
   },
   pressed: {
@@ -190,6 +191,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.primary + '20',
   },
 }));

@@ -237,6 +237,7 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: theme.radii.xl - 2,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -249,6 +250,7 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: theme.radii.xl - 2,
+    borderCurve: 'continuous',
     borderWidth: 2,
     borderColor: theme.colors.primary,
     overflow: 'hidden',
@@ -257,5 +259,6 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     height: '100%',
     borderRadius: theme.radii.xl - 2,
+    borderCurve: 'continuous',
   },
 }));

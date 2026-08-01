@@ -114,6 +114,7 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionBody: {
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },

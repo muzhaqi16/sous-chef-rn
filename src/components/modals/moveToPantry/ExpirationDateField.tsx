@@ -83,6 +83,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   dateText: {
     fontSize: theme.fonts.size.base,

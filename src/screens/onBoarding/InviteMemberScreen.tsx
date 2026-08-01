@@ -336,6 +336,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     marginBottom: theme.spacing.sm,
   },
@@ -351,6 +352,7 @@ const styles = StyleSheet.create(theme => ({
   infoBox: {
     backgroundColor: theme.colors.info + '20',
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     marginBottom: theme.spacing.md,
   },

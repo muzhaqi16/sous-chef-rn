@@ -137,6 +137,7 @@ const styles = StyleSheet.create(theme => ({
   sortModal: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     padding: theme.spacing['5'],
     width: '80%',
     maxWidth: theme.sizes.modal.sm,
@@ -163,6 +164,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'] + 2,
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,
     gap: theme.spacing.md,
   },

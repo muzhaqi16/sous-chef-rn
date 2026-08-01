@@ -122,6 +122,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm + 2,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
   },
   actionButtonWithBg: {
     backgroundColor: theme.colors.filterTab.inactiveBg,

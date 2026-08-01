@@ -31,6 +31,8 @@ import {
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
 
 /**
  * Inline cell adapter — the filter helper passes the node ref straight through.
@@ -187,6 +189,7 @@ export const MyRecipes: React.FC = () => {
         <FlashList
           data={myRecipes}
           keyExtractor={keyExtractor}
+          getItemType={getItemType}
           renderItem={renderItem}
           onRefresh={handleRefresh}
           refreshing={false}

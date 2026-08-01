@@ -428,6 +428,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.xs,
     marginBottom: theme.spacing.md,
   },
@@ -436,6 +437,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   modeButtonActive: {
@@ -467,6 +469,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs,
   },
   previewTitle: {

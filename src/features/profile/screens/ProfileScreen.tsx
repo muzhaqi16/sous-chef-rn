@@ -237,6 +237,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.error,
     backgroundColor: 'transparent',

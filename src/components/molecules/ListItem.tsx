@@ -156,6 +156,7 @@ export const ListItem = ListItemComponent;
 const styles = StyleSheet.create(theme => ({
   container: {
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,

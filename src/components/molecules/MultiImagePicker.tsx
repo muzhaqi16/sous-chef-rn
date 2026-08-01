@@ -231,6 +231,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingVertical: theme.spacing.xl,
     paddingHorizontal: theme.spacing.md,
     alignItems: 'center',
@@ -249,6 +250,7 @@ const styles = StyleSheet.create(theme => ({
   thumbnailWrapper: {
     position: 'relative',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   thumbnail: {
@@ -289,6 +291,7 @@ const styles = StyleSheet.create(theme => ({
     borderColor: theme.colors.primary,
     borderStyle: 'dashed',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     gap: theme.spacing.xs,

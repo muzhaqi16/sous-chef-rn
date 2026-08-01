@@ -82,6 +82,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
   },
   actionText: {

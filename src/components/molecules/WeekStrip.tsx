@@ -161,6 +161,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     minWidth: 40,
   },
   dayItemSelected: {

@@ -48,6 +48,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs + 2,
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
   },
   selected: {

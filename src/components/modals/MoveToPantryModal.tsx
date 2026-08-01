@@ -326,6 +326,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   itemName: {
     marginBottom: theme.spacing.xs,
@@ -353,6 +354,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,

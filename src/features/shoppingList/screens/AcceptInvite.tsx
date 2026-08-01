@@ -398,6 +398,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   inviteType: {
@@ -411,6 +412,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     width: '100%',
   },
   messageLabel: {
@@ -425,6 +427,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingVertical: theme.spacing.sm + 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
@@ -437,6 +440,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingVertical: theme.spacing.sm + 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
   },

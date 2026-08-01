@@ -39,6 +39,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     variants: {
       variant: {
         default: { backgroundColor: theme.colors.surface },

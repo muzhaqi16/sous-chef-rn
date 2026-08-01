@@ -113,6 +113,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     margin: theme.spacing.xs,
     borderRadius: theme.radii.pill,
+    borderCurve: 'continuous',
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: theme.colors.border,

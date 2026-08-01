@@ -96,6 +96,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     backgroundColor: theme.colors.primary + '1A', // 10% opacity
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.md,
     marginBottom: theme.spacing.md,
