@@ -225,6 +225,7 @@ const styles = StyleSheet.create(theme => ({
     right: -theme.spacing.xs,
     backgroundColor: theme.colors.error,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     minWidth: theme.spacing['5'],
     height: theme.spacing['5'],
     justifyContent: 'center',

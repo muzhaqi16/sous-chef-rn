@@ -483,6 +483,7 @@ const styles = StyleSheet.create(theme => ({
   sectionCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     padding: theme.spacing.sm,

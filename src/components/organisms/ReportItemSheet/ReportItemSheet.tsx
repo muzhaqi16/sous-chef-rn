@@ -174,11 +174,13 @@ const styles = StyleSheet.create(theme => ({
     width: 40,
     height: 40,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   candidatePlaceholder: {
     width: 40,
     height: 40,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,
     alignItems: 'center',
     justifyContent: 'center',
@@ -199,6 +201,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
   },
   submit: {

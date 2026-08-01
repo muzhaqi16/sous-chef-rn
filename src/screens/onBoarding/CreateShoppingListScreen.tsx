@@ -273,6 +273,7 @@ const styles = StyleSheet.create(theme => ({
   resourceCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -288,6 +289,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignSelf: 'flex-start',
     marginTop: theme.spacing.sm,
     borderWidth: 1,

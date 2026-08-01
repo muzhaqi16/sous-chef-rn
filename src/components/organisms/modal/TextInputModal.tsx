@@ -191,6 +191,7 @@ const styles = StyleSheet.create(theme => ({
     margin: theme.spacing['5'],
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing['5'],
     boxShadow: [
       {
@@ -214,6 +215,7 @@ const styles = StyleSheet.create(theme => ({
   input: {
     borderWidth: 1,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     marginBottom: theme.spacing.sm,
@@ -229,6 +231,7 @@ const styles = StyleSheet.create(theme => ({
   multilineInput: {
     borderWidth: 1,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
     marginBottom: theme.spacing.sm,
@@ -257,6 +260,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.button.md,
@@ -267,6 +271,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.button.md,

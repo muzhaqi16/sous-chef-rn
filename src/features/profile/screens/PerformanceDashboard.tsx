@@ -710,6 +710,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   tableHeader: {
@@ -779,6 +780,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.backgroundSecondary,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderLeftWidth: 3,
     borderLeftColor: theme.colors.primary,
   },
@@ -807,6 +809,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.xl,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   clearButtonText: {
@@ -818,6 +821,7 @@ const styles = StyleSheet.create(theme => ({
   startupCard: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',

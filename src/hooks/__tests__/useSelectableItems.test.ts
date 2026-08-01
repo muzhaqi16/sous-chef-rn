@@ -168,5 +168,61 @@ describe('useSelectableItems', () => {
 
       expect(result.current.items).toHaveLength(4);
     });
+
+    it('keeps the user selection when a refreshed seed arrives', () => {
+      const { result, rerender } = renderHook(
+        (props: { items: TestItem[] }) =>
+          useSelectableItems({ initialItems: props.items }),
+        { initialProps: { items: createItems(3) } },
+      );
+
+      act(() => {
+        result.current.toggleItem('item-2');
+      });
+      expect(result.current.selectedItems.map(i => i.id)).toEqual(['item-2']);
+
+      // A background refetch re-seeds the same rows with server-side selection.
+      rerender({ items: createItems(3, ['item-3']) });
+
+      // item-3 picks up the new seed; item-2 keeps what the user chose.
+      expect(result.current.selectedItems.map(i => i.id)).toEqual([
+        'item-2',
+        'item-3',
+      ]);
+    });
+
+    it('lets a refreshed seed through for items the user never touched', () => {
+      const { result, rerender } = renderHook(
+        (props: { items: TestItem[] }) =>
+          useSelectableItems({ initialItems: props.items }),
+        { initialProps: { items: createItems(3) } },
+      );
+
+      expect(result.current.selectedItems).toHaveLength(0);
+
+      rerender({ items: createItems(3, ['item-1', 'item-3']) });
+
+      expect(result.current.selectedItems.map(i => i.id)).toEqual([
+        'item-1',
+        'item-3',
+      ]);
+    });
+
+    it('keeps an explicit deselection over a seed that still selects it', () => {
+      const { result, rerender } = renderHook(
+        (props: { items: TestItem[] }) =>
+          useSelectableItems({ initialItems: props.items }),
+        { initialProps: { items: createItems(3, ['item-1']) } },
+      );
+
+      act(() => {
+        result.current.toggleItem('item-1');
+      });
+      expect(result.current.selectedItems).toHaveLength(0);
+
+      rerender({ items: createItems(3, ['item-1']) });
+
+      expect(result.current.selectedItems).toHaveLength(0);
+    });
   });
 });

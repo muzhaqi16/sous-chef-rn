@@ -73,6 +73,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   saveButtonDisabled: {
     opacity: theme.opacity.disabled,

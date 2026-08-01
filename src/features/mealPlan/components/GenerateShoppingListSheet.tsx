@@ -255,6 +255,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   infoNoteText: {
     flex: 1,
@@ -267,6 +268,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,
@@ -290,6 +292,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -311,6 +314,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing.sm,
   },
   listItemSelected: {

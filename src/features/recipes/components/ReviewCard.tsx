@@ -152,11 +152,13 @@ const styles = StyleSheet.create(theme => ({
     width: 36,
     height: 36,
     borderRadius: 18,
+    borderCurve: 'continuous',
   },
   avatarPlaceholder: {
     width: 36,
     height: 36,
     borderRadius: 18,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.border,
     alignItems: 'center',
     justifyContent: 'center',

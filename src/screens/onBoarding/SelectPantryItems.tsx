@@ -12,10 +12,12 @@ import {
   SelectPantryItems_PantryItemFragmentDoc,
   type SelectPantryItems_PantryItemFragment,
 } from './SelectPantryItems.generated';
+import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
   DeletePantryItemDocument,
+  type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   StorageState,
@@ -36,6 +38,68 @@ import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDupli
 import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
+
+type PantryItemsConnection = NonNullable<
+  GetPantryQuery['pantry']
+>['itemsConnection'];
+
+interface ExistingPantryIndex {
+  /** catalog item id → the pantry item id that already stocks it */
+  existingItemMap: Map<string, string>;
+  /** catalog item ids already in the pantry */
+  existingCatalogIds: Set<string>;
+}
+
+// Keyed on the connection object Apollo hands back, which keeps its identity
+// until the pantry's item set actually changes. Mirrors the WeakMap in
+// `connectionUtils.extractNodes`. Only identity fields are read below
+// (`id`, `itemId`, `item.id`), and those never change for a given pantry item,
+// so a hit can't go stale while the connection stays the same object.
+const existingPantryIndexCache = new WeakMap<object, ExistingPantryIndex>();
+
+/**
+ * Index the pantry's existing items by catalog id.
+ *
+ * Each row arrives as a masked ref, so resolving it costs one cache read —
+ * up to `itemsFirst` of them per call. The React Compiler leaves this
+ * derivation uncached in the component body (verified against the compiled
+ * output), which would re-read every row on each render, including every chip
+ * tap, so the result is cached explicitly here instead.
+ */
+function buildExistingPantryIndex(
+  cache: ApolloCache,
+  itemsConnection: PantryItemsConnection | undefined,
+): ExistingPantryIndex {
+  if (!itemsConnection) {
+    return {
+      existingItemMap: new Map(),
+      existingCatalogIds: new Set(),
+    };
+  }
+  const cached = existingPantryIndexCache.get(itemsConnection);
+  if (cached) return cached;
+
+  const existingItemMap = new Map<string, string>();
+  const existingCatalogIds = new Set<string>();
+  for (const ref of extractNodes(itemsConnection)) {
+    const pantryItem = cache.readFragment<SelectPantryItems_PantryItemFragment>(
+      {
+        fragment: SelectPantryItems_PantryItemFragmentDoc,
+        fragmentName: 'SelectPantryItems_pantryItem',
+        from: ref,
+      },
+    );
+    if (!pantryItem) continue;
+    const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
+    if (catalogId) {
+      existingItemMap.set(catalogId, pantryItem.id);
+      existingCatalogIds.add(catalogId);
+    }
+  }
+  const index = { existingItemMap, existingCatalogIds };
+  existingPantryIndexCache.set(itemsConnection, index);
+  return index;
+}
 
 export const SelectPantryItems = () => {
   const { t } = useTranslation();
@@ -77,31 +141,13 @@ export const SelectPantryItems = () => {
 
   const [isSaving, setIsSaving] = useState(false);
 
-  // Map catalog item IDs to pantry item IDs for existing pantry items.
-  // pantryItems comes back as masked refs — materialize each via
-  // cache.readFragment with a narrow `SelectPantryItems_pantryItem` fragment
-  // that selects only `id`, `itemId`, and `item.id`.
-  const pantryItemRefs = extractNodes(pantryData?.pantry?.itemsConnection);
-  const map = new Map<string, string>();
-  const ids = new Set<string>();
-  for (const ref of pantryItemRefs) {
-    const pantryItem =
-      apolloClient.cache.readFragment<SelectPantryItems_PantryItemFragment>({
-        fragment: SelectPantryItems_PantryItemFragmentDoc,
-        fragmentName: 'SelectPantryItems_pantryItem',
-        from: ref,
-      });
-    if (!pantryItem) continue;
-    const catalogId = pantryItem.item?.id ?? pantryItem.itemId;
-    if (catalogId) {
-      map.set(catalogId, pantryItem.id);
-      ids.add(catalogId);
-    }
-  }
-  const { existingItemMap, existingCatalogIds } = {
-    existingItemMap: map,
-    existingCatalogIds: ids,
-  };
+  // Map catalog item IDs to pantry item IDs for existing pantry items, via a
+  // narrow `SelectPantryItems_pantryItem` fragment selecting only `id`,
+  // `itemId`, and `item.id`.
+  const { existingItemMap, existingCatalogIds } = buildExistingPantryIndex(
+    apolloClient.cache,
+    pantryData?.pantry?.itemsConnection,
+  );
 
   // Transform onboarding items into selectable items, pre-selecting existing pantry items
   const selectableItems = (

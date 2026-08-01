@@ -158,6 +158,7 @@ const styles = StyleSheet.create(theme => ({
     minHeight: theme.sizes.itemCard.compact.height,
     padding: theme.spacing['3'],
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     borderWidth: 1,
     // Soft floating elevation instead of a hard outline. Status variants below
     // keep a colored border to stay distinguishable; the default row relies on

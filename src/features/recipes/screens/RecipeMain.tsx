@@ -627,6 +627,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing['3'],
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   suggestedTextContainer: { flex: 1 },
   suggestedSubtitle: {

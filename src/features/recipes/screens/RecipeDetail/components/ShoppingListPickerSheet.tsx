@@ -13,6 +13,9 @@ import { FlashList } from '@shopify/flash-list';
 import type { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
+
 interface ShoppingList {
   id: string;
   name: string;
@@ -86,6 +89,7 @@ export const ShoppingListPickerSheet: React.FC<
         renderScrollComponent={BottomSheetScrollable}
         data={shoppingLists}
         keyExtractor={(item: ShoppingList) => item.id}
+        getItemType={getItemType}
         style={styles.shoppingListFlashList}
         contentContainerStyle={styles.shoppingListContent}
         renderItem={renderListItem}
@@ -168,6 +172,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.primary + '20',
   },
   defaultBadgeText: {
@@ -200,6 +205,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     color: theme.colors.textPrimary,
@@ -212,6 +218,7 @@ const styles = StyleSheet.create(theme => ({
   createListButton: {
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     minHeight: 44,
     justifyContent: 'center',

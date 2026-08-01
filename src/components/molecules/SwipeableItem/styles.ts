@@ -24,6 +24,7 @@ export const styles = StyleSheet.create(theme => {
     swipeableContainer: {
       overflow: 'visible',
       borderRadius: SWIPEABLE_RADIUS,
+      borderCurve: 'continuous',
       // No backgroundColor here — it bleeds through as a thin dark ring behind
       // the card's rounded border. The action containers have their own dark bg.
     },

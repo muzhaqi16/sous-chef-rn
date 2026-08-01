@@ -177,6 +177,7 @@ const styles = StyleSheet.create(theme => ({
   currentInfo: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
   },
   currentLabel: {
@@ -191,6 +192,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.sm,
   },
   dateButton: {
@@ -212,6 +214,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   infoText: {
     flex: 1,

@@ -196,12 +196,14 @@ const styles = StyleSheet.create(theme => ({
     height: theme.spacing.xs,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xs,
+    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.md,
   },
   progressBarFill: {
     height: theme.spacing.xs,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radii.xs,
+    borderCurve: 'continuous',
   },
   keyboardAvoid: {
     flex: 1,

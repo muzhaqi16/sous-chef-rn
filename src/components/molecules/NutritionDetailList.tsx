@@ -113,6 +113,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',

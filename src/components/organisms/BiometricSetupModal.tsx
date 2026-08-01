@@ -114,6 +114,7 @@ const styles = StyleSheet.create(theme => ({
   card: {
     backgroundColor: theme.colors.background,
     borderRadius: theme.spacing.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.xl,
     alignItems: 'center',
     maxWidth: 360,

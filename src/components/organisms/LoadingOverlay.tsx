@@ -92,6 +92,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     padding: theme.spacing.xl + 8,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     minWidth: 150,
     backgroundColor: theme.colors.background,

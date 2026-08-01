@@ -177,6 +177,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm + 2,
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.chipSelectedBackground,
   },
   chipText: {

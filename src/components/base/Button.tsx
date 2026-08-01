@@ -105,6 +105,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs,
     overflow: 'hidden',
     variants: {

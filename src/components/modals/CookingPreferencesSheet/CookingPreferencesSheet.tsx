@@ -247,6 +247,7 @@ const styles = StyleSheet.create(theme => ({
   pickerContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',

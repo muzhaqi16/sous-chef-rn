@@ -127,6 +127,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     gap: theme.spacing.xs,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,

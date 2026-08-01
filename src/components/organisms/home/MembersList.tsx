@@ -138,6 +138,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     minWidth: theme.spacing['3xl'] - 4,
     alignItems: 'center',
     variants: {
@@ -184,6 +185,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderStyle: 'dashed',
     minWidth: theme.spacing['3xl'] - 4,

@@ -1,9 +1,4 @@
-import React, {
-  startTransition,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import { Platform, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -179,23 +174,24 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
       const mainScreen = mainScreenMap[route.name];
 
-      // Wrap in startTransition so React treats the navigation as a non-urgent
-      // update — the current screen stays visible while the target mounts,
-      // allowing skeleton fallbacks to paint instead of freezing the UI.
-      startTransition(() => {
-        if (!isFocused) {
-          // Switching tabs: just focus the tab, preserve paused stack state.
-          // With inactiveBehavior: 'pause', the paused tree resumes instantly
-          // instead of unmounting/remounting the entire screen.
-          navigation.navigate(route.name);
-        } else if (mainScreen) {
-          // Re-tapping the active tab: reset stack to root (standard iOS/Android pattern)
-          navigation.navigate(route.name, {
-            screen: mainScreen,
-            initial: false,
-          });
-        }
-      });
+      // Dispatched as a normal (not startTransition) update: as a low-priority
+      // transition this update had no scheduling deadline, so a steady stream
+      // of unrelated Immediate-priority renders elsewhere in the app could
+      // starve it for many seconds — the tab icon would flip instantly (a
+      // Reanimated shared value) while the actual screen stayed frozen on the
+      // old route until the transition finally got a turn.
+      if (!isFocused) {
+        // Switching tabs: just focus the tab, preserve paused stack state.
+        // With inactiveBehavior: 'pause', the paused tree resumes instantly
+        // instead of unmounting/remounting the entire screen.
+        navigation.navigate(route.name);
+      } else if (mainScreen) {
+        // Re-tapping the active tab: reset stack to root (standard iOS/Android pattern)
+        navigation.navigate(route.name, {
+          screen: mainScreen,
+          initial: false,
+        });
+      }
     }
   };
 
@@ -298,6 +294,7 @@ const styles = StyleSheet.create(theme => ({
     height: TAB_BAR_HEIGHT,
     alignSelf: 'center',
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     position: 'absolute',
     paddingHorizontal: '5%',
     boxShadow: [
@@ -325,6 +322,7 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     bottom: 0,
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
   },
   tabsRow: {
     flex: 1,

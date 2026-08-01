@@ -349,6 +349,7 @@ const styles = StyleSheet.create(theme => ({
   planInfo: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     gap: theme.spacing.xs,
   },
@@ -365,6 +366,7 @@ const styles = StyleSheet.create(theme => ({
   actionsCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   divider: {
@@ -375,6 +377,7 @@ const styles = StyleSheet.create(theme => ({
   nutritionContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
   },
   listRow: {

@@ -224,6 +224,7 @@ const styles = StyleSheet.create(theme => ({
   card: {
     padding: theme.spacing['2xl'],
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     alignItems: 'center',
     minWidth: theme.sizes.modal.sm,
     backgroundColor: theme.colors.background,

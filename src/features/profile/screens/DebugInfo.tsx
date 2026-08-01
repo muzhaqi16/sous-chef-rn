@@ -191,6 +191,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm + 2,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   copyAllButtonText: {
@@ -210,12 +211,14 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing['3'],
     borderRadius: theme.radii.xs + 2,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.primary,
   },
   infoContainer: {
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',

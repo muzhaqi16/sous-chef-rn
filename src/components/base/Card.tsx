@@ -234,6 +234,7 @@ const styles = StyleSheet.create(theme => ({
   card: {
     flexDirection: 'row',
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
     variants: {
@@ -258,6 +259,7 @@ const styles = StyleSheet.create(theme => ({
     width: 64,
     height: 68,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     margin: theme.spacing.sm,
     alignSelf: 'center',
   },

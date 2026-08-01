@@ -91,6 +91,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginVertical: theme.spacing.xs,
     borderWidth: 1,
@@ -120,6 +121,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     variants: {
       status: {
         pending: { backgroundColor: theme.colors.status.pending + '20' },
@@ -142,6 +144,7 @@ const styles = StyleSheet.create(theme => ({
   revokeButton: {
     padding: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.validation.errorBg,
   },
   pressed: {

@@ -119,6 +119,7 @@ const styles = StyleSheet.create(theme => ({
     height: 48,
     paddingHorizontal: theme.spacing.sm,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.inputBackground,
     borderWidth: 1,
     borderColor: theme.colors.border,

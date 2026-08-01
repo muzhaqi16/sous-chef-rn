@@ -211,6 +211,7 @@ const styles = StyleSheet.create(theme => ({
   container: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
     overflow: 'hidden',
     borderWidth: 1,
@@ -233,6 +234,7 @@ const styles = StyleSheet.create(theme => ({
     width: 40,
     height: 40,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     marginRight: theme.spacing.md,
   },

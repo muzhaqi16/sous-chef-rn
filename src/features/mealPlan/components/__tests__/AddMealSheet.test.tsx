@@ -242,13 +242,57 @@ describe('AddMealSheet', () => {
     expect(screen.getByText(/Add "Tacos" as custom meal/)).toBeTruthy();
   });
 
-  it('hides "Your Recipes" section header while searching', () => {
+  it('keeps "Your Recipes" section header while searching with matches', () => {
     renderWithApollo(<AddMealSheet {...defaultProps} />);
     expect(screen.getByText('Your Recipes')).toBeTruthy();
     const searchInput = screen.getByPlaceholderText(
       'Search recipes or add a custom meal...',
     );
     fireEvent.changeText(searchInput, 'Pasta');
+    // The header labels the saved-recipe matches, separating them from the
+    // API results rendered below.
+    expect(screen.getByText('Your Recipes')).toBeTruthy();
+  });
+
+  it('drops "Your Recipes" section header when no saved recipe matches', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByText('Your Recipes')).toBeTruthy();
+    const searchInput = screen.getByPlaceholderText(
+      'Search recipes or add a custom meal...',
+    );
+    fireEvent.changeText(searchInput, 'zzz');
     expect(screen.queryByText('Your Recipes')).toBeNull();
+  });
+
+  it('narrows the saved-recipe rows to search matches', () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
+    expect(screen.getByText('Chicken Salad')).toBeTruthy();
+
+    const searchInput = screen.getByPlaceholderText(
+      'Search recipes or add a custom meal...',
+    );
+    fireEvent.changeText(searchInput, 'pasta');
+
+    // Matching is case-insensitive and drops non-matching rows from the list
+    // itself, rather than rendering them as empty cells.
+    expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
+    expect(screen.queryByText('Chicken Salad')).toBeNull();
+  });
+
+  it('shows the no-results message when the query matches no saved recipe', async () => {
+    renderWithApollo(<AddMealSheet {...defaultProps} />);
+    const searchInput = screen.getByPlaceholderText(
+      'Search recipes or add a custom meal...',
+    );
+    fireEvent.changeText(searchInput, 'zzz');
+
+    expect(screen.queryByText('Pasta Carbonara')).toBeNull();
+    expect(screen.queryByText('Chicken Salad')).toBeNull();
+    // The query is long enough to trigger the API search, so the message only
+    // appears once that settles empty and the spinner clears.
+    expect(
+      await screen.findByText('No recipes match your search'),
+    ).toBeTruthy();
   });
 });

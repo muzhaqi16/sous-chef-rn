@@ -352,6 +352,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.infoLight,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.md,
     borderWidth: 1,
     borderColor: theme.colors.info,
@@ -364,6 +365,7 @@ const styles = StyleSheet.create(theme => ({
   },
   purchaseCard: {
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     borderWidth: 1,
     marginVertical: theme.spacing.sm,
@@ -382,6 +384,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginRight: theme.spacing.sm,
   },
   purchaseNumberText: {

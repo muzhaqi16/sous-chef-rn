@@ -172,6 +172,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'] + 2,
     paddingVertical: theme.spacing.xs + 1,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
     variants: {
@@ -185,6 +186,7 @@ const styles = StyleSheet.create(theme => ({
           paddingHorizontal: theme.spacing.sm + 2,
           paddingVertical: theme.spacing.xs + 2,
           borderRadius: theme.radii.lg,
+          borderCurve: 'continuous',
           gap: theme.spacing.xs,
         },
       },
@@ -242,6 +244,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xs + 3,
     paddingVertical: 2,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.filterTab.countBg,
     variants: {
       state: {
@@ -254,6 +257,7 @@ const styles = StyleSheet.create(theme => ({
           paddingHorizontal: theme.spacing.xs + 1,
           paddingVertical: 1,
           borderRadius: theme.radii.sm,
+          borderCurve: 'continuous',
         },
       },
     },

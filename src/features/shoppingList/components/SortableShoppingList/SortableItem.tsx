@@ -147,6 +147,18 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     index === 0 &&
     !isPurchased;
 
+  const isTutorialLongPressTarget =
+    tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE &&
+    index === 0 &&
+    !isPurchased;
+
+  // Swipe and long-press both spotlight the full item row, so they share the
+  // same measured rect ('itemCard') — only one of the two steps is ever
+  // active at a time.
+  const isTutorialItemCardTarget =
+    isTutorialSwipeTarget || isTutorialLongPressTarget;
+
   // Disable swipe gestures during non-swipe spotlight steps so users can't
   // accidentally swipe items while the tutorial overlay is showing.
   // During the swipe step itself, swiping is allowed so the user can
@@ -205,9 +217,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     });
   };
 
-  // Measure entire item card for swipe actions tutorial spotlight
+  // Measure entire item card for swipe actions / long-press tutorial spotlight
   const handleItemCardLayout = () => {
-    if (!isTutorialSwipeTarget) return;
+    if (!isTutorialItemCardTarget) return;
     requestAnimationFrame(() => {
       itemCardRef.current?.measure((_x, _y, w, h, pageX, pageY) => {
         if (w > 0 && h > 0) {
@@ -336,7 +348,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       entering={entering}
       style={[styles.container, animatedSlideStyle]}
     >
-      {isTutorialSwipeTarget ? (
+      {isTutorialItemCardTarget ? (
         <View
           ref={itemCardRef}
           collapsable={false}
@@ -351,6 +363,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         // Press-and-hold an unpurchased item to open the purchase-amount sheet
         // (mark purchased with actual qty/price). Falls back to opening details
         // for already-purchased rows or when the user can't mark purchased.
+        // The tutorial only advances once that sheet actually closes (see
+        // ShoppingListModalsContext's PurchaseAmountSheet onClose/onConfirm) —
+        // not here, where the sheet has only just opened.
         onLongPress={
           !isPurchased && canMarkPurchased && onTogglePurchase
             ? () => onTogglePurchase(itemId, { withDetails: true })
@@ -400,6 +415,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing['3'],
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   moveToPantryButton: {
     padding: theme.spacing.xs,

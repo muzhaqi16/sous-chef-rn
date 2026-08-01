@@ -131,6 +131,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 2,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     variants: {
       badgeColor: {
         success: { backgroundColor: theme.colors.success + '20' },
@@ -165,6 +166,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     fontSize: theme.fonts.size.sm,
     color: theme.colors.textPrimary,
     textAlign: 'center',

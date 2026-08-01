@@ -38,6 +38,8 @@ const MVCP_DISABLED = { disabled: true };
 
 // Module-scope functions — zero runtime overhead (no compiler tracking/comparison)
 const keyExtractor = (item: ShoppingListRowItem) => item.id;
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
 const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
   // FlashList v2 can transiently invoke renderItem with an undefined item while
   // recycling cells during a data swap (e.g. switching the active list). Guard
@@ -171,6 +173,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               data={items}
               extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
               keyExtractor={keyExtractor}
+              getItemType={getItemType}
               renderItem={renderItem}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={contentContainerStyle}

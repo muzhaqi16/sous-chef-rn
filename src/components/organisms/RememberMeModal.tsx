@@ -82,6 +82,7 @@ const styles = StyleSheet.create(theme => ({
   modalContent: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.xl,
     width: '100%',
     maxWidth: 400,
@@ -102,6 +103,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
   },
@@ -109,6 +111,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: 'transparent',
     borderWidth: 1,

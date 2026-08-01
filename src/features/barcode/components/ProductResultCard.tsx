@@ -117,6 +117,7 @@ const styles = StyleSheet.create(theme => ({
   itemCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.lg,
     ...theme.shadows.md,
   },
@@ -124,6 +125,7 @@ const styles = StyleSheet.create(theme => ({
     width: '100%',
     height: 200,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.md,
   },
   placeholderImage: {
@@ -131,6 +133,7 @@ const styles = StyleSheet.create(theme => ({
     height: 200,
     backgroundColor: theme.colors.backgroundSecondary,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,

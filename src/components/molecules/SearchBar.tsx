@@ -239,6 +239,7 @@ const styles = StyleSheet.create(theme => ({
   inputContainer: {
     flex: 1,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   actionsContainer: {
     flexDirection: 'row',

@@ -194,6 +194,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.primary,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderStyle: 'dashed',
   },
   reviewsList: {

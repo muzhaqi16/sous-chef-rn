@@ -92,6 +92,7 @@ const scanButtonStyles = StyleSheet.create(theme => ({
     width: 44,
     height: 44,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
   },

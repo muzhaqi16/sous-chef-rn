@@ -167,6 +167,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing['3'],
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     boxSizing: 'border-box',
     ...theme.shadows.card,
   },
