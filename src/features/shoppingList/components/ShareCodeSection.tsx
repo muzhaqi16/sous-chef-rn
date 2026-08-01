@@ -201,6 +201,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   shareCodeToggleContent: {
     flexDirection: 'row',
@@ -253,6 +254,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing['3'],
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderStyle: 'dashed',
@@ -274,6 +276,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   shareLinkText: {
     fontSize: theme.typography.fontSize.md,

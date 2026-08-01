@@ -125,6 +125,7 @@ const styles = StyleSheet.create(theme => ({
   hintContainer: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing.xl,
     marginHorizontal: theme.spacing.xl,
     maxWidth: 400,
@@ -157,6 +158,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.xl,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     minWidth: 120,
   },
   dismissButtonText: {

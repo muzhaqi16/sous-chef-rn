@@ -180,6 +180,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   section: {
     marginBottom: theme.spacing.lg,
@@ -193,6 +194,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   toggleInfo: {
     flex: 1,

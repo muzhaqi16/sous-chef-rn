@@ -599,6 +599,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderLeftWidth: 4,
     borderLeftColor: theme.colors.info,
   },
@@ -614,6 +615,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,
   },
   pickerValue: {
@@ -625,6 +627,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.sm,
   },
   quietHoursText: {

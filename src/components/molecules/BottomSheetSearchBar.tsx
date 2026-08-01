@@ -236,6 +236,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
     marginBottom: theme.spacing.md,

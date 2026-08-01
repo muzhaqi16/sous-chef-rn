@@ -29,6 +29,7 @@ export default StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.inputBackground,
     minHeight: {
       xs: 44,

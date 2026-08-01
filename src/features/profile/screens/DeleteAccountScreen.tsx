@@ -345,6 +345,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.md,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   retryButtonText: {
     color: theme.colors.white,
@@ -357,6 +358,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     backgroundColor: `${theme.colors.warning}15`,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
   },
   blockedWarningTitle: {
@@ -373,6 +375,7 @@ const styles = StyleSheet.create(theme => ({
   blockerCard: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
     borderWidth: 1,
@@ -398,6 +401,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     padding: theme.spacing.sm,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   resolutionTitle: {
     fontSize: theme.fonts.size.sm,
@@ -415,6 +419,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.lg,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     backgroundColor: theme.colors.primary,
   },
@@ -429,6 +434,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     backgroundColor: `${theme.colors.error}10`,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
   },
   warningTitle: {
@@ -480,6 +486,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.error,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
@@ -495,6 +502,7 @@ const styles = StyleSheet.create(theme => ({
   cancelButton: {
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.colors.border,

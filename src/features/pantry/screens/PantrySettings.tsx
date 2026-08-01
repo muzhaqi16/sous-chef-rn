@@ -510,6 +510,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.error,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing['3'],
   },
   deleteButtonText: {

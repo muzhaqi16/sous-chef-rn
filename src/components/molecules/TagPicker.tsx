@@ -15,6 +15,8 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 
 const TagListSeparator = () => <View style={styles.tagSeparator} />;
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
 
 export interface TagPickerProps {
   visible: boolean;
@@ -154,6 +156,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             renderScrollComponent={BottomSheetScrollable}
             data={filteredTags}
             renderItem={renderTagItem}
+            getItemType={getItemType}
             keyExtractor={(item: string) => item}
             extraData={selectedTags}
             showsVerticalScrollIndicator={false}
@@ -192,6 +195,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing['3'],
     marginBottom: theme.spacing.md,
   },
@@ -214,6 +218,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing['3'],
   },
   tagItemSelected: {

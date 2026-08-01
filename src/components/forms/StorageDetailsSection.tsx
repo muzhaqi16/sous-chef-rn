@@ -166,5 +166,6 @@ const styles = StyleSheet.create(theme => ({
   statePill: {
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
 }));

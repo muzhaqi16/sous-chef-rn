@@ -72,6 +72,28 @@ function syncListFormState(
   }
 }
 
+// Constructing an Intl.NumberFormat parses locale data and builds internal
+// lookup tables, so the instance is cached per currency code rather than
+// rebuilt on each call. A `null` entry marks a code Intl rejected, so the
+// unsupported-currency path doesn't re-throw on every render.
+const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
+
+function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
+  const cached = currencyFormatters.get(currency);
+  if (cached !== undefined) return cached;
+  let formatter: Intl.NumberFormat | null = null;
+  try {
+    formatter = new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency,
+    });
+  } catch {
+    formatter = null;
+  }
+  currencyFormatters.set(currency, formatter);
+  return formatter;
+}
+
 /**
  * Format a money amount with the list's ISO currency code, degrading to a plain
  * two-decimal number when the currency is absent or not recognized by Intl.
@@ -82,14 +104,9 @@ function formatCurrencyAmount(
 ): string {
   const value = amount ?? 0;
   if (!currency) return value.toFixed(2);
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-    }).format(value);
-  } catch {
-    return `${currency} ${value.toFixed(2)}`;
-  }
+  const formatter = getCurrencyFormatter(currency);
+  if (!formatter) return `${currency} ${value.toFixed(2)}`;
+  return formatter.format(value);
 }
 
 export const ListSettings: React.FC<
@@ -1131,6 +1148,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.error,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   deleteButtonText: {
     marginLeft: theme.spacing.sm,
@@ -1142,6 +1160,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm + 2,
     backgroundColor: theme.colors.surface,
@@ -1156,6 +1175,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     borderWidth: 1,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     borderColor: theme.colors.border,
     opacity: 0.6,
   },

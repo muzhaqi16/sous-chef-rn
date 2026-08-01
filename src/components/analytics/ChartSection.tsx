@@ -69,6 +69,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
     backgroundColor: theme.colors.surface,

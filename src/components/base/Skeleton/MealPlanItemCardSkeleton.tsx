@@ -44,6 +44,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.xs,
   },
   checkbox: {
@@ -54,6 +55,7 @@ const styles = StyleSheet.create(theme => ({
   },
   imageBorderRadius: {
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   content: {
     flex: 1,

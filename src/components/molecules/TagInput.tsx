@@ -177,6 +177,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
     minHeight: 48,
   },

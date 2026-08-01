@@ -99,6 +99,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing.sm,
   },
   pantryOptionActive: {
@@ -119,6 +120,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   defaultBadgeActive: {
     backgroundColor: theme.colors.overlays.light,

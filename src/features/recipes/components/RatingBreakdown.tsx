@@ -121,11 +121,13 @@ const styles = StyleSheet.create(theme => ({
     height: 8,
     backgroundColor: theme.colors.border,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.rating,
   },
   barCount: {

@@ -27,6 +27,9 @@ import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
 /** Protected folders that cannot be renamed or deleted */
 const PROTECTED_FOLDERS = ['Favorites'];
 
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
+
 export interface FolderPickerProps {
   visible: boolean;
   folders: string[];
@@ -359,6 +362,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               renderScrollComponent={BottomSheetScrollable}
               data={filteredFolders}
               renderItem={renderFolderItem}
+              getItemType={getItemType}
               keyExtractor={(item: string) => item}
               showsVerticalScrollIndicator={false}
               style={styles.folderList}
@@ -434,6 +438,7 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     backgroundColor: theme.colors.background,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing['3'],
     marginBottom: theme.spacing.md,
   },
@@ -450,6 +455,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing['3'],
   },
   folderItemSelected: {
@@ -481,6 +487,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,
@@ -492,6 +499,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   createButtonDisabled: {
     backgroundColor: theme.colors.border,
@@ -526,6 +534,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
   },
   bottomSheetContent: {
     padding: theme.spacing['5'],

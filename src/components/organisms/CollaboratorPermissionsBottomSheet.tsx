@@ -384,6 +384,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surface,
     variants: {

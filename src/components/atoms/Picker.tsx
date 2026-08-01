@@ -42,6 +42,7 @@ const styles = StyleSheet.create(theme => ({
   picker: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   item: {
     color: theme.colors.textPrimary,

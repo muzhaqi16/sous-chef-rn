@@ -213,6 +213,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     height: theme.sizes.input.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     fontSize: theme.fonts.size.md,
     paddingHorizontal: theme.spacing.sm,
     paddingRight: theme.spacing.xl, // Space for loading indicator
@@ -240,6 +241,7 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
     marginTop: theme.spacing.xs,

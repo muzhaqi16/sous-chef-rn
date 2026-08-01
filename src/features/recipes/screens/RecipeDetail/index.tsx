@@ -653,6 +653,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   tagText: {
     fontSize: theme.fonts.size.xs,

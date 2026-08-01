@@ -109,6 +109,7 @@ const styles = StyleSheet.create(theme => ({
     height: 3,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radii.xs,
+    borderCurve: 'continuous',
     alignSelf: 'flex-start',
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.md,

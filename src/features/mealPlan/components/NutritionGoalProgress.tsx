@@ -128,12 +128,14 @@ const barStyles = StyleSheet.create(theme => ({
   barBackground: {
     height: 6,
     borderRadius: 3,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.border,
     overflow: 'hidden',
   },
   barFill: {
     height: '100%',
     borderRadius: 3,
+    borderCurve: 'continuous',
     variants: {
       status: {
         [GoalStatus.OnTarget]: { backgroundColor: theme.colors.success },

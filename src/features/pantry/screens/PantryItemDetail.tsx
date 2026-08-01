@@ -557,6 +557,7 @@ const styles = StyleSheet.create(theme => ({
     width: 140,
     height: 100,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
   },
   recipeTitle: {

@@ -192,5 +192,6 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.md,
     backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
 }));

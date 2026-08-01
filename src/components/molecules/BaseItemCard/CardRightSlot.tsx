@@ -144,6 +144,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.button.sm,
     height: theme.sizes.button.sm,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     backgroundColor: theme.colors.surfaceVariant,
     justifyContent: 'center',
     alignItems: 'center',

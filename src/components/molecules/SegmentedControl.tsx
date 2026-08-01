@@ -199,6 +199,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     overflow: 'hidden',
     backgroundColor: theme.colors.surface,
   },
@@ -208,6 +209,7 @@ const styles = StyleSheet.create(theme => ({
     left: 0,
     bottom: 0,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     // backgroundColor is driven by the worklet in `indicatorAnimatedStyle`, not
     // here — see the comment there for why the brand color must not live on the
     // static stylesheet of a node Reanimated also commits to.

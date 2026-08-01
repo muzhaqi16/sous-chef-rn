@@ -66,6 +66,7 @@ const styles = StyleSheet.create(theme => ({
     width: 24,
     height: 24,
     borderRadius: theme.radii.xs,
+    borderCurve: 'continuous',
     borderWidth: 2,
     borderColor: theme.colors.border,
     backgroundColor: 'transparent',

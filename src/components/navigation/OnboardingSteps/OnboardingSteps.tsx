@@ -20,18 +20,28 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
   const externalSpacing = stepSpacing;
   const height = stepSize + 20;
 
+  // Width the bar reaches at the last step — also the track's fixed width, so
+  // the fill can be laid out once at full size and revealed by translation.
+  const fullWidth =
+    steps.length * stepSize +
+    (steps.length - 1) * stepSpacing +
+    externalSpacing;
+
   const progressBarStyle = useAnimatedStyle(() => {
-    // Calculate the width of the progress bar based on the active index
-    // The formula ensures the bar extends to the current active step
+    // Width the bar should reach for the active step. The fill is always
+    // `fullWidth` wide and slid left by the remainder, so the animation stays
+    // on transform instead of relaying out the track on every frame.
     const activeWidth =
       (activeIndex.get() + 1) * stepSize +
       activeIndex.get() * stepSpacing +
       externalSpacing;
 
     return {
-      width: withSpring(activeWidth, SPRING.DEFAULT),
+      transform: [
+        { translateX: withSpring(activeWidth - fullWidth, SPRING.DEFAULT) },
+      ],
     };
-  }, [stepSize, stepSpacing, externalSpacing]);
+  }, [stepSize, stepSpacing, externalSpacing, fullWidth]);
 
   return (
     <View
@@ -45,10 +55,10 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
     >
       {/* Animated progress bar background */}
       {/* UNISTYLES FIX: Wrapper pattern - static Unistyles on outer View */}
-      <View style={[styles.progressBar, { height }]}>
-        <Animated.View
-          style={[{ width: '100%', height: '100%' }, progressBarStyle]}
-        />
+      {/* The track clips the fill, so the fill's trailing cap stays round
+          while its leading edge is hidden behind the track's own radius. */}
+      <View style={[styles.progressBar, { height, width: fullWidth }]}>
+        <Animated.View style={[styles.progressFill, progressBarStyle]} />
       </View>
 
       {/* Step dots */}
@@ -76,9 +86,16 @@ const styles = StyleSheet.create(theme => ({
   },
   progressBar: {
     position: 'absolute',
+    borderRadius: theme.radii.full,
+    borderCurve: 'continuous',
+    overflow: 'hidden',
+    left: 0,
+  },
+  progressFill: {
+    width: '100%',
+    height: '100%',
     backgroundColor: theme.colors.primaryLight || '#DBEAFE',
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
-    left: 0,
   },
 }));

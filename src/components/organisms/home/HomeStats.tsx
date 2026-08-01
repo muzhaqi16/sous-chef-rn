@@ -94,6 +94,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.lg,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     alignItems: 'center',
   },
   iconBadge: {

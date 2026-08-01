@@ -24,6 +24,9 @@ import { Text } from '#components/atoms/Text';
 
 // ── Types ──
 
+// Every row is the same component, so one recycling pool is correct.
+const getItemType = () => 'item';
+
 interface IngredientSelectorSheetProps {
   /** State-driven presentation — auto-presents/dismisses via the hook's
    *  guarded `visible` path (see useStandardBottomSheet). */
@@ -126,6 +129,7 @@ export const IngredientSelectorSheet: React.FC<
           renderScrollComponent={BottomSheetScrollable}
           data={screen.filteredPantryItems}
           keyExtractor={ingredientKeyExtractor}
+          getItemType={getItemType}
           renderItem={renderIngredientItem}
           extraData={screen.selectedIngredients.size}
           contentContainerStyle={styles.listContent}

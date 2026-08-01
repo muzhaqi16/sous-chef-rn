@@ -331,6 +331,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.md,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     backgroundColor: 'rgba(0, 0, 0, 0.55)',
     alignItems: 'center',
     zIndex: 1,

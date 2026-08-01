@@ -148,6 +148,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     marginBottom: theme.spacing.sm,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   memberInfo: {
     flexDirection: 'row',
@@ -192,6 +193,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.pill,
+    borderCurve: 'continuous',
     borderWidth: 1,
     variants: {
       status: {

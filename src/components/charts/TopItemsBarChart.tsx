@@ -128,6 +128,7 @@ const styles = StyleSheet.create(theme => ({
   bar: {
     height: 20,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
     minWidth: 4,
     backgroundColor: theme.colors.primary,
   },

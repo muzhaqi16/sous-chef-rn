@@ -400,6 +400,7 @@ const styles = StyleSheet.create(theme => ({
     marginHorizontal: theme.spacing['3'],
     marginVertical: theme.spacing.xs,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   moveToPantryButton: {
     padding: theme.spacing.xs,

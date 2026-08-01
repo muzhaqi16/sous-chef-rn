@@ -150,6 +150,7 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   pantryBadge: {
     flexDirection: 'row',

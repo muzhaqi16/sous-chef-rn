@@ -60,6 +60,7 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.background,
     padding: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
   },
   barcodeLabel: {

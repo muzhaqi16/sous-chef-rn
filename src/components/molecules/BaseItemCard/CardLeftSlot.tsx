@@ -120,6 +120,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.avatar.md,
     height: theme.sizes.avatar.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing['3'],

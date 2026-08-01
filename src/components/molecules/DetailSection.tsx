@@ -51,6 +51,7 @@ const styles = StyleSheet.create(theme => ({
   section: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     paddingHorizontal: theme.spacing.md,
@@ -60,6 +61,7 @@ const styles = StyleSheet.create(theme => ({
   sectionFlush: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     marginHorizontal: theme.spacing.sm,
     marginBottom: theme.spacing.md,
     paddingVertical: theme.spacing.xs,

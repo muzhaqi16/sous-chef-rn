@@ -63,6 +63,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.lg,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
   },
   disabled: {
     opacity: theme.opacity.disabled,

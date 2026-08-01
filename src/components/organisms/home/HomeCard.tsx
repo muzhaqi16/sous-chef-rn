@@ -157,6 +157,7 @@ const styles = StyleSheet.create(theme => ({
   card: {
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     padding: theme.spacing.md,
     overflow: 'hidden',
   },
@@ -165,6 +166,7 @@ const styles = StyleSheet.create(theme => ({
     marginVertical: theme.spacing.sm,
     // borderRadius needed for shadow to follow card shape
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     ...theme.shadows.card,
   },
   highlightOverlay: {
@@ -197,6 +199,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
+    borderCurve: 'continuous',
   },
   pressed: {
     opacity: theme.opacity.pressed,

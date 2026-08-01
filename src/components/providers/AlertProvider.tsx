@@ -280,6 +280,7 @@ const styles = StyleSheet.create(theme => ({
     margin: theme.spacing['5'],
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     padding: theme.spacing['5'],
     boxShadow: [
       {
@@ -312,6 +313,7 @@ const styles = StyleSheet.create(theme => ({
   button: {
     padding: theme.spacing['3'],
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: theme.sizes.button.md,

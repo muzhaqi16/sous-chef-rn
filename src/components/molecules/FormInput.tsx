@@ -83,6 +83,7 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing['3'],
     fontSize: theme.typography.fontSize.base,

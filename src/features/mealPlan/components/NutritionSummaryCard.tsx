@@ -238,6 +238,7 @@ const statStyles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     marginHorizontal: 2,
   },
   label: {

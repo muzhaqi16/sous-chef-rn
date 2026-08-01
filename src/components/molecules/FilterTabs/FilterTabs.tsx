@@ -160,6 +160,7 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'] + 2,
     paddingVertical: theme.spacing.sm,
     borderRadius: theme.radii.xl,
+    borderCurve: 'continuous',
     gap: theme.spacing.xs + 2,
     backgroundColor: theme.colors.filterTab.inactiveBg,
     variants: {
@@ -168,6 +169,7 @@ const styles = StyleSheet.create(theme => ({
           paddingHorizontal: theme.spacing.sm + 2,
           paddingVertical: theme.spacing.xs + 2,
           borderRadius: theme.radii.lg,
+          borderCurve: 'continuous',
           gap: theme.spacing.xs,
         },
       },

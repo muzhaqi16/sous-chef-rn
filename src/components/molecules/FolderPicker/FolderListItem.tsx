@@ -59,6 +59,7 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing['3'],
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
     gap: theme.spacing['3'],
   },
   folderItemSelected: {

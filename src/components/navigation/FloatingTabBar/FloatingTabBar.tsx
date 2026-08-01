@@ -298,6 +298,7 @@ const styles = StyleSheet.create(theme => ({
     height: TAB_BAR_HEIGHT,
     alignSelf: 'center',
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
     position: 'absolute',
     paddingHorizontal: '5%',
     boxShadow: [
@@ -325,6 +326,7 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     bottom: 0,
     borderRadius: theme.radii['2xl'],
+    borderCurve: 'continuous',
   },
   tabsRow: {
     flex: 1,

@@ -35,6 +35,7 @@ const styles = StyleSheet.create(theme => ({
     width: theme.sizes.fab.md,
     height: theme.sizes.button.md,
     borderRadius: theme.radii.lg,
+    borderCurve: 'continuous',
     // Primary CTA — follows the user's selected App Color so the + button
     // matches the active tab icon highlight and other primary-tinted surfaces.
     backgroundColor: theme.colors.primary,

@@ -387,6 +387,7 @@ const styles = StyleSheet.create(theme => ({
     padding: theme.spacing.md,
     backgroundColor: theme.colors.surfaceVariant,
     borderRadius: theme.radii.md,
+    borderCurve: 'continuous',
   },
   notesHeader: {
     flexDirection: 'row',
