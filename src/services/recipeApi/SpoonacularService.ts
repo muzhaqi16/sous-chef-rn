@@ -102,7 +102,16 @@ class SpoonacularService {
       }
 
       const data = await response.json();
-      logger.debug('Spoonacular API response:', data);
+      // Log a shape summary, not the raw payload — a 25-result findByIngredients
+      // response has deeply nested ingredient arrays per recipe, and serializing
+      // that for the console (especially with a JS inspector attached) can block
+      // the JS thread for seconds.
+      logger.debug(
+        'Spoonacular API response:',
+        Array.isArray(data)
+          ? { resultCount: data.length }
+          : { keys: Object.keys(data as object) },
+      );
 
       return data as T;
     } catch (error) {
