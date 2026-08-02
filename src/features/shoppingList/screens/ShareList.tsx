@@ -37,7 +37,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
 }) => {
   const { t } = useTranslation();
   const { goBack } = useNavigation();
-  const { toShoppingListHomeDetail } = useAppNavigation();
+  const { toHomeDetail } = useAppNavigation();
   const { listId } = route.params;
 
   const permissionsBottomSheetRef =
@@ -222,7 +222,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                 <Button
                   title={t('shoppingListScreens.manageHome')}
                   onPress={() =>
-                    toShoppingListHomeDetail({
+                    toHomeDetail({
                       homeId: shoppingList?.homeId ?? '',
                     })
                   }

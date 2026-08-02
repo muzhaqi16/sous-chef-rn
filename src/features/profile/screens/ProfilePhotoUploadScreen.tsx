@@ -100,7 +100,7 @@ async function requestCameraAndLaunch(
 
 export const ProfilePhotoUploadScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack, toPantryImageCrop } = useAppNavigation();
+  const { goBack, toImageCrop } = useAppNavigation();
   const { uploadProfileImage, updateProfileAvatarUrl } = useImageUpload();
 
   const [selectedImage, setSelectedImage] = useState<ImageFile | null>(null);
@@ -169,7 +169,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
   const handleCropImage = () => {
     if (!selectedImage) return;
 
-    toPantryImageCrop({ imageFile: selectedImage });
+    toImageCrop({ imageFile: selectedImage });
   };
 
   const handleUpload = () => {

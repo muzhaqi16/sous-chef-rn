@@ -167,11 +167,33 @@ jest.mock('../stacks/NotificationStack', () => ({
   NotificationStack: () => null,
 }));
 
+// Feature-owned screen groups spread into the root config. One mock per
+// feature replaces the per-screen mocks this file used to carry, and keeps
+// the real (heavy) screen modules out of this suite. The linking-intent
+// invariant for the screens inside each group is asserted against the real
+// module in the feature's own test — see
+// features/pantry/screens/__tests__/registration.test.ts.
+jest.mock('#features/pantry/screens/registration', () => ({
+  pantryDetailScreens: {},
+}));
+jest.mock('#features/shoppingList/screens/registration', () => ({
+  shoppingListDetailScreens: {},
+}));
+jest.mock('#features/recipes/screens/registration', () => ({
+  recipeDetailScreens: {},
+}));
+jest.mock('#features/mealPlan/screens/registration', () => ({
+  mealPlanDetailScreens: {},
+}));
+jest.mock('#features/profile/screens/registration', () => ({
+  profileScreens: {},
+}));
+jest.mock('#screens/home/registration', () => ({
+  homeManagementScreens: {},
+}));
+
 // Mock screen imports — only what RootNavigator.tsx itself still imports
-// directly. Every feature detail/sub screen has migrated to nest under its
-// owning tab's own stack (PantryStack/ShoppingListStack/RecipeStack/
-// MealPlanStack — each with its own test coverage), so RootNavigator no
-// longer imports any of them and their mocks were removed along with that.
+// directly.
 jest.mock('#screens/auth/CodeVerificationScreen', () => ({
   CodeVerificationScreen: () => null,
 }));

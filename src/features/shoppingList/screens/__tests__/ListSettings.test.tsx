@@ -314,11 +314,11 @@ describe('ListSettings', () => {
     }));
 
     const { useAppNavigation } = require('#hooks/navigation/useAppNavigation');
-    const { toShoppingListHomeDetail } = useAppNavigation();
+    const { toHomeDetail } = useAppNavigation();
 
     render(<ListSettings route={editRoute} />);
     fireEvent.press(screen.getByText('Manage Home'));
-    expect(toShoppingListHomeDetail).toHaveBeenCalledWith({ homeId: 'h1' });
+    expect(toHomeDetail).toHaveBeenCalledWith({ homeId: 'h1' });
   });
 
   it('pops back when a non-owner has lost access to the list', () => {

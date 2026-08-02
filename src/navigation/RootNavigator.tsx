@@ -28,6 +28,12 @@ import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 import { JoinHomeByCodeScreen } from '#screens/home/JoinHomeByCodeScreen';
 import { JoinByLinkScreen } from '#screens/home/JoinByLinkScreen';
+import { pantryDetailScreens } from '#features/pantry/screens/registration';
+import { recipeDetailScreens } from '#features/recipes/screens/registration';
+import { shoppingListDetailScreens } from '#features/shoppingList/screens/registration';
+import { mealPlanDetailScreens } from '#features/mealPlan/screens/registration';
+import { profileScreens } from '#features/profile/screens/registration';
+import { homeManagementScreens } from '#screens/home/registration';
 
 import {
   NavigationErrorBoundary,
@@ -120,15 +126,19 @@ const RootStack = createNativeStackNavigator({
     },
     MainApp: {
       if: useIsMainApp,
-      // Top safe-area inset for every screen in the group (it's no longer
-      // global — see TopInsetLayout). The three nested navigators below opt out
-      // with `noInsetScreenLayout` because they inset their own screens; Home's
-      // tabs and the Barcode/Notification stacks would otherwise double-inset.
+      // Nested navigators opt out with `noInsetScreenLayout` — they inset
+      // their own screens and would otherwise double-inset.
       screenLayout: topInsetScreenLayout,
       screens: {
         Home: createNativeStackScreen({
           screen: HomeTabs,
           layout: noInsetScreenLayout,
+          // Keeps the tab subtree's effects alive while a detail screen is
+          // pushed over it, rather than re-running every layout effect in one
+          // commit on pop. Only bites from the second push down (native-stack
+          // already treats the screen directly under the focused one as
+          // active) — i.e. Home > Profile > HomeManagement > HomeDetail.
+          options: { inactiveBehavior: 'none' },
         }),
         Barcode: createNativeStackScreen({
           screen: BarcodeStack,
@@ -138,16 +148,25 @@ const RootStack = createNativeStackNavigator({
           screen: NotificationStack,
           layout: noInsetScreenLayout,
         }),
+        // Feature-owned detail screens, siblings of `Home` so a pushed screen
+        // covers the tab navigator and the floating tab bar is structurally
+        // absent on it. Each feature owns its own group; the object spread
+        // keeps `StaticParamList` inference, so every `navigate` call site
+        // stays type-checked. One registration per screen — screens opened
+        // from several tabs (RecipeDetail, HomeDetail) have a single copy.
+        ...pantryDetailScreens,
+        ...shoppingListDetailScreens,
+        ...recipeDetailScreens,
+        ...mealPlanDetailScreens,
+        ...profileScreens,
+        ...homeManagementScreens,
       },
     },
-    // Always-available deep link screens — placed last so the active
-    // conditional group's first screen is the initial route.
+    // Placed last so the active conditional group's first screen is the
+    // initial route.
     DeepLinks: {
-      // Top safe-area inset for every deep-link screen (no longer global — see
-      // TopInsetLayout). All are plain screens, so inset every one.
       screenLayout: topInsetScreenLayout,
       screens: {
-        // Core deep-link screens (auth lifecycle)
         EmailVerification: createNativeStackScreen({
           screen: EmailVerificationDeepLinkScreen,
           linking: 'verify-email',
@@ -156,9 +175,6 @@ const RootStack = createNativeStackNavigator({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
         }),
-        // Feature-contributed deep-link screens. Declared statically so v8's
-        // `StaticParamList` inference picks them up (a runtime spread of the
-        // feature registry would erase their typing).
         AcceptInvitation: createNativeStackScreen({
           screen: AcceptInvite,
           linking: 'accept-invitation',
@@ -238,7 +254,6 @@ export function Navigation() {
     return unsubscribe;
   }, []);
 
-  // Track initialization
   const hasInitialized = useRef(false);
 
   // Initialize navigation state after hydration. Cold start never enters the
@@ -251,7 +266,6 @@ export function Navigation() {
     }
   }, [isHydrated, user, setNavigationState]);
 
-  // React to user state changes after initialization.
   useEffect(() => {
     if (!isHydrated || !hasInitialized.current) return;
     const target = resolveNavTarget(user);
@@ -278,7 +292,6 @@ export function Navigation() {
     setNavigationState,
   ]);
 
-  // Create navigation theme based on current Unistyles theme
   const navigationTheme: Theme = {
     ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
     colors: {
@@ -294,7 +307,6 @@ export function Navigation() {
     },
   };
 
-  // Show splash while app is hydrating or determining navigation state
   if (!isHydrated || navigationState === 'loading') {
     return <SplashScreen />;
   }

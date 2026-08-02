@@ -119,7 +119,7 @@ export const ListSettings: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const listId = route.params?.listId;
-  const { toShareList, toShoppingListHomeDetail, goBack } = useAppNavigation();
+  const { toShareList, toHomeDetail, goBack } = useAppNavigation();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
@@ -658,9 +658,7 @@ export const ListSettings: React.FC<
                         styles.actionRow,
                         pressed && styles.pressed,
                       ]}
-                      onPress={() =>
-                        toShoppingListHomeDetail({ homeId: linkedHomeId })
-                      }
+                      onPress={() => toHomeDetail({ homeId: linkedHomeId })}
                     >
                       <Icon name="people-outline" size={20} tone="primary" />
                       <Text size="md" tone="accent" style={styles.actionText}>
