@@ -19,6 +19,9 @@ import {
   type VerifyEmailMutationVariables,
 } from '#operations/auth/auth.generated';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
+import { authService } from '#/services/authService';
+import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
@@ -98,6 +101,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const user = useUser();
   const updateUser = useUpdateUser();
   const toast = useToast();
+  const { skipVerification } = useEmailVerificationActions();
   const [verifyEmail] = useMutation(VerifyEmailDocument);
   const [resendVerificationEmail] = useMutation(
     ResendVerificationEmailDocument,
@@ -238,6 +242,42 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     );
   };
 
+  // The only way off this screen without a working code. `verification` is a
+  // conditional group holding one headerless screen, and RootNavigator re-derives
+  // that target from `user` on every change — so nothing but clearing the user
+  // can move them. Logout is entirely local (LogoutCleanup cancels timers and
+  // subscriptions; device deregistration is fire-and-forget), so this still works
+  // when the mail server, or the whole API, is down.
+  const onBackToLogin = () => {
+    alertService.alert(
+      t('auth.exitVerificationTitle'),
+      t('auth.exitVerificationMessage'),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        {
+          text: t('auth.exitVerificationConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            authService.logout();
+          },
+        },
+      ],
+    );
+  };
+
+  // Deferring is a real choice, not a dismissal, so it states the cost up front
+  // — sharing and collaborating stay unavailable until the address is verified.
+  const onSkip = () => {
+    alertService.alert(
+      t('auth.skipVerificationTitle'),
+      t('auth.skipVerificationMessage'),
+      [
+        { text: t('labels.cancel'), style: 'cancel' },
+        { text: t('auth.skipVerification'), onPress: skipVerification },
+      ],
+    );
+  };
+
   const onResend = () => {
     // Prevent resend during countdown
     if (countdown > 0 || !user?.email) return;
@@ -317,6 +357,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   return (
     <AuthWrapper>
       <AuthFormTemplate
+        onBackPress={onBackToLogin}
         title={t('auth.enterCode')}
         subtitle={
           <>
@@ -340,6 +381,9 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         ]}
         control={control}
         errors={errors}
+        linkText={t('auth.skipVerification')}
+        onLinkPress={onSkip}
+        linkTestID="skip-verification"
         submitText={t('labels.submit')}
         onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
         footerText={t('auth.didntGetEmail')}

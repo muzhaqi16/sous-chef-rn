@@ -6,6 +6,11 @@ import {
   ShoppingListMainContent,
   type ShoppingListMainContentProps,
 } from '../ShoppingListMainContent';
+import {
+  useShoppingListTutorial,
+  ShoppingListTutorialStep,
+} from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useShoppingListModals } from '#features/shoppingList/context/ShoppingListModalsContext';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -94,11 +99,22 @@ jest.mock('@react-navigation/native', () => ({
 
 jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
   useShoppingListModals: jest.fn(() => ({
-    addItemSheet: { open: jest.fn() },
-    quantityEdit: { openForItem: jest.fn() },
-    moveToPantry: { openForItem: jest.fn() },
+    addItemSheet: { open: jest.fn(), visible: false },
+    quantityEdit: { openForItem: jest.fn(), visible: false },
+    purchaseAmount: { openForItem: jest.fn(), visible: false },
+    moveToPantry: { openForItem: jest.fn(), visible: false },
   })),
 }));
+
+jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
+  const actual = jest.requireActual(
+    '#features/shoppingList/context/ShoppingListTutorialContext',
+  );
+  return {
+    ...actual,
+    useShoppingListTutorial: jest.fn(() => null),
+  };
+});
 
 jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   optimisticDataPersistence: { clearType: jest.fn() },
@@ -156,7 +172,10 @@ jest.mock(
 jest.mock(
   '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
   () => ({
-    SpotlightCoachMark: () => null,
+    SpotlightCoachMark: ({ title }: { title: string }) => {
+      const { Text } = require('react-native');
+      return <Text testID="spotlight-coach-mark">{title}</Text>;
+    },
   }),
 );
 
@@ -213,9 +232,38 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
   return data as ScreenData;
 };
 
+// Full tutorial mock shape — every notify*/skip* fn the component may call,
+// even though a given test only ever exercises the one matching its step.
+const makeTutorial = (
+  overrides: Partial<NonNullable<ReturnType<typeof useShoppingListTutorial>>>,
+) => ({
+  isActive: true,
+  currentStep: ShoppingListTutorialStep.IDLE,
+  rects: {},
+  registerRect: jest.fn(),
+  notifyAddButtonPressed: jest.fn(),
+  notifyItemAdded: jest.fn(),
+  notifySheetClosed: jest.fn(),
+  notifySwipeActionsSeen: jest.fn(),
+  notifyCheckboxTapped: jest.fn(),
+  notifyLongPressPriceSeen: jest.fn(),
+  notifyPurchasedTabTapped: jest.fn(),
+  notifyMoveToPantryTapped: jest.fn(),
+  skipCurrentStep: jest.fn(),
+  skipAll: jest.fn(),
+  ...overrides,
+});
+
 describe('ShoppingListMainContent', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (useShoppingListTutorial as jest.Mock).mockReturnValue(null);
+    (useShoppingListModals as jest.Mock).mockReturnValue({
+      addItemSheet: { open: jest.fn(), visible: false },
+      quantityEdit: { openForItem: jest.fn(), visible: false },
+      purchaseAmount: { openForItem: jest.fn(), visible: false },
+      moveToPantry: { openForItem: jest.fn(), visible: false },
+    });
   });
 
   it('renders shopping list screen', () => {
@@ -259,5 +307,104 @@ describe('ShoppingListMainContent', () => {
       <ShoppingListMainContent screenData={makeScreenData()} />,
     );
     expect(tree.toJSON()).toBeTruthy();
+  });
+
+  describe('tutorial coach-mark render guards', () => {
+    // Positive control: proves the mocks/wiring actually let the coach mark
+    // render at all, so the negative cases below are meaningful rather than
+    // trivially passing because nothing was ever going to render.
+    it('renders the coach mark when the step, rect, and item all line up', () => {
+      (useShoppingListTutorial as jest.Mock).mockReturnValue(
+        makeTutorial({
+          currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
+          rects: { checkbox: { x: 0, y: 0, width: 10, height: 10 } },
+        }),
+      );
+      const { getByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            rawUnpurchasedItems: [{ id: 'item-1' }],
+          })}
+        />,
+      );
+      expect(getByTestId('spotlight-coach-mark')).toBeTruthy();
+    });
+
+    it('hides the coach mark when the checkbox step has no unpurchased items, even with a stale rect', () => {
+      (useShoppingListTutorial as jest.Mock).mockReturnValue(
+        makeTutorial({
+          currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
+          // Simulates a rect left over from before the last item was purchased/removed.
+          rects: { checkbox: { x: 0, y: 0, width: 10, height: 10 } },
+        }),
+      );
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({ rawUnpurchasedItems: [] })}
+        />,
+      );
+      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+    });
+
+    it('hides the coach mark when the move-to-pantry step has no purchased items', () => {
+      (useShoppingListTutorial as jest.Mock).mockReturnValue(
+        makeTutorial({
+          currentStep: ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY,
+          rects: { archiveIcon: { x: 0, y: 0, width: 10, height: 10 } },
+        }),
+      );
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({ rawPurchasedItems: [] })}
+        />,
+      );
+      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+    });
+
+    it('hides the coach mark while the add-item sheet is open, even mid-way through an unrelated step', () => {
+      (useShoppingListTutorial as jest.Mock).mockReturnValue(
+        makeTutorial({
+          currentStep: ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
+          rects: { itemCard: { x: 0, y: 0, width: 10, height: 10 } },
+        }),
+      );
+      (useShoppingListModals as jest.Mock).mockReturnValue({
+        addItemSheet: { open: jest.fn(), visible: true },
+        quantityEdit: { openForItem: jest.fn(), visible: false },
+        purchaseAmount: { openForItem: jest.fn(), visible: false },
+        moveToPantry: { openForItem: jest.fn(), visible: false },
+      });
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            rawUnpurchasedItems: [{ id: 'item-1' }],
+          })}
+        />,
+      );
+      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+    });
+
+    it('hides the coach mark while the purchase-amount sheet it opened is still open', () => {
+      (useShoppingListTutorial as jest.Mock).mockReturnValue(
+        makeTutorial({
+          currentStep: ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
+          rects: { itemCard: { x: 0, y: 0, width: 10, height: 10 } },
+        }),
+      );
+      (useShoppingListModals as jest.Mock).mockReturnValue({
+        addItemSheet: { open: jest.fn(), visible: false },
+        quantityEdit: { openForItem: jest.fn(), visible: false },
+        purchaseAmount: { openForItem: jest.fn(), visible: true },
+        moveToPantry: { openForItem: jest.fn(), visible: false },
+      });
+      const { queryByTestId } = render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            rawUnpurchasedItems: [{ id: 'item-1' }],
+          })}
+        />,
+      );
+      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+    });
   });
 });

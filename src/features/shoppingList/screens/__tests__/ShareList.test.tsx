@@ -44,6 +44,19 @@ const render = (ui: React.ReactElement) =>
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
+// The verification gate is exercised in its own suite; here it always allows
+// the action so these tests stay focused on their own behaviour.
+jest.mock('#hooks/auth/useEmailVerification', () => ({
+  useVerifiedEmailGate: () => ({
+    requireVerifiedEmail: () => true,
+    hasUnverifiedEmail: false,
+  }),
+  useEmailVerificationActions: () => ({
+    skipVerification: jest.fn(),
+    resumeVerification: jest.fn(),
+  }),
+}));
+
 jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#store/useAppStore', () => {

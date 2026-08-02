@@ -117,6 +117,19 @@ describe('useHomeQuery', () => {
     expect(result.current.initialLoading).toBe(false);
   });
 
+  it('clears initialLoading once an empty home list has resolved', async () => {
+    const { result } = renderHookWithApollo(() => useHomeQuery(), {
+      operationMocks: [homesMock([])],
+    });
+    expect(result.current.initialLoading).toBe(true);
+
+    // A response carrying zero homes is still a response — the screen must
+    // settle to its empty list rather than sitting on the full-screen loader.
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.homes).toEqual([]);
+    expect(result.current.initialLoading).toBe(false);
+  });
+
   it('returns homes from query data', async () => {
     const homes: HomeFixture[] = [
       { id: 'home-1', isDefault: true },

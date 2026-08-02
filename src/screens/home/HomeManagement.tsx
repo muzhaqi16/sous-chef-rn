@@ -18,6 +18,7 @@ import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
@@ -81,6 +82,7 @@ export const HomeManagement: React.FC = () => {
     stats,
     refetch: refetchHomes,
   } = useHomeManagement();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
 
   // Note: Removed useFocusEffect refetch to prevent flickering
   // Apollo's cache-and-network + cache-first strategy handles data freshness
@@ -106,6 +108,10 @@ export const HomeManagement: React.FC = () => {
       toastService.error(t('homeManagement.errorNoInvitePermission'));
       return;
     }
+
+    // Gate before the modal opens rather than on submit, so the user isn't
+    // asked for an email address the invite can't use.
+    if (!requireVerifiedEmail()) return;
 
     // Get the roles this user can invite
     const allowedRoles = getInvitableRoles(
@@ -146,6 +152,7 @@ export const HomeManagement: React.FC = () => {
 
   const handleJoinHome = async () => {
     if (!joinCode.trim()) return;
+    if (!requireVerifiedEmail()) return;
 
     const result = await joinHomeByCode(joinCode);
     if (result) {

@@ -9,6 +9,7 @@ import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useMutation } from '@apollo/client/react';
 import { InviteToHomeDocument } from '#operations/home/home.generated';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -49,6 +50,7 @@ export const InviteMemberScreen = () => {
   const [currentEmail, setCurrentEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
 
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [inviteToHome] = useMutation(InviteToHomeDocument, {
     onError: error => {
       handleMutationError(error, { operation: 'Invite to Home' });
@@ -108,6 +110,8 @@ export const InviteMemberScreen = () => {
   };
 
   const sendInvites = () => {
+    if (!requireVerifiedEmail()) return;
+
     if (invites.length > 0) {
       executeWithLoadingState(
         async () => {

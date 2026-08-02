@@ -15,6 +15,7 @@ import {
   unwrapPayload,
 } from '#/utils/compilerSafeWrappers';
 import { alertService } from '#/services/alertService';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';
 import { buildJoinListUrl, shareUrl } from '#/utils/deepLinkUrls';
 
@@ -38,6 +39,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
   shareLinkUrl,
 }) => {
   const { t } = useTranslation();
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [shareShoppingList] = useMutation(ShareShoppingListDocument);
   const [togglingShareCode, setTogglingShareCode] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -57,6 +59,10 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
   }
 
   const handleToggleShareCode = () => {
+    // Only opening the list up is gated — turning sharing back off is always
+    // allowed, so an unverified account is never stuck sharing something.
+    if (!isPublic && !requireVerifiedEmail()) return;
+
     executeWithLoadingState(
       async () => {
         const { data } = await shareShoppingList({

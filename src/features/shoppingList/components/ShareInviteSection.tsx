@@ -14,6 +14,7 @@ import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import {
   executeWithLoadingState,
   unwrapPayload,
@@ -64,9 +65,12 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   );
   const [sharing, setSharing] = useState(false);
 
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [shareList] = useMutation(AddCollaboratorDocument);
 
   const handleShare = () => {
+    if (!requireVerifiedEmail()) return;
+
     if (!email.trim()) {
       alertService.alert(
         t('labels.error'),

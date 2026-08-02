@@ -18,6 +18,7 @@ import {
 } from '#operations/home/home.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import {
@@ -60,6 +61,7 @@ export const JoinHomeByCodeScreen: React.FC<
   );
   const home = data?.homeByJoinCode ?? null;
 
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [joinMutation] = useMutation(JoinHomeByCodeDocument);
 
   const handleFind = () => {
@@ -79,6 +81,7 @@ export const JoinHomeByCodeScreen: React.FC<
     if (!code) {
       return;
     }
+    if (!requireVerifiedEmail()) return;
 
     executeWithLoadingState(
       async () => {

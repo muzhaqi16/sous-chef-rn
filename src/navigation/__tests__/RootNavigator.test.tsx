@@ -127,6 +127,7 @@ let mockUser: User | null = null;
 let mockNavigationState: NavigationState = 'loading';
 let mockShowBiometricSetup = false;
 let mockPostLoginCredentials: { email: string; password: string } | null = null;
+let mockVerificationSkipped = false;
 const mockSetNavigationState = jest.fn((state: NavigationState) => {
   mockNavigationState = state;
 });
@@ -148,6 +149,7 @@ jest.mock('#store/useAppStore', () => ({
   }),
   useIsHydrated: jest.fn(() => mockIsHydrated),
   useUser: jest.fn(() => mockUser),
+  useVerificationSkipped: jest.fn(() => mockVerificationSkipped),
   usePostLoginState: jest.fn(() => ({
     navigationState: mockNavigationState,
     showBiometricSetup: mockShowBiometricSetup,
@@ -224,6 +226,7 @@ describe('Navigation (RootNavigator)', () => {
     mockNavigationState = 'loading';
     mockShowBiometricSetup = false;
     mockPostLoginCredentials = null;
+    mockVerificationSkipped = false;
     mockSetNavigationState.mockClear();
   });
 
@@ -266,6 +269,34 @@ describe('Navigation (RootNavigator)', () => {
     mockNavigationState = 'auth'; // will be changed
     render(<Navigation />);
     expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
+  });
+
+  it('lets an unverified user who skipped through to the main app', () => {
+    mockIsHydrated = true;
+    mockVerificationSkipped = true;
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: false,
+      onBoarded: true,
+    };
+    mockNavigationState = 'verification';
+    render(<Navigation />);
+    expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('still routes a skipped user to onboarding when not onboarded', () => {
+    mockIsHydrated = true;
+    mockVerificationSkipped = true;
+    mockUser = {
+      id: '1',
+      email: 'test@example.com',
+      emailVerified: false,
+      onBoarded: false,
+    };
+    mockNavigationState = 'verification';
+    render(<Navigation />);
+    expect(mockSetNavigationState).toHaveBeenCalledWith('onboarding');
   });
 
   it('sets navigation to onboarding for verified but not onboarded user', () => {

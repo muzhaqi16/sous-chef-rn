@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Ionicons } from '@react-native-vector-icons/ionicons';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { useIsOfflineBannerVisible } from '#hooks/app/useIsOfflineBannerVisible';
+import { useAppStore } from '#store/useAppStore';
 import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -22,30 +21,30 @@ export interface OfflineStatus {
  * offline indicator (`OfflineStatusPill`) and announced by the transition
  * toaster (`OfflineTransitionToaster`). Keeping both readers on one hook stops
  * the icon/message logic from drifting between them.
+ *
+ * The cause comes from the store's debounced `offlineBannerCause`, not from the
+ * live flags — during the minimum-visible window after a recovery the live flags
+ * already read "online", and re-deriving from them would rewrite the message
+ * under the user mid-display.
  */
 export const useOfflineStatus = (): OfflineStatus => {
   const { t } = useTranslation();
-  const isOnline = useIsOnline();
-  const apiReachable = useAppStore(state => state.apiReachable);
+  const cause = useAppStore(state => state.offlineBannerCause);
   const pendingCount = usePendingMutationCount();
-  const offline = useIsOfflineBannerVisible();
 
-  // Priority: device offline > API unreachable while online (reachability
-  // breaker open) > user-toggled offline mode.
-  const isDeviceOffline = !isOnline;
-  const isApiDown = isOnline && apiReachable === false;
   const iconName: IoniconName =
-    isDeviceOffline || isApiDown ? 'cloud-offline-outline' : 'airplane-outline';
+    cause === 'offline-mode' ? 'airplane-outline' : 'cloud-offline-outline';
 
-  const message = isDeviceOffline
-    ? pendingCount > 0
-      ? t('offlineBanner.deviceOfflinePending', { count: pendingCount })
-      : t('offlineBanner.deviceOffline')
-    : isApiDown
-    ? pendingCount > 0
-      ? t('offlineBanner.apiDownPending', { count: pendingCount })
-      : t('offlineBanner.apiDown')
-    : t('offlineBanner.offlineMode');
+  const message =
+    cause === 'device-offline'
+      ? pendingCount > 0
+        ? t('offlineBanner.deviceOfflinePending', { count: pendingCount })
+        : t('offlineBanner.deviceOffline')
+      : cause === 'api-unreachable'
+      ? pendingCount > 0
+        ? t('offlineBanner.apiDownPending', { count: pendingCount })
+        : t('offlineBanner.apiDown')
+      : t('offlineBanner.offlineMode');
 
-  return { offline, iconName, message, pendingCount };
+  return { offline: cause !== null, iconName, message, pendingCount };
 };

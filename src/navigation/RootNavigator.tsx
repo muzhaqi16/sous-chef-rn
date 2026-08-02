@@ -12,7 +12,12 @@ import {
   createNativeStackScreen,
 } from '@react-navigation/native-stack';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useIsHydrated, useUser, usePostLoginState } from '#store/useAppStore';
+import {
+  useIsHydrated,
+  useUser,
+  usePostLoginState,
+  useVerificationSkipped,
+} from '#store/useAppStore';
 import type { NavigationState } from '#store/slices/appSlice';
 import { SplashScreen } from '#screens/SplashScreen';
 import { NotFoundScreen } from '#screens/NotFoundScreen';
@@ -213,15 +218,22 @@ declare module '@react-navigation/core' {
 const StaticNavigation = createStaticNavigation(RootStack);
 
 /**
- * Derive the navigation state implied purely by the current user. The
- * post-login `biometric_setup` gate is NOT derivable from `user` (it depends on
- * device capability + stored credentials), so it's set explicitly by
- * `authService.handleLogin` and must not be clobbered here — see the guard in
- * the user-change effect below.
+ * Derive the navigation state implied by the current user plus their stored
+ * decision to defer email verification. The post-login `biometric_setup` gate is
+ * NOT derivable from either (it depends on device capability + stored
+ * credentials), so it's set explicitly by `authService.handleLogin` and must not
+ * be clobbered here — see the guard in the user-change effect below.
  */
-function resolveNavTarget(user: ReturnType<typeof useUser>): NavigationState {
+function resolveNavTarget(
+  user: ReturnType<typeof useUser>,
+  verificationSkipped: boolean,
+): NavigationState {
   if (!user) return 'auth';
-  if (!user.emailVerified) return 'verification';
+  // `verificationSkipped` is what lets an unverified account past this gate.
+  // Re-opening the verification screen from the reminder banner clears the
+  // flag, so the target agrees with where the user already is and this derive
+  // never yanks them back out — no special case needed for either direction.
+  if (!user.emailVerified && !verificationSkipped) return 'verification';
   if (!user.onBoarded) return 'onboarding';
   return 'main_app';
 }
@@ -237,6 +249,7 @@ export function Navigation() {
   const user = useUser();
   const { navigationState, postLoginCredentials, setNavigationState } =
     usePostLoginState();
+  const verificationSkipped = useVerificationSkipped();
 
   // Track focused-route changes for screen-view analytics + crash breadcrumbs.
   // Only emits when the route name actually changes; intermediate state ticks
@@ -262,13 +275,13 @@ export function Navigation() {
   useEffect(() => {
     if (isHydrated && !hasInitialized.current) {
       hasInitialized.current = true;
-      setNavigationState(resolveNavTarget(user));
+      setNavigationState(resolveNavTarget(user, verificationSkipped));
     }
-  }, [isHydrated, user, setNavigationState]);
+  }, [isHydrated, user, verificationSkipped, setNavigationState]);
 
   useEffect(() => {
     if (!isHydrated || !hasInitialized.current) return;
-    const target = resolveNavTarget(user);
+    const target = resolveNavTarget(user, verificationSkipped);
     // Don't let a user-prop change yank the user out of a pending post-login
     // gate into main_app. Two gates own that transition themselves:
     //   • biometric enrollment — its own `biometric_setup` screen, and
@@ -289,6 +302,7 @@ export function Navigation() {
     isHydrated,
     navigationState,
     postLoginCredentials,
+    verificationSkipped,
     setNavigationState,
   ]);
 

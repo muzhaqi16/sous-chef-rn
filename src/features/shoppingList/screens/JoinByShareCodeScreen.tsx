@@ -13,6 +13,7 @@ import { useMutation } from '@apollo/client/react';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import {
@@ -36,9 +37,12 @@ export const JoinByShareCodeScreen: React.FC<
   const [code, setCode] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [joinMutation] = useMutation(JoinShoppingListByShareCodeDocument);
 
   const handleJoin = () => {
+    if (!requireVerifiedEmail()) return;
+
     const trimmed = code.trim();
     if (!trimmed) {
       toastService.error(t('shoppingListScreens.joinEmptyCodeError'));

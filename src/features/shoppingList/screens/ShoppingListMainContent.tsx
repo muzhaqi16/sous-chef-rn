@@ -472,15 +472,53 @@ export const ShoppingListMainContent: React.FC<
       {(() => {
         if (!tutorial?.isActive) return null;
         if (!isScreenFocused || isOverlayOpen) return null;
-        // Hide the spotlight while the purchase-amount sheet is open — it
-        // stays on SPOTLIGHT_LONG_PRESS_PRICE until the sheet closes (see
-        // ShoppingListModalsContext), so without this the coach mark would
-        // otherwise render on top of the open sheet the whole time.
-        if (purchaseAmount.visible) return null;
+
+        // Hide the spotlight whenever any modal sheet on this screen is
+        // open — most importantly the purchase-amount sheet the long-press
+        // step itself opens (it stays on SPOTLIGHT_LONG_PRESS_PRICE until
+        // that sheet closes, see ShoppingListModalsContext), but this also
+        // covers the user accidentally opening an unrelated sheet (e.g. Add
+        // Item) mid-tutorial. The spotlight resumes once every sheet closes.
+        if (
+          addItemSheet.visible ||
+          quantityEdit.visible ||
+          purchaseAmount.visible ||
+          moveToPantry.visible
+        )
+          return null;
+
+        const isSwipeStep =
+          tutorial.currentStep ===
+          ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
+        const isCheckboxStep =
+          tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX;
+        const isLongPressStep =
+          tutorial.currentStep ===
+          ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE;
+        const isMoveToPantryStep =
+          tutorial.currentStep ===
+          ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY;
+
+        // Every spotlight step that targets a specific row (swipe, checkbox,
+        // long-press-price target an unpurchased row; move-to-pantry targets
+        // a purchased row) needs at least one matching item to point at.
+        // Without this, a step reached via "Next"/skip on an empty list — or
+        // one whose only qualifying item was purchased/removed/moved out
+        // from under it — would fall through to a stale or absent rect.
+        const needsUnpurchasedItem =
+          isSwipeStep || isCheckboxStep || isLongPressStep;
+        const needsPurchasedItem = isMoveToPantryStep;
+        if (needsUnpurchasedItem && rawUnpurchasedItems.length === 0)
+          return null;
+        if (needsPurchasedItem && rawPurchasedItems.length === 0) return null;
 
         const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
         if (!stepConfig) return null;
 
+        // Belt-and-suspenders: SortableItem clears its rect on unmount/
+        // no-longer-target, so this should already be null whenever the
+        // item check above didn't catch it — but never render on a rect
+        // that hasn't been (re)measured yet either way.
         const targetRect = tutorial.rects[stepConfig.rectKey];
         if (!targetRect) return null;
 
@@ -536,21 +574,6 @@ export const ShoppingListMainContent: React.FC<
             }
           }
         };
-
-        const isSwipeStep =
-          tutorial.currentStep ===
-          ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
-        const isLongPressStep =
-          tutorial.currentStep ===
-          ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE;
-
-        // Don't show the swipe/long-press spotlight until there is at least
-        // one unpurchased item to interact with
-        if (
-          (isSwipeStep || isLongPressStep) &&
-          rawUnpurchasedItems.length === 0
-        )
-          return null;
 
         const handleNext = () => {
           if (

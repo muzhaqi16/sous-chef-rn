@@ -566,6 +566,11 @@ async function handleLogin(
 
   // Navigation flow control
   if (!user.emailVerified) {
+    // A previous session's "skip for now" doesn't carry into a fresh login —
+    // prompt once more, and let them skip again if the email still hasn't
+    // arrived. Clearing it here also keeps this in step with resolveNavTarget,
+    // which would otherwise immediately route past the screen we just set.
+    store.setUserNavigationState(user.id, { verificationSkipped: false });
     store.setNavigationState('verification');
     return false;
   }

@@ -86,6 +86,11 @@ export function useMealPlans(filters?: MealPlanFilters) {
       mealPlans,
       currentPlan,
       loading,
+      // True only while the very first response is in flight (nothing cached
+      // yet). A `cache-and-network` refetch over existing data keeps this
+      // false, so consumers can hold a skeleton on cold start without
+      // flashing it over already-rendered content.
+      initialLoading: loading && !data,
       error: error as Error | undefined,
       totalCount: connectionData.totalCount,
       hasMore: connectionData.hasMore,

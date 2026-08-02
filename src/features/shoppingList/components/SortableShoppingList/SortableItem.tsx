@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
@@ -182,6 +182,28 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
     index === 0 &&
     isPurchased;
+
+  // Clear each rect the moment this row stops being that step's target —
+  // item gets purchased/removed, the step advances, or FlashList recycles
+  // this cell to a different position. Without this, `registerRect` only
+  // ever sets a value and never unsets one, so a rect measured for a since-
+  // vanished item lingers in tutorial state and the coach mark renders
+  // pointing at a target that no longer exists (e.g. spotlighting the
+  // checkbox after the only unpurchased item was just purchased).
+  useEffect(() => {
+    if (!isTutorialCheckboxTarget) return;
+    return () => tutorialActions?.registerRect('checkbox', null);
+  }, [isTutorialCheckboxTarget, tutorialActions]);
+
+  useEffect(() => {
+    if (!isTutorialArchiveTarget) return;
+    return () => tutorialActions?.registerRect('archiveIcon', null);
+  }, [isTutorialArchiveTarget, tutorialActions]);
+
+  useEffect(() => {
+    if (!isTutorialItemCardTarget) return;
+    return () => tutorialActions?.registerRect('itemCard', null);
+  }, [isTutorialItemCardTarget, tutorialActions]);
 
   // Measure checkbox position for tutorial spotlight
   const handleCheckboxLayout = () => {

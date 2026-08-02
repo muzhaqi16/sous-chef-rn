@@ -5,6 +5,7 @@ import {
   WhiteActivityIndicator,
 } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -61,6 +62,7 @@ export const AcceptInvite: React.FC = () => {
     });
 
   // Mutations for shopping list invites
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [acceptShoppingListInvite] = useMutation(
     AcceptShoppingListInviteDocument,
   );
@@ -114,6 +116,11 @@ export const AcceptInvite: React.FC = () => {
     invitationType === 'unknown' ? undefined : token;
 
   const handleAccept = () => {
+    // Accepting joins a shared home or list, so it sits behind the same gate as
+    // joining by code. Declining stays open — an unverified account must always
+    // be able to clear an invitation it can't act on.
+    if (!requireVerifiedEmail()) return;
+
     const inviteToken = resolveInviteToken();
 
     if (!inviteToken) {

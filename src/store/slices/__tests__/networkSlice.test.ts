@@ -104,6 +104,99 @@ describe('networkSlice', () => {
     });
   });
 
+  describe('offlineBannerCause (debounced presentation state)', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    const goOffline = (store: ReturnType<typeof createTestStore>) =>
+      store.getState().setNetworkStatus({
+        isOnline: false,
+        isInternetReachable: false,
+        networkType: null,
+      });
+
+    const goOnline = (store: ReturnType<typeof createTestStore>) =>
+      store.getState().setNetworkStatus({
+        isOnline: true,
+        isInternetReachable: true,
+        networkType: 'wifi',
+      });
+
+    it('starts hidden', () => {
+      expect(createTestStore().getState().offlineBannerCause).toBeNull();
+    });
+
+    it('shows nothing while the API failure is still within the dwell window', () => {
+      const store = createTestStore();
+      store.getState().setApiReachable(false);
+      jest.advanceTimersByTime(4_000);
+      expect(store.getState().offlineBannerCause).toBeNull();
+    });
+
+    it('shows api-unreachable once the failure has held for the full dwell', () => {
+      const store = createTestStore();
+      store.getState().setApiReachable(false);
+      jest.advanceTimersByTime(5_000);
+      expect(store.getState().offlineBannerCause).toBe('api-unreachable');
+    });
+
+    it('never shows when the API recovers inside the dwell window', () => {
+      const store = createTestStore();
+      store.getState().setApiReachable(false);
+      jest.advanceTimersByTime(2_000);
+      store.getState().setApiReachable(true);
+      jest.advanceTimersByTime(10_000);
+      expect(store.getState().offlineBannerCause).toBeNull();
+    });
+
+    it('does not accumulate dwell across a flapping circuit', () => {
+      const store = createTestStore();
+      for (let i = 0; i < 5; i += 1) {
+        store.getState().setApiReachable(false);
+        jest.advanceTimersByTime(3_000);
+        store.getState().setApiReachable(true);
+        jest.advanceTimersByTime(1_000);
+      }
+      expect(store.getState().offlineBannerCause).toBeNull();
+    });
+
+    it('uses the shorter dwell for a device-level disconnect', () => {
+      const store = createTestStore();
+      goOffline(store);
+      jest.advanceTimersByTime(2_000);
+      expect(store.getState().offlineBannerCause).toBe('device-offline');
+    });
+
+    it('shows offline mode immediately — the user just flipped the switch', () => {
+      const store = createTestStore();
+      store.getState().setOfflineModeEnabled(true);
+      expect(store.getState().offlineBannerCause).toBe('offline-mode');
+    });
+
+    it('stays visible for the minimum duration after recovery', () => {
+      const store = createTestStore();
+      goOffline(store);
+      jest.advanceTimersByTime(2_000);
+      goOnline(store);
+      jest.advanceTimersByTime(2_000);
+      expect(store.getState().offlineBannerCause).toBe('device-offline');
+      jest.advanceTimersByTime(1_000);
+      expect(store.getState().offlineBannerCause).toBeNull();
+    });
+
+    it('swaps the cause without hiding while it is already visible', () => {
+      const store = createTestStore();
+      goOffline(store);
+      jest.advanceTimersByTime(2_000);
+      expect(store.getState().offlineBannerCause).toBe('device-offline');
+
+      // Device back, API still down: relabel in place, no flicker.
+      store.getState().setApiReachable(false);
+      goOnline(store);
+      expect(store.getState().offlineBannerCause).toBe('api-unreachable');
+    });
+  });
+
   describe('isApiUnavailable', () => {
     it('is true when the device is offline', () => {
       expect(isApiUnavailable({ isOnline: false, apiReachable: true })).toBe(

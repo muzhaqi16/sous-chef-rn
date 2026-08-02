@@ -88,12 +88,23 @@ jest.mock('#features/profile/hooks/useConfigurableSettings', () => ({
   }),
 }));
 
+let mockHasUnverifiedEmail = false;
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: <T,>(selector: (state: RootState) => T): T => {
     const state = { canAccessDevTools: false };
     return selector(state as Partial<RootState> as RootState);
   },
   useCanAccessDevTools: jest.fn(() => false),
+  useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
+}));
+
+const mockResumeVerification = jest.fn();
+jest.mock('#hooks/auth/useEmailVerification', () => ({
+  useEmailVerificationActions: () => ({
+    skipVerification: jest.fn(),
+    resumeVerification: mockResumeVerification,
+  }),
 }));
 
 jest.mock('#hooks/performance/useScreenTransition');
@@ -199,6 +210,18 @@ jest.mock('#components/base/Skeleton/ProfileSkeleton', () => ({
 describe('ProfileScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockHasUnverifiedEmail = false;
+  });
+
+  it('hides the verify-email banner when the address is verified', () => {
+    render(<ProfileScreen />);
+    expect(screen.queryByTestId('verify-email-banner')).toBeNull();
+  });
+
+  it('shows the verify-email banner for an unverified address', () => {
+    mockHasUnverifiedEmail = true;
+    render(<ProfileScreen />);
+    expect(screen.getByTestId('verify-email-banner')).toBeTruthy();
   });
 
   it('renders the profile screen', () => {
