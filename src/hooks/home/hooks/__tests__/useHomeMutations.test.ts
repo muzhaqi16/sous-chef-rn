@@ -22,10 +22,13 @@ const mockStoreState = {
   setSelectedHomeId: jest.fn(),
 };
 
+let mockHasUnverifiedEmail = false;
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (state: Partial<RootState>) => unknown) =>
     selector(mockStoreState),
   useSelectedHomeId: jest.fn(() => mockStoreState.selectedHomeId),
+  useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
   useHomeState: jest.fn(() => ({
     selectedHomeId: mockStoreState.selectedHomeId,
     setSelectedHomeId: mockStoreState.setSelectedHomeId,
@@ -124,6 +127,7 @@ const createOptions = () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = 'home-1';
+  mockHasUnverifiedEmail = false;
 });
 
 function createHomeMock(home: { id: string; name: string }) {
@@ -207,6 +211,29 @@ describe('useHomeMutations', () => {
         input: {
           name: 'Test',
           createDefaultPantry: false,
+          allowJoinCode: false,
+        },
+      });
+    });
+
+    it('creates the home without a join code when the email is unverified', async () => {
+      // The server refuses createHome outright for allowJoinCode: true from an
+      // unverified caller, so requesting one would fail the whole creation.
+      mockHasUnverifiedEmail = true;
+      const m = createHomeMock({ id: 'new-home', name: 'My Home' });
+      const { result } = renderHookWithApollo(
+        () => useHomeMutations(createOptions()),
+        { operationMocks: [m.mock] },
+      );
+
+      await act(async () => {
+        await result.current.createHome('My Home');
+      });
+
+      expect(m.fired).toContainEqual({
+        input: {
+          name: 'My Home',
+          createDefaultPantry: true,
           allowJoinCode: false,
         },
       });

@@ -235,6 +235,57 @@ directive @requireSystemRole(
   role: UserRole!
 ) on FIELD_DEFINITION
 
+"""
+Require that the caller's email address is verified.
+
+Applies to the outward-facing writes — the ones that expose the caller's data
+to another party, or admit another party into the caller's scope. An
+unverified caller is refused with a top-level error carrying
+`AUTH_EMAIL_NOT_VERIFIED` (HTTP 403), which a client shows as a
+"verify your email" prompt rather than a generic permission error.
+
+NOT AN AUTH POSTURE. It restricts a caller who is already authenticated and
+says nothing about whether the field requires authentication at all, so it
+never satisfies the default-deny audit on its own — a field carrying it MUST
+also carry `@auth` / `@requireAccess` / `@requireMembershipRole` /
+`@requireSystemRole`. Schema build fails otherwise.
+
+ARGUMENT-CONDITIONAL FORM. Several mutations here serve BOTH directions of a
+share: `shareShoppingList(input: {isPublic: false})` is how a list is
+un-published, and `updateHome(input: {allowJoinCode: false})` is how a join
+link is turned off. Gating those outright would strand an unverified account
+with a share it cannot revoke. `whenInputTrue` names a Boolean field on the
+operation's `input` argument; the gate engages ONLY when that field is
+literally true. An omitted field, an explicit false, and an explicit null all
+pass through.
+
+The named field is checked when the schema is built — it must exist on the
+input type and be a Boolean — because a typo would otherwise disable the gate
+silently while every test of the ungated direction still passed.
+
+Example (unconditional):
+  type Mutation {
+    inviteToHome(input: InviteToHomeInput!): InviteToHomeResult!
+      @auth
+      @requireVerifiedEmail
+  }
+
+Example (conditional — publishing is gated, un-publishing is not):
+  type Mutation {
+    shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
+      @auth
+      @requireAccess(resource: "ShoppingList", level: OWNER)
+      @requireVerifiedEmail(whenInputTrue: "isPublic")
+  }
+"""
+directive @requireVerifiedEmail(
+  """
+  Name of a Boolean field on the operation's `input` argument. When given,
+  the gate applies only if that field is literally true.
+  """
+  whenInputTrue: String
+) on FIELD_DEFINITION
+
 input AcceptHomeInviteInput {
   token: String!
 }
@@ -904,6 +955,181 @@ input ApiAutomationInput {
   apiClient: String
   isApiLogin: Boolean
   isAutomated: Boolean
+}
+
+"""
+A client credential for the API.
+
+Admin-only, and never carries secret material: the stored key is a one-way
+hash and is not exposed on this type or any other. Use keyPrefix to recognise
+a key in a list — it is the first characters of the secret and is safe to
+display.
+"""
+type ApiKey {
+  clientType: ApiKeyClientType!
+  createdAt: DateTime!
+  """Id of the administrator who created this key."""
+  createdBy: ID
+  description: String
+  """
+  Deployments this key authenticates against. A key not listing a deployment's environment is refused there.
+  """
+  environment: [ApiKeyEnvironment!]!
+  """When this key stops authenticating, or null if it does not expire."""
+  expiresAt: DateTime
+  id: ID!
+  """
+  First characters of the key, for identification. Not usable to authenticate.
+  """
+  keyPrefix: String!
+  """When this key last authenticated a request, or null if it never has."""
+  lastUsedAt: DateTime
+  """Human-readable label, e.g. Android Client."""
+  name: String!
+  """What this key may do. Enforced — see ApiKeyPermission."""
+  permissions: [ApiKeyPermission!]!
+  """Requests per window this key is allowed, or null for the default."""
+  rateLimit: Int
+  """When this key was permanently retired, or null if it has not been."""
+  revokedAt: DateTime
+  """
+  Id of the administrator who revoked this key, or null if it is not revoked.
+  """
+  revokedById: ID
+  """Derived lifecycle state. Not settable — use the lifecycle mutations."""
+  status: ApiKeyStatus!
+  updatedAt: DateTime!
+  """Total successful authentications by this key, all time."""
+  usageCount: Int!
+}
+
+"""
+Which client an API key credentials.
+
+Determines the key's display prefix (an ANDROID key reads and_...) and, for
+ADMIN, is the client type the admin panel's own credential is expected to
+carry.
+"""
+enum ApiKeyClientType {
+  ADMIN
+  ANDROID
+  IOS
+  TESTING
+  WEB
+}
+
+"""
+A page of ApiKey results. Read "edges" for the rows and "pageInfo" to decide
+whether to request another page.
+"""
+type ApiKeyConnection implements Connection {
+  """The rows in this page, in the connection's sort order."""
+  edges: [ApiKeyEdge!]!
+  """Cursors and flags describing where this page sits in the full result."""
+  pageInfo: PageInfo!
+  """
+  Total rows matching the query across all pages. Computed only when selected; null when not available.
+  """
+  totalCount: Int
+}
+
+"""
+One ApiKey in a paginated result, paired with the cursor that identifies its
+position. Pass the cursor as "after" to resume from just past this edge.
+"""
+type ApiKeyEdge implements Edge {
+  """Opaque position marker for this edge. Do not parse or construct it."""
+  cursor: String!
+  """The ApiKey this edge wraps."""
+  node: ApiKey!
+}
+
+"""
+A deployment environment an API key is valid for.
+
+A key authenticates against a deployment only when the deployment's
+environment is among the key's. A key listing no environment matching the
+deployment it is given to will never authenticate there — it is not an error
+at creation time, so check this before wondering why a new key is rejected.
+"""
+enum ApiKeyEnvironment {
+  DEVELOPMENT
+  PRODUCTION
+  STAGING
+  TEST
+}
+
+input ApiKeyFilters {
+  clientType: ApiKeyClientType
+  """Keys valid for this environment."""
+  environment: ApiKeyEnvironment
+  """Keys holding this permission."""
+  permission: ApiKeyPermission
+  """Keys in this lifecycle state."""
+  status: ApiKeyStatus
+}
+
+input ApiKeyOrderBy {
+  createdAt: SortOrder
+  lastUsedAt: SortOrder
+}
+
+"""
+What an API key is permitted to do. These are enforced, not advisory.
+
+A request is refused with API_KEY_INSUFFICIENT_PERMISSIONS when the key
+authenticating it does not hold the permission the operation needs. A key's
+permission never substitutes for the calling user's authority: an operation
+requiring a system role still requires it.
+"""
+enum ApiKeyPermission {
+  """
+  Authenticate against the admin deployment at all. Checked before an
+  operation is parsed, so it gates the whole service rather than any
+  particular field. Without it a key cannot reach the admin API even if the
+  caller is a system administrator.
+  """
+  ADMIN
+  """Execute queries and subscriptions."""
+  READ
+  """Execute mutations. Grant alongside READ."""
+  WRITE
+}
+
+"""
+A newly issued API key secret.
+
+THIS VALUE IS SHOWN ONCE AND CANNOT BE RETRIEVED AGAIN. It is stored only as
+a one-way hash, so no query, no re-read, and no support request can recover
+it. A caller that does not persist or display it immediately has lost it, and
+the only remedy is to rotate the key for a new one.
+
+It appears in exactly two places — the results of createApiKey and
+rotateApiKey. No other operation returns this type.
+"""
+type ApiKeySecret {
+  """First characters of the token, matching the key's keyPrefix."""
+  keyPrefix: String!
+  """The raw key, to be sent as the x-api-key header. Shown once."""
+  token: String!
+}
+
+"""
+The lifecycle state of an API key.
+
+Derived from the key's stored facts rather than set directly — there is no
+mutation that assigns a status. A terminal state is never masked by a
+reversible one: a revoked key reads REVOKED even if it is also expired.
+"""
+enum ApiKeyStatus {
+  """Authenticates normally."""
+  ACTIVE
+  """Reversibly paused. Re-enable to restore it, with its existing secret."""
+  DISABLED
+  """Past its expiry instant. Extend the expiry to restore it."""
+  EXPIRED
+  """Permanently retired. Cannot be re-enabled, edited, or rotated."""
+  REVOKED
 }
 
 enum AppTheme {
@@ -2042,6 +2268,33 @@ type CookingStats {
   totalRecipesCooked: Int!
 }
 
+input CreateApiKeyInput {
+  clientType: ApiKeyClientType!
+  description: String
+  """At least one. A key valid for no environment authenticates nowhere."""
+  environment: [ApiKeyEnvironment!]!
+  expiresAt: DateTime
+  name: String!
+  """Defaults to READ when omitted."""
+  permissions: [ApiKeyPermission!]
+  rateLimit: Int
+}
+
+type CreateApiKeyPayload {
+  apiKey: ApiKey!
+  """
+  The new secret, shown once. Not retrievable afterward — see ApiKeySecret.
+  """
+  secret: ApiKeySecret!
+}
+
+"""
+Result of CreateApiKey. Select on CreateApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateApiKeyResult = ConflictError | CreateApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateBrandInput {
   description: String
   name: String!
@@ -3076,6 +3329,21 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
 
+input DeleteApiKeyInput {
+  id: ID!
+}
+
+type DeleteApiKeyPayload {
+  apiKey: ApiKey!
+}
+
+"""
+Result of DeleteApiKey. Select on DeleteApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeleteApiKeyResult = ConflictError | DeleteApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
+
 input DeleteBrandInput {
   id: ID!
   """
@@ -3964,6 +4232,21 @@ enum Difficulty {
   VERY_EASY
 }
 
+input DisableApiKeyInput {
+  id: ID!
+}
+
+type DisableApiKeyPayload {
+  apiKey: ApiKey!
+}
+
+"""
+Result of DisableApiKey. Select on DisableApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DisableApiKeyResult = ConflictError | DisableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
+
 """Display format for quantities"""
 enum DisplayFormat {
   AUTO
@@ -4034,6 +4317,21 @@ union DuplicateTemplateResult = ConflictError | DuplicateTemplatePayload | Forbi
 interface Edge {
   cursor: String!
 }
+
+input EnableApiKeyInput {
+  id: ID!
+}
+
+type EnableApiKeyPayload {
+  apiKey: ApiKey!
+}
+
+"""
+Result of EnableApiKey. Select on EnableApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union EnableApiKeyResult = ConflictError | EnableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
 
 input EnableHomeJoinLinkInput {
   """ID of the home to enable the join link for."""
@@ -10500,6 +10798,21 @@ type ReviewItemSuggestionPayload {
   suggestion: ItemEditSuggestion!
 }
 
+input RevokeApiKeyInput {
+  id: ID!
+}
+
+type RevokeApiKeyPayload {
+  apiKey: ApiKey!
+}
+
+"""
+Result of RevokeApiKey. Select on RevokeApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RevokeApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RevokeApiKeyPayload | ValidationError
+
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
   isRisky: Boolean
@@ -10524,6 +10837,26 @@ enum RiskFactor {
   UNUSUAL_TIME
   VPN_DETECTED
 }
+
+input RotateApiKeyInput {
+  id: ID!
+}
+
+type RotateApiKeyPayload {
+  apiKey: ApiKey!
+  """
+  The replacement secret, shown once. The key's previous secret stops
+  authenticating immediately.
+  """
+  secret: ApiKeySecret!
+}
+
+"""
+Result of RotateApiKey. Select on RotateApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RotateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RotateApiKeyPayload | ValidationError
 
 type SavedRecipe {
   cookedCount: Int!
@@ -12313,6 +12646,33 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError
+
+"""
+Metadata changes only. There is no field here that alters the secret — use
+rotateApiKey for that, and the lifecycle mutations to change status.
+
+An omitted field is left unchanged.
+"""
+input UpdateApiKeyInput {
+  description: String
+  environment: [ApiKeyEnvironment!]
+  expiresAt: DateTime
+  id: ID!
+  name: String
+  permissions: [ApiKeyPermission!]
+  rateLimit: Int
+}
+
+type UpdateApiKeyPayload {
+  apiKey: ApiKey!
+}
+
+"""
+Result of UpdateApiKey. Select on UpdateApiKeyPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | UpdateApiKeyPayload | ValidationError
 
 input UpdateBrandInput {
   description: String

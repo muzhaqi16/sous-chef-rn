@@ -19,7 +19,11 @@ import {
   type CreateHomeMutation,
 } from '#operations/home/home.generated';
 import { UpdateHomeOptimistic_HomeFragmentDoc } from './useHomeMutations.generated';
-import { useSelectedHomeId, useHomeState } from '#store/useAppStore';
+import {
+  useSelectedHomeId,
+  useHomeState,
+  useHasUnverifiedEmail,
+} from '#store/useAppStore';
 import {
   handleMutationError,
   versionConflictCheck,
@@ -57,6 +61,7 @@ export function useHomeMutations({
   setSelectedPantryId,
 }: UseHomeMutationsOptions) {
   const selectedHomeId = useSelectedHomeId();
+  const hasUnverifiedEmail = useHasUnverifiedEmail();
   const { setSelectedHomeId } = useHomeState();
   const { createAddOperation, createRemoveOperation } = useCrudOperations();
   const apolloClient = useApolloClient();
@@ -229,7 +234,12 @@ export function useHomeMutations({
     }) => ({
       name: input.name.trim(),
       createDefaultPantry: input.createDefaultPantry ?? true,
-      allowJoinCode: input.allowJoinCode ?? true,
+      // The server refuses `createHome` outright when `allowJoinCode` is true
+      // and the caller's email is unverified, so asking for one here would fail
+      // the whole creation — including onboarding, which requests a join code
+      // unconditionally. Create the home without one instead; it can be enabled
+      // later through `enableHomeJoinLink` once the address is verified.
+      allowJoinCode: hasUnverifiedEmail ? false : input.allowJoinCode ?? true,
     }),
     validateInput: (input: { name: string }) => {
       if (!input.name?.trim()) {

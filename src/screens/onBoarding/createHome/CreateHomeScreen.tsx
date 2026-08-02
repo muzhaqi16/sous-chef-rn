@@ -46,6 +46,7 @@ import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated'
 // Store & Navigation
 import {
   useAppStore,
+  useHasUnverifiedEmail,
   useSelectedHomeId,
   useSetSelectedPantryId,
   useUser,
@@ -130,6 +131,7 @@ async function performCreateHome(
   deps: {
     needsHome: boolean;
     needsPantry: boolean;
+    hasUnverifiedEmail: boolean;
     selectedHomeId: string | null;
     createHome: CreateHomeFn;
     createPantry: CreatePantryFn;
@@ -150,7 +152,11 @@ async function performCreateHome(
           description: 'Created during onboarding',
           type: HomeType.Household,
           isPublic: false,
-          allowJoinCode: true,
+          // Asking for a join code while the caller's email is unverified makes
+          // the server refuse the whole mutation, which would dead-end
+          // onboarding for anyone who deferred verification. Create the home
+          // without one — it can be enabled later from the home's settings.
+          allowJoinCode: !deps.hasUnverifiedEmail,
           createDefaultPantry: true,
           defaultPantryName: data.pantryName.trim(),
           tags: ['onboarding'],
@@ -354,6 +360,7 @@ const CreateHomeScreenComponent = () => {
     existingHomePantries.find(p => p.isDefault) ?? existingHomePantries[0];
   const needsHome = !existingHome;
   const needsPantry = !existingPantry;
+  const hasUnverifiedEmail = useHasUnverifiedEmail();
   const hasPendingInvites = pendingInvites.length > 0;
 
   // GraphQL Mutations
@@ -483,6 +490,7 @@ const CreateHomeScreenComponent = () => {
         performCreateHome(data, {
           needsHome,
           needsPantry,
+          hasUnverifiedEmail,
           selectedHomeId,
           createHome,
           createPantry,

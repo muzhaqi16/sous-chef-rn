@@ -17,6 +17,8 @@ import type { AlertButton } from '#/services/alertService';
 import type { RootState } from '#store/index';
 import { CreateHomeScreen } from '../CreateHomeScreen';
 
+let mockHasUnverifiedEmail = false;
+
 jest.mock('../../../../apollo/links/tokenScheduler');
 jest.mock('../../../../apollo/links/refreshToken');
 
@@ -58,6 +60,7 @@ jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => mockUser),
   useSelectedHomeId: jest.fn(() => null),
   useSetSelectedPantryId: jest.fn(() => mockSetSelectedPantryId),
+  useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
 }));
 
 jest.mock('#/utils/validation/onboarding', () => ({
@@ -493,6 +496,7 @@ beforeEach(() => {
   mockHomesLoading = false;
   mockPendingInvites = [];
   recordedMutations = [];
+  mockHasUnverifiedEmail = false;
   mockCreateHomeError = null;
   mockCreateHomeResponse = {
     createHome: {
@@ -1058,6 +1062,46 @@ describe('CreateHomeScreen', () => {
         name: 'DeclineHomeInvite',
         variables: { input: { token: 'invite-1' } },
       });
+    });
+  });
+
+  it('requests a join code when the email is verified', async () => {
+    const user = userEvent.setup();
+
+    const { findByTestId } = renderScreen();
+    await user.press(await findByTestId('submit-button'));
+
+    await waitFor(() => {
+      expect(recordedMutations).toContainEqual(
+        expect.objectContaining({
+          name: 'CreateHome',
+          variables: expect.objectContaining({
+            input: expect.objectContaining({ allowJoinCode: true }),
+          }),
+        }),
+      );
+    });
+  });
+
+  it('creates the home without a join code when the email is unverified', async () => {
+    // The server refuses createHome outright for allowJoinCode: true from an
+    // unverified caller — asking for one here would dead-end onboarding for
+    // anyone who deferred verification.
+    const user = userEvent.setup();
+    mockHasUnverifiedEmail = true;
+
+    const { findByTestId } = renderScreen();
+    await user.press(await findByTestId('submit-button'));
+
+    await waitFor(() => {
+      expect(recordedMutations).toContainEqual(
+        expect.objectContaining({
+          name: 'CreateHome',
+          variables: expect.objectContaining({
+            input: expect.objectContaining({ allowJoinCode: false }),
+          }),
+        }),
+      );
     });
   });
 

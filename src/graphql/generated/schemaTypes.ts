@@ -708,6 +708,177 @@ export type ApiAutomationInput = {
   isAutomated?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
+/**
+ * A client credential for the API.
+ *
+ * Admin-only, and never carries secret material: the stored key is a one-way
+ * hash and is not exposed on this type or any other. Use keyPrefix to recognise
+ * a key in a list — it is the first characters of the secret and is safe to
+ * display.
+ */
+export type ApiKey = {
+  __typename: 'ApiKey';
+  clientType: ApiKeyClientType;
+  createdAt: Scalars['DateTime']['output'];
+  /** Id of the administrator who created this key. */
+  createdBy: Maybe<Scalars['ID']['output']>;
+  description: Maybe<Scalars['String']['output']>;
+  /** Deployments this key authenticates against. A key not listing a deployment's environment is refused there. */
+  environment: Array<ApiKeyEnvironment>;
+  /** When this key stops authenticating, or null if it does not expire. */
+  expiresAt: Maybe<Scalars['DateTime']['output']>;
+  id: Scalars['ID']['output'];
+  /** First characters of the key, for identification. Not usable to authenticate. */
+  keyPrefix: Scalars['String']['output'];
+  /** When this key last authenticated a request, or null if it never has. */
+  lastUsedAt: Maybe<Scalars['DateTime']['output']>;
+  /** Human-readable label, e.g. Android Client. */
+  name: Scalars['String']['output'];
+  /** What this key may do. Enforced — see ApiKeyPermission. */
+  permissions: Array<ApiKeyPermission>;
+  /** Requests per window this key is allowed, or null for the default. */
+  rateLimit: Maybe<Scalars['Int']['output']>;
+  /** When this key was permanently retired, or null if it has not been. */
+  revokedAt: Maybe<Scalars['DateTime']['output']>;
+  /** Id of the administrator who revoked this key, or null if it is not revoked. */
+  revokedById: Maybe<Scalars['ID']['output']>;
+  /** Derived lifecycle state. Not settable — use the lifecycle mutations. */
+  status: ApiKeyStatus;
+  updatedAt: Scalars['DateTime']['output'];
+  /** Total successful authentications by this key, all time. */
+  usageCount: Scalars['Int']['output'];
+};
+
+/**
+ * Which client an API key credentials.
+ *
+ * Determines the key's display prefix (an ANDROID key reads and_...) and, for
+ * ADMIN, is the client type the admin panel's own credential is expected to
+ * carry.
+ */
+export enum ApiKeyClientType {
+  Admin = 'ADMIN',
+  Android = 'ANDROID',
+  Ios = 'IOS',
+  Testing = 'TESTING',
+  Web = 'WEB'
+}
+
+/**
+ * A page of ApiKey results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
+export type ApiKeyConnection = Connection & {
+  __typename: 'ApiKeyConnection';
+  /** The rows in this page, in the connection's sort order. */
+  edges: Array<ApiKeyEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
+  pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+/**
+ * One ApiKey in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
+export type ApiKeyEdge = Edge & {
+  __typename: 'ApiKeyEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
+  cursor: Scalars['String']['output'];
+  /** The ApiKey this edge wraps. */
+  node: ApiKey;
+};
+
+/**
+ * A deployment environment an API key is valid for.
+ *
+ * A key authenticates against a deployment only when the deployment's
+ * environment is among the key's. A key listing no environment matching the
+ * deployment it is given to will never authenticate there — it is not an error
+ * at creation time, so check this before wondering why a new key is rejected.
+ */
+export enum ApiKeyEnvironment {
+  Development = 'DEVELOPMENT',
+  Production = 'PRODUCTION',
+  Staging = 'STAGING',
+  Test = 'TEST'
+}
+
+export type ApiKeyFilters = {
+  clientType?: InputMaybe<ApiKeyClientType>;
+  /** Keys valid for this environment. */
+  environment?: InputMaybe<ApiKeyEnvironment>;
+  /** Keys holding this permission. */
+  permission?: InputMaybe<ApiKeyPermission>;
+  /** Keys in this lifecycle state. */
+  status?: InputMaybe<ApiKeyStatus>;
+};
+
+export type ApiKeyOrderBy = {
+  createdAt?: InputMaybe<SortOrder>;
+  lastUsedAt?: InputMaybe<SortOrder>;
+};
+
+/**
+ * What an API key is permitted to do. These are enforced, not advisory.
+ *
+ * A request is refused with API_KEY_INSUFFICIENT_PERMISSIONS when the key
+ * authenticating it does not hold the permission the operation needs. A key's
+ * permission never substitutes for the calling user's authority: an operation
+ * requiring a system role still requires it.
+ */
+export enum ApiKeyPermission {
+  /**
+   * Authenticate against the admin deployment at all. Checked before an
+   * operation is parsed, so it gates the whole service rather than any
+   * particular field. Without it a key cannot reach the admin API even if the
+   * caller is a system administrator.
+   */
+  Admin = 'ADMIN',
+  /** Execute queries and subscriptions. */
+  Read = 'READ',
+  /** Execute mutations. Grant alongside READ. */
+  Write = 'WRITE'
+}
+
+/**
+ * A newly issued API key secret.
+ *
+ * THIS VALUE IS SHOWN ONCE AND CANNOT BE RETRIEVED AGAIN. It is stored only as
+ * a one-way hash, so no query, no re-read, and no support request can recover
+ * it. A caller that does not persist or display it immediately has lost it, and
+ * the only remedy is to rotate the key for a new one.
+ *
+ * It appears in exactly two places — the results of createApiKey and
+ * rotateApiKey. No other operation returns this type.
+ */
+export type ApiKeySecret = {
+  __typename: 'ApiKeySecret';
+  /** First characters of the token, matching the key's keyPrefix. */
+  keyPrefix: Scalars['String']['output'];
+  /** The raw key, to be sent as the x-api-key header. Shown once. */
+  token: Scalars['String']['output'];
+};
+
+/**
+ * The lifecycle state of an API key.
+ *
+ * Derived from the key's stored facts rather than set directly — there is no
+ * mutation that assigns a status. A terminal state is never masked by a
+ * reversible one: a revoked key reads REVOKED even if it is also expired.
+ */
+export enum ApiKeyStatus {
+  /** Authenticates normally. */
+  Active = 'ACTIVE',
+  /** Reversibly paused. Re-enable to restore it, with its existing secret. */
+  Disabled = 'DISABLED',
+  /** Past its expiry instant. Extend the expiry to restore it. */
+  Expired = 'EXPIRED',
+  /** Permanently retired. Cannot be re-enabled, edited, or rotated. */
+  Revoked = 'REVOKED'
+}
+
 export enum AppTheme {
   Dark = 'DARK',
   Light = 'LIGHT',
@@ -1885,6 +2056,32 @@ export type CookingStats = {
   totalRecipesCooked: Scalars['Int']['output'];
 };
 
+export type CreateApiKeyInput = {
+  clientType: ApiKeyClientType;
+  description?: InputMaybe<Scalars['String']['input']>;
+  /** At least one. A key valid for no environment authenticates nowhere. */
+  environment: Array<ApiKeyEnvironment>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  name: Scalars['String']['input'];
+  /** Defaults to READ when omitted. */
+  permissions?: InputMaybe<Array<ApiKeyPermission>>;
+  rateLimit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type CreateApiKeyPayload = {
+  __typename: 'CreateApiKeyPayload';
+  apiKey: ApiKey;
+  /** The new secret, shown once. Not retrievable afterward — see ApiKeySecret. */
+  secret: ApiKeySecret;
+};
+
+/**
+ * Result of CreateApiKey. Select on CreateApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type CreateApiKeyResult = ConflictError | CreateApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
@@ -2932,6 +3129,22 @@ export type DeleteAllReadNotificationsPayload = {
  */
 export type DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
+export type DeleteApiKeyInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DeleteApiKeyPayload = {
+  __typename: 'DeleteApiKeyPayload';
+  apiKey: ApiKey;
+};
+
+/**
+ * Result of DeleteApiKey. Select on DeleteApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type DeleteApiKeyResult = ConflictError | DeleteApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type DeleteBrandInput = {
   id: Scalars['ID']['input'];
   /**
@@ -3849,6 +4062,22 @@ export enum Difficulty {
   VeryEasy = 'VERY_EASY'
 }
 
+export type DisableApiKeyInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type DisableApiKeyPayload = {
+  __typename: 'DisableApiKeyPayload';
+  apiKey: ApiKey;
+};
+
+/**
+ * Result of DisableApiKey. Select on DisableApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type DisableApiKeyResult = ConflictError | DisableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
+
 /** Display format for quantities */
 export enum DisplayFormat {
   Auto = 'AUTO',
@@ -3921,6 +4150,22 @@ export type DuplicateTemplateResult = ConflictError | DuplicateTemplatePayload |
 export type Edge = {
   cursor: Scalars['String']['output'];
 };
+
+export type EnableApiKeyInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type EnableApiKeyPayload = {
+  __typename: 'EnableApiKeyPayload';
+  apiKey: ApiKey;
+};
+
+/**
+ * Result of EnableApiKey. Select on EnableApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type EnableApiKeyResult = ConflictError | EnableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type EnableHomeJoinLinkInput = {
   /** ID of the home to enable the join link for. */
@@ -13954,6 +14199,22 @@ export type ReviewItemSuggestionPayload = {
   suggestion: ItemEditSuggestion;
 };
 
+export type RevokeApiKeyInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type RevokeApiKeyPayload = {
+  __typename: 'RevokeApiKeyPayload';
+  apiKey: ApiKey;
+};
+
+/**
+ * Result of RevokeApiKey. Select on RevokeApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RevokeApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RevokeApiKeyPayload | ValidationError;
+
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
   isRisky?: InputMaybe<Scalars['Boolean']['input']>;
@@ -13978,6 +14239,27 @@ export enum RiskFactor {
   UnusualTime = 'UNUSUAL_TIME',
   VpnDetected = 'VPN_DETECTED'
 }
+
+export type RotateApiKeyInput = {
+  id: Scalars['ID']['input'];
+};
+
+export type RotateApiKeyPayload = {
+  __typename: 'RotateApiKeyPayload';
+  apiKey: ApiKey;
+  /**
+   * The replacement secret, shown once. The key's previous secret stops
+   * authenticating immediately.
+   */
+  secret: ApiKeySecret;
+};
+
+/**
+ * Result of RotateApiKey. Select on RotateApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RotateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RotateApiKeyPayload | ValidationError;
 
 export type SavedRecipe = {
   __typename: 'SavedRecipe';
@@ -15951,6 +16233,34 @@ export type UpdateAccountPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError;
+
+/**
+ * Metadata changes only. There is no field here that alters the secret — use
+ * rotateApiKey for that, and the lifecycle mutations to change status.
+ *
+ * An omitted field is left unchanged.
+ */
+export type UpdateApiKeyInput = {
+  description?: InputMaybe<Scalars['String']['input']>;
+  environment?: InputMaybe<Array<ApiKeyEnvironment>>;
+  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
+  id: Scalars['ID']['input'];
+  name?: InputMaybe<Scalars['String']['input']>;
+  permissions?: InputMaybe<Array<ApiKeyPermission>>;
+  rateLimit?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type UpdateApiKeyPayload = {
+  __typename: 'UpdateApiKeyPayload';
+  apiKey: ApiKey;
+};
+
+/**
+ * Result of UpdateApiKey. Select on UpdateApiKeyPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type UpdateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | UpdateApiKeyPayload | ValidationError;
 
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;

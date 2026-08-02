@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
@@ -87,7 +86,6 @@ export const InvitationAcceptanceModal: React.FC<
   const user = useUser();
   const userId = user?.id ?? null;
   const [accepting, setAccepting] = useState(false);
-  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [rejecting, setRejecting] = useState(false);
 
   const [acceptHomeInvite] = useMutation(AcceptHomeInviteDocument, {
@@ -182,7 +180,6 @@ export const InvitationAcceptanceModal: React.FC<
 
   const handleAccept = () => {
     if (!invitation) return;
-    if (!requireVerifiedEmail()) return;
 
     setAccepting(true);
     executeAsyncWithCleanup(
