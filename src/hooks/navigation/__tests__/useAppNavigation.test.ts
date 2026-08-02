@@ -99,6 +99,7 @@ describe('useAppNavigation', () => {
       act(() => result.current.toPantryMain());
       expect(mockNavigate).toHaveBeenCalledWith('Home', {
         screen: 'Pantry',
+        params: { screen: 'PantryMain' },
       });
     });
 
@@ -107,6 +108,7 @@ describe('useAppNavigation', () => {
       act(() => result.current.toShoppingListMain());
       expect(mockNavigate).toHaveBeenCalledWith('Home', {
         screen: 'ShoppingList',
+        params: { screen: 'ShoppingListMain' },
       });
     });
 

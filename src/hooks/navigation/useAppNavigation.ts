@@ -208,11 +208,18 @@ export function useAppNavigation() {
       navigation.navigate('Onboarding', { screen: 'InviteMembers' }),
 
     // ─── Cross-tab navigation (nested) ────────────────────────────────────
-    // Each tab stack is single-screen (detail screens live at the root level),
-    // so focusing the tab shows its main screen — no nested `params` needed.
-    toPantryMain: () => navigation.navigate('Home', { screen: 'Pantry' }),
+    // Each tab's stack now has multiple screens (detail screens nested
+    // under it), so its own Main screen must be named explicitly.
+    toPantryMain: () =>
+      navigation.navigate('Home', {
+        screen: 'Pantry',
+        params: { screen: 'PantryMain' },
+      }),
     toShoppingListMain: () =>
-      navigation.navigate('Home', { screen: 'ShoppingList' }),
+      navigation.navigate('Home', {
+        screen: 'ShoppingList',
+        params: { screen: 'ShoppingListMain' },
+      }),
 
     // ─── Pantry detail/sub screens (nested under Pantry's own stack) ──────
     // Migrated from root-level siblings of `Home` to nested screens so

@@ -58,17 +58,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 
   // Whether the currently-focused tab is showing its own Main screen (index
   // 0 of its nested stack) rather than a pushed detail screen. Derived
-  // directly from navigation state — passed to this component fresh on
-  // every relevant navigation change — rather than a per-screen opt-in hook
-  // (the previous `useHideTabBarOnFocus` + shared-value approach). That
-  // event-driven design required every detail screen to remember to call a
-  // hook and depended on react-navigation's focus/blur ordering when two
-  // detail screens were stacked (e.g. HomeManagement -> HomeDetail); this
-  // reads the single authoritative source of truth instead, so there's
-  // nothing for a new screen to forget and no event-ordering to get wrong.
-  // `nestedState` is undefined until the tab's stack has rendered at least
-  // once, and a `PartialState` can have `index` omitted — both cases mean
-  // "still on the Main screen."
+  // directly from navigation state, refreshed on every navigation change —
+  // no per-screen opt-in needed. `nestedState` is undefined until the tab's
+  // stack has rendered at least once, and a `PartialState` can have `index`
+  // omitted — both cases mean "still on the Main screen."
   const focusedTabRoute = state.routes[state.index];
   const nestedState = focusedTabRoute.state;
   const isOnMainScreen =

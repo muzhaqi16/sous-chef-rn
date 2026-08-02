@@ -82,17 +82,10 @@ export const PantryStack = createNativeStackNavigator({
     headerShown: false,
     animation: 'slide_from_right',
     contentStyle: { backgroundColor: theme.colors.background },
-    // Default 'pause' (React 19 Activity/Offscreen) tears down every layout
-    // effect in a blurred screen's subtree and re-runs all of them
-    // synchronously in one commit on resume. For PantryMain's subtree (a
-    // FlashList plus every mounted item cell's own animation/gesture layout
-    // effects), that's a confirmed multi-second freeze — reproduced via a
-    // controlled A/B: reverting just this stack back to 'pause' brought the
-    // freeze back on Pantry push/pop while the other 3 tabs (still 'none')
-    // stayed smooth. 'none' trades pause's idle memory/CPU savings (this
-    // tab's effects — queries, animations — keep running while blurred) for
-    // eliminating the resume storm. See CLAUDE.md's `inactiveBehavior`
-    // section for the full writeup.
+    // Keeps PantryMain's subtree (FlashList + every item cell's animation/
+    // gesture effects) running while blurred instead of tearing it down and
+    // re-running it all synchronously on resume — see CLAUDE.md's
+    // `inactiveBehavior` section.
     inactiveBehavior: 'none',
   }),
   // Top safe-area inset for the main screen (Home opts out of the inset and

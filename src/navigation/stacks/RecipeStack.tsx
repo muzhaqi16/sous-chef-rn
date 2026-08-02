@@ -27,8 +27,9 @@ export const RecipeStack = createNativeStackNavigator({
     headerShown: false,
     animation: 'slide_from_right',
     contentStyle: { backgroundColor: theme.colors.background },
-    // Confirmed fix (via controlled A/B revert) — see PantryStack.tsx's
-    // identical comment and CLAUDE.md's `inactiveBehavior` section.
+    // Keeps this tab's screens running while blurred instead of tearing
+    // them down on pause — see PantryStack.tsx and CLAUDE.md's
+    // `inactiveBehavior` section.
     inactiveBehavior: 'none',
   }),
   screenLayout: topInsetScreenLayout,
