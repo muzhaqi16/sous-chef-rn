@@ -6,10 +6,8 @@ import {
 import { MealPlanMain } from '#features/mealPlan/screens/MealPlanMain';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
-// Single-screen stack: the Meal Plan tab's main screen. Its detail/sub screens
-// (CreateMealPlan, RecipeDetail) are registered at the root level in
-// RootNavigator — as siblings of the tab navigator — so the floating tab bar is
-// never mounted on them and cannot get stuck hidden.
+// Single-screen stack — see PantryStack for why detail screens live at the
+// root instead (features/mealPlan/screens/registration.ts).
 export const MealPlanStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,

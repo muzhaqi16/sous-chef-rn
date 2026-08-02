@@ -21,10 +21,6 @@ import { OnboardingStack } from './stacks/OnboardingStack';
 import { HomeTabs } from './stacks/HomeTabs';
 import { BarcodeStack } from './stacks/BarcodeStack';
 import { NotificationStack } from './stacks/NotificationStack';
-import { ProfileScreen } from '#features/profile/screens/ProfileScreen';
-import { HomeManagement } from '#screens/home/HomeManagement';
-import { HomeDetailScreen } from '#screens/home/HomeDetailScreen';
-import { StorageLocationsScreen } from '#screens/home/StorageLocationsScreen';
 import { CodeVerificationScreen } from '#screens/auth/CodeVerificationScreen';
 import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerificationDeepLinkScreen';
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
@@ -32,69 +28,12 @@ import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
 import { JoinHomeByCodeScreen } from '#screens/home/JoinHomeByCodeScreen';
 import { JoinByLinkScreen } from '#screens/home/JoinByLinkScreen';
-
-// Feature detail/sub screens. These live at the root level — as siblings of
-// `Home` (the tab navigator) — rather than nested inside each tab's stack, so
-// the floating tab bar is structurally absent on them. Nesting them under the
-// tabs made tab-bar visibility depend on a render-time route check that could
-// latch hidden on a fast push→pop (see FloatingTabBar).
-import { PantryItemScreen } from '#features/pantry/screens/PantryItemScreen';
-import { PantryItemDetail } from '#features/pantry/screens/PantryItemDetail';
-import { FilteredPantryItems } from '#features/pantry/screens/FilteredPantryItems';
-import { PantrySettings } from '#features/pantry/screens/PantrySettings';
-import { NutritionScreen } from '#features/pantry/screens/NutritionScreen';
-import { RecipeDetail } from '#features/recipes/screens/RecipeDetail';
-import { RecipeFormScreen } from '#features/recipes/screens/RecipeForm';
-import { SavedRecipes } from '#features/recipes/screens/SavedRecipes';
-import { MyRecipes } from '#features/recipes/screens/MyRecipes';
-import { ListSettings } from '#features/shoppingList/screens/ListSettings';
-import { ShareList } from '#features/shoppingList/screens/ShareList';
-import { AddEditItem } from '#features/shoppingList/screens/AddEditItem';
-import { ShoppingListItemDetail } from '#features/shoppingList/screens/ItemDetail';
-import { PurchaseHistoryScreen } from '#features/shoppingList/screens/PurchaseHistoryScreen';
-import { CreateMealPlanScreen } from '#features/mealPlan/screens/CreateMealPlanScreen';
-import { MealTemplateBuilderScreen } from '#features/mealPlan/screens/MealTemplateBuilderScreen';
-
-// Lazy-loaded screens (infrequently visited, reduces cold start JS parsing)
-const ProfilePhotoUploadScreen = React.lazy(
-  () => import('#features/profile/screens/ProfilePhotoUploadScreen'),
-);
-const ImageCropScreen = React.lazy(
-  () => import('#features/profile/screens/ImageCropScreen'),
-);
-const DeleteAccountScreen = React.lazy(
-  () => import('#features/profile/screens/DeleteAccountScreen'),
-);
-const DietaryProfileScreen = React.lazy(
-  () => import('#features/profile/screens/DietaryProfileScreen'),
-);
-const AppSettingsScreen = React.lazy(
-  () => import('#features/profile/screens/AppSettingsScreen'),
-);
-const PersonalInformationScreen = React.lazy(
-  () => import('#features/profile/screens/PersonalInformationScreen'),
-);
-const PerformanceDashboard = React.lazy(
-  () => import('#features/profile/screens/PerformanceDashboard'),
-);
-const DebugInfo = React.lazy(
-  () => import('#features/profile/screens/DebugInfo'),
-);
-const ChangePasswordScreen = React.lazy(
-  () => import('#features/profile/screens/ChangePasswordScreen'),
-);
-const NotificationSettingsScreen = React.lazy(
-  () => import('#features/notifications/screens/NotificationSettingsScreen'),
-);
-const AppearanceScreen = React.lazy(
-  () => import('#features/profile/screens/AppearanceScreen'),
-);
-// Deferred (Skia + victory-native) — kept lazy as it was inside PantryStack.
-const PantryAnalytics = React.lazy(() =>
-  import('#features/pantry/screens/PantryAnalytics').then(m => ({
-    default: m.PantryAnalytics,
-  })),
-);
+import { pantryDetailScreens } from '#features/pantry/screens/registration';
+import { recipeDetailScreens } from '#features/recipes/screens/registration';
+import { shoppingListDetailScreens } from '#features/shoppingList/screens/registration';
+import { mealPlanDetailScreens } from '#features/mealPlan/screens/registration';
+import { profileScreens } from '#features/profile/screens/registration';
+import { homeManagementScreens } from '#screens/home/registration';
 
 import {
   NavigationErrorBoundary,
@@ -128,16 +67,6 @@ function RootLayout({ children }: { children: React.ReactNode }) {
   useDeepLinkRouter();
   return <>{children}</>;
 }
-
-// Shared options for the feature detail/sub screens lifted out of the tab
-// stacks — mirrors the per-feature stack `screenOptions` they previously
-// inherited (full-screen swipe-back + 250ms slide) so their UX is unchanged.
-// Exported so RootNavigator.test.tsx can identify the lifted screens by this
-// shared reference and assert each declares an explicit `linking` intent.
-export const featureDetailOptions = {
-  fullScreenGestureEnabled: true,
-  animationDuration: 250,
-};
 
 const RootStack = createNativeStackNavigator({
   layout: RootLayout,
@@ -197,34 +126,19 @@ const RootStack = createNativeStackNavigator({
     },
     MainApp: {
       if: useIsMainApp,
-      // Top safe-area inset for every screen in the group (it's no longer
-      // global — see TopInsetLayout). The three nested navigators below opt out
-      // with `noInsetScreenLayout` because they inset their own screens; Home's
-      // tabs and the Barcode/Notification stacks would otherwise double-inset.
+      // Nested navigators opt out with `noInsetScreenLayout` — they inset
+      // their own screens and would otherwise double-inset.
       screenLayout: topInsetScreenLayout,
       screens: {
         Home: createNativeStackScreen({
           screen: HomeTabs,
           layout: noInsetScreenLayout,
-        }),
-        Profile: createNativeStackScreen({
-          screen: ProfileScreen,
-          options: { animation: 'slide_from_right', animationDuration: 200 },
-        }),
-        HomeManagement: createNativeStackScreen({
-          screen: HomeManagement,
-          linking: 'home-management/:selectedHomeId?',
-        }),
-        HomeDetail: createNativeStackScreen({
-          screen: HomeDetailScreen,
-          options: {
-            presentation: 'card',
-            animation: 'slide_from_right',
-          },
-        }),
-        StorageLocations: createNativeStackScreen({
-          screen: StorageLocationsScreen,
-          options: { presentation: 'card', animation: 'slide_from_right' },
+          // Keeps the tab subtree's effects alive while a detail screen is
+          // pushed over it, rather than re-running every layout effect in one
+          // commit on pop. Only bites from the second push down (native-stack
+          // already treats the screen directly under the focused one as
+          // active) — i.e. Home > Profile > HomeManagement > HomeDetail.
+          options: { inactiveBehavior: 'none' },
         }),
         Barcode: createNativeStackScreen({
           screen: BarcodeStack,
@@ -234,175 +148,25 @@ const RootStack = createNativeStackNavigator({
           screen: NotificationStack,
           layout: noInsetScreenLayout,
         }),
-        ProfilePhotoUpload: createNativeStackScreen({
-          screen: ProfilePhotoUploadScreen,
-          options: {
-            presentation: 'card',
-            animation: 'slide_from_bottom',
-          },
-          linking: 'upload-photo',
-        }),
-        ImageCrop: createNativeStackScreen({
-          screen: ImageCropScreen,
-          options: {
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
-          },
-          linking: 'crop-image',
-        }),
-        DeleteAccount: createNativeStackScreen({
-          screen: DeleteAccountScreen,
-          linking: 'delete-account',
-        }),
-        NotificationSettings: createNativeStackScreen({
-          screen: NotificationSettingsScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        DietaryProfile: createNativeStackScreen({
-          screen: DietaryProfileScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        PersonalInformation: createNativeStackScreen({
-          screen: PersonalInformationScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        AppSettings: createNativeStackScreen({
-          screen: AppSettingsScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        PerformanceDashboard: createNativeStackScreen({
-          screen: PerformanceDashboard,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        DebugInfo: createNativeStackScreen({
-          screen: DebugInfo,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        ChangePassword: createNativeStackScreen({
-          screen: ChangePasswordScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-        Appearance: createNativeStackScreen({
-          screen: AppearanceScreen,
-          options: { animation: 'fade', animationDuration: 150 },
-        }),
-
-        // ── Feature detail/sub screens (lifted out of the tab stacks) ──
-        // Siblings of `Home`, so the floating tab bar is never in their tree.
-        // Not deep-linkable: the app's deep links are auth/invite/join entry
-        // points only (see useDeepLinkRouter), never in-app detail screens. Each
-        // declares `linking: null` so React Navigation can't infer a path from
-        // the route name — enforced by RootNavigator.test.tsx.
-        // Hero screens opt out of the top inset to draw edge-to-edge.
-        PantryItem: createNativeStackScreen({
-          screen: PantryItemScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        PantryItemDetail: createNativeStackScreen({
-          screen: PantryItemDetail,
-          layout: noInsetScreenLayout,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        FilteredPantryItems: createNativeStackScreen({
-          screen: FilteredPantryItems,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        PantrySettings: createNativeStackScreen({
-          screen: PantrySettings,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        PantryAnalytics: createNativeStackScreen({
-          screen: PantryAnalytics,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        NutritionScreen: createNativeStackScreen({
-          screen: NutritionScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        // Single shared RecipeDetail — reached from Pantry, Recipe and MealPlan.
-        RecipeDetail: createNativeStackScreen({
-          screen: RecipeDetail,
-          layout: noInsetScreenLayout,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        ListSettings: createNativeStackScreen({
-          screen: ListSettings,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        ShareList: createNativeStackScreen({
-          screen: ShareList,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        AddItem: createNativeStackScreen({
-          screen: AddEditItem,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        EditItem: createNativeStackScreen({
-          screen: AddEditItem,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        ItemDetail: createNativeStackScreen({
-          screen: ShoppingListItemDetail,
-          layout: noInsetScreenLayout,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        PurchaseHistory: createNativeStackScreen({
-          screen: PurchaseHistoryScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        RecipeCreate: createNativeStackScreen({
-          screen: RecipeFormScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        RecipeEdit: createNativeStackScreen({
-          screen: RecipeFormScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        SavedRecipes: createNativeStackScreen({
-          screen: SavedRecipes,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        MyRecipes: createNativeStackScreen({
-          screen: MyRecipes,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        CreateMealPlan: createNativeStackScreen({
-          screen: CreateMealPlanScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
-        MealTemplateBuilder: createNativeStackScreen({
-          screen: MealTemplateBuilderScreen,
-          options: featureDetailOptions,
-          linking: null,
-        }),
+        // Feature-owned detail screens, siblings of `Home` so a pushed screen
+        // covers the tab navigator and the floating tab bar is structurally
+        // absent on it. Each feature owns its own group; the object spread
+        // keeps `StaticParamList` inference, so every `navigate` call site
+        // stays type-checked. One registration per screen — screens opened
+        // from several tabs (RecipeDetail, HomeDetail) have a single copy.
+        ...pantryDetailScreens,
+        ...shoppingListDetailScreens,
+        ...recipeDetailScreens,
+        ...mealPlanDetailScreens,
+        ...profileScreens,
+        ...homeManagementScreens,
       },
     },
-    // Always-available deep link screens — placed last so the active
-    // conditional group's first screen is the initial route.
+    // Placed last so the active conditional group's first screen is the
+    // initial route.
     DeepLinks: {
-      // Top safe-area inset for every deep-link screen (no longer global — see
-      // TopInsetLayout). All are plain screens, so inset every one.
       screenLayout: topInsetScreenLayout,
       screens: {
-        // Core deep-link screens (auth lifecycle)
         EmailVerification: createNativeStackScreen({
           screen: EmailVerificationDeepLinkScreen,
           linking: 'verify-email',
@@ -411,9 +175,6 @@ const RootStack = createNativeStackNavigator({
           screen: ResetPasswordScreen,
           linking: 'reset-password',
         }),
-        // Feature-contributed deep-link screens. Declared statically so v8's
-        // `StaticParamList` inference picks them up (a runtime spread of the
-        // feature registry would erase their typing).
         AcceptInvitation: createNativeStackScreen({
           screen: AcceptInvite,
           linking: 'accept-invitation',
@@ -493,7 +254,6 @@ export function Navigation() {
     return unsubscribe;
   }, []);
 
-  // Track initialization
   const hasInitialized = useRef(false);
 
   // Initialize navigation state after hydration. Cold start never enters the
@@ -506,7 +266,6 @@ export function Navigation() {
     }
   }, [isHydrated, user, setNavigationState]);
 
-  // React to user state changes after initialization.
   useEffect(() => {
     if (!isHydrated || !hasInitialized.current) return;
     const target = resolveNavTarget(user);
@@ -533,7 +292,6 @@ export function Navigation() {
     setNavigationState,
   ]);
 
-  // Create navigation theme based on current Unistyles theme
   const navigationTheme: Theme = {
     ...(theme.colors.background === '#FFFFFF' ? DefaultTheme : DarkTheme),
     colors: {
@@ -549,7 +307,6 @@ export function Navigation() {
     },
   };
 
-  // Show splash while app is hydrating or determining navigation state
   if (!isHydrated || navigationState === 'loading') {
     return <SplashScreen />;
   }

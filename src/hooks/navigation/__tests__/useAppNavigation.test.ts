@@ -47,7 +47,7 @@ describe('useAppNavigation', () => {
   });
 
   describe('root-level screen helpers', () => {
-    it('toProfile navigates to Profile', () => {
+    it('toProfile navigates at root level', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toProfile());
       expect(mockNavigate).toHaveBeenCalledWith('Profile');
@@ -61,15 +61,28 @@ describe('useAppNavigation', () => {
       });
     });
 
-    it('toImageCrop navigates with imageFile params', () => {
+    // Two distinct ImageCrop routes: the root-level one used by the profile
+    // photo flow, and Onboarding's own copy so cropping mid-onboarding stays
+    // inside that flow.
+    it('toImageCrop navigates to the root-level ImageCrop', () => {
       const { result } = renderHook(() => useAppNavigation());
       const imageFile = { uri: 'file://photo.jpg', fileName: 'photo.jpg' };
 
-      act(() => {
-        result.current.toImageCrop({ imageFile });
-      });
+      act(() => result.current.toImageCrop({ imageFile }));
 
       expect(mockNavigate).toHaveBeenCalledWith('ImageCrop', { imageFile });
+    });
+
+    it('toOnboardingImageCrop navigates to Onboarding > ImageCrop', () => {
+      const { result } = renderHook(() => useAppNavigation());
+      const imageFile = { uri: 'file://photo.jpg', fileName: 'photo.jpg' };
+
+      act(() => result.current.toOnboardingImageCrop({ imageFile }));
+
+      expect(mockNavigate).toHaveBeenCalledWith('Onboarding', {
+        screen: 'ImageCrop',
+        params: { imageFile },
+      });
     });
   });
 
@@ -77,9 +90,7 @@ describe('useAppNavigation', () => {
     it('toPantryMain focuses the Home > Pantry tab', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryMain());
-      expect(mockNavigate).toHaveBeenCalledWith('Home', {
-        screen: 'Pantry',
-      });
+      expect(mockNavigate).toHaveBeenCalledWith('Home', { screen: 'Pantry' });
     });
 
     it('toShoppingListMain focuses the Home > ShoppingList tab', () => {
@@ -102,11 +113,11 @@ describe('useAppNavigation', () => {
     });
   });
 
-  // Feature detail/sub screens live at the root level (siblings of the tab
-  // navigator), so the facade navigates to them directly — not nested under
-  // `Home`. This keeps the floating tab bar off them entirely.
-  describe('root-level feature detail helpers', () => {
-    it('toPantryItem navigates directly to PantryItem', () => {
+  // Every feature's detail screens are registered as siblings of `Home` via
+  // their own `*Screens` group (e.g. features/pantry/screens/registration.ts),
+  // so the facade dispatches a flat root-level navigate for all of them.
+  describe('feature detail helpers', () => {
+    it('toPantryItem navigates at root level with params', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryItem({ itemId: 'p1' }));
       expect(mockNavigate).toHaveBeenCalledWith('PantryItem', {
@@ -120,7 +131,7 @@ describe('useAppNavigation', () => {
       expect(mockNavigate).toHaveBeenCalledWith('PantryItem', {});
     });
 
-    it('toPantryItemDetail navigates directly with itemId', () => {
+    it('toPantryItemDetail navigates at root level with itemId', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toPantryItemDetail({ itemId: 'item-1' }));
       expect(mockNavigate).toHaveBeenCalledWith('PantryItemDetail', {
@@ -128,7 +139,7 @@ describe('useAppNavigation', () => {
       });
     });
 
-    it('toNutritionScreen navigates directly with full params', () => {
+    it('toNutritionScreen navigates at root level with full params', () => {
       const { result } = renderHook(() => useAppNavigation());
       const params = {
         itemId: 'i1',
@@ -140,7 +151,7 @@ describe('useAppNavigation', () => {
       expect(mockNavigate).toHaveBeenCalledWith('NutritionScreen', params);
     });
 
-    it('toShoppingListItemDetail navigates directly to ItemDetail', () => {
+    it('toShoppingListItemDetail navigates at root level', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() =>
         result.current.toShoppingListItemDetail({
@@ -154,19 +165,18 @@ describe('useAppNavigation', () => {
       });
     });
 
-    it('all three RecipeDetail aliases target the single root RecipeDetail', () => {
+    // A single root-level RecipeDetail serves all three tabs that open it, so
+    // its own "open the fork I just made" / "edit this recipe" actions stay
+    // wherever the user opened it from instead of jumping to a fixed tab.
+    it('RecipeDetail and its edit action navigate at root level', () => {
       const { result } = renderHook(() => useAppNavigation());
       act(() => result.current.toRecipeDetail({ recipeId: 'r1' }));
-      act(() => result.current.toPantryRecipeDetail({ recipeId: 'r2' }));
-      act(() => result.current.toMealPlanRecipeDetail({ recipeId: 'r3' }));
+      act(() => result.current.toRecipeEdit({ recipeId: 'r1' }));
       expect(mockNavigate).toHaveBeenNthCalledWith(1, 'RecipeDetail', {
         recipeId: 'r1',
       });
-      expect(mockNavigate).toHaveBeenNthCalledWith(2, 'RecipeDetail', {
-        recipeId: 'r2',
-      });
-      expect(mockNavigate).toHaveBeenNthCalledWith(3, 'RecipeDetail', {
-        recipeId: 'r3',
+      expect(mockNavigate).toHaveBeenNthCalledWith(2, 'RecipeEdit', {
+        recipeId: 'r1',
       });
     });
   });

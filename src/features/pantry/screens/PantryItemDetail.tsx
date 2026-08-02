@@ -84,7 +84,7 @@ export const PantryItemDetail: React.FC<
     goBack,
     toShoppingListMain,
     toPantryItem,
-    toPantryRecipeDetail,
+    toRecipeDetail,
     toNutritionScreen,
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
@@ -199,7 +199,7 @@ export const PantryItemDetail: React.FC<
   };
 
   const handleRecipePress = (recipeId: number) => {
-    toPantryRecipeDetail({
+    toRecipeDetail({
       externalSource: 'SPOONACULAR',
       externalId: String(recipeId),
     });

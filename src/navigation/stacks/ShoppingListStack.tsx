@@ -6,10 +6,8 @@ import {
 import { ShoppingListMain } from '#features/shoppingList/screens/ShoppingListMain';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
-// Single-screen stack: the Shopping List tab's main screen. All detail/sub
-// screens (ItemDetail, ListSettings, AddItem, …) are registered at the root
-// level in RootNavigator — as siblings of the tab navigator — so the floating
-// tab bar is never mounted on them and cannot get stuck hidden.
+// Single-screen stack — see PantryStack for why detail screens live at the
+// root instead (features/shoppingList/screens/registration.ts).
 export const ShoppingListStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,

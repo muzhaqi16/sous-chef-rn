@@ -167,19 +167,33 @@ jest.mock('../stacks/NotificationStack', () => ({
   NotificationStack: () => null,
 }));
 
-// Mock screen imports
-jest.mock('#features/profile/screens/ProfileScreen', () => ({
-  ProfileScreen: () => null,
+// Feature-owned screen groups spread into the root config. One mock per
+// feature replaces the per-screen mocks this file used to carry, and keeps
+// the real (heavy) screen modules out of this suite. The linking-intent
+// invariant for the screens inside each group is asserted against the real
+// module in the feature's own test — see
+// features/pantry/screens/__tests__/registration.test.ts.
+jest.mock('#features/pantry/screens/registration', () => ({
+  pantryDetailScreens: {},
 }));
-jest.mock('#screens/home/HomeManagement', () => ({
-  HomeManagement: () => null,
+jest.mock('#features/shoppingList/screens/registration', () => ({
+  shoppingListDetailScreens: {},
 }));
-jest.mock('#screens/home/HomeDetailScreen', () => ({
-  HomeDetailScreen: () => null,
+jest.mock('#features/recipes/screens/registration', () => ({
+  recipeDetailScreens: {},
 }));
-jest.mock('#screens/home/StorageLocationsScreen', () => ({
-  StorageLocationsScreen: () => null,
+jest.mock('#features/mealPlan/screens/registration', () => ({
+  mealPlanDetailScreens: {},
 }));
+jest.mock('#features/profile/screens/registration', () => ({
+  profileScreens: {},
+}));
+jest.mock('#screens/home/registration', () => ({
+  homeManagementScreens: {},
+}));
+
+// Mock screen imports — only what RootNavigator.tsx itself still imports
+// directly.
 jest.mock('#screens/auth/CodeVerificationScreen', () => ({
   CodeVerificationScreen: () => null,
 }));
@@ -193,58 +207,6 @@ jest.mock('#features/shoppingList/screens/AcceptInvite', () => ({
   AcceptInvite: () => null,
 }));
 
-// Feature detail/sub screens — now registered at the root level (siblings of
-// Home), so RootNavigator imports them directly. Mock them so the test doesn't
-// load their heavy real modules (e.g. bottom-sheet scrollables).
-jest.mock('#features/pantry/screens/PantryItemScreen', () => ({
-  PantryItemScreen: () => null,
-}));
-jest.mock('#features/pantry/screens/PantryItemDetail', () => ({
-  PantryItemDetail: () => null,
-}));
-jest.mock('#features/pantry/screens/FilteredPantryItems', () => ({
-  FilteredPantryItems: () => null,
-}));
-jest.mock('#features/pantry/screens/PantrySettings', () => ({
-  PantrySettings: () => null,
-}));
-jest.mock('#features/pantry/screens/NutritionScreen', () => ({
-  NutritionScreen: () => null,
-}));
-jest.mock('#features/pantry/screens/PantryAnalytics', () => ({
-  PantryAnalytics: () => null,
-}));
-jest.mock('#features/recipes/screens/RecipeDetail', () => ({
-  RecipeDetail: () => null,
-}));
-jest.mock('#features/recipes/screens/RecipeForm', () => ({
-  RecipeFormScreen: () => null,
-}));
-jest.mock('#features/recipes/screens/SavedRecipes', () => ({
-  SavedRecipes: () => null,
-}));
-jest.mock('#features/recipes/screens/MyRecipes', () => ({
-  MyRecipes: () => null,
-}));
-jest.mock('#features/shoppingList/screens/ListSettings', () => ({
-  ListSettings: () => null,
-}));
-jest.mock('#features/shoppingList/screens/ShareList', () => ({
-  ShareList: () => null,
-}));
-jest.mock('#features/shoppingList/screens/AddEditItem', () => ({
-  AddEditItem: () => null,
-}));
-jest.mock('#features/shoppingList/screens/ItemDetail', () => ({
-  ShoppingListItemDetail: () => null,
-}));
-jest.mock('#features/shoppingList/screens/PurchaseHistoryScreen', () => ({
-  PurchaseHistoryScreen: () => null,
-}));
-jest.mock('#features/mealPlan/screens/CreateMealPlanScreen', () => ({
-  CreateMealPlanScreen: () => null,
-}));
-
 // Mock the feature registry so stacks don't load real screen modules
 jest.mock('#features/registry', () => ({
   TAB_FEATURES: [],
@@ -252,22 +214,7 @@ jest.mock('#features/registry', () => ({
   FEATURE_REGISTRY: [],
 }));
 
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Navigation, featureDetailOptions } from '../RootNavigator';
-
-// The static config passed to the (mocked) navigator factory. `createNativeStackScreen`
-// is mocked as identity, so each screen entry is its raw `{ screen, options, linking }`
-// config. Captured once here at import time because beforeEach's `clearAllMocks`
-// wipes `mock.calls`.
-const rootStackConfig = (createNativeStackNavigator as jest.Mock).mock
-  .calls[0][0] as {
-  groups: Record<
-    string,
-    {
-      screens: Record<string, { options?: unknown; linking?: unknown }>;
-    }
-  >;
-};
+import { Navigation } from '../RootNavigator';
 
 describe('Navigation (RootNavigator)', () => {
   beforeEach(() => {
@@ -361,49 +308,5 @@ describe('Navigation (RootNavigator)', () => {
     // In main_app the biometric gate is not rendered (it's its own screen under
     // the biometric_setup state, not an overlay), so nothing biometric appears.
     expect(queryByTestId('biometric-prompt')).toBeNull();
-  });
-});
-
-describe('deep-link safety — lifted feature screens', () => {
-  // The lifted feature detail/sub screens all share the `featureDetailOptions`
-  // reference. The app enables deep linking with only `prefixes` (no
-  // `enabled: 'auto'`), so a screen is deep-linkable purely by what it declares.
-  // Every lifted screen must therefore declare an explicit `linking` intent —
-  // `linking: null` to opt out, or a path string to keep a shared link working.
-  // This locks the invariant against future screen additions that forget it.
-  it('every lifted feature screen declares an explicit linking intent', () => {
-    const mainAppScreens = rootStackConfig.groups.MainApp.screens;
-    const liftedScreens = Object.entries(mainAppScreens).filter(
-      ([, config]) => config.options === featureDetailOptions,
-    );
-
-    // Sanity: the reference filter actually matched the lifted screens (guards
-    // against featureDetailOptions being refactored out from under the test).
-    expect(liftedScreens.length).toBeGreaterThanOrEqual(19);
-
-    for (const [name, config] of liftedScreens) {
-      const declaresIntent =
-        config.linking === null ||
-        (typeof config.linking === 'string' && config.linking.length > 0);
-
-      // Object form so a failure names the offending screen and its value.
-      expect({ screen: name, linking: config.linking, declaresIntent }).toEqual(
-        expect.objectContaining({ declaresIntent: true }),
-      );
-    }
-  });
-
-  it('lifted feature screens are not deep-linkable (all opt out with linking: null)', () => {
-    const mainAppScreens = rootStackConfig.groups.MainApp.screens;
-    const liftedScreens = Object.entries(mainAppScreens).filter(
-      ([, config]) => config.options === featureDetailOptions,
-    );
-
-    for (const [name, config] of liftedScreens) {
-      expect({ screen: name, linking: config.linking }).toEqual({
-        screen: name,
-        linking: null,
-      });
-    }
   });
 });

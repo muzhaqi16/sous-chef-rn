@@ -74,6 +74,13 @@ export async function executeRefetch(
   try {
     await refetchFn();
   } catch (error) {
+    // A refetch aborted because the query was torn down mid-flight (e.g. the
+    // user navigated away before it settled) is expected, not a failure —
+    // reporting it as an error is just noise. This became visible/reachable
+    // once httpLink started forwarding Apollo's own cancellation signal into
+    // the underlying fetch (see httpLink.ts) — before that fix the abort
+    // never actually happened, so it never threw.
+    if (error instanceof Error && error.name === 'AbortError') return;
     errorService.reportError(error, { operation: errorMsg });
   }
 }

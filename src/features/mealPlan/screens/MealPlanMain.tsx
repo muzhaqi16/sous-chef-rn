@@ -103,7 +103,7 @@ export const MealPlanMain: React.FC = () => (
  */
 const MealPlanMainInner: React.FC = () => {
   const { t } = useTranslation();
-  const { toMealPlanRecipeDetail, toCreateMealPlan, toMealTemplateBuilder } =
+  const { toRecipeDetail, toCreateMealPlan, toMealTemplateBuilder } =
     useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -333,7 +333,7 @@ const MealPlanMainInner: React.FC = () => {
   const handleItemPress = (id: string) => {
     const item = items.find(i => i.id === id);
     if (item?.recipe?.id) {
-      toMealPlanRecipeDetail({ recipeId: item.recipe.id });
+      toRecipeDetail({ recipeId: item.recipe.id });
     }
   };
 
