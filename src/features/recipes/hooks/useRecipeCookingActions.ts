@@ -79,11 +79,7 @@ export function useRecipeCookingActions({
     }
 
     // A falsy result (the call threw) classifies as 'rejected'.
-    return classifyCreateResult(
-      result || undefined,
-      'markRecipeAsCooked',
-      'MarkRecipeAsCookedPayload',
-    );
+    return classifyCreateResult(result);
   };
 
   const handleMarkAsCooked = (input: MarkCookedInput) => {

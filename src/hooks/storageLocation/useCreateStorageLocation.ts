@@ -205,11 +205,7 @@ export function useCreateStorageLocation(
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'createStorageLocation',
-      'CreateStorageLocationPayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       // The server refused the create — discard the location we showed and

@@ -223,13 +223,7 @@ export function useRecipeShoppingList({
           // This mutation has no onError, so a resolved error-union payload or a
           // transport error would otherwise fall through to the success toast.
           // Classify and report once on rejection; 'created'/'queued' confirm.
-          if (
-            classifyCreateResult(
-              result,
-              'createShoppingListItemFromRecipeIngredient',
-              'CreateShoppingListItemFromRecipeIngredientPayload',
-            ) === 'rejected'
-          ) {
+          if (classifyCreateResult(result) === 'rejected') {
             toastService.error(t('recipes.addIngredientToListFailed'));
             return;
           }
@@ -272,13 +266,7 @@ export function useRecipeShoppingList({
           // 'rejected' reports and returns. The mutation's onError already
           // toasts on a transport error, so toast here only for the resolved
           // error-union case — exactly one toast either way.
-          if (
-            classifyCreateResult(
-              result,
-              'addItemsToShoppingList',
-              'AddItemsToShoppingListPayload',
-            ) === 'rejected'
-          ) {
+          if (classifyCreateResult(result) === 'rejected') {
             if (!result.error) {
               toastService.error(t('recipes.addIngredientToListFailed'));
             }

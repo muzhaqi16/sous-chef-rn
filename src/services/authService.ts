@@ -19,6 +19,8 @@ import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { logger } from '#/utils/environment';
+import { isDeadCredentialCode } from '#/utils/authErrorCodes';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
@@ -683,7 +685,7 @@ async function login(
 
     const payload = result.data?.login;
 
-    if (payload?.__typename === 'AuthPayload') {
+    if (isSuccessPayload(payload, 'AuthPayload')) {
       const loginCredentials = {
         email: input.email,
         password: input.password,
@@ -744,7 +746,7 @@ async function register(
 
     const payload = result.data?.register;
 
-    if (payload?.__typename === 'RegisterPayload') {
+    if (isSuccessPayload(payload, 'RegisterPayload')) {
       // Registration is verification-first and existence-blind: the API sends
       // an activation email and issues NO tokens. Do NOT set auth here — the
       // user activates via the emailed link, then logs in. Persist the
@@ -875,7 +877,7 @@ async function autoLogin(): Promise<boolean> {
 
     const payload = result.data?.login;
 
-    if (payload?.__typename === 'AuthPayload') {
+    if (isSuccessPayload(payload, 'AuthPayload')) {
       const unmaskedLogin = unmaskAuthPayload(payload);
       if (unmaskedLogin) {
         await handleLogin(unmaskedLogin, true);
@@ -887,14 +889,10 @@ async function autoLogin(): Promise<boolean> {
     if (payload) {
       // Drop the stored credentials only when the server says THESE
       // credentials will never authenticate — the password changed elsewhere,
-      // or the account is gone. A temporary failed-attempt lockout
-      // (AUTH_ACCOUNT_LOCKED) clears on its own, so keeping the credentials
-      // spares the user a full biometric re-enrollment over a window that
-      // expires by itself.
-      if (
-        payload.code === 'AUTH_CREDENTIALS_INVALID' ||
-        payload.code === 'AUTH_ACCOUNT_SUSPENDED'
-      ) {
+      // or the account is gone. Token-side refusals end the session but leave
+      // the credentials good, so they are deliberately not in this set; see
+      // isDeadCredentialCode for how the two lists relate.
+      if (isDeadCredentialCode(payload.code)) {
         logger.warn(
           `Auto-login rejected (${payload.code}), clearing stored credentials`,
         );

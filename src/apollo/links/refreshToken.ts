@@ -4,6 +4,8 @@ import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import {
@@ -48,22 +50,6 @@ class RefreshRejectedError extends Error {
   }
 }
 
-// Refusal codes that mean this session is unrecoverable: the refresh token
-// can't be exchanged now or later, so the only correct move is to end the
-// session. AUTH_ACCOUNT_LOCKED is deliberately absent — the API documents it
-// as a temporary, self-clearing failed-attempt lockout, so it defers to the
-// unknown-error path (auth state preserved, refresh retried later) instead of
-// signing the user out over a window that expires on its own.
-const SESSION_ENDING_AUTH_CODES = [
-  'AUTH_REFRESH_TOKEN_INVALID',
-  'AUTH_REFRESH_TOKEN_MISSING',
-  'AUTH_TOKEN_EXPIRED',
-  'AUTH_TOKEN_MISSING',
-  'AUTH_TOKEN_INVALID',
-  'AUTH_CREDENTIALS_INVALID',
-  'AUTH_ACCOUNT_SUSPENDED',
-];
-
 // A genuine, server-confirmed refresh-token rejection (vs a network failure,
 // which is handled separately and must preserve the cache). Checked only AFTER
 // isNetworkError, so transient/offline failures never reach here. Recognizes
@@ -71,7 +57,7 @@ const SESSION_ENDING_AUTH_CODES = [
 // legacy AC3-style shape.
 const isAuthRejectionError = (error: unknown): boolean => {
   if (error instanceof RefreshRejectedError) {
-    return SESSION_ENDING_AUTH_CODES.includes(error.code);
+    return isSessionEndingAuthCode(error.code);
   }
   if (ServerError.is(error)) {
     return error.statusCode === 401;
@@ -206,19 +192,19 @@ const performTokenRefresh = async (): Promise<string | null> => {
       context: { skipErrorLink: true },
     });
 
-    const data = response.data?.refresh;
-    if (data && data.__typename !== 'RefreshTokenPayload') {
+    const payload = response.data?.refresh;
+    if (payload && !isSuccessPayload(payload, 'RefreshTokenPayload')) {
       // An error member of RefreshResult. Rethrow with its code so the catch
       // below can tell a dead session (log out) from a transient refusal
       // (defer) — a bare "Missing tokens" throw would collapse both into the
       // unknown-error path and strand the user on an unusable access token.
-      throw new RefreshRejectedError(data.code, data.message);
+      throw new RefreshRejectedError(payload.code, payload.message);
     }
-    if (!data?.accessToken || !data?.refreshToken) {
+    if (!payload?.accessToken || !payload?.refreshToken) {
       throw new Error('Invalid refresh response: Missing tokens');
     }
 
-    const { accessToken: newToken, refreshToken: newRefreshToken } = data;
+    const { accessToken: newToken, refreshToken: newRefreshToken } = payload;
 
     // Update tokens in store
     state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });

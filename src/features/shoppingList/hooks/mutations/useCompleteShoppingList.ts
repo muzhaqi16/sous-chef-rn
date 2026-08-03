@@ -90,14 +90,7 @@ export function useCompleteShoppingList() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'completeShoppingList',
-        'CompleteShoppingListPayload',
-        t('shoppingListScreens.failedToComplete'),
-      )
-    ) {
+    if (alertIfRejected(result, t('shoppingListScreens.failedToComplete'))) {
       revert();
       return false;
     }
@@ -129,14 +122,7 @@ export function useCompleteShoppingList() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'markShoppingListActive',
-        'MarkShoppingListActivePayload',
-        t('shoppingListScreens.failedToReactivate'),
-      )
-    ) {
+    if (alertIfRejected(result, t('shoppingListScreens.failedToReactivate'))) {
       revert();
       return false;
     }

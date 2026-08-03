@@ -102,11 +102,7 @@ export function useConvertExpiredToWaste({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'convertExpiredToWaste',
-      'ConvertExpiredToWastePayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       // Only revert from a real snapshot — falling back to 0/SPOILED would

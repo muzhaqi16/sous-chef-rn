@@ -98,11 +98,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    const outcome = classifyCreateResult(
-      result,
-      'updateShoppingList',
-      'UpdateShoppingListPayload',
-    );
+    const outcome = classifyCreateResult(result);
     if (outcome === 'queued') {
       // Offline / API down: the permanent write stands and the update replays
       // keyed by the list id — report success with the local state.

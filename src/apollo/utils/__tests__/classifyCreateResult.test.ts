@@ -1,33 +1,30 @@
 import { classifyCreateResult } from '../classifyCreateResult';
 
 describe('classifyCreateResult', () => {
-  const KEY = 'createPantryItem';
-  const SUCCESS = 'CreatePantryItemPayload';
-
   it("returns 'created' for a success payload", () => {
     const result = {
       data: { createPantryItem: { __typename: 'CreatePantryItemPayload' } },
     };
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('created');
+    expect(classifyCreateResult(result)).toBe('created');
   });
 
   it("returns 'queued' when there is no data and no error (offline replay)", () => {
-    expect(classifyCreateResult({ data: null }, KEY, SUCCESS)).toBe('queued');
-    expect(classifyCreateResult({}, KEY, SUCCESS)).toBe('queued');
+    expect(classifyCreateResult({ data: null })).toBe('queued');
+    expect(classifyCreateResult({})).toBe('queued');
   });
 
   it("returns 'queued' for the queue's null-field result shape", () => {
     // The offline queue emits each top-level field as null (so Apollo's mutation
     // result write doesn't warn). A null payload field means queued, not rejected.
     const result = { data: { createPantryItem: null } };
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('queued');
+    expect(classifyCreateResult(result)).toBe('queued');
   });
 
   it("returns 'rejected' for a non-success payload (e.g. ValidationError)", () => {
     const result = {
       data: { createPantryItem: { __typename: 'ValidationError' } },
     };
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('rejected');
+    expect(classifyCreateResult(result)).toBe('rejected');
   });
 
   it("returns 'created' for a replayed client-PK create (ConflictError code IDEMPOTENT_REPLAY)", () => {
@@ -43,7 +40,7 @@ describe('classifyCreateResult', () => {
         },
       },
     };
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('created');
+    expect(classifyCreateResult(result)).toBe('created');
   });
 
   it("returns 'rejected' for a generic ConflictError (code CONFLICT — real conflict, e.g. duplicate name)", () => {
@@ -58,43 +55,49 @@ describe('classifyCreateResult', () => {
         },
       },
     };
-    expect(
-      classifyCreateResult(
-        result,
-        'createShoppingList',
-        'CreateShoppingListPayload',
-      ),
-    ).toBe('rejected');
+    expect(classifyCreateResult(result)).toBe('rejected');
   });
 
   it("returns 'rejected' when a GraphQL error is surfaced", () => {
-    expect(
-      classifyCreateResult({ error: new Error('boom') }, KEY, SUCCESS),
-    ).toBe('rejected');
+    expect(classifyCreateResult({ error: new Error('boom') })).toBe('rejected');
   });
 
   it("returns 'rejected' when the call threw (falsy result)", () => {
-    expect(classifyCreateResult(null, KEY, SUCCESS)).toBe('rejected');
-    expect(classifyCreateResult(undefined, KEY, SUCCESS)).toBe('rejected');
+    expect(classifyCreateResult(null)).toBe('rejected');
+    expect(classifyCreateResult(undefined)).toBe('rejected');
+    expect(classifyCreateResult(false)).toBe('rejected');
   });
 
-  it('keys off the supplied payload field name', () => {
+  // The payload field is found by shape, not by name — every mutation operation
+  // in the app selects exactly one top-level field, so there is nothing to key
+  // off and nothing to keep in sync when the API renames a field or a payload.
+  it('finds the payload whatever the mutation field is called', () => {
+    expect(
+      classifyCreateResult({
+        data: {
+          addItemToShoppingList: {
+            __typename: 'AddItemToShoppingListPayload',
+          },
+        },
+      }),
+    ).toBe('created');
+
+    expect(
+      classifyCreateResult({
+        data: { someFutureRenamedField: { __typename: 'ValidationError' } },
+      }),
+    ).toBe('rejected');
+  });
+
+  it("ignores Apollo's __typename: 'Mutation' wrapper when locating the payload", () => {
+    // Apollo adds __typename to the mutation root. It must not be mistaken for
+    // the payload field, and must not make the object look like it holds two.
     const result = {
       data: {
-        addItemToShoppingList: {
-          __typename: 'AddItemToShoppingListPayload',
-        },
+        __typename: 'Mutation',
+        createPantryItem: { __typename: 'CreatePantryItemPayload' },
       },
     };
-    expect(
-      classifyCreateResult(
-        result,
-        'addItemToShoppingList',
-        'AddItemToShoppingListPayload',
-      ),
-    ).toBe('created');
-    // Wrong key → the looked-up payload field is absent → indistinguishable from
-    // a queued result, so 'queued' (callers always pass the matching key).
-    expect(classifyCreateResult(result, KEY, SUCCESS)).toBe('queued');
+    expect(classifyCreateResult(result)).toBe('created');
   });
 });

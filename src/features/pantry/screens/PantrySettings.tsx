@@ -288,11 +288,7 @@ export const PantrySettings: React.FC<
             variables: { input },
             context: { localFirst: true },
           });
-          const outcome = classifyCreateResult(
-            result,
-            'createPantry',
-            'CreatePantryPayload',
-          );
+          const outcome = classifyCreateResult(result);
           if (outcome === 'rejected') {
             executeCacheUpdate(
               () =>

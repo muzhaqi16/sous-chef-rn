@@ -17,6 +17,7 @@ import { errorService } from '#/services/errorService';
 import {
   executeMutation,
   executeWithLoadingState,
+  isSuccessPayload,
 } from '#/utils/compilerSafeWrappers';
 import {
   getRateLimitMessage,
@@ -78,7 +79,7 @@ export function ForgotPasswordScreen() {
 
     const payload = response.data?.requestPasswordReset;
 
-    if (payload?.__typename === 'RequestPasswordResetPayload') return true;
+    if (isSuccessPayload(payload, 'RequestPasswordResetPayload')) return true;
 
     if (payload) {
       toast({
@@ -95,21 +96,22 @@ export function ForgotPasswordScreen() {
     return false;
   };
 
-  const onSendResetLink = (data: ForgotPasswordValues) =>
-    executeWithLoadingState(async () => {
+  // Both senders count the attempt BEFORE firing, so the cooldown opens
+  // synchronously and a failing address can't be hammered by repeated taps.
+  const onSendResetLink = (data: ForgotPasswordValues) => {
+    registerAttempt();
+    return executeWithLoadingState(async () => {
       const sent = await requestResetLink(data.email);
-      // Counted whether or not it succeeded, so a failing address can't be
-      // hammered by repeated taps.
-      registerAttempt();
       if (sent) setSentTo(data.email);
     }, setSubmitting);
+  };
 
   const onResend = () => {
     if (!canResend || sentTo === null) return;
 
+    registerAttempt();
     return executeWithLoadingState(async () => {
       const sent = await requestResetLink(sentTo);
-      registerAttempt();
       if (sent) {
         toast({ message: t('auth.resetLinkResent'), type: 'success' });
       }

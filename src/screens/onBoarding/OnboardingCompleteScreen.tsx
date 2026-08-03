@@ -45,14 +45,7 @@ export const OnboardingCompleteScreen = () => {
 
     // A resolved error member doesn't throw under errorPolicy:'all' — inspect
     // the union before marking the user onboarded and navigating to the app.
-    if (
-      alertIfRejected(
-        result,
-        'completeOnboarding',
-        'CompleteOnboardingPayload',
-        t('onBoarding.completeOnboardingError'),
-      )
-    ) {
+    if (alertIfRejected(result, t('onBoarding.completeOnboardingError'))) {
       setError(t('onBoarding.completeOnboardingError'));
       setIsCompleting(false);
       return;

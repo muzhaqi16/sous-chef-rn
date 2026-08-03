@@ -62,14 +62,7 @@ export function useShoppingListBudget() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'updateShoppingList',
-        'UpdateShoppingListPayload',
-        failureMessage,
-      )
-    ) {
+    if (alertIfRejected(result, failureMessage)) {
       revert();
       return false;
     }

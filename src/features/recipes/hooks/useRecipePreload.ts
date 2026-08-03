@@ -616,11 +616,7 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     // a resolved rejection (error union member / transport error) reverts. Under
     // errorPolicy:'all' a refusal RESOLVES rather than throws, so this check is
     // what stops a refused favorite from sticking + toasting success.
-    const outcome = classifyCreateResult(
-      result,
-      'addRecipeToFavorites',
-      'AddRecipeToFavoritesPayload',
-    );
+    const outcome = classifyCreateResult(result);
     if (outcome === 'rejected') {
       revert();
       toastService.error(t('recipes.saveRecipeFailed'));

@@ -240,13 +240,7 @@ export const useDietaryProfile = () => {
         }),
       'Failed to update dietary profile',
     );
-    if (
-      classifyCreateResult(
-        result || null,
-        'updateDietaryProfile',
-        'UpdateDietaryProfilePayload',
-      ) === 'rejected'
-    ) {
+    if (classifyCreateResult(result) === 'rejected') {
       revert();
     }
     return result ? !!result.data : false;
@@ -306,13 +300,7 @@ export const useDietaryProfile = () => {
         }),
       'Failed to update dietary restriction',
     );
-    if (
-      classifyCreateResult(
-        result || null,
-        'updateRestriction',
-        'UpdateRestrictionPayload',
-      ) === 'rejected'
-    ) {
+    if (classifyCreateResult(result) === 'rejected') {
       revert();
     }
     return result ? !!result.data : false;

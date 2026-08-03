@@ -63,13 +63,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
     // keep/revert decision under test matches production.
     reconcileShoppingCreate: jest.fn(
       (cache: unknown, listId: string, id: string, result: unknown) => {
-        if (
-          classifyCreateResult(
-            result,
-            'addItemsToShoppingList',
-            'AddItemsToShoppingListPayload',
-          ) === 'rejected'
-        ) {
+        if (classifyCreateResult(result) === 'rejected') {
           revertOptimisticShoppingListItem(cache, listId, id);
           return 'reverted';
         }

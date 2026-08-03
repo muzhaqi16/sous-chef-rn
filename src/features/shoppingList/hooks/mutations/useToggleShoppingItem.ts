@@ -189,14 +189,7 @@ export function useToggleShoppingItem({
     // `onError` already ran and decided (network errors keep the flip for the
     // queue's retry; other errors reverted + alerted) — don't second-guess it.
     // 'queued' (null payload, offline) keeps the optimistic flip.
-    if (
-      !result.error &&
-      classifyCreateResult(
-        result,
-        'toggleShoppingListItemPurchased',
-        'ToggleShoppingListItemPurchasedPayload',
-      ) === 'rejected'
-    ) {
+    if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
       alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
@@ -318,14 +311,7 @@ export function useToggleShoppingItem({
 
     // Same contract as toggleItem's guard: only handle the resolved
     // error-union case here; `result.error` was already routed by `onError`.
-    if (
-      !result.error &&
-      classifyCreateResult(
-        result,
-        'updateShoppingListItem',
-        'UpdateShoppingListItemPayload',
-      ) === 'rejected'
-    ) {
+    if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
       alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;

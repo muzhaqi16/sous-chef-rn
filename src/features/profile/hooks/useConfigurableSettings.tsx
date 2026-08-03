@@ -182,14 +182,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
 
     // Rejection (resolved non-success payload) → surface + restore the snapshot.
     // Queued (null payload, no error) keeps the write; the replay is idempotent.
-    if (
-      alertIfRejected(
-        result,
-        'updateProfile',
-        'UpdateProfilePayload',
-        t('errors.somethingWentWrong'),
-      )
-    ) {
+    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
       revert();
     }
   };
@@ -209,12 +202,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
         }),
       error => handleMutationError(error, { operation: 'Update Preferences' }),
     );
-    alertIfRejected(
-      result,
-      'updateSettings',
-      'UpdateSettingsPayload',
-      t('errors.somethingWentWrong'),
-    );
+    alertIfRejected(result, t('errors.somethingWentWrong'));
   };
 
   const createSettingItem = (config: SettingConfig): SettingItem => {

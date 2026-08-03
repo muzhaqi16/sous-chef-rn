@@ -242,15 +242,17 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     // Prevent resend during countdown
     if (!canResend || !user?.email) return;
 
+    // Counted BEFORE the request, not after it: the cooldown opens
+    // synchronously, so a second tap lands on a disabled link instead of firing
+    // a duplicate send, and a request that throws can't leave the window open
+    // for a tight retry loop.
+    registerAttempt();
+
     executeMutation(
       async () => {
         const response = await resendVerificationEmail({
           variables: { input: { email: user.email } },
         });
-
-        // Counted whether or not it succeeded, so a failing address can't be
-        // hammered by repeated taps.
-        registerAttempt();
 
         // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
         if (response.error && 'errors' in response.error) {
@@ -345,7 +347,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         footerText={t('auth.didntGetEmail')}
         footerLinkText={t('auth.resendCode')}
         onFooterLinkPress={onResend}
-        footerLinkDisabled={countdown > 0}
+        footerLinkDisabled={!canResend}
         footerLinkCountdown={countdown}
       />
     </AuthWrapper>

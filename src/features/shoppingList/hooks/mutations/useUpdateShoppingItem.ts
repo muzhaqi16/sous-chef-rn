@@ -118,11 +118,7 @@ export function useUpdateShoppingItem({
 
     // Classify the resolved result and revert on a real rejection. 'queued'
     // (offline / API down) keeps the write — it replays via SyncShoppingListItem.
-    const outcome = classifyCreateResult(
-      result,
-      'updateShoppingListItem',
-      'UpdateShoppingListItemPayload',
-    );
+    const outcome = classifyCreateResult(result);
     if (outcome === 'rejected') {
       revertSnapshot();
       // Alerts only for a union-payload rejection; onError handles error cases.

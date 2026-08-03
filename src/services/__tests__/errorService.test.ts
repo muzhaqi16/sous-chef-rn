@@ -82,6 +82,22 @@ describe('errorService', () => {
         'An unexpected error occurred',
       );
     });
+
+    // Both account states are mapped, and to different copy. A suspension is a
+    // moderation decision and a lockout is a window that expires, so telling a
+    // suspended user to wait it out sends them nowhere. Without a mapping the
+    // suspended case fell through to the raw server message.
+    it('distinguishes a suspended account from a temporary lockout', () => {
+      expect(
+        errorService.getUserFriendlyMessage(
+          'AUTH_ACCOUNT_SUSPENDED',
+          'raw server text',
+        ),
+      ).toBe('This account is no longer active. Please contact support.');
+      expect(errorService.getUserFriendlyMessage('AUTH_ACCOUNT_LOCKED')).toBe(
+        'Your account has been temporarily locked for security',
+      );
+    });
   });
 
   // -----------------------------------------------------------------------

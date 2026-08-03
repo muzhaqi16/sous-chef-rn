@@ -46,7 +46,7 @@ export function alertRejectedMutation(
  * rejected branch is a single call:
  *
  * ```ts
- * if (alertIfRejected(result, 'updateMembership', 'UpdateMembershipPayload', t('errors.updateMemberRoleFailed'))) {
+ * if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
  *   revertSnapshot();   // site-specific cleanup
  *   return false;
  * }
@@ -54,14 +54,10 @@ export function alertRejectedMutation(
  */
 export function alertIfRejected(
   result: { data?: unknown; error?: unknown } | null | undefined | false,
-  payloadKey: string,
-  successTypename: string,
   message: string,
 ): boolean {
   if (!result) return false;
-  if (
-    classifyCreateResult(result, payloadKey, successTypename) !== 'rejected'
-  ) {
+  if (classifyCreateResult(result) !== 'rejected') {
     return false;
   }
   alertService.alert(t('labels.error'), message);

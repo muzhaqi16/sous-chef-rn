@@ -154,12 +154,7 @@ export function useMealTemplateEditor() {
 
     const rejected =
       !result ||
-      alertIfRejected(
-        result,
-        'createMealTemplate',
-        'CreateMealTemplatePayload',
-        t('mealTemplateBuilder.failedToCreate'),
-      );
+      alertIfRejected(result, t('mealTemplateBuilder.failedToCreate'));
     if (rejected) {
       if (optimisticTemplate) {
         executeCacheUpdate(
@@ -239,14 +234,7 @@ export function useMealTemplateEditor() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'updateMealTemplate',
-        'UpdateMealTemplatePayload',
-        t('mealTemplateBuilder.failedToSave'),
-      )
-    ) {
+    if (alertIfRejected(result, t('mealTemplateBuilder.failedToSave'))) {
       revert();
       return false;
     }
@@ -259,12 +247,7 @@ export function useMealTemplateEditor() {
       'Add Template Item error:',
     );
     if (!result) return false;
-    return !alertIfRejected(
-      result,
-      'addTemplateItem',
-      'AddTemplateItemPayload',
-      t('mealTemplateBuilder.failedToAddItem'),
-    );
+    return !alertIfRejected(result, t('mealTemplateBuilder.failedToAddItem'));
   };
 
   const updateItem = async (
@@ -275,12 +258,7 @@ export function useMealTemplateEditor() {
       'Update Template Item error:',
     );
     if (!result) return false;
-    return !alertIfRejected(
-      result,
-      'updateTemplateItem',
-      'UpdateTemplateItemPayload',
-      t('mealTemplateBuilder.failedToSaveItem'),
-    );
+    return !alertIfRejected(result, t('mealTemplateBuilder.failedToSaveItem'));
   };
 
   const removeItem = async (itemId: string): Promise<boolean> => {
@@ -291,8 +269,6 @@ export function useMealTemplateEditor() {
     if (!result) return false;
     return !alertIfRejected(
       result,
-      'removeTemplateItem',
-      'RemoveTemplateItemPayload',
       t('mealTemplateBuilder.failedToRemoveItem'),
     );
   };

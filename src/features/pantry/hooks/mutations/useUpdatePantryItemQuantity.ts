@@ -128,11 +128,7 @@ export function useUpdatePantryItemQuantity({
         // 'queued' (null payload, no error) keeps the permanent write — the
         // change replays later. A rejection restores the pre-edit snapshot;
         // the user-facing alert comes from the mutation's onError.
-        const outcome = classifyCreateResult(
-          result,
-          'updatePantryItemQuantity',
-          'UpdatePantryItemQuantityPayload',
-        );
+        const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
           executeCacheUpdate(
             () => writeItem(currentItem),

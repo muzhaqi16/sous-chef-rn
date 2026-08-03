@@ -61,13 +61,7 @@ export function useLeaveShoppingList(listId: string) {
         // Surfacing is delegated to callbacks.onError (the callers alert/toast) —
         // don't alert here too. classifyCreateResult treats the offline-queued
         // null as success; a resolved error member or transport error → rejected.
-        if (
-          classifyCreateResult(
-            result,
-            'removeShoppingListCollaborator',
-            'RemoveShoppingListCollaboratorPayload',
-          ) === 'rejected'
-        ) {
+        if (classifyCreateResult(result) === 'rejected') {
           callbacks?.onError?.(new Error('Leave Shopping List'));
           return;
         }

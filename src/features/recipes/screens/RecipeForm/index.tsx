@@ -133,17 +133,9 @@ export const RecipeFormScreen: React.FC<
           // 'queued' (null payload, no error) counts as success — the edit
           // replays on reconnect.
           const recipeSuccess =
-            classifyCreateResult(
-              updateResult,
-              'updateRecipe',
-              'UpdateRecipePayload',
-            ) !== 'rejected';
+            classifyCreateResult(updateResult) !== 'rejected';
           const ingredientsSuccess =
-            classifyCreateResult(
-              ingredientsResult,
-              'updateRecipeIngredients',
-              'UpdateRecipeIngredientsPayload',
-            ) !== 'rejected';
+            classifyCreateResult(ingredientsResult) !== 'rejected';
           if (recipeSuccess && ingredientsSuccess) {
             goBack();
           } else {
@@ -183,11 +175,7 @@ export const RecipeFormScreen: React.FC<
             variables: { input: { ...input, id } },
             context: { localFirst: true },
           });
-          const outcome = classifyCreateResult(
-            result,
-            'createRecipe',
-            'CreateRecipePayload',
-          );
+          const outcome = classifyCreateResult(result);
           if (outcome !== 'rejected') {
             // Online success or queued offline — the recipe is in My Recipes
             // either way.

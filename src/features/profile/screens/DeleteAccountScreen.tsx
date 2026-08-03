@@ -45,14 +45,7 @@ async function performDeleteAccount(
 
   // A ForbiddenError/ValidationError member resolves WITHOUT throwing under
   // errorPolicy:'all' — only the success payload logs the user out.
-  if (
-    alertIfRejected(
-      result,
-      'deleteAccount',
-      'DeleteAccountPayload',
-      rejectionMessage,
-    )
-  ) {
+  if (alertIfRejected(result, rejectionMessage)) {
     setIsDeleting(false);
     return;
   }

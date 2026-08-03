@@ -81,12 +81,7 @@ export function useShoppingListTemplate() {
       return false;
     }
     if (
-      alertIfRejected(
-        result,
-        'markAsTemplate',
-        'MarkAsTemplatePayload',
-        t('shoppingListScreens.failedToSaveTemplate'),
-      )
+      alertIfRejected(result, t('shoppingListScreens.failedToSaveTemplate'))
     ) {
       revert();
       return false;
@@ -111,8 +106,6 @@ export function useShoppingListTemplate() {
     if (
       alertIfRejected(
         result,
-        'createFromTemplate',
-        'CreateFromTemplatePayload',
         t('shoppingListScreens.failedToCreateFromTemplate'),
       )
     ) {

@@ -135,11 +135,7 @@ function didPersist(
 ): boolean {
   if (!result) return false;
 
-  const outcome = classifyCreateResult(
-    result,
-    'updateNotificationPreferences',
-    'UpdateNotificationPreferencesPayload',
-  );
+  const outcome = classifyCreateResult(result);
   if (outcome !== 'rejected') return true;
 
   // Transport errors are already reported through the mutation's onError; this

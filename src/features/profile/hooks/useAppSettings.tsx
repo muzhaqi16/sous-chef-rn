@@ -92,14 +92,7 @@ export const useAppSettings = () => {
       () => updateSettings({ variables: { input } }),
       'Update Setting',
     );
-    if (
-      alertIfRejected(
-        result,
-        'updateSettings',
-        'UpdateSettingsPayload',
-        t('errors.somethingWentWrong'),
-      )
-    ) {
+    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
       return false;
     }
     return result !== false;
@@ -111,14 +104,7 @@ export const useAppSettings = () => {
       () => updateSettings({ variables: { input } }),
       'Update Settings',
     );
-    if (
-      alertIfRejected(
-        result,
-        'updateSettings',
-        'UpdateSettingsPayload',
-        t('errors.somethingWentWrong'),
-      )
-    ) {
+    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
       return false;
     }
     return result !== false;

@@ -82,6 +82,11 @@ export class ErrorService {
     AUTH_CREDENTIALS_INVALID: 'Invalid email or password',
     AUTH_ACCOUNT_LOCKED:
       'Your account has been temporarily locked for security',
+    // Distinct from the lockout above: a moderation decision, not a window
+    // that expires. Says nothing about why, and points at support rather than
+    // inviting a retry that can never succeed.
+    AUTH_ACCOUNT_SUSPENDED:
+      'This account is no longer active. Please contact support.',
     AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before continuing',
 
     // Authorization Errors

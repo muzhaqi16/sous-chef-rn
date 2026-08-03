@@ -83,11 +83,7 @@ export function useOpenPantryItemBatch({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'openPantryItemBatch',
-      'OpenPantryItemBatchPayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       executeCacheUpdate(
