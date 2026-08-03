@@ -94,36 +94,30 @@ describe('errorLink.ts', () => {
       mockIsInLogoutProcess.mockReturnValue(false);
     });
 
-    it('handles API key error in GraphQL errors', () => {
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'API key required', extensions: { code: 'API_KEY_REQUIRED' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
-    });
+    // The codes the API actually emits (docs/api/errors.md "API Key Errors").
+    // API_KEY_REQUIRED and INVALID_API_KEY, asserted here previously, are not in
+    // the server's registry — nothing has ever sent them.
+    it.each(['API_KEY_MISSING', 'API_KEY_INVALID', 'API_KEY_EXPIRED', 'API_KEY_REVOKED'])(
+      'handles %s as an API key error',
+      code => {
+        const error = new CombinedGraphQLErrors({
+          errors: [{ message: 'Key problem', extensions: { code } }],
+        });
+        errorHandler({ error, operation: mockOperation, forward: mockForward });
+        expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      },
+    );
 
-    it('handles INVALID_API_KEY code', () => {
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Invalid key', extensions: { code: 'INVALID_API_KEY' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
-    });
-
-    it('handles API_KEY_EXPIRED code', () => {
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Expired key', extensions: { code: 'API_KEY_EXPIRED' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
-    });
-
-    it('detects api key error from message (lowercase check)', () => {
+    // Classification is by code alone. Substring-matching "api key" in the
+    // message let a refusal whose wording merely mentioned the key fall through
+    // to the auth branch and spend a pointless token refresh.
+    it('does not treat an unrelated code as an API key error because of its message', () => {
       const error = new CombinedGraphQLErrors({
         errors: [{ message: 'Please provide an API key for authentication', extensions: { code: 'SOME_CODE' } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(logger.error).toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(logger.error).not.toHaveBeenCalledWith('API Key error:', expect.any(String));
+      expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
     });
 
     it('handles FORBIDDEN as resource access error (not auth error)', () => {
@@ -149,52 +143,40 @@ describe('errorLink.ts', () => {
       );
     });
 
-    it('initiates token refresh on message containing "expired"', () => {
-      mockAttemptTokenRefresh.mockReturnValue('observable');
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Token has expired please login again', extensions: { code: 'SOME_CODE' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Auth error detected for'),
-      );
-    });
+    // The access-token side: a refresh mints a working token and the operation
+    // can be replayed. AUTH_TOKEN_INVALID is included because the old message
+    // heuristics missed it entirely — "token is malformed or invalid" matched
+    // none of the terms they searched for.
+    it.each(['AUTH_TOKEN_EXPIRED', 'AUTH_TOKEN_MISSING', 'AUTH_TOKEN_INVALID'])(
+      'initiates token refresh on %s',
+      code => {
+        mockAttemptTokenRefresh.mockReturnValue('observable');
+        const error = new CombinedGraphQLErrors({
+          errors: [{ message: 'Token problem', extensions: { code } }],
+        });
+        errorHandler({ error, operation: mockOperation, forward: mockForward });
+        expect(mockAttemptTokenRefresh).toHaveBeenCalled();
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining('Auth error detected for'),
+        );
+      },
+    );
 
-    it('initiates token refresh on "unauthorized" in message', () => {
-      mockAttemptTokenRefresh.mockReturnValue('observable');
+    // Refusals are classified by code, never by prose. These messages all match
+    // a term the old substring heuristics searched for ('expired',
+    // 'unauthorized', 'invalid token', 'jwt'), but none of them is an
+    // access-token problem, so none may spend a token refresh.
+    it.each([
+      ['Your subscription has expired', 'BUSINESS_QUOTA_EXCEEDED'],
+      ['Unauthorized: key lacks the required permission', 'API_KEY_INSUFFICIENT_PERMISSIONS'],
+      ['The provided invalid token was rejected', 'VALIDATION_FAILED'],
+      ['jwt malformed', 'BAD_REQUEST'],
+    ])('does not refresh on %s (code %s)', (message, code) => {
       const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'Unauthorized access', extensions: { code: 'OTHER' } }],
+        errors: [{ message, extensions: { code } }],
       });
       errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Auth error detected for'),
-      );
-    });
-
-    it('initiates token refresh on "invalid token" in message', () => {
-      mockAttemptTokenRefresh.mockReturnValue('observable');
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'The provided invalid token was rejected', extensions: { code: 'OTHER' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Auth error detected for'),
-      );
-    });
-
-    it('initiates token refresh on "jwt" in message', () => {
-      mockAttemptTokenRefresh.mockReturnValue('observable');
-      const error = new CombinedGraphQLErrors({
-        errors: [{ message: 'jwt malformed', extensions: { code: 'OTHER' } }],
-      });
-      errorHandler({ error, operation: mockOperation, forward: mockForward });
-      expect(mockAttemptTokenRefresh).toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Auth error detected for'),
-      );
+      expect(mockAttemptTokenRefresh).not.toHaveBeenCalled();
     });
 
     it('skips token refresh for RefreshToken operation (avoids infinite loop)', () => {

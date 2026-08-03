@@ -40,6 +40,8 @@
  * @param result the awaited mutation result (`{ data, error }`), or a falsy
  *               value if the call threw before resolving
  */
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+
 export type CreateOutcome = 'created' | 'queued' | 'rejected';
 
 /**
@@ -73,7 +75,7 @@ export function classifyCreateResult(
     // CONFLICT (a real duplicate-name / business conflict → rejected below).
     if (
       payload.__typename === 'ConflictError' &&
-      payload.code === 'IDEMPOTENT_REPLAY'
+      payload.code === ErrorCode.IdempotentReplay
     ) {
       return 'created';
     }

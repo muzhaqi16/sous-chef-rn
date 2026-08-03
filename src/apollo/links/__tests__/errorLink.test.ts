@@ -21,6 +21,9 @@ jest.mock('../refreshToken', () => ({
   attemptTokenRefresh: jest.fn(),
   getRefreshState: jest.fn(() => ({ isRefreshing: false })),
 }));
+jest.mock('../../clientUpgradeNotice', () => ({
+  announceClientUpgradeRequired: jest.fn(),
+}));
 const mockClearAuth = jest.fn();
 jest.mock('#store', () => ({
   useStore: {
@@ -40,22 +43,22 @@ import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from '../refreshToken';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { isRefreshableAuthCode } from '#/utils/authErrorCodes';
+import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
 
 // ---- Pure helper function tests (replicated logic) ----
 
 describe('errorLink helpers', () => {
-  const isAuthError = (code: string, msg: string) =>
-    code === 'UNAUTHENTICATED' ||
-    code === 'AUTH_TOKEN_EXPIRED' ||
-    ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term =>
-      msg.toLowerCase().includes(term),
-    );
-
   const isResourceAccessError = (code: string) => code === 'FORBIDDEN';
 
-  const isApiKeyError = (code: string, msg: string) =>
-    ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
-    msg.toLowerCase().includes('api key');
+  const API_KEY_ERROR_CODES = [
+    'API_KEY_MISSING',
+    'API_KEY_INVALID',
+    'API_KEY_EXPIRED',
+    'API_KEY_REVOKED',
+    'API_KEY_RATE_LIMITED',
+  ];
+  const isApiKeyError = (code: string) => API_KEY_ERROR_CODES.includes(code);
 
   type TestDefinition = { kind: string; operation?: string; name?: string };
   type TestOperation = { query: { definitions: TestDefinition[] } };
@@ -65,63 +68,47 @@ describe('errorLink helpers', () => {
         def.kind === 'OperationDefinition' && def.operation === 'subscription',
     );
 
-  describe('isAuthError', () => {
-    it('returns true for UNAUTHENTICATED code', () => {
-      expect(isAuthError('UNAUTHENTICATED', '')).toBe(true);
+  // The refresh trigger is no longer a local predicate — it delegates to
+  // isRefreshableAuthCode, tested against the real implementation in
+  // src/utils/__tests__/authErrorCodes.test.ts. What matters here is that the
+  // link asks by code only, so the cases below pin the message as irrelevant.
+  describe('refresh trigger (isRefreshableAuthCode)', () => {
+    it.each(['UNAUTHENTICATED', 'AUTH_TOKEN_EXPIRED', 'AUTH_TOKEN_MISSING'])(
+      'returns true for %s regardless of message',
+      code => {
+        expect(isRefreshableAuthCode(code)).toBe(true);
+      },
+    );
+
+    // Used to match no term at all — "token is malformed or invalid" contains
+    // neither "invalid token" nor any other, so it never earned a refresh.
+    it('returns true for AUTH_TOKEN_INVALID', () => {
+      expect(isRefreshableAuthCode('AUTH_TOKEN_INVALID')).toBe(true);
     });
 
-    it('returns true for UNAUTHENTICATED code regardless of message', () => {
-      expect(isAuthError('UNAUTHENTICATED', 'some random message')).toBe(true);
+    // The message is never consulted, so prose that merely sounds auth-shaped
+    // no longer buys a refresh. This is what let an API key refused for want of
+    // a permission ("Unauthorized: …") spin the refresh path.
+    it.each([
+      'Token has expired',
+      'Unauthorized access',
+      'The invalid token was provided',
+      'JWT malformed',
+    ])('returns false for an uncoded error whose message says %p', message => {
+      expect(isRefreshableAuthCode('')).toBe(false);
+      expect(message).toBeTruthy();
     });
 
-    it('returns true for AUTH_TOKEN_EXPIRED code', () => {
-      expect(isAuthError('AUTH_TOKEN_EXPIRED', '')).toBe(true);
+    it('returns false for FORBIDDEN', () => {
+      expect(isRefreshableAuthCode('FORBIDDEN')).toBe(false);
     });
 
-    it('returns true for AUTH_TOKEN_EXPIRED code regardless of message', () => {
-      expect(isAuthError('AUTH_TOKEN_EXPIRED', 'some random message')).toBe(
-        true,
-      );
-    });
-
-    it('returns true when message contains "expired"', () => {
-      expect(isAuthError('SOME_CODE', 'Token has expired')).toBe(true);
-    });
-
-    it('returns true when message contains "unauthorized"', () => {
-      expect(isAuthError('', 'Unauthorized access')).toBe(true);
-    });
-
-    it('returns true when message contains "invalid token"', () => {
-      expect(isAuthError('', 'The invalid token was provided')).toBe(true);
-    });
-
-    it('returns true when message contains "jwt"', () => {
-      expect(isAuthError('', 'JWT malformed')).toBe(true);
-    });
-
-    it('is case-insensitive for message matching', () => {
-      expect(isAuthError('', 'EXPIRED')).toBe(true);
-      expect(isAuthError('', 'JWT Malformed')).toBe(true);
-      expect(isAuthError('', 'UNAUTHORIZED')).toBe(true);
-      expect(isAuthError('', 'Invalid Token provided')).toBe(true);
-    });
-
-    it('returns false for non-auth errors', () => {
-      expect(isAuthError('NOT_FOUND', 'Resource not found')).toBe(false);
-    });
-
-    it('returns false for FORBIDDEN code', () => {
-      expect(isAuthError('FORBIDDEN', 'Access denied')).toBe(false);
-    });
-
-    it('returns false for empty code and unrelated message', () => {
-      expect(isAuthError('', 'Something else went wrong')).toBe(false);
-    });
-
-    it('returns false for validation errors', () => {
-      expect(isAuthError('VALIDATION_ERROR', 'Field is required')).toBe(false);
-    });
+    it.each(['NOT_FOUND', 'VALIDATION_FAILED'])(
+      'returns false for %s',
+      code => {
+        expect(isRefreshableAuthCode(code)).toBe(false);
+      },
+    );
   });
 
   describe('isResourceAccessError', () => {
@@ -149,37 +136,38 @@ describe('errorLink helpers', () => {
   });
 
   describe('isApiKeyError', () => {
-    it('returns true for API_KEY_REQUIRED code', () => {
-      expect(isApiKeyError('API_KEY_REQUIRED', '')).toBe(true);
+    it.each(API_KEY_ERROR_CODES)('returns true for %s', code => {
+      expect(isApiKeyError(code)).toBe(true);
     });
 
-    it('returns true for INVALID_API_KEY code', () => {
-      expect(isApiKeyError('INVALID_API_KEY', '')).toBe(true);
-    });
+    // These two were matched for a long time but are not codes the API emits —
+    // they transpose the real API_KEY_MISSING / API_KEY_INVALID. Pinned so the
+    // invented names can't drift back in.
+    it.each(['API_KEY_REQUIRED', 'INVALID_API_KEY'])(
+      'returns false for %s, which the API never emits',
+      code => {
+        expect(isApiKeyError(code)).toBe(false);
+      },
+    );
 
-    it('returns true for API_KEY_EXPIRED code', () => {
-      expect(isApiKeyError('API_KEY_EXPIRED', '')).toBe(true);
-    });
-
-    it('returns true when message contains "api key"', () => {
-      expect(isApiKeyError('', 'Missing api key in request')).toBe(true);
-    });
-
-    it('is case-insensitive for message matching', () => {
-      expect(isApiKeyError('', 'API Key is invalid')).toBe(true);
-      expect(isApiKeyError('', 'API KEY MISSING')).toBe(true);
+    // Handled by its own branch in the link, which bails out of the handler
+    // instead of continuing, so it deliberately isn't part of this set.
+    it('returns false for API_KEY_INSUFFICIENT_PERMISSIONS', () => {
+      expect(isApiKeyError('API_KEY_INSUFFICIENT_PERMISSIONS')).toBe(false);
     });
 
     it('returns false for non-api-key errors', () => {
-      expect(isApiKeyError('UNAUTHENTICATED', 'Token expired')).toBe(false);
+      expect(isApiKeyError('UNAUTHENTICATED')).toBe(false);
     });
 
-    it('returns false for empty code and unrelated message', () => {
-      expect(isApiKeyError('', 'Something else')).toBe(false);
+    // The message is no longer consulted: a refusal whose wording merely
+    // mentioned an API key used to be swallowed here regardless of its code.
+    it('ignores the message entirely', () => {
+      expect(isApiKeyError('')).toBe(false);
     });
 
     it('code matching is case-sensitive', () => {
-      expect(isApiKeyError('api_key_required', '')).toBe(false);
+      expect(isApiKeyError('api_key_missing')).toBe(false);
     });
   });
 
@@ -360,6 +348,32 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
     ).rejects.toBeDefined();
 
     expect(attemptTokenRefresh).not.toHaveBeenCalled();
+  });
+
+  // The refusal lands on every operation, so without a user-visible signal the
+  // app just fails silently everywhere.
+  it('announces the upgrade to the user', async () => {
+    await expect(
+      runWithError([
+        {
+          message: 'Client upgrade required: 5.0.0',
+          extensions: {
+            code: 'CLIENT_UPGRADE_REQUIRED',
+            minimumVersion: '5.0.0',
+          },
+        },
+      ]),
+    ).rejects.toBeDefined();
+
+    expect(announceClientUpgradeRequired).toHaveBeenCalled();
+  });
+
+  it('does not announce for an unrelated error', async () => {
+    await runWithError([
+      { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
+    ]).catch(() => undefined);
+
+    expect(announceClientUpgradeRequired).not.toHaveBeenCalled();
   });
 
   it('still refreshes for a genuine auth error (guards the early bail)', async () => {

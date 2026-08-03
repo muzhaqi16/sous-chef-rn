@@ -322,7 +322,7 @@ describe('useSuggestItemEdit', () => {
         data: {
           updateItem: {
             __typename: 'ForbiddenError',
-            code: 'AUTHZ_FORBIDDEN',
+            code: 'FORBIDDEN',
             message: 'Use createItemSuggestion',
           },
         },
@@ -372,7 +372,7 @@ describe('useSuggestItemEdit', () => {
         data: {
           updateItem: {
             __typename: 'ForbiddenError',
-            code: 'AUTHZ_FORBIDDEN',
+            code: 'FORBIDDEN',
             message: 'Not yours',
           },
         },

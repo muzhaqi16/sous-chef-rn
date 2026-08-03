@@ -110,9 +110,13 @@ describe('errorService', () => {
       );
     });
 
-    it('returns Authorization for AUTHZ_ prefix', () => {
-      expect(errorService.getErrorCategory('AUTHZ_FORBIDDEN')).toBe(
-        'Authorization',
+    it('returns Authorization for FORBIDDEN', () => {
+      expect(errorService.getErrorCategory('FORBIDDEN')).toBe('Authorization');
+    });
+
+    it('returns Authentication for UNAUTHENTICATED', () => {
+      expect(errorService.getErrorCategory('UNAUTHENTICATED')).toBe(
+        'Authentication',
       );
     });
 
@@ -169,8 +173,14 @@ describe('errorService', () => {
       expect(errorService.isAuthError('AUTH_TOKEN_INVALID')).toBe(true);
     });
 
-    it('returns true for AUTHZ_ prefixed codes', () => {
-      expect(errorService.isAuthError('AUTHZ_FORBIDDEN')).toBe(true);
+    it('returns true for UNAUTHENTICATED', () => {
+      expect(errorService.isAuthError('UNAUTHENTICATED')).toBe(true);
+    });
+
+    // FORBIDDEN is authorization, not authentication. Treating it as an auth
+    // error is what let a 403 be handled as a dead session.
+    it('returns false for FORBIDDEN', () => {
+      expect(errorService.isAuthError('FORBIDDEN')).toBe(false);
     });
 
     it('returns false for non-auth codes', () => {
@@ -268,7 +278,7 @@ describe('errorService', () => {
         errors: [
           {
             message: 'Not authorized',
-            extensions: { code: 'AUTHZ_FORBIDDEN' },
+            extensions: { code: 'FORBIDDEN' },
           },
         ],
       };
@@ -278,8 +288,10 @@ describe('errorService', () => {
 
       const result = errorService.parseApolloError(error);
 
-      expect(result.error?.code).toBe('AUTHZ_FORBIDDEN');
-      expect(result.error?.isAuthError).toBe(true);
+      expect(result.error?.code).toBe('FORBIDDEN');
+      // Authorization, not authentication — this must not be reported as an
+      // auth error or callers will treat a permission denial as a dead session.
+      expect(result.error?.isAuthError).toBe(false);
     });
 
     it('handles CombinedGraphQLErrors with VALIDATION_FAILED and validationErrors', () => {
@@ -321,7 +333,7 @@ describe('errorService', () => {
 
     it.each([
       [401, 'AUTH_TOKEN_INVALID'],
-      [403, 'AUTHZ_FORBIDDEN'],
+      [403, 'FORBIDDEN'],
       [404, 'RESOURCE_NOT_FOUND'],
       [429, 'RATE_LIMIT_EXCEEDED'],
       [500, 'SERVICE_UNAVAILABLE'],
@@ -705,7 +717,7 @@ describe('errorService', () => {
       );
       expect(service.getErrorCategory('VALIDATION_FAILED')).toBe('Validation');
       expect(service.shouldRetry('SERVICE_TIMEOUT')).toBe(true);
-      expect(service.isAuthError('AUTHZ_FORBIDDEN')).toBe(true);
+      expect(service.isAuthError('AUTH_TOKEN_INVALID')).toBe(true);
     });
   });
 });

@@ -1,6 +1,8 @@
 import {
   isDeadCredentialCode,
   isSessionEndingAuthCode,
+  isRefreshableAuthCode,
+  isDeadRefreshTokenCode,
 } from '../authErrorCodes';
 
 // The credentials themselves are gone — both predicates must agree.
@@ -47,4 +49,82 @@ describe('isSessionEndingAuthCode', () => {
       expect(isSessionEndingAuthCode(code)).toBe(false);
     },
   );
+});
+
+// Access-token-side refusals on an ordinary operation. AUTH_TOKEN_INVALID is
+// the one the old message heuristics missed outright: "token is malformed or
+// invalid" contains none of the terms they matched, so it never earned the
+// refresh that would have fixed it.
+const REFRESHABLE = [
+  'UNAUTHENTICATED',
+  'AUTH_TOKEN_EXPIRED',
+  'AUTH_TOKEN_MISSING',
+  'AUTH_TOKEN_INVALID',
+];
+
+describe('isRefreshableAuthCode', () => {
+  it.each(REFRESHABLE)('exchanges the refresh token on %s', code => {
+    expect(isRefreshableAuthCode(code)).toBe(true);
+  });
+
+  // The same code answers this question and isSessionEndingAuthCode in
+  // opposite directions, because the channels mean different things: on the
+  // refresh mutation's own response the exchange has already failed, while on
+  // an ordinary operation it hasn't been tried yet.
+  it.each(['AUTH_TOKEN_EXPIRED', 'AUTH_TOKEN_MISSING'])(
+    'deliberately disagrees with isSessionEndingAuthCode on %s',
+    code => {
+      expect(isRefreshableAuthCode(code)).toBe(true);
+      expect(isSessionEndingAuthCode(code)).toBe(true);
+    },
+  );
+
+  // Refreshing cannot fix any of these: a dead refresh token has nothing left
+  // to exchange, a permission denial isn't about the token at all, and the
+  // verification gate lifts on the next request without one.
+  it.each([
+    'AUTH_REFRESH_TOKEN_INVALID',
+    'AUTH_REFRESH_TOKEN_MISSING',
+    'AUTH_CREDENTIALS_INVALID',
+    'AUTH_ACCOUNT_LOCKED',
+    'AUTH_ACCOUNT_SUSPENDED',
+    'AUTH_EMAIL_NOT_VERIFIED',
+    'FORBIDDEN',
+    'API_KEY_INSUFFICIENT_PERMISSIONS',
+    'VALIDATION_FAILED',
+  ])('does not spend a refresh on %s', code => {
+    expect(isRefreshableAuthCode(code)).toBe(false);
+  });
+
+  // The predicate is code-only. An error carrying no code must never trigger a
+  // refresh on the strength of its prose.
+  it('ignores the message entirely', () => {
+    expect(isRefreshableAuthCode('')).toBe(false);
+  });
+});
+
+describe('isDeadRefreshTokenCode', () => {
+  it.each(['AUTH_REFRESH_TOKEN_INVALID', 'AUTH_REFRESH_TOKEN_MISSING'])(
+    'ends the session on %s',
+    code => {
+      expect(isDeadRefreshTokenCode(code)).toBe(true);
+    },
+  );
+
+  // These end the session too, but via their own branches — the account-state
+  // one, or a refresh that comes back empty. Keeping them out here preserves
+  // the distinct logging and the one refresh attempt.
+  it.each(['AUTH_TOKEN_EXPIRED', 'AUTH_ACCOUNT_SUSPENDED', 'UNAUTHENTICATED'])(
+    'leaves %s to its own branch',
+    code => {
+      expect(isDeadRefreshTokenCode(code)).toBe(false);
+    },
+  );
+
+  // The two predicates errorLink consults must never both fire on one code, or
+  // the branch order silently decides between ending the session and retrying.
+  it('never overlaps with isRefreshableAuthCode', () => {
+    const overlap = REFRESHABLE.filter(isDeadRefreshTokenCode);
+    expect(overlap).toEqual([]);
+  });
 });

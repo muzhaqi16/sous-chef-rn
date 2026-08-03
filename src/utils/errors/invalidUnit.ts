@@ -1,3 +1,5 @@
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+
 /**
  * Invalid Unit Error Details
  */
@@ -44,12 +46,14 @@ function getSingleError(error: unknown): GraphQLErrorLike | undefined {
 export function isInvalidUnitError(error: unknown): boolean {
   const graphQLErrors = getGraphQLErrors(error);
   if (graphQLErrors) {
-    return graphQLErrors.some(err => err.extensions?.code === 'UNIT_INVALID');
+    return graphQLErrors.some(
+      err => err.extensions?.code === TopLevelErrorCode.UnitInvalid,
+    );
   }
 
   const single = getSingleError(error);
   if (single) {
-    return single.extensions?.code === 'UNIT_INVALID';
+    return single.extensions?.code === TopLevelErrorCode.UnitInvalid;
   }
 
   return false;
@@ -61,7 +65,7 @@ export function isInvalidUnitError(error: unknown): boolean {
  * member's code directly (there is no `success` field on current payloads).
  */
 export function isInvalidUnitPayload(code: string): boolean {
-  return code === 'UNIT_INVALID';
+  return code === TopLevelErrorCode.UnitInvalid;
 }
 
 /**
@@ -76,7 +80,7 @@ export function getValidUnits(error: unknown): string[] | null {
   const graphQLErrors = getGraphQLErrors(error);
   if (graphQLErrors) {
     unitError = graphQLErrors.find(
-      err => err.extensions?.code === 'UNIT_INVALID',
+      err => err.extensions?.code === TopLevelErrorCode.UnitInvalid,
     );
   } else {
     unitError = getSingleError(error);
@@ -102,7 +106,7 @@ export function getInvalidUnitMessage(error: unknown): string {
   const graphQLErrors = getGraphQLErrors(error);
   if (graphQLErrors) {
     unitError = graphQLErrors.find(
-      err => err.extensions?.code === 'UNIT_INVALID',
+      err => err.extensions?.code === TopLevelErrorCode.UnitInvalid,
     );
   } else {
     unitError = getSingleError(error);

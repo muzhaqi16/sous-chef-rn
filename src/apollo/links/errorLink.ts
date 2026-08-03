@@ -5,35 +5,43 @@ import {
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
 import type { DefinitionNode } from 'graphql';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
+import {
+  isRefreshableAuthCode,
+  isDeadRefreshTokenCode,
+} from '#/utils/authErrorCodes';
 import {
   isRateLimitError,
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
 import { CLIENT_VERSION } from '../clientIdentity';
+import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LogoutCleanup } from '../logoutCleanup';
 import { attemptTokenRefresh, getRefreshState } from './refreshToken';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 
-// Utility functions for error detection
-// Note: FORBIDDEN is intentionally NOT included here - it's a resource access error, not an auth error
-// Treating FORBIDDEN as auth error causes unnecessary token refresh cycles
-const isAuthError = (code: string, msg: string) =>
-  code === 'UNAUTHENTICATED' ||
-  code === 'AUTH_TOKEN_EXPIRED' ||
-  ['expired', 'unauthorized', 'invalid token', 'jwt'].some(term =>
-    msg.toLowerCase().includes(term),
-  );
+// Which auth refusals a refresh can clear (and which it can't) lives in
+// #/utils/authErrorCodes, so this link, the refresh path and the offline queue
+// all classify from one list.
+//
+// This used to also substring-match 'expired' / 'unauthorized' / 'invalid
+// token' / 'jwt' in the message, which was both too wide and too narrow: any
+// error whose prose happened to contain "unauthorized" — an API key refused for
+// want of a permission, say — bought a pointless refresh, while
+// AUTH_TOKEN_INVALID ("token is malformed or invalid") matched no term at all
+// and fell through without one. FORBIDDEN is deliberately absent: it is a
+// resource-access denial, and refreshing a perfectly good token can't grant
+// access the user doesn't have.
 
-// FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't have access to the resource
-// — not an auth issue (no token refresh). Both codes are current, on different
-// channels: FORBIDDEN is what the mutation result-union member (errors-as-data)
-// and the @auth directive emit; AUTHZ_FORBIDDEN is the top-level
-// `extensions.code` on rejected reads. Both branches are load-bearing.
-const isResourceAccessError = (code: string) =>
-  code === 'FORBIDDEN' || code === 'AUTHZ_FORBIDDEN';
+// FORBIDDEN means the user doesn't have access to the resource — not an auth
+// issue (no token refresh). It is the single authorization code, emitted on
+// both channels: as a mutation result-union member (errors-as-data) and as the
+// top-level `extensions.code` on rejected reads. The AUTHZ_* family that used
+// to be checked alongside it is retired and no longer emitted by any path.
+const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
 
 // The @auth directive rejects EVERY field for a suspended, banned, or deleted
 // account: the credentials are valid but the account may not transact. That is
@@ -45,11 +53,35 @@ const isResourceAccessError = (code: string) =>
 // wording as non-contractual, so drop the fallback once every deployed
 // environment serves the code.
 const isAccountInactiveError = (code: string, reason: string) =>
-  code === 'AUTH_ACCOUNT_SUSPENDED' || /suspended or deleted/i.test(reason);
+  code === ErrorCode.AuthAccountSuspended ||
+  /suspended or deleted/i.test(reason);
 
-const isApiKeyError = (code: string, msg: string) =>
-  ['API_KEY_REQUIRED', 'INVALID_API_KEY', 'API_KEY_EXPIRED'].includes(code) ||
-  msg.toLowerCase().includes('api key');
+// The key travels in the `x-api-key` header and is baked into the build, so
+// every code here is a build/config fault rather than anything the session can
+// recover from. Matched on the exact codes the API documents (docs/api/errors.md
+// "API Key Errors"); an earlier version also substring-matched "api key" in the
+// message, which let a refusal whose wording happened to differ fall through to
+// the auth branch below and trigger a pointless token refresh.
+// API_KEY_RATE_LIMITED is in the API's internal registry but absent from the
+// published TopLevelErrorCode enum, which admits only codes that have an
+// emitter — so it stays a literal and is retained defensively rather than
+// promoted.
+const API_KEY_ERROR_CODES: string[] = [
+  TopLevelErrorCode.ApiKeyMissing,
+  TopLevelErrorCode.ApiKeyInvalid,
+  TopLevelErrorCode.ApiKeyExpired,
+  TopLevelErrorCode.ApiKeyRevoked,
+  'API_KEY_RATE_LIMITED',
+];
+
+const isApiKeyError = (code: string) => API_KEY_ERROR_CODES.includes(code);
+
+// Deliberately distinct from API_KEY_INVALID: the key is valid but was issued
+// without the permission this operation needs, so the fix is re-provisioning
+// the key, not re-authenticating. `requiredPermission` names what was missing
+// and is never masked, so it stays readable in production.
+const API_KEY_INSUFFICIENT_PERMISSIONS =
+  TopLevelErrorCode.ApiKeyInsufficientPermissions;
 
 const isSubscription = (op: Pick<ApolloLink.Operation, 'query'>) =>
   op.query.definitions.some(
@@ -82,16 +114,36 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // definition — a retry sends the same version, and a token refresh
       // succeeds and then fails identically — so bail out of the whole handler
       // before anything downstream tries to recover from it.
-      if (code === 'CLIENT_UPGRADE_REQUIRED') {
+      if (code === TopLevelErrorCode.ClientUpgradeRequired) {
         logger.error(
           `App version ${CLIENT_VERSION} is below the server minimum (${String(
             err.extensions?.minimumVersion ?? 'unknown',
           )}); ${operation.operationName} refused until the app is updated`,
         );
+        // Every operation is refused from here on, so the user needs to be told
+        // once rather than left watching screens fail silently. The notice
+        // de-duplicates across the flood of refusals this produces.
+        announceClientUpgradeRequired();
         return;
       }
 
-      if (isApiKeyError(code, message)) {
+      // Terminal for the same reason CLIENT_UPGRADE_REQUIRED is: the credential
+      // is fixed for this build, so a retry sends the same key and a refresh
+      // succeeds and then fails identically. Signing out would be worse — the
+      // user's session is perfectly valid, and this is a provisioning fault.
+      // Bail out of the whole handler so nothing downstream tries to recover.
+      if (code === API_KEY_INSUFFICIENT_PERMISSIONS) {
+        logger.error(
+          `API key lacks ${String(
+            err.extensions?.requiredPermission ?? 'a required permission',
+          )} for ${
+            operation.operationName
+          }; the key needs re-provisioning — ${message}`,
+        );
+        return;
+      }
+
+      if (isApiKeyError(code)) {
         logger.error('API Key error:', message);
         continue;
       }
@@ -108,13 +160,27 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         return;
       }
 
+      // The refresh token is gone or rejected, so the refresh branch below has
+      // nothing left to exchange. Ending the session here rather than letting it
+      // try keeps a dead session from spending a doomed round trip per failing
+      // operation, and lands the user on sign-in instead of stranding them on
+      // cached data. Reached only when an ordinary operation carries the code —
+      // the refresh mutation's own rejection is handled in refreshToken.ts.
+      if (isDeadRefreshTokenCode(code)) {
+        logger.error(
+          `Refresh token rejected (${operation.operationName}) — ending session`,
+        );
+        useStore.getState().clearAuth();
+        return;
+      }
+
       if (isResourceAccessError(code)) {
         logger.warn(`Access denied for ${operation.operationName}: ${message}`);
         continue;
       }
 
       if (
-        isAuthError(code, message) &&
+        isRefreshableAuthCode(code) &&
         operation.operationName !== 'RefreshToken'
       ) {
         // Suppress logging if refresh already in progress to avoid cascade

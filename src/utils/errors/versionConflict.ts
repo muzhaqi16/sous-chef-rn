@@ -1,3 +1,4 @@
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
 
 /**
@@ -7,7 +8,10 @@ import { t } from '#/i18n/t';
  * `VERSION_CONFLICT` for optimistic-lock failures and `CONFLICT` for other
  * uniqueness/state conflicts — both get the "updated elsewhere" treatment.
  */
-const CONFLICT_CODES = new Set(['CONFLICT', 'VERSION_CONFLICT']);
+const CONFLICT_CODES = new Set<string>([
+  ErrorCode.Conflict,
+  ErrorCode.VersionConflict,
+]);
 
 /**
  * Minimal shape of a GraphQL error carrying conflict metadata in `extensions`.

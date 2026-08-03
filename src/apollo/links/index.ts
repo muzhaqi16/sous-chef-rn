@@ -5,6 +5,7 @@ import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
 import { createOfflineModeLink } from './offlineModeLink';
 import { createNetworkStatusLink } from './networkStatusLink';
+import { createClientReleaseLink } from './clientReleaseLink';
 import { errorLink } from './errorLink';
 import { retryLink } from './retryLink';
 import { httpLink } from './httpLink';
@@ -55,6 +56,9 @@ export function createLink() {
   // Network status link - drives the API-reachability circuit breaker
   const networkStatusLink = createNetworkStatusLink();
 
+  // Reads the server's soft "a newer build exists" signal off response extensions
+  const clientReleaseLink = createClientReleaseLink();
+
   // Queue link for offline mutation support
   const queueLink = createQueueLink();
 
@@ -73,6 +77,7 @@ export function createLink() {
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)
+    clientReleaseLink, // Surface the server's "newer build available" extension
     telemetryLink, // Track operations for monitoring
     retryLink, // Retry transient network failures (queries only)
     errorLink, // Handle/log errors + return cached data on network failures

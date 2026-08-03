@@ -218,6 +218,11 @@
     "apiDownPending_other": "Serveri nuk arrihet — {{count}} ndryshime do të sinkronizohen kur të rikthehet",
     "backOnline": "Sërish online — po sinkronizohen ndryshimet"
   },
+  "appUpdate": {
+    "title": "Nevojitet përditësim",
+    "message": "Ky version i Sous Chef nuk mund të lidhet më me serverin. Përditësoje në versionin e fundit për të vazhduar ta përdorësh aplikacionin.",
+    "available": "Një version i ri i Sous Chef është i disponueshëm."
+  },
   "empty": {
     "noItems": "Ende pa artikuj",
     "noNotifications": "Ende pa njoftime",

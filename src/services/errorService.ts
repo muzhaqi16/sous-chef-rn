@@ -16,6 +16,7 @@
  * ```
  */
 
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -89,20 +90,19 @@ export class ErrorService {
       'This account is no longer active. Please contact support.',
     AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before continuing',
 
-    // Authorization Errors
-    AUTHZ_FORBIDDEN: "You don't have permission to perform this action",
-    AUTHZ_INSUFFICIENT_PERMISSIONS: "You don't have sufficient permissions",
-    AUTHZ_RESOURCE_ACCESS_DENIED: 'Access denied to this resource',
-    AUTHZ_ADMIN_REQUIRED: "You don't have permission to perform this action.",
-    AUTHZ_MODERATOR_REQUIRED:
-      "You don't have permission to perform this action.",
+    // Authorization Errors. FORBIDDEN is the only code here — the AUTHZ_*
+    // family it used to sit alongside was retired and never emitted.
+    FORBIDDEN: "You don't have permission to perform this action",
 
-    // API Key Errors
+    // API Key Errors. All of these are build/config faults the user can do
+    // nothing about, so they share one deliberately generic message.
     API_KEY_MISSING: 'Something went wrong. Please try again later.',
     API_KEY_INVALID: 'Something went wrong. Please try again later.',
     API_KEY_EXPIRED: 'Something went wrong. Please try again later.',
     API_KEY_REVOKED: 'Something went wrong. Please try again later.',
     API_KEY_RATE_LIMITED: 'Something went wrong. Please try again later.',
+    API_KEY_INSUFFICIENT_PERMISSIONS:
+      'Something went wrong. Please try again later.',
 
     // Validation Errors
     VALIDATION_FAILED: 'Please check your input and try again',
@@ -169,7 +169,6 @@ export class ErrorService {
 
     // Application-Specific Errors
     SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
-    SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
     SHOPPING_ITEM_NOT_FOUND: 'Shopping item not found',
     SHOPPING_ITEM_ALREADY_EXISTS: 'This item is already in your shopping list',
     HOME_NOT_FOUND: 'Home not found',
@@ -179,12 +178,15 @@ export class ErrorService {
     HOME_MEMBER_ALREADY_EXISTS: 'User is already a member of this home',
   };
 
-  private static readonly RETRYABLE_ERRORS = [
-    'SERVICE_UNAVAILABLE',
+  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are in the API's internal registry
+  // but absent from the published TopLevelErrorCode enum, which admits a code
+  // only once something emits it — so they stay literals, kept defensively.
+  private static readonly RETRYABLE_ERRORS: string[] = [
+    TopLevelErrorCode.ServiceUnavailable,
     'SERVICE_TIMEOUT',
     'SERVICE_OVERLOADED',
-    'RATE_LIMIT_EXCEEDED',
-    'AUTH_TOKEN_EXPIRED',
+    TopLevelErrorCode.RateLimitExceeded,
+    TopLevelErrorCode.AuthTokenExpired,
   ];
 
   // Expected user-input / business-rule outcomes — normal UX, not system
@@ -192,12 +194,18 @@ export class ErrorService {
   // the error dashboards aren't polluted by routine validation results (e.g. a
   // user signing up with an email that's already taken). Any VALIDATION_* code
   // is also treated as expected (see isExpectedUserError).
-  private static readonly EXPECTED_USER_ERRORS = new Set([
-    'EMAIL_ALREADY_EXISTS',
-    'VERSION_CONFLICT',
-    'RESOURCE_ALREADY_EXISTS',
-    'RESOURCE_CONFLICT',
-    'PANTRY_ITEM_ALREADY_EXISTS',
+  // Both channels are represented because this is asked of whatever code was
+  // parsed out: ErrorCode.* for a result-union member, TopLevelErrorCode.* for
+  // an `extensions.code`. The SHOPPING_* / HOME_* codes are in neither enum —
+  // the API's registry defines them but nothing emits them — so they stay
+  // literals, kept defensively.
+  private static readonly EXPECTED_USER_ERRORS = new Set<string>([
+    ErrorCode.EmailAlreadyExists,
+    ErrorCode.VersionConflict,
+    ErrorCode.ResourceAlreadyExists,
+    ErrorCode.PantryItemAlreadyExists,
+    TopLevelErrorCode.ResourceConflict,
+    TopLevelErrorCode.ResourceVersionConflict,
     'SHOPPING_ITEM_ALREADY_EXISTS',
     'HOME_MEMBER_ALREADY_EXISTS',
     'HOME_INVITE_INVALID',
@@ -206,7 +214,11 @@ export class ErrorService {
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
     AUTH_: 'Authentication',
-    AUTHZ_: 'Authorization',
+    // The two Apollo-standard codes carry no category prefix, so they are
+    // listed in full. An 'AUTHZ_' prefix would select nothing — that family is
+    // retired — while implying codes that no longer exist.
+    [TopLevelErrorCode.Unauthenticated]: 'Authentication',
+    [TopLevelErrorCode.Forbidden]: 'Authorization',
     API_: 'API Key',
     VALIDATION_: 'Validation',
     RESOURCE_: 'Resource',
@@ -245,7 +257,10 @@ export class ErrorService {
   }
 
   isAuthError(errorCode: string): boolean {
-    return errorCode.startsWith('AUTH_') || errorCode.startsWith('AUTHZ_');
+    return (
+      errorCode.startsWith('AUTH_') ||
+      errorCode === TopLevelErrorCode.Unauthenticated
+    );
   }
 
   isExpectedUserError(errorCode: string): boolean {
@@ -308,7 +323,7 @@ export class ErrorService {
       }
       // Check for version conflict errors
       else if (isVersionConflictError(error)) {
-        errorCode = 'VERSION_CONFLICT';
+        errorCode = ErrorCode.VersionConflict;
         errorMessage = getVersionConflictMessage();
       }
       // Apollo error types
@@ -320,7 +335,7 @@ export class ErrorService {
           errorMessage = graphQLError.message;
 
           if (
-            errorCode === 'VALIDATION_FAILED' &&
+            errorCode === ErrorCode.ValidationFailed &&
             graphQLError.extensions?.validationErrors
           ) {
             validationErrors = graphQLError.extensions
@@ -329,16 +344,26 @@ export class ErrorService {
         }
       } else if (ServerError.is(error)) {
         const statusCode = error.statusCode;
-        if (statusCode === 401) errorCode = 'AUTH_TOKEN_INVALID';
-        else if (statusCode === 403) errorCode = 'AUTHZ_FORBIDDEN';
-        else if (statusCode === 404) errorCode = 'RESOURCE_NOT_FOUND';
-        else if (statusCode === 429) errorCode = 'RATE_LIMIT_EXCEEDED';
-        else if (statusCode >= 500) errorCode = 'SERVICE_UNAVAILABLE';
+        if (statusCode === 401) errorCode = TopLevelErrorCode.AuthTokenInvalid;
+        // Only reached when the body wasn't a GraphQL envelope, so there is no
+        // `extensions.code` to read and the status is all we have. Four
+        // different conditions share 403 — FORBIDDEN, AUTH_EMAIL_NOT_VERIFIED,
+        // AUTH_ACCOUNT_SUSPENDED and API_KEY_INSUFFICIENT_PERMISSIONS — so this
+        // resolves to the generic authorization code rather than guessing.
+        // Deliberately not an AUTH_* code: isAuthError() must stay false here,
+        // or a key-provisioning fault gets handled as a dead session.
+        else if (statusCode === 403) errorCode = TopLevelErrorCode.Forbidden;
+        else if (statusCode === 404)
+          errorCode = TopLevelErrorCode.ResourceNotFound;
+        else if (statusCode === 429)
+          errorCode = TopLevelErrorCode.RateLimitExceeded;
+        else if (statusCode >= 500)
+          errorCode = TopLevelErrorCode.ServiceUnavailable;
         else errorCode = 'NETWORK_ERROR';
 
         errorMessage = error.message || `Unable to connect (${statusCode}).`;
       } else if (ServerParseError.is(error)) {
-        errorCode = 'SERVICE_UNAVAILABLE';
+        errorCode = TopLevelErrorCode.ServiceUnavailable;
         errorMessage = 'Server response could not be parsed';
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
@@ -464,7 +489,7 @@ export class ErrorService {
       const result = this.parseApolloError(error, config);
       return {
         ...result,
-        isVersionConflict: result.error?.code === 'VERSION_CONFLICT',
+        isVersionConflict: result.error?.code === ErrorCode.VersionConflict,
       };
     }
   }

@@ -5,6 +5,7 @@ import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
@@ -50,6 +51,31 @@ class RefreshRejectedError extends Error {
   }
 }
 
+// One refusal, two carriers: the same server response reaches this module as an
+// AC4 `CombinedGraphQLErrors` and as the legacy AC3 `graphQLErrors` array, so
+// both run through this predicate rather than each keeping its own copy of the
+// code list (they had drifted to matching only AUTH_TOKEN_EXPIRED, missing
+// AUTH_TOKEN_MISSING and AUTH_REFRESH_TOKEN_INVALID).
+//
+// `UNAUTHENTICATED` is tested on its own because it reaches clients only on the
+// top-level channel, so it lives in `TopLevelErrorCode` rather than the
+// `ErrorCode` enum that isSessionEndingAuthCode is built from.
+//
+// Classified by code only. This used to fall back to matching 'expired' in the
+// message for a server that described an expiry without attaching a code; every
+// auth refusal now carries one, and the fallback caught unrelated refusals whose
+// prose happened to mention expiry — an expired invite or share link reaching
+// this path would have been read as a dead session.
+const isSessionEndingGraphQLError = (e: {
+  extensions?: { code?: unknown };
+  message?: string;
+}): boolean => {
+  const code = String(e.extensions?.code ?? '');
+  return (
+    isSessionEndingAuthCode(code) || code === TopLevelErrorCode.Unauthenticated
+  );
+};
+
 // A genuine, server-confirmed refresh-token rejection (vs a network failure,
 // which is handled separately and must preserve the cache). Checked only AFTER
 // isNetworkError, so transient/offline failures never reach here. Recognizes
@@ -63,23 +89,12 @@ const isAuthRejectionError = (error: unknown): boolean => {
     return error.statusCode === 401;
   }
   if (CombinedGraphQLErrors.is(error)) {
-    return error.errors.some(
-      e =>
-        e.extensions?.code === 'UNAUTHENTICATED' ||
-        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
-        (e.message ?? '').toLowerCase().includes('expired'),
-    );
+    return error.errors.some(isSessionEndingGraphQLError);
   }
   const legacy = error as RefreshErrorLike;
   return (
     legacy.networkError?.statusCode === 401 ||
-    (legacy.graphQLErrors?.some(
-      e =>
-        e.extensions?.code === 'UNAUTHENTICATED' ||
-        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
-        (e.message ?? '').toLowerCase().includes('expired'),
-    ) ??
-      false)
+    (legacy.graphQLErrors?.some(isSessionEndingGraphQLError) ?? false)
   );
 };
 

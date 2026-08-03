@@ -1,20 +1,30 @@
 import { getI18n } from '#/i18n/config';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 // Match on the exact code — never on a `RATE_` prefix. OPERATION_RATE_LIMITED
 // deliberately doesn't carry it (docs/api/errors.md), so a prefix test would
 // silently drop every per-operation limit.
-const RATE_LIMIT_CODES = [
+// Only RATE_LIMIT_EXCEEDED and OPERATION_RATE_LIMITED are declared in the
+// published TopLevelErrorCode enum, which admits a code only once something
+// emits it. The rest live in the API's internal registry without an emitter, so
+// they stay literals — kept defensively rather than promoted.
+const RATE_LIMIT_CODES: string[] = [
   'RATE_LIMITED',
   // The global budget. Carries `resetAt` rather than `retryAfter`, so the
   // message below falls back to the server's text for it.
-  'RATE_LIMIT_EXCEEDED',
+  TopLevelErrorCode.RateLimitExceeded,
   'RATE_LIMIT_IP_BLOCKED',
   'RATE_LIMIT_USER_BLOCKED',
   'RATE_LIMIT_API_KEY_BLOCKED',
+  // Two more rate-limit conditions that live outside the RATE_ family — one in
+  // the API_ family, one in EXTERNAL_. Without them a throttled request skips
+  // rate-limit classification entirely and loses its `retryAfter`.
+  'API_KEY_RATE_LIMITED',
+  'EXTERNAL_API_RATE_LIMITED',
   // A single operation's own budget, stricter than and separate from the global
   // one — ~30 operations have one (createItemSuggestion: 10/hour), so this fires
   // while well under RATE_LIMIT_EXCEEDED. Both must be handled.
-  'OPERATION_RATE_LIMITED',
+  TopLevelErrorCode.OperationRateLimited,
 ];
 
 export interface RateLimitDetails {

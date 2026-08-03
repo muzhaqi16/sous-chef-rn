@@ -12,6 +12,7 @@
  */
 
 import { client } from '#/apollo/client';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -492,7 +493,8 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
 
     if (
       isAuthError &&
-      (code === 'AUTH_TOKEN_EXPIRED' || code === 'AUTH_REFRESH_TOKEN_INVALID')
+      (code === ErrorCode.AuthTokenExpired ||
+        code === ErrorCode.AuthRefreshTokenInvalid)
     ) {
       useStore.getState().clearAuth();
     }

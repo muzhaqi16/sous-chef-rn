@@ -1,3 +1,13 @@
+import {
+  CombinedGraphQLErrors,
+  CombinedProtocolErrors,
+  ServerError,
+} from '@apollo/client/errors';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  isSessionEndingAuthCode,
+  isRefreshableAuthCode,
+} from '#/utils/authErrorCodes';
 import type { QueueError } from './types';
 
 /**
@@ -71,10 +81,65 @@ export function classifyReplayResult(payload: unknown): ReplayOutcome {
   };
   if (!typename || !typename.endsWith('Error')) return 'applied';
 
-  if (typename === 'ConflictError' && code === 'IDEMPOTENT_REPLAY') {
+  if (typename === 'ConflictError' && code === ErrorCode.IdempotentReplay) {
     return 'converged';
   }
   return 'rejected';
+}
+
+/**
+ * Pull the error code out of whatever Apollo threw.
+ *
+ * The queue replays through `client.mutate`, which rejects with Apollo's own
+ * error classes — and those keep the code somewhere a flat `error.extensions.code`
+ * read never looked. `CombinedGraphQLErrors.extensions` is the RESPONSE-level
+ * extensions bag, while the API sets its codes per-error, inside `errors[i]`.
+ * Reading the flat shape alone therefore saw `undefined` for every real server
+ * refusal, so each code branch below was dead against production traffic and
+ * every refusal fell through to the message heuristics or the permanent bucket.
+ * The synthetic `{ code }` objects in the tests matched, which is why it looked
+ * fine.
+ *
+ * The flat shapes are still read, last: `queueStore` persists `lastError` and
+ * replays it back through here, and callers construct that shape directly.
+ */
+function readErrorCode(error: unknown): string | undefined {
+  if (CombinedGraphQLErrors.is(error) || CombinedProtocolErrors.is(error)) {
+    // First code wins. A partial-success response can carry several errors;
+    // the queue only needs one classification, and the branches below are
+    // ordered so the most consequential refusal is acted on either way.
+    for (const graphQLError of error.errors) {
+      const code = graphQLError.extensions?.code;
+      if (typeof code === 'string') return code;
+    }
+    return undefined;
+  }
+
+  const flat = error as
+    | { code?: string; extensions?: { code?: string } }
+    | null
+    | undefined;
+  return flat?.extensions?.code ?? flat?.code;
+}
+
+/**
+ * HTTP status behind a non-200 response.
+ *
+ * Apollo 4 throws `ServerError` carrying `statusCode` directly; the
+ * `networkError.statusCode` nesting read here before is the Apollo 3
+ * `ApolloError` shape, which nothing produces any more. That made the 5xx
+ * branch dead too — a transient server error was reverted and dequeued as a
+ * permanent client fault, losing the user's queued write over an outage that
+ * would have cleared on its own.
+ */
+function readStatusCode(error: unknown): number | undefined {
+  if (ServerError.is(error)) return error.statusCode;
+
+  const legacy = error as
+    | { networkError?: { statusCode?: number } }
+    | null
+    | undefined;
+  return legacy?.networkError?.statusCode;
 }
 
 /**
@@ -92,11 +157,11 @@ export function classifyError(error: unknown): QueueError {
     // DEADLOCK is the one ConflictError code the API documents as a transient
     // lock conflict ("safe to retry"): defer like a server error so the entry
     // stays queued for the next drain instead of being reverted + dequeued.
-    if (error.payloadCode === 'DEADLOCK') {
+    if (error.payloadCode === ErrorCode.Deadlock) {
       return {
         type: 'server',
         message: error.message,
-        code: 'DEADLOCK',
+        code: ErrorCode.Deadlock,
         timestamp: Date.now(),
         retryable: true,
       };
@@ -110,32 +175,41 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  const err = (error ?? {}) as {
-    message?: string;
-    code?: string;
-    extensions?: { code?: string };
-    networkError?: { statusCode?: number };
-  };
+  const err = (error ?? {}) as { message?: string };
   const message = err.message || String(error);
-  const code = err.extensions?.code || err.code;
+  const code = readErrorCode(error);
 
-  // Resource-access errors. FORBIDDEN / AUTHZ_FORBIDDEN mean the user doesn't
-  // have access to the resource — not an auth issue, so a token refresh won't
-  // help. Match errorLink's policy: treat them as permanent failures rather
-  // than retrying behind a refresh. Both codes are current, on different
-  // channels: FORBIDDEN is the mutation result-union member's code
-  // (errors-as-data), AUTHZ_FORBIDDEN is the top-level `extensions.code`.
-  // AUTH_ACCOUNT_SUSPENDED joins them: the account is suspended, banned, or
+  // The build is below the server's minimum version, so every replay of this
+  // entry is refused until the user updates from the store. Deferred rather
+  // than failed: the change stays on disk and syncs after the update, where
+  // reverting would throw away work over a condition the user can actually fix.
+  // `retryable: false` skips the in-run retry loop — each attempt would send
+  // the same version and be refused identically — while QueueManager defers
+  // `server` regardless of that flag, which is the combination wanted here.
+  if (code === TopLevelErrorCode.ClientUpgradeRequired) {
+    return {
+      type: 'server',
+      message,
+      code,
+      timestamp: Date.now(),
+      retryable: false,
+    };
+  }
+
+  // Resource-access errors. FORBIDDEN means the user doesn't have access to the
+  // resource — not an auth issue, so a token refresh won't help. Match
+  // errorLink's policy: treat it as a permanent failure rather than retrying
+  // behind a refresh. It is the single authorization code on both channels (the
+  // mutation result-union member's `code` and the top-level `extensions.code`).
+  // The AUTHZ_FORBIDDEN that used to be matched with it is retired and emitted
+  // by nothing.
+  // AUTH_ACCOUNT_SUSPENDED joins it: the account is suspended, banned, or
   // deleted, so no replay of this entry can ever succeed and a token refresh
   // cannot revive it. Classified here rather than left to the default so the
   // message heuristics in the auth branch below can never see it — server
   // wording that happened to contain "unauthorized" would otherwise mark a
   // permanently dead account retryable and spin the queue against it.
-  if (
-    code === 'FORBIDDEN' ||
-    code === 'AUTHZ_FORBIDDEN' ||
-    code === 'AUTH_ACCOUNT_SUSPENDED'
-  ) {
+  if (code === ErrorCode.Forbidden || code === ErrorCode.AuthAccountSuspended) {
     return {
       type: 'unknown',
       message,
@@ -145,12 +219,29 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Auth errors
+  // Auth errors. Matching the whole token-side family via isSessionEndingAuthCode
+  // rather than AUTH_TOKEN_EXPIRED alone: AUTH_TOKEN_MISSING is exactly what a
+  // refresh fixes, yet on its own it used to fall past this branch into the
+  // permanent bucket below and get reverted + dequeued without a single retry.
+  // isRefreshableAuthCode adds the rest of the access-token side (UNAUTHENTICATED,
+  // AUTH_TOKEN_INVALID), which travel on the top-level channel and so come from
+  // `TopLevelErrorCode` rather than `ErrorCode`.
+  //
+  // The codes in that set a refresh genuinely cannot fix (a rejected refresh
+  // token) are self-limiting here: QueueManager runs proactiveTokenRefresh()
+  // once for an `auth` classification and marks the entry failed when it comes
+  // back without a token, so a dead session costs one attempt, not a retry loop.
+  // AUTH_ACCOUNT_SUSPENDED is in that set too, but the resource-access branch
+  // above returns first and must keep doing so — a suspended account is
+  // permanent, so it should not spend a refresh attempt per queued entry.
+  //
+  // Classified by code only. Matching 'expired' / 'unauthorized' in the message
+  // used to pull in refusals that have nothing to do with the token — an API key
+  // rejected for want of a permission reads "Unauthorized: …" — and each one
+  // then cost the queue a doomed refresh before failing anyway.
   if (
-    code === 'UNAUTHENTICATED' ||
-    code === 'AUTH_TOKEN_EXPIRED' ||
-    message.toLowerCase().includes('expired') ||
-    message.toLowerCase().includes('unauthorized')
+    isSessionEndingAuthCode(code ?? '') ||
+    isRefreshableAuthCode(code ?? '')
   ) {
     return {
       type: 'auth',
@@ -179,7 +270,7 @@ export function classifyError(error: unknown): QueueError {
   }
 
   // Server errors (5xx)
-  if ((err.networkError?.statusCode ?? 0) >= 500) {
+  if ((readStatusCode(error) ?? 0) >= 500) {
     return {
       type: 'server',
       message,

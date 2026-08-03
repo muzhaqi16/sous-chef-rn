@@ -28,6 +28,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -259,7 +260,8 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           const graphQLErrors = response.error
             .errors as ReadonlyArray<GraphQLError>;
           const alreadyVerified = graphQLErrors.some(
-            err => err.extensions?.code === 'EMAIL_ALREADY_VERIFIED',
+            err =>
+              err.extensions?.code === TopLevelErrorCode.EmailAlreadyVerified,
           );
 
           if (alreadyVerified) {

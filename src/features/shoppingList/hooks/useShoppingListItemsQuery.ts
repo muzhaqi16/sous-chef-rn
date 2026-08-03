@@ -66,7 +66,7 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   // The server returned an explicit null for this list — it was deleted/unshared
   // (a missing by-id record is null data, not a NOT_FOUND error). Distinct from
-  // an access-revoked read, which still surfaces as an AUTHZ_FORBIDDEN `error`.
+  // an access-revoked read, which still surfaces as a FORBIDDEN `error`.
   // Gated on !loading/!listIdChanged so a transition's stale null can't flag a
   // freshly selected list as missing before its own fetch resolves.
   const notFound =
