@@ -16193,7 +16193,7 @@ export enum TopLevelErrorCode {
   /** Default code of the AuthenticationError base class, so it covers every bare throw across the resolver tree. */
   AuthTokenMissing = 'AUTH_TOKEN_MISSING',
   BadRequest = 'BAD_REQUEST',
-  /** The client build is below the configured minimum for its platform. Carries minimumVersion. Retrying cannot fix it. */
+  /** The client build is below the configured minimum for its client name (not its platform — one name covers iOS and Android). Carries minimumVersion. Retrying cannot fix it. */
   ClientUpgradeRequired = 'CLIENT_UPGRADE_REQUIRED',
   DbConstraintViolation = 'DB_CONSTRAINT_VIOLATION',
   EmailAlreadyExists = 'EMAIL_ALREADY_EXISTS',

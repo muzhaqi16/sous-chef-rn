@@ -12665,7 +12665,7 @@ enum TopLevelErrorCode {
   AUTH_TOKEN_MISSING
   BAD_REQUEST
   """
-  The client build is below the configured minimum for its platform. Carries minimumVersion. Retrying cannot fix it.
+  The client build is below the configured minimum for its client name (not its platform — one name covers iOS and Android). Carries minimumVersion. Retrying cannot fix it.
   """
   CLIENT_UPGRADE_REQUIRED
   DB_CONSTRAINT_VIOLATION
