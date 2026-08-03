@@ -215,6 +215,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-access-token',
             refreshToken: 'new-refresh-token',
           },
@@ -250,6 +251,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-token',
             refreshToken: 'new-refresh',
           },
@@ -309,7 +311,13 @@ describe('refreshToken', () => {
         setNeedsTokenRefresh: jest.fn(),
       });
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
-        data: { refresh: { accessToken: null, refreshToken: null } },
+        data: {
+          refresh: {
+            __typename: 'RefreshTokenPayload',
+            accessToken: null,
+            refreshToken: null,
+          },
+        },
       });
       const mockForward = createMockForward();
 
@@ -333,6 +341,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-access-token',
             refreshToken: 'new-refresh-token',
           },
@@ -362,6 +371,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-access-token',
             refreshToken: 'new-refresh-token',
           },
@@ -433,6 +443,108 @@ describe('refreshToken', () => {
       });
     });
 
+    it('triggers logout when refresh resolves an AuthenticationError union member', done => {
+      // `refresh` returns a RefreshResult union, so a rejected refresh token
+      // arrives 200 as DATA — errorPolicy can't reject it. It must still end
+      // the session rather than fall through to the deferred-retry path.
+      const mockTokenRefreshFailed = jest.fn();
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'revoked-refresh-token',
+        tokenRefreshFailed: mockTokenRefreshFailed,
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockResolvedValue({
+        data: {
+          refresh: {
+            __typename: 'AuthenticationError',
+            code: 'AUTH_REFRESH_TOKEN_INVALID',
+            message: 'Refresh token has been revoked',
+          },
+        },
+      });
+      (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+      const mockForward = createMockForward();
+
+      const observable = attemptTokenRefresh(mockOperation, mockForward);
+      observable.subscribe({
+        error: () => {
+          expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
+          done();
+        },
+      });
+    });
+
+    it('defers instead of logging out when the refusal is a temporary AUTH_ACCOUNT_LOCKED', done => {
+      // The API documents the lockout as self-clearing, so the session must
+      // survive it — signing the user out would be unrecoverable for a window
+      // that expires on its own.
+      const mockTokenRefreshFailed = jest.fn();
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'mock-refresh-token',
+        tokenRefreshFailed: mockTokenRefreshFailed,
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockResolvedValue({
+        data: {
+          refresh: {
+            __typename: 'AuthenticationError',
+            code: 'AUTH_ACCOUNT_LOCKED',
+            message: 'Too many attempts',
+          },
+        },
+      });
+      (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+      const mockForward = createMockForward();
+
+      const observable = attemptTokenRefresh(mockOperation, mockForward);
+      observable.subscribe({
+        error: () => {
+          expect(mockTokenRefreshFailed).toHaveBeenCalledWith('unknown');
+          expect(mockTokenRefreshFailed).not.toHaveBeenCalledWith(
+            'auth_rejected',
+          );
+          done();
+        },
+      });
+    });
+
+    it('classifies a union refusal by code even when its message reads as a network failure', done => {
+      // The message is server-authored free text. If it reached the network
+      // heuristics, wording like "unreachable" would spin the refresh in a
+      // retry loop against a token the server has permanently rejected.
+      const mockTokenRefreshFailed = jest.fn();
+      (mockedUseStore.getState as jest.Mock).mockReturnValue({
+        refreshToken: 'revoked-refresh-token',
+        tokenRefreshFailed: mockTokenRefreshFailed,
+        setTokens: jest.fn(),
+        setNeedsTokenRefresh: jest.fn(),
+      });
+      (mockedClient.mutate as jest.Mock).mockResolvedValue({
+        data: {
+          refresh: {
+            __typename: 'AuthenticationError',
+            code: 'AUTH_REFRESH_TOKEN_INVALID',
+            message: 'Session store unreachable — token could not be verified',
+          },
+        },
+      });
+      // isNetworkError is the real trap: let it match, and assert the
+      // code-based branch still wins because it runs first.
+      (mockedIsNetworkError as jest.Mock).mockReturnValue(true);
+      const mockForward = createMockForward();
+
+      const observable = attemptTokenRefresh(mockOperation, mockForward);
+      observable.subscribe({
+        error: () => {
+          expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
+          expect(mockedClient.mutate).toHaveBeenCalledTimes(1);
+          done();
+        },
+      });
+    });
+
     it('passes errorPolicy: "none" to client.mutate so errors reject and can be classified (not swallowed by the global "all")', done => {
       (mockedUseStore.getState as jest.Mock).mockReturnValue({
         refreshToken: 'mock-refresh-token',
@@ -443,6 +555,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-access-token',
             refreshToken: 'new-refresh-token',
           },
@@ -502,6 +615,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'proactive-new-token',
             refreshToken: 'proactive-new-refresh',
           },
@@ -554,6 +668,7 @@ describe('refreshToken', () => {
       (mockedClient.mutate as jest.Mock).mockResolvedValue({
         data: {
           refresh: {
+            __typename: 'RefreshTokenPayload',
             accessToken: 'new-token',
             refreshToken: 'new-refresh',
           },

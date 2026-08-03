@@ -644,11 +644,7 @@ export function reconcileShoppingCreate(
   optimisticId: string,
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
-  const outcome = classifyCreateResult(
-    result,
-    'addItemsToShoppingList',
-    'AddItemsToShoppingListPayload',
-  );
+  const outcome = classifyCreateResult(result);
   // Each add fires the batch mutation with a single item. The batch can resolve
   // successfully while that one item fails (`results[0].success === false`, e.g.
   // a per-item validation error reported inside the batch rather than as a
@@ -1070,11 +1066,7 @@ export function reconcileShoppingListCreate(
   optimisticId: string,
   result: { data?: unknown; error?: unknown } | null | undefined,
 ): 'kept' | 'reverted' {
-  const outcome = classifyCreateResult(
-    result,
-    'createShoppingList',
-    'CreateShoppingListPayload',
-  );
+  const outcome = classifyCreateResult(result);
   if (outcome === 'rejected') {
     executeCacheUpdate(
       () => revertOptimisticShoppingList(cache, optimisticId),

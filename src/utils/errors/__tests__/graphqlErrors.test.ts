@@ -83,8 +83,16 @@ describe('isResourceAccessLostError', () => {
       errors: [{ message: 'denied', extensions: { code } }],
     } satisfies FormattedExecutionResult);
 
-  it.each(['AUTHZ_FORBIDDEN', 'FORBIDDEN'])('is true for %s', code => {
-    expect(isResourceAccessLostError(errorWithCode(code))).toBe(true);
+  it('is true for FORBIDDEN', () => {
+    expect(isResourceAccessLostError(errorWithCode('FORBIDDEN'))).toBe(true);
+  });
+
+  // Retired server-side and emitted by nothing — matching it would keep a dead
+  // code alive in the access-revoked path.
+  it('is false for the retired AUTHZ_FORBIDDEN', () => {
+    expect(isResourceAccessLostError(errorWithCode('AUTHZ_FORBIDDEN'))).toBe(
+      false,
+    );
   });
 
   it('is false for unrelated GraphQL error codes', () => {

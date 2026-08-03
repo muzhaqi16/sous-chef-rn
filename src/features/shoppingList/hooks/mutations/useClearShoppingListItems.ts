@@ -97,14 +97,7 @@ async function executeClearItems(
   // replays later. A rejection means the server refused it: the evicted items
   // still exist server-side, so alert (the eviction would otherwise snap back
   // silently) and refetch to restore them.
-  if (
-    alertIfRejected(
-      result,
-      'removeItemsFromShoppingList',
-      'RemoveItemsFromShoppingListPayload',
-      t('shoppingListScreens.failedToClear'),
-    )
-  ) {
+  if (alertIfRejected(result, t('shoppingListScreens.failedToClear'))) {
     await refetch();
   }
 }

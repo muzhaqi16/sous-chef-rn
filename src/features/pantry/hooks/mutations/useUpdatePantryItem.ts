@@ -187,11 +187,7 @@ export function useUpdatePantryItem({
         // change replays later. A rejection (ValidationError / version
         // conflict / surfaced error) restores the pre-edit snapshot; the
         // user-facing alert comes from the mutation's onError.
-        const outcome = classifyCreateResult(
-          result,
-          'updatePantryItem',
-          'UpdatePantryItemPayload',
-        );
+        const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
           executeCacheUpdate(
             () => writeItem(currentItem),

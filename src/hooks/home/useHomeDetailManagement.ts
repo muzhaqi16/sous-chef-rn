@@ -299,12 +299,7 @@ export function useHomeDetailManagement(homeId: string) {
       error => handleMutationError(error, { operation: 'Update Member Role' }),
     );
     if (!result) return;
-    alertIfRejected(
-      result,
-      'updateMembership',
-      'UpdateMembershipPayload',
-      t('errors.updateMemberRoleFailed'),
-    );
+    alertIfRejected(result, t('errors.updateMemberRoleFailed'));
   };
 
   // Toggle a single membership permission override. updateMembership returns the
@@ -324,12 +319,7 @@ export function useHomeDetailManagement(homeId: string) {
         handleMutationError(error, { operation: 'Update Member Permission' }),
     );
     if (!result) return false;
-    return !alertIfRejected(
-      result,
-      'updateMembership',
-      'UpdateMembershipPayload',
-      t('errors.updateMemberRoleFailed'),
-    );
+    return !alertIfRejected(result, t('errors.updateMemberRoleFailed'));
   };
 
   const removeMember = (membershipId: string, memberName: string) => {
@@ -374,14 +364,7 @@ export function useHomeDetailManagement(homeId: string) {
                 resolve(false);
                 return;
               }
-              if (
-                alertIfRejected(
-                  result,
-                  'leaveHome',
-                  'LeaveHomePayload',
-                  t('errors.somethingWentWrong'),
-                )
-              ) {
+              if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
                 resolve(false);
                 return;
               }
@@ -404,12 +387,7 @@ export function useHomeDetailManagement(homeId: string) {
         () => enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
         error => handleMutationError(error, { operation: 'Enable Join Link' }),
       );
-      alertIfRejected(
-        result,
-        'enableHomeJoinLink',
-        'UpdateHomePayload',
-        t('errors.updateHomeFailed'),
-      );
+      alertIfRejected(result, t('errors.updateHomeFailed'));
       return;
     }
     // No disableHomeJoinLink mutation — clear the flag via updateHome. Same
@@ -418,12 +396,7 @@ export function useHomeDetailManagement(homeId: string) {
     const result = await updateHomeMutation({
       variables: { input: { id: homeId, allowJoinCode: false } },
     });
-    alertIfRejected(
-      result,
-      'updateHome',
-      'UpdateHomePayload',
-      t('errors.updateHomeFailed'),
-    );
+    alertIfRejected(result, t('errors.updateHomeFailed'));
   };
 
   // Hand the home off to another member. The server flips the OWNER role; the
@@ -438,12 +411,7 @@ export function useHomeDetailManagement(homeId: string) {
         handleMutationError(error, { operation: 'Transfer Home Ownership' }),
     );
     if (!result) return false;
-    return !alertIfRejected(
-      result,
-      'transferHomeOwnership',
-      'TransferHomeOwnershipPayload',
-      t('errors.updateHomeFailed'),
-    );
+    return !alertIfRejected(result, t('errors.updateHomeFailed'));
   };
 
   // Rotate the join code to invalidate a leaked link.
@@ -453,12 +421,7 @@ export function useHomeDetailManagement(homeId: string) {
       error => handleMutationError(error, { operation: 'Rotate Join Code' }),
     );
     if (!result) return false;
-    return !alertIfRejected(
-      result,
-      'updateHomeJoinCode',
-      'UpdateHomePayload',
-      t('errors.updateHomeFailed'),
-    );
+    return !alertIfRejected(result, t('errors.updateHomeFailed'));
   };
 
   return {

@@ -4,6 +4,9 @@ import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import {
@@ -34,33 +37,64 @@ interface RefreshErrorLike {
   }>;
 }
 
+// `refresh` returns a RefreshResult union, so a server refusal resolves 200
+// with an error member as DATA — no GraphQL error, nothing for errorPolicy to
+// reject. This carries that member's code out of the success path so the
+// catch below can classify it like any other rejection.
+class RefreshRejectedError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'RefreshRejectedError';
+    this.code = code;
+  }
+}
+
+// One refusal, two carriers: the same server response reaches this module as an
+// AC4 `CombinedGraphQLErrors` and as the legacy AC3 `graphQLErrors` array, so
+// both run through this predicate rather than each keeping its own copy of the
+// code list (they had drifted to matching only AUTH_TOKEN_EXPIRED, missing
+// AUTH_TOKEN_MISSING and AUTH_REFRESH_TOKEN_INVALID).
+//
+// `UNAUTHENTICATED` is tested on its own because it reaches clients only on the
+// top-level channel, so it lives in `TopLevelErrorCode` rather than the
+// `ErrorCode` enum that isSessionEndingAuthCode is built from.
+//
+// Classified by code only. This used to fall back to matching 'expired' in the
+// message for a server that described an expiry without attaching a code; every
+// auth refusal now carries one, and the fallback caught unrelated refusals whose
+// prose happened to mention expiry — an expired invite or share link reaching
+// this path would have been read as a dead session.
+const isSessionEndingGraphQLError = (e: {
+  extensions?: { code?: unknown };
+  message?: string;
+}): boolean => {
+  const code = String(e.extensions?.code ?? '');
+  return (
+    isSessionEndingAuthCode(code) || code === TopLevelErrorCode.Unauthenticated
+  );
+};
+
 // A genuine, server-confirmed refresh-token rejection (vs a network failure,
 // which is handled separately and must preserve the cache). Checked only AFTER
 // isNetworkError, so transient/offline failures never reach here. Recognizes
 // AC4 error types (CombinedGraphQLErrors / ServerError) and falls back to the
 // legacy AC3-style shape.
 const isAuthRejectionError = (error: unknown): boolean => {
+  if (error instanceof RefreshRejectedError) {
+    return isSessionEndingAuthCode(error.code);
+  }
   if (ServerError.is(error)) {
     return error.statusCode === 401;
   }
   if (CombinedGraphQLErrors.is(error)) {
-    return error.errors.some(
-      e =>
-        e.extensions?.code === 'UNAUTHENTICATED' ||
-        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
-        (e.message ?? '').toLowerCase().includes('expired'),
-    );
+    return error.errors.some(isSessionEndingGraphQLError);
   }
   const legacy = error as RefreshErrorLike;
   return (
     legacy.networkError?.statusCode === 401 ||
-    (legacy.graphQLErrors?.some(
-      e =>
-        e.extensions?.code === 'UNAUTHENTICATED' ||
-        e.extensions?.code === 'AUTH_TOKEN_EXPIRED' ||
-        (e.message ?? '').toLowerCase().includes('expired'),
-    ) ??
-      false)
+    (legacy.graphQLErrors?.some(isSessionEndingGraphQLError) ?? false)
   );
 };
 
@@ -173,12 +207,19 @@ const performTokenRefresh = async (): Promise<string | null> => {
       context: { skipErrorLink: true },
     });
 
-    const data = response.data?.refresh;
-    if (!data?.accessToken || !data?.refreshToken) {
+    const payload = response.data?.refresh;
+    if (payload && !isSuccessPayload(payload, 'RefreshTokenPayload')) {
+      // An error member of RefreshResult. Rethrow with its code so the catch
+      // below can tell a dead session (log out) from a transient refusal
+      // (defer) — a bare "Missing tokens" throw would collapse both into the
+      // unknown-error path and strand the user on an unusable access token.
+      throw new RefreshRejectedError(payload.code, payload.message);
+    }
+    if (!payload?.accessToken || !payload?.refreshToken) {
       throw new Error('Invalid refresh response: Missing tokens');
     }
 
-    const { accessToken: newToken, refreshToken: newRefreshToken } = data;
+    const { accessToken: newToken, refreshToken: newRefreshToken } = payload;
 
     // Update tokens in store
     state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
@@ -206,6 +247,28 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     // Legacy AC3-style error shape the reactive refresh logic inspects.
     const refreshError = error as RefreshErrorLike;
+
+    // A union-member refusal is classified by its code before any message
+    // heuristic runs. The server answered, so this is by construction not a
+    // network failure — and its message is server-authored free text that
+    // must never reach isNetworkError's substring patterns, where wording
+    // like "unreachable" would spin the refresh in a retry loop against a
+    // token the server has already rejected for good.
+    if (error instanceof RefreshRejectedError) {
+      if (isAuthRejectionError(error)) {
+        logger.info(
+          `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
+        );
+        state.tokenRefreshFailed('auth_rejected');
+        throw new Error('Refresh token expired');
+      }
+
+      logger.error(
+        `Refresh rejected by the server (${error.code}), deferring token refresh`,
+      );
+      state.tokenRefreshFailed('unknown');
+      throw error;
+    }
 
     // IMPORTANT: Check network errors FIRST before auth errors
     // This prevents offline scenarios from incorrectly clearing the cache

@@ -16,7 +16,7 @@ const EMPTY_DENIED: ReadonlySet<string> = new Set();
  *   hasn't appeared in query results yet, the auto-select is suppressed
  * - Stale detection: when a list is removed (subscription/deletion), auto-select fires
  * - Denied lists: ids the caller knows the user can no longer access (a read
- *   returned AUTHZ_FORBIDDEN, or null data for a deleted/unshared list) are
+ *   returned FORBIDDEN, or null data for a deleted/unshared list) are
  *   excluded from selection so auto-select never re-picks a dead list while its
  *   cache entry lingers.
  *

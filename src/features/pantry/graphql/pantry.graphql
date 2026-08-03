@@ -1039,39 +1039,53 @@ mutation ConvertExpiredBatchesToWaste($input: ConvertExpiredBatchesToWasteInput!
 
 mutation SyncPantryItem($input: SyncPantryItemInput!) {
   syncPantryItem(input: $input) {
-    clientId
-    serverId
-    operation
-    converged
-    item {
-      id
-      ...queueManager_syncPantryItem
-    }
-    conflict {
-      clientVersion
-      serverVersion
-      message
-      serverItem {
+    __typename
+    ... on SyncPantryItemPayload {
+      clientId
+      serverId
+      operation
+      converged
+      item {
         id
-        version
+        ...queueManager_syncPantryItem
       }
+      conflict {
+        clientVersion
+        serverVersion
+        message
+        serverItem {
+          id
+          version
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
   syncDeletePantryItem(input: $input) {
-    clientId
-    serverId
-    operation
-    converged
-    item {
-      id
-      itemName
+    __typename
+    ... on SyncPantryItemPayload {
+      clientId
+      serverId
+      operation
+      converged
+      item {
+        id
+        itemName
+      }
+      conflict {
+        clientVersion
+        serverVersion
+        message
+      }
     }
-    conflict {
-      clientVersion
-      serverVersion
+    ... on Error {
+      code
       message
     }
   }

@@ -200,11 +200,7 @@ export function useCreatePantryItem({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'createPantryItem',
-      'CreatePantryItemPayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'created') {
       onSuccess?.();
@@ -265,13 +261,7 @@ export function useCreatePantryItem({
             // A resolved non-success union member (ValidationError / ConflictError
             // / …) carries no `error`, so classifyCreateResult catches it where a
             // bare falsy check would treat the refusal as success.
-            if (
-              classifyCreateResult(
-                restockResult,
-                'restockPantryItem',
-                'RestockPantryItemPayload',
-              ) === 'rejected'
-            ) {
+            if (classifyCreateResult(restockResult) === 'rejected') {
               alertRejectedMutation(
                 restockResult,
                 t('errors.restockFailedRetry'),

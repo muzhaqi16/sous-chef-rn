@@ -362,13 +362,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
           }
           // A resolved non-success union member carries no `error`, so classify
           // it — a bare falsy check would treat the refusal as success.
-          if (
-            classifyCreateResult(
-              restockResult,
-              'restockPantryItem',
-              'RestockPantryItemPayload',
-            ) === 'rejected'
-          ) {
+          if (classifyCreateResult(restockResult) === 'rejected') {
             alertRejectedMutation(
               restockResult,
               t('errors.restockFailedRetry'),
@@ -410,11 +404,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       return;
     }
 
-    const outcome = classifyCreateResult(
-      result,
-      'createPantryItem',
-      'CreatePantryItemPayload',
-    );
+    const outcome = classifyCreateResult(result);
     if (outcome === 'rejected') {
       // The server refused the create — discard the item we showed.
       safeEvict(client.cache, 'PantryItem', id);

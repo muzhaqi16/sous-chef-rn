@@ -13,7 +13,7 @@ import type {
   SyncDeleteShoppingListItemInput,
   SyncMoveShoppingListItemInput,
   SyncPantryItemInput,
-  SyncShoppingListItemInput,
+  SyncShoppingListItemFieldsInput,
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
 import { logger } from '#/utils/environment';
@@ -44,7 +44,7 @@ export interface SyncConversion {
 /**
  * Cache readers a builder uses to backfill required fields the queued input
  * may omit (`UpdatePantryItemInput` carries no `pantryId`; shopping update/qty/
- * toggle inputs carry only the row id, while `SyncShoppingListItemInput`
+ * toggle inputs carry only the row id, while `SyncShoppingListItemFieldsInput`
  * requires the @oneOf catalog-item ref). Injected so the builders stay pure and
  * the cache access lives in the queue manager.
  */
@@ -53,7 +53,7 @@ export interface SyncReaders {
   readShoppingListId: (clientId: string | undefined) => string | undefined;
   readItemRef: (
     clientId: string | undefined,
-  ) => SyncShoppingListItemInput['item'] | undefined;
+  ) => SyncShoppingListItemFieldsInput['item'] | undefined;
 }
 
 /**
@@ -216,8 +216,8 @@ const buildDeletePantryItemSync: SyncBuilder = mutation => {
 };
 
 /**
- * ShoppingListItem create/update sync. `SyncShoppingListItemFullInput =
- * { clientId, item: SyncShoppingListItemInput }`. `shoppingListId` is required on
+ * ShoppingListItem create/update sync. `SyncShoppingListItemInput =
+ * { clientId, item: SyncShoppingListItemFieldsInput }`. `shoppingListId` is required on
  * the item — present on a create input, else read from cache. The specialized
  * single-item creates (barcode, add-from-filtered-pantry, add-from-pantry-item)
  * produce a ShoppingListItem from the same fields, so they sync through here too.
@@ -268,7 +268,7 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
   // used: on UpdateShoppingListItemQuantity it is the shopping-list ROW id, not
   // a catalog item id.
   const itemRef =
-    (input.item as SyncShoppingListItemInput['item'] | undefined) ??
+    (input.item as SyncShoppingListItemFieldsInput['item'] | undefined) ??
     (input.itemName != null ? { itemName: input.itemName } : undefined) ??
     readers.readItemRef(clientId);
   if (!itemRef) {
@@ -277,35 +277,37 @@ const buildShoppingItemSync: SyncBuilder = (mutation, readers) => {
     );
   }
 
-  const item: SyncShoppingListItemInput = {
+  const item: SyncShoppingListItemFieldsInput = {
     shoppingListId,
     item: itemRef,
     ...(input.category != null && { category: input.category }),
     ...(input.notes != null && { notes: input.notes }),
-    ...(unit && { unit: unit as SyncShoppingListItemInput['unit'] }),
+    ...(unit && { unit: unit as SyncShoppingListItemFieldsInput['unit'] }),
     // `quantity` is the FlexibleQuantity scalar (string | number, e.g. "1/3" or
     // 2) — pass it through directly; no unitId needed.
     ...(input.quantity != null && { quantity: input.quantity }),
     ...(purchaseTracking != null && {
       purchaseTracking:
-        purchaseTracking as SyncShoppingListItemInput['purchaseTracking'],
+        purchaseTracking as SyncShoppingListItemFieldsInput['purchaseTracking'],
     }),
     // priority / sortOrder ride on UpdateShoppingListItem — preserve on replay.
     ...(input.priority != null && { priority: input.priority }),
     ...(input.sortOrder != null && { sortOrder: input.sortOrder }),
-    // Carried by the barcode add (and accepted by SyncShoppingListItemInput) so
+    // Carried by the barcode add (and accepted by SyncShoppingListItemFieldsInput) so
     // replaying through sync doesn't drop them vs. the original mutation.
     ...(input.brand != null && {
-      brand: input.brand as SyncShoppingListItemInput['brand'],
+      brand: input.brand as SyncShoppingListItemFieldsInput['brand'],
     }),
     ...(input.netWeight != null && {
-      netWeight: input.netWeight as SyncShoppingListItemInput['netWeight'],
+      netWeight:
+        input.netWeight as SyncShoppingListItemFieldsInput['netWeight'],
     }),
     ...(input.storePrefs != null && {
-      storePrefs: input.storePrefs as SyncShoppingListItemInput['storePrefs'],
+      storePrefs:
+        input.storePrefs as SyncShoppingListItemFieldsInput['storePrefs'],
     }),
     ...(input.pricing != null && {
-      pricing: input.pricing as SyncShoppingListItemInput['pricing'],
+      pricing: input.pricing as SyncShoppingListItemFieldsInput['pricing'],
     }),
     ...(input.version != null && { version: input.version }),
   };

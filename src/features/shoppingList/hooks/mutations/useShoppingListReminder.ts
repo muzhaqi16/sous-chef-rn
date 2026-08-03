@@ -70,14 +70,7 @@ export function useShoppingListReminder() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'updateShoppingListReminder',
-        'UpdateShoppingListReminderPayload',
-        t('shoppingListScreens.failedToSetReminder'),
-      )
-    ) {
+    if (alertIfRejected(result, t('shoppingListScreens.failedToSetReminder'))) {
       revert();
       return false;
     }
@@ -105,12 +98,7 @@ export function useShoppingListReminder() {
       return false;
     }
     if (
-      alertIfRejected(
-        result,
-        'deleteShoppingListReminder',
-        'DeleteShoppingListReminderPayload',
-        t('shoppingListScreens.failedToClearReminder'),
-      )
+      alertIfRejected(result, t('shoppingListScreens.failedToClearReminder'))
     ) {
       revert();
       return false;

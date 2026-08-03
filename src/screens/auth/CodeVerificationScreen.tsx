@@ -22,11 +22,13 @@ import { errorService } from '#/services/errorService';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
+import { useResendBackoff } from '#hooks/auth/useResendBackoff';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
@@ -84,14 +86,6 @@ async function performAutoVerify(
   }
 }
 
-// Exponential backoff delays in seconds: immediate, then 30s, 1m, 3m, 5m
-const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
-
-const getBackoffDelay = (attemptCount: number): number => {
-  const index = Math.min(attemptCount, RESEND_BACKOFF_DELAYS.length - 1);
-  return RESEND_BACKOFF_DELAYS[index];
-};
-
 type CodeVerificationValues = {
   code: string;
 };
@@ -112,9 +106,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   const autoVerifyProcessedRef = useRef(false);
 
   // Backoff state for resend rate limiting
-  const [resendAttempts, setResendAttempts] = useState(0);
-  const [countdown, setCountdown] = useState(0);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const { countdown, canResend, registerAttempt } = useResendBackoff();
 
   const {
     control,
@@ -124,15 +116,6 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     resolver: yupResolver(getEmailVerificationValidationSchema()),
     defaultValues: { code: '' },
   });
-
-  // Cleanup countdown interval on unmount
-  useEffect(() => {
-    return () => {
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-      }
-    };
-  }, []);
 
   // Listen for deep link URLs (cold start + warm start)
   useEffect(() => {
@@ -176,28 +159,6 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
       logger.debug('User email verified, navigation will update automatically');
     }
   }, [user?.emailVerified]);
-
-  // Start countdown timer for backoff
-  const startCountdown = (seconds: number) => {
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-    }
-
-    setCountdown(seconds);
-
-    countdownRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-          }
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
 
   const onVerifyCode = (data: CodeVerificationValues) => {
     executeMutation(
@@ -280,7 +241,13 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
 
   const onResend = () => {
     // Prevent resend during countdown
-    if (countdown > 0 || !user?.email) return;
+    if (!canResend || !user?.email) return;
+
+    // Counted BEFORE the request, not after it: the cooldown opens
+    // synchronously, so a second tap lands on a disabled link instead of firing
+    // a duplicate send, and a request that throws can't leave the window open
+    // for a tight retry loop.
+    registerAttempt();
 
     executeMutation(
       async () => {
@@ -288,20 +255,13 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
           variables: { input: { email: user.email } },
         });
 
-        // Increment attempts and start countdown for next request
-        const newAttempts = resendAttempts + 1;
-        setResendAttempts(newAttempts);
-        const nextDelay = getBackoffDelay(newAttempts);
-        if (nextDelay > 0) {
-          startCountdown(nextDelay);
-        }
-
         // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
         if (response.error && 'errors' in response.error) {
           const graphQLErrors = response.error
             .errors as ReadonlyArray<GraphQLError>;
           const alreadyVerified = graphQLErrors.some(
-            err => err.extensions?.code === 'EMAIL_ALREADY_VERIFIED',
+            err =>
+              err.extensions?.code === TopLevelErrorCode.EmailAlreadyVerified,
           );
 
           if (alreadyVerified) {
@@ -389,7 +349,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         footerText={t('auth.didntGetEmail')}
         footerLinkText={t('auth.resendCode')}
         onFooterLinkPress={onResend}
-        footerLinkDisabled={countdown > 0}
+        footerLinkDisabled={!canResend}
         footerLinkCountdown={countdown}
       />
     </AuthWrapper>

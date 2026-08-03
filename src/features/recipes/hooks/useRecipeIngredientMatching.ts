@@ -215,13 +215,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     // errorPolicy:'all' RESOLVES rather than throws — bail before the success
     // toast / sheet-close. 'created' and 'queued' both succeed (a queued
     // consumption replays later).
-    if (
-      classifyCreateResult(
-        result,
-        'confirmRecipeConsumption',
-        'ConfirmRecipeConsumptionPayload',
-      ) === 'rejected'
-    ) {
+    if (classifyCreateResult(result) === 'rejected') {
       toastService.error(t('recipes.markCookedFailed'));
       return;
     }

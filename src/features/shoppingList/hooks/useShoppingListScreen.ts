@@ -31,7 +31,7 @@ export function useShoppingListScreen() {
   // 1. Query: Fetch all user's shopping lists (independent of home)
   const { lists, loading: listsLoading } = useShoppingListsQuery();
 
-  // Lists whose read came back AUTHZ_FORBIDDEN, or null (deleted/unshared), this
+  // Lists whose read came back FORBIDDEN, or null (deleted/unshared), this
   // session. Excluded from selection so auto-select can't re-pick a list the user
   // lost access to while its (cache-only) entry lingers before the lite query drops it.
   const [deniedListIds, setDeniedListIds] = useState<ReadonlySet<string>>(
@@ -82,7 +82,7 @@ export function useShoppingListScreen() {
 
   // 3b. Access-loss detection. When the selected list's read no longer reaches a
   // visible list, record its id. Two causes: (a) access revoked — a collaborator
-  // on a list that became home-linked, surfaced as an AUTHZ_FORBIDDEN `error`; or
+  // on a list that became home-linked, surfaced as a FORBIDDEN `error`; or
   // (b) deleted/unshared — the by-id read resolves to null data (`listNotFound`),
   // not an error. useShoppingListSelection then excludes the id and auto-selects
   // the next valid list, instead of the cache-and-network + previousData fallback

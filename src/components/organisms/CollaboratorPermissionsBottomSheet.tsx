@@ -167,14 +167,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
         // A resolved error member doesn't throw under errorPolicy:'all' — keep
         // the sheet open and surface it instead of reporting success.
-        if (
-          alertIfRejected(
-            result,
-            'updateCollaboratorRole',
-            'UpdateCollaboratorRolePayload',
-            t('errors.somethingWentWrong'),
-          )
-        ) {
+        if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
           return;
         }
 
@@ -210,14 +203,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
             input: { shoppingListId, collaboratorId, permissions: next },
           },
         });
-        if (
-          alertIfRejected(
-            result,
-            'updateCollaboratorPermissions',
-            'UpdateCollaboratorPermissionsPayload',
-            t('errors.somethingWentWrong'),
-          )
-        ) {
+        if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
           setPermissions(previous);
         }
       },

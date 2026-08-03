@@ -278,11 +278,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             return;
           }
 
-          const outcome = classifyCreateResult(
-            result,
-            'createPantryItem',
-            'CreatePantryItemPayload',
-          );
+          const outcome = classifyCreateResult(result);
           if (outcome === 'rejected') {
             // The server refused the create — discard the item we wrote.
             safeEvict(client.cache, 'PantryItem', id);

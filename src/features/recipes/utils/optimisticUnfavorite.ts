@@ -7,14 +7,16 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
-interface OptimisticUnfavoriteArgs<
-  T extends { data?: unknown; error?: unknown },
-> {
+// The mutate result this helper classifies. Not generic: nothing here depends
+// on the mutation's shape — classifyCreateResult reads the outcome structurally.
+type UnfavoriteResult = { data?: unknown; error?: unknown };
+
+interface OptimisticUnfavoriteArgs {
   client: ApolloClient;
   /** Recipe id whose saved edge is dropped and whose `savedDetails` is cleared. */
   recipeId: string;
   /** Fires the RemoveRecipeFromFavorites mutation (local-first, idempotent). */
-  mutate: () => Promise<T>;
+  mutate: () => Promise<UnfavoriteResult>;
   /** `errorService` operation label for the throw path. */
   operation: string;
   /** Reports the failure to the user (alert or toast). Fires once, on rejection or throw. */
@@ -32,15 +34,13 @@ interface OptimisticUnfavoriteArgs<
  *
  * @returns `true` when the removal is kept (`'created'`/`'queued'`), `false` when reverted.
  */
-export async function performOptimisticUnfavorite<
-  T extends { data?: unknown; error?: unknown },
->({
+export async function performOptimisticUnfavorite({
   client,
   recipeId,
   mutate,
   operation,
   reportFailure,
-}: OptimisticUnfavoriteArgs<T>): Promise<boolean> {
+}: OptimisticUnfavoriteArgs): Promise<boolean> {
   const recipeCacheId = client.cache.identify({
     __typename: 'Recipe',
     id: recipeId,
@@ -109,13 +109,7 @@ export async function performOptimisticUnfavorite<
 
   // A resolved rejection (error union member / transport error) reverts;
   // 'queued' (offline / API down) keeps the optimistic removal — it replays.
-  if (
-    classifyCreateResult(
-      result,
-      'removeRecipeFromFavorites',
-      'RemoveRecipeFromFavoritesPayload',
-    ) === 'rejected'
-  ) {
+  if (classifyCreateResult(result) === 'rejected') {
     revert();
     reportFailure();
     return false;

@@ -300,6 +300,38 @@ describe('ApolloCachePersistence', () => {
       expect(storage.getString(CACHE_KEY)).toBeUndefined();
     });
 
+    // The session-end path (store `endSession`) relies on this: once a server
+    // verdict ends a session, the previous account's normalized entities must
+    // not be restorable, or the next sign-in on the device paints them until
+    // each cache-and-network query overwrites them.
+    it('leaves nothing for a later restore to load', () => {
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(
+        CACHE_KEY,
+        JSON.stringify({
+          'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'Milk' },
+        }),
+      );
+      storage.set(
+        CRITICAL_KEY,
+        JSON.stringify({ ROOT_QUERY: { __typename: 'Query' } }),
+      );
+      storage.set(
+        DEFERRED_KEY,
+        JSON.stringify({
+          'ShoppingListItem:9': { __typename: 'ShoppingListItem', id: '9' },
+        }),
+      );
+      // Sanity: the entities are restorable before the clear.
+      expect(apolloCachePersistence.load()).not.toBeNull();
+
+      apolloCachePersistence.clear();
+
+      expect(apolloCachePersistence.load()).toBeNull();
+      expect(apolloCachePersistence.loadCritical()).toBeNull();
+      expect(apolloCachePersistence.loadDeferred()).toBeNull();
+    });
+
     it('cancels a pending deferred restore so stale data is not written back', () => {
       const deferredData = { 'PantryItem:1': { id: '1' } };
       storage.set(VERSION_KEY, CURRENT_VERSION);

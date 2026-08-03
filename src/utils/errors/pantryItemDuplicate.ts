@@ -1,11 +1,12 @@
 import { alertService } from '#/services/alertService';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 export interface PantryItemDuplicateInfo {
   existingPantryItemId: string;
   existingPantryItemIds: string[];
 }
 
-const ERROR_CODE = 'PANTRY_ITEM_ALREADY_EXISTS';
+const ERROR_CODE = TopLevelErrorCode.PantryItemAlreadyExists;
 
 interface GraphQLErrorLike {
   extensions?: {

@@ -31,14 +31,7 @@ export function useForkRecipe() {
       'Fork Recipe error:',
     );
     if (!result) return null;
-    if (
-      alertIfRejected(
-        result,
-        'forkRecipe',
-        'ForkRecipePayload',
-        t('recipes.forkFailed'),
-      )
-    ) {
+    if (alertIfRejected(result, t('recipes.forkFailed'))) {
       return null;
     }
     const payload = result.data?.forkRecipe;

@@ -38,12 +38,13 @@ import { t } from '#/i18n/t';
 /**
  * Surface a resolved errors-as-data member from a mutation `data` payload.
  *
- * These CRUD helpers are type-erased (they don't know the success typename), so
- * unlike call sites they can't use `classifyCreateResult`. Detect the `*Error`
- * union member via the shared `findFirstErrorMember` scanner — under
- * `errorPolicy:'all'` it resolves as truthy `data` and would otherwise be
- * treated as success. Returns true (and alerts + reports) when an error was
- * surfaced.
+ * Uses `findFirstErrorMember` rather than `classifyCreateResult` because this
+ * needs the refused member's own `message` to put in front of the user, which
+ * the classifier doesn't return — both apply the same `isErrorTypename` rule, so
+ * they agree on WHICH member is the refusal and differ only in what they hand
+ * back. Under `errorPolicy:'all'` that member resolves as truthy `data` and
+ * would otherwise be treated as success. Returns true (and alerts + reports)
+ * when an error was surfaced.
  */
 function surfaceCrudDataError(data: unknown, operationName: string): boolean {
   const member = findFirstErrorMember(data);

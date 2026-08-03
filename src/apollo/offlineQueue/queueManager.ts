@@ -20,6 +20,7 @@ import {
   classifyReplayResult,
   ReplayRejectedError,
 } from './queueErrorPolicy';
+import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -36,7 +37,7 @@ const QUEUE_ITEM_DATA_FRAGMENT = gql`
 
 /**
  * Reads a ShoppingListItem's catalog reference from cache during queue
- * processing. `SyncShoppingListItemInput.item` is a required @oneOf ref, but
+ * processing. `SyncShoppingListItemFieldsInput.item` is a required @oneOf ref, but
  * toggle/quantity/plain-update inputs carry only the row id — the replay
  * backfills the ref from the cached row. Kept separate from
  * {@link QUEUE_ITEM_DATA_FRAGMENT} and read with `returnPartialData` so a row
@@ -306,14 +307,16 @@ export class QueueManager {
     }
 
     // Dynamic payload extraction — the mutation field name varies per queued
-    // operation, so the value shape is only known structurally here.
-    const payload = Object.values(result.data || {})[0] as
+    // operation, so the value shape is only known structurally here. Shares the
+    // foreground path's reader so both locate the payload by the same rule.
+    const payload = extractMutationPayload(result.data) as
       | {
           __typename?: string;
           code?: string;
           message?: string;
           conflict?: { message?: string };
         }
+      | null
       | undefined;
 
     // Under errorPolicy 'all' a server refusal RESOLVES as an error union

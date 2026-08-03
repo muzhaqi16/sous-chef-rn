@@ -107,12 +107,7 @@ export function useRecurringShoppingList() {
       return false;
     }
     if (
-      alertIfRejected(
-        result,
-        'createRecurringShoppingList',
-        'CreateRecurringShoppingListPayload',
-        t('shoppingListScreens.failedToSetRecurring'),
-      )
+      alertIfRejected(result, t('shoppingListScreens.failedToSetRecurring'))
     ) {
       revert();
       return false;
@@ -141,12 +136,7 @@ export function useRecurringShoppingList() {
       return false;
     }
     if (
-      alertIfRejected(
-        result,
-        'cancelRecurring',
-        'CancelRecurringPayload',
-        t('shoppingListScreens.failedToCancelRecurring'),
-      )
+      alertIfRejected(result, t('shoppingListScreens.failedToCancelRecurring'))
     ) {
       revert();
       return false;
@@ -163,12 +153,7 @@ export function useRecurringShoppingList() {
 
     if (!result) return null;
     if (
-      alertIfRejected(
-        result,
-        'generateNextRecurringList',
-        'GenerateNextRecurringListPayload',
-        t('shoppingListScreens.failedToGenerateNext'),
-      )
+      alertIfRejected(result, t('shoppingListScreens.failedToGenerateNext'))
     ) {
       return null;
     }

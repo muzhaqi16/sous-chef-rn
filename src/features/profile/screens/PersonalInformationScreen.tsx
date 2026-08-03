@@ -103,13 +103,7 @@ export const PersonalInformationScreen: React.FC = () => {
     );
 
     // Rejection restores the snapshot; a queued (null) result keeps the write.
-    if (
-      classifyCreateResult(
-        result || null,
-        'updateProfile',
-        'UpdateProfilePayload',
-      ) === 'rejected'
-    ) {
+    if (classifyCreateResult(result) === 'rejected') {
       revert();
     }
   };

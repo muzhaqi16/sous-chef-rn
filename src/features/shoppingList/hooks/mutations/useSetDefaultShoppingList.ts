@@ -68,14 +68,7 @@ export function useSetDefaultShoppingList() {
       revert();
       return false;
     }
-    if (
-      alertIfRejected(
-        result,
-        'markShoppingListAsDefault',
-        'MarkShoppingListAsDefaultPayload',
-        t('shoppingListScreens.failedToSetDefault'),
-      )
-    ) {
+    if (alertIfRejected(result, t('shoppingListScreens.failedToSetDefault'))) {
       revert();
       return false;
     }

@@ -98,11 +98,7 @@ export function useWastePantryItemBatch({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'wastePantryItemBatch',
-      'WastePantryItemBatchPayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       executeCacheUpdate(

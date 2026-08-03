@@ -124,8 +124,6 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             );
             alertIfRejected(
               result,
-              'removeShoppingListCollaborator',
-              'RemoveShoppingListCollaboratorPayload',
               t('shoppingListScreens.failedToRemoveMember'),
             );
           },

@@ -953,6 +953,23 @@ export type AuthPayload = {
   user: User;
 };
 
+/**
+ * The caller is not authenticated: credentials did not match, a token was
+ * missing, invalid or expired, or the account is locked or suspended.
+ * Disambiguate via `code`.
+ *
+ * This is the union-channel form of a refusal that also exists top-level. An
+ * operation returning a `*Result` union reports the refusal here; one with no
+ * union to return into — the `@auth` directive family, a field or connection
+ * resolver, a REST route — reports it as a top-level error. The `code` is the
+ * same value on both channels for the same condition.
+ */
+export type AuthenticationError = Error & {
+  __typename: 'AuthenticationError';
+  code: ErrorCode;
+  message: Scalars['String']['output'];
+};
+
 export type AutocompleteCategoryInput = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   parentId?: InputMaybe<Scalars['ID']['input']>;
@@ -1230,7 +1247,7 @@ export type BrowserStat = {
   count: Scalars['Int']['output'];
 };
 
-export type BulkCreateItemInput = {
+export type BulkCreateItemsInput = {
   items: Array<CreateItemInput>;
   skipDuplicates?: InputMaybe<Scalars['Boolean']['input']>;
   updateExisting?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1335,7 +1352,7 @@ export type BulkDeviceUpdateInput = {
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type BulkNotificationInput = {
+export type BulkSendNotificationsInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   batchId?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<NotificationCategory>;
@@ -2063,7 +2080,12 @@ export type CreateApiKeyInput = {
   environment: Array<ApiKeyEnvironment>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   name: Scalars['String']['input'];
-  /** Defaults to READ when omitted. */
+  /**
+   * Defaults to READ when omitted. If given it must be non-empty, and ADMIN
+   * must be accompanied by READ — ADMIN admits a key to the admin deployment
+   * but grants no operation, so a key holding it alone can reach the admin API
+   * and do nothing there.
+   */
   permissions?: InputMaybe<Array<ApiKeyPermission>>;
   rateLimit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -2312,6 +2334,13 @@ export type CreateMealPlanFromTemplateInput = {
   templateId: Scalars['ID']['input'];
 };
 
+/**
+ * Result of CreateMealPlanFromTemplate. Select on CreateMealPlanPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type CreateMealPlanFromTemplateResult = ConflictError | CreateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError;
+
 export type CreateMealPlanInput = {
   budgetAmount?: InputMaybe<Scalars['Float']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
@@ -2446,6 +2475,14 @@ export type CreateMembershipPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError;
+
+export type CreateModerationRecordInput = {
+  moderatorNotes?: InputMaybe<Scalars['String']['input']>;
+  riskScore?: InputMaybe<Scalars['Float']['input']>;
+  status?: InputMaybe<ModerationStatus>;
+  trustLevel?: InputMaybe<TrustLevel>;
+  userId: Scalars['ID']['input'];
+};
 
 export type CreateModerationRecordPayload = {
   __typename: 'CreateModerationRecordPayload';
@@ -2966,14 +3003,6 @@ export type CreateUnitPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError;
-
-export type CreateUserModerationInput = {
-  moderatorNotes?: InputMaybe<Scalars['String']['input']>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  status?: InputMaybe<ModerationStatus>;
-  trustLevel?: InputMaybe<TrustLevel>;
-  userId: Scalars['ID']['input'];
-};
 
 export enum Cuisine {
   African = 'AFRICAN',
@@ -4173,6 +4202,13 @@ export type EnableHomeJoinLinkInput = {
 };
 
 /**
+ * Result of EnableHomeJoinLink. Select on UpdateHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError;
+
+/**
  * Base interface for every mutation error variant. Every concrete error
  * type implements this so clients can write a generic
  * `... on Error { code message }` fallback alongside specific variants.
@@ -4187,24 +4223,39 @@ export type Error = {
  * clients can branch on `code` without needing to inspect `__typename`
  * for common cases.
  *
- * This enum covers the **business-error channel only** — conditions that
- * arrive as a member of a `*Result` union. Two other classes of failure
- * never reach it, and clients read them from a top-level error's
- * `extensions` instead:
+ * This enum types the `code` field on `*Result` union members. A value here
+ * must have an emitter — some code path able to return it as a union member's
+ * `code` — or it is a false promise to clients branching on it.
+ *
+ * Authentication codes are emittable: a mutation returning a union reports a
+ * refusal as an `AuthenticationError` member. The same condition reaching a
+ * caller through a path with no union to return into arrives as a top-level
+ * error carrying the **same** code in `extensions`, so a client branching on
+ * `code` reads one value per condition and only chooses where to read it from.
+ *
+ * Two classes of failure still never reach this enum, and clients read them
+ * from a top-level error's `extensions` instead:
  *
  * - **Rate limiting** — thrown as a top-level error carrying
  *   `OPERATION_RATE_LIMITED` plus `retryAfter` in `extensions`. It is not
- *   a union member, so it cannot populate this enum. (Related codes on that
- *   channel: `API_KEY_RATE_LIMITED`, `EXTERNAL_API_RATE_LIMITED`.)
+ *   a union member, so it cannot populate this enum.
  * - **Internal failures** — surface as a top-level error, masked in
  *   production. There is no `InternalError` union member to carry a code.
+ *
+ * Both are typed by `TopLevelErrorCode`, which names that channel's whole
+ * vocabulary.
  *
  * A value here without an emitter is a false promise; see the
  * `error-code-contract` spec.
  */
 export enum ErrorCode {
+  /** Failed-attempt lockout. Temporary and self-clearing — the caller may retry once the window elapses. */
   AuthAccountLocked = 'AUTH_ACCOUNT_LOCKED',
+  /** Banned, suspended or deleted — a moderation decision, not a transient lockout. Clients end the session on this code. Also emitted top-level by the auth directive for the same account state. */
+  AuthAccountSuspended = 'AUTH_ACCOUNT_SUSPENDED',
   AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
+  /** Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). Emitted by the refresh mutation; the REST /refresh route reports the same code top-level. */
+  AuthRefreshTokenInvalid = 'AUTH_REFRESH_TOKEN_INVALID',
   AuthTokenExpired = 'AUTH_TOKEN_EXPIRED',
   AuthTokenMissing = 'AUTH_TOKEN_MISSING',
   Conflict = 'CONFLICT',
@@ -4460,32 +4511,15 @@ export type FeatureTogglesInput = {
 };
 
 /**
- * Caller is authenticated but not authorized for this operation. (Pure
- * authentication failures surface as top-level GraphQL errors, not as a
- * result variant.)
+ * Caller is authenticated but not authorized for this operation. An
+ * authentication failure — the caller is not identified at all — is
+ * `AuthenticationError` instead.
  */
 export type ForbiddenError = Error & {
   __typename: 'ForbiddenError';
   code: ErrorCode;
   message: Scalars['String']['output'];
 };
-
-export type ForgotPasswordInput = {
-  email: Scalars['String']['input'];
-};
-
-export type ForgotPasswordPayload = {
-  __typename: 'ForgotPasswordPayload';
-  message: Scalars['String']['output'];
-  status: PasswordActionStatus;
-};
-
-/**
- * Result of ForgotPassword. Select on ForgotPasswordPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError;
 
 export type ForkRecipeInput = {
   /** The SOURCE recipe to fork. */
@@ -6404,6 +6438,13 @@ export type LoginMethodStat = {
   method: LoginMethod;
 };
 
+/**
+ * Result of Login. Select on AuthPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type LoginResult = AuthPayload | AuthenticationError | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 /** Subtype discriminator for login domain events. */
 export enum LoginSubtype {
   /** A successful login was recorded. */
@@ -7480,12 +7521,19 @@ export type Mutation = {
    * Create a new meal plan from a template.
    * Copies all template items to the new plan with dates offset from startDate.
    */
-  createMealPlanFromTemplate: CreateMealPlanResult;
+  createMealPlanFromTemplate: CreateMealPlanFromTemplateResult;
   /** Add an item to a meal plan. */
   createMealPlanItem: CreateMealPlanItemResult;
   /** Create a new meal template */
   createMealTemplate: CreateMealTemplateResult;
-  /** Create a new membership directly (owner/admin only). */
+  /**
+   * Create a new membership directly (owner/admin only).
+   *
+   * Admits the named user as an ACTIVE member immediately — no invitation, and
+   * no acceptance from the person being added. That makes it the most direct
+   * way to pull someone into the caller's scope, so it requires a verified
+   * email like the invite and join-link routes do.
+   */
   createMembership: CreateMembershipResult;
   /** Create a new notification. */
   createNotification: CreateNotificationResult;
@@ -7636,9 +7684,7 @@ export type Mutation = {
    * pantry-share link). Idempotent — preserves an existing code so links
    * already shared keep working. Read the resulting link via home.joinLink.
    */
-  enableHomeJoinLink: UpdateHomeResult;
-  /** Request a password reset email */
-  forgotPassword: ForgotPasswordResult;
+  enableHomeJoinLink: EnableHomeJoinLinkResult;
   /**
    * Create an editable copy of a recipe the caller does not own — an external
    * import or another user's. The fork is owned by the caller and carries a
@@ -7662,7 +7708,7 @@ export type Mutation = {
   /** Link an existing item to an external source. */
   linkItemToExternalSource: LinkItemToExternalSourceResult;
   /** Authenticate a user with credentials and return tokens. */
-  login: AuthPayload;
+  login: LoginResult;
   /** Mark all notifications as read for the current user. */
   markAllNotificationsAsRead: MarkAllNotificationsAsReadResult;
   /** Mark a shopping list as a reusable template. */
@@ -7753,7 +7799,7 @@ export type Mutation = {
   /** Record that a saved recipe was cooked (increments the cooked count). */
   recordRecipeCooked: RecordRecipeCookedResult;
   /** Refresh an expired access token using a refresh token. */
-  refresh: RefreshTokenPayload;
+  refresh: RefreshResult;
   /**
    * Register a new user account. Existence-blind and verification-first: always
    * returns the same result and (for an available email) sends a verification
@@ -7795,6 +7841,8 @@ export type Mutation = {
   removeTemplateItem: RemoveTemplateItemResult;
   /** Remove the conversion factor from a unit. */
   removeUnitConversion: RemoveUnitConversionResult;
+  /** Request a password reset email */
+  requestPasswordReset: RequestPasswordResetResult;
   /** Resend the email verification message to a user. */
   resendVerificationEmail: ResendVerificationEmailResult;
   /** Reset password using token from email */
@@ -7811,17 +7859,17 @@ export type Mutation = {
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
   /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
-  syncDeletePantryItem: SyncPantryItemResult;
+  syncDeletePantryItem: SyncDeletePantryItemResult;
   /**
    * Offline-sync twin of removeItemFromShoppingList — idempotent by a
    * client-minted id.
    */
-  syncDeleteShoppingListItem: SyncShoppingListItemResult;
+  syncDeleteShoppingListItem: SyncDeleteShoppingListItemResult;
   /**
    * Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
    * client-minted id.
    */
-  syncMoveShoppingListItem: SyncShoppingListItemResult;
+  syncMoveShoppingListItem: SyncMoveShoppingListItemResult;
   /**
    * Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
    * client-minted id (the primary key for creates, idempotencyKey for
@@ -7878,8 +7926,15 @@ export type Mutation = {
   updateFavoriteRecipe: UpdateFavoriteRecipeResult;
   /** Update an existing home's details. */
   updateHome: UpdateHomeResult;
-  /** Rotate (update) a home's join code, invalidating any previously shared join link. */
-  updateHomeJoinCode: UpdateHomeResult;
+  /**
+   * Rotate (update) a home's join code, invalidating any previously shared join link.
+   *
+   * Does NOT enable sharing — a home with the join link turned off stays off,
+   * and its home.joinLink stays null. Use enableHomeJoinLink for that. This is
+   * why rotating needs no verified email: it is how a leaked link is killed, so
+   * it must stay available to an account that cannot grant access.
+   */
+  updateHomeJoinCode: UpdateHomeJoinCodeResult;
   /**
    * Update an item. Consolidated mutation that handles:
    * - Basic fields (name, description, type, etc.)
@@ -8210,7 +8265,7 @@ export type MutationAdjustPantryItemWeightArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationBulkCreateItemsArgs = {
-  input: BulkCreateItemInput;
+  input: BulkCreateItemsInput;
 };
 
 
@@ -9236,19 +9291,6 @@ export type MutationEnableHomeJoinLinkArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationForgotPasswordArgs = {
-  input: ForgotPasswordInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationForkRecipeArgs = {
   input: ForkRecipeInput;
 };
@@ -9692,7 +9734,7 @@ export type MutationRecordRecipeCookedArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationRefreshArgs = {
-  input: RefreshTokenInput;
+  input: RefreshInput;
 };
 
 
@@ -9860,6 +9902,19 @@ export type MutationRemoveUnitConversionArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationRequestPasswordResetArgs = {
+  input: RequestPasswordResetInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationResendVerificationEmailArgs = {
   input: ResendVerificationEmailInput;
 };
@@ -9874,7 +9929,7 @@ export type MutationResendVerificationEmailArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationResetPasswordArgs = {
-  input: ResetPasswordWithTokenInput;
+  input: ResetPasswordInput;
 };
 
 
@@ -9991,7 +10046,7 @@ export type MutationSyncPantryItemArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationSyncShoppingListItemArgs = {
-  input: SyncShoppingListItemFullInput;
+  input: SyncShoppingListItemInput;
 };
 
 
@@ -10082,7 +10137,7 @@ export type MutationUpdateCategoryArgs = {
  * through reservation tokens) can opt back in.
  */
 export type MutationUpdateCollaboratorPermissionsArgs = {
-  input: UpdateCollaboratorPermissionsFullInput;
+  input: UpdateCollaboratorPermissionsInput;
 };
 
 
@@ -12016,7 +12071,7 @@ export type PantryUsageStats = {
 /**
  * Outcome of a password-flow action (bulk-operation-standard sibling: replaces
  * the flat {success,code,message} status types). Anti-enumeration is preserved
- * by the resolver — e.g. forgotPassword always resolves to SENT regardless of
+ * by the resolver — e.g. requestPasswordReset always resolves to SENT regardless of
  * whether the email exists.
  */
 export enum PasswordActionStatus {
@@ -12024,7 +12079,7 @@ export enum PasswordActionStatus {
   Completed = 'COMPLETED',
   /** The token was missing, invalid, or expired. */
   InvalidOrExpired = 'INVALID_OR_EXPIRED',
-  /** A reset email was sent (forgotPassword — always this, existence-blind). */
+  /** A reset email was sent (requestPasswordReset — always this, existence-blind). */
   Sent = 'SENT',
   /** The token was valid (validatePasswordResetToken). */
   Validated = 'VALIDATED'
@@ -13775,9 +13830,16 @@ export enum RecurringPattern {
   Weekly = 'WEEKLY'
 }
 
-export type RefreshTokenInput = {
+export type RefreshInput = {
   token: Scalars['String']['input'];
 };
+
+/**
+ * Result of Refresh. Select on RefreshTokenPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RefreshResult = AuthenticationError | ConflictError | ForbiddenError | NotFoundError | RefreshTokenPayload | ValidationError;
 
 /** Token refresh response - NEVER cache */
 export type RefreshTokenPayload = {
@@ -14071,6 +14133,23 @@ export type RemoveUnitConversionPayload = {
  */
 export type RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError;
 
+export type RequestPasswordResetInput = {
+  email: Scalars['String']['input'];
+};
+
+export type RequestPasswordResetPayload = {
+  __typename: 'RequestPasswordResetPayload';
+  message: Scalars['String']['output'];
+  status: PasswordActionStatus;
+};
+
+/**
+ * Result of RequestPasswordReset. Select on RequestPasswordResetPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RequestPasswordResetResult = ConflictError | ForbiddenError | NotFoundError | RequestPasswordResetPayload | ValidationError;
+
 export type ResendVerificationEmailInput = {
   email: Scalars['String']['input'];
 };
@@ -14087,6 +14166,11 @@ export type ResendVerificationEmailPayload = {
  */
 export type ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError;
 
+export type ResetPasswordInput = {
+  newPassword: Scalars['String']['input'];
+  token: Scalars['String']['input'];
+};
+
 export type ResetPasswordPayload = {
   __typename: 'ResetPasswordPayload';
   message: Scalars['String']['output'];
@@ -14099,11 +14183,6 @@ export type ResetPasswordPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError;
-
-export type ResetPasswordWithTokenInput = {
-  newPassword: Scalars['String']['input'];
-  token: Scalars['String']['input'];
-};
 
 /**
  * Resolution of a shareable code (home join code or list share code) into a
@@ -15788,10 +15867,24 @@ export type SyncDeletePantryItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * Result of SyncDeletePantryItem. Select on SyncPantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SyncDeletePantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError;
+
 export type SyncDeleteShoppingListItemInput = {
   clientId: Scalars['ID']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
+
+/**
+ * Result of SyncDeleteShoppingListItem. Select on SyncShoppingListItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
 
 export type SyncItemPopularityInput = {
   /** Reconcile a single item synchronously. Omit to enqueue a full backfill of all items. */
@@ -15821,6 +15914,13 @@ export type SyncMoveShoppingListItemInput = {
   clientId: Scalars['ID']['input'];
   version?: InputMaybe<Scalars['Int']['input']>;
 };
+
+/**
+ * Result of SyncMoveShoppingListItem. Select on SyncShoppingListItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SyncMoveShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
 
 export enum SyncOperation {
   Create = 'CREATE',
@@ -15853,8 +15953,8 @@ export type SyncPantryItemInput = {
   wasteReason?: InputMaybe<WasteReason>;
 };
 
-export type SyncPantryItemResult = {
-  __typename: 'SyncPantryItemResult';
+export type SyncPantryItemPayload = {
+  __typename: 'SyncPantryItemPayload';
   clientId: Scalars['ID']['output'];
   conflict: Maybe<SyncConflictInfo>;
   /**
@@ -15867,6 +15967,13 @@ export type SyncPantryItemResult = {
   operation: SyncOperation;
   serverId: Maybe<Scalars['ID']['output']>;
 };
+
+/**
+ * Result of SyncPantryItem. Select on SyncPantryItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError;
 
 export type SyncRecipeRatingsInput = {
   /** Reconcile a single recipe synchronously. Omit to enqueue a full backfill of all recipes. */
@@ -15896,12 +16003,7 @@ export type SyncSettingsInput = {
   offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type SyncShoppingListItemFullInput = {
-  clientId: Scalars['ID']['input'];
-  item: SyncShoppingListItemInput;
-};
-
-export type SyncShoppingListItemInput = {
+export type SyncShoppingListItemFieldsInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
   /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
@@ -15928,9 +16030,14 @@ export type SyncShoppingListItemInput = {
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
+export type SyncShoppingListItemInput = {
+  clientId: Scalars['ID']['input'];
+  item: SyncShoppingListItemFieldsInput;
+};
+
 /** Result of syncing a shopping list item */
-export type SyncShoppingListItemResult = {
-  __typename: 'SyncShoppingListItemResult';
+export type SyncShoppingListItemPayload = {
+  __typename: 'SyncShoppingListItemPayload';
   /** The client-provided permanent ID (CUID) echoed back for correlation */
   clientId: Scalars['ID']['output'];
   /** Conflict information if version mismatch occurred */
@@ -15948,6 +16055,13 @@ export type SyncShoppingListItemResult = {
   /** The server-assigned database ID (equals clientId; null if item was deleted before reaching server) */
   serverId: Maybe<Scalars['ID']['output']>;
 };
+
+/**
+ * Result of SyncShoppingListItem. Select on SyncShoppingListItemPayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SyncShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
 
 /** Sub-input for tag-based filters */
 export type TagFilterInput = {
@@ -16027,6 +16141,103 @@ export type ToggleShoppingListItemPurchasedPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type ToggleShoppingListItemPurchasedResult = ConflictError | ForbiddenError | NotFoundError | ToggleShoppingListItemPurchasedPayload | ValidationError;
+
+/**
+ * Machine-readable code carried by a **top-level** error — one that aborts the
+ * field instead of arriving inside `data`. Clients read it from
+ * `errors[].extensions.code` on an HTTP response, from the error frame of a
+ * WebSocket subscription, or from the JSON body of a REST auth route.
+ *
+ * No field returns this enum, and none can: `extensions` is an untyped map by
+ * GraphQL specification, so there is nowhere in the schema for a value of this
+ * type to appear. It is declared anyway so that the vocabulary travels through
+ * codegen to clients, which is the only way a client branches on these codes
+ * without hardcoding strings. Do not "clean up" the apparent orphan — it is the
+ * entire point of the declaration.
+ *
+ * This is the server's error registry, published: the values here and the
+ * `ERROR_CODES` map in the API are one list, checked by the compiler rather
+ * than by convention. Membership follows the same rule as `ErrorCode` — a
+ * value must have an emitter, or it is a false promise to clients branching on
+ * it.
+ *
+ * Some conditions reach clients on both channels and carry the SAME string in
+ * both enums (`FORBIDDEN`, `AUTH_ACCOUNT_SUSPENDED`, `VALIDATION_FAILED`).
+ * That overlap is deliberate: one condition, one code, and the client only
+ * chooses where to read it from. Codes that differ across the channels differ
+ * because they mean different things — top-level `RESOURCE_NOT_FOUND` is a
+ * thrown error escaping a resolver, while `NOT_FOUND` is a union member a
+ * mutation returns.
+ */
+export enum TopLevelErrorCode {
+  ApiKeyExpired = 'API_KEY_EXPIRED',
+  /** The credential is valid; it is not permitted to perform this operation. Carries requiredPermission, so a client can tell 're-provision my key' from 'my key is wrong'. */
+  ApiKeyInsufficientPermissions = 'API_KEY_INSUFFICIENT_PERMISSIONS',
+  ApiKeyInvalid = 'API_KEY_INVALID',
+  ApiKeyMissing = 'API_KEY_MISSING',
+  ApiKeyRevoked = 'API_KEY_REVOKED',
+  /** Failed-attempt lockout. Temporary and self-clearing — the caller may retry once the window elapses. */
+  AuthAccountLocked = 'AUTH_ACCOUNT_LOCKED',
+  /** Banned, suspended or deleted — a moderation decision, not a transient lockout. Clients end the session on this code. */
+  AuthAccountSuspended = 'AUTH_ACCOUNT_SUSPENDED',
+  /** Login rejection. Existence-blind by construction — the message is the same whether the email is unknown or the password is wrong. */
+  AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
+  /** Credentials are valid and the session is live; the account's email address is unverified. A 403, not a 401 — clients must not sign the user out. */
+  AuthEmailNotVerified = 'AUTH_EMAIL_NOT_VERIFIED',
+  /** Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). */
+  AuthRefreshTokenInvalid = 'AUTH_REFRESH_TOKEN_INVALID',
+  AuthRefreshTokenMissing = 'AUTH_REFRESH_TOKEN_MISSING',
+  /** Access token expired. On an ordinary operation this is what a refresh fixes; on the refresh response itself the session is over. */
+  AuthTokenExpired = 'AUTH_TOKEN_EXPIRED',
+  AuthTokenInvalid = 'AUTH_TOKEN_INVALID',
+  /** Default code of the AuthenticationError base class, so it covers every bare throw across the resolver tree. */
+  AuthTokenMissing = 'AUTH_TOKEN_MISSING',
+  BadRequest = 'BAD_REQUEST',
+  /** The client build is below the configured minimum for its client name (not its platform — one name covers iOS and Android). Carries minimumVersion. Retrying cannot fix it. */
+  ClientUpgradeRequired = 'CLIENT_UPGRADE_REQUIRED',
+  DbConstraintViolation = 'DB_CONSTRAINT_VIOLATION',
+  EmailAlreadyExists = 'EMAIL_ALREADY_EXISTS',
+  EmailAlreadyVerified = 'EMAIL_ALREADY_VERIFIED',
+  /** Authenticated, active, and not allowed. The ONE authorization code, whichever layer refuses: the auth directive family, a service-thrown AuthorizationError, or the ForbiddenError union member. */
+  Forbidden = 'FORBIDDEN',
+  /** The caller is not a member of the home. Distinct from the union member's HOME_ACCESS_DENIED, which a mutation returns. */
+  HomeNotAMember = 'HOME_NOT_A_MEMBER',
+  /** An unexpected server fault. Masked in production, so only the code survives. */
+  InternalServerError = 'INTERNAL_SERVER_ERROR',
+  /** Per-operation limit. Names the operation that was limited and carries operation, limit, duration and retryAfter. */
+  OperationRateLimited = 'OPERATION_RATE_LIMITED',
+  /** The requested page multiplied out to more rows than the fan-out budget allows. */
+  PaginationFanoutExceeded = 'PAGINATION_FANOUT_EXCEEDED',
+  /** A pagination argument exceeded its per-field maximum. */
+  PaginationLimitExceeded = 'PAGINATION_LIMIT_EXCEEDED',
+  /** A thrown DuplicatePantryItemError escaping a resolver. Inside createPantryItem the same condition arrives as the DuplicatePantryItemError union member. */
+  PantryItemAlreadyExists = 'PANTRY_ITEM_ALREADY_EXISTS',
+  /** Global rate limit. Carries retryAfter in seconds. */
+  RateLimitExceeded = 'RATE_LIMIT_EXCEEDED',
+  ResourceAlreadyExists = 'RESOURCE_ALREADY_EXISTS',
+  /** A thrown ConflictError escaping a resolver. The union-member spelling is CONFLICT. */
+  ResourceConflict = 'RESOURCE_CONFLICT',
+  /** A thrown NotFoundError escaping a resolver. The union-member spelling of this condition is NOT_FOUND. */
+  ResourceNotFound = 'RESOURCE_NOT_FOUND',
+  /** Optimistic-locking failure. The union-member spelling is VERSION_CONFLICT. */
+  ResourceVersionConflict = 'RESOURCE_VERSION_CONFLICT',
+  /** The server is shedding load or a dependency is down. Retryable. */
+  ServiceUnavailable = 'SERVICE_UNAVAILABLE',
+  /** The subscription could not be established. Retryable. */
+  SubscriptionError = 'SUBSCRIPTION_ERROR',
+  /** A subscription's filter threw while deciding whether to deliver an event. */
+  SubscriptionFilterError = 'SUBSCRIPTION_FILTER_ERROR',
+  /** The caller is at their concurrent-subscription cap. Carries current and max. */
+  SubscriptionLimitExceeded = 'SUBSCRIPTION_LIMIT_EXCEEDED',
+  /** No credentials were presented. Apollo's standard code, which clients already branch on. */
+  Unauthenticated = 'UNAUTHENTICATED',
+  /** The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem. */
+  UnitInvalid = 'UNIT_INVALID',
+  ValidationFailed = 'VALIDATION_FAILED',
+  ValidationUniqueConstraint = 'VALIDATION_UNIQUE_CONSTRAINT',
+  /** A query or mutation was sent over the WebSocket, which accepts subscriptions only. Send it over HTTP POST /graphql instead. */
+  WsOperationNotAllowed = 'WS_OPERATION_NOT_ALLOWED'
+}
 
 export type TransferHomeOwnershipInput = {
   homeId: Scalars['ID']['input'];
@@ -16242,10 +16453,12 @@ export type UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError
  */
 export type UpdateApiKeyInput = {
   description?: InputMaybe<Scalars['String']['input']>;
+  /** Replaces the existing set. Must be non-empty. */
   environment?: InputMaybe<Array<ApiKeyEnvironment>>;
   expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
+  /** Replaces the existing set. Same rules as on create: non-empty, and ADMIN requires READ. */
   permissions?: InputMaybe<Array<ApiKeyPermission>>;
   rateLimit?: InputMaybe<Scalars['Int']['input']>;
 };
@@ -16306,13 +16519,7 @@ export type UpdateCategoryPayload = {
  */
 export type UpdateCategoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateCategoryPayload | ValidationError;
 
-export type UpdateCollaboratorPermissionsFullInput = {
-  collaboratorId: Scalars['ID']['input'];
-  permissions: UpdateCollaboratorPermissionsInput;
-  shoppingListId: Scalars['ID']['input'];
-};
-
-export type UpdateCollaboratorPermissionsInput = {
+export type UpdateCollaboratorPermissionsFieldsInput = {
   canAddItems?: InputMaybe<Scalars['Boolean']['input']>;
   canEdit?: InputMaybe<Scalars['Boolean']['input']>;
   canEditItems?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16321,6 +16528,12 @@ export type UpdateCollaboratorPermissionsInput = {
   canMarkPurchased?: InputMaybe<Scalars['Boolean']['input']>;
   canRemoveItems?: InputMaybe<Scalars['Boolean']['input']>;
   canViewHistory?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+export type UpdateCollaboratorPermissionsInput = {
+  collaboratorId: Scalars['ID']['input'];
+  permissions: UpdateCollaboratorPermissionsFieldsInput;
+  shoppingListId: Scalars['ID']['input'];
 };
 
 export type UpdateCollaboratorPermissionsPayload = {
@@ -16530,6 +16743,13 @@ export type UpdateHomeJoinCodeInput = {
   /** ID of the home whose join code to rotate. */
   id: Scalars['ID']['input'];
 };
+
+/**
+ * Result of UpdateHomeJoinCode. Select on UpdateHomePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type UpdateHomeJoinCodeResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError;
 
 export type UpdateHomePayload = {
   __typename: 'UpdateHomePayload';

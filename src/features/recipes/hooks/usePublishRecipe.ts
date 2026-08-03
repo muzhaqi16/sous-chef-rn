@@ -79,12 +79,7 @@ export function usePublishRecipe() {
 
     // A resolved rejection reverts the optimistic flip; a queued (null) result
     // keeps it — the update replays idempotently on reconnect.
-    const rejected = alertIfRejected(
-      result,
-      'updateRecipe',
-      'UpdateRecipePayload',
-      t('recipes.publishFailed'),
-    );
+    const rejected = alertIfRejected(result, t('recipes.publishFailed'));
     if (rejected) revert();
     return !rejected;
   };

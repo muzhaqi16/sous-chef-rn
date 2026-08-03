@@ -6,7 +6,9 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/utils/deviceId';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
+import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
 // pick the right WebSocket constructor
@@ -310,6 +312,9 @@ const createWsClient = () => {
           logger.error(
             `🔌 WebSocket closed: client upgrade required (app version ${CLIENT_VERSION}): ${reason}`,
           );
+          // Shared with the HTTP half so the two transports announce once
+          // between them, not once each.
+          announceClientUpgradeRequired();
           return;
         }
 
@@ -333,7 +338,7 @@ const createWsClient = () => {
             logger.error(
               '🔌 WebSocket closed: repeated 4403 — session revoked, signing out',
             );
-            useStore.getState().clearAuth();
+            void useStore.getState().endSession('session_revoked');
           }
           return;
         }
@@ -368,11 +373,13 @@ const createWsClient = () => {
         const isAuthCode = code === 4500;
         const is401Rejection = code === 1006 && reason.includes('401');
 
-        // Specific auth error reasons from server
+        // Specific auth error reasons from server. A close reason is the
+        // top-level channel, so these come from TopLevelErrorCode — which is
+        // also the only one of the two enums that declares AUTH_TOKEN_INVALID.
         const hasAuthReason = [
-          'AUTH_TOKEN_EXPIRED',
-          'AUTH_REFRESH_TOKEN_INVALID',
-          'AUTH_TOKEN_INVALID',
+          TopLevelErrorCode.AuthTokenExpired,
+          TopLevelErrorCode.AuthRefreshTokenInvalid,
+          TopLevelErrorCode.AuthTokenInvalid,
         ].some(r => reason.includes(r));
 
         if (__DEV__ && !isAuthCode) {

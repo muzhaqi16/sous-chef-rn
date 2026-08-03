@@ -46,22 +46,28 @@ export function alertRejectedMutation(
  * rejected branch is a single call:
  *
  * ```ts
- * if (alertIfRejected(result, 'updateMembership', 'UpdateMembershipPayload', t('errors.updateMemberRoleFailed'))) {
+ * if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
  *   revertSnapshot();   // site-specific cleanup
  *   return false;
  * }
  * ```
+ *
+ * **A falsy result returns `false` here, where `classifyCreateResult` returns
+ * `'rejected'`.** The two answer different questions and the split is load-bearing,
+ * not an oversight: `classifyCreateResult` asks "did the write land?" (a throw
+ * means it didn't), while this asks "does the user still need telling?" — and on
+ * a throw they don't, because `executeMutation`'s own `onError` already reported
+ * it. Collapsing the two contracts would double-alert at every call site. That is
+ * why callers keep an `if (!result) return …` guard above this call: it isn't
+ * redundant, it distinguishes "already reported" from "reverted silently".
  */
 export function alertIfRejected(
   result: { data?: unknown; error?: unknown } | null | undefined | false,
-  payloadKey: string,
-  successTypename: string,
   message: string,
 ): boolean {
+  // Already surfaced by executeMutation's onError — see the contract note above.
   if (!result) return false;
-  if (
-    classifyCreateResult(result, payloadKey, successTypename) !== 'rejected'
-  ) {
+  if (classifyCreateResult(result) !== 'rejected') {
     return false;
   }
   alertService.alert(t('labels.error'), message);

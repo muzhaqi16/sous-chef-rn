@@ -144,8 +144,6 @@ export const MyRecipes: React.FC = () => {
     // later. A null result (transport throw) already alerted via onError above.
     const wasRejected = alertIfRejected(
       result,
-      'deleteRecipe',
-      'DeleteRecipePayload',
       t('recipes.deleteRecipeFailed'),
     );
     if (!result || wasRejected) {

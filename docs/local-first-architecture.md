@@ -67,10 +67,12 @@ sites call `classifyCreateResult` directly and evict.
 
 **There is no unified `useLocalFirstMutation` primitive.** The original plan proposed one; in practice
 each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
-identical: the cache-write helpers (§3, §5) and `classifyCreateResult(result, payloadKey,
-successTypename) → 'created' | 'queued' | 'rejected'` (`apollo/utils/classifyCreateResult.ts`), which
-centralizes the "queued create is success / non-success payload is a rejection" decision so it can't
-drift between sites. What stays per-site — input construction and success UX (navigate / close / toast /
+identical: the cache-write helpers (§3, §5) and `classifyCreateResult(result) → 'created' | 'queued' |
+'rejected'` (`apollo/utils/classifyCreateResult.ts`), which centralizes the "queued create is success /
+non-success payload is a rejection" decision so it can't drift between sites. It takes the result and
+nothing else — the payload field and the success member are derived structurally via
+`utils/errors/mutationPayload.ts`, shared with `classifyReplayResult` (§ replay) so the foreground and
+replay paths apply one rule. What stays per-site — input construction and success UX (navigate / close / toast /
 restock) — is irreducibly site-specific, so a single primitive would be the wrong abstraction over it.
 
 ## 3. Identity — client-generated permanent ids

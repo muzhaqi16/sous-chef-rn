@@ -4,11 +4,21 @@
 
 mutation Login($input: LoginInput!) {
   login(input: $input) {
-    accessToken
-    refreshToken
-    user {
-      id
-      ...LoginUser
+    __typename
+    ... on AuthPayload {
+      accessToken
+      refreshToken
+      user {
+        id
+        ...LoginUser
+      }
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
@@ -30,10 +40,20 @@ mutation Register($input: RegisterInput!) {
   }
 }
 
-mutation RefreshToken($input: RefreshTokenInput!) {
+mutation RefreshToken($input: RefreshInput!) {
   refresh(input: $input) {
-    accessToken
-    refreshToken
+    __typename
+    ... on RefreshTokenPayload {
+      accessToken
+      refreshToken
+    }
+    ... on ValidationError {
+      field
+    }
+    ... on Error {
+      code
+      message
+    }
   }
 }
 
@@ -60,10 +80,10 @@ mutation VerifyEmail($input: VerifyEmailInput!) {
   }
 }
 
-mutation ForgotPassword($input: ForgotPasswordInput!) {
-  forgotPassword(input: $input) {
+mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
+  requestPasswordReset(input: $input) {
     __typename
-    ... on ForgotPasswordPayload {
+    ... on RequestPasswordResetPayload {
       status
     }
     ... on Error {
@@ -73,7 +93,7 @@ mutation ForgotPassword($input: ForgotPasswordInput!) {
   }
 }
 
-mutation ResetPassword($input: ResetPasswordWithTokenInput!) {
+mutation ResetPassword($input: ResetPasswordInput!) {
   resetPassword(input: $input) {
     __typename
     ... on ResetPasswordPayload {

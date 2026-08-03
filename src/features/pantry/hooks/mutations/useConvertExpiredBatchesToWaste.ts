@@ -48,11 +48,7 @@ export function useConvertExpiredBatchesToWaste({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'convertExpiredBatchesToWaste',
-      'ConvertExpiredBatchesToWastePayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       // onError covers transport errors; a non-success union payload has none.

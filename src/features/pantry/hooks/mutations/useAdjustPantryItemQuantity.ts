@@ -119,11 +119,7 @@ export function useAdjustPantryItemQuantity({
       context: { localFirst: true },
     });
 
-    const outcome = classifyCreateResult(
-      result,
-      'adjustPantryItemQuantity',
-      'AdjustPantryItemQuantityPayload',
-    );
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       // Server refused the adjust — restore the pre-adjust snapshot. A transport

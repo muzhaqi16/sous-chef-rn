@@ -12,6 +12,7 @@
  */
 
 import { client } from '#/apollo/client';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { LogoutCleanup } from '#/apollo/logoutCleanup';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -19,6 +20,8 @@ import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { logger } from '#/utils/environment';
+import { isDeadCredentialCode } from '#/utils/authErrorCodes';
+import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
@@ -488,15 +491,39 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
 
     toastService.error(message);
 
+    // `clearAuth` and deliberately not `endSession`, unlike the link-layer
+    // sites that see these same codes. This runs while a sign-in, register or
+    // verification request is in flight, and a full auth reset would also drop
+    // `pendingEmail` / `pendingPassword` and the selected-entity ids, breaking
+    // verification resume. There is also no established session's cache to
+    // clear here — this is a refused attempt to start one, not a revoked one.
     if (
       isAuthError &&
-      (code === 'AUTH_TOKEN_EXPIRED' || code === 'AUTH_REFRESH_TOKEN_INVALID')
+      (code === ErrorCode.AuthTokenExpired ||
+        code === ErrorCode.AuthRefreshTokenInvalid)
     ) {
       useStore.getState().clearAuth();
     }
   } catch {
     toastService.error('Something went wrong. Please try again.');
   }
+  useStore.getState().setAuthIsLoading(false);
+}
+
+// A non-success member of LoginResult. It resolves 200 with no transport
+// error, so surface it the way handleAuthError surfaces transport failures —
+// a toast — and stay on the sign-in screen. The code is mapped through the
+// shared friendly-message table so a refusal reads the same here as it does
+// when the identical condition arrives as a top-level error; the server's own
+// message is only the fallback.
+function handleRejectedAuthPayload(
+  payload: { code: string; message: string },
+  operation: string,
+): void {
+  logger.warn(`${operation} rejected by the server: ${payload.code}`);
+  toastService.error(
+    errorService.getUserFriendlyMessage(payload.code, payload.message),
+  );
   useStore.getState().setAuthIsLoading(false);
 }
 
@@ -664,13 +691,15 @@ async function login(
       variables: { input },
     });
 
-    if (result.data?.login) {
+    const payload = result.data?.login;
+
+    if (isSuccessPayload(payload, 'AuthPayload')) {
       const loginCredentials = {
         email: input.email,
         password: input.password,
       };
 
-      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+      const unmaskedLogin = unmaskAuthPayload(payload);
       if (unmaskedLogin) {
         // handleLogin owns all post-login routing — verification, onboarding,
         // the biometric gate, and the RememberMe gate (driven by
@@ -685,6 +714,11 @@ async function login(
 
       store.setAuthIsLoading(false);
       return true;
+    }
+
+    if (payload) {
+      handleRejectedAuthPayload(payload, 'Login');
+      return false;
     }
 
     if (result.error) {
@@ -720,7 +754,7 @@ async function register(
 
     const payload = result.data?.register;
 
-    if (payload?.__typename === 'RegisterPayload') {
+    if (isSuccessPayload(payload, 'RegisterPayload')) {
       // Registration is verification-first and existence-blind: the API sends
       // an activation email and issues NO tokens. Do NOT set auth here — the
       // user activates via the emailed link, then logs in. Persist the
@@ -849,13 +883,31 @@ async function autoLogin(): Promise<boolean> {
       },
     });
 
-    if (result.data?.login) {
-      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+    const payload = result.data?.login;
+
+    if (isSuccessPayload(payload, 'AuthPayload')) {
+      const unmaskedLogin = unmaskAuthPayload(payload);
       if (unmaskedLogin) {
         await handleLogin(unmaskedLogin, true);
       }
       logger.info('Auto-login successful');
       return true;
+    }
+
+    if (payload) {
+      // Drop the stored credentials only when the server says THESE
+      // credentials will never authenticate — the password changed elsewhere,
+      // or the account is gone. Token-side refusals end the session but leave
+      // the credentials good, so they are deliberately not in this set; see
+      // isDeadCredentialCode for how the two lists relate.
+      if (isDeadCredentialCode(payload.code)) {
+        logger.warn(
+          `Auto-login rejected (${payload.code}), clearing stored credentials`,
+        );
+        await removeCredentials(email);
+      }
+      handleRejectedAuthPayload(payload, 'Auto-login');
+      return false;
     }
 
     if (result.error) {

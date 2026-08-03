@@ -7,6 +7,7 @@
  */
 
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 export class GraphQLDomainError extends Error {
   override readonly name = 'GraphQLDomainError';
@@ -56,15 +57,16 @@ export function getTopLevelGraphQLError(
   };
 }
 
-// Codes the API returns when a read is rejected because access was revoked.
-// Both are current, on different channels: AUTHZ_FORBIDDEN is the top-level
-// `extensions.code` on rejected reads (e.g. a collaborator on a list that
-// became home-linked; collaborators are ignored on home-linked lists);
-// FORBIDDEN is the code the @auth directive and mutation result-union members
-// emit. A deleted/unshared record is NOT here: by-id queries now resolve to
-// null data (not a NOT_FOUND error), so callers detect that case via a null
-// field, not this helper.
-const RESOURCE_ACCESS_LOST_CODES = new Set(['AUTHZ_FORBIDDEN', 'FORBIDDEN']);
+// The code the API returns when a read is rejected because access was revoked
+// (e.g. a collaborator on a list that became home-linked; collaborators are
+// ignored on home-linked lists). FORBIDDEN is the single authorization code and
+// travels on both channels — the top-level `extensions.code` on rejected reads,
+// and the mutation result-union member's code. The AUTHZ_FORBIDDEN literal that
+// used to sit alongside it is retired and emitted by nothing.
+// A deleted/unshared record is NOT here: by-id queries resolve to null data
+// (not a NOT_FOUND error), so callers detect that case via a null field, not
+// this helper.
+const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
 
 /** True when a query error means the requesting user has lost access to a
  *  resource (access revoked). A deleted/missing record surfaces as null data,

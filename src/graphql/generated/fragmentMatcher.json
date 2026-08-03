@@ -449,6 +449,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "CreateMealPlanFromTemplateResult": [
+      "ConflictError",
+      "CreateMealPlanPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "CreateMealPlanItemResult": [
       "ConflictError",
       "CreateMealPlanItemPayload",
@@ -920,17 +927,18 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "EnableHomeJoinLinkResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateHomePayload",
+      "ValidationError"
+    ],
     "Error": [
+      "AuthenticationError",
       "ConflictError",
       "DuplicatePantryItemError",
       "ForbiddenError",
-      "NotFoundError",
-      "ValidationError"
-    ],
-    "ForgotPasswordResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "ForgotPasswordPayload",
       "NotFoundError",
       "ValidationError"
     ],
@@ -998,6 +1006,14 @@
       "ConflictError",
       "ForbiddenError",
       "LinkItemToExternalSourcePayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "LoginResult": [
+      "AuthPayload",
+      "AuthenticationError",
+      "ConflictError",
+      "ForbiddenError",
       "NotFoundError",
       "ValidationError"
     ],
@@ -1195,6 +1211,14 @@
       "RecordRecipeCookedPayload",
       "ValidationError"
     ],
+    "RefreshResult": [
+      "AuthenticationError",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RefreshTokenPayload",
+      "ValidationError"
+    ],
     "RegisterDeviceResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1293,6 +1317,13 @@
       "RemoveUnitConversionPayload",
       "ValidationError"
     ],
+    "RequestPasswordResetResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RequestPasswordResetPayload",
+      "ValidationError"
+    ],
     "ResendVerificationEmailResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1354,6 +1385,20 @@
       "ShoppingListCollaborator",
       "ShoppingListItem"
     ],
+    "SyncDeletePantryItemResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncPantryItemPayload",
+      "ValidationError"
+    ],
+    "SyncDeleteShoppingListItemResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncShoppingListItemPayload",
+      "ValidationError"
+    ],
     "SyncItemPopularityResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1361,11 +1406,32 @@
       "SyncItemPopularityPayload",
       "ValidationError"
     ],
+    "SyncMoveShoppingListItemResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncShoppingListItemPayload",
+      "ValidationError"
+    ],
+    "SyncPantryItemResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncPantryItemPayload",
+      "ValidationError"
+    ],
     "SyncRecipeRatingsResult": [
       "ConflictError",
       "ForbiddenError",
       "NotFoundError",
       "SyncRecipeRatingsPayload",
+      "ValidationError"
+    ],
+    "SyncShoppingListItemResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SyncShoppingListItemPayload",
       "ValidationError"
     ],
     "ToggleReviewHelpfulResult": [
@@ -1471,6 +1537,13 @@
       "ForbiddenError",
       "NotFoundError",
       "UpdateFavoriteRecipePayload",
+      "ValidationError"
+    ],
+    "UpdateHomeJoinCodeResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateHomePayload",
       "ValidationError"
     ],
     "UpdateHomeResult": [

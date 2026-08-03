@@ -388,15 +388,6 @@ describe('QueueManager', () => {
       expect(result.retryable).toBe(false);
     });
 
-    it('classifies AUTHZ_FORBIDDEN as a non-retryable resource-access error, not auth', () => {
-      const result = classifyError({
-        message: 'Forbidden',
-        extensions: { code: 'AUTHZ_FORBIDDEN' },
-      });
-      expect(result.type).not.toBe('auth');
-      expect(result.retryable).toBe(false);
-    });
-
     it('classifies AUTH_ACCOUNT_SUSPENDED as non-retryable, not auth', () => {
       const result = classifyError({
         message: 'User account is not active',
@@ -417,14 +408,29 @@ describe('QueueManager', () => {
       expect(result.retryable).toBe(false);
     });
 
-    it('classifies "expired" message as auth error', () => {
-      const result = classifyError({ message: 'Token expired' });
-      expect(result.type).toBe('auth');
-    });
+    // Classification is by code alone. Matching these words in the message
+    // swept up refusals that have nothing to do with the token — an API key
+    // rejected for want of a permission reads "Unauthorized: …" — and cost the
+    // queue a doomed refresh for each one before it failed anyway.
+    it.each(['Token expired', 'Unauthorized access'])(
+      'does not treat a codeless %p message as an auth error',
+      message => {
+        expect(classifyError({ message }).type).not.toBe('auth');
+      },
+    );
 
-    it('classifies "unauthorized" message as auth error', () => {
-      const result = classifyError({ message: 'Unauthorized access' });
+    it.each([
+      'UNAUTHENTICATED',
+      'AUTH_TOKEN_EXPIRED',
+      'AUTH_TOKEN_MISSING',
+      'AUTH_TOKEN_INVALID',
+    ])('classifies %s as a retryable auth error', code => {
+      const result = classifyError({
+        message: 'nothing about this message is auth-shaped',
+        extensions: { code },
+      });
       expect(result.type).toBe('auth');
+      expect(result.retryable).toBe(true);
     });
 
     it('classifies network errors', () => {

@@ -10,6 +10,10 @@
 /**
  * Query complexity error types
  */
+// PAGINATION_LIMIT_EXCEEDED is a TopLevelErrorCode member and would otherwise be
+// referenced through the generated enum, but a TypeScript string enum rejects a
+// computed initializer, so the value has to be repeated here. QUERY_TOO_COMPLEX
+// is in neither generated enum — the API's registry has no such code.
 export enum QueryComplexityErrorType {
   TOO_COMPLEX = 'QUERY_TOO_COMPLEX',
   PAGINATION_LIMIT_EXCEEDED = 'PAGINATION_LIMIT_EXCEEDED',

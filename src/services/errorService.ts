@@ -16,6 +16,8 @@
  * ```
  */
 
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -72,114 +74,120 @@ export interface ErrorConfig {
 }
 
 export class ErrorService {
-  private static readonly ERROR_MESSAGES: Record<string, string> = {
+  /**
+   * Error code → i18n key under `errors.codes`.
+   *
+   * Keys, not strings: these messages are shown to the user (login failures and
+   * password-reset refusals are the most-seen strings in the app), and the app
+   * ships four locales. Resolution happens per call in
+   * {@link getUserFriendlyMessage} rather than here, because this table is a
+   * static class field — evaluating `t()` at module load would freeze whatever
+   * language happened to be active first and ignore later changes.
+   *
+   * Codes that warrant the same sentence deliberately share a key rather than
+   * getting near-duplicate translations that can drift apart.
+   */
+  private static readonly ERROR_MESSAGE_KEYS: Record<string, string> = {
     // Authentication Errors
-    AUTH_TOKEN_MISSING: 'Please sign in to continue',
-    AUTH_TOKEN_INVALID: 'Your session is invalid. Please sign in again',
-    AUTH_TOKEN_EXPIRED: 'Your session has expired. Please sign in again',
-    AUTH_REFRESH_TOKEN_MISSING: 'Session expired. Please sign in again',
-    AUTH_REFRESH_TOKEN_INVALID: 'Session expired. Please sign in again',
-    AUTH_CREDENTIALS_INVALID: 'Invalid email or password',
-    AUTH_ACCOUNT_LOCKED:
-      'Your account has been temporarily locked for security',
-    AUTH_EMAIL_NOT_VERIFIED: 'Please verify your email before continuing',
+    AUTH_TOKEN_MISSING: 'signInRequired',
+    AUTH_TOKEN_INVALID: 'sessionInvalid',
+    AUTH_TOKEN_EXPIRED: 'sessionExpired',
+    AUTH_REFRESH_TOKEN_MISSING: 'sessionEnded',
+    AUTH_REFRESH_TOKEN_INVALID: 'sessionEnded',
+    AUTH_CREDENTIALS_INVALID: 'credentialsInvalid',
+    AUTH_ACCOUNT_LOCKED: 'accountLocked',
+    // Distinct from the lockout above: a moderation decision, not a window
+    // that expires. Says nothing about why, and points at support rather than
+    // inviting a retry that can never succeed.
+    AUTH_ACCOUNT_SUSPENDED: 'accountSuspended',
+    AUTH_EMAIL_NOT_VERIFIED: 'emailNotVerified',
 
-    // Authorization Errors
-    AUTHZ_FORBIDDEN: "You don't have permission to perform this action",
-    AUTHZ_INSUFFICIENT_PERMISSIONS: "You don't have sufficient permissions",
-    AUTHZ_RESOURCE_ACCESS_DENIED: 'Access denied to this resource',
-    AUTHZ_ADMIN_REQUIRED: "You don't have permission to perform this action.",
-    AUTHZ_MODERATOR_REQUIRED:
-      "You don't have permission to perform this action.",
+    // Authorization Errors. FORBIDDEN is the only code here — the AUTHZ_*
+    // family it used to sit alongside was retired and never emitted.
+    FORBIDDEN: 'forbidden',
 
-    // API Key Errors
-    API_KEY_MISSING: 'Something went wrong. Please try again later.',
-    API_KEY_INVALID: 'Something went wrong. Please try again later.',
-    API_KEY_EXPIRED: 'Something went wrong. Please try again later.',
-    API_KEY_REVOKED: 'Something went wrong. Please try again later.',
-    API_KEY_RATE_LIMITED: 'Something went wrong. Please try again later.',
+    // API Key Errors. All of these are build/config faults the user can do
+    // nothing about, so they share one deliberately generic message.
+    API_KEY_MISSING: 'genericLater',
+    API_KEY_INVALID: 'genericLater',
+    API_KEY_EXPIRED: 'genericLater',
+    API_KEY_REVOKED: 'genericLater',
+    API_KEY_RATE_LIMITED: 'genericLater',
+    API_KEY_INSUFFICIENT_PERMISSIONS: 'genericLater',
 
     // Validation Errors
-    VALIDATION_FAILED: 'Please check your input and try again',
-    VALIDATION_FIELD_REQUIRED: 'Required field is missing',
-    VALIDATION_FIELD_INVALID: 'Invalid field value',
-    VALIDATION_FORMAT_INVALID: 'Invalid format',
-    VALIDATION_LENGTH_INVALID: 'Input length is invalid',
-    VALIDATION_RANGE_INVALID: 'Value is outside allowed range',
-    VALIDATION_UNIQUE_CONSTRAINT: 'This value already exists',
+    VALIDATION_FAILED: 'validationFailed',
+    VALIDATION_FIELD_REQUIRED: 'fieldRequired',
+    VALIDATION_FIELD_INVALID: 'fieldInvalid',
+    VALIDATION_FORMAT_INVALID: 'formatInvalid',
+    VALIDATION_LENGTH_INVALID: 'lengthInvalid',
+    VALIDATION_RANGE_INVALID: 'rangeInvalid',
+    VALIDATION_UNIQUE_CONSTRAINT: 'uniqueConstraint',
 
     // Resource Errors
-    RESOURCE_NOT_FOUND: 'The requested item was not found',
-    RESOURCE_ALREADY_EXISTS: 'This resource already exists',
-    RESOURCE_CONFLICT: "There's a conflict with this operation",
-    RESOURCE_GONE: 'This item is no longer available',
-    RESOURCE_LOCKED: 'This item is currently locked and cannot be modified',
+    RESOURCE_NOT_FOUND: 'resourceNotFound',
+    RESOURCE_ALREADY_EXISTS: 'resourceAlreadyExists',
+    RESOURCE_CONFLICT: 'resourceConflict',
+    RESOURCE_GONE: 'resourceGone',
+    RESOURCE_LOCKED: 'resourceLocked',
 
     // Business Logic Errors
-    BUSINESS_RULE_VIOLATION:
-      "This action couldn't be completed. Please try again.",
-    BUSINESS_STATE_INVALID:
-      "This action couldn't be completed right now. Please try again.",
-    BUSINESS_OPERATION_NOT_ALLOWED: "This action isn't available right now.",
-    BUSINESS_QUOTA_EXCEEDED: "You've exceeded your quota limit",
-    BUSINESS_FEATURE_DISABLED: 'This feature is currently disabled',
+    BUSINESS_RULE_VIOLATION: 'businessRuleViolation',
+    BUSINESS_STATE_INVALID: 'businessStateInvalid',
+    BUSINESS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',
+    BUSINESS_QUOTA_EXCEEDED: 'quotaExceeded',
+    BUSINESS_FEATURE_DISABLED: 'featureDisabled',
 
     // Rate Limiting Errors
-    RATE_LIMIT_EXCEEDED: 'Too many requests. Please try again later',
-    RATE_LIMIT_IP_BLOCKED:
-      'Too many requests. Please wait a moment and try again.',
-    RATE_LIMIT_USER_BLOCKED:
-      'Too many requests. Please wait a moment and try again.',
-    RATE_LIMIT_API_KEY_BLOCKED:
-      'Too many requests. Please wait a moment and try again.',
+    RATE_LIMIT_EXCEEDED: 'rateLimitExceeded',
+    RATE_LIMIT_IP_BLOCKED: 'rateLimitBlocked',
+    RATE_LIMIT_USER_BLOCKED: 'rateLimitBlocked',
+    RATE_LIMIT_API_KEY_BLOCKED: 'rateLimitBlocked',
 
     // Service Errors
-    SERVICE_UNAVAILABLE: "We're experiencing issues. Please try again shortly.",
-    SERVICE_TIMEOUT: 'Request timed out. Please try again',
-    SERVICE_MAINTENANCE:
-      "We're performing maintenance. Please try again shortly.",
-    SERVICE_OVERLOADED:
-      "We're experiencing high demand. Please try again shortly.",
+    SERVICE_UNAVAILABLE: 'serviceUnavailable',
+    SERVICE_TIMEOUT: 'serviceTimeout',
+    SERVICE_MAINTENANCE: 'serviceMaintenance',
+    SERVICE_OVERLOADED: 'serviceOverloaded',
 
     // Network/Offline Errors
-    NETWORK_ERROR:
-      "You're currently offline. Showing cached data when available.",
-    CIRCUIT_OPEN:
-      "You're currently offline. Showing cached data when available.",
-    CIRCUIT_HALF_OPEN: 'Reconnecting... You may see cached data.',
+    NETWORK_ERROR: 'offline',
+    CIRCUIT_OPEN: 'offline',
+    CIRCUIT_HALF_OPEN: 'reconnecting',
 
     // Email Errors
-    EMAIL_ALREADY_EXISTS: 'An account with this email already exists.',
+    EMAIL_ALREADY_EXISTS: 'emailAlreadyExists',
 
     // Query Complexity Errors
-    QUERY_TOO_COMPLEX: 'Something went wrong. Please try again.',
-    PAGINATION_LIMIT_EXCEEDED: 'Something went wrong. Please try again.',
+    QUERY_TOO_COMPLEX: 'genericRetry',
+    PAGINATION_LIMIT_EXCEEDED: 'genericRetry',
 
     // Version Control Errors
-    VERSION_CONFLICT:
-      'This item was updated by another user. Please refresh and try again.',
+    VERSION_CONFLICT: 'versionConflict',
 
     // Pantry Errors
-    PANTRY_ITEM_ALREADY_EXISTS: 'This item is already in your pantry',
+    PANTRY_ITEM_ALREADY_EXISTS: 'pantryItemAlreadyExists',
 
     // Application-Specific Errors
-    SHOPPING_LIST_NOT_FOUND: 'Shopping list not found',
-    SHOPPING_LIST_ACCESS_DENIED: "You don't have access to this shopping list",
-    SHOPPING_ITEM_NOT_FOUND: 'Shopping item not found',
-    SHOPPING_ITEM_ALREADY_EXISTS: 'This item is already in your shopping list',
-    HOME_NOT_FOUND: 'Home not found',
-    HOME_ACCESS_DENIED: "You don't have access to this home",
-    HOME_INVITE_INVALID: 'Invalid home invitation',
-    HOME_INVITE_EXPIRED: 'Home invitation has expired',
-    HOME_MEMBER_ALREADY_EXISTS: 'User is already a member of this home',
+    SHOPPING_LIST_NOT_FOUND: 'shoppingListNotFound',
+    SHOPPING_ITEM_NOT_FOUND: 'shoppingItemNotFound',
+    SHOPPING_ITEM_ALREADY_EXISTS: 'shoppingItemAlreadyExists',
+    HOME_NOT_FOUND: 'homeNotFound',
+    HOME_ACCESS_DENIED: 'homeAccessDenied',
+    HOME_INVITE_INVALID: 'homeInviteInvalid',
+    HOME_INVITE_EXPIRED: 'homeInviteExpired',
+    HOME_MEMBER_ALREADY_EXISTS: 'homeMemberAlreadyExists',
   };
 
-  private static readonly RETRYABLE_ERRORS = [
-    'SERVICE_UNAVAILABLE',
+  // SERVICE_TIMEOUT and SERVICE_OVERLOADED are in the API's internal registry
+  // but absent from the published TopLevelErrorCode enum, which admits a code
+  // only once something emits it — so they stay literals, kept defensively.
+  private static readonly RETRYABLE_ERRORS: string[] = [
+    TopLevelErrorCode.ServiceUnavailable,
     'SERVICE_TIMEOUT',
     'SERVICE_OVERLOADED',
-    'RATE_LIMIT_EXCEEDED',
-    'AUTH_TOKEN_EXPIRED',
+    TopLevelErrorCode.RateLimitExceeded,
+    TopLevelErrorCode.AuthTokenExpired,
   ];
 
   // Expected user-input / business-rule outcomes — normal UX, not system
@@ -187,12 +195,18 @@ export class ErrorService {
   // the error dashboards aren't polluted by routine validation results (e.g. a
   // user signing up with an email that's already taken). Any VALIDATION_* code
   // is also treated as expected (see isExpectedUserError).
-  private static readonly EXPECTED_USER_ERRORS = new Set([
-    'EMAIL_ALREADY_EXISTS',
-    'VERSION_CONFLICT',
-    'RESOURCE_ALREADY_EXISTS',
-    'RESOURCE_CONFLICT',
-    'PANTRY_ITEM_ALREADY_EXISTS',
+  // Both channels are represented because this is asked of whatever code was
+  // parsed out: ErrorCode.* for a result-union member, TopLevelErrorCode.* for
+  // an `extensions.code`. The SHOPPING_* / HOME_* codes are in neither enum —
+  // the API's registry defines them but nothing emits them — so they stay
+  // literals, kept defensively.
+  private static readonly EXPECTED_USER_ERRORS = new Set<string>([
+    ErrorCode.EmailAlreadyExists,
+    ErrorCode.VersionConflict,
+    ErrorCode.ResourceAlreadyExists,
+    ErrorCode.PantryItemAlreadyExists,
+    TopLevelErrorCode.ResourceConflict,
+    TopLevelErrorCode.ResourceVersionConflict,
     'SHOPPING_ITEM_ALREADY_EXISTS',
     'HOME_MEMBER_ALREADY_EXISTS',
     'HOME_INVITE_INVALID',
@@ -201,7 +215,11 @@ export class ErrorService {
 
   private static readonly ERROR_CATEGORIES: Record<string, string> = {
     AUTH_: 'Authentication',
-    AUTHZ_: 'Authorization',
+    // The two Apollo-standard codes carry no category prefix, so they are
+    // listed in full. An 'AUTHZ_' prefix would select nothing — that family is
+    // retired — while implying codes that no longer exist.
+    [TopLevelErrorCode.Unauthenticated]: 'Authentication',
+    [TopLevelErrorCode.Forbidden]: 'Authorization',
     API_: 'API Key',
     VALIDATION_: 'Validation',
     RESOURCE_: 'Resource',
@@ -217,11 +235,11 @@ export class ErrorService {
   };
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
-    return (
-      ErrorService.ERROR_MESSAGES[errorCode] ||
-      fallbackMessage ||
-      'An unexpected error occurred'
-    );
+    const key = ErrorService.ERROR_MESSAGE_KEYS[errorCode];
+    // An unmapped code falls back to the server's own message, which is at
+    // least accurate even though it arrives untranslated.
+    if (!key) return fallbackMessage || t('errors.codes.unexpected');
+    return t(`errors.codes.${key}`, fallbackMessage);
   }
 
   getErrorCategory(errorCode: string): string {
@@ -240,7 +258,10 @@ export class ErrorService {
   }
 
   isAuthError(errorCode: string): boolean {
-    return errorCode.startsWith('AUTH_') || errorCode.startsWith('AUTHZ_');
+    return (
+      errorCode.startsWith('AUTH_') ||
+      errorCode === TopLevelErrorCode.Unauthenticated
+    );
   }
 
   isExpectedUserError(errorCode: string): boolean {
@@ -303,7 +324,7 @@ export class ErrorService {
       }
       // Check for version conflict errors
       else if (isVersionConflictError(error)) {
-        errorCode = 'VERSION_CONFLICT';
+        errorCode = ErrorCode.VersionConflict;
         errorMessage = getVersionConflictMessage();
       }
       // Apollo error types
@@ -315,7 +336,7 @@ export class ErrorService {
           errorMessage = graphQLError.message;
 
           if (
-            errorCode === 'VALIDATION_FAILED' &&
+            errorCode === ErrorCode.ValidationFailed &&
             graphQLError.extensions?.validationErrors
           ) {
             validationErrors = graphQLError.extensions
@@ -324,16 +345,26 @@ export class ErrorService {
         }
       } else if (ServerError.is(error)) {
         const statusCode = error.statusCode;
-        if (statusCode === 401) errorCode = 'AUTH_TOKEN_INVALID';
-        else if (statusCode === 403) errorCode = 'AUTHZ_FORBIDDEN';
-        else if (statusCode === 404) errorCode = 'RESOURCE_NOT_FOUND';
-        else if (statusCode === 429) errorCode = 'RATE_LIMIT_EXCEEDED';
-        else if (statusCode >= 500) errorCode = 'SERVICE_UNAVAILABLE';
+        if (statusCode === 401) errorCode = TopLevelErrorCode.AuthTokenInvalid;
+        // Only reached when the body wasn't a GraphQL envelope, so there is no
+        // `extensions.code` to read and the status is all we have. Four
+        // different conditions share 403 — FORBIDDEN, AUTH_EMAIL_NOT_VERIFIED,
+        // AUTH_ACCOUNT_SUSPENDED and API_KEY_INSUFFICIENT_PERMISSIONS — so this
+        // resolves to the generic authorization code rather than guessing.
+        // Deliberately not an AUTH_* code: isAuthError() must stay false here,
+        // or a key-provisioning fault gets handled as a dead session.
+        else if (statusCode === 403) errorCode = TopLevelErrorCode.Forbidden;
+        else if (statusCode === 404)
+          errorCode = TopLevelErrorCode.ResourceNotFound;
+        else if (statusCode === 429)
+          errorCode = TopLevelErrorCode.RateLimitExceeded;
+        else if (statusCode >= 500)
+          errorCode = TopLevelErrorCode.ServiceUnavailable;
         else errorCode = 'NETWORK_ERROR';
 
         errorMessage = error.message || `Unable to connect (${statusCode}).`;
       } else if (ServerParseError.is(error)) {
-        errorCode = 'SERVICE_UNAVAILABLE';
+        errorCode = TopLevelErrorCode.ServiceUnavailable;
         errorMessage = 'Server response could not be parsed';
       } else if (CombinedProtocolErrors.is(error)) {
         errorCode = 'NETWORK_ERROR';
@@ -459,7 +490,7 @@ export class ErrorService {
       const result = this.parseApolloError(error, config);
       return {
         ...result,
-        isVersionConflict: result.error?.code === 'VERSION_CONFLICT',
+        isVersionConflict: result.error?.code === ErrorCode.VersionConflict,
       };
     }
   }
