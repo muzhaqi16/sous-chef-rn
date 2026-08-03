@@ -1,4 +1,5 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { isErrorTypename } from './mutationPayload';
 import { t } from '#/i18n/t';
 
 /**
@@ -85,7 +86,7 @@ export function findFirstErrorMember(
   for (const value of Object.values(data as Record<string, unknown>)) {
     if (!value || typeof value !== 'object') continue;
     const typename = (value as { __typename?: unknown }).__typename;
-    if (typeof typename !== 'string' || !typename.endsWith('Error')) continue;
+    if (typeof typename !== 'string' || !isErrorTypename(typename)) continue;
     const code = (value as { code?: unknown }).code;
     const message = (value as { message?: unknown }).message;
     return {

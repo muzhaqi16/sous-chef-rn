@@ -177,7 +177,7 @@ export function useMealTemplateActions() {
       'Delete meal template error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot && cacheId) {

@@ -20,6 +20,7 @@ import {
   classifyReplayResult,
   ReplayRejectedError,
 } from './queueErrorPolicy';
+import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
@@ -306,14 +307,16 @@ export class QueueManager {
     }
 
     // Dynamic payload extraction — the mutation field name varies per queued
-    // operation, so the value shape is only known structurally here.
-    const payload = Object.values(result.data || {})[0] as
+    // operation, so the value shape is only known structurally here. Shares the
+    // foreground path's reader so both locate the payload by the same rule.
+    const payload = extractMutationPayload(result.data) as
       | {
           __typename?: string;
           code?: string;
           message?: string;
           conflict?: { message?: string };
         }
+      | null
       | undefined;
 
     // Under errorPolicy 'all' a server refusal RESOLVES as an error union

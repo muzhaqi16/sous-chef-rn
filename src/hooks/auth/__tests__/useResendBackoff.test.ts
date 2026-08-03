@@ -1,5 +1,11 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useResendBackoff, RESEND_BACKOFF_DELAYS } from '../useResendBackoff';
+import { useResendBackoff } from '../useResendBackoff';
+
+// Restated rather than imported from the hook: asserting against the same array
+// the implementation indexes would pass for any schedule it happened to have.
+// These are the delays the UI promises the user, in seconds.
+const FIRST_DELAY = 30;
+const LONGEST_DELAY = 300;
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -23,7 +29,7 @@ describe('useResendBackoff', () => {
     act(() => result.current.registerAttempt());
 
     expect(result.current.canResend).toBe(false);
-    expect(result.current.countdown).toBe(RESEND_BACKOFF_DELAYS[1]);
+    expect(result.current.countdown).toBe(FIRST_DELAY);
   });
 
   it('counts the window down and reopens when it elapses', () => {
@@ -55,15 +61,14 @@ describe('useResendBackoff', () => {
 
   it('caps the window at the longest configured delay', () => {
     const { result } = renderHook(() => useResendBackoff());
-    const longest = RESEND_BACKOFF_DELAYS[RESEND_BACKOFF_DELAYS.length - 1];
 
-    for (let i = 0; i < RESEND_BACKOFF_DELAYS.length + 3; i++) {
+    for (let i = 0; i < 8; i++) {
       act(() => result.current.registerAttempt());
-      act(() => jest.advanceTimersByTime(longest * 1000));
+      act(() => jest.advanceTimersByTime(LONGEST_DELAY * 1000));
     }
 
     act(() => result.current.registerAttempt());
-    expect(result.current.countdown).toBe(longest);
+    expect(result.current.countdown).toBe(LONGEST_DELAY);
   });
 
   it('measures the window against elapsed real time, not tick count', () => {

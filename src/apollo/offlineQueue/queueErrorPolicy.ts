@@ -4,10 +4,8 @@ import {
   ServerError,
 } from '@apollo/client/errors';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import {
-  isSessionEndingAuthCode,
-  isRefreshableAuthCode,
-} from '#/utils/authErrorCodes';
+import { isAuthRefusalCode } from '#/utils/authErrorCodes';
+import { isErrorTypename } from '#/utils/errors/mutationPayload';
 import type { QueueError } from './types';
 
 /**
@@ -79,7 +77,7 @@ export function classifyReplayResult(payload: unknown): ReplayOutcome {
     __typename?: string;
     code?: string;
   };
-  if (!typename || !typename.endsWith('Error')) return 'applied';
+  if (!typename || !isErrorTypename(typename)) return 'applied';
 
   if (typename === 'ConflictError' && code === ErrorCode.IdempotentReplay) {
     return 'converged';
@@ -219,19 +217,17 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  // Auth errors. Matching the whole token-side family via isSessionEndingAuthCode
-  // rather than AUTH_TOKEN_EXPIRED alone: AUTH_TOKEN_MISSING is exactly what a
-  // refresh fixes, yet on its own it used to fall past this branch into the
-  // permanent bucket below and get reverted + dequeued without a single retry.
-  // isRefreshableAuthCode adds the rest of the access-token side (UNAUTHENTICATED,
-  // AUTH_TOKEN_INVALID), which travel on the top-level channel and so come from
-  // `TopLevelErrorCode` rather than `ErrorCode`.
+  // Auth errors. Matching the whole family rather than AUTH_TOKEN_EXPIRED alone:
+  // AUTH_TOKEN_MISSING is exactly what a refresh fixes, yet on its own it used to
+  // fall past this branch into the permanent bucket below and get reverted +
+  // dequeued without a single retry.
   //
-  // The codes in that set a refresh genuinely cannot fix (a rejected refresh
-  // token) are self-limiting here: QueueManager runs proactiveTokenRefresh()
-  // once for an `auth` classification and marks the entry failed when it comes
-  // back without a token, so a dead session costs one attempt, not a retry loop.
-  // AUTH_ACCOUNT_SUSPENDED is in that set too, but the resource-access branch
+  // The codes a refresh genuinely cannot fix (a rejected refresh token) are
+  // self-limiting here: QueueManager runs proactiveTokenRefresh() once for an
+  // `auth` classification and marks the entry failed when it comes back without
+  // a token, so a dead session costs one attempt, not a retry loop. That is why
+  // this asks the coarse question instead of splitting the family.
+  // AUTH_ACCOUNT_SUSPENDED is in the set too, but the resource-access branch
   // above returns first and must keep doing so — a suspended account is
   // permanent, so it should not spend a refresh attempt per queued entry.
   //
@@ -239,10 +235,7 @@ export function classifyError(error: unknown): QueueError {
   // used to pull in refusals that have nothing to do with the token — an API key
   // rejected for want of a permission reads "Unauthorized: …" — and each one
   // then cost the queue a doomed refresh before failing anyway.
-  if (
-    isSessionEndingAuthCode(code ?? '') ||
-    isRefreshableAuthCode(code ?? '')
-  ) {
+  if (isAuthRefusalCode(code ?? '')) {
     return {
       type: 'auth',
       message,

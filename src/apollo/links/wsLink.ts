@@ -338,7 +338,7 @@ const createWsClient = () => {
             logger.error(
               '🔌 WebSocket closed: repeated 4403 — session revoked, signing out',
             );
-            useStore.getState().clearAuth();
+            void useStore.getState().endSession('session_revoked');
           }
           return;
         }

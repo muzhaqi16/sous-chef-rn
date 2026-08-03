@@ -180,7 +180,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Create Meal Plan Item error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       executeCacheUpdate(() => {
@@ -236,7 +236,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Update Meal Plan Item error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {
@@ -324,7 +324,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Toggle Meal Plan Item error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       executeCacheUpdate(
@@ -391,7 +391,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       'Delete Meal Plan Item error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {

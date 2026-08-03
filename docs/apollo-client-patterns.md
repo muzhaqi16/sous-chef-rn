@@ -486,8 +486,8 @@ combiner so the rejected branch is a single call:
 
 | Helper | File | Role |
 |---|---|---|
-| `classifyCreateResult(result, field, 'XPayload')` | `src/apollo/utils/classifyCreateResult.ts` | `'created' \| 'queued' \| 'rejected'` — inspects `__typename`; `result.error` (transport) ⇒ rejected; offline-queued `null` ⇒ success |
-| `alertIfRejected(result, field, 'XPayload', message)` | `src/apollo/utils/alertRejectedMutation.ts` | **the combiner** ⭐ — classify + alert in one call; returns `true` if rejected. Alerts **unconditionally**, so it covers BOTH a resolved error member AND a resolved transport error. Use at sites with **no** mutation `onError`. |
+| `classifyCreateResult(result)` | `src/apollo/utils/classifyCreateResult.ts` | `'created' \| 'queued' \| 'rejected'` — inspects `__typename`; `result.error` (transport) ⇒ rejected; offline-queued `null` ⇒ success; a falsy `result` (the call threw) ⇒ rejected |
+| `alertIfRejected(result, message)` | `src/apollo/utils/alertRejectedMutation.ts` | **the combiner** ⭐ — classify + alert in one call; returns `true` if rejected. Alerts **unconditionally**, so it covers BOTH a resolved error member AND a resolved transport error. Use at sites with **no** mutation `onError`. |
 | `alertRejectedMutation(result, message)` | `src/apollo/utils/alertRejectedMutation.ts` | lower-level — alerts only when `!result.error` (the resolved-error-member case). Use **only** alongside a mutation `onError` that handles the transport case, to avoid double-alerting. The pantry/shopping reference hooks use this form. |
 
 > ⚠️ **The transport-error trap.** Under `errorPolicy:'all'`, a network/GraphQL
@@ -508,19 +508,28 @@ const result = await executeMutation(
   error => handleMutationError(error, { operation: 'Update Member' }), // rare genuine throw
 );
 if (!result) return; // threw — handled above (uncommon under errorPolicy:'all')
-if (
-  alertIfRejected(
-    result,
-    'updateMembership',
-    'UpdateMembershipPayload',
-    t('errors.updateMemberRoleFailed'),
-  )
-) {
+if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
   revertSnapshot(); // site-specific cleanup
   return;
 }
 // success
 ```
+
+> **Neither helper takes the field name or the success typename.** Both are
+> derived from the result: the payload is the mutation's single top-level field,
+> and it's the success member when its `__typename` doesn't end in `Error`
+> (`src/utils/errors/mutationPayload.ts`, shared with the offline queue's
+> `classifyReplayResult` so the foreground and replay paths can't disagree).
+> `__tests__/graphql/mutationResultInvariants.test.ts` asserts both rules against
+> the generated SDL and every authored operation. An earlier signature took them
+> as strings; neither was checkable, and a stale one silently classified every
+> create as `'rejected'`, reverting its optimistic write forever.
+
+> **Keep the `if (!result) return` guard above `alertIfRejected`.** A falsy result
+> means the call threw and `executeMutation`'s `onError` already told the user, so
+> `alertIfRejected` returns `false` for it — deliberately unlike
+> `classifyCreateResult`, which reports `'rejected'` because the *write* didn't
+> land. The two answer different questions; dropping the guard double-alerts.
 
 **Rules:**
 - **Don't throw to handle a data-error.** `unwrapPayload` (throw-based, in
@@ -539,9 +548,11 @@ if (
   `operation` label is a **telemetry tag — a plain inline string, never
   translated** (matches the codebase-wide `trackEvent`/`operation:` convention;
   these flow to Loki/Telemetry, never to the user).
-- **`useCrudOperations`** is type-erased (it doesn't know the success typename),
-  so it can't call `classifyCreateResult`. It uses a local `*Error`-suffix
-  detector (`surfaceCrudDataError`) — the one place a generic scan is justified.
+- **`useCrudOperations`** uses `findFirstErrorMember` (via `surfaceCrudDataError`)
+  rather than `classifyCreateResult`, because it needs the refused member's own
+  `message` to show the user and the classifier only returns an outcome. Both
+  apply the same shared `isErrorTypename` rule, so they agree on which member is
+  the refusal.
 
 **Reference implementations:** `useUpdateShoppingItem.ts`,
 `useAdjustPantryItemQuantity.ts`, `useWastePantryItemBatch.ts`,

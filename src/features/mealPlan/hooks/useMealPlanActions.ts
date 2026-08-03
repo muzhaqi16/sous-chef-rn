@@ -266,7 +266,7 @@ export function useMealPlanActions() {
       'Create Meal Plan error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (optimisticPlan) {
@@ -307,7 +307,7 @@ export function useMealPlanActions() {
       'Update Meal Plan error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {
@@ -345,7 +345,7 @@ export function useMealPlanActions() {
       'Delete Meal Plan error:',
     );
 
-    const outcome = !result ? 'rejected' : classifyCreateResult(result);
+    const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {

@@ -312,28 +312,37 @@ describe('wsLink', () => {
       expect(getWebSocketState().reconnectAttempts).toBe(0);
     });
 
-    it('repeated 4403 before a stable connection clears auth (revoked session)', () => {
+    it('repeated 4403 before a stable connection ends the session (revoked)', () => {
       const { useStore } = require('#store');
+      const endSession = jest.fn(() => Promise.resolve());
       const clearAuth = jest.fn();
       useStore.getState.mockReturnValue({
         accessToken: 'mock-token',
+        endSession,
         clearAuth,
       });
 
       onHandlers.closed({ code: 4403, reason: 'Session expired' });
       expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
 
-      // The refreshed token was rejected too — the session is revoked.
+      // The refreshed token was rejected too — the session is revoked. That is
+      // the same verdict the HTTP paths act on, so it gets the same cleanup:
+      // clearing tokens alone would strand the revoked account's entities in
+      // the persisted Apollo cache.
       onHandlers.closed({ code: 4403, reason: 'Session revoked' });
-      expect(clearAuth).toHaveBeenCalledTimes(1);
+      expect(endSession).toHaveBeenCalledTimes(1);
+      expect(endSession).toHaveBeenCalledWith('session_revoked');
+      expect(clearAuth).not.toHaveBeenCalled();
       expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
     });
 
     it('a connection that survives the stability window re-arms the refresh recovery', () => {
       const { useStore } = require('#store');
+      const endSession = jest.fn(() => Promise.resolve());
       const clearAuth = jest.fn();
       useStore.getState.mockReturnValue({
         accessToken: 'mock-token',
+        endSession,
         clearAuth,
       });
 
@@ -347,6 +356,7 @@ describe('wsLink', () => {
       onHandlers.closed({ code: 4403, reason: 'Session expired' });
 
       expect(mockSessionRefresh).toHaveBeenCalledTimes(2);
+      expect(endSession).not.toHaveBeenCalled();
       expect(clearAuth).not.toHaveBeenCalled();
     });
   });

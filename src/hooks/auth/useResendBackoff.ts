@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
  * Index 0 is the never-attempted state, so `registerAttempt` (which counts from
  * 1) always lands on a real delay.
  */
-export const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
+const RESEND_BACKOFF_DELAYS = [0, 30, 60, 180, 300];
 
 const delayForAttempt = (attempt: number): number =>
   RESEND_BACKOFF_DELAYS[Math.min(attempt, RESEND_BACKOFF_DELAYS.length - 1)];
@@ -62,8 +62,6 @@ export function useResendBackoff(): ResendBackoff {
     setAttempts(nextAttempt);
 
     const delay = delayForAttempt(nextAttempt);
-    if (delay === 0) return;
-
     const startedAt = Date.now();
     setNow(startedAt);
     setCooldownUntil(startedAt + delay * 1000);

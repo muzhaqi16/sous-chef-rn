@@ -18,19 +18,9 @@
  *                   `ValidationError`): the server refused it. Revert the
  *                   optimistic item.
  *
- * Takes the result and nothing else. Both facts it needs are derivable, so
- * naming them at the call site only creates strings that can go stale:
- *
- *  - **Which field holds the payload** — every mutation operation in this app
- *    selects exactly one top-level field, so it's the single non-`__typename`
- *    entry in `data`. {@link QueueManager.executeMutation} reads the replay
- *    payload the same way.
- *  - **Whether that payload is the success member** — its `__typename` doesn't
- *    end in `Error`. All 246 `*Result` mutation unions in the schema have
- *    exactly one non-`Error` member, so the suffix decides it completely. (The
- *    only multi-payload unions are the `*EventNode` subscription unions, which
- *    never reach here.) {@link classifyReplayResult} applies the same rule on
- *    the replay side, and the two must agree.
+ * Takes the result and nothing else — both facts it needs are derived by
+ * {@link extractMutationPayload} and {@link isErrorTypename}, which
+ * {@link classifyReplayResult} uses on the replay side so the two can't drift.
  *
  * An earlier signature took the field name and the expected payload typename as
  * strings. Neither was checkable against the schema, and a stale one failed
@@ -41,32 +31,22 @@
  *               value if the call threw before resolving
  */
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  extractMutationPayload,
+  isErrorTypename,
+} from '#/utils/errors/mutationPayload';
 
 export type CreateOutcome = 'created' | 'queued' | 'rejected';
-
-/**
- * The mutation's single payload field. `null` when the field is present but
- * empty — which is how the offline queue reports a queued write, so the null
- * case must survive to the caller rather than being filtered out here.
- */
-function extractPayload(
-  data: unknown,
-): { __typename?: string; code?: string } | null | undefined {
-  if (!data || typeof data !== 'object') return undefined;
-  const fields = Object.entries(data).filter(([key]) => key !== '__typename');
-  if (fields.length !== 1) return undefined;
-  return fields[0][1];
-}
 
 export function classifyCreateResult(
   result: { data?: unknown; error?: unknown } | null | undefined | false,
 ): CreateOutcome {
   if (!result) return 'rejected';
 
-  const payload = extractPayload(result.data);
+  const payload = extractMutationPayload(result.data);
 
   if (payload?.__typename) {
-    if (!payload.__typename.endsWith('Error')) return 'created';
+    if (!isErrorTypename(payload.__typename)) return 'created';
     // A client-PK create replayed after it already committed (an online
     // double-tap, or a retry whose first response was lost) resolves as
     // ConflictError(code: IDEMPOTENT_REPLAY) — the row is already on the server,

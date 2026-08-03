@@ -491,6 +491,12 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
 
     toastService.error(message);
 
+    // `clearAuth` and deliberately not `endSession`, unlike the link-layer
+    // sites that see these same codes. This runs while a sign-in, register or
+    // verification request is in flight, and a full auth reset would also drop
+    // `pendingEmail` / `pendingPassword` and the selected-entity ids, breaking
+    // verification resume. There is also no established session's cache to
+    // clear here — this is a refused attempt to start one, not a revoked one.
     if (
       isAuthError &&
       (code === ErrorCode.AuthTokenExpired ||

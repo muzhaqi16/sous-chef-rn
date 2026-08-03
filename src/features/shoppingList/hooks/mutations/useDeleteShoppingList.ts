@@ -55,7 +55,7 @@ export function useDeleteShoppingList() {
     // 'queued' (null payload, no error) keeps the removal — the delete replays
     // later. A rejection restores the snapshot; without one (incomplete cache
     // copy) the next overview refetch restores the authoritative state.
-    const rejected = !result || classifyCreateResult(result) === 'rejected';
+    const rejected = classifyCreateResult(result) === 'rejected';
     if (rejected && snapshot) {
       executeCacheUpdate(
         () => addOptimisticShoppingList(client.cache, snapshot),

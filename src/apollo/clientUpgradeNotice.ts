@@ -39,9 +39,9 @@ export function announceClientUpgradeRequired(): void {
   // `storage` throws when touched before initializeSecureStorage() resolves.
   // index.js runs it before any React code, so this is defensive only — and it
   // fails toward announcing, since a duplicate alert beats a link-layer throw.
-  if (isStorageReady()) {
+  const storageReady = isStorageReady();
+  if (storageReady) {
     if (storage.getString(ANNOUNCED_VERSION_KEY) === CLIENT_VERSION) return;
-    storage.set(ANNOUNCED_VERSION_KEY, CLIENT_VERSION);
   } else {
     logger.warn(
       'Client-upgrade notice fired before storage init; announcing without the per-version guard',
@@ -49,6 +49,13 @@ export function announceClientUpgradeRequired(): void {
   }
 
   alertService.alert(t('appUpdate.title'), t('appUpdate.message'));
+
+  // Recorded only once the alert has actually been raised. Burning the key
+  // first would mean a notice that never reached the user — the process dying
+  // in between, or i18n not yet initialized so the copy renders as raw keys —
+  // silences this build permanently, and only a store update can clear the
+  // refusal it was reporting.
+  if (storageReady) storage.set(ANNOUNCED_VERSION_KEY, CLIENT_VERSION);
 }
 
 /**
@@ -82,16 +89,12 @@ export function announceClientReleaseAvailable(recommended: string): void {
   // duplicate block-notice at least tells the user something true.
   if (!isStorageReady()) return;
   if (storage.getString(ANNOUNCED_RECOMMENDED_KEY) === recommended) return;
-  storage.set(ANNOUNCED_RECOMMENDED_KEY, recommended);
 
   logger.info(
     `A newer client release is available (${recommended}); running ${CLIENT_VERSION}`,
   );
   toastService.info(t('appUpdate.available'));
-}
 
-/** Clears the once-per-launch guards so a suite can exercise the notices repeatedly. */
-export function resetClientUpgradeNotice(): void {
-  announcedThisLaunch = false;
-  announcedRecommendedThisLaunch = null;
+  // Recorded after the toast, for the same reason the hard notice is.
+  storage.set(ANNOUNCED_RECOMMENDED_KEY, recommended);
 }

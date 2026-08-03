@@ -40,6 +40,9 @@ import {
   type UnionTypeDefinitionNode,
   type SelectionSetNode,
 } from 'graphql';
+// The production rule itself, so this guards the code rather than a restatement
+// of it that could be relaxed independently.
+import { isErrorTypename } from '#/utils/errors/mutationPayload';
 
 const SRC = resolve(__dirname, '..', '..', 'src');
 const SCHEMA_PATH = join(SRC, 'graphql', 'generated', 'schema.graphql');
@@ -79,8 +82,6 @@ for (const def of schemaDoc.definitions) {
 const mutationResultUnions = [...new Set(mutationReturns.values())]
   .filter(name => unions.has(name))
   .sort();
-
-const isErrorMember = (typeName: string): boolean => typeName.endsWith('Error');
 
 // --- Operation side ---
 
@@ -144,7 +145,7 @@ describe('mutation result invariants', () => {
     const violations = mutationResultUnions
       .map(name => {
         const members = (unions.get(name)?.types ?? []).map(t => t.name.value);
-        const payloads = members.filter(m => !isErrorMember(m));
+        const payloads = members.filter(m => !isErrorTypename(m));
         return { name, payloads };
       })
       .filter(u => u.payloads.length !== 1)
@@ -197,7 +198,7 @@ describe('mutation result invariants', () => {
         // No arms at all means nothing but __typename is selected — the payload
         // carries no data either way, so there is nothing to swallow.
         if (arms.length === 0) continue;
-        if (!arms.some(isErrorMember)) {
+        if (!arms.some(isErrorTypename)) {
           violations.push(
             `${op.name} (${op.file}) → ${field.name}: ${returns} arms [${arms.join(', ')}]`,
           );

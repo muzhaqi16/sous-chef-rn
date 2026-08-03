@@ -24,10 +24,17 @@ jest.mock('../refreshToken', () => ({
 jest.mock('../../clientUpgradeNotice', () => ({
   announceClientUpgradeRequired: jest.fn(),
 }));
+// `endSession` and not `clearAuth`: a server verdict that the session is over
+// has to clear the persisted Apollo cache too, or the signed-out account's
+// entities are restored for whoever signs in on this device next.
+const mockEndSession = jest.fn(() => Promise.resolve());
 const mockClearAuth = jest.fn();
 jest.mock('#store', () => ({
   useStore: {
-    getState: jest.fn(() => ({ clearAuth: mockClearAuth })),
+    getState: jest.fn(() => ({
+      endSession: mockEndSession,
+      clearAuth: mockClearAuth,
+    })),
   },
 }));
 
@@ -396,7 +403,9 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
         },
       ]).catch(() => undefined);
 
-      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(mockEndSession).toHaveBeenCalledTimes(1);
+      expect(mockEndSession).toHaveBeenCalledWith('account_inactive');
+      expect(mockClearAuth).not.toHaveBeenCalled();
       expect(attemptTokenRefresh).not.toHaveBeenCalled();
     });
 
@@ -412,7 +421,7 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
         },
       ]).catch(() => undefined);
 
-      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(mockEndSession).toHaveBeenCalledWith('account_inactive');
     });
 
     // Servers predating the dedicated code send FORBIDDEN + a prose reason.
@@ -427,7 +436,7 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
         },
       ]).catch(() => undefined);
 
-      expect(mockClearAuth).toHaveBeenCalledTimes(1);
+      expect(mockEndSession).toHaveBeenCalledWith('account_inactive');
       expect(attemptTokenRefresh).not.toHaveBeenCalled();
     });
 
@@ -439,7 +448,42 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
         },
       ]).catch(() => undefined);
 
+      expect(mockEndSession).not.toHaveBeenCalled();
       expect(mockClearAuth).not.toHaveBeenCalled();
+    });
+  });
+
+  // The refresh token is gone or rejected, so there is nothing left to
+  // exchange and the refresh branch would spend a doomed round trip per
+  // failing operation. Arriving on an ordinary operation — the refresh
+  // mutation's own rejection is handled in refreshToken.ts.
+  describe('dead refresh token on an ordinary operation', () => {
+    it.each(['AUTH_REFRESH_TOKEN_INVALID', 'AUTH_REFRESH_TOKEN_MISSING'])(
+      'ends the session on %s without attempting a refresh',
+      async code => {
+        await runWithError([
+          { message: 'Refresh token rejected', extensions: { code } },
+        ]).catch(() => undefined);
+
+        expect(mockEndSession).toHaveBeenCalledTimes(1);
+        expect(mockEndSession).toHaveBeenCalledWith('refresh_token_dead');
+        expect(mockClearAuth).not.toHaveBeenCalled();
+        expect(attemptTokenRefresh).not.toHaveBeenCalled();
+      },
+    );
+
+    // The access-token-side refusals stay refreshable: the stored refresh
+    // token is untouched, so an exchange still fixes them.
+    it('AUTH_TOKEN_EXPIRED still refreshes rather than ending the session', async () => {
+      await runWithError([
+        {
+          message: 'Token expired',
+          extensions: { code: 'AUTH_TOKEN_EXPIRED' },
+        },
+      ]).catch(() => undefined);
+
+      expect(mockEndSession).not.toHaveBeenCalled();
+      expect(attemptTokenRefresh).toHaveBeenCalled();
     });
   });
 });

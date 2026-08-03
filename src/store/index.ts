@@ -51,6 +51,7 @@ import {
   createResetManager,
   ResetOptions,
   RESET_SCENARIOS,
+  SessionEndReason,
 } from './resetManager';
 
 import {
@@ -222,6 +223,7 @@ interface ResetManagerState {
   fullReset: () => Promise<void>;
   sessionExpired: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
+  endSession: (reason: SessionEndReason) => Promise<void>;
   tokenRefreshFailed: (
     reason: 'auth_rejected' | 'network' | 'unknown',
   ) => Promise<void>;

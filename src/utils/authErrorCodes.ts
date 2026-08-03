@@ -101,3 +101,18 @@ export const isRefreshableAuthCode = (code: string): boolean =>
 /** The refresh token is gone or rejected — end the session without retrying. */
 export const isDeadRefreshTokenCode = (code: string): boolean =>
   DEAD_REFRESH_TOKEN_CODES.includes(code);
+
+/**
+ * Any auth refusal at all, whichever of the two token sides it names.
+ *
+ * The union of {@link isSessionEndingAuthCode} and {@link isRefreshableAuthCode},
+ * which answer opposite questions — this is for the one caller that needs
+ * neither answer, only "is this the auth pipeline's problem". The offline queue
+ * asks it that way on purpose: it classifies the entry as `auth`, spends exactly
+ * one refresh attempt, and lets the outcome decide, so it does not need to
+ * predict which side of the family the code came from. Defined here rather than
+ * OR-ed at the call site so the fourth question stays answered from the same
+ * lists as the other three.
+ */
+export const isAuthRefusalCode = (code: string): boolean =>
+  isSessionEndingAuthCode(code) || isRefreshableAuthCode(code);

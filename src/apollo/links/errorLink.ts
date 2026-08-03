@@ -25,22 +25,18 @@ import { useStore } from '#store';
 
 // Which auth refusals a refresh can clear (and which it can't) lives in
 // #/utils/authErrorCodes, so this link, the refresh path and the offline queue
-// all classify from one list.
-//
-// This used to also substring-match 'expired' / 'unauthorized' / 'invalid
-// token' / 'jwt' in the message, which was both too wide and too narrow: any
-// error whose prose happened to contain "unauthorized" — an API key refused for
-// want of a permission, say — bought a pointless refresh, while
-// AUTH_TOKEN_INVALID ("token is malformed or invalid") matched no term at all
-// and fell through without one. FORBIDDEN is deliberately absent: it is a
-// resource-access denial, and refreshing a perfectly good token can't grant
-// access the user doesn't have.
+// all classify from one list. Classification is by code only — the message
+// substring matching this replaced was both too wide and too narrow, buying a
+// pointless refresh for any refusal whose prose contained "unauthorized" while
+// missing AUTH_TOKEN_INVALID entirely.
 
 // FORBIDDEN means the user doesn't have access to the resource — not an auth
-// issue (no token refresh). It is the single authorization code, emitted on
-// both channels: as a mutation result-union member (errors-as-data) and as the
-// top-level `extensions.code` on rejected reads. The AUTHZ_* family that used
-// to be checked alongside it is retired and no longer emitted by any path.
+// issue, and refreshing a perfectly good token can't grant access the user
+// doesn't have, so it is deliberately absent from the refreshable set. It is
+// the single authorization code, emitted on both channels: as a mutation
+// result-union member (errors-as-data) and as the top-level `extensions.code`
+// on rejected reads. The AUTHZ_* family that used to be checked alongside it is
+// retired and no longer emitted by any path.
 const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
 
 // The @auth directive rejects EVERY field for a suspended, banned, or deleted
@@ -152,11 +148,15 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // as FORBIDDEN, so testing it after that branch would `continue` past it.
       // Staying "logged in" would strand the user on cached data with every
       // request failing, so end the session and land them on sign-in.
+      //
+      // `endSession` and not `clearAuth`: the account is suspended, banned or
+      // deleted, and clearing tokens alone would leave its normalized entities
+      // in the persisted cache for whoever signs in on this device next.
       if (isAccountInactiveError(code, String(err.extensions?.reason || ''))) {
         logger.error(
           `Account inactive (${operation.operationName}) — ending session`,
         );
-        useStore.getState().clearAuth();
+        void useStore.getState().endSession('account_inactive');
         return;
       }
 
@@ -170,7 +170,7 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
         logger.error(
           `Refresh token rejected (${operation.operationName}) — ending session`,
         );
-        useStore.getState().clearAuth();
+        void useStore.getState().endSession('refresh_token_dead');
         return;
       }
 
@@ -205,21 +205,20 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       return;
     }
 
-    // For network errors, log and let the error propagate. retryLink (above this
-    // link) owns query-retry policy with backoff/jitter and deliberately skips
-    // mutations — re-forwarding here would double query retries AND re-send
-    // mutations (a duplicate-write risk for non-idempotent ones). Returning void
-    // makes Apollo emit the networkError to the observer, where errorPolicy plus
-    // the cache-and-network fetch policy keep cached data visible.
+    // Network errors are neither logged nor re-forwarded here.
+    //
+    // Not logged: that lives in networkStatusLink, which sits ABOVE retryLink
+    // and so emits one warning per operation. This link sits BELOW retryLink and
+    // would log every retry attempt — a wall of identical warnings on an offline
+    // cold start.
+    //
+    // Not re-forwarded: retryLink owns query-retry policy (backoff/jitter, and
+    // it deliberately skips mutations), so re-forwarding would double query
+    // retries AND re-send mutations, a duplicate-write risk for non-idempotent
+    // ones. Returning void instead makes Apollo emit the networkError to the
+    // observer, where errorPolicy plus the cache-and-network fetch policy keep
+    // cached data visible.
     if (isNetworkError(error)) {
-      // Network-error logging lives in networkStatusLink, which sits ABOVE
-      // retryLink and so emits one warning per operation — this link sits
-      // BELOW retryLink and would log every retry attempt (a wall of identical
-      // warnings on an offline cold start). Just let the error propagate:
-      // retryLink owns query-retry policy (backoff/jitter, skips mutations),
-      // and errorPolicy + the cache-and-network fetch policy keep cached data
-      // visible. Re-forwarding here would double query retries AND re-send
-      // mutations (a duplicate-write risk for non-idempotent ones).
       return;
     }
 
