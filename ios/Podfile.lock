@@ -7,7 +7,7 @@ PODS:
   - hermes-engine (250829098.0.10):
     - hermes-engine/Pre-built (= 250829098.0.10)
   - hermes-engine/Pre-built (250829098.0.10)
-  - LiquidGlass (0.7.0):
+  - LiquidGlass (0.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1681,7 +1681,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.7.0):
+  - react-native-safe-area-context (5.8.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1693,8 +1693,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.7.0)
-    - react-native-safe-area-context/fabric (= 5.7.0)
+    - react-native-safe-area-context/common (= 5.8.0)
+    - react-native-safe-area-context/fabric (= 5.8.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1705,7 +1705,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.7.0):
+  - react-native-safe-area-context/common (5.8.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1727,7 +1727,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.7.0):
+  - react-native-safe-area-context/fabric (5.8.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2184,7 +2184,7 @@ PODS:
     - React-utils (= 0.85.3)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.85.3)
-  - ReactNavigation (8.0.0-alpha.35):
+  - ReactNavigation (8.0.0-alpha.40):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3046,7 +3046,7 @@ SPEC CHECKSUMS:
   FBLazyVector: 24e62c765683b8d89006a88a2c8f5cf019f0074d
   Gifu: 9f7e52357d41c0739709019eb80a71ad9aab1b6d
   hermes-engine: 7d048ca0752e7567b326d8ef4ab346c99f397785
-  LiquidGlass: dded25ea0322308cbc5e2504de75c30da3f70c85
+  LiquidGlass: 79edfdadba32c29aa45772a4684cfead35698e9a
   MMKVCore: 3d16ce9f7d411e135020915fde98a056859a1efa
   NitroImage: 1f29caf8d1b31ca9647f0551a25ffcc94ffc5726
   NitroMmkv: 85a251e15c39d7c95fe58cf40786fa126b8d143c
@@ -3096,7 +3096,7 @@ SPEC CHECKSUMS:
   react-native-netinfo: 4319d381f35bc11b53dafebd5cd99c04c66a9fb4
   react-native-pager-view: 1c005017ae5f344608af076f9aa4eb984ee6ec1c
   react-native-performance: 3290079971f56838ae50f7f1d65d6e075d88b932
-  react-native-safe-area-context: 6b4966397ada0f7dd481e4486a2ef936834861a1
+  react-native-safe-area-context: fb5c8ee9f6dd62ef710611b3d370c501f42a4ac0
   react-native-skia: 4bce4f754c3dd3f1f9e283ec4fd8f730fa4cd6e3
   react-native-turbo-image: 293a01cc65dc9dd1184c0a5629411448da29065c
   react-native-vector-icons-ionicons: ad07e944a092a5cf71b8b569d8f5ce2bf674c415
@@ -3134,7 +3134,7 @@ SPEC CHECKSUMS:
   ReactCodegen: c8f81e6c6f762dcf442a6203a1fb58f7dafc8014
   ReactCommon: 7dfc3250793bf36cf221096ff59e1179e13eef7f
   ReactNativeDependencies: 347b05c9932a57452bacfb8bfd66117e3ce31e22
-  ReactNavigation: 506ff5aa4b04f3e1613347967ddffd4da51c542b
+  ReactNavigation: c904156705d952eb61fbbbeb04f5f3d6edf2fb93
   RNCClipboard: 715fa7c6c8366f17d00f05a439ee7488f390fa5f
   RNCMaskedView: eb2b2e538afa907f05a5848a1a1ac26092e6fec9
   RNCPicker: d74667bdfc08ed389a2a277d95b8faf2349290a9
