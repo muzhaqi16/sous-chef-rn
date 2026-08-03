@@ -16231,7 +16231,7 @@ export enum TopLevelErrorCode {
   SubscriptionLimitExceeded = 'SUBSCRIPTION_LIMIT_EXCEEDED',
   /** No credentials were presented. Apollo's standard code, which clients already branch on. */
   Unauthenticated = 'UNAUTHENTICATED',
-  /** The unit is not valid for the requested operation. Carries validUnits. */
+  /** The unit is not valid for the requested operation. Carries no machine-readable list of the units that would be: a mutation reports this as a ValidationError union member, which has no extensions, and the message names the acceptable alternatives in prose. To present them as options, re-query consumptionUnitsForItem or restockUnitsForItem. */
   UnitInvalid = 'UNIT_INVALID',
   ValidationFailed = 'VALIDATION_FAILED',
   ValidationUniqueConstraint = 'VALIDATION_UNIQUE_CONSTRAINT',
