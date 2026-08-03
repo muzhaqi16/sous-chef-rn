@@ -978,7 +978,7 @@ mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {
 }
 
 mutation UpdateCollaboratorPermissions(
-  $input: UpdateCollaboratorPermissionsFullInput!
+  $input: UpdateCollaboratorPermissionsInput!
 ) {
   updateCollaboratorPermissions(input: $input) {
     __typename
@@ -1141,42 +1141,56 @@ mutation JoinShoppingListByShareCode(
 # OFFLINE SYNC MUTATIONS
 # ============================================
 
-mutation SyncShoppingListItem($input: SyncShoppingListItemFullInput!) {
+mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {
   syncShoppingListItem(input: $input) {
-    clientId
-    serverId
-    operation
-    converged
-    item {
-      id
-      ...queueManager_syncItem
-    }
-    conflict {
-      clientVersion
-      serverVersion
-      message
-      serverItem {
+    __typename
+    ... on SyncShoppingListItemPayload {
+      clientId
+      serverId
+      operation
+      converged
+      item {
         id
-        version
-        sortOrder
+        ...queueManager_syncItem
       }
+      conflict {
+        clientVersion
+        serverVersion
+        message
+        serverItem {
+          id
+          version
+          sortOrder
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }
 
 mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
   syncDeleteShoppingListItem(input: $input) {
-    clientId
-    serverId
-    operation
-    converged
-    item {
-      id
-      itemName
+    __typename
+    ... on SyncShoppingListItemPayload {
+      clientId
+      serverId
+      operation
+      converged
+      item {
+        id
+        itemName
+      }
+      conflict {
+        clientVersion
+        serverVersion
+        message
+      }
     }
-    conflict {
-      clientVersion
-      serverVersion
+    ... on Error {
+      code
       message
     }
   }
@@ -1184,23 +1198,30 @@ mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {
 
 mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
   syncMoveShoppingListItem(input: $input) {
-    clientId
-    serverId
-    operation
-    converged
-    item {
-      id
-      ...queueManager_syncMoveItem
-    }
-    conflict {
-      clientVersion
-      serverVersion
-      message
-      serverItem {
+    __typename
+    ... on SyncShoppingListItemPayload {
+      clientId
+      serverId
+      operation
+      converged
+      item {
         id
-        version
-        sortOrder
+        ...queueManager_syncMoveItem
       }
+      conflict {
+        clientVersion
+        serverVersion
+        message
+        serverItem {
+          id
+          version
+          sortOrder
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
     }
   }
 }

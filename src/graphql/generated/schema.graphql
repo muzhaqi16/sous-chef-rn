@@ -109,6 +109,44 @@ directive @cacheControl(
 ) on FIELD_DEFINITION | INTERFACE | OBJECT | UNION
 
 """
+Mark a mutation that a client never queues offline, so it needs no
+`idempotencyKey` on its input.
+
+The offline-replay coverage rule requires a key on the cumulative-write verbs
+(restock, waste, adjust, consume, record, increment, convert, open), because a
+queued write replayed after a flaky connection must not apply twice. Two kinds
+of operation carry one of those verbs without carrying that risk:
+
+- **Server-recorded events** — the server writes them in response to something
+  that already happened, so no client queue holds a copy to replay.
+- **Set-to-absolute corrections** — replaying writes the same value, so the
+  operation is idempotent by construction rather than by a key.
+
+Neither is visible in the SDL: a set-to-absolute input
+(`netWeight: Float!`) and a cumulative one (`quantity: Float!`) have the same
+shape. The distinction is semantic, so it is DECLARED here rather than derived
+— beside the operation it describes, where a reviewer reading the mutation
+sees it, and with a mandatory reason.
+
+It is NOT an authorization posture and grants nothing. Its only effect is to
+tell the operation-conventions check that this mutation's missing
+`idempotencyKey` is intentional.
+
+Example:
+  type Mutation {
+    adjustPantryItemWeight(input: AdjustPantryItemWeightInput!): AdjustPantryItemWeightResult!
+      @auth
+      @offlineReplayExempt(reason: "set-to-absolute weight correction")
+  }
+"""
+directive @offlineReplayExempt(
+  """
+  Why this mutation is not offline-queued. Required — an unexplained exemption is the drift this directive exists to prevent.
+  """
+  reason: String!
+) on FIELD_DEFINITION
+
+"""
 Mark a field as supporting OPTIONAL authentication.
 
 - If the caller provides a valid JWT, the resolver sees a populated
@@ -1203,6 +1241,22 @@ type AuthPayload {
   user: User!
 }
 
+"""
+The caller is not authenticated: credentials did not match, a token was
+missing, invalid or expired, or the account is locked or suspended.
+Disambiguate via `code`.
+
+This is the union-channel form of a refusal that also exists top-level. An
+operation returning a `*Result` union reports the refusal here; one with no
+union to return into — the `@auth` directive family, a field or connection
+resolver, a REST route — reports it as a top-level error. The `code` is the
+same value on both channels for the same condition.
+"""
+type AuthenticationError implements Error {
+  code: ErrorCode!
+  message: String!
+}
+
 input AutocompleteCategoryInput {
   limit: Int = 10
   parentId: ID
@@ -1476,7 +1530,7 @@ type BrowserStat {
   count: Int!
 }
 
-input BulkCreateItemInput {
+input BulkCreateItemsInput {
   items: [CreateItemInput!]!
   skipDuplicates: Boolean
   updateExisting: Boolean
@@ -1576,7 +1630,7 @@ input BulkDeviceUpdateInput {
   isVerified: Boolean
 }
 
-input BulkNotificationInput {
+input BulkSendNotificationsInput {
   actionUrl: String
   batchId: String
   category: NotificationCategory
@@ -2520,6 +2574,13 @@ input CreateMealPlanFromTemplateInput {
   templateId: ID!
 }
 
+"""
+Result of CreateMealPlanFromTemplate. Select on CreateMealPlanPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateMealPlanFromTemplateResult = ConflictError | CreateMealPlanPayload | ForbiddenError | NotFoundError | ValidationError
+
 input CreateMealPlanInput {
   budgetAmount: Float
   description: String
@@ -2658,6 +2719,14 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateModerationRecordInput {
+  moderatorNotes: String
+  riskScore: Float
+  status: ModerationStatus
+  trustLevel: TrustLevel
+  userId: ID!
+}
 
 type CreateModerationRecordPayload {
   userModeration: UserModeration!
@@ -3166,14 +3235,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreateUnitResult = ConflictError | CreateUnitPayload | ForbiddenError | NotFoundError | ValidationError
-
-input CreateUserModerationInput {
-  moderatorNotes: String
-  riskScore: Float
-  status: ModerationStatus
-  trustLevel: TrustLevel
-  userId: ID!
-}
 
 enum Cuisine {
   AFRICAN
@@ -4339,6 +4400,13 @@ input EnableHomeJoinLinkInput {
 }
 
 """
+Result of EnableHomeJoinLink. Select on UpdateHomePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union EnableHomeJoinLinkResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError
+
+"""
 Base interface for every mutation error variant. Every concrete error
 type implements this so clients can write a generic
 `... on Error { code message }` fallback alongside specific variants.
@@ -4353,10 +4421,18 @@ Machine-readable error code. Returned on every Error implementer so
 clients can branch on `code` without needing to inspect `__typename`
 for common cases.
 
-This enum covers the **business-error channel only** — conditions that
-arrive as a member of a `*Result` union. Two other classes of failure
-never reach it, and clients read them from a top-level error's
-`extensions` instead:
+This enum types the `code` field on `*Result` union members. A value here
+must have an emitter — some code path able to return it as a union member's
+`code` — or it is a false promise to clients branching on it.
+
+Authentication codes are emittable: a mutation returning a union reports a
+refusal as an `AuthenticationError` member. The same condition reaching a
+caller through a path with no union to return into arrives as a top-level
+error carrying the **same** code in `extensions`, so a client branching on
+`code` reads one value per condition and only chooses where to read it from.
+
+Two classes of failure still never reach this enum, and clients read them
+from a top-level error's `extensions` instead:
 
 - **Rate limiting** — thrown as a top-level error carrying
   `OPERATION_RATE_LIMITED` plus `retryAfter` in `extensions`. It is not
@@ -4369,8 +4445,19 @@ A value here without an emitter is a false promise; see the
 `error-code-contract` spec.
 """
 enum ErrorCode {
+  """
+  Failed-attempt lockout. Temporary and self-clearing — the caller may retry once the window elapses.
+  """
   AUTH_ACCOUNT_LOCKED
+  """
+  Banned, suspended or deleted — a moderation decision, not a transient lockout. Clients end the session on this code. Also emitted top-level by the auth directive for the same account state.
+  """
+  AUTH_ACCOUNT_SUSPENDED
   AUTH_CREDENTIALS_INVALID
+  """
+  Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). Emitted by the refresh mutation; the REST /refresh route reports the same code top-level.
+  """
+  AUTH_REFRESH_TOKEN_INVALID
   AUTH_TOKEN_EXPIRED
   AUTH_TOKEN_MISSING
   CONFLICT
@@ -4629,30 +4716,14 @@ Quantity input that accepts both strings and numbers. Strings can be fractions l
 scalar FlexibleQuantity
 
 """
-Caller is authenticated but not authorized for this operation. (Pure
-authentication failures surface as top-level GraphQL errors, not as a
-result variant.)
+Caller is authenticated but not authorized for this operation. An
+authentication failure — the caller is not identified at all — is
+`AuthenticationError` instead.
 """
 type ForbiddenError implements Error {
   code: ErrorCode!
   message: String!
 }
-
-input ForgotPasswordInput {
-  email: String!
-}
-
-type ForgotPasswordPayload {
-  message: String!
-  status: PasswordActionStatus!
-}
-
-"""
-Result of ForgotPassword. Select on ForgotPasswordPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union ForgotPasswordResult = ConflictError | ForbiddenError | ForgotPasswordPayload | NotFoundError | ValidationError
 
 input ForkRecipeInput {
   """The SOURCE recipe to fork."""
@@ -6398,6 +6469,13 @@ type LoginMethodStat {
   method: LoginMethod!
 }
 
+"""
+Result of Login. Select on AuthPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union LoginResult = AuthPayload | AuthenticationError | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 """Subtype discriminator for login domain events."""
 enum LoginSubtype {
   """A successful login was recorded."""
@@ -7377,7 +7455,7 @@ type Mutation {
   """
   adjustPantryItemWeight(input: AdjustPantryItemWeightInput!): AdjustPantryItemWeightResult!
   """Create multiple items at once"""
-  bulkCreateItems(input: BulkCreateItemInput!): BulkCreateItemsResult!
+  bulkCreateItems(input: BulkCreateItemsInput!): BulkCreateItemsResult!
   """Create multiple purchase records at once."""
   bulkCreatePurchases(input: BulkCreatePurchasesInput!): BulkCreatePurchasesResult!
   """Create several stores in one call, for seeding a region's chains."""
@@ -7459,12 +7537,19 @@ type Mutation {
   Create a new meal plan from a template.
   Copies all template items to the new plan with dates offset from startDate.
   """
-  createMealPlanFromTemplate(input: CreateMealPlanFromTemplateInput!): CreateMealPlanResult!
+  createMealPlanFromTemplate(input: CreateMealPlanFromTemplateInput!): CreateMealPlanFromTemplateResult!
   """Add an item to a meal plan."""
   createMealPlanItem(input: CreateMealPlanItemInput!): CreateMealPlanItemResult!
   """Create a new meal template"""
   createMealTemplate(input: CreateMealTemplateInput!): CreateMealTemplateResult!
-  """Create a new membership directly (owner/admin only)."""
+  """
+  Create a new membership directly (owner/admin only).
+  
+  Admits the named user as an ACTIVE member immediately — no invitation, and
+  no acceptance from the person being added. That makes it the most direct
+  way to pull someone into the caller's scope, so it requires a verified
+  email like the invite and join-link routes do.
+  """
   createMembership(input: CreateMembershipInput!): CreateMembershipResult!
   """Create a new notification."""
   createNotification(input: CreateNotificationInput!): CreateNotificationResult!
@@ -7615,9 +7700,7 @@ type Mutation {
   pantry-share link). Idempotent — preserves an existing code so links
   already shared keep working. Read the resulting link via home.joinLink.
   """
-  enableHomeJoinLink(input: EnableHomeJoinLinkInput!): UpdateHomeResult!
-  """Request a password reset email"""
-  forgotPassword(input: ForgotPasswordInput!): ForgotPasswordResult!
+  enableHomeJoinLink(input: EnableHomeJoinLinkInput!): EnableHomeJoinLinkResult!
   """
   Create an editable copy of a recipe the caller does not own — an external
   import or another user's. The fork is owned by the caller and carries a
@@ -7641,7 +7724,7 @@ type Mutation {
   """Link an existing item to an external source."""
   linkItemToExternalSource(input: LinkItemToExternalSourceInput!): LinkItemToExternalSourceResult!
   """Authenticate a user with credentials and return tokens."""
-  login(input: LoginInput!): AuthPayload!
+  login(input: LoginInput!): LoginResult!
   """Mark all notifications as read for the current user."""
   markAllNotificationsAsRead: MarkAllNotificationsAsReadResult!
   """Mark a shopping list as a reusable template."""
@@ -7732,7 +7815,7 @@ type Mutation {
   """Record that a saved recipe was cooked (increments the cooked count)."""
   recordRecipeCooked(input: RecordRecipeCookedInput!): RecordRecipeCookedResult!
   """Refresh an expired access token using a refresh token."""
-  refresh(input: RefreshTokenInput!): RefreshTokenPayload!
+  refresh(input: RefreshInput!): RefreshResult!
   """
   Register a new user account. Existence-blind and verification-first: always
   returns the same result and (for an available email) sends a verification
@@ -7774,10 +7857,12 @@ type Mutation {
   removeTemplateItem(input: RemoveTemplateItemInput!): RemoveTemplateItemResult!
   """Remove the conversion factor from a unit."""
   removeUnitConversion(input: RemoveUnitConversionInput!): RemoveUnitConversionResult!
+  """Request a password reset email"""
+  requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetResult!
   """Resend the email verification message to a user."""
   resendVerificationEmail(input: ResendVerificationEmailInput!): ResendVerificationEmailResult!
   """Reset password using token from email"""
-  resetPassword(input: ResetPasswordWithTokenInput!): ResetPasswordResult!
+  resetPassword(input: ResetPasswordInput!): ResetPasswordResult!
   """
   Restock a pantry item - adds quantity and creates a ledger record.
   Use this when replenishing an existing pantry item.
@@ -7792,17 +7877,17 @@ type Mutation {
   """
   Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
   """
-  syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncPantryItemResult!
+  syncDeletePantryItem(input: SyncDeletePantryItemInput!): SyncDeletePantryItemResult!
   """
   Offline-sync twin of removeItemFromShoppingList — idempotent by a
   client-minted id.
   """
-  syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncShoppingListItemResult!
+  syncDeleteShoppingListItem(input: SyncDeleteShoppingListItemInput!): SyncDeleteShoppingListItemResult!
   """
   Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
   client-minted id.
   """
-  syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncShoppingListItemResult!
+  syncMoveShoppingListItem(input: SyncMoveShoppingListItemInput!): SyncMoveShoppingListItemResult!
   """
   Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
   client-minted id (the primary key for creates, idempotencyKey for
@@ -7816,7 +7901,7 @@ type Mutation {
   the online mutations directly when not syncing offline edits. See
   docs/api/graphql-operation-conventions.md (§5).
   """
-  syncShoppingListItem(input: SyncShoppingListItemFullInput!): SyncShoppingListItemResult!
+  syncShoppingListItem(input: SyncShoppingListItemInput!): SyncShoppingListItemResult!
   """Toggle a helpful vote on a recipe review."""
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Toggle the purchased state of a shopping list item."""
@@ -7833,7 +7918,7 @@ type Mutation {
   """Update an existing category."""
   updateCategory(input: UpdateCategoryInput!): UpdateCategoryResult!
   """Update a collaborator's granular permissions on a shopping list."""
-  updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsFullInput!): UpdateCollaboratorPermissionsResult!
+  updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsInput!): UpdateCollaboratorPermissionsResult!
   """Update a collaborator's role on a shopping list."""
   updateCollaboratorRole(input: UpdateCollaboratorRoleInput!): UpdateCollaboratorRoleResult!
   """Update an existing cooking log entry."""
@@ -7861,8 +7946,13 @@ type Mutation {
   updateHome(input: UpdateHomeInput!): UpdateHomeResult!
   """
   Rotate (update) a home's join code, invalidating any previously shared join link.
+  
+  Does NOT enable sharing — a home with the join link turned off stays off,
+  and its home.joinLink stays null. Use enableHomeJoinLink for that. This is
+  why rotating needs no verified email: it is how a leaked link is killed, so
+  it must stay available to an account that cannot grant access.
   """
-  updateHomeJoinCode(input: UpdateHomeJoinCodeInput!): UpdateHomeResult!
+  updateHomeJoinCode(input: UpdateHomeJoinCodeInput!): UpdateHomeJoinCodeResult!
   """
   Update an item. Consolidated mutation that handles:
   - Basic fields (name, description, type, etc.)
@@ -9222,7 +9312,7 @@ type PantryUsageStats {
 """
 Outcome of a password-flow action (bulk-operation-standard sibling: replaces
 the flat {success,code,message} status types). Anti-enumeration is preserved
-by the resolver — e.g. forgotPassword always resolves to SENT regardless of
+by the resolver — e.g. requestPasswordReset always resolves to SENT regardless of
 whether the email exists.
 """
 enum PasswordActionStatus {
@@ -9231,7 +9321,7 @@ enum PasswordActionStatus {
   """The token was missing, invalid, or expired."""
   INVALID_OR_EXPIRED
   """
-  A reset email was sent (forgotPassword — always this, existence-blind).
+  A reset email was sent (requestPasswordReset — always this, existence-blind).
   """
   SENT
   """The token was valid (validatePasswordResetToken)."""
@@ -10383,9 +10473,16 @@ enum RecurringPattern {
   WEEKLY
 }
 
-input RefreshTokenInput {
+input RefreshInput {
   token: String!
 }
+
+"""
+Result of Refresh. Select on RefreshTokenPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RefreshResult = AuthenticationError | ConflictError | ForbiddenError | NotFoundError | RefreshTokenPayload | ValidationError
 
 """Token refresh response - NEVER cache"""
 type RefreshTokenPayload {
@@ -10673,6 +10770,22 @@ Always include a __typename so the variant can be discriminated.
 """
 union RemoveUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | RemoveUnitConversionPayload | ValidationError
 
+input RequestPasswordResetInput {
+  email: String!
+}
+
+type RequestPasswordResetPayload {
+  message: String!
+  status: PasswordActionStatus!
+}
+
+"""
+Result of RequestPasswordReset. Select on RequestPasswordResetPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RequestPasswordResetResult = ConflictError | ForbiddenError | NotFoundError | RequestPasswordResetPayload | ValidationError
+
 input ResendVerificationEmailInput {
   email: String!
 }
@@ -10688,6 +10801,11 @@ Always include a __typename so the variant can be discriminated.
 """
 union ResendVerificationEmailResult = ConflictError | ForbiddenError | NotFoundError | ResendVerificationEmailPayload | ValidationError
 
+input ResetPasswordInput {
+  newPassword: String!
+  token: String!
+}
+
 type ResetPasswordPayload {
   message: String!
   status: PasswordActionStatus!
@@ -10699,11 +10817,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ResetPasswordResult = ConflictError | ForbiddenError | NotFoundError | ResetPasswordPayload | ValidationError
-
-input ResetPasswordWithTokenInput {
-  newPassword: String!
-  token: String!
-}
 
 """
 Resolution of a shareable code (home join code or list share code) into a
@@ -12193,10 +12306,24 @@ input SyncDeletePantryItemInput {
   version: Int
 }
 
+"""
+Result of SyncDeletePantryItem. Select on SyncPantryItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union SyncDeletePantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError
+
 input SyncDeleteShoppingListItemInput {
   clientId: ID!
   version: Int
 }
+
+"""
+Result of SyncDeleteShoppingListItem. Select on SyncShoppingListItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
 
 input SyncItemPopularityInput {
   """
@@ -12232,6 +12359,13 @@ input SyncMoveShoppingListItemInput {
   version: Int
 }
 
+"""
+Result of SyncMoveShoppingListItem. Select on SyncShoppingListItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union SyncMoveShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
+
 enum SyncOperation {
   CREATE
   DELETE
@@ -12263,7 +12397,7 @@ input SyncPantryItemInput {
   wasteReason: WasteReason
 }
 
-type SyncPantryItemResult {
+type SyncPantryItemPayload {
   clientId: ID!
   conflict: SyncConflictInfo
   """
@@ -12276,6 +12410,13 @@ type SyncPantryItemResult {
   operation: SyncOperation!
   serverId: ID
 }
+
+"""
+Result of SyncPantryItem. Select on SyncPantryItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError
 
 input SyncRecipeRatingsInput {
   """
@@ -12310,12 +12451,7 @@ input SyncSettingsInput {
   offlineMode: Boolean
 }
 
-input SyncShoppingListItemFullInput {
-  clientId: ID!
-  item: SyncShoppingListItemInput!
-}
-
-input SyncShoppingListItemInput {
+input SyncShoppingListItemFieldsInput {
   brand: BrandReferenceInput
   category: String
   """
@@ -12344,8 +12480,13 @@ input SyncShoppingListItemInput {
   version: Int
 }
 
+input SyncShoppingListItemInput {
+  clientId: ID!
+  item: SyncShoppingListItemFieldsInput!
+}
+
 """Result of syncing a shopping list item"""
-type SyncShoppingListItemResult {
+type SyncShoppingListItemPayload {
   """The client-provided permanent ID (CUID) echoed back for correlation"""
   clientId: ID!
   """Conflict information if version mismatch occurred"""
@@ -12365,6 +12506,13 @@ type SyncShoppingListItemResult {
   """
   serverId: ID
 }
+
+"""
+Result of SyncShoppingListItem. Select on SyncShoppingListItemPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union SyncShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
 
 """Sub-input for tag-based filters"""
 input TagFilterInput {
@@ -12716,13 +12864,7 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateCategoryResult = ConflictError | ForbiddenError | NotFoundError | UpdateCategoryPayload | ValidationError
 
-input UpdateCollaboratorPermissionsFullInput {
-  collaboratorId: ID!
-  permissions: UpdateCollaboratorPermissionsInput!
-  shoppingListId: ID!
-}
-
-input UpdateCollaboratorPermissionsInput {
+input UpdateCollaboratorPermissionsFieldsInput {
   canAddItems: Boolean
   canEdit: Boolean
   canEditItems: Boolean
@@ -12731,6 +12873,12 @@ input UpdateCollaboratorPermissionsInput {
   canMarkPurchased: Boolean
   canRemoveItems: Boolean
   canViewHistory: Boolean
+}
+
+input UpdateCollaboratorPermissionsInput {
+  collaboratorId: ID!
+  permissions: UpdateCollaboratorPermissionsFieldsInput!
+  shoppingListId: ID!
 }
 
 type UpdateCollaboratorPermissionsPayload {
@@ -12934,6 +13082,13 @@ input UpdateHomeJoinCodeInput {
   """ID of the home whose join code to rotate."""
   id: ID!
 }
+
+"""
+Result of UpdateHomeJoinCode. Select on UpdateHomePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateHomeJoinCodeResult = ConflictError | ForbiddenError | NotFoundError | UpdateHomePayload | ValidationError
 
 type UpdateHomePayload {
   home: Home!

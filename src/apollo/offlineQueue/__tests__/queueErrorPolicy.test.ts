@@ -25,7 +25,7 @@ describe('classifyReplayResult', () => {
     ).toBe('applied');
     expect(
       classifyReplayResult({
-        __typename: 'SyncPantryItemResult',
+        __typename: 'SyncPantryItemPayload',
         clientId: 'c1',
         converged: true,
       }),

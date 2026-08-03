@@ -500,6 +500,23 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
   useStore.getState().setAuthIsLoading(false);
 }
 
+// A non-success member of LoginResult. It resolves 200 with no transport
+// error, so surface it the way handleAuthError surfaces transport failures —
+// a toast — and stay on the sign-in screen. The code is mapped through the
+// shared friendly-message table so a refusal reads the same here as it does
+// when the identical condition arrives as a top-level error; the server's own
+// message is only the fallback.
+function handleRejectedAuthPayload(
+  payload: { code: string; message: string },
+  operation: string,
+): void {
+  logger.warn(`${operation} rejected by the server: ${payload.code}`);
+  toastService.error(
+    errorService.getUserFriendlyMessage(payload.code, payload.message),
+  );
+  useStore.getState().setAuthIsLoading(false);
+}
+
 async function handleLogin(
   loginResponse: ResolvedAuthPayload,
   shouldRemember?: boolean,
@@ -664,13 +681,15 @@ async function login(
       variables: { input },
     });
 
-    if (result.data?.login) {
+    const payload = result.data?.login;
+
+    if (payload?.__typename === 'AuthPayload') {
       const loginCredentials = {
         email: input.email,
         password: input.password,
       };
 
-      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+      const unmaskedLogin = unmaskAuthPayload(payload);
       if (unmaskedLogin) {
         // handleLogin owns all post-login routing — verification, onboarding,
         // the biometric gate, and the RememberMe gate (driven by
@@ -685,6 +704,11 @@ async function login(
 
       store.setAuthIsLoading(false);
       return true;
+    }
+
+    if (payload) {
+      handleRejectedAuthPayload(payload, 'Login');
+      return false;
     }
 
     if (result.error) {
@@ -849,13 +873,35 @@ async function autoLogin(): Promise<boolean> {
       },
     });
 
-    if (result.data?.login) {
-      const unmaskedLogin = unmaskAuthPayload(result.data.login);
+    const payload = result.data?.login;
+
+    if (payload?.__typename === 'AuthPayload') {
+      const unmaskedLogin = unmaskAuthPayload(payload);
       if (unmaskedLogin) {
         await handleLogin(unmaskedLogin, true);
       }
       logger.info('Auto-login successful');
       return true;
+    }
+
+    if (payload) {
+      // Drop the stored credentials only when the server says THESE
+      // credentials will never authenticate — the password changed elsewhere,
+      // or the account is gone. A temporary failed-attempt lockout
+      // (AUTH_ACCOUNT_LOCKED) clears on its own, so keeping the credentials
+      // spares the user a full biometric re-enrollment over a window that
+      // expires by itself.
+      if (
+        payload.code === 'AUTH_CREDENTIALS_INVALID' ||
+        payload.code === 'AUTH_ACCOUNT_SUSPENDED'
+      ) {
+        logger.warn(
+          `Auto-login rejected (${payload.code}), clearing stored credentials`,
+        );
+        await removeCredentials(email);
+      }
+      handleRejectedAuthPayload(payload, 'Auto-login');
+      return false;
     }
 
     if (result.error) {

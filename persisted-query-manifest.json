@@ -435,12 +435,6 @@
       "body": "mutation EnableHomeJoinLink($input: EnableHomeJoinLinkInput!) {\n  enableHomeJoinLink(input: $input) {\n    __typename\n    ... on UpdateHomePayload {\n      home {\n        id\n        allowJoinCode\n        joinCode\n        joinLink {\n          universal\n          scheme\n          __typename\n        }\n        version\n        updatedAt\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "dea6e809a15a9ab48043f8612f7335591997b3e1efb026776211cc6f41ab9f22",
-      "name": "ForgotPassword",
-      "type": "mutation",
-      "body": "mutation ForgotPassword($input: ForgotPasswordInput!) {\n  forgotPassword(input: $input) {\n    __typename\n    ... on ForgotPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
-    },
-    {
       "id": "f37d70111e3505f5999e02ebc1b32df16c9020d7d031437ec68a5e2edc99a2d9",
       "name": "ForkRecipe",
       "type": "mutation",
@@ -801,10 +795,10 @@
       "body": "mutation LeaveHome($input: LeaveHomeInput!) {\n  leaveHome(input: $input) {\n    __typename\n    ... on LeaveHomePayload {\n      membership {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "e41fd4088dc5a96f24f0b629c704905da9099e6dd0fbf3925b30d50478dbffea",
+      "id": "7ffc6d23a52b428a1edc7132f7edd450a63c5ff98b90041cfd08ee950a608212",
       "name": "Login",
       "type": "mutation",
-      "body": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    user {\n      id\n      ...LoginUser\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    displayName\n    avatar\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    __typename\n    ... on AuthPayload {\n      accessToken\n      refreshToken\n      user {\n        id\n        ...LoginUser\n        __typename\n      }\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment LoginUser on User {\n  id\n  email\n  emailVerified\n  role\n  canAccessDevTools\n  onBoarded\n  createdAt\n  updatedAt\n  timezone\n  defaultHomeId\n  defaultShoppingListId\n  defaultHome {\n    id\n    name\n    isDefault\n    pantriesConnection {\n      edges {\n        node {\n          id\n          isDefault\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  profile {\n    id\n    displayName\n    avatar\n    __typename\n  }\n  settings {\n    id\n    theme\n    showTutorials\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "3396cec70675cb7254c1a78f07c6036fbf77b0dde4f72825e2cec3e0dcc73c21",
@@ -963,10 +957,10 @@
       "body": "subscription PantryEvents($pantryId: ID!) {\n  pantryEvents(pantryId: $pantryId) {\n    actorUserId\n    mutation\n    subtype\n    pantryId\n    timestamp\n    parents {\n      homeId\n      __typename\n    }\n    node {\n      ... on PantryItem {\n        id\n        ...usePantrySubscriptions_pantryItem\n        __typename\n      }\n      ... on Pantry {\n        id\n        name\n        description\n        isDefault\n        version\n        stats {\n          totalItems\n          expiringCount\n          expiredCount\n          lowStockCount\n          __typename\n        }\n        __typename\n      }\n      ... on PantryItemUsage {\n        id\n        quantityUsed\n        purpose\n        usagePantryItem: pantryItem {\n          id\n          quantity\n          isLowStock\n          __typename\n        }\n        __typename\n      }\n      ... on ExpirationNotification {\n        id\n        ...usePantrySubscriptions_expirationNotification\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment usePantrySubscriptions_expirationNotification on ExpirationNotification {\n  id\n  daysUntilExpiry\n  actionTaken\n  genericNotificationId\n  pantryItem {\n    id\n    item {\n      id\n      name\n      imageUrl\n      __typename\n    }\n    __typename\n  }\n  __typename\n}\n\nfragment usePantrySubscriptions_pantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "cc3cff85e52e76404c18196fc01ff298ef26c9f6590bc5d411b6aa3a97df06e3",
+      "id": "5deabb7504e9e8323b06fd37247f6b16673050e14e7d3f8cd483f7df0fa3aa57",
       "name": "RefreshToken",
       "type": "mutation",
-      "body": "mutation RefreshToken($input: RefreshTokenInput!) {\n  refresh(input: $input) {\n    accessToken\n    refreshToken\n    __typename\n  }\n}"
+      "body": "mutation RefreshToken($input: RefreshInput!) {\n  refresh(input: $input) {\n    __typename\n    ... on RefreshTokenPayload {\n      accessToken\n      refreshToken\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "a98c2a089528845ee65e1e95eefc30e4cae2159c949a7dbfd2a940817dc26845",
@@ -1023,16 +1017,22 @@
       "body": "mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {\n  removeTemplateItem(input: $input) {\n    __typename\n    ... on RemoveTemplateItemPayload {\n      mealTemplate {\n        id\n        items {\n          id\n          ...MealTemplateItemFragment\n          __typename\n        }\n        __typename\n      }\n      mealTemplateItem {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment MealTemplateItemFragment on MealTemplateItem {\n  id\n  dayOffset\n  mealType\n  customMealName\n  servings\n  notes\n  recipe {\n    id\n    name\n    imageUrl\n    servings\n    totalTimeMinutes\n    __typename\n  }\n  __typename\n}"
     },
     {
+      "id": "5702f22c511d0fa1017a9a81f67acea0949c17d60fcf2d9f2113e196b36a290d",
+      "name": "RequestPasswordReset",
+      "type": "mutation",
+      "body": "mutation RequestPasswordReset($input: RequestPasswordResetInput!) {\n  requestPasswordReset(input: $input) {\n    __typename\n    ... on RequestPasswordResetPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
+    },
+    {
       "id": "f4c8aa6054bba45ee9035c0d2d406ddfec795cf8a230bf5ce2cb77b95b699385",
       "name": "ResendVerificationEmail",
       "type": "mutation",
       "body": "mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {\n  resendVerificationEmail(input: $input) {\n    __typename\n    ... on ResendVerificationEmailPayload {\n      user {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "30aebcedf48c788239e73bdb7f6f394c640b43a5da266861e5e35576c498d06c",
+      "id": "c04c6e878212152bd209d94fe2517608b9274a83a0d4cd341858cc0747f11f5f",
       "name": "ResetPassword",
       "type": "mutation",
-      "body": "mutation ResetPassword($input: ResetPasswordWithTokenInput!) {\n  resetPassword(input: $input) {\n    __typename\n    ... on ResetPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+      "body": "mutation ResetPassword($input: ResetPasswordInput!) {\n  resetPassword(input: $input) {\n    __typename\n    ... on ResetPasswordPayload {\n      status\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "99f5afdb269e6dd2077029b830990affeb6536c9fec9e740f4bdc25f1576646a",
@@ -1101,34 +1101,34 @@
       "body": "mutation ShareShoppingList($input: ShareShoppingListInput!) {\n  shareShoppingList(input: $input) {\n    __typename\n    ... on ShareShoppingListPayload {\n      shoppingList {\n        id\n        shareCode\n        isPublic\n        shareLink {\n          universal\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "9637e761132d7f876e9735c94cfd17f2664c99a28dfa51f43c05bd04b58ac90a",
+      "id": "cd45548298678e069b212b3965a1e5f4e0c1c769b9fcd758977e5f269585a763",
       "name": "SyncDeletePantryItem",
       "type": "mutation",
-      "body": "mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {\n  syncDeletePantryItem(input: $input) {\n    clientId\n    serverId\n    operation\n    converged\n    item {\n      id\n      itemName\n      __typename\n    }\n    conflict {\n      clientVersion\n      serverVersion\n      message\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {\n  syncDeletePantryItem(input: $input) {\n    __typename\n    ... on SyncPantryItemPayload {\n      clientId\n      serverId\n      operation\n      converged\n      item {\n        id\n        itemName\n        __typename\n      }\n      conflict {\n        clientVersion\n        serverVersion\n        message\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "ddefb142efb3915e026531aa75aabff47b4ab0694067108b6ed127c8645b9a5b",
+      "id": "196f473a34fcff77165414b0a3bedbe59f562a7c30645157d1030123fcb8f9c4",
       "name": "SyncDeleteShoppingListItem",
       "type": "mutation",
-      "body": "mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {\n  syncDeleteShoppingListItem(input: $input) {\n    clientId\n    serverId\n    operation\n    converged\n    item {\n      id\n      itemName\n      __typename\n    }\n    conflict {\n      clientVersion\n      serverVersion\n      message\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "mutation SyncDeleteShoppingListItem($input: SyncDeleteShoppingListItemInput!) {\n  syncDeleteShoppingListItem(input: $input) {\n    __typename\n    ... on SyncShoppingListItemPayload {\n      clientId\n      serverId\n      operation\n      converged\n      item {\n        id\n        itemName\n        __typename\n      }\n      conflict {\n        clientVersion\n        serverVersion\n        message\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "8b86730897a8afc11d6cf761db76c24fd6b9e70af2abdaea6a0bd48e9bc5fd03",
+      "id": "f46454077eb71c85d7adbb7d964c4b668437038c9d3dbab7756c9b43c4daed82",
       "name": "SyncMoveShoppingListItem",
       "type": "mutation",
-      "body": "mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {\n  syncMoveShoppingListItem(input: $input) {\n    clientId\n    serverId\n    operation\n    converged\n    item {\n      id\n      ...queueManager_syncMoveItem\n      __typename\n    }\n    conflict {\n      clientVersion\n      serverVersion\n      message\n      serverItem {\n        id\n        version\n        sortOrder\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment queueManager_syncMoveItem on ShoppingListItem {\n  id\n  version\n  sortOrder\n  purchaseInfo {\n    isPurchased\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {\n  syncMoveShoppingListItem(input: $input) {\n    __typename\n    ... on SyncShoppingListItemPayload {\n      clientId\n      serverId\n      operation\n      converged\n      item {\n        id\n        ...queueManager_syncMoveItem\n        __typename\n      }\n      conflict {\n        clientVersion\n        serverVersion\n        message\n        serverItem {\n          id\n          version\n          sortOrder\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment queueManager_syncMoveItem on ShoppingListItem {\n  id\n  version\n  sortOrder\n  purchaseInfo {\n    isPurchased\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "680ee5d0b8ea644f2db7b741c867a791ff3d9ec65b16af436e28566845ca68d4",
+      "id": "6e6c2b18d4e8b2d44e16f390ad4f61cb23e72297ab3ef9e0f8faae0bed1e6fa4",
       "name": "SyncPantryItem",
       "type": "mutation",
-      "body": "mutation SyncPantryItem($input: SyncPantryItemInput!) {\n  syncPantryItem(input: $input) {\n    clientId\n    serverId\n    operation\n    converged\n    item {\n      id\n      ...queueManager_syncPantryItem\n      __typename\n    }\n    conflict {\n      clientVersion\n      serverVersion\n      message\n      serverItem {\n        id\n        version\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment queueManager_syncPantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation SyncPantryItem($input: SyncPantryItemInput!) {\n  syncPantryItem(input: $input) {\n    __typename\n    ... on SyncPantryItemPayload {\n      clientId\n      serverId\n      operation\n      converged\n      item {\n        id\n        ...queueManager_syncPantryItem\n        __typename\n      }\n      conflict {\n        clientVersion\n        serverVersion\n        message\n        serverItem {\n          id\n          version\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment queueManager_syncPantryItem on PantryItem {\n  id\n  pantryId\n  itemId\n  itemName\n  quantity\n  version\n  updatedAt\n  storageState\n  expiresAt\n  lowStockAlert\n  isLowStock\n  minQuantity\n  lastUsedAt\n  netWeight\n  remainingNetWeight\n  activeBatchCount\n  earliestBatchExpiration\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  netWeightUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  storageLocation {\n    id\n    name\n    type\n    __typename\n  }\n  packageBreakdown {\n    count\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    perUnitNetWeight\n    perUnitNetWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalNetWeight\n    __typename\n  }\n  quantityBreakdown {\n    fullPackages\n    looseContentUnits\n    contentUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    totalContentUnits\n    remainingWeight\n    remainingWeightUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "eea42ef9e73986393a08650b5ba64691b89a07fe98bec5c21200c8ef2f81dc00",
+      "id": "3229f827b2edbc0ad78370516d4e4096af5d92fbf6074d898c32b9daaa0299d9",
       "name": "SyncShoppingListItem",
       "type": "mutation",
-      "body": "mutation SyncShoppingListItem($input: SyncShoppingListItemFullInput!) {\n  syncShoppingListItem(input: $input) {\n    clientId\n    serverId\n    operation\n    converged\n    item {\n      id\n      ...queueManager_syncItem\n      __typename\n    }\n    conflict {\n      clientVersion\n      serverVersion\n      message\n      serverItem {\n        id\n        version\n        sortOrder\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment queueManager_syncItem on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "mutation SyncShoppingListItem($input: SyncShoppingListItemInput!) {\n  syncShoppingListItem(input: $input) {\n    __typename\n    ... on SyncShoppingListItemPayload {\n      clientId\n      serverId\n      operation\n      converged\n      item {\n        id\n        ...queueManager_syncItem\n        __typename\n      }\n      conflict {\n        clientVersion\n        serverVersion\n        message\n        serverItem {\n          id\n          version\n          sortOrder\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}\n\nfragment queueManager_syncItem on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "7f08bbfaddd2f76ade7e73e591ab45fccc50151f463dcb9f5ff5e6d481d4e09c",
@@ -1155,10 +1155,10 @@
       "body": "mutation UpdateAccount($input: UpdateAccountInput!) {\n  updateAccount(input: $input) {\n    __typename\n    ... on UpdateAccountPayload {\n      user {\n        id\n        email\n        emailVerified\n        role\n        onBoarded\n        timezone\n        preferredCurrency\n        language\n        defaultShoppingListId\n        defaultHomeId\n        createdAt\n        updatedAt\n        lastActiveAt\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "55c408ed746e4944e609fc5cc4993d81b900682244dfc4cac13d9094ee25c01f",
+      "id": "599d69bf8ba35f18f560d4b0ccd658dd17c99965dfea3f3352ba4dacb5924e31",
       "name": "UpdateCollaboratorPermissions",
       "type": "mutation",
-      "body": "mutation UpdateCollaboratorPermissions($input: UpdateCollaboratorPermissionsFullInput!) {\n  updateCollaboratorPermissions(input: $input) {\n    __typename\n    ... on UpdateCollaboratorPermissionsPayload {\n      collaborator {\n        id\n        canAddItems\n        canRemoveItems\n        canEditItems\n        canMarkPurchased\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
+      "body": "mutation UpdateCollaboratorPermissions($input: UpdateCollaboratorPermissionsInput!) {\n  updateCollaboratorPermissions(input: $input) {\n    __typename\n    ... on UpdateCollaboratorPermissionsPayload {\n      collaborator {\n        id\n        canAddItems\n        canRemoveItems\n        canEditItems\n        canMarkPurchased\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "ad10f6f0530fd231f6dfd1240e1157ae25cb34e27179814928d45e323cf1798d",

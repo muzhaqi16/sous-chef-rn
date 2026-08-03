@@ -34,12 +34,45 @@ interface RefreshErrorLike {
   }>;
 }
 
+// `refresh` returns a RefreshResult union, so a server refusal resolves 200
+// with an error member as DATA — no GraphQL error, nothing for errorPolicy to
+// reject. This carries that member's code out of the success path so the
+// catch below can classify it like any other rejection.
+class RefreshRejectedError extends Error {
+  readonly code: string;
+
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'RefreshRejectedError';
+    this.code = code;
+  }
+}
+
+// Refusal codes that mean this session is unrecoverable: the refresh token
+// can't be exchanged now or later, so the only correct move is to end the
+// session. AUTH_ACCOUNT_LOCKED is deliberately absent — the API documents it
+// as a temporary, self-clearing failed-attempt lockout, so it defers to the
+// unknown-error path (auth state preserved, refresh retried later) instead of
+// signing the user out over a window that expires on its own.
+const SESSION_ENDING_AUTH_CODES = [
+  'AUTH_REFRESH_TOKEN_INVALID',
+  'AUTH_REFRESH_TOKEN_MISSING',
+  'AUTH_TOKEN_EXPIRED',
+  'AUTH_TOKEN_MISSING',
+  'AUTH_TOKEN_INVALID',
+  'AUTH_CREDENTIALS_INVALID',
+  'AUTH_ACCOUNT_SUSPENDED',
+];
+
 // A genuine, server-confirmed refresh-token rejection (vs a network failure,
 // which is handled separately and must preserve the cache). Checked only AFTER
 // isNetworkError, so transient/offline failures never reach here. Recognizes
 // AC4 error types (CombinedGraphQLErrors / ServerError) and falls back to the
 // legacy AC3-style shape.
 const isAuthRejectionError = (error: unknown): boolean => {
+  if (error instanceof RefreshRejectedError) {
+    return SESSION_ENDING_AUTH_CODES.includes(error.code);
+  }
   if (ServerError.is(error)) {
     return error.statusCode === 401;
   }
@@ -174,6 +207,13 @@ const performTokenRefresh = async (): Promise<string | null> => {
     });
 
     const data = response.data?.refresh;
+    if (data && data.__typename !== 'RefreshTokenPayload') {
+      // An error member of RefreshResult. Rethrow with its code so the catch
+      // below can tell a dead session (log out) from a transient refusal
+      // (defer) — a bare "Missing tokens" throw would collapse both into the
+      // unknown-error path and strand the user on an unusable access token.
+      throw new RefreshRejectedError(data.code, data.message);
+    }
     if (!data?.accessToken || !data?.refreshToken) {
       throw new Error('Invalid refresh response: Missing tokens');
     }
@@ -206,6 +246,28 @@ const performTokenRefresh = async (): Promise<string | null> => {
 
     // Legacy AC3-style error shape the reactive refresh logic inspects.
     const refreshError = error as RefreshErrorLike;
+
+    // A union-member refusal is classified by its code before any message
+    // heuristic runs. The server answered, so this is by construction not a
+    // network failure — and its message is server-authored free text that
+    // must never reach isNetworkError's substring patterns, where wording
+    // like "unreachable" would spin the refresh in a retry loop against a
+    // token the server has already rejected for good.
+    if (error instanceof RefreshRejectedError) {
+      if (isAuthRejectionError(error)) {
+        logger.info(
+          `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
+        );
+        state.tokenRefreshFailed('auth_rejected');
+        throw new Error('Refresh token expired');
+      }
+
+      logger.error(
+        `Refresh rejected by the server (${error.code}), deferring token refresh`,
+      );
+      state.tokenRefreshFailed('unknown');
+      throw error;
+    }
 
     // IMPORTANT: Check network errors FIRST before auth errors
     // This prevents offline scenarios from incorrectly clearing the cache

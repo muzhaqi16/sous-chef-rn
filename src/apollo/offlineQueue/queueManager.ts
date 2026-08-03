@@ -36,7 +36,7 @@ const QUEUE_ITEM_DATA_FRAGMENT = gql`
 
 /**
  * Reads a ShoppingListItem's catalog reference from cache during queue
- * processing. `SyncShoppingListItemInput.item` is a required @oneOf ref, but
+ * processing. `SyncShoppingListItemFieldsInput.item` is a required @oneOf ref, but
  * toggle/quantity/plain-update inputs carry only the row id — the replay
  * backfills the ref from the cached row. Kept separate from
  * {@link QUEUE_ITEM_DATA_FRAGMENT} and read with `returnPartialData` so a row
