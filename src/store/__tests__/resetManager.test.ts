@@ -4,12 +4,15 @@
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
-// Mock keychain
+// Mock keychain. `clearCredentials` is the stored-login tier (biometric /
+// remembered login) and is mocked purely so the assertion that session end
+// never touches it has something real to watch.
 jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(() => Promise.resolve()),
   clearSessionTokens: jest.fn(() => Promise.resolve()),
   loadSessionTokens: jest.fn(() => Promise.resolve(null)),
   saveSessionTokens: jest.fn(() => Promise.resolve()),
+  clearCredentials: jest.fn(() => Promise.resolve()),
 }));
 
 // Mock apollo client module
@@ -28,7 +31,10 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
 import { RESET_SCENARIOS, createResetManager } from '../resetManager';
 import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
-import { clearTempRegistrationPassword } from '#/storage/keychain';
+import {
+  clearTempRegistrationPassword,
+  clearCredentials,
+} from '#/storage/keychain';
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { logger } from '#/utils/environment';
@@ -458,6 +464,27 @@ describe('resetManager', () => {
         // reappear under whoever signs in next.
         expect(apolloCachePersistence.clear).toHaveBeenCalledTimes(1);
       });
+
+      it.each(REASONS)(
+        'leaves the stored login credentials intact for reason %s',
+        async reason => {
+          await resetManager.endSession(reason);
+
+          // Ending a session must not cost the user their biometric /
+          // remembered login — they need to be able to sign straight back in.
+          // Only the session-token tier goes. Nothing on this path calls
+          // clearCredentials today; this pins that, because adding such a call
+          // to clearAuthFromStorage would break biometric sign-in silently.
+          expect(clearCredentials).not.toHaveBeenCalled();
+
+          // Same for the preferences that say credentials exist — a reset that
+          // nulls these would hide a keychain entry that is still there.
+          const authState = findAuthResetCall(mockSet)?.[0];
+          expect(authState).toBeDefined();
+          expect(authState).not.toHaveProperty('rememberMe');
+          expect(authState).not.toHaveProperty('hasStoredCredentials');
+        },
+      );
     });
   });
 });
