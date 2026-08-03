@@ -58,6 +58,11 @@ interface UserNavigationState {
   biometricDeclinedPermanently?: boolean;
   credentialPromptDeclined?: boolean;
   lastCredentialPromptShown?: number;
+  // User chose "skip for now" on the email verification screen. Lets an
+  // unverified account reach the app instead of being parked on a screen it
+  // can't leave when the verification email never arrives. Cleared on every
+  // interactive login so each new session prompts once more.
+  verificationSkipped?: boolean;
 }
 
 export interface NavigationState {

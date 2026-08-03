@@ -5,6 +5,8 @@ import { screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CreateHomeScreen } from '../createHome/CreateHomeScreen';
 
+let mockHasUnverifiedEmail = false;
+
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
@@ -35,6 +37,7 @@ jest.mock('#store/useAppStore', () => {
     useUser: jest.fn(() => mockState.user),
     useSelectedHomeId: jest.fn(() => mockState.selectedHomeId),
     useSetSelectedPantryId: jest.fn(() => mockState.setSelectedPantryId),
+    useHasUnverifiedEmail: jest.fn(() => mockHasUnverifiedEmail),
   };
 });
 

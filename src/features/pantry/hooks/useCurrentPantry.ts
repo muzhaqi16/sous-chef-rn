@@ -1,13 +1,7 @@
 import { useEffect } from 'react';
-import {
-  useSelectedHomeId,
-  usePantryState,
-  useIsHomeSelectionReady,
-} from '#store/useAppStore';
-import { useQuery } from '@apollo/client/react';
-import { GetHomesDocument } from '#operations/home/home.generated';
+import { usePantryState } from '#store/useAppStore';
 import { extractNodes } from '#/utils/connectionUtils';
-import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 
 type PantryNode = { id: string; name?: string; isDefault?: boolean };
 
@@ -23,27 +17,9 @@ type PantryNode = { id: string; name?: string; isDefault?: boolean };
  * duplicate GetHomes network request during startup.
  */
 export function useCurrentPantry() {
-  const selectedHomeId = useSelectedHomeId();
   const { selectedPantryId, setSelectedPantryId } = usePantryState();
-  const isHomeSelectionReady = useIsHomeSelectionReady();
-
-  const { data: homesData } = useQuery(GetHomesDocument, {
-    fetchPolicy: 'cache-only',
-    errorPolicy: 'ignore',
-  });
-
-  // Preserve homes (connection-shape nodes).
-  const homes = usePreservedNodes(homesData?.homes);
-
-  type HomeNode = (typeof homes)[number] & {
-    name?: string;
-    pantriesConnection?: unknown;
-    myMembership?: unknown;
-  };
-
-  const currentHome = isHomeSelectionReady
-    ? (homes.find(h => h.id === selectedHomeId) as HomeNode | undefined)
-    : undefined;
+  const { currentHome, homeCount, selectedHomeId, isHomeSelectionReady } =
+    useCurrentHome();
 
   const pantries = extractNodes(
     currentHome?.pantriesConnection as never,
@@ -101,7 +77,7 @@ export function useCurrentPantry() {
       setSelectedPantryId,
       currentHome: null,
       selectedHomeId: null,
-      homeCount: homes.length,
+      homeCount,
       isReady: false,
     };
   }
@@ -113,7 +89,7 @@ export function useCurrentPantry() {
     setSelectedPantryId,
     currentHome,
     selectedHomeId,
-    homeCount: homes.length,
+    homeCount,
     isReady: true,
   };
 }

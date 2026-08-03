@@ -6,10 +6,10 @@ import {
 import { PantryMain } from '#features/pantry/screens/PantryMain';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
-// Single-screen stack: the Pantry tab's main screen. All detail/sub screens
-// (PantryItemDetail, PantrySettings, RecipeDetail, …) are registered at the
-// root level in RootNavigator — as siblings of the tab navigator — so the
-// floating tab bar is never mounted on them and cannot get stuck hidden.
+// Single-screen stack: the Pantry tab's main screen. Its detail/sub screens
+// are registered as siblings of `Home` (see features/pantry/screens/
+// registration.ts) so a pushed detail screen covers the tab navigator and the
+// floating tab bar is structurally absent on it.
 export const PantryStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,

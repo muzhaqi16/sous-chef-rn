@@ -392,16 +392,24 @@ export function AddItemSheet<
         )}
       </View>
 
-      <ReportItemSheet
-        visible={reportVisible}
-        candidates={autocomplete.displayItems.map(item => ({
-          id: item.id,
-          name: item.name,
-          imageUrl: item.imageUrl,
-          brandName: item.brands?.[0]?.name,
-        }))}
-        onDismiss={() => setReportVisible(false)}
-      />
+      {/* Mounted only while open — reportVisible is only ever cleared by
+          onDismiss (which gorhom fires after the close animation completes),
+          so gating the mount on the same flag can't cut off that animation.
+          Avoids paying useStandardBottomSheet's mount cost (Reanimated shared
+          value + derived value + animated reaction) for a rarely-used,
+          secondary flow that's always mounted alongside the primary sheet. */}
+      {!!reportVisible && (
+        <ReportItemSheet
+          visible={reportVisible}
+          candidates={autocomplete.displayItems.map(item => ({
+            id: item.id,
+            name: item.name,
+            imageUrl: item.imageUrl,
+            brandName: item.brands?.[0]?.name,
+          }))}
+          onDismiss={() => setReportVisible(false)}
+        />
+      )}
     </BottomSheetModal>
   );
 }

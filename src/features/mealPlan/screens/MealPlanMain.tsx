@@ -103,7 +103,7 @@ export const MealPlanMain: React.FC = () => (
  */
 const MealPlanMainInner: React.FC = () => {
   const { t } = useTranslation();
-  const { toMealPlanRecipeDetail, toCreateMealPlan, toMealTemplateBuilder } =
+  const { toRecipeDetail, toCreateMealPlan, toMealTemplateBuilder } =
     useAppNavigation();
   const { setOverlayOpen } = useTabBarSetters();
 
@@ -153,7 +153,12 @@ const MealPlanMainInner: React.FC = () => {
 
   // Fetch meal plans and resolve active plan
   const {
-    state: { currentPlan, mealPlans, loading: plansLoading },
+    state: {
+      currentPlan,
+      mealPlans,
+      loading: plansLoading,
+      initialLoading: plansInitialLoading,
+    },
   } = useMealPlans();
   const activePlanId =
     selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
@@ -333,7 +338,7 @@ const MealPlanMainInner: React.FC = () => {
   const handleItemPress = (id: string) => {
     const item = items.find(i => i.id === id);
     if (item?.recipe?.id) {
-      toMealPlanRecipeDetail({ recipeId: item.recipe.id });
+      toRecipeDetail({ recipeId: item.recipe.id });
     }
   };
 
@@ -439,8 +444,25 @@ const MealPlanMainInner: React.FC = () => {
     }
   };
 
-  // Show empty state if no plans exist and not loading
-  if (!plansLoading && mealPlans.length === 0) {
+  // Cold start with nothing cached: stay on the skeleton until the plan list
+  // arrives. Rendering the calendar here would show a week strip and an empty
+  // day for a plan that may not exist, then swap to the empty state a moment
+  // later. A refetch over existing plans keeps `initialLoading` false, so the
+  // skeleton never covers content that is already on screen.
+  if (plansInitialLoading) {
+    return (
+      <TabMainScreen testID="meal-plan-screen">
+        <TabScreenHeader
+          label={t('mealPlanMain.label')}
+          title={t('mealPlanMain.defaultTitle')}
+        />
+        <MealPlanSkeleton />
+      </TabMainScreen>
+    );
+  }
+
+  // Show empty state if no plans exist
+  if (mealPlans.length === 0) {
     return (
       <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader

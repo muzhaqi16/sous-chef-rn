@@ -18,6 +18,7 @@ import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useHomeManagement } from '#hooks/home/hooks/useHomeManagement';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useInviteUserModal } from '#/hooks/useInviteUserModal';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
 import { Button } from '#/components/base/Button';
@@ -81,6 +82,7 @@ export const HomeManagement: React.FC = () => {
     stats,
     refetch: refetchHomes,
   } = useHomeManagement();
+  const { requireVerifiedEmail, hasUnverifiedEmail } = useVerifiedEmailGate();
 
   // Note: Removed useFocusEffect refetch to prevent flickering
   // Apollo's cache-and-network + cache-first strategy handles data freshness
@@ -107,6 +109,10 @@ export const HomeManagement: React.FC = () => {
       return;
     }
 
+    // Gate before the modal opens rather than on submit, so the user isn't
+    // asked for an email address the invite can't use.
+    if (!requireVerifiedEmail()) return;
+
     // Get the roles this user can invite
     const allowedRoles = getInvitableRoles(
       membership.role,
@@ -123,6 +129,14 @@ export const HomeManagement: React.FC = () => {
         // If we reach here, the invitation was successful and the modal will close
       },
     });
+  };
+
+  // Requesting a join code makes the server refuse `createHome` outright while
+  // the address is unverified, so surface the gate on the checkbox rather than
+  // letting the whole creation fail on submit.
+  const handleAllowJoinCodeChange = (value: boolean) => {
+    if (value && !requireVerifiedEmail()) return;
+    setAllowJoinCode(value);
   };
 
   const handleCreateHome = async () => {
@@ -146,6 +160,7 @@ export const HomeManagement: React.FC = () => {
 
   const handleJoinHome = async () => {
     if (!joinCode.trim()) return;
+    if (!requireVerifiedEmail()) return;
 
     const result = await joinHomeByCode(joinCode);
     if (result) {
@@ -292,8 +307,8 @@ export const HomeManagement: React.FC = () => {
                 isVisible={true}
                 homeName={homeName}
                 onHomeNameChange={setHomeName}
-                allowJoinCode={allowJoinCode}
-                onAllowJoinCodeChange={setAllowJoinCode}
+                allowJoinCode={!!allowJoinCode && !hasUnverifiedEmail}
+                onAllowJoinCodeChange={handleAllowJoinCodeChange}
                 onSubmit={handleCreateHome}
                 onCancel={handleCancelCreate}
                 isCreating={creating}

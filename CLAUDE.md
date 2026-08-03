@@ -95,18 +95,20 @@ happen inside that factory.
   `<View style={[styles.x, callerStyle]} />` ([Unistyles "Merging styles"
   guide](https://www.unistyl.es/v3/guides/merging-styles/)). No wrapper or
   `'use no memo'` directive needed.
-- **Navigators use the default `inactiveBehavior: 'pause'`.** Historically the
-  app pinned `inactiveBehavior: 'none'` on every navigator because the default
+- **Navigators default to `inactiveBehavior: 'pause'`, EXCEPT `HomeTabs` and
+  the root `Home` screen, which set `inactiveBehavior: 'none'`.**
   `'pause'` (React 19 `React.Activity`, used by `@react-navigation/native-stack`
-  v8 and `@react-navigation/bottom-tabs` v8 to freeze inactive screens) prevented
-  Unistyles ShadowTree updates from reaching them — a theme change only applied
-  after navigating back. **Fixed in `react-native-unistyles@3.3.0`**
-  ([#1183](https://github.com/jpudysz/react-native-unistyles/issues/1183) /
-  [#1212](https://github.com/jpudysz/react-native-unistyles/pull/1212)): unistyles
-  now detects the React `Offscreen` fiber boundary and re-links + pushes a fresh
-  ShadowTree update when a paused screen resumes, so `'pause'` applies theme
-  changes correctly. Do **not** re-add `inactiveBehavior: 'none'` — the default
-  `'pause'` is correct and reclaims the freeze-inactive-screens optimization.
+  v8 / `@react-navigation/bottom-tabs` v8) destroys every layout effect in a
+  hidden subtree and re-runs all of them synchronously in one commit on
+  resume. The tab subtree is 4 FlashLists plus every mounted item cell's own
+  animation/gesture effects, so resuming freezes the JS thread for
+  multi-second stretches. `HomeTabs` covers switching tabs; `Home` covers a
+  detail screen being pushed over the tabs (that only pauses from the second
+  push down — native-stack treats the screen directly under the focused one
+  as active — but `Home > Profile > HomeManagement > HomeDetail` reaches it).
+  The cost is higher idle memory/CPU for the tabs. Every other navigator
+  stays on the default `'pause'`. (Unistyles ShadowTree updates on paused
+  screens are unrelated and already fixed as of `react-native-unistyles@3.3.0`.)
 
 The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 (see `babel.config.js`); reversing the order produces compile errors.

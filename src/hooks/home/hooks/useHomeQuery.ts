@@ -98,7 +98,10 @@ export function useHomeQuery() {
     homes,
     remoteDefaultHomeId,
     loading,
-    initialLoading: !homes.length && loading,
+    // Keyed off `data`, not `homes.length`, so a user who genuinely has zero
+    // homes settles to the empty list instead of showing the full-screen
+    // loader again on every cache-and-network fetch.
+    initialLoading: !data && loading,
     error,
     stats,
     refetch: memoizedRefetch,

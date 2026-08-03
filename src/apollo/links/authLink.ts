@@ -54,7 +54,7 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
   }
 
   // Get the access token for authentication (if available)
-  let token = useStore.getState().accessToken;
+  const token = useStore.getState().accessToken;
 
   // Pre-request token validation: if the access token is expiring/expired, try
   // a server refresh before sending the request. We deliberately do NOT decide
@@ -71,13 +71,22 @@ export const authLink = new SetContextLink(async ({ headers }, operation) => {
       // the network layer, and we re-auth when back online.
       useStore.getState().setNeedsTokenRefresh(true);
     } else {
-      const newToken = await proactiveTokenRefresh();
-      if (newToken) {
-        token = newToken;
-      }
-      // If the refresh failed, proceed with the existing token; the reactive
-      // 401 path (errorLink → refreshToken) confirms and handles a genuine
-      // rejection.
+      // Fire-and-forget — do NOT await. The token is still valid for another
+      // REFRESH_BUFFER_MS (only approaching expiry, not expired), so there is
+      // no correctness reason to block this request on a refresh completing.
+      // Awaiting here used to stall every request whose token entered this
+      // window behind performTokenRefresh()'s own retry loop (up to 3 attempts
+      // with exponential backoff on network failure) — on a slow connection
+      // that is tens of seconds, and since proactiveTokenRefresh() dedupes
+      // concurrent callers onto one shared promise, EVERY concurrent request
+      // (e.g. a screen's paired queries firing together) piled up behind that
+      // single slow refresh, freezing the whole app for its entire duration.
+      // Firing it without awaiting keeps the safety-net behavior (this is the
+      // fallback for tokenScheduler.ts's own 10-minutes-ahead background
+      // refresh missing its window) without blocking anything on it; if it
+      // fails, the reactive 401 path (errorLink → refreshToken) is the
+      // documented fallback.
+      void proactiveTokenRefresh();
     }
   }
 

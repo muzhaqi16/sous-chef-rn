@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -11,8 +12,10 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#/utils/notifications/quietHours';
+import { logger } from '#/utils/environment';
 
 export interface NotificationSettings {
   // Core toggles
@@ -97,24 +100,95 @@ function toNestedInput(
   return input;
 }
 
+/**
+ * Inverse of toNestedInput — collapses the input groups back to flat setting
+ * keys. The optimistic response patches the flat NotificationPreferences
+ * entity, so it needs the changed keys at the top level; spreading the nested
+ * input directly would add `channels` / `features` keys that the mutation's
+ * selection set ignores, leaving every real field at its pre-mutation value.
+ */
+function fromNestedInput(
+  input: UpdateNotificationPreferencesInput,
+): Record<string, unknown> {
+  const flat: Record<string, unknown> = {};
+  for (const group of [
+    input.channels,
+    input.expiration,
+    input.features,
+    input.quietHours,
+  ]) {
+    if (group) Object.assign(flat, group);
+  }
+  return flat;
+}
+
+/**
+ * A refused update still resolves with HTTP 200: the result union carries a
+ * `ValidationError` / `ForbiddenError` / `NotFoundError` / `ConflictError`
+ * member instead of the payload, so `data` is truthy and the mutation's
+ * `onError` never fires. Only the payload member means the change was
+ * persisted — anything else must report failure, or the toggle silently snaps
+ * back with the caller believing it succeeded.
+ */
+function didPersist(
+  result: { data?: unknown; error?: unknown } | false | null,
+): boolean {
+  if (!result) return false;
+
+  const outcome = classifyCreateResult(
+    result,
+    'updateNotificationPreferences',
+    'UpdateNotificationPreferencesPayload',
+  );
+  if (outcome !== 'rejected') return true;
+
+  // Transport errors are already reported through the mutation's onError; this
+  // logs the server's reason for the union-error case, which has none.
+  if (!result.error) {
+    const data = result.data as
+      | { updateNotificationPreferences?: unknown }
+      | null
+      | undefined;
+    logger.warn(
+      'UpdateNotificationPreferences rejected:',
+      data?.updateNotificationPreferences,
+    );
+  }
+  return false;
+}
+
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const user = useUser();
 
-  // PERFORMANCE: Hardcoded policies prevent query cascade from network status changes
-  // - cache-first: Uses cache if available for settings
-  // - errorPolicy: 'all' returns cached data when network fails
-
+  // cache-and-network (the app-wide default) paints from cache and still
+  // refreshes on mount. Under cache-first this query never reached the network
+  // once anything was cached, so a cache that lacked `me.notificationPreferences`
+  // could never repair itself and `settings` stayed on the defaults below —
+  // which reads as "every toggle is broken".
+  const skipped = !user?.id || !!options?.skip;
   const { data, loading, error } = useQuery(
     GetNotificationPreferencesDocument,
     {
-      skip: !user?.id || options?.skip,
-      fetchPolicy: 'cache-first',
+      skip: skipped,
+      fetchPolicy: 'cache-and-network',
     },
   );
 
   const preferences = data?.me?.notificationPreferences;
 
   useApolloErrorLogger('GetNotificationPreferences', error);
+
+  // Without preferences every value below is a fabricated default that the
+  // settings screen presents as if it were saved state, and no write can ever
+  // change it. Say so rather than letting the screen quietly lie.
+  useEffect(() => {
+    if (!loading && !preferences) {
+      logger.warn(
+        'Notification preferences unavailable — settings screen is showing defaults.',
+        { skipped, hasUser: !!user?.id, hasError: !!error },
+      );
+    }
+  }, [loading, preferences, skipped, user?.id, error]);
 
   // Update notification preferences mutation
   const [updatePreferences] = useMutation(
@@ -127,7 +201,9 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
         // Filter out null/undefined values from input to prevent overriding non-nullable fields
         const definedInputs = Object.fromEntries(
-          Object.entries(variables.input).filter(([, v]) => v != null),
+          Object.entries(fromNestedInput(variables.input)).filter(
+            ([, v]) => v != null,
+          ),
         );
 
         const optimistic: UpdateNotificationPreferencesMutation = {
@@ -144,8 +220,11 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         return optimistic;
       },
       onError: error => {
+        // Telemetry only — every caller already surfaces one alert off the
+        // returned boolean, so alerting here too would double up.
         handleMutationError(error, {
           operation: 'Update Notification Preferences',
+          showAlert: false,
         });
       },
     },
@@ -202,7 +281,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         }),
       'Failed to update notification setting',
     );
-    return result ? !!result.data : false;
+    return didPersist(result);
   };
 
   const updateMultipleSettings = async (
@@ -223,7 +302,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
         }),
       'Failed to update notification settings',
     );
-    return result ? !!result.data : false;
+    return didPersist(result);
   };
 
   const resetToDefaults = async () => {

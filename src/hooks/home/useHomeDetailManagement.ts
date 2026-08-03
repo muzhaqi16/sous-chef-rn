@@ -42,6 +42,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import {
   useAppStore,
   useHomeState,
@@ -105,6 +106,7 @@ export function useHomeDetailManagement(homeId: string) {
       },
     },
   );
+  const { requireVerifiedEmail } = useVerifiedEmailGate();
   const [enableJoinLinkMutation] = useMutation(EnableHomeJoinLinkDocument);
   const [rotateJoinCodeMutation, { loading: rotatingJoinCode }] = useMutation(
     UpdateHomeJoinCodeDocument,
@@ -392,6 +394,10 @@ export function useHomeDetailManagement(homeId: string) {
   };
 
   const toggleJoinCode = async (enabled: boolean) => {
+    // Only minting a join link is gated; revoking one stays available so an
+    // unverified account can always close off a home it already opened.
+    if (enabled && !requireVerifiedEmail()) return;
+
     if (enabled) {
       // Dedicated mutation: mints a joinCode + join link server-side.
       const result = await executeMutation(

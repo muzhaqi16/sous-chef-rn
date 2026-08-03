@@ -323,6 +323,7 @@
       "ValidationError"
     ],
     "Connection": [
+      "ApiKeyConnection",
       "BrandConnection",
       "CategoryConnection",
       "CookingLogConnection",
@@ -374,6 +375,13 @@
     "ConvertExpiredToWasteResult": [
       "ConflictError",
       "ConvertExpiredToWastePayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
+    "CreateApiKeyResult": [
+      "ConflictError",
+      "CreateApiKeyPayload",
       "ForbiddenError",
       "NotFoundError",
       "ValidationError"
@@ -624,6 +632,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "DeleteApiKeyResult": [
+      "ConflictError",
+      "DeleteApiKeyPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "DeleteBrandResult": [
       "ConflictError",
       "DeleteBrandPayload",
@@ -834,6 +849,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "DisableApiKeyResult": [
+      "ConflictError",
+      "DisableApiKeyPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "DuplicateMealPlanResult": [
       "ConflictError",
       "DuplicateMealPlanPayload",
@@ -849,6 +871,7 @@
       "ValidationError"
     ],
     "Edge": [
+      "ApiKeyEdge",
       "BrandEdge",
       "CategoryEdge",
       "CookingLogEdge",
@@ -889,6 +912,13 @@
       "UserAddressEdge",
       "UserEdge",
       "UserModerationEdge"
+    ],
+    "EnableApiKeyResult": [
+      "ConflictError",
+      "EnableApiKeyPayload",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
     ],
     "Error": [
       "ConflictError",
@@ -1291,6 +1321,20 @@
       "RestoreItemPayload",
       "ValidationError"
     ],
+    "RevokeApiKeyResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RevokeApiKeyPayload",
+      "ValidationError"
+    ],
+    "RotateApiKeyResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RotateApiKeyPayload",
+      "ValidationError"
+    ],
     "SendTestNotificationResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1350,6 +1394,13 @@
       "ForbiddenError",
       "NotFoundError",
       "UpdateAccountPayload",
+      "ValidationError"
+    ],
+    "UpdateApiKeyResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "UpdateApiKeyPayload",
       "ValidationError"
     ],
     "UpdateBrandResult": [

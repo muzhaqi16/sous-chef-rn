@@ -47,6 +47,7 @@ const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
     currentPlan: null,
     mealPlans: [],
     loading: false,
+    initialLoading: false,
     error: undefined,
     totalCount: undefined,
     hasMore: false,
@@ -170,9 +171,12 @@ jest.mock('#features/mealPlan/components/DayMealList', () => ({
 jest.mock('#features/mealPlan/components/CalendarToggleBar', () => ({
   CalendarToggleBar: () => null,
 }));
-jest.mock('#features/mealPlan/components/MealPlanEmptyState', () => ({
-  MealPlanEmptyState: () => 'MealPlanEmptyState',
-}));
+jest.mock('#features/mealPlan/components/MealPlanEmptyState', () => {
+  const { View } = require('react-native');
+  return {
+    MealPlanEmptyState: () => <View testID="meal-plan-empty-state" />,
+  };
+});
 jest.mock('#features/mealPlan/components/AddMealSheet', () => ({
   AddMealSheet: () => null,
 }));
@@ -212,9 +216,12 @@ jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
 
-jest.mock('#components/base/Skeleton/MealPlanSkeleton', () => ({
-  MealPlanSkeleton: () => 'MealPlanSkeleton',
-}));
+jest.mock('#components/base/Skeleton/MealPlanSkeleton', () => {
+  const { View } = require('react-native');
+  return {
+    MealPlanSkeleton: () => <View testID="meal-plan-skeleton" />,
+  };
+});
 
 jest.mock('#components/molecules/TabScreenHeader', () => ({
   TabScreenHeader: ({ title }: { title: string }) => title,
@@ -262,6 +269,41 @@ describe('MealPlanMain', () => {
 
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
+    expect(tree.queryByTestId('meal-plan-empty-state')).toBeTruthy();
+  });
+
+  it('keeps the skeleton up while the first plan fetch is in flight', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({ loading: true, initialLoading: true }),
+    );
+
+    const tree = renderWithApollo(<MealPlanMain />);
+    expect(tree.queryByTestId('meal-plan-skeleton')).toBeTruthy();
+    expect(tree.queryByTestId('meal-plan-empty-state')).toBeNull();
+  });
+
+  it('shows the empty state while a refetch runs over an empty cached list', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({ loading: true, initialLoading: false }),
+    );
+
+    const tree = renderWithApollo(<MealPlanMain />);
+    expect(tree.queryByTestId('meal-plan-empty-state')).toBeTruthy();
+    expect(tree.queryByTestId('meal-plan-skeleton')).toBeNull();
   });
 
   it('renders meal plan content when plans exist', () => {

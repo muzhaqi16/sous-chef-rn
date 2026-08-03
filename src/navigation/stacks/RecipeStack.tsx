@@ -6,10 +6,8 @@ import {
 import { RecipeMain } from '#features/recipes/screens/RecipeMain';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
-// Single-screen stack: the Recipe tab's main screen. All detail/sub screens
-// (RecipeDetail, RecipeCreate, SavedRecipes, …) are registered at the root
-// level in RootNavigator — as siblings of the tab navigator — so the floating
-// tab bar is never mounted on them and cannot get stuck hidden.
+// Single-screen stack — see PantryStack for why detail screens live at the
+// root instead (features/recipes/screens/registration.ts).
 export const RecipeStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
     headerShown: false,

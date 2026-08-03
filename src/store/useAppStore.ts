@@ -58,6 +58,21 @@ const selectIsOnline = (state: RootState) => state.isOnline;
 // Auth navigation state machine (atomic — used by guards and conditional UI)
 const selectNavigationState = (state: RootState) => state.navigationState;
 
+// True once the signed-in user has tapped "skip for now" on email verification.
+// Read as a plain boolean (not the nav-state object) so consumers only re-render
+// when the flag itself flips.
+const selectVerificationSkipped = (state: RootState) => {
+  const userId = state.user?.id;
+  return userId
+    ? state.userNavigationStates[userId]?.verificationSkipped === true
+    : false;
+};
+
+// An unverified account that deferred verification. Drives the reminder banner
+// and the share/collaborate gate.
+const selectHasUnverifiedEmail = (state: RootState) =>
+  state.user != null && !state.user.emailVerified;
+
 // Preferences (atomic)
 const selectTheme = (state: RootState) => state.theme;
 const selectShowNavigationLabels = (state: RootState) =>
@@ -186,6 +201,10 @@ export const useIsPantryQueryComplete = () =>
   useAppStore(selectIsPantryQueryComplete);
 export const useSetHomeAndPantry = () => useAppStore(selectSetHomeAndPantry);
 export const useNavigationState = () => useAppStore(selectNavigationState);
+export const useVerificationSkipped = () =>
+  useAppStore(selectVerificationSkipped);
+export const useHasUnverifiedEmail = () =>
+  useAppStore(selectHasUnverifiedEmail);
 export const useTheme = () => useAppStore(selectTheme);
 export const useShowNavigationLabels = () =>
   useAppStore(selectShowNavigationLabels);

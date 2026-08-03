@@ -44,6 +44,10 @@ const ThemedToastIcon = withUnistyles(Ionicons);
 type ToastQueueState = {
   current: ToastOptions | null;
   queue: ToastOptions[];
+  // Bumped every time a toast becomes current. A dismissal carries the
+  // generation it started on so it can only clear that toast — see
+  // onDismissComplete.
+  generation: number;
 };
 
 const sameType = (a: ToastOptions, b: ToastOptions) =>
@@ -56,27 +60,44 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   // Updater pattern lets two synchronous showToast() calls coordinate — the
   // second updater sees the first's result, no need for refs.
-  const [{ current, queue }, setQueue] = useState<ToastQueueState>({
+  const [{ current, queue, generation }, setQueue] = useState<ToastQueueState>({
     current: null,
     queue: [],
+    generation: 0,
   });
+
+  // The container never unmounts, so it has to keep rendering the outgoing
+  // toast's message and colors while it animates away. Rendering it with a
+  // null toast drops the type variant and falls back to the base background,
+  // which is near-white in the dark theme.
+  const [displayed, setDisplayed] = useState<ToastOptions | null>(null);
+  if (current && current !== displayed) setDisplayed(current);
 
   const translateY = useSharedValue(TOAST.OFFSCREEN_Y);
   const translateX = useSharedValue(0);
   const opacity = useSharedValue(0);
+  // Mirrors `generation` for the gesture worklet, which can't read state.
+  const currentGeneration = useSharedValue(0);
 
-  const onDismissComplete = () => {
-    setQueue(prev => ({ ...prev, current: null }));
+  // The spring's completion hops to the JS thread a frame later. A toast
+  // arriving in that gap is already on screen by the time this lands, so
+  // clearing unconditionally would blank it mid-display.
+  const onDismissComplete = (dismissedGeneration: number) => {
+    setQueue(prev =>
+      prev.generation === dismissedGeneration
+        ? { ...prev, current: null }
+        : prev,
+    );
   };
 
   // Idempotent — safe to call mid-animation.
-  const animateDismiss = () => {
+  const animateDismiss = (dismissedGeneration: number) => {
     translateY.set(
       withSpring(TOAST.OFFSCREEN_Y, SPRING.TOAST_DISMISS, finished => {
         'worklet';
         if (finished) {
           translateX.set(0);
-          scheduleOnRN(onDismissComplete);
+          scheduleOnRN(onDismissComplete, dismissedGeneration);
         }
       }),
     );
@@ -85,7 +106,8 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
 
   const showToast: ToastFn = opts => {
     setQueue(prev => {
-      if (!prev.current) return { ...prev, current: opts };
+      if (!prev.current)
+        return { ...prev, current: opts, generation: prev.generation + 1 };
       // Replace in-place when nothing has an action and the type matches —
       // coalesces rapid same-type calls into one toast that ends N seconds
       // after the *last* call (instead of a sequential parade).
@@ -97,6 +119,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         return {
           current: { ...opts, action: undefined },
           queue: prev.queue.filter(q => q.action != null || !sameType(q, opts)),
+          generation: prev.generation + 1,
         };
       }
       return { ...prev, queue: [...prev.queue, opts] };
@@ -114,6 +137,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   // visually) and resets the timer — the spam-coalescing behavior.
   useEffect(() => {
     if (!current) return;
+    currentGeneration.set(generation);
     translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: TIMING.FAST }));
@@ -121,9 +145,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       current.duration === TOAST.AUTO_DISMISS_LONG
         ? TOAST.AUTO_DISMISS_LONG
         : TOAST.AUTO_DISMISS_SHORT;
-    const id = setTimeout(animateDismiss, ms);
+    const id = setTimeout(() => animateDismiss(generation), ms);
     return () => clearTimeout(id);
-  }, [current]);
+  }, [current, generation]);
 
   // After dismissal, give it a beat before popping the next queued toast.
   useEffect(() => {
@@ -132,7 +156,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       setQueue(prev => {
         if (prev.current || prev.queue.length === 0) return prev;
         const [next, ...rest] = prev.queue;
-        return { current: next, queue: rest };
+        return { current: next, queue: rest, generation: prev.generation + 1 };
       });
     }, TOAST.QUEUE_DELAY);
     return () => clearTimeout(id);
@@ -153,7 +177,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;
       if (shouldDismiss) {
-        scheduleOnRN(animateDismiss);
+        scheduleOnRN(animateDismiss, currentGeneration.get());
       } else {
         translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
@@ -172,11 +196,11 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const handleActionPress = () => {
     if (current?.action) {
       current.action.onPress();
-      animateDismiss();
+      animateDismiss(generation);
     }
   };
 
-  const type = current?.type ?? 'default';
+  const type = displayed?.type ?? 'default';
   const iconName = TOAST_ICONS[type];
   styles.useVariants({ type: type === 'default' ? undefined : type });
 
@@ -186,7 +210,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       <GestureDetector gesture={panGesture}>
         <Animated.View
           testID={`toast-${type}`}
-          pointerEvents={current ? 'auto' : 'box-none'}
+          pointerEvents={current ? 'auto' : 'none'}
           style={[styles.toastContainer, animatedStyle]}
         >
           {iconName ? (
@@ -209,11 +233,11 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
             testID="toast-message"
             numberOfLines={2}
           >
-            {current?.message}
+            {displayed?.message}
           </Text>
-          {current?.action ? (
+          {displayed?.action ? (
             <Pressable onPress={handleActionPress} style={styles.actionButton}>
-              <Text style={styles.actionText}>{current.action.label}</Text>
+              <Text style={styles.actionText}>{displayed.action.label}</Text>
             </Pressable>
           ) : null}
         </Animated.View>

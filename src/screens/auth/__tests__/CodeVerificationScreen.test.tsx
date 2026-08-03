@@ -6,6 +6,8 @@ import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
 } from '#operations/auth/auth.generated';
+import { alertService } from '#/services/alertService';
+import { authService } from '#/services/authService';
 import type { RootState } from '#store/index';
 import type * as UseAppStoreModule from '#store/useAppStore';
 import {
@@ -26,6 +28,10 @@ const mockToast = jest.fn();
 type MockAuthFormTemplateProps = {
   title: string;
   subtitle?: string | React.ReactNode;
+  onBackPress?: () => void;
+  linkText?: string;
+  linkTestID?: string;
+  onLinkPress?: () => void;
   submitText: string;
   onSubmit: () => void;
   footerText?: string;
@@ -63,6 +69,22 @@ jest.mock('#/services/errorService', () => ({
   },
 }));
 
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
+}));
+
+jest.mock('#/services/authService', () => ({
+  authService: { logout: jest.fn() },
+}));
+
+const mockSkipVerification = jest.fn();
+jest.mock('#hooks/auth/useEmailVerification', () => ({
+  useEmailVerificationActions: () => ({
+    skipVerification: mockSkipVerification,
+    resumeVerification: jest.fn(),
+  }),
+}));
+
 jest.mock('#/utils/compilerSafeWrappers');
 
 jest.mock('#components/templates/AuthWrapper', () => {
@@ -80,6 +102,10 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
     AuthFormTemplate: ({
       title,
       subtitle,
+      onBackPress,
+      linkText,
+      linkTestID,
+      onLinkPress,
       submitText,
       onSubmit,
       footerText,
@@ -89,12 +115,22 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       footerLinkCountdown,
     }: MockAuthFormTemplateProps) => (
       <View testID="auth-form-template">
+        {onBackPress ? (
+          <Pressable testID="back-button" onPress={onBackPress}>
+            <Text>Back</Text>
+          </Pressable>
+        ) : null}
         <Text>{title}</Text>
         {typeof subtitle === 'string' ? (
           <Text>{subtitle}</Text>
         ) : (
           <View testID="subtitle-container">{subtitle}</View>
         )}
+        {linkText ? (
+          <Pressable testID={linkTestID} onPress={onLinkPress}>
+            <Text>{linkText}</Text>
+          </Pressable>
+        ) : null}
         <Pressable testID="submit-button" onPress={onSubmit}>
           <Text>{submitText}</Text>
         </Pressable>
@@ -204,6 +240,67 @@ describe('CodeVerificationScreen', () => {
         input: { email: 'test@example.com' },
       });
     });
+  });
+
+  it('offers a way back to sign in', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen />);
+
+    await user.press(screen.getByTestId('back-button'));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Go back to sign in?',
+      expect.any(String),
+      expect.arrayContaining([
+        expect.objectContaining({ text: 'Cancel', style: 'cancel' }),
+        expect.objectContaining({ text: 'Sign Out', style: 'destructive' }),
+      ]),
+    );
+    expect(authService.logout).not.toHaveBeenCalled();
+  });
+
+  it('logs out once the sign-out confirmation is accepted', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen />);
+
+    await user.press(screen.getByTestId('back-button'));
+
+    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    buttons.find(b => b.text === 'Sign Out')?.onPress?.();
+
+    expect(authService.logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('warns about the collaboration limits before skipping', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen />);
+
+    await user.press(screen.getByTestId('skip-verification'));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Skip verification?',
+      expect.stringContaining("won't be able to share"),
+      expect.any(Array),
+    );
+    expect(mockSkipVerification).not.toHaveBeenCalled();
+  });
+
+  it('defers verification once the skip is confirmed', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen />);
+
+    await user.press(screen.getByTestId('skip-verification'));
+
+    const buttons = (alertService.alert as jest.Mock).mock.lastCall?.[2] as {
+      text: string;
+      onPress?: () => void;
+    }[];
+    buttons.find(b => b.text === 'Skip for now')?.onPress?.();
+
+    expect(mockSkipVerification).toHaveBeenCalledTimes(1);
   });
 
   it('returns null when user is already verified', () => {

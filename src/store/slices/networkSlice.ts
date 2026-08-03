@@ -4,6 +4,45 @@ import { storage } from '#/storage/mmkv';
 
 const OFFLINE_MODE_KEY = 'user_offline_mode';
 
+/**
+ * Why the banner is showing. `null` means it isn't. Kept as a cause rather than
+ * a boolean so the icon/message can't disagree with the reason we decided to
+ * show it — during the minimum-visible window the underlying flags may already
+ * have recovered, and re-deriving the cause from them would swap the text
+ * mid-display.
+ */
+export type OfflineBannerCause =
+  | 'device-offline'
+  | 'api-unreachable'
+  | 'offline-mode';
+
+/**
+ * How long each cause must hold continuously before the user sees anything.
+ *
+ * The offline *policy* (serve cache, queue mutations) reacts instantly — see
+ * `isApiUnavailable`. Only the announcement waits, because a banner that
+ * appears on a single failed request and vanishes on the next success reads as
+ * a flicker, not as information. Dwell is per-cause because the causes differ
+ * in trustworthiness:
+ *  - `offline-mode` is a switch the user just flipped — confirm nothing.
+ *  - `device-offline` is an OS-level signal (airplane mode, radio off); short
+ *    dwell only to absorb NetInfo's reachability probe blipping.
+ *  - `api-unreachable` is *inferred* from failed requests, so it's the
+ *    flappiest input and needs the most corroboration.
+ */
+const SHOW_DWELL_MS: Record<OfflineBannerCause, number> = {
+  'offline-mode': 0,
+  'device-offline': 2_000,
+  'api-unreachable': 5_000,
+};
+
+/**
+ * Once shown, the banner stays up at least this long. Without it, an outage
+ * that resolves a moment after the dwell elapsed would flash the banner and the
+ * "back online" toast back to back.
+ */
+const MIN_VISIBLE_MS = 3_000;
+
 export interface NetworkState {
   // Network status
   isOnline: boolean;
@@ -21,6 +60,17 @@ export interface NetworkState {
    * (a circuit breaker over network outcomes), NOT by NetInfo.
    */
   apiReachable: boolean;
+  /**
+   * Debounced, presentation-only view of the offline state — the single input
+   * to `OfflineStatusPill` / `OfflineTransitionToaster` (via
+   * `useIsOfflineBannerVisible` / `useOfflineStatus`). Lives in the store, not
+   * in a hook, so every mounted pill agrees and so navigating between screens
+   * doesn't restart the dwell timer on a fresh mount.
+   *
+   * Never read this for offline *behaviour* — use `isApiUnavailable`, which is
+   * instant.
+   */
+  offlineBannerCause: OfflineBannerCause | null;
 
   // Actions
   setNetworkStatus: (status: {
@@ -45,6 +95,21 @@ export const isApiUnavailable = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
 ): boolean => !state.isOnline || state.apiReachable === false;
 
+/**
+ * The reason the user should be told we're offline, at this instant and with no
+ * debouncing. Priority: losing the device's connection explains everything else,
+ * so it outranks an unreachable API, which in turn outranks the user's own
+ * offline-mode switch.
+ */
+const resolveOfflineCause = (
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
+): OfflineBannerCause | null => {
+  if (!state.isOnline) return 'device-offline';
+  if (state.apiReachable === false) return 'api-unreachable';
+  if (state.offlineModeEnabled) return 'offline-mode';
+  return null;
+};
+
 const initialNetworkState = {
   isOnline: true, // Assume online until proven otherwise (per Apollo best practices)
   isInternetReachable: null,
@@ -54,6 +119,7 @@ const initialNetworkState = {
   needsTokenRefresh: false,
   offlineModeEnabled: false,
   apiReachable: true,
+  offlineBannerCause: null,
 };
 
 export const createNetworkSlice: StateCreator<
@@ -61,65 +127,120 @@ export const createNetworkSlice: StateCreator<
   [['zustand/immer', never]],
   [],
   NetworkState
-> = (set, get) => ({
-  ...initialNetworkState,
+> = (set, get) => {
+  let bannerTimer: ReturnType<typeof setTimeout> | null = null;
+  let bannerShownAt = 0;
 
-  setNetworkStatus: status => {
-    set(state => {
-      const wasOnline = state.isOnline;
-      state.isOnline = status.isOnline;
-      state.isInternetReachable = status.isInternetReachable;
-      state.networkType = status.networkType;
+  const applyBannerCause = (cause: OfflineBannerCause | null): void => {
+    if (get().offlineBannerCause === cause) return;
+    if (cause !== null && get().offlineBannerCause === null) {
+      bannerShownAt = Date.now();
+    }
+    set(draft => {
+      draft.offlineBannerCause = cause;
+    });
+  };
 
-      // Track transition timestamps
-      if (!wasOnline && status.isOnline) {
-        state.lastOnlineTime = Date.now();
-      } else if (wasOnline && !status.isOnline) {
-        state.lastOfflineTime = Date.now();
+  /**
+   * Re-evaluate the banner after any connectivity input changes. Called by every
+   * setter below; a pending transition is always cancelled first, so flapping
+   * that settles inside the dwell window never reaches the screen at all.
+   */
+  const syncOfflineBanner = (): void => {
+    if (bannerTimer) {
+      clearTimeout(bannerTimer);
+      bannerTimer = null;
+    }
+    const cause = resolveOfflineCause(get());
+    const shown = get().offlineBannerCause;
+    if (cause === shown) return;
+
+    // Already visible and still offline: swapping the reason is a label change,
+    // not an appearance, so there's nothing to debounce.
+    if (cause !== null && shown !== null) {
+      applyBannerCause(cause);
+      return;
+    }
+
+    const delay =
+      cause !== null
+        ? SHOW_DWELL_MS[cause]
+        : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
+    if (delay === 0) {
+      applyBannerCause(cause);
+      return;
+    }
+    bannerTimer = setTimeout(() => {
+      bannerTimer = null;
+      applyBannerCause(cause);
+    }, delay);
+  };
+
+  return {
+    ...initialNetworkState,
+
+    setNetworkStatus: status => {
+      set(state => {
+        const wasOnline = state.isOnline;
+        state.isOnline = status.isOnline;
+        state.isInternetReachable = status.isInternetReachable;
+        state.networkType = status.networkType;
+
+        // Track transition timestamps
+        if (!wasOnline && status.isOnline) {
+          state.lastOnlineTime = Date.now();
+        } else if (wasOnline && !status.isOnline) {
+          state.lastOfflineTime = Date.now();
+        }
+      });
+      syncOfflineBanner();
+    },
+
+    setOnline: () => {
+      const state = get();
+      if (!state.isOnline) {
+        set(draft => {
+          draft.isOnline = true;
+          draft.lastOnlineTime = Date.now();
+        });
+        syncOfflineBanner();
       }
-    });
-  },
+    },
 
-  setOnline: () => {
-    const state = get();
-    if (!state.isOnline) {
+    setOffline: () => {
+      const state = get();
+      if (state.isOnline) {
+        set(draft => {
+          draft.isOnline = false;
+          draft.lastOfflineTime = Date.now();
+        });
+        syncOfflineBanner();
+      }
+    },
+
+    setNeedsTokenRefresh: (value: boolean) => {
       set(draft => {
-        draft.isOnline = true;
-        draft.lastOnlineTime = Date.now();
+        draft.needsTokenRefresh = value;
       });
-    }
-  },
+    },
 
-  setOffline: () => {
-    const state = get();
-    if (state.isOnline) {
+    setOfflineModeEnabled: (enabled: boolean) => {
       set(draft => {
-        draft.isOnline = false;
-        draft.lastOfflineTime = Date.now();
+        draft.offlineModeEnabled = enabled;
       });
-    }
-  },
+      storage.set(OFFLINE_MODE_KEY, enabled);
+      syncOfflineBanner();
+    },
 
-  setNeedsTokenRefresh: (value: boolean) => {
-    set(draft => {
-      draft.needsTokenRefresh = value;
-    });
-  },
-
-  setOfflineModeEnabled: (enabled: boolean) => {
-    set(draft => {
-      draft.offlineModeEnabled = enabled;
-    });
-    storage.set(OFFLINE_MODE_KEY, enabled);
-  },
-
-  setApiReachable: (reachable: boolean) => {
-    if (get().apiReachable === reachable) return;
-    set(draft => {
-      draft.apiReachable = reachable;
-    });
-  },
-});
+    setApiReachable: (reachable: boolean) => {
+      if (get().apiReachable === reachable) return;
+      set(draft => {
+        draft.apiReachable = reachable;
+      });
+      syncOfflineBanner();
+    },
+  };
+};
 
 /**
  * Hydrate `offlineModeEnabled` from MMKV. Called from the persist

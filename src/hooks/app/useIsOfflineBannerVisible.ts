@@ -1,14 +1,15 @@
 import { useAppStore } from '#store/useAppStore';
-import { isApiUnavailable } from '#store/slices/networkSlice';
 
 /**
- * Whether the server can't currently be reached — drives the persistent
+ * Whether to tell the user the server can't be reached — drives the persistent
  * offline indicator (`OfflineStatusPill`) and transition toaster
  * (`OfflineTransitionToaster`) via `useOfflineStatus`.
  *
- * Reuses the shared `isApiUnavailable` selector (device offline OR the API
- * reachability breaker being open) and adds the user-toggled offline mode, so
- * the banner condition stays in step with the rest of the offline policy.
+ * Reads the debounced `offlineBannerCause` rather than the raw flags: the
+ * offline *policy* flips the instant a request fails (`isApiUnavailable`), which
+ * is right for serving cache and queueing mutations but far too twitchy to show
+ * a human — a single failed request followed by a single success would flash the
+ * banner on and off. The dwell/minimum-visible rules live in `networkSlice`.
  */
 export const useIsOfflineBannerVisible = (): boolean =>
-  useAppStore(state => isApiUnavailable(state) || state.offlineModeEnabled);
+  useAppStore(state => state.offlineBannerCause !== null);

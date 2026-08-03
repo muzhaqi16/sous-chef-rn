@@ -235,7 +235,14 @@ export function usePantryScreen() {
   // -------------------------------------------------------------------------
   const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
   const noHomes = isReady && !selectedHomeId && homeCount === 0;
-  const noPantries = isReady && !!selectedHomeId && pantries.length === 0;
+  // Requires the home itself to have resolved. `isReady` alone isn't enough:
+  // `useDefaultHome` flips it early off persisted home/pantry ids, before
+  // `GetHomes` lands, so there is a window where `pantries` is empty purely
+  // because nothing has loaded. Treating that as "this home has no pantries"
+  // flashed the create-a-pantry empty state and disabled the add button
+  // mid-load — "unknown" is not "none".
+  const noPantries =
+    isReady && !!selectedHomeId && !!currentHome && pantries.length === 0;
 
   const isLoadingInitial =
     (!isReady || loading) && !pantryError && pantryItems.length === 0;

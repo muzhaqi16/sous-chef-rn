@@ -35,6 +35,16 @@ export const TAB_BAR_HEIGHT = 65;
 // refracts softly through it. Static — the bar is dark in both themes.
 const GLASS_TINT = 'rgba(28, 27, 32, 0.4)';
 
+// Each tab's own Main screen, for the reset-to-root on re-tapping the active
+// tab. A no-op while every tab stack holds a single screen, but it keeps the
+// standard platform gesture correct if a tab ever nests screens again.
+const TAB_MAIN_SCREENS: Record<string, string> = {
+  Pantry: 'PantryMain',
+  ShoppingList: 'ShoppingListMain',
+  Recipe: 'RecipeMain',
+  MealPlan: 'MealPlanMain',
+};
+
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
   descriptors,
@@ -94,7 +104,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   //   it slides back AS the sheet slides down, with no settled-closed callback.
   // - Scroll hide: a spring toggled by scroll direction.
   // Detail screens don't factor in here: they're siblings of the tab navigator
-  // (see RootNavigator), so the bar is structurally absent on them.
+  // (see RootNavigator), so the pushed screen covers the bar entirely.
   const overlayOpacity = useOverlayBackdropOpacity();
   const scrollHide = useSharedValue(0);
 
@@ -164,15 +174,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     });
 
     if (!event.defaultPrevented) {
-      // Map tab names to their main screens for stack reset
-      const mainScreenMap: Record<string, string> = {
-        Pantry: 'PantryMain',
-        ShoppingList: 'ShoppingListMain',
-        Recipe: 'RecipeMain',
-        MealPlan: 'MealPlanMain',
-      };
-
-      const mainScreen = mainScreenMap[route.name];
+      const mainScreen = TAB_MAIN_SCREENS[route.name];
 
       // Dispatched as a normal (not startTransition) update: as a low-priority
       // transition this update had no scheduling deadline, so a steady stream
@@ -181,9 +183,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       // Reanimated shared value) while the actual screen stayed frozen on the
       // old route until the transition finally got a turn.
       if (!isFocused) {
-        // Switching tabs: just focus the tab, preserve paused stack state.
-        // With inactiveBehavior: 'pause', the paused tree resumes instantly
-        // instead of unmounting/remounting the entire screen.
+        // Switching tabs: just focus the tab. HomeTabs runs
+        // `inactiveBehavior: 'none'`, so the blurred tab's tree was never torn
+        // down and there's nothing to remount.
         navigation.navigate(route.name);
       } else if (mainScreen) {
         // Re-tapping the active tab: reset stack to root (standard iOS/Android pattern)

@@ -24,7 +24,12 @@ import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
-import { useCanAccessDevTools } from '#store/useAppStore';
+import {
+  useCanAccessDevTools,
+  useHasUnverifiedEmail,
+} from '#store/useAppStore';
+import { useEmailVerificationActions } from '#hooks/auth/useEmailVerification';
+import { AlertBanner } from '#components/molecules/AlertBanner';
 import { Text } from '#components/atoms/Text';
 
 const HEADER_TIMING = {
@@ -36,6 +41,8 @@ export const ProfileScreen = () => {
   const { t } = useTranslation();
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
+  const hasUnverifiedEmail = useHasUnverifiedEmail();
+  const { resumeVerification } = useEmailVerificationActions();
   const {
     toProfilePhotoUpload,
     toDeleteAccount,
@@ -145,6 +152,17 @@ export const ProfileScreen = () => {
           { paddingBottom: safeBottom + 16 },
         ]}
       >
+        {!!hasUnverifiedEmail && (
+          <AlertBanner
+            title={t('auth.verifyEmailBannerTitle')}
+            subtitle={t('auth.verifyEmailBannerSubtitle')}
+            icon="mail-unread-outline"
+            iconLibrary="Ionicons"
+            variant="warning"
+            onPress={resumeVerification}
+            testID="verify-email-banner"
+          />
+        )}
         {sections
           .filter(section => {
             // Filter out Developer section if debug features are not enabled.

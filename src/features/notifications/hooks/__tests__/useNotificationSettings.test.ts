@@ -5,7 +5,11 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { UpdateNotificationPreferencesDocument } from '#operations/user/user.generated';
+import {
+  GetNotificationPreferencesDocument,
+  UpdateNotificationPreferencesDocument,
+} from '#operations/user/user.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useNotificationSettings } from '../useNotificationSettings';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -83,6 +87,46 @@ function withPrefs(prefs: typeof mockPreferencesData | null) {
   };
 }
 
+/**
+ * The success member of UpdateNotificationPreferencesResult, echoing back the
+ * full entity the way the server does. Apollo normalizes it by id, which is
+ * what makes the toggle stick — a placeholder payload would never exercise
+ * that write.
+ */
+/**
+ * `operationMocks` replaces the schema-driven link entirely, so tests that read
+ * `settings` back out of the cache have to mock the query explicitly too.
+ */
+function prefsQueryMock(patch: Partial<typeof mockPreferencesData> = {}) {
+  return recordMock(GetNotificationPreferencesDocument, {
+    data: {
+      me: {
+        __typename: 'User',
+        id: 'user-1',
+        notificationPreferences: {
+          ...mockPreferencesData,
+          userId: 'user-1',
+          ...patch,
+        },
+      },
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  }).mock;
+}
+
+function updatedPrefs(patch: Partial<typeof mockPreferencesData>) {
+  return {
+    updateNotificationPreferences: {
+      __typename: 'UpdateNotificationPreferencesPayload',
+      notificationPreferences: {
+        ...mockPreferencesData,
+        userId: 'user-1',
+        ...patch,
+      },
+    },
+  };
+}
+
 describe('useNotificationSettings', () => {
   it('returns settings from query data', async () => {
     const { result } = renderHookWithApollo(
@@ -121,7 +165,7 @@ describe('useNotificationSettings', () => {
 
   it('updateNotificationSetting calls mutation with nested input', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: { updateNotificationPreferences: true },
+      data: updatedPrefs({ pushEnabled: true }),
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
@@ -143,9 +187,85 @@ describe('useNotificationSettings', () => {
     expect(success).toBe(true);
   });
 
+  it('reflects the server-confirmed value so the toggle stays put', async () => {
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
+      data: updatedPrefs({ pushEnabled: false }),
+    });
+
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      operationMocks: [prefsQueryMock(), update.mock],
+    });
+
+    await waitFor(() => expect(result.current.settings.pushEnabled).toBe(true));
+
+    await act(async () => {
+      await result.current.updateNotificationSetting('pushEnabled', false);
+    });
+
+    expect(result.current.settings.pushEnabled).toBe(false);
+  });
+
+  it('applies the change optimistically before the server responds', async () => {
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
+      data: updatedPrefs({ pushEnabled: false }),
+      delay: 200,
+    });
+
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      operationMocks: [prefsQueryMock(), update.mock],
+    });
+
+    await waitFor(() => expect(result.current.settings.pushEnabled).toBe(true));
+
+    let pending: Promise<boolean> | undefined;
+    await act(async () => {
+      pending = result.current.updateNotificationSetting('pushEnabled', false);
+      await Promise.resolve();
+    });
+
+    // The mock has not replied yet — this value can only come from the
+    // optimistic layer.
+    expect(result.current.settings.pushEnabled).toBe(false);
+
+    await act(async () => {
+      await pending;
+    });
+  });
+
+  it('reports failure when the server returns an error member', async () => {
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
+      data: {
+        updateNotificationPreferences: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          message: 'Push requires a registered device',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      operationMocks: [prefsQueryMock({ pushEnabled: false }), update.mock],
+    });
+
+    await waitFor(() =>
+      expect(result.current.settings.pushEnabled).toBe(false),
+    );
+
+    let success: boolean = true;
+    await act(async () => {
+      success = await result.current.updateNotificationSetting(
+        'pushEnabled',
+        true,
+      );
+    });
+
+    expect(success).toBe(false);
+    expect(result.current.settings.pushEnabled).toBe(false);
+  });
+
   it('updateNotificationSetting maps feature keys correctly', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: { updateNotificationPreferences: true },
+      data: updatedPrefs({ lowStockAlerts: false }),
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
@@ -164,7 +284,7 @@ describe('useNotificationSettings', () => {
 
   it('updateNotificationSetting maps expiration keys correctly', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: { updateNotificationPreferences: true },
+      data: updatedPrefs({ expirationDaysThreshold: 7 }),
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
@@ -186,7 +306,7 @@ describe('useNotificationSettings', () => {
 
   it('updateMultipleSettings sends batch update', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: { updateNotificationPreferences: true },
+      data: updatedPrefs({ pushEnabled: true, lowStockAlerts: false }),
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {
@@ -208,7 +328,7 @@ describe('useNotificationSettings', () => {
 
   it('resetToDefaults sends default values', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
-      data: { updateNotificationPreferences: true },
+      data: updatedPrefs({ pushEnabled: false }),
     });
 
     const { result } = renderHookWithApollo(() => useNotificationSettings(), {

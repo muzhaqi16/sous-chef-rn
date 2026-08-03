@@ -161,11 +161,27 @@ jest.mock('../SortableListThemeContext', () => ({
   useShoppingListRowOptions: jest.fn(() => ({ showImages: true })),
 }));
 
+jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
+  const actual = jest.requireActual(
+    '#features/shoppingList/context/ShoppingListTutorialContext',
+  );
+  return {
+    ...actual,
+    useShoppingListTutorialState: jest.fn(),
+    useShoppingListTutorialActions: jest.fn(),
+  };
+});
+
 // Import after mocks
 import { SwipeableListItem } from '../SortableItem';
 import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
 import type { FragmentType } from '@apollo/client/masking';
 import type { ShoppingListRowItem } from '../types';
+import {
+  useShoppingListTutorialState,
+  useShoppingListTutorialActions,
+  ShoppingListTutorialStep,
+} from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -209,9 +225,22 @@ function rowItem(
   };
 }
 
+const mockRegisterRect = jest.fn();
+
 describe('SwipeableListItem (SortableItem)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    (useShoppingListTutorialState as jest.Mock).mockReturnValue({
+      currentStep: ShoppingListTutorialStep.IDLE,
+      isActive: false,
+      rects: {},
+    });
+    (useShoppingListTutorialActions as jest.Mock).mockReturnValue({
+      registerRect: mockRegisterRect,
+      notifyCheckboxTapped: jest.fn(),
+      notifyMoveToPantryTapped: jest.fn(),
+      notifySwipeActionsSeen: jest.fn(),
+    });
   });
 
   it('renders the item title from the fragment', () => {
@@ -302,5 +331,99 @@ describe('SwipeableListItem (SortableItem)', () => {
     );
     expect(screen.queryByTestId('list-item')).toBeNull();
     expect(screen.queryByTestId('swipeable-item')).toBeNull();
+  });
+
+  describe('tutorial rect cleanup', () => {
+    // registerRect only ever sets a value — nothing else clears a rect once
+    // its owning row stops being the tutorial's target (item purchased/
+    // removed, step advances). Without an explicit clear, the coach mark can
+    // render pointing at a target that no longer exists — the root cause
+    // behind several reported "spotlight stuck on the wrong thing" bugs.
+
+    it('clears the checkbox rect once the spotlighted item is purchased', () => {
+      const entry = seedItem();
+      (useShoppingListTutorialState as jest.Mock).mockReturnValue({
+        currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
+        isActive: true,
+        rects: {},
+      });
+      const { rerender } = renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, false)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+      expect(mockRegisterRect).not.toHaveBeenCalledWith('checkbox', null);
+
+      rerender(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+      );
+      expect(mockRegisterRect).toHaveBeenCalledWith('checkbox', null);
+    });
+
+    it('clears the archiveIcon rect once the spotlighted item leaves the purchased tab', () => {
+      const entry = seedItem();
+      (useShoppingListTutorialState as jest.Mock).mockReturnValue({
+        currentStep: ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY,
+        isActive: true,
+        rects: {},
+      });
+      const { rerender } = renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, true)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+      expect(mockRegisterRect).not.toHaveBeenCalledWith('archiveIcon', null);
+
+      rerender(
+        <SwipeableListItem
+          item={rowItem(entry, false)}
+          index={0}
+          target="Cell"
+        />,
+      );
+      expect(mockRegisterRect).toHaveBeenCalledWith('archiveIcon', null);
+    });
+
+    it('clears the itemCard rect once the tutorial advances past the long-press step', () => {
+      const entry = seedItem();
+      (useShoppingListTutorialState as jest.Mock).mockReturnValue({
+        currentStep: ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
+        isActive: true,
+        rects: {},
+      });
+      const { rerender } = renderWithApollo(
+        <SwipeableListItem
+          item={rowItem(entry, false)}
+          index={0}
+          target="Cell"
+        />,
+        { cache: seedCache([entry]) },
+      );
+      expect(mockRegisterRect).not.toHaveBeenCalledWith('itemCard', null);
+
+      (useShoppingListTutorialState as jest.Mock).mockReturnValue({
+        currentStep: ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB,
+        isActive: true,
+        rects: {},
+      });
+      rerender(
+        <SwipeableListItem
+          item={rowItem(entry, false)}
+          index={0}
+          target="Cell"
+        />,
+      );
+      expect(mockRegisterRect).toHaveBeenCalledWith('itemCard', null);
+    });
   });
 });

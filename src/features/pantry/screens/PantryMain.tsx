@@ -365,15 +365,17 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Register add button action via tab bar
-  useTabBarAddButton(
-    canAdd
-      ? () => {
-          Telemetry.trackEvent('add_pantry_item_clicked');
-          setAddSheetVisible(true);
-        }
-      : undefined,
-  );
+  // Register add button action via tab bar. The handler is registered
+  // unconditionally and gated with the `disabled` flag instead of being passed
+  // as `undefined`: an undefined handler leaves the button rendered (its
+  // visibility is per-tab, not per-handler — see TabBarActionsContext's
+  // `shouldShowAdd`) but makes `onAddPress?.()` a silent no-op with no toast,
+  // so the button looks live and does nothing. Passing `disabled` routes the
+  // press through FloatingTabBar's toast instead. Mirrors ShoppingListMain.
+  useTabBarAddButton(() => {
+    Telemetry.trackEvent('add_pantry_item_clicked');
+    setAddSheetVisible(true);
+  }, !canAdd);
 
   const handleAddItem = canAdd ? () => setAddSheetVisible(true) : undefined;
 
