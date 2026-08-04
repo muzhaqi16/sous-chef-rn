@@ -1,18 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { useUser } from '#store/useAppStore';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
-  type UpdateNotificationPreferencesMutation,
 } from '#operations/user/user.generated';
 import {
   ExpirationFrequency,
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   computeIsQuietTime,
@@ -104,60 +102,31 @@ function toNestedInput(
 }
 
 /**
- * Inverse of toNestedInput — collapses the input groups back to flat setting
- * keys. The optimistic response patches the flat NotificationPreferences
- * entity, so it needs the changed keys at the top level; spreading the nested
- * input directly would add `channels` / `features` keys that the mutation's
- * selection set ignores, leaving every real field at its pre-mutation value.
- */
-function fromNestedInput(
-  input: UpdateNotificationPreferencesInput,
-): Record<string, unknown> {
-  const flat: Record<string, unknown> = {};
-  for (const group of [
-    input.channels,
-    input.expiration,
-    input.features,
-    input.quietHours,
-  ]) {
-    if (group) Object.assign(flat, group);
-  }
-  return flat;
-}
-
-/**
  * A refused update still resolves with HTTP 200: the result union carries a
  * `ValidationError` / `ForbiddenError` / `NotFoundError` / `ConflictError`
  * member instead of the payload, so `data` is truthy and the mutation's
- * `onError` never fires. Only the payload member means the change was
- * persisted — anything else must report failure, or the toggle silently snaps
- * back with the caller believing it succeeded.
+ * `onError` never fires. Transport errors are already reported through that
+ * `onError`; this logs the server's reason for the union-error case, which
+ * has none. Classification itself lives in `updateEntityFieldsLocalFirst`.
  */
-function didPersist(
+function reportRefusal(
   result: { data?: unknown; error?: unknown } | false | null,
-): boolean {
-  if (!result) return false;
+): void {
+  if (!result || result.error) return;
 
-  const outcome = classifyCreateResult(result);
-  if (outcome !== 'rejected') return true;
-
-  // Transport errors are already reported through the mutation's onError; this
-  // logs the server's reason for the union-error case, which has none.
-  if (!result.error) {
-    const data = result.data as
-      | { updateNotificationPreferences?: unknown }
-      | null
-      | undefined;
-    logger.warn(
-      'UpdateNotificationPreferences rejected:',
-      data?.updateNotificationPreferences,
-    );
-  }
-  return false;
+  const data = result.data as
+    | { updateNotificationPreferences?: unknown }
+    | null
+    | undefined;
+  logger.warn(
+    'UpdateNotificationPreferences rejected:',
+    data?.updateNotificationPreferences,
+  );
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const user = useUser();
+  const client = useApolloClient();
 
   // cache-and-network (the app-wide default) paints from cache and still
   // refreshes on mount. Under cache-first this query never reached the network
@@ -194,30 +163,13 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     UpdateNotificationPreferencesDocument,
     {
       // Uses automatic normalization - mutation returns full NotificationPreferences fragment
-      // No manual cache update needed (Pattern 2)
-      optimisticResponse: (variables, { IGNORE }) => {
-        if (!preferences) return IGNORE;
-
-        // Filter out null/undefined values from input to prevent overriding non-nullable fields
-        const definedInputs = Object.fromEntries(
-          Object.entries(fromNestedInput(variables.input)).filter(
-            ([, v]) => v != null,
-          ),
-        );
-
-        const optimistic: UpdateNotificationPreferencesMutation = {
-          __typename: 'Mutation',
-          updateNotificationPreferences: {
-            __typename: 'UpdateNotificationPreferencesPayload',
-            notificationPreferences: {
-              ...preferences,
-              ...definedInputs,
-              __typename: 'NotificationPreferences',
-            },
-          },
-        };
-        return optimistic;
-      },
+      // No manual cache update needed (Pattern 2).
+      //
+      // No `optimisticResponse`: the callers write the change into the cache
+      // permanently before firing (see `updateEntityFieldsLocalFirst`). An optimistic
+      // layer is rolled back as soon as the mutation completes, and offline that
+      // completion is `queueLink`'s null result — which snapped every toggle
+      // back to its old position while the change sat queued.
       onError: error => {
         // Telemetry only — every caller already surfaces one alert off the
         // returned boolean, so alerting here too would double up.
@@ -269,19 +221,10 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     };
   })();
 
-  const updateNotificationSetting = async (
-    key: keyof NotificationSettings,
-    value: boolean | string | number | ExpirationFrequency,
-  ) => {
-    const result = await executeMutation(
-      () =>
-        updatePreferences({
-          variables: { input: toNestedInput({ [key]: value }) },
-        }),
-      'Failed to update notification setting',
-    );
-    return didPersist(result);
-  };
+  /** The cached entity carrying the settings fields, once the query has loaded. */
+  const preferencesEntity = preferences?.id
+    ? { __typename: 'NotificationPreferences', id: preferences.id }
+    : undefined;
 
   const updateMultipleSettings = async (
     updates: Partial<NotificationSettings>,
@@ -294,15 +237,44 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       ]),
     );
 
-    const result = await executeMutation(
-      () =>
-        updatePreferences({
-          variables: { input: toNestedInput(cleanedUpdates) },
-        }),
-      'Failed to update notification settings',
+    const keys = Object.keys(updates) as (keyof NotificationSettings)[];
+    const previous: Partial<NotificationSettings> = Object.fromEntries(
+      keys.map(key => [key, settings[key]]),
     );
-    return didPersist(result);
+
+    const { persisted, result } =
+      await updateEntityFieldsLocalFirst<NotificationSettings>({
+        cache: client.cache,
+        entity: preferencesEntity,
+        updates,
+        previous,
+        // localFirst: an unreachable API queues the change for replay rather
+        // than failing it, so the toggle the user just flipped isn't lost.
+        mutate: () =>
+          updatePreferences({
+            variables: { input: toNestedInput(cleanedUpdates) },
+            context: { localFirst: true },
+          }),
+        logLabel: 'Failed to update notification settings',
+      });
+
+    // Queued counts as persisted — it replays later. `reportRefusal` logs the
+    // server's reason for the union-error case; the screen shows the alert.
+    if (!persisted) {
+      reportRefusal(result);
+      return false;
+    }
+    return true;
   };
+
+  /** Single-key convenience over {@link updateMultipleSettings}. */
+  const updateNotificationSetting = async (
+    key: keyof NotificationSettings,
+    value: boolean | string | number | ExpirationFrequency,
+  ) =>
+    updateMultipleSettings({
+      [key]: value,
+    } as Partial<NotificationSettings>);
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<NotificationSettings> = {

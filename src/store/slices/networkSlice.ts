@@ -145,8 +145,14 @@ export const createNetworkSlice: StateCreator<
    * Re-evaluate the banner after any connectivity input changes. Called by every
    * setter below; a pending transition is always cancelled first, so flapping
    * that settles inside the dwell window never reaches the screen at all.
+   *
+   * `immediate` skips both the show dwell and the minimum-visible hold. Those
+   * exist to absorb *flapping* — a radio blipping, a request failing once. A
+   * switch the user just flipped isn't flapping, and holding its announcement
+   * for the rest of MIN_VISIBLE_MS meant toggling off right after on surfaced
+   * the second toast seconds late, describing a state the user had already left.
    */
-  const syncOfflineBanner = (): void => {
+  const syncOfflineBanner = (immediate = false): void => {
     if (bannerTimer) {
       clearTimeout(bannerTimer);
       bannerTimer = null;
@@ -162,10 +168,11 @@ export const createNetworkSlice: StateCreator<
       return;
     }
 
-    const delay =
-      cause !== null
-        ? SHOW_DWELL_MS[cause]
-        : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
+    const delay = immediate
+      ? 0
+      : cause !== null
+      ? SHOW_DWELL_MS[cause]
+      : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
     if (delay === 0) {
       applyBannerCause(cause);
       return;
@@ -229,7 +236,8 @@ export const createNetworkSlice: StateCreator<
         draft.offlineModeEnabled = enabled;
       });
       storage.set(OFFLINE_MODE_KEY, enabled);
-      syncOfflineBanner();
+      // User-driven, so announce it immediately in both directions.
+      syncOfflineBanner(true);
     },
 
     setApiReachable: (reachable: boolean) => {

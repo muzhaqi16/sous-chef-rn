@@ -24,10 +24,17 @@ export const OfflineTransitionToaster: React.FC = () => {
   useEffect(() => {
     const wasOffline = wasOfflineRef.current;
     wasOfflineRef.current = offline;
+    // `supersede`: these announce a state, so the newest replaces a displayed or
+    // queued one instead of waiting behind it — otherwise toggling off right
+    // after on showed the second toast only once the first had run its full
+    // duration, seconds after the state it described.
     if (offline && !wasOffline) {
-      toastService.warning(message, { duration: TOAST.AUTO_DISMISS_LONG });
+      toastService.warning(message, {
+        duration: TOAST.AUTO_DISMISS_LONG,
+        supersede: true,
+      });
     } else if (!offline && wasOffline) {
-      toastService.success(t('offlineBanner.backOnline'));
+      toastService.success(t('offlineBanner.backOnline'), { supersede: true });
     }
   }, [offline, message, t]);
 

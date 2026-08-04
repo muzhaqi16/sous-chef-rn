@@ -173,10 +173,17 @@ const getThresholdOptions = (t: T) => [
   },
 ];
 
+/**
+ * No `loading` prop: `SettingSwitch` forwards it to `disabled`, and disabling a
+ * switch the user has just flipped drops the taps that land while the mutation
+ * is in flight — seconds, when the API is unreachable. Nothing waits on that
+ * request any more: the change is written to the cache before firing and queued
+ * for replay, so the switch reflects it immediately either way. The action rows
+ * (send test / reset) keep `loading`, where it debounces a one-shot command.
+ */
 const renderSettings = (
   defs: SettingDef[],
   settings: NotificationSettings,
-  updating: string | null,
   handleSettingChange: (
     key: keyof NotificationSettings,
     value: boolean | string | number | ExpirationFrequency,
@@ -186,11 +193,11 @@ const renderSettings = (
   defs.map(({ key, titleKey, descriptionKey }) => (
     <SettingSwitch
       key={key}
+      testID={`notification-switch-${key}`}
       title={t(titleKey)}
       description={t(descriptionKey)}
       value={!!settings[key]}
       onValueChange={v => handleSettingChange(key, v)}
-      loading={updating === key}
     />
   ));
 
@@ -416,13 +423,7 @@ export const NotificationSettingsScreen: React.FC = () => {
       )}
 
       <SettingSection title={t('notifications.general')}>
-        {renderSettings(
-          CHANNEL_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(CHANNEL_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.pantry')}>
@@ -433,7 +434,6 @@ export const NotificationSettingsScreen: React.FC = () => {
           onValueChange={value =>
             handleSettingChange('expirationNotifications', value)
           }
-          loading={updating === 'expirationNotifications'}
         />
 
         {!!settings.expirationNotifications && (
@@ -492,63 +492,27 @@ export const NotificationSettingsScreen: React.FC = () => {
           </>
         )}
 
-        {renderSettings(
-          PANTRY_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(PANTRY_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.shopping')}>
-        {renderSettings(
-          SHOPPING_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(SHOPPING_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.social')}>
-        {renderSettings(
-          SOCIAL_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(SOCIAL_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.recipesMealPlanning')}>
-        {renderSettings(
-          RECIPE_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(RECIPE_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.digestsReports')}>
-        {renderSettings(
-          DIGEST_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(DIGEST_SETTINGS, settings, handleSettingChange, t)}
       </SettingSection>
 
       <SettingSection title={t('notifications.quietHours')}>
-        {renderSettings(
-          QUIET_HOURS_SETTINGS,
-          settings,
-          updating,
-          handleSettingChange,
-          t,
-        )}
+        {renderSettings(QUIET_HOURS_SETTINGS, settings, handleSettingChange, t)}
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
             <Text size="md" weight="medium" style={styles.quietHoursText}>

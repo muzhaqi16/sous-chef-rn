@@ -32,6 +32,17 @@ export const AppSettingsScreen: React.FC = () => {
   const { settings, loading, updateAppSetting, resetToDefaults } =
     useAppSettings();
 
+  // Offline mode renders from the STORE, not from `settings`. The store is what
+  // actually drives the policy (`offlineModeLink` reads it, and it's the value
+  // mirrored to MMKV) — the server copy is a cross-device mirror. Binding the
+  // switch to the store makes the flip synchronous and independent of an Apollo
+  // broadcast, which matters most in exactly the case where the server can't be
+  // reached.
+  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
+  const setOfflineModeEnabled = useAppStore(
+    state => state.setOfflineModeEnabled,
+  );
+
   // PERFORMANCE: Use selective selectors instead of inline functions
   const hapticFeedbackEnabled = useAppStore(
     state => state.hapticFeedbackEnabled,
@@ -72,6 +83,22 @@ export const AppSettingsScreen: React.FC = () => {
     // stacked a second dialog on every failed toggle.
     executeAsyncWithCleanup(
       () => updateAppSetting(key, value),
+      () => setUpdating(null),
+    );
+  };
+
+  /**
+   * Offline mode applies locally first, then mirrors to the server. The local
+   * write is the one that matters: it drives the link policy and persists to
+   * MMKV, and it must not depend on a round-trip that is unavailable precisely
+   * when the user reaches for this switch. The mirror rides `localFirst`, so an
+   * unreachable API queues it for replay rather than failing it.
+   */
+  const handleOfflineModeChange = (value: boolean) => {
+    setOfflineModeEnabled(value);
+    setUpdating('offlineMode');
+    executeAsyncWithCleanup(
+      () => updateAppSetting('offlineMode', value),
       () => setUpdating(null),
     );
   };
@@ -165,9 +192,8 @@ export const AppSettingsScreen: React.FC = () => {
         <SettingSwitch
           title={t('settings.offlineMode')}
           description={t('settings.offlineModeDesc')}
-          value={settings.offlineMode}
-          onValueChange={value => handleSettingChange('offlineMode', value)}
-          loading={updating === 'offlineMode'}
+          value={offlineModeEnabled}
+          onValueChange={handleOfflineModeChange}
         />
       </SettingSection>
 
