@@ -57,8 +57,21 @@ export const SHEET = {
  * Toast animation constants.
  */
 export const TOAST = {
-  AUTO_DISMISS_SHORT: 2000,
-  AUTO_DISMISS_LONG: 3500,
+  /**
+   * Default hold, and what nearly every toast gets — the short confirmations
+   * ("Item added", "Review submitted") that make up most of them.
+   *
+   * The hold is armed on the same tick the enter animation starts, so it spans
+   * the `TIMING.FAST` fade-in; add `TIMING.STANDARD` for the fade-out to get
+   * total time on screen (~1.6s here).
+   */
+  AUTO_DISMISS_SHORT: 1400,
+  /**
+   * For toasts carrying a full sentence rather than a confirmation — currently
+   * only the connectivity announcements (`OfflineStatusPill`,
+   * `OfflineTransitionToaster`), which need reading time.
+   */
+  AUTO_DISMISS_LONG: 2600,
   SWIPE_THRESHOLD: 50,
   /**
    * Dismissal travel, relative to the resting position (laid out at

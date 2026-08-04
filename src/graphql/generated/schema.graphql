@@ -5663,7 +5663,10 @@ type ItemCreation {
   metadata: JSON
   reason: String
   source: DataSource!
-  user: User!
+  """
+  Null when the creator's account was permanently deleted. The item and this provenance record remain.
+  """
+  user: User
 }
 
 """A cluster of items that share a UPC."""
@@ -5698,7 +5701,10 @@ type ItemEdit {
   item: Item!
   newValues: JSON
   oldValues: JSON
-  user: User!
+  """
+  Null when the editor's account was permanently deleted. The item and this provenance record remain.
+  """
+  user: User
 }
 
 """
@@ -9043,8 +9049,11 @@ input PantryItemBatchOrderBy {
 """Audit record of a change to a pantry item"""
 type PantryItemChange {
   changeType: ChangeType!
-  changedBy: User!
-  changedById: ID!
+  """
+  Null when the actor's account was permanently deleted. The audit entry is retained for the home.
+  """
+  changedBy: User
+  changedById: ID
   createdAt: DateTime!
   deviceId: String
   field: String
@@ -9135,7 +9144,10 @@ type PantryItemPhoto {
   pantryItem: PantryItem!
   photoType: PhotoType!
   takenAt: DateTime!
-  takenBy: User!
+  """
+  Null when the photographer's account was permanently deleted. The photo stays with the pantry item.
+  """
+  takenBy: User
 }
 
 """
@@ -10350,7 +10362,10 @@ type RecipeReview {
   rating: Int!
   recipe: Recipe!
   updatedAt: DateTime!
-  user: User!
+  """
+  Null when the author's account was permanently deleted. The rating still counts toward the recipe's totals.
+  """
+  user: User
   verified: Boolean!
   """
   Whether the requesting user has an active helpful vote on this review.
@@ -10939,7 +10954,10 @@ type ReviewHelpful {
   createdAt: DateTime!
   id: ID!
   review: RecipeReview!
-  user: User!
+  """
+  Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total.
+  """
+  user: User
 }
 
 """Approve or reject a pending suggestion (admin only)."""
@@ -11233,8 +11251,14 @@ type ShoppingListActivity {
   shoppingList: ShoppingList!
   shoppingListId: ID!
   source: String
-  user: User!
-  userId: ID!
+  """
+  Null when the actor's account was permanently deleted. The list keeps its history.
+  """
+  user: User
+  """
+  Null when the actor's account was permanently deleted. The list keeps its history.
+  """
+  userId: ID
 }
 
 """

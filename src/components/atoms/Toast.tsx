@@ -21,6 +21,15 @@ export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
 export interface ToastOptions {
   message: string;
+  /**
+   * How long to hold before dismissing, in ms. Defaults to
+   * `TOAST.AUTO_DISMISS_SHORT`; `TOAST.AUTO_DISMISS_LONG` is the preset for
+   * toasts carrying a sentence. Any positive value works — prefer a preset so
+   * the timings stay tunable in one place.
+   *
+   * The hold spans the fade-in and excludes the fade-out, so time on screen is
+   * roughly `duration + TIMING.STANDARD`.
+   */
   duration?: number;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
@@ -28,8 +37,8 @@ export interface ToastOptions {
    * Marks a toast as a *state announcement* — the latest one is the only one
    * still true, so it replaces a displayed or queued announcement instead of
    * waiting in line behind it (offline → back-online being the case that
-   * matters: queueing meant the second toggle's toast surfaced ~4s later, long
-   * after the state it described).
+   * matters: queueing meant the second toggle's toast only surfaced once the
+   * first had run its full duration, long after the state it described).
    *
    * Only announcements supersede each other, and never one carrying an
    * `action` — an actionable toast is never silently dropped.
@@ -171,9 +180,13 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     translateY.set(withSpring(0, SPRING.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: TIMING.FAST }));
+    // Any positive duration is honoured. This used to compare against
+    // AUTO_DISMISS_LONG for equality, which made `duration` a flag with one
+    // recognized value — `duration: 800` silently held for AUTO_DISMISS_SHORT.
+    const requested = current.duration;
     const ms =
-      current.duration === TOAST.AUTO_DISMISS_LONG
-        ? TOAST.AUTO_DISMISS_LONG
+      typeof requested === 'number' && requested > 0
+        ? requested
         : TOAST.AUTO_DISMISS_SHORT;
     const id = setTimeout(() => animateDismiss(generation), ms);
     return () => clearTimeout(id);

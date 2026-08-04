@@ -5631,7 +5631,8 @@ export type ItemCreation = {
   metadata: Maybe<Scalars['JSON']['output']>;
   reason: Maybe<Scalars['String']['output']>;
   source: DataSource;
-  user: User;
+  /** Null when the creator's account was permanently deleted. The item and this provenance record remain. */
+  user: Maybe<User>;
 };
 
 /** A cluster of items that share a UPC. */
@@ -5670,7 +5671,8 @@ export type ItemEdit = {
   item: Item;
   newValues: Maybe<Scalars['JSON']['output']>;
   oldValues: Maybe<Scalars['JSON']['output']>;
-  user: User;
+  /** Null when the editor's account was permanently deleted. The item and this provenance record remain. */
+  user: Maybe<User>;
 };
 
 /**
@@ -11817,8 +11819,9 @@ export type PantryItemBatchOrderBy = {
 export type PantryItemChange = {
   __typename: 'PantryItemChange';
   changeType: ChangeType;
-  changedBy: User;
-  changedById: Scalars['ID']['output'];
+  /** Null when the actor's account was permanently deleted. The audit entry is retained for the home. */
+  changedBy: Maybe<User>;
+  changedById: Maybe<Scalars['ID']['output']>;
   createdAt: Scalars['DateTime']['output'];
   deviceId: Maybe<Scalars['String']['output']>;
   field: Maybe<Scalars['String']['output']>;
@@ -11910,7 +11913,8 @@ export type PantryItemPhoto = {
   pantryItem: PantryItem;
   photoType: PhotoType;
   takenAt: Scalars['DateTime']['output'];
-  takenBy: User;
+  /** Null when the photographer's account was permanently deleted. The photo stays with the pantry item. */
+  takenBy: Maybe<User>;
 };
 
 /**
@@ -13719,7 +13723,8 @@ export type RecipeReview = {
   rating: Scalars['Int']['output'];
   recipe: Recipe;
   updatedAt: Scalars['DateTime']['output'];
-  user: User;
+  /** Null when the author's account was permanently deleted. The rating still counts toward the recipe's totals. */
+  user: Maybe<User>;
   verified: Scalars['Boolean']['output'];
   /**
    * Whether the requesting user has an active helpful vote on this review.
@@ -14327,7 +14332,8 @@ export type ReviewHelpful = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   review: RecipeReview;
-  user: User;
+  /** Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total. */
+  user: Maybe<User>;
 };
 
 /** Approve or reject a pending suggestion (admin only). */
@@ -14687,8 +14693,10 @@ export type ShoppingListActivity = {
   shoppingList: ShoppingList;
   shoppingListId: Scalars['ID']['output'];
   source: Maybe<Scalars['String']['output']>;
-  user: User;
-  userId: Scalars['ID']['output'];
+  /** Null when the actor's account was permanently deleted. The list keeps its history. */
+  user: Maybe<User>;
+  /** Null when the actor's account was permanently deleted. The list keeps its history. */
+  userId: Maybe<Scalars['ID']['output']>;
 };
 
 /**

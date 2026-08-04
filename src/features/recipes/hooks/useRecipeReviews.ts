@@ -82,9 +82,10 @@ export function useRecipeReviews({
     });
   })();
 
-  // Current user's review
+  // Current user's review. `r.user` is null for reviews whose author deleted
+  // their account, which can never be the signed-in viewer.
   const userReview = userId
-    ? reviews.find(r => r.user.id === userId) ?? null
+    ? reviews.find(r => r.user?.id === userId) ?? null
     : null;
 
   const hasReviewed = !!userReview;

@@ -223,6 +223,7 @@
     "pantry": "Pantry",
     "default": "Default",
     "someone": "Someone",
+    "deletedUser": "Deleted user",
     "unknownHome": "Unknown Home",
     "from": "From",
     "role": "Role",

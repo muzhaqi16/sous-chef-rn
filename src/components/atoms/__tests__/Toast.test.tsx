@@ -5,6 +5,7 @@ import { withSpring } from 'react-native-reanimated';
 import { Text } from '#components/atoms/Text';
 import { scheduleOnRN } from 'react-native-worklets';
 import { ToastProvider, type ToastFn, type ToastType } from '../Toast';
+import { TOAST } from '#/constants/animations';
 import { useToast } from '../../../hooks/useToast';
 
 // Mock the toastService bridge — the Toast tests don't exercise the
@@ -198,6 +199,94 @@ describe('ToastProvider', () => {
       onEnd({ translationY: 100, translationX: 0 });
 
       expect(scheduleOnRNMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('auto-dismiss timing', () => {
+    const withSpringMock = withSpring as unknown as jest.Mock;
+    const passThrough = (toValue: unknown) => toValue;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      scheduleOnRNMock.mockImplementation(
+        (
+          fn: ((...args: unknown[]) => unknown) | undefined,
+          ...args: unknown[]
+        ) => fn?.(...args),
+      );
+      // The shared mock drops the completion callback, so the dismissal chain
+      // would stall at the spring and `current` would never clear.
+      withSpringMock.mockImplementation((toValue, _config, callback) => {
+        if (typeof callback === 'function') callback(true);
+        return toValue;
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+      withSpringMock.mockImplementation(passThrough);
+    });
+
+    /** `pointerEvents` tracks whether a toast is still the live one. */
+    const isLive = () =>
+      screen.getByTestId('toast-success').props.pointerEvents === 'auto';
+
+    const showToastNow = (opts: Parameters<ToastFn>[0]) => {
+      let show: ToastFn | undefined;
+      render(
+        <ToastProvider>
+          <ToastCapture
+            onReady={fn => {
+              show = fn;
+            }}
+          />
+        </ToastProvider>,
+      );
+      act(() => {
+        show?.(opts);
+      });
+    };
+
+    it('holds a default toast for AUTO_DISMISS_SHORT', () => {
+      showToastNow({ message: 'Saved', type: 'success' });
+
+      act(() => {
+        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT - 50);
+      });
+      expect(isLive()).toBe(true);
+
+      act(() => {
+        jest.advanceTimersByTime(100);
+      });
+      expect(isLive()).toBe(false);
+    });
+
+    it('honours an explicit duration shorter than the default', () => {
+      // The hold used to be an equality check against AUTO_DISMISS_LONG, so
+      // every other value — including a deliberately short one — silently held
+      // for AUTO_DISMISS_SHORT instead.
+      const short = 500;
+      showToastNow({ message: 'Saved', type: 'success', duration: short });
+
+      act(() => {
+        jest.advanceTimersByTime(short + 50);
+      });
+      expect(isLive()).toBe(false);
+    });
+
+    it('honours an explicit duration longer than the default', () => {
+      const long = TOAST.AUTO_DISMISS_SHORT + 1000;
+      showToastNow({ message: 'Saved', type: 'success', duration: long });
+
+      act(() => {
+        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT + 50);
+      });
+      expect(isLive()).toBe(true);
+
+      act(() => {
+        jest.advanceTimersByTime(1000);
+      });
+      expect(isLive()).toBe(false);
     });
   });
 
