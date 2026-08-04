@@ -1420,7 +1420,10 @@ Brand type for product manufacturers and retailers
 Cache: 1 hour - brand catalog is relatively stable
 """
 type Brand {
-  children: [Brand!]!
+  """
+  Child brands. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
+  """
+  children(limit: Int = 50): [Brand!]!
   createdAt: DateTime!
   description: String
   id: ID!
@@ -1821,7 +1824,10 @@ Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
 type Category {
-  children: [Category!]!
+  """
+  Child categories. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
+  """
+  children(limit: Int = 50): [Category!]!
   color: String
   createdAt: DateTime!
   createdBy: User
@@ -4871,7 +4877,15 @@ type Home {
   unless allowJoinCode is enabled and a joinCode is set.
   """
   joinLink: ShareLink
-  lowStockItems: [LowStockItem!]!
+  """
+  Low stock items across all pantries in this home.
+  
+  The limit is clamped server-side (see SMALL_LIST_FIELD_MAX): this is a
+  dashboard list, and a home with many pantries can accumulate a lot of
+  low-stock rows. Bounds the RESPONSE — the underlying batch read is not yet
+  per-key limited, so this caps payload and client memory, not database work.
+  """
+  lowStockItems(limit: Int = 20): [LowStockItem!]!
   maxMembers: Int
   mealPlansConnection(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int): MealPlanConnection!
   mealTemplatesConnection(after: String, before: String, first: Int, last: Int): MealTemplateConnection!
@@ -10321,7 +10335,15 @@ type RecipeReview {
   comment: String
   createdAt: DateTime!
   helpful: Int!
-  helpfulVotes: [ReviewHelpful!]!
+  """
+  Who marked this review helpful.
+  
+  The limit is clamped server-side: one row per upvoting user, so on a popular
+  review this is unbounded. Prefer the helpful count above for display —
+  this list exists for detail views and is a candidate for removal (nothing in
+  the first-party client selects it, and it discloses voter identity).
+  """
+  helpfulVotes(limit: Int = 20): [ReviewHelpful!]!
   id: ID!
   rating: Int!
   recipe: Recipe!
@@ -12010,8 +12032,7 @@ type StoreEdge implements Edge {
 
 """
 Consolidated real-time event envelope for store changes. Subscribe via
-storeEvents(storeId) (omit storeId for all stores) and branch on
-mutation (CREATED / UPDATED).
+storeEvents(storeId) and branch on mutation (CREATED / UPDATED).
 """
 type StoreEvent {
   """The user who caused the change."""
@@ -12127,18 +12148,30 @@ input StoreSkuOpsInput {
 }
 
 """
-Store statistics and analytics
-Cache: 10 minutes - stats aggregate over time
+Store statistics for the CALLING user.
+
+Every purchase-derived field is scoped to the caller: a Store is global and has
+no tenant column, so an unscoped stat leaks other shoppers' purchase history to
+anyone who can name the store.
+
+Cache: PRIVATE and uncached. The contents differ per caller, so a shared cache
+could serve one caller's statistics to another.
+
+There is deliberately no revenue or unique-customer figure here: both are
+cross-tenant by definition, and scoping one to the caller changes its meaning
+rather than correcting it.
 """
 type StoreStats {
+  """Mean value of the CALLER's own purchases at this store."""
   averagePurchaseAmount: Float!
   priceAccuracy: Float
   qualityRating: Float
+  """The CALLER's most recent purchases at this store."""
   recentActivity: [Purchase!]!
+  """The CALLER's most-purchased items at this store."""
   topItems: [StoreTopItem!]!
+  """Count of the CALLER's purchases at this store."""
   totalPurchases: Int!
-  totalRevenue: Float!
-  uniqueCustomers: Int!
 }
 
 """Subtype discriminator for store domain events."""
@@ -12207,8 +12240,16 @@ type Subscription {
   ITEMS_BATCH_CLEARED, COLLABORATION_CHANGED.
   """
   shoppingListEvents(listId: ID!): ShoppingListEvent!
-  """Subscribe to store changes. Omit storeId to watch all stores."""
-  storeEvents(storeId: ID): StoreEvent!
+  """
+  Subscribe to one store's changes.
+  
+  storeId is REQUIRED. The filter's only isolation is matching this variable
+  against the event's storeId — it carries no access check, because a store is
+  global reference data with no ownership model. A nullable argument would let
+  a subscriber omit it, skip the match, and receive every store's events
+  including actorUserId.
+  """
+  storeEvents(storeId: ID!): StoreEvent!
   """
   Consolidated per-user event stream (account update, profile change, and
   home/shopping-list membership + moderation lifecycle transitions).
@@ -14285,8 +14326,18 @@ type User {
   deviceStats: DeviceStats!
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
-  email: String!
-  emailVerified: Boolean!
+  """
+  Null unless the caller is this user or an admin.
+  
+  A User node is reachable cross-user (Recipe.createdBy, Membership.user, …),
+  so these three are gated rather than served raw. They are nullable rather
+  than non-null because an unauthorized reader must receive null — a
+  placeholder would make "no permission" indistinguishable from "no value"
+  and put a fabricated value on the wire.
+  """
+  email: String
+  """Null unless the caller is this user or an admin. See email."""
+  emailVerified: Boolean
   expirationNotificationsConnection(after: String, before: String, filters: ExpirationNotificationFilters, first: Int, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
   hasUrgentNotifications: Boolean!
   homeOwnershipsConnection(after: String, before: String, first: Int, last: Int): HomeOwnershipConnection!
@@ -14307,7 +14358,8 @@ type User {
   profile: UserProfile
   purchaseStats: PurchaseStats!
   purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
-  role: UserRole!
+  """Null unless the caller is this user or an admin. See email."""
+  role: UserRole
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
   sentHomeInvitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
   settings: UserSettings

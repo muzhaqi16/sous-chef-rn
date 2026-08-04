@@ -1,5 +1,6 @@
 import {
   computeIsQuietTime,
+  getDeviceTimezone,
   minutesSinceMidnightInTimezone,
 } from '../quietHours';
 
@@ -26,6 +27,23 @@ describe('minutesSinceMidnightInTimezone', () => {
     const local = now.getHours() * 60 + now.getMinutes();
     expect(minutesSinceMidnightInTimezone(now, null)).toBe(local);
     expect(minutesSinceMidnightInTimezone(now, 'Not/AZone')).toBe(local);
+  });
+});
+
+describe('getDeviceTimezone', () => {
+  it('reports the engine-resolved IANA zone', () => {
+    expect(getDeviceTimezone()).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+  });
+
+  it('returns null when the engine cannot resolve one', () => {
+    const spy = jest.spyOn(Intl, 'DateTimeFormat').mockImplementation((() => {
+      throw new Error('no Intl');
+    }) as unknown as typeof Intl.DateTimeFormat);
+
+    expect(getDeviceTimezone()).toBeNull();
+    spy.mockRestore();
   });
 });
 

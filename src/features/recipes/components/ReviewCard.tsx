@@ -45,7 +45,10 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
 
   // User fields are inlined in RecipeReviewFragment, so direct field reads.
   const user = review.user;
-  const displayName = user.profile?.displayName || user.email;
+  // `user.email` only resolves for the viewer's own record, so it's null on
+  // every other author's review — the literal fallback is what actually renders.
+  const displayName =
+    user.profile?.displayName || user.email || t('labels.someone');
   const avatar = user.profile?.avatar;
 
   return (

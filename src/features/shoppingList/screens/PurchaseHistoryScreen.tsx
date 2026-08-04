@@ -133,7 +133,9 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
               {t('purchaseHistory.purchasedBy')}
             </Text>
             <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
-              {purchase.user.profile?.displayName || purchase.user.email}
+              {purchase.user.profile?.displayName ||
+                purchase.user.email ||
+                t('labels.someone')}
             </Text>
           </View>
         )}

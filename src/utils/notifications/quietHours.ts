@@ -16,6 +16,25 @@ interface QuietHoursConfig {
 }
 
 /**
+ * The device's IANA zone, or `null` when the engine can't report one.
+ *
+ * `quietHoursTimezone` is what both the server's suppression and this module's
+ * banner evaluate the window in, and the API defaults it to `"UTC"`. Left at
+ * that default a 22:00–08:00 window mutes 18:00–04:00 for a New York user, so
+ * the client keeps the field pointed at the device's zone — that is what makes
+ * the configured window mean the user's own wall clock.
+ *
+ * (Plain function, not a hook, so the try-catch never sits in a hook body.)
+ */
+export function getDeviceTimezone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Minutes-since-midnight for `now` rendered in `timezone`. Falls back to the
  * device's local time when the timezone is missing or not recognized by Intl
  * (kept in a plain function so the try-catch never sits in a hook/component body).

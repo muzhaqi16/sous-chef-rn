@@ -18,7 +18,9 @@ export interface Credentials {
 
 // Module-level functions — stable references, no hook state needed
 
-const checkStoredCredentials = async (email?: string): Promise<boolean> => {
+const checkStoredCredentials = async (
+  email?: string | null,
+): Promise<boolean> => {
   // No account → no per-account credentials to check.
   if (!email) return false;
   try {

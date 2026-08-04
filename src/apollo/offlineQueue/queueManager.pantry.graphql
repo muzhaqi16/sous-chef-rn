@@ -1,6 +1,12 @@
 # Narrow fragment for SyncPantryItem mutation response (offline queue).
 # Sync may create new entities, so the response carries the display-cell
 # hydration shape. Apollo auto-normalization writes these to the cache.
+#
+# It must stay a superset of what GetPantry reads off a list node — a replayed
+# create that comes back missing a field GetPantry selects leaves the pantry
+# query's cache read INCOMPLETE, which drops the whole result until the next
+# full network read. `createdAt` and the unit's `type`/`displayAsFraction` are
+# here for exactly that reason (mirrors the CreatePantryItem selection).
 fragment queueManager_syncPantryItem on PantryItem {
   id
   pantryId
@@ -8,6 +14,7 @@ fragment queueManager_syncPantryItem on PantryItem {
   itemName
   quantity
   version
+  createdAt
   updatedAt
   storageState
   expiresAt
@@ -31,6 +38,8 @@ fragment queueManager_syncPantryItem on PantryItem {
     id
     name
     symbol
+    type
+    displayAsFraction
   }
   netWeightUnit {
     id

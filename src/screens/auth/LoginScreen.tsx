@@ -31,7 +31,7 @@ import { Text } from '#components/atoms/Text';
  *  Extracted from useEffect to avoid try-catch bailout. */
 async function loadAuthInfoAsync(
   getLastBiometricEmail: () => Promise<string | null>,
-  checkStoredCredentials: (email?: string) => Promise<boolean>,
+  checkStoredCredentials: (email?: string | null) => Promise<boolean>,
   getBiometricInfo: () => Promise<{
     isAvailable: boolean;
     biometryType: string | null;

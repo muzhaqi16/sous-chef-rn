@@ -185,13 +185,17 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               addToPantryItemsCache(
                 client.cache,
                 pantryId,
-                buildOptimisticPantryItem(id, {
-                  pantryId,
-                  itemName: item.name,
-                  itemId: item.id,
-                  quantity,
-                  unitId: item.displayUnit?.id ?? item.unitId,
-                }),
+                buildOptimisticPantryItem(
+                  id,
+                  {
+                    pantryId,
+                    itemName: item.name,
+                    itemId: item.id,
+                    quantity,
+                    unitId: item.displayUnit?.id ?? item.unitId,
+                  },
+                  client.cache,
+                ),
               ),
             'Add Pantry Item (optimistic)',
           );

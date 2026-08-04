@@ -1136,6 +1136,7 @@ export type BehavioralSignalsInput = {
  */
 export type Brand = {
   __typename: 'Brand';
+  /** Child brands. The limit is clamped server-side; the hierarchy is admin-curated and shallow. */
   children: Array<Brand>;
   createdAt: Scalars['DateTime']['output'];
   description: Maybe<Scalars['String']['output']>;
@@ -1152,6 +1153,15 @@ export type Brand = {
   references: BrandReferences;
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
+};
+
+
+/**
+ * Brand type for product manufacturers and retailers
+ * Cache: 1 hour - brand catalog is relatively stable
+ */
+export type BrandChildrenArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /**
@@ -1552,6 +1562,7 @@ export type CancelRecurringResult = CancelRecurringPayload | ConflictError | For
  */
 export type Category = {
   __typename: 'Category';
+  /** Child categories. The limit is clamped server-side; the hierarchy is admin-curated and shallow. */
   children: Array<Category>;
   color: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -1577,6 +1588,15 @@ export type Category = {
   usageCount: Scalars['Int']['output'];
   version: Scalars['Int']['output'];
   visibility: Visibility;
+};
+
+
+/**
+ * Category type for organizing items
+ * Cache: 2 hours - reference data that changes very rarely
+ */
+export type CategoryChildrenArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /**
@@ -4666,6 +4686,14 @@ export type Home = {
    * unless allowJoinCode is enabled and a joinCode is set.
    */
   joinLink: Maybe<ShareLink>;
+  /**
+   * Low stock items across all pantries in this home.
+   *
+   * The limit is clamped server-side (see SMALL_LIST_FIELD_MAX): this is a
+   * dashboard list, and a home with many pantries can accumulate a lot of
+   * low-stock rows. Bounds the RESPONSE — the underlying batch read is not yet
+   * per-key limited, so this caps payload and client memory, not database work.
+   */
   lowStockItems: Array<LowStockItem>;
   maxMembers: Maybe<Scalars['Int']['output']>;
   mealPlansConnection: MealPlanConnection;
@@ -4716,6 +4744,15 @@ export type HomeInvitesConnectionArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/**
+ * Home/household for managing pantries and shopping lists
+ * Cache: 5 minutes - metadata changes occasionally
+ */
+export type HomeLowStockItemsArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -13666,6 +13703,14 @@ export type RecipeReview = {
   comment: Maybe<Scalars['String']['output']>;
   createdAt: Scalars['DateTime']['output'];
   helpful: Scalars['Int']['output'];
+  /**
+   * Who marked this review helpful.
+   *
+   * The limit is clamped server-side: one row per upvoting user, so on a popular
+   * review this is unbounded. Prefer the helpful count above for display —
+   * this list exists for detail views and is a candidate for removal (nothing in
+   * the first-party client selects it, and it discloses voter identity).
+   */
   helpfulVotes: Array<ReviewHelpful>;
   id: Scalars['ID']['output'];
   rating: Scalars['Int']['output'];
@@ -13673,6 +13718,11 @@ export type RecipeReview = {
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   verified: Scalars['Boolean']['output'];
+};
+
+
+export type RecipeReviewHelpfulVotesArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
 };
 
 /**
@@ -15508,8 +15558,7 @@ export type StoreEdge = Edge & {
 
 /**
  * Consolidated real-time event envelope for store changes. Subscribe via
- * storeEvents(storeId) (omit storeId for all stores) and branch on
- * mutation (CREATED / UPDATED).
+ * storeEvents(storeId) and branch on mutation (CREATED / UPDATED).
  */
 export type StoreEvent = {
   __typename: 'StoreEvent';
@@ -15629,19 +15678,31 @@ export type StoreSkuOpsInput = {
 };
 
 /**
- * Store statistics and analytics
- * Cache: 10 minutes - stats aggregate over time
+ * Store statistics for the CALLING user.
+ *
+ * Every purchase-derived field is scoped to the caller: a Store is global and has
+ * no tenant column, so an unscoped stat leaks other shoppers' purchase history to
+ * anyone who can name the store.
+ *
+ * Cache: PRIVATE and uncached. The contents differ per caller, so a shared cache
+ * could serve one caller's statistics to another.
+ *
+ * There is deliberately no revenue or unique-customer figure here: both are
+ * cross-tenant by definition, and scoping one to the caller changes its meaning
+ * rather than correcting it.
  */
 export type StoreStats = {
   __typename: 'StoreStats';
+  /** Mean value of the CALLER's own purchases at this store. */
   averagePurchaseAmount: Scalars['Float']['output'];
   priceAccuracy: Maybe<Scalars['Float']['output']>;
   qualityRating: Maybe<Scalars['Float']['output']>;
+  /** The CALLER's most recent purchases at this store. */
   recentActivity: Array<Purchase>;
+  /** The CALLER's most-purchased items at this store. */
   topItems: Array<StoreTopItem>;
+  /** Count of the CALLER's purchases at this store. */
   totalPurchases: Scalars['Int']['output'];
-  totalRevenue: Scalars['Float']['output'];
-  uniqueCustomers: Scalars['Int']['output'];
 };
 
 /** Subtype discriminator for store domain events. */
@@ -15712,7 +15773,15 @@ export type Subscription = {
    * ITEMS_BATCH_CLEARED, COLLABORATION_CHANGED.
    */
   shoppingListEvents: ShoppingListEvent;
-  /** Subscribe to store changes. Omit storeId to watch all stores. */
+  /**
+   * Subscribe to one store's changes.
+   *
+   * storeId is REQUIRED. The filter's only isolation is matching this variable
+   * against the event's storeId — it carries no access check, because a store is
+   * global reference data with no ownership model. A nullable argument would let
+   * a subscriber omit it, skip the match, and receive every store's events
+   * including actorUserId.
+   */
   storeEvents: StoreEvent;
   /**
    * Consolidated per-user event stream (account update, profile change, and
@@ -15759,7 +15828,7 @@ export type SubscriptionShoppingListEventsArgs = {
 
 
 export type SubscriptionStoreEventsArgs = {
-  storeId?: InputMaybe<Scalars['ID']['input']>;
+  storeId: Scalars['ID']['input'];
 };
 
 
@@ -17821,8 +17890,18 @@ export type User = {
   deviceStats: DeviceStats;
   devicesConnection: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
-  email: Scalars['String']['output'];
-  emailVerified: Scalars['Boolean']['output'];
+  /**
+   * Null unless the caller is this user or an admin.
+   *
+   * A User node is reachable cross-user (Recipe.createdBy, Membership.user, …),
+   * so these three are gated rather than served raw. They are nullable rather
+   * than non-null because an unauthorized reader must receive null — a
+   * placeholder would make "no permission" indistinguishable from "no value"
+   * and put a fabricated value on the wire.
+   */
+  email: Maybe<Scalars['String']['output']>;
+  /** Null unless the caller is this user or an admin. See email. */
+  emailVerified: Maybe<Scalars['Boolean']['output']>;
   expirationNotificationsConnection: ExpirationNotificationConnection;
   hasUrgentNotifications: Scalars['Boolean']['output'];
   homeOwnershipsConnection: HomeOwnershipConnection;
@@ -17843,7 +17922,8 @@ export type User = {
   profile: Maybe<UserProfile>;
   purchaseStats: PurchaseStats;
   purchasesConnection: PurchaseConnection;
-  role: UserRole;
+  /** Null unless the caller is this user or an admin. See email. */
+  role: Maybe<UserRole>;
   savedRecipesConnection: SavedRecipeConnection;
   sentHomeInvitesConnection: HomeInviteConnection;
   settings: Maybe<UserSettings>;

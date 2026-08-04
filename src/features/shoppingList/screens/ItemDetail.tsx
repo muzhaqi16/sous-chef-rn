@@ -318,7 +318,9 @@ export const ShoppingListItemDetail: React.FC<
         {!!item.addedBy && (
           <DetailRow label={t('shoppingListScreens.addedBy')}>
             <Text size="sm" weight="medium">
-              {item.addedBy.profile?.displayName || item.addedBy.email}
+              {item.addedBy.profile?.displayName ||
+                item.addedBy.email ||
+                t('labels.someone')}
             </Text>
           </DetailRow>
         )}

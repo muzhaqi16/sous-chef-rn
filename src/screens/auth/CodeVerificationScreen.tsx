@@ -240,8 +240,10 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
   };
 
   const onResend = () => {
-    // Prevent resend during countdown
-    if (!canResend || !user?.email) return;
+    // Prevent resend during countdown. Captured up front because the narrowing
+    // on `user.email` doesn't survive into the async mutation callback.
+    const email = user?.email;
+    if (!canResend || !email) return;
 
     // Counted BEFORE the request, not after it: the cooldown opens
     // synchronously, so a second tap lands on a disabled link instead of firing
@@ -252,7 +254,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     executeMutation(
       async () => {
         const response = await resendVerificationEmail({
-          variables: { input: { email: user.email } },
+          variables: { input: { email } },
         });
 
         // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)

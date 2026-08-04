@@ -795,7 +795,11 @@ export type OptimisticShoppingList = {
 type OptimisticShoppingListUser = {
   __typename: 'User';
   id: string;
-  email: string;
+  // Nullable per the schema: `User.email` only resolves for the caller's own
+  // record. The optimistic row is always the creator's, so it is populated
+  // here, but the cache shape has to match what the server write-through
+  // carries or the entity would be overwritten with a type mismatch.
+  email: string | null;
   profile: {
     __typename: 'UserProfile';
     id: string;
@@ -904,7 +908,7 @@ export function buildOptimisticShoppingList(
   cache: ApolloCache,
   id: string,
   input: { name: string; isDefault?: boolean | null; homeId?: string | null },
-  owner: { id: string; email: string },
+  owner: { id: string; email?: string | null },
 ): OptimisticShoppingList {
   const userCacheId = cache.identify({ __typename: 'User', id: owner.id });
   const cachedUser = userCacheId
@@ -917,7 +921,7 @@ export function buildOptimisticShoppingList(
   const user: OptimisticShoppingListUser = cachedUser ?? {
     __typename: 'User',
     id: owner.id,
-    email: owner.email,
+    email: owner.email ?? null,
     profile: null,
   };
 

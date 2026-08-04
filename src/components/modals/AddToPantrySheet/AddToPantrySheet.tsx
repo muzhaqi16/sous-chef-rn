@@ -216,11 +216,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         addToPantryItemsCache(
           client.cache,
           pantryId,
-          buildOptimisticPantryItem(id, {
-            pantryId,
-            itemName: item.name,
-            itemId: item.id,
-          }),
+          buildOptimisticPantryItem(
+            id,
+            {
+              pantryId,
+              itemName: item.name,
+              itemId: item.id,
+            },
+            client.cache,
+          ),
         ),
       'Add Pantry Item (optimistic)',
     );
@@ -311,11 +315,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         addToPantryItemsCache(
           client.cache,
           pantryId,
-          buildOptimisticPantryItem(id, {
-            pantryId,
-            itemName: pantryItem.name,
-            itemId: pantryItem.itemId,
-          }),
+          buildOptimisticPantryItem(
+            id,
+            {
+              pantryId,
+              itemName: pantryItem.name,
+              itemId: pantryItem.itemId,
+            },
+            client.cache,
+          ),
         ),
       'Add Pantry Item (optimistic)',
     );

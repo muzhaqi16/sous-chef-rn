@@ -61,12 +61,23 @@ export const handleTokenRefreshOnResume = async (
   }
 };
 
+/**
+ * The signed-in user, as persisted by the store.
+ *
+ * `email`, `emailVerified` and `role` are gated by the API: `User.email` and
+ * friends resolve to null unless the caller is that user or an admin. The
+ * bootstrap payloads that feed `setAuth` are always the caller's own record, so
+ * these arrive populated in practice — but the types stay nullable because the
+ * schema permits null, and silently substituting a placeholder would make "not
+ * authorized to read" indistinguishable from a real value. Read them
+ * defensively (`user?.email || fallback`) rather than asserting.
+ */
 export interface User {
   id: string;
-  email: string;
-  emailVerified: boolean;
+  email: string | null;
+  emailVerified: boolean | null;
   onBoarded: boolean;
-  role?: string;
+  role?: string | null;
   canAccessDevTools?: boolean;
   firstName?: string;
   lastName?: string;

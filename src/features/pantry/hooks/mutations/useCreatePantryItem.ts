@@ -177,20 +177,23 @@ export function useCreatePantryItem({
         addToPantryItemsCache(
           client.cache,
           targetPantryId,
-          buildOptimisticPantryItem(id, {
-            pantryId: targetPantryId,
-            itemName: input.itemName?.trim() ?? '',
-            quantity: quantityValue,
-            itemId: input.selectedItemId,
-            unitId,
-            unitName: input.unit?.trim() || null,
-            storageState: input.storageState,
-            expiresAt: input.expirationDate?.toISOString() ?? null,
-            location: input.location?.trim() || null,
-            minQuantity: input.minQuantity
-              ? parseFloat(input.minQuantity)
-              : null,
-          }),
+          buildOptimisticPantryItem(
+            id,
+            {
+              pantryId: targetPantryId,
+              itemName: input.itemName?.trim() ?? '',
+              quantity: quantityValue,
+              itemId: input.selectedItemId,
+              unitId,
+              storageState: input.storageState,
+              expiresAt: input.expirationDate?.toISOString() ?? null,
+              location: input.location?.trim() || null,
+              minQuantity: input.minQuantity
+                ? parseFloat(input.minQuantity)
+                : null,
+            },
+            client.cache,
+          ),
         ),
       'Add Pantry Item (optimistic)',
     );

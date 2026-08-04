@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
@@ -14,7 +14,10 @@ import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { computeIsQuietTime } from '#/utils/notifications/quietHours';
+import {
+  computeIsQuietTime,
+  getDeviceTimezone,
+} from '#/utils/notifications/quietHours';
 import { logger } from '#/utils/environment';
 
 export interface NotificationSettings {
@@ -327,6 +330,30 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
     return updateMultipleSettings(defaultSettings);
   };
+
+  // Nothing else in the app writes quietHoursTimezone, so an account keeps the
+  // API's "UTC" default and the window is applied on a UTC clock — 22:00–08:00
+  // mutes 18:00–04:00 in New York, both here and in the server's suppression.
+  // Point it at the device's zone so the configured window means the user's own
+  // wall clock. Guarded by a ref: a rejected write must not re-fire every render.
+  const syncedTimezone = useRef<string | null>(null);
+  useEffect(() => {
+    const deviceTimezone = getDeviceTimezone();
+    if (
+      !deviceTimezone ||
+      !preferences?.quietHoursEnabled ||
+      preferences.quietHoursTimezone === deviceTimezone ||
+      syncedTimezone.current === deviceTimezone
+    ) {
+      return;
+    }
+    syncedTimezone.current = deviceTimezone;
+    void updateNotificationSetting('quietHoursTimezone', deviceTimezone);
+  }, [
+    preferences?.quietHoursEnabled,
+    preferences?.quietHoursTimezone,
+    updateNotificationSetting,
+  ]);
 
   // Evaluated in the user's configured IANA timezone (not the device's) so
   // client suppression matches the server's. See computeIsQuietTime.

@@ -79,7 +79,7 @@ export interface LoginCredentials {
 
 // --- Credential management (pure async, no React) ---
 
-async function checkStoredCredentials(email?: string): Promise<boolean> {
+async function checkStoredCredentials(email?: string | null): Promise<boolean> {
   if (!email) return false;
   try {
     return await hasCredentials(email);
@@ -635,9 +635,12 @@ async function handleLogin(
 
 async function shouldShowPostLoginBiometricPrompt(targetUser: {
   id: string;
-  email: string;
+  email?: string | null;
 }): Promise<{ shouldShow: boolean; reason?: string }> {
-  if (!targetUser?.id || !targetUser?.email) {
+  // Keychain entries are namespaced by email, so an account with no readable
+  // email can't be matched against stored credentials.
+  const accountEmail = targetUser?.email;
+  if (!targetUser?.id || !accountEmail) {
     return { shouldShow: false, reason: 'No user found' };
   }
 
@@ -657,7 +660,7 @@ async function shouldShowPostLoginBiometricPrompt(targetUser: {
       return { shouldShow: false, reason: 'Biometric not available' };
     }
 
-    const hasCreds = await hasCredentials(targetUser.email);
+    const hasCreds = await hasCredentials(accountEmail);
     if (hasCreds) {
       return { shouldShow: false, reason: 'Already has biometric setup' };
     }

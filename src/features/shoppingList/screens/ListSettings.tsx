@@ -167,8 +167,12 @@ export const ListSettings: React.FC<
     : null;
 
   // Find current user's collaborator entry for leave functionality
+  // The email arm is guarded: both sides are nullable, and a null-to-null
+  // comparison would match an arbitrary collaborator as "me".
   const currentUserCollaborator = collaborators.find(
-    c => c.email === user?.email || c.collaboratorId === user?.id,
+    c =>
+      (!!user?.email && c.email === user.email) ||
+      c.collaboratorId === user?.id,
   );
   // Only members of the linked home are told to "leave the home first" — that's
   // the only case where list access actually derives from home membership. A
