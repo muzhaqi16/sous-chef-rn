@@ -99,9 +99,12 @@ export async function executeRefreshWithFinally(
 }
 
 /** Wraps an async operation with try-catch-finally where loading state is set externally
- *  before the call. Only provides catch + finally cleanup. */
+ *  before the call. Only provides catch + finally cleanup.
+ *  `fn` may resolve to anything — the value is discarded, and `Promise<void>`
+ *  would reject a `Promise<T>` callback (the void-return exemption covers a bare
+ *  `void` return type, not one wrapped in a Promise). */
 export async function executeAsyncWithCleanup(
-  fn: () => Promise<void>,
+  fn: () => Promise<unknown>,
   cleanup: () => void,
   onError?: (error: unknown) => void,
 ): Promise<void> {

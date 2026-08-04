@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -27,8 +28,42 @@ export interface AppSettings {
   betaFeatures: string[];
 }
 
+/**
+ * Write one setting into the cached `UserSettings` entity.
+ *
+ * Settings are local-first: the switch has to flip the moment it's tapped, and
+ * the change has to survive an unreachable API (the offline-mode switch in
+ * particular — needing the server to turn OFFLINE mode on is the one case where
+ * a round-trip is guaranteed to be unavailable). Writing the cache here is what
+ * makes that true, since the screen renders from the `GetUserSettings` query and
+ * `offlineModeEnabled` is mirrored into the store from the same value.
+ *
+ * Reverted by the caller when the server rejects the change.
+ */
+function writeSettingToCache<K extends keyof AppSettings>(
+  cache: ApolloCache,
+  settingsId: string,
+  key: K,
+  value: AppSettings[K],
+): void {
+  const cacheId = cache.identify({
+    __typename: 'UserSettings',
+    id: settingsId,
+  });
+  // Without the guard a missing id would fall through to ROOT_QUERY.
+  if (!cacheId) return;
+  // Widened to the value union before it reaches the modifier: Apollo types a
+  // modifier's return as `DeepPartial<T>`, which TypeScript can't evaluate
+  // while `T` is still the unresolved `AppSettings[K]`. Callers keep the
+  // key/value correlation through the `K` parameter.
+  const nextValue: AppSettings[keyof AppSettings] = value;
+  // Every AppSettings key is a field of the same name on UserSettings.
+  cache.modify({ id: cacheId, fields: { [key]: () => nextValue } });
+}
+
 export const useAppSettings = () => {
   const user = useUser();
+  const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });
@@ -48,6 +83,10 @@ export const useAppSettings = () => {
       betaFeatures: settings?.betaFeatures || [],
     };
   };
+
+  // Resolved once per render — also the snapshot the mutators revert to when the
+  // server rejects an optimistic change.
+  const memoizedSettings = getAppSettings();
 
   const toSettingsInput = (
     updates: Partial<AppSettings>,
@@ -88,26 +127,72 @@ export const useAppSettings = () => {
     value: AppSettings[K],
   ) => {
     const input = toSettingsInput({ [key]: value } as Partial<AppSettings>);
+    const settingsId = settings?.id;
+    const previous = memoizedSettings[key];
+    if (settingsId) {
+      writeSettingToCache(client.cache, settingsId, key, value);
+    }
+
     const result = await executeMutation(
-      () => updateSettings({ variables: { input } }),
+      // localFirst: an unreachable API queues the change for replay instead of
+      // failing it, so the setting the user just flipped isn't lost.
+      () =>
+        updateSettings({
+          variables: { input },
+          context: { localFirst: true },
+        }),
       'Update Setting',
     );
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+
+    // `alertIfRejected` is the ONLY alerter for this call (there is no mutation
+    // `onError`) — callers must not add their own, see its contract.
+    if (!result || alertIfRejected(result, t('settings.updateFailed'))) {
+      if (settingsId) {
+        writeSettingToCache(client.cache, settingsId, key, previous);
+      }
       return false;
     }
-    return result !== false;
+    return true;
   };
 
-  const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
+  const updateMultipleSettings = async (
+    updates: Partial<AppSettings>,
+    failureMessage: string = t('settings.updateFailed'),
+  ) => {
     const input = toSettingsInput(updates);
+    const settingsId = settings?.id;
+    const keys = Object.keys(updates) as (keyof AppSettings)[];
+    // Annotated rather than inferred so each entry stays a two-element tuple —
+    // a bare `.map` widens it to an array of the key/value union.
+    const previous: Array<[keyof AppSettings, AppSettings[keyof AppSettings]]> =
+      keys.map(key => [key, memoizedSettings[key]]);
+    if (settingsId) {
+      for (const key of keys) {
+        const next = updates[key];
+        if (next !== undefined) {
+          writeSettingToCache(client.cache, settingsId, key, next);
+        }
+      }
+    }
+
     const result = await executeMutation(
-      () => updateSettings({ variables: { input } }),
+      () =>
+        updateSettings({
+          variables: { input },
+          context: { localFirst: true },
+        }),
       'Update Settings',
     );
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+
+    if (!result || alertIfRejected(result, failureMessage)) {
+      if (settingsId) {
+        for (const [key, value] of previous) {
+          writeSettingToCache(client.cache, settingsId, key, value);
+        }
+      }
       return false;
     }
-    return result !== false;
+    return true;
   };
 
   const resetToDefaults = async () => {
@@ -120,10 +205,8 @@ export const useAppSettings = () => {
       preferredUnitSystem: UnitSystem.Metric,
     };
 
-    return updateMultipleSettings(defaultSettings);
+    return updateMultipleSettings(defaultSettings, t('settings.resetFailed'));
   };
-
-  const memoizedSettings = getAppSettings();
 
   // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
   // without triggering the GetUserSettings GraphQL query at startup.

@@ -67,13 +67,11 @@ export const AppSettingsScreen: React.FC = () => {
     value: AppSettings[K],
   ) => {
     setUpdating(key);
+    // No alert here: `updateAppSetting` is the single alerter for its own
+    // failure (see `alertIfRejected`'s contract). Alerting again on `!success`
+    // stacked a second dialog on every failed toggle.
     executeAsyncWithCleanup(
-      async () => {
-        const success = await updateAppSetting(key, value);
-        if (!success) {
-          alertService.alert(t('labels.error'), t('settings.updateFailed'));
-        }
-      },
+      () => updateAppSetting(key, value),
       () => setUpdating(null),
     );
   };
@@ -95,15 +93,12 @@ export const AppSettingsScreen: React.FC = () => {
                 // Also reset feature hints/tutorials and per-user preferences
                 resetAllFeatureHints();
                 resetUserPreferences();
+                // Only the success path alerts — `resetToDefaults` already
+                // surfaces its own failure with `settings.resetFailed`.
                 if (success) {
                   alertService.alert(
                     t('settings.resetSuccessTitle'),
                     t('settings.resetSuccess'),
-                  );
-                } else {
-                  alertService.alert(
-                    t('labels.error'),
-                    t('settings.resetFailed'),
                   );
                 }
               },

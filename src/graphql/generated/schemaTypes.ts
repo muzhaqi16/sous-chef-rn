@@ -17370,11 +17370,16 @@ export type UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundErro
 export type UpdateShoppingListInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
-  isCompleted?: InputMaybe<Scalars['Boolean']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
   planning?: InputMaybe<ShoppingListPlanningInput>;
   settings?: InputMaybe<ShoppingListSettingsInput>;
+  /**
+   * ARCHIVED / PAUSED / CANCELLED have no dedicated mutation and are set here.
+   * COMPLETED and TEMPLATE do — completeShoppingList, markShoppingListActive
+   * and markAsTemplate — and those also stamp completion metadata and notify
+   * collaborators, which this field does not.
+   */
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   version?: InputMaybe<Scalars['Int']['input']>;

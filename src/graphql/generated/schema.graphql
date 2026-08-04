@@ -13818,11 +13818,16 @@ union UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | Up
 input UpdateShoppingListInput {
   description: String
   id: ID!
-  isCompleted: Boolean
   isDefault: Boolean
   name: String
   planning: ShoppingListPlanningInput
   settings: ShoppingListSettingsInput
+  """
+  ARCHIVED / PAUSED / CANCELLED have no dedicated mutation and are set here.
+  COMPLETED and TEMPLATE do — completeShoppingList, markShoppingListActive
+  and markAsTemplate — and those also stamp completion metadata and notify
+  collaborators, which this field does not.
+  """
   status: ListStatus
   tags: [String!]
   version: Int
