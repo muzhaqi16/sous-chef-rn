@@ -323,6 +323,7 @@ Pick the cache-update pattern based on what the mutation changes:
 | **No `update` callback** (preferred default) | Mutation returns the entity and Apollo auto-normalizes by `__typename + id` | `useAdjustPantryItemQuantity` — the mutation spreads the hook's fragment on the response; Apollo writes through automatically |
 | **`cache.modify` on parent aggregates** | Need to update parent stat fields not in the response | `useRecipeReviews` — patches `Recipe.totalReviews` / `averageRating` / `rating{N}Count` aggregates (`recipeReviewCacheUpdaters`) after create/update/delete review. (`Pantry.stats` is instead kept current via the `Pantry.stats` `mergeObjects` field policy + mutation responses — no manual `cache.modify`.) |
 | **`cache.modify` on entity fields BEFORE firing the mutation** | Optimistic UI without a callback — set fields synchronously, revert from a snapshot on error | `useToggleShoppingItem` — flips `purchaseInfo.isPurchased` + moves the item between purchased/unpurchased connections immediately, reverts in `onError` |
+| **`updateEntityFieldsLocalFirst`** | Settings-shaped mutation: a normalized entity whose GraphQL field names ARE the flat setting names, updated a field or two at a time | `useAppSettings` (`UserSettings`), `useNotificationSettings` (`NotificationPreferences`) — writes the fields, fires with `context: { localFirst: true }`, reverts from the caller's `previous` snapshot only on `'rejected'` |
 | **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` — `moveShoppingListItemTo*` helpers |
 | **`writeFragment`** | Subscription handler receives an entity push and writes it through | `usePantrySubscriptions`, `useShoppingListSubscriptions` |
 | **`refetchQueries`** (last resort) | Mutation affects queries whose shape can't be derived from the response | `CreateHomeScreen` (refetches home list after creating home), `useRecipePreload` |
@@ -332,6 +333,20 @@ Defaults:
 - `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
 - Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic.
 - Build optimistic responses from the existing cache via `cache.readFragment` + spread, never with hand-rolled placeholder shapes that can drift from the schema.
+- **Never pair `optimisticResponse` with `context: { localFirst: true }`.** Apollo tears the optimistic layer down as soon as the mutation completes, and offline that completion is `queueLink`'s null result — so the change reverts on screen while it sits in the queue. Local-first writes to the cache permanently before firing instead.
+
+**Optimistic entities must be COMPLETE for every query that reads them.** Apollo has no
+`returnPartialData` on these hooks, so one missing field makes the whole query's cache read incomplete
+and `useQuery` returns no data at all. Online a refetch hides it; offline there is no refetch and the
+row the user just added stays invisible for the rest of the session. When you add a field to a list
+query — or to a fragment it spreads — the optimistic builder, the create mutation's selection, AND the
+queue's `Sync*` replay fragment all have to carry it.
+`__tests__/apollo/optimisticEntityCompleteness.test.ts` executes the real schema and asserts
+`cache.diff(...)` reads complete for all three writers; add a case there for any new local-first entity.
+Corollary for nested entity references (`unit`, `item`): resolve them from the cache with
+`cache.readFragment` selecting **every** field the query needs — `readFragment` returns null on a
+partially-cached entity exactly as it does on a missing one, so a narrow selection elsewhere in the app
+silently drops the reference.
 
 ### Autocomplete Local-First Search
 

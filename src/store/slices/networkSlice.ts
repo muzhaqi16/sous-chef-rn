@@ -81,7 +81,13 @@ export interface NetworkState {
   setOnline: () => void;
   setOffline: () => void;
   setNeedsTokenRefresh: (value: boolean) => void;
-  setOfflineModeEnabled: (enabled: boolean) => void;
+  /**
+   * `immediate` skips the banner's dwell/hold debouncing — pass it only from a
+   * control the user just operated. The other callers (MMKV hydration on boot,
+   * the `GetUserSettings` sync in `useAppSettings`) are not user gestures and
+   * take the debounced path.
+   */
+  setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
   setApiReachable: (reachable: boolean) => void;
 }
 
@@ -231,13 +237,16 @@ export const createNetworkSlice: StateCreator<
       });
     },
 
-    setOfflineModeEnabled: (enabled: boolean) => {
+    setOfflineModeEnabled: (enabled: boolean, immediate = false) => {
       set(draft => {
         draft.offlineModeEnabled = enabled;
       });
       storage.set(OFFLINE_MODE_KEY, enabled);
-      // User-driven, so announce it immediately in both directions.
-      syncOfflineBanner(true);
+      // Only a switch the user just flipped skips the debounce — see the
+      // interface note. Boot hydration and the settings sync go through the
+      // normal dwell/hold so a value arriving from elsewhere can't yank the
+      // banner off screen mid-hold.
+      syncOfflineBanner(immediate);
     },
 
     setApiReachable: (reachable: boolean) => {

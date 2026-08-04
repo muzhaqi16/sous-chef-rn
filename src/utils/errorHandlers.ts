@@ -37,8 +37,15 @@ import { getI18n } from '#/i18n/config';
  *
  * Deliberately narrow: only NETWORK errors are suppressed, and only while
  * `isApiUnavailable` holds. A validation / permission / conflict error is a real
- * defect report and is always sent, outage or not. Mirrors the query-side guard
- * in `useApolloErrorLogger`.
+ * defect report and is always sent, outage or not.
+ *
+ * This goes one step further than the query-side guard in `useApolloErrorLogger`,
+ * which suppresses only the `__DEV__` console warning and still emits its
+ * telemetry during an outage. The asymmetry is intended: a query re-fires on its
+ * own, so its error count is roughly "screens mounted" and is the signal that
+ * says how wide the outage is. A mutation error is one-per-user-action, so its
+ * count is really "how many times did the user retry", which tells you nothing
+ * the query side hasn't already said and drowns out unrelated failures.
  */
 function reportMutationFailure(error: unknown, operation: string): void {
   if (isNetworkError(error) && isApiUnavailable(storeApi.getState())) {

@@ -18,10 +18,15 @@
  * That is exactly what shipped: `buildOptimisticPantryItem` never wrote
  * `createdAt`, which `GetPantry` selects on every node.
  *
- * Both halves are covered because both write the entity:
- *  1. the optimistic entity written before the mutation fires, and
- *  2. the mutation's own response shape (`CreatePantryItem`), which is what the
- *     queue replay writes back too.
+ * Three writers are covered, because all three produce the entity the list
+ * reads:
+ *  1. the optimistic entity written before the mutation fires,
+ *  2. the mutation's own response shape (`CreatePantryItem`), and
+ *  3. the offline queue's replay response (`SyncPantryItem`) — the only one of
+ *     the three that lands while still offline, so a field missing there is the
+ *     worst case: the row the user added stays invisible until a full network
+ *     read. Its fragment carries a comment saying it must remain a superset of
+ *     what `GetPantry` reads off a node; this is what holds it to that.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -38,6 +43,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
+  SyncPantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -85,6 +91,7 @@ const mockedSchema = addMocksToSchema({
     // Result unions default to their first member (an error type), which would
     // leave the success inline fragment unmatched and the payload undefined.
     CreatePantryItemResult: () => ({ __typename: 'CreatePantryItemPayload' }),
+    SyncPantryItemResult: () => ({ __typename: 'SyncPantryItemPayload' }),
   },
 });
 
@@ -262,6 +269,25 @@ describe('optimistic entity completeness', () => {
       pantryItem.pantryId = 'pantry-1';
 
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
+
+      expectCompletePantry(readPantry(cache));
+    });
+
+    it('keeps GetPantry complete after a SyncPantryItem replay lands', async () => {
+      // The offline queue replays a queued create as SyncPantryItem and writes
+      // the response back. That happens while the app may still be offline, so
+      // a field its fragment omits can't be repaired by a refetch.
+      const cache = await seedPantryCache();
+      const synced = await runAgainstSchema<{
+        syncPantryItem: { item: { id: string; pantryId: string } };
+      }>(SyncPantryItemDocument, {
+        input: { clientId: 'client-cuid-5', pantryId: 'pantry-1' },
+      });
+      const item = synced.syncPantryItem.item;
+      item.id = 'client-cuid-5';
+      item.pantryId = 'pantry-1';
+
+      addToPantryItemsCache(cache, 'pantry-1', item);
 
       expectCompletePantry(readPantry(cache));
     });

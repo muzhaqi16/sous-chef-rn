@@ -101,9 +101,13 @@ export const AppSettingsScreen: React.FC = () => {
    * MMKV, and it must not depend on a round-trip that is unavailable precisely
    * when the user reaches for this switch. The mirror rides `localFirst`, so an
    * unreachable API queues it for replay rather than failing it.
+   *
+   * `immediate` on the store write: this is the one caller that IS a user
+   * gesture, so the offline banner should announce it without the dwell/hold
+   * those debounces exist to absorb flapping, and a switch isn't flapping.
    */
   const handleOfflineModeChange = (value: boolean) => {
-    setOfflineModeEnabled(value);
+    setOfflineModeEnabled(value, true);
     setUpdating('offlineMode');
     executeAsyncWithCleanup(
       () => updateAppSetting('offlineMode', value),

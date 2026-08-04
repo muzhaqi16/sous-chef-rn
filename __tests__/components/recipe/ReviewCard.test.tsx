@@ -34,7 +34,7 @@ const makeReview = (
       avatar: null,
     },
   },
-  helpfulVotes: [],
+  viewerHasVotedHelpful: false,
   ...overrides,
 });
 

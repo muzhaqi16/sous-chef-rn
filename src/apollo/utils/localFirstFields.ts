@@ -14,7 +14,10 @@
  * optimistic layer as soon as the mutation completes, and offline that
  * completion is `queueLink`'s null result — so the control flips, the queued
  * result lands, the layer rolls back, and the change visually reverts while
- * sitting in the queue waiting to replay. Both settings screens had that bug.
+ * sitting in the queue waiting to replay. That is the bug the notification
+ * settings screen had. App settings had no optimistic layer at all, so its
+ * controls simply didn't move until the round trip returned — the same symptom
+ * ("takes two taps"), reached from the other direction, and the same fix.
  */
 
 import type { ApolloCache, StoreObject } from '@apollo/client';

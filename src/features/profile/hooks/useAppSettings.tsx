@@ -13,6 +13,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { alertService } from '#/services/alertService';
 import { t } from '#/i18n/t';
 import { storage } from '#/storage/mmkv';
 
@@ -118,11 +119,21 @@ export const useAppSettings = () => {
         logLabel: 'Update Settings',
       });
 
-    // `alertIfRejected` is the ONLY alerter for this call (there is no mutation
-    // `onError`) — callers must not add their own, see its contract. It no-ops
-    // on the throw case, which `executeMutation` already reported.
+    // This call is the ONLY alerter for its own failure (there is no mutation
+    // `onError`) — callers must not add their own, see `alertIfRejected`'s
+    // contract. Two branches because they fail differently:
+    //  - `false` means the call THREW. `executeMutation` reported it (log +
+    //    telemetry) but shows the user nothing, and `alertIfRejected`
+    //    deliberately no-ops on a falsy result — so without this the setting
+    //    reverts with no explanation.
+    //  - anything else is a resolved rejection (union error member, or an
+    //    `errorPolicy: 'all'` transport error), which `alertIfRejected` owns.
     if (!persisted) {
-      alertIfRejected(result, failureMessage);
+      if (result === false) {
+        alertService.alert(t('labels.error'), failureMessage);
+      } else {
+        alertIfRejected(result, failureMessage);
+      }
       return false;
     }
     return true;

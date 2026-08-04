@@ -74,18 +74,25 @@ const OptimisticUnitFragment = gql`
 /**
  * Resolve the optimistic item's `unit` from the cache.
  *
- * A unit id at an add site always comes from something already fetched (the
- * unit autocomplete, an item's `defaultUnit`), so the `Unit` entity is normally
- * cached. Referencing it — rather than writing a hand-built `{id, name, symbol}`
- * stub — does two things a stub can't: it keeps `type`/`displayAsFraction`
- * readable (a stub without them strands the pantry query, see the module doc),
- * and it stops the stub's placeholder `symbol: ''` from overwriting the real
- * symbol on a shared `Unit` entity.
+ * Reading the real unit — rather than writing a hand-built `{id, name, symbol}`
+ * stub — is what keeps `type`/`displayAsFraction` readable. A stub without them
+ * strands the whole pantry query (see the module doc), and it also puts the
+ * unit's real `symbol` on the row instead of a placeholder.
  *
- * `readFragment` returns null when the unit isn't cached (or is cached
- * incomplete). Then the optimistic item carries no unit — the quantity renders
- * bare until the create response or replay supplies the real one, which beats
- * stranding the whole list.
+ * (It is NOT about protecting the shared `Unit` entity from the stub. The
+ * writer, `addToPantryItemsCache`, calls `toReference(item, true)`, which
+ * normalizes only the top-level `PantryItem`; nested objects are stored
+ * embedded on it, so a stub could never have reached `Unit:<id>` to overwrite
+ * anything.)
+ *
+ * A unit id at an add site comes from something already fetched, but "fetched"
+ * has to mean *these five fields* — `readFragment` returns null on a partial
+ * entity just as it does on a missing one. The unit autocomplete
+ * (`SearchUnits` / `GetCommonUnits`) and an item's `displayUnit`
+ * (`item.graphql`) all select them. Anything narrower silently lands in the
+ * null branch below: the optimistic item carries no unit and the quantity
+ * renders bare until the create response or replay supplies the real one —
+ * which still beats stranding the whole list.
  */
 function readCachedUnit(
   cache: ApolloCache | undefined,

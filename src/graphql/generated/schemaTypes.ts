@@ -13704,12 +13704,15 @@ export type RecipeReview = {
   createdAt: Scalars['DateTime']['output'];
   helpful: Scalars['Int']['output'];
   /**
-   * Who marked this review helpful.
+   * Who marked this review helpful, newest first.
    *
-   * The limit is clamped server-side: one row per upvoting user, so on a popular
-   * review this is unbounded. Prefer the helpful count above for display —
-   * this list exists for detail views and is a candidate for removal (nothing in
-   * the first-party client selects it, and it discloses voter identity).
+   * Windowed, and the window is the whole story: the limit is clamped
+   * server-side to 50, so a review with more helpful votes than that cannot
+   * report all of them through this field, and the ones it omits are not
+   * identifiable from what it returns. Membership is therefore not a test of
+   * whether any particular user voted — use viewerHasVotedHelpful for the
+   * requesting user. Prefer the helpful count above for display.
+   * @deprecated Discloses voter identity, and its window makes it unusable as a membership test. Use viewerHasVotedHelpful for the requesting user's own state and helpful for the count. Scheduled for removal.
    */
   helpfulVotes: Array<ReviewHelpful>;
   id: Scalars['ID']['output'];
@@ -13718,6 +13721,16 @@ export type RecipeReview = {
   updatedAt: Scalars['DateTime']['output'];
   user: User;
   verified: Scalars['Boolean']['output'];
+  /**
+   * Whether the requesting user has an active helpful vote on this review.
+   * False for an anonymous viewer.
+   *
+   * This is the field to drive a vote button's state from. Deriving it by
+   * looking for your own id in helpfulVotes cannot work: that list is windowed,
+   * so on a review with more votes than the window your own vote falls outside
+   * it and reads as "not voted".
+   */
+  viewerHasVotedHelpful: Scalars['Boolean']['output'];
 };
 
 

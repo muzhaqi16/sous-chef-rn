@@ -75,6 +75,16 @@ nothing else — the payload field and the success member are derived structural
 replay paths apply one rule. What stays per-site — input construction and success UX (navigate / close / toast /
 restock) — is irreducibly site-specific, so a single primitive would be the wrong abstraction over it.
 
+**One shape did earn a primitive: settings.** `updateEntityFieldsLocalFirst`
+(`apollo/utils/localFirstFields.ts`) runs the whole lifecycle for a *settings-shaped* mutation — a
+normalized entity whose GraphQL field names are the flat setting names (`UserSettings`,
+`NotificationPreferences`), updated a field or two at a time. It writes the fields with `cache.modify`,
+fires with `context: { localFirst: true }`, and reverts from the caller's `previous` snapshot only when
+`classifyCreateResult` says `'rejected'`. It qualifies where the create sites don't because there is no
+per-site input construction (the change *is* the fields) and no success UX (the control already moved).
+It returns the outcome rather than reporting it — the two call sites surface a refusal differently, and
+deciding that centrally is what produces double alerts. See §10 for what uses it.
+
 ## 3. Identity — client-generated permanent ids
 
 Rather than temp-ids + server reconciliation, **the client mints the real id at create time** and sends
@@ -278,7 +288,15 @@ query-blocking, orthogonal to connectivity.
   toasts the user, and **removes the entry from the queue**. `useOnlineQueueSync` intentionally does
   **not** register a handler (a comment there documents why — it mounts after `App.tsx`, so registering
   one would shadow the full handler). So a permanently-failed (validation/4xx) mutation is fully
-  reverted and dequeued.
+  reverted and dequeued — **as long as it names an entity**. The revert keys off
+  `entityType` + `entityId`; a settings mutation (§10) carries neither, so the toast fires and the
+  entry is dequeued but the `cache.modify` stands. That corrects itself on the next
+  `GetUserSettings` / `GetNotificationPreferences` network read (both `cache-and-network`), so the
+  window is one screen visit, not forever.
+- **Reconnect ordering.** The queue drain and the settings queries' `cache-and-network` refetch both
+  fire on reconnect and are not ordered against each other. If the refetch lands first, a queued
+  toggle visibly snaps to the server value and back when the replay lands. Cosmetic and self-correcting;
+  not worth serializing.
 - **Network errors** no longer raise a blocking alert for opted-in mutations — they queue silently.
 - **Not yet shipped:** a uniform offline-degraded affordance for online-only features.
 
@@ -325,6 +343,17 @@ query-blocking, orthogonal to connectivity.
 
 - **Storage location create** (`useCreateStorageLocation`) — permanent write before firing +
   `context.localFirst`; plain-create tier keyed by the client-minted id.
+- **App settings + notification preferences** (`useAppSettings`, `useNotificationSettings`) — both go
+  through `updateEntityFieldsLocalFirst` (§2): `cache.modify` the changed fields on `UserSettings` /
+  `NotificationPreferences`, fire, revert from the caller's snapshot only on a rejection. No
+  `optimisticResponse` anywhere here — an optimistic layer is torn down the moment the mutation
+  completes, and offline that completion is `queueLink`'s null result, which is what snapped every
+  toggle back while the change sat queued. Replay is the plain-create tier: settings writes are
+  naturally idempotent (last write wins on the same fields), so a duplicate replay converges.
+  **Offline mode is the one exception to "the cache is the source of truth"** — the switch renders from
+  the Zustand store, because that is what `offlineModeLink` reads and what is mirrored to MMKV; the
+  server copy is a cross-device mirror. `useAppSettings` syncs the store back off the query, so a
+  server rejection reverts the store too.
 - **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
   `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`, `ConvertExpiredBatchesToWaste`)
   — replay as the **original canonical mutation**, made at-most-once by a client-minted
@@ -348,7 +377,8 @@ This is **enforced in code**, not just convention: `queueLink` only queues allow
 (`localFirst` opt-ins + `Sync*`-mapped ops) when the device is offline; everything else fails fast with
 a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
 
-**Out of current scope (own server work pending):** profile, notifications. Replay is strictly FIFO
+**Out of current scope (own server work pending):** profile (name / avatar / dietary profile — the
+*settings* half is local-first, see above). Replay is strictly FIFO
 for the whole queue, so dependents queued behind a parent-entity create (items in a new list, meals
 in a new plan, meals referencing a new recipe, items in a new pantry) always replay after their
 parent exists — ordering is correct by construction, no special-casing.
@@ -433,7 +463,9 @@ parent exists — ordering is correct by construction, no special-casing.
 | Pending-aware connection merge | `src/apollo/cache.ts` (`itemsConnectionFieldPolicy`) + `queueStore.getPendingClientIds()` |
 | Shared shopping writers/reconcilers | `src/apollo/utils/shoppingListCacheUpdaters.ts` (`createOptimisticShoppingListItem`, `addOptimisticShoppingListItem`, `reconcileShoppingCreate`, `adoptServerShoppingListItemId`, `revertOptimisticShoppingListItem`) |
 | Shared pantry builder | `src/hooks/home/pantry/buildOptimisticPantryItem.ts` |
+| Settings-shaped field writer | `src/apollo/utils/localFirstFields.ts` (`updateEntityFieldsLocalFirst`, `writeEntityFields`) |
 | Create-result classifier | `src/apollo/utils/classifyCreateResult.ts` |
+| Optimistic-entity completeness guard | `__tests__/apollo/optimisticEntityCompleteness.test.ts` |
 | Offline banner (mounted in `App.tsx`) | `src/components/atoms/OfflineBanner.tsx` |
 | Query short-circuit when offline | `src/apollo/links/offlineModeLink.ts` |
 | API-reachability circuit breaker | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts` |
