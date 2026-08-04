@@ -1,4 +1,5 @@
 import { alertService, type AlertButton } from '#/services/alertService';
+import { storeApi } from '#store';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -90,5 +91,50 @@ describe('handleMutationErrorAlert', () => {
       customMessage: 'Custom error',
     });
     expect(alertService.alert).toHaveBeenCalledWith('Error', 'Custom error');
+  });
+
+  /**
+   * During an outage every failing mutation used to write a console error and a
+   * telemetry error event — one settings session against a down API produced
+   * 228, all describing the same known condition.
+   */
+  describe('reporting during a known outage', () => {
+    const setApiUnavailable = (unavailable: boolean) => {
+      storeApi.setState({
+        isOnline: !unavailable,
+        apiReachable: true,
+      } as Partial<ReturnType<typeof storeApi.getState>>);
+    };
+
+    afterEach(() => setApiUnavailable(false));
+
+    it('skips the report for a network error while the API is unavailable', () => {
+      setApiUnavailable(true);
+      handleMutationErrorAlert(new Error('Network request failed'), {
+        operation: 'Update Settings',
+      });
+
+      expect(errorService.reportError).not.toHaveBeenCalled();
+      // The user still gets told — only the report is suppressed.
+      expect(alertService.alert).toHaveBeenCalled();
+    });
+
+    it('still reports a non-network error while the API is unavailable', () => {
+      setApiUnavailable(true);
+      handleMutationErrorAlert(new Error('Validation failed: name required'), {
+        operation: 'Update Settings',
+      });
+
+      expect(errorService.reportError).toHaveBeenCalled();
+    });
+
+    it('reports a network error normally while the API is reachable', () => {
+      setApiUnavailable(false);
+      handleMutationErrorAlert(new Error('Network request failed'), {
+        operation: 'Update Settings',
+      });
+
+      expect(errorService.reportError).toHaveBeenCalled();
+    });
   });
 });

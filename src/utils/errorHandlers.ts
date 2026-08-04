@@ -19,8 +19,33 @@ import {
   getInvalidUnitMessage,
 } from './errors/invalidUnit';
 import { errorService, getErrorMessage } from '#/services/errorService';
+import { isNetworkError } from '#/utils/isNetworkError';
+import { storeApi } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { t } from '#/i18n/t';
 import { getI18n } from '#/i18n/config';
+
+/**
+ * Report a mutation failure, unless it's a network error we already know about.
+ *
+ * During an outage every mutation that reaches an error handler would otherwise
+ * write a full console error AND a `Telemetry.trackError` — one settings screen
+ * session against a down API produced 228 of them, all describing the same
+ * condition. The breaker's one-line verdict and `networkStatusLink`'s
+ * per-operation warning are the signal then; per-call reports are noise that
+ * buries real failures and inflates error telemetry.
+ *
+ * Deliberately narrow: only NETWORK errors are suppressed, and only while
+ * `isApiUnavailable` holds. A validation / permission / conflict error is a real
+ * defect report and is always sent, outage or not. Mirrors the query-side guard
+ * in `useApolloErrorLogger`.
+ */
+function reportMutationFailure(error: unknown, operation: string): void {
+  if (isNetworkError(error) && isApiUnavailable(storeApi.getState())) {
+    return;
+  }
+  errorService.reportError(error, { operation });
+}
 
 export interface VersionConflictConfig {
   /** Name of the item being updated (e.g., "Item", "Home", "Recipe"). */
@@ -123,7 +148,9 @@ export const handleMutationErrorAlert = (
     alertService.alert(t('labels.error'), errorMessage);
   }
 
-  errorService.reportError(error, { operation });
+  // The ALERT is unconditional — the user acted and deserves an answer. Only
+  // the report is suppressed for an already-known outage.
+  reportMutationFailure(error, operation);
 };
 
 // ---------------------------------------------------------------------------

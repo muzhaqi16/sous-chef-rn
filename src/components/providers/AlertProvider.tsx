@@ -215,6 +215,32 @@ const AlertStack: React.FC<AlertStackProps> = ({ alerts, onDismiss }) => {
 
 // ─── AlertProvider ─────────────────────────────────────────────────────────────
 
+/**
+ * An alert nobody has to answer: every button only dismisses it. A second copy
+ * of such an alert tells the user nothing the first one didn't.
+ *
+ * Anything with an `onPress` is a decision (Delete / Retry / Open Settings) —
+ * those are never collapsed, because dropping one would drop the callback the
+ * caller is waiting on.
+ */
+const isInformational = (entry: AlertEntry): boolean =>
+  entry.buttons.every(button => button.onPress == null);
+
+/**
+ * Is this alert already on screen or queued behind one?
+ *
+ * Matches on the rendered content (title + message), which is what the user
+ * actually sees repeated.
+ */
+const isRedundant = (alerts: AlertEntry[], entry: AlertEntry): boolean =>
+  isInformational(entry) &&
+  alerts.some(
+    existing =>
+      isInformational(existing) &&
+      existing.title === entry.title &&
+      existing.message === entry.message,
+  );
+
 interface AlertProviderProps {
   children: React.ReactNode;
 }
@@ -224,7 +250,11 @@ export const AlertProvider: React.FC<AlertProviderProps> = ({ children }) => {
 
   useEffect(() => {
     alertService.init((entry: AlertEntry) => {
-      setAlerts(prev => [...prev, entry]);
+      // Collapse a repeat of an alert that's already waiting — see
+      // `isRedundant`. Without this, a run of identical failures (every tap on
+      // a control while the API is down) stacks one modal per failure and the
+      // user has to dismiss each of them in turn.
+      setAlerts(prev => (isRedundant(prev, entry) ? prev : [...prev, entry]));
     });
   }, []);
 

@@ -17,7 +17,7 @@
  * sitting in the queue waiting to replay. Both settings screens had that bug.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import type { ApolloCache, StoreObject } from '@apollo/client';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from './classifyCreateResult';
 
@@ -25,11 +25,16 @@ import { classifyCreateResult } from './classifyCreateResult';
  * Identifies the normalized entity holding the fields. Its field names must
  * match the keys of `TFields` — true for `UserSettings` / `NotificationPreferences`,
  * whose GraphQL fields are the flat setting names.
+ *
+ * Intersected with `StoreObject` so it satisfies `cache.identify` directly.
  */
-export interface FieldsEntityRef {
+export type FieldsEntityRef = StoreObject & {
   __typename: string;
   id: string;
-}
+};
+
+/** The shape of an awaited Apollo mutation result this module reads. */
+type MutationResultLike = { data?: unknown; error?: unknown };
 
 /**
  * Write flat fields onto a cached entity. `undefined` values are skipped so a
@@ -64,7 +69,7 @@ export interface LocalFirstFieldsOptions<TFields extends object> {
   /** Current values for the same keys — restored if the server refuses. */
   previous: Partial<TFields>;
   /** Fires the mutation. MUST pass `context: { localFirst: true }`. */
-  mutate: () => Promise<unknown>;
+  mutate: () => Promise<MutationResultLike>;
   /** Operation label for `executeMutation`'s error reporting. */
   logLabel: string;
 }
@@ -73,7 +78,7 @@ export interface LocalFirstFieldsResult {
   /** True when the change landed on the server OR was queued for replay. */
   persisted: boolean;
   /** Raw mutation result; `false` when the call threw. Callers classify/report. */
-  result: { data?: unknown; error?: unknown } | false;
+  result: MutationResultLike | false;
 }
 
 /**
