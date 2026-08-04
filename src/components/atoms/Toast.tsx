@@ -21,9 +21,29 @@ export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
 export interface ToastOptions {
   message: string;
+  /**
+   * How long to hold before dismissing, in ms. Defaults to
+   * `TOAST.AUTO_DISMISS_SHORT`; `TOAST.AUTO_DISMISS_LONG` is the preset for
+   * toasts carrying a sentence. Any positive value works — prefer a preset so
+   * the timings stay tunable in one place.
+   *
+   * The hold spans the fade-in and excludes the fade-out, so time on screen is
+   * roughly `duration + TIMING.STANDARD`.
+   */
   duration?: number;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
+  /**
+   * Marks a toast as a *state announcement* — the latest one is the only one
+   * still true, so it replaces a displayed or queued announcement instead of
+   * waiting in line behind it (offline → back-online being the case that
+   * matters: queueing meant the second toggle's toast only surfaced once the
+   * first had run its full duration, long after the state it described).
+   *
+   * Only announcements supersede each other, and never one carrying an
+   * `action` — an actionable toast is never silently dropped.
+   */
+  supersede?: boolean;
 }
 export type ToastFn = (options: ToastOptions) => void;
 
@@ -52,6 +72,10 @@ type ToastQueueState = {
 
 const sameType = (a: ToastOptions, b: ToastOptions) =>
   (a.type ?? 'default') === (b.type ?? 'default');
+
+/** Both are state announcements, so the newer one obsoletes the older. */
+const supersedes = (older: ToastOptions, newer: ToastOptions) =>
+  older.supersede === true && newer.supersede === true;
 
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -108,17 +132,21 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     setQueue(prev => {
       if (!prev.current)
         return { ...prev, current: opts, generation: prev.generation + 1 };
-      // Replace in-place when nothing has an action and the type matches —
-      // coalesces rapid same-type calls into one toast that ends N seconds
-      // after the *last* call (instead of a sequential parade).
+      // Replace in-place when nothing has an action and either the type matches
+      // (coalesces rapid same-type calls into one toast that ends N seconds
+      // after the *last* call, instead of a sequential parade) or both are state
+      // announcements (the newer state is the only true one).
       const canReplace =
         prev.current.action == null &&
         opts.action == null &&
-        sameType(prev.current, opts);
+        (sameType(prev.current, opts) || supersedes(prev.current, opts));
       if (canReplace) {
         return {
           current: { ...opts, action: undefined },
-          queue: prev.queue.filter(q => q.action != null || !sameType(q, opts)),
+          queue: prev.queue.filter(
+            q =>
+              q.action != null || !(sameType(q, opts) || supersedes(q, opts)),
+          ),
           generation: prev.generation + 1,
         };
       }
@@ -135,15 +163,30 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   // cancels the timer on replace, gesture-dismiss, unmount. Re-running on
   // in-place replace re-targets SharedValues at their current value (no-op
   // visually) and resets the timer — the spam-coalescing behavior.
+  //
+  // The resting position (`insets.top` + `marginTop`) is LAYOUT; translateY is
+  // relative to it and rests at 0. Two reasons the safe-area offset isn't in
+  // the spring target: a target captured on the frame the toast appears can't
+  // follow an inset that resolves or changes later, and entering from
+  // OFFSCREEN_Y made every appearance sweep ~290pt, so its first frames sat
+  // under the status bar / Dynamic Island — screenshotted mid-flight it reads
+  // as a clipped banner. ENTER_FROM_Y keeps the slide short.
   useEffect(() => {
     if (!current) return;
     currentGeneration.set(generation);
-    translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
+    if (translateY.get() < TOAST.ENTER_FROM_Y) {
+      translateY.set(TOAST.ENTER_FROM_Y);
+    }
+    translateY.set(withSpring(0, SPRING.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: TIMING.FAST }));
+    // Any positive duration is honoured. This used to compare against
+    // AUTO_DISMISS_LONG for equality, which made `duration` a flag with one
+    // recognized value — `duration: 800` silently held for AUTO_DISMISS_SHORT.
+    const requested = current.duration;
     const ms =
-      current.duration === TOAST.AUTO_DISMISS_LONG
-        ? TOAST.AUTO_DISMISS_LONG
+      typeof requested === 'number' && requested > 0
+        ? requested
         : TOAST.AUTO_DISMISS_SHORT;
     const id = setTimeout(() => animateDismiss(generation), ms);
     return () => clearTimeout(id);
@@ -166,8 +209,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     minDistance: 10,
     onUpdate: event => {
       'worklet';
+      // Drag up only — the toast rests at its laid-out position (translateY 0).
       if (event.translationY < 0) {
-        translateY.set(insets.top + 16 + event.translationY);
+        translateY.set(event.translationY);
       }
       translateX.set(event.translationX);
     },
@@ -179,7 +223,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       if (shouldDismiss) {
         scheduleOnRN(animateDismiss, currentGeneration.get());
       } else {
-        translateY.set(withSpring(insets.top + 16, SPRING.TOAST_ENTER));
+        translateY.set(withSpring(0, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
       }
     },
@@ -211,7 +255,9 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         <Animated.View
           testID={`toast-${type}`}
           pointerEvents={current ? 'auto' : 'none'}
-          style={[styles.toastContainer, animatedStyle]}
+          // Safe-area offset applied as layout, not animation — see the entry
+          // effect. `marginTop` (spacing.md) is the gap below it.
+          style={[styles.toastContainer, { top: insets.top }, animatedStyle]}
         >
           {iconName ? (
             <ThemedToastIcon
@@ -251,7 +297,9 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     left: theme.spacing.md,
     right: theme.spacing.md,
-    top: 0,
+    // `top` is set at the call site from the safe-area inset; this is the gap
+    // between the status bar and the toast.
+    marginTop: theme.spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,

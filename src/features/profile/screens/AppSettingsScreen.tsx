@@ -32,6 +32,17 @@ export const AppSettingsScreen: React.FC = () => {
   const { settings, loading, updateAppSetting, resetToDefaults } =
     useAppSettings();
 
+  // Offline mode renders from the STORE, not from `settings`. The store is what
+  // actually drives the policy (`offlineModeLink` reads it, and it's the value
+  // mirrored to MMKV) — the server copy is a cross-device mirror. Binding the
+  // switch to the store makes the flip synchronous and independent of an Apollo
+  // broadcast, which matters most in exactly the case where the server can't be
+  // reached.
+  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
+  const setOfflineModeEnabled = useAppStore(
+    state => state.setOfflineModeEnabled,
+  );
+
   // PERFORMANCE: Use selective selectors instead of inline functions
   const hapticFeedbackEnabled = useAppStore(
     state => state.hapticFeedbackEnabled,
@@ -62,18 +73,44 @@ export const AppSettingsScreen: React.FC = () => {
     Telemetry.updateConfig(config);
   };
 
+  /**
+   * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`, so
+   * the control went dead on the frame after the tap and every tap landing in
+   * that window was dropped — which is what "takes two taps" was. Nothing waits
+   * on the request now: the change is written to the cache before firing and
+   * queues for replay if the API is unreachable. `updating` is still tracked for
+   * the reset row, where it debounces a one-shot command.
+   */
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
   ) => {
     setUpdating(key);
+    // No alert here: `updateAppSetting` is the single alerter for its own
+    // failure (see `alertIfRejected`'s contract). Alerting again on `!success`
+    // stacked a second dialog on every failed toggle.
     executeAsyncWithCleanup(
-      async () => {
-        const success = await updateAppSetting(key, value);
-        if (!success) {
-          alertService.alert(t('labels.error'), t('settings.updateFailed'));
-        }
-      },
+      () => updateAppSetting(key, value),
+      () => setUpdating(null),
+    );
+  };
+
+  /**
+   * Offline mode applies locally first, then mirrors to the server. The local
+   * write is the one that matters: it drives the link policy and persists to
+   * MMKV, and it must not depend on a round-trip that is unavailable precisely
+   * when the user reaches for this switch. The mirror rides `localFirst`, so an
+   * unreachable API queues it for replay rather than failing it.
+   *
+   * `immediate` on the store write: this is the one caller that IS a user
+   * gesture, so the offline banner should announce it without the dwell/hold
+   * those debounces exist to absorb flapping, and a switch isn't flapping.
+   */
+  const handleOfflineModeChange = (value: boolean) => {
+    setOfflineModeEnabled(value, true);
+    setUpdating('offlineMode');
+    executeAsyncWithCleanup(
+      () => updateAppSetting('offlineMode', value),
       () => setUpdating(null),
     );
   };
@@ -95,15 +132,12 @@ export const AppSettingsScreen: React.FC = () => {
                 // Also reset feature hints/tutorials and per-user preferences
                 resetAllFeatureHints();
                 resetUserPreferences();
+                // Only the success path alerts — `resetToDefaults` already
+                // surfaces its own failure with `settings.resetFailed`.
                 if (success) {
                   alertService.alert(
                     t('settings.resetSuccessTitle'),
                     t('settings.resetSuccess'),
-                  );
-                } else {
-                  alertService.alert(
-                    t('labels.error'),
-                    t('settings.resetFailed'),
                   );
                 }
               },
@@ -161,28 +195,27 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingSection title={t('settings.syncOffline')}>
         <SettingSwitch
+          testID="settings-auto-sync-switch"
           title={t('settings.autoSync')}
           description={t('settings.autoSyncDesc')}
           value={settings.autoSync}
           onValueChange={value => handleSettingChange('autoSync', value)}
-          loading={updating === 'autoSync'}
         />
         <SettingSwitch
           title={t('settings.offlineMode')}
           description={t('settings.offlineModeDesc')}
-          value={settings.offlineMode}
-          onValueChange={value => handleSettingChange('offlineMode', value)}
-          loading={updating === 'offlineMode'}
+          value={offlineModeEnabled}
+          onValueChange={handleOfflineModeChange}
         />
       </SettingSection>
 
       <SettingSection title={t('settings.features')}>
         <SettingSwitch
+          testID="settings-show-tutorials-switch"
           title={t('settings.showTutorials')}
           description={t('settings.showTutorialsDesc')}
           value={settings.showTutorials}
           onValueChange={value => handleSettingChange('showTutorials', value)}
-          loading={updating === 'showTutorials'}
         />
 
         {settings.betaFeatures.length > 0 && (

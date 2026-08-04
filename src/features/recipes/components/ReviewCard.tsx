@@ -44,9 +44,15 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
   const review = fragmentResult.complete ? fragmentResult.data : reviewSource;
 
   // User fields are inlined in RecipeReviewFragment, so direct field reads.
+  // `user` is null once the author permanently deletes their account — the
+  // review stays and still counts toward the recipe's rating totals.
   const user = review.user;
-  const displayName = user.profile?.displayName || user.email;
-  const avatar = user.profile?.avatar;
+  // `user.email` only resolves for the viewer's own record, so it's null on
+  // every other author's review — the literal fallback is what actually renders.
+  const displayName = user
+    ? user.profile?.displayName || user.email || t('labels.someone')
+    : t('labels.deletedUser');
+  const avatar = user?.profile?.avatar;
 
   return (
     <View style={styles.container}>

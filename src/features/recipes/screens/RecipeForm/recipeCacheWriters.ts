@@ -11,7 +11,7 @@
  * name + quantity and their links resolve from the server response on sync.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import {
   MyRecipesDocument,
   type MyRecipesQuery,
@@ -48,11 +48,16 @@ export type MyRecipesEdgeNode = {
   } | null;
 };
 
-/** The created-by identity a recipe entity is materialized with. */
+/**
+ * The created-by identity a recipe entity is materialized with. `email` is
+ * nullable to match the schema — the API withholds `User.email` from callers
+ * other than the user themselves, so a cached `Recipe.createdBy` read back for
+ * someone else's recipe carries null there.
+ */
 export type RecipeCreatedBy = {
   __typename: 'User';
   id: string;
-  email: string;
+  email: string | null;
 } | null;
 
 function totalTime(prep: number | null, cook: number | null): number | null {
@@ -156,6 +161,68 @@ function buildOptimisticRecipeEntity(
 }
 
 /**
+ * The `RecipeForm_recipe` fields that `useRecipeData_recipe` does NOT select.
+ *
+ * `GetRecipe` spreads BOTH fragments, so materializing only the detail one
+ * leaves the query's cache read incomplete — and an incomplete read means
+ * `useQuery` returns no data at all and goes to the network. Online the fetch
+ * papers over it; offline the recipe detail (and its edit form) render nothing
+ * for a recipe the user just created locally. Same failure the pantry's missing
+ * `createdAt` caused — see `buildOptimisticPantryItem`.
+ *
+ * Written as its own fragment rather than folded into either builder because
+ * each of those is pinned to a generated fragment type that can't carry the
+ * other's fields.
+ */
+const OptimisticRecipeFormFieldsFragment = gql`
+  fragment _OptimisticRecipeFormFields on Recipe {
+    id
+    prepTimeMinutes
+    cookTimeMinutes
+    difficulty
+    category
+    cuisine
+    diets
+    healthGoals
+    intolerances
+    notes
+  }
+`;
+
+/**
+ * Write the form-only half of the entity. Overlaps deliberately with the
+ * MyRecipes edge node (`prepTimeMinutes` … `category`) so the entity satisfies
+ * `RecipeForm_recipe` on its own, independent of the edge write.
+ */
+function writeOptimisticRecipeFormFields(
+  cache: ApolloCache,
+  id: string,
+  input: CreateRecipeInput,
+): void {
+  const prep = input.timing?.prepTimeMinutes ?? null;
+  const cook = input.timing?.cookTimeMinutes ?? null;
+  cache.writeFragment({
+    id: cache.identify({ __typename: 'Recipe', id }),
+    fragment: OptimisticRecipeFormFieldsFragment,
+    fragmentName: '_OptimisticRecipeFormFields',
+    data: {
+      __typename: 'Recipe',
+      id,
+      prepTimeMinutes: prep,
+      cookTimeMinutes: cook,
+      // Same server-side defaults the list node mirrors.
+      difficulty: input.metadata?.difficulty ?? Difficulty.Easy,
+      category: input.metadata?.category ?? RecipeCategory.MainCourse,
+      cuisine: input.metadata?.cuisine ?? null,
+      diets: input.dietary?.diets ?? [],
+      healthGoals: input.dietary?.healthGoals ?? [],
+      intolerances: input.dietary?.intolerances ?? [],
+      notes: input.notes ?? null,
+    },
+  });
+}
+
+/**
  * Insert-or-replace a recipe edge in MyRecipes. Shared by the local-first
  * pre-fire write (insert) and the mutation's update callback (replace — the
  * server row carries the same client-minted id, so the optimistic node is
@@ -224,6 +291,9 @@ export function writeOptimisticRecipe(
     fragmentName: 'useRecipeData_recipe',
     data: buildOptimisticRecipeEntity(id, input, createdBy),
   });
+  // GetRecipe = useRecipeData_recipe + RecipeForm_recipe; without this the read
+  // is incomplete and the detail screen is blank offline.
+  writeOptimisticRecipeFormFields(cache, id, input);
 }
 
 /** Revert a rejected create: drop the edge and evict the entity. */

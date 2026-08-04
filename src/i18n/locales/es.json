@@ -223,6 +223,7 @@
     "pantry": "Despensa",
     "default": "Predeterminado",
     "someone": "Alguien",
+    "deletedUser": "Usuario eliminado",
     "unknownHome": "Hogar desconocido",
     "from": "De",
     "role": "Rol",

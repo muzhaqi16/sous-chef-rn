@@ -10,6 +10,7 @@
  * - Automatic retry for flaky operations
  */
 
+import { system } from 'detox';
 import {
   waitForElementAndTap,
   waitForElementAndType,
@@ -412,4 +413,72 @@ export async function tapSystemAlertButton(buttonLabel: string) {
       error,
     );
   }
+}
+
+/**
+ * Read a switch's own value. iOS reports `'1'` / `'0'`; Android reports the
+ * toggle state on `value` too. Used to assert that a single tap actually
+ * changed a control, rather than that a tap was delivered.
+ */
+export async function getToggleValue(
+  testID: string,
+): Promise<string | undefined> {
+  const attributes = (await element(by.id(testID)).getAttributes()) as {
+    value?: string;
+  };
+  return attributes.value;
+}
+
+/**
+ * Poll until a switch reports a value different from `before`, or give up and
+ * return whatever it reports last.
+ *
+ * Polling rather than sleeping a fixed interval: a settings flip is a local
+ * cache write, so it lands in a frame or two — a fixed wait is dead time on
+ * every run and still has to be long enough to catch a late revert (a value
+ * that flips and comes back is the failure worth catching).
+ */
+export async function waitForToggleChange(
+  testID: string,
+  before: string | undefined,
+  timeoutMs = 2500,
+): Promise<string | undefined> {
+  const deadline = Date.now() + timeoutMs;
+  let latest = before;
+  while (Date.now() < deadline) {
+    latest = await getToggleValue(testID);
+    if (latest !== before) return latest;
+    await delay(50);
+  }
+  return latest;
+}
+
+/**
+ * iOS offers "Save Password?" after a bootstrap login. It's a system alert, so
+ * it sits above the app and makes the tab bar unhittable — dismiss it before
+ * any navigation. No-op on Android and on simulators that don't show it.
+ *
+ * Distinct from {@link tapSystemAlertButton}, which taps an in-app-hierarchy
+ * label; this one reaches the springboard alert via Detox's `system` matcher.
+ */
+export async function dismissSavePasswordPrompt(): Promise<void> {
+  try {
+    await system.element(by.system.label('Not Now')).tap();
+  } catch {
+    // Not shown on this simulator — fine.
+  }
+}
+
+/**
+ * Tap a switch once and report whether it actually moved. Screenshots the
+ * result so a run is reviewable in `e2e/artifacts`.
+ */
+export async function tapToggleOnce(
+  testID: string,
+): Promise<{ before: string | undefined; after: string | undefined }> {
+  const before = await getToggleValue(testID);
+  await element(by.id(testID)).tap();
+  const after = await waitForToggleChange(testID, before);
+  await device.takeScreenshot(`${testID}-after-one-tap`);
+  return { before, after };
 }

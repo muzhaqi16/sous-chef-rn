@@ -8,42 +8,17 @@
 
 import React from 'react';
 import { Avatar } from './Avatar';
-import { getShoppingListDisplayAvatarInfo } from '#utils/ownershipHelpers';
+import {
+  getShoppingListDisplayAvatarInfo,
+  type ShoppingListWithHome,
+} from '#utils/ownershipHelpers';
 
 interface ShoppingListAvatarProps {
-  /** Shopping list with ownerships and optional home data */
-  list: {
-    ownerships?: Array<{
-      userId: string;
-      user?: {
-        id: string;
-        email: string;
-        profile?: {
-          displayName?: string | null;
-          avatar?: string | null;
-        } | null;
-      } | null;
-    }> | null;
-    home?: {
-      id?: string;
-      name?: string;
-      membersConnection?: {
-        edges?: Array<{
-          node?: {
-            role: string;
-            user?: {
-              id: string;
-              email?: string;
-              profile?: {
-                displayName?: string | null;
-                avatar?: string | null;
-              } | null;
-            } | null;
-          } | null;
-        } | null> | null;
-      } | null;
-    } | null;
-  };
+  /**
+   * Shopping list with ownerships and optional home data. Shares the resolver's
+   * own input type so the accepted shape can't drift from what it reads.
+   */
+  list: ShoppingListWithHome;
   /** Size of avatar in pixels */
   size?: number;
 }

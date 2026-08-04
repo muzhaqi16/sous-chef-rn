@@ -7,12 +7,17 @@
 
 /**
  * Shopping List Types (matching GraphQL schema)
+ *
+ * `user.email` is nullable: the API returns `User.email` only when the caller
+ * is that user (or an admin), so it is populated for the viewer's own record
+ * and null for every other member. Treat it as an optional extra, never as a
+ * guaranteed display label — see `OwnerInfo` consumers for the fallbacks.
  */
 interface ShoppingListOwnership {
   userId: string;
   user?: {
     id: string;
-    email: string;
+    email?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -26,7 +31,7 @@ interface ShoppingListCollaborator {
   status: string;
   collaborator?: {
     id: string;
-    email: string;
+    email?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -34,7 +39,7 @@ interface ShoppingListCollaborator {
   } | null;
 }
 
-interface ShoppingListWithOwnership {
+export interface ShoppingListWithOwnership {
   ownerships?: ShoppingListOwnership[] | null;
   collaboratorsConnection?: {
     edges?: Array<{ node?: ShoppingListCollaborator | null } | null> | null;
@@ -53,7 +58,7 @@ interface HomeMember {
   status?: string;
   user?: {
     id: string;
-    email?: string;
+    email?: string | null;
     profile?: {
       displayName?: string | null;
       avatar?: string | null;
@@ -63,7 +68,7 @@ interface HomeMember {
   } | null;
 }
 
-interface HomeWithMembers {
+export interface HomeWithMembers {
   members?: HomeMember[] | null;
   membersConnection?: {
     edges?: Array<{ node?: HomeMember | null } | null> | null;
@@ -114,8 +119,13 @@ export function getShoppingListOwnerInfo(
 /**
  * Shopping list with optional home for display avatar resolution
  */
-interface ShoppingListWithHome extends ShoppingListWithOwnership {
-  home?: HomeWithMembers | null;
+export interface ShoppingListWithHome extends ShoppingListWithOwnership {
+  /**
+   * Identity fields are declared alongside the member shape so a list that
+   * selects only `home { id name }` still satisfies this type — the avatar
+   * resolver falls back to the list owner when no members were selected.
+   */
+  home?: (HomeWithMembers & { id?: string; name?: string }) | null;
 }
 
 /**

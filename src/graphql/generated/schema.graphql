@@ -1420,7 +1420,10 @@ Brand type for product manufacturers and retailers
 Cache: 1 hour - brand catalog is relatively stable
 """
 type Brand {
-  children: [Brand!]!
+  """
+  Child brands. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
+  """
+  children(limit: Int = 50): [Brand!]!
   createdAt: DateTime!
   description: String
   id: ID!
@@ -1821,7 +1824,10 @@ Category type for organizing items
 Cache: 2 hours - reference data that changes very rarely
 """
 type Category {
-  children: [Category!]!
+  """
+  Child categories. The limit is clamped server-side; the hierarchy is admin-curated and shallow.
+  """
+  children(limit: Int = 50): [Category!]!
   color: String
   createdAt: DateTime!
   createdBy: User
@@ -4871,7 +4877,15 @@ type Home {
   unless allowJoinCode is enabled and a joinCode is set.
   """
   joinLink: ShareLink
-  lowStockItems: [LowStockItem!]!
+  """
+  Low stock items across all pantries in this home.
+  
+  The limit is clamped server-side (see SMALL_LIST_FIELD_MAX): this is a
+  dashboard list, and a home with many pantries can accumulate a lot of
+  low-stock rows. Bounds the RESPONSE — the underlying batch read is not yet
+  per-key limited, so this caps payload and client memory, not database work.
+  """
+  lowStockItems(limit: Int = 20): [LowStockItem!]!
   maxMembers: Int
   mealPlansConnection(after: String, before: String, filters: MealPlanFilters, first: Int, last: Int): MealPlanConnection!
   mealTemplatesConnection(after: String, before: String, first: Int, last: Int): MealTemplateConnection!
@@ -5649,7 +5663,10 @@ type ItemCreation {
   metadata: JSON
   reason: String
   source: DataSource!
-  user: User!
+  """
+  Null when the creator's account was permanently deleted. The item and this provenance record remain.
+  """
+  user: User
 }
 
 """A cluster of items that share a UPC."""
@@ -5684,7 +5701,10 @@ type ItemEdit {
   item: Item!
   newValues: JSON
   oldValues: JSON
-  user: User!
+  """
+  Null when the editor's account was permanently deleted. The item and this provenance record remain.
+  """
+  user: User
 }
 
 """
@@ -9029,8 +9049,11 @@ input PantryItemBatchOrderBy {
 """Audit record of a change to a pantry item"""
 type PantryItemChange {
   changeType: ChangeType!
-  changedBy: User!
-  changedById: ID!
+  """
+  Null when the actor's account was permanently deleted. The audit entry is retained for the home.
+  """
+  changedBy: User
+  changedById: ID
   createdAt: DateTime!
   deviceId: String
   field: String
@@ -9121,7 +9144,10 @@ type PantryItemPhoto {
   pantryItem: PantryItem!
   photoType: PhotoType!
   takenAt: DateTime!
-  takenBy: User!
+  """
+  Null when the photographer's account was permanently deleted. The photo stays with the pantry item.
+  """
+  takenBy: User
 }
 
 """
@@ -10321,13 +10347,36 @@ type RecipeReview {
   comment: String
   createdAt: DateTime!
   helpful: Int!
-  helpfulVotes: [ReviewHelpful!]!
+  """
+  Who marked this review helpful, newest first.
+  
+  Windowed, and the window is the whole story: the limit is clamped
+  server-side to 50, so a review with more helpful votes than that cannot
+  report all of them through this field, and the ones it omits are not
+  identifiable from what it returns. Membership is therefore not a test of
+  whether any particular user voted — use viewerHasVotedHelpful for the
+  requesting user. Prefer the helpful count above for display.
+  """
+  helpfulVotes(limit: Int = 20): [ReviewHelpful!]! @deprecated(reason: "Discloses voter identity, and its window makes it unusable as a membership test. Use viewerHasVotedHelpful for the requesting user's own state and helpful for the count. Scheduled for removal.")
   id: ID!
   rating: Int!
   recipe: Recipe!
   updatedAt: DateTime!
-  user: User!
+  """
+  Null when the author's account was permanently deleted. The rating still counts toward the recipe's totals.
+  """
+  user: User
   verified: Boolean!
+  """
+  Whether the requesting user has an active helpful vote on this review.
+  False for an anonymous viewer.
+  
+  This is the field to drive a vote button's state from. Deriving it by
+  looking for your own id in helpfulVotes cannot work: that list is windowed,
+  so on a review with more votes than the window your own vote falls outside
+  it and reads as "not voted".
+  """
+  viewerHasVotedHelpful: Boolean!
 }
 
 """
@@ -10905,7 +10954,10 @@ type ReviewHelpful {
   createdAt: DateTime!
   id: ID!
   review: RecipeReview!
-  user: User!
+  """
+  Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total.
+  """
+  user: User
 }
 
 """Approve or reject a pending suggestion (admin only)."""
@@ -11199,8 +11251,14 @@ type ShoppingListActivity {
   shoppingList: ShoppingList!
   shoppingListId: ID!
   source: String
-  user: User!
-  userId: ID!
+  """
+  Null when the actor's account was permanently deleted. The list keeps its history.
+  """
+  user: User
+  """
+  Null when the actor's account was permanently deleted. The list keeps its history.
+  """
+  userId: ID
 }
 
 """
@@ -12010,8 +12068,7 @@ type StoreEdge implements Edge {
 
 """
 Consolidated real-time event envelope for store changes. Subscribe via
-storeEvents(storeId) (omit storeId for all stores) and branch on
-mutation (CREATED / UPDATED).
+storeEvents(storeId) and branch on mutation (CREATED / UPDATED).
 """
 type StoreEvent {
   """The user who caused the change."""
@@ -12127,18 +12184,30 @@ input StoreSkuOpsInput {
 }
 
 """
-Store statistics and analytics
-Cache: 10 minutes - stats aggregate over time
+Store statistics for the CALLING user.
+
+Every purchase-derived field is scoped to the caller: a Store is global and has
+no tenant column, so an unscoped stat leaks other shoppers' purchase history to
+anyone who can name the store.
+
+Cache: PRIVATE and uncached. The contents differ per caller, so a shared cache
+could serve one caller's statistics to another.
+
+There is deliberately no revenue or unique-customer figure here: both are
+cross-tenant by definition, and scoping one to the caller changes its meaning
+rather than correcting it.
 """
 type StoreStats {
+  """Mean value of the CALLER's own purchases at this store."""
   averagePurchaseAmount: Float!
   priceAccuracy: Float
   qualityRating: Float
+  """The CALLER's most recent purchases at this store."""
   recentActivity: [Purchase!]!
+  """The CALLER's most-purchased items at this store."""
   topItems: [StoreTopItem!]!
+  """Count of the CALLER's purchases at this store."""
   totalPurchases: Int!
-  totalRevenue: Float!
-  uniqueCustomers: Int!
 }
 
 """Subtype discriminator for store domain events."""
@@ -12207,8 +12276,16 @@ type Subscription {
   ITEMS_BATCH_CLEARED, COLLABORATION_CHANGED.
   """
   shoppingListEvents(listId: ID!): ShoppingListEvent!
-  """Subscribe to store changes. Omit storeId to watch all stores."""
-  storeEvents(storeId: ID): StoreEvent!
+  """
+  Subscribe to one store's changes.
+  
+  storeId is REQUIRED. The filter's only isolation is matching this variable
+  against the event's storeId — it carries no access check, because a store is
+  global reference data with no ownership model. A nullable argument would let
+  a subscriber omit it, skip the match, and receive every store's events
+  including actorUserId.
+  """
+  storeEvents(storeId: ID!): StoreEvent!
   """
   Consolidated per-user event stream (account update, profile change, and
   home/shopping-list membership + moderation lifecycle transitions).
@@ -13777,11 +13854,16 @@ union UpdateSettingsResult = ConflictError | ForbiddenError | NotFoundError | Up
 input UpdateShoppingListInput {
   description: String
   id: ID!
-  isCompleted: Boolean
   isDefault: Boolean
   name: String
   planning: ShoppingListPlanningInput
   settings: ShoppingListSettingsInput
+  """
+  ARCHIVED / PAUSED / CANCELLED have no dedicated mutation and are set here.
+  COMPLETED and TEMPLATE do — completeShoppingList, markShoppingListActive
+  and markAsTemplate — and those also stamp completion metadata and notify
+  collaborators, which this field does not.
+  """
   status: ListStatus
   tags: [String!]
   version: Int
@@ -14285,8 +14367,18 @@ type User {
   deviceStats: DeviceStats!
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
-  email: String!
-  emailVerified: Boolean!
+  """
+  Null unless the caller is this user or an admin.
+  
+  A User node is reachable cross-user (Recipe.createdBy, Membership.user, …),
+  so these three are gated rather than served raw. They are nullable rather
+  than non-null because an unauthorized reader must receive null — a
+  placeholder would make "no permission" indistinguishable from "no value"
+  and put a fabricated value on the wire.
+  """
+  email: String
+  """Null unless the caller is this user or an admin. See email."""
+  emailVerified: Boolean
   expirationNotificationsConnection(after: String, before: String, filters: ExpirationNotificationFilters, first: Int, last: Int, orderBy: ExpirationNotificationOrderBy): ExpirationNotificationConnection!
   hasUrgentNotifications: Boolean!
   homeOwnershipsConnection(after: String, before: String, first: Int, last: Int): HomeOwnershipConnection!
@@ -14307,7 +14399,8 @@ type User {
   profile: UserProfile
   purchaseStats: PurchaseStats!
   purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
-  role: UserRole!
+  """Null unless the caller is this user or an admin. See email."""
+  role: UserRole
   savedRecipesConnection(after: String, before: String, first: Int, folder: String, last: Int, orderBy: SavedRecipeOrderBy): SavedRecipeConnection!
   sentHomeInvitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
   settings: UserSettings

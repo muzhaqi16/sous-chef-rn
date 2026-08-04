@@ -82,9 +82,10 @@ export function useRecipeReviews({
     });
   })();
 
-  // Current user's review
+  // Current user's review. `r.user` is null for reviews whose author deleted
+  // their account, which can never be the signed-in viewer.
   const userReview = userId
-    ? reviews.find(r => r.user.id === userId) ?? null
+    ? reviews.find(r => r.user?.id === userId) ?? null
     : null;
 
   const hasReviewed = !!userReview;
@@ -148,12 +149,20 @@ export function useRecipeReviews({
         return;
       }
       const { reviewId, isHelpful } = variables.input;
+      // Both fields are client-derived until the next GetRecipeReviews read —
+      // see the mutation's selection for why the server's own values aren't
+      // taken here.
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
         fields: {
           helpful(existing: number = 0) {
             const current = existing ?? 0;
             return isHelpful ? current + 1 : Math.max(0, current - 1);
+          },
+          // Drives the button's state. Nothing updated it before, so the
+          // button stayed put until the next refetch.
+          viewerHasVotedHelpful() {
+            return isHelpful;
           },
         },
       });
@@ -244,11 +253,14 @@ export function useRecipeReviews({
     });
   };
 
-  // Check if user has voted helpful on a review
-  const hasVotedHelpful = (review: RecipeReviewFragment) => {
-    if (!userId) return false;
-    return review.helpfulVotes.some(v => v.user.id === userId);
-  };
+  // Server-computed per requesting user. Previously derived by looking for our
+  // own id in `review.helpfulVotes` — that list is windowed, so past the window
+  // our own vote was invisible and the button both rendered un-voted and sent
+  // `isHelpful: true` again instead of un-voting. The `userId` guard stays:
+  // the field is false for an anonymous viewer, but a null `userId` also means
+  // there is no vote to toggle.
+  const hasVotedHelpful = (review: RecipeReviewFragment) =>
+    !!userId && review.viewerHasVotedHelpful;
 
   return {
     state: {

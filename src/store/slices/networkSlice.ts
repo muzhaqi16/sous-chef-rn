@@ -81,7 +81,13 @@ export interface NetworkState {
   setOnline: () => void;
   setOffline: () => void;
   setNeedsTokenRefresh: (value: boolean) => void;
-  setOfflineModeEnabled: (enabled: boolean) => void;
+  /**
+   * `immediate` skips the banner's dwell/hold debouncing — pass it only from a
+   * control the user just operated. The other callers (MMKV hydration on boot,
+   * the `GetUserSettings` sync in `useAppSettings`) are not user gestures and
+   * take the debounced path.
+   */
+  setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
   setApiReachable: (reachable: boolean) => void;
 }
 
@@ -145,8 +151,14 @@ export const createNetworkSlice: StateCreator<
    * Re-evaluate the banner after any connectivity input changes. Called by every
    * setter below; a pending transition is always cancelled first, so flapping
    * that settles inside the dwell window never reaches the screen at all.
+   *
+   * `immediate` skips both the show dwell and the minimum-visible hold. Those
+   * exist to absorb *flapping* — a radio blipping, a request failing once. A
+   * switch the user just flipped isn't flapping, and holding its announcement
+   * for the rest of MIN_VISIBLE_MS meant toggling off right after on surfaced
+   * the second toast seconds late, describing a state the user had already left.
    */
-  const syncOfflineBanner = (): void => {
+  const syncOfflineBanner = (immediate = false): void => {
     if (bannerTimer) {
       clearTimeout(bannerTimer);
       bannerTimer = null;
@@ -162,10 +174,11 @@ export const createNetworkSlice: StateCreator<
       return;
     }
 
-    const delay =
-      cause !== null
-        ? SHOW_DWELL_MS[cause]
-        : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
+    const delay = immediate
+      ? 0
+      : cause !== null
+      ? SHOW_DWELL_MS[cause]
+      : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
     if (delay === 0) {
       applyBannerCause(cause);
       return;
@@ -224,12 +237,16 @@ export const createNetworkSlice: StateCreator<
       });
     },
 
-    setOfflineModeEnabled: (enabled: boolean) => {
+    setOfflineModeEnabled: (enabled: boolean, immediate = false) => {
       set(draft => {
         draft.offlineModeEnabled = enabled;
       });
       storage.set(OFFLINE_MODE_KEY, enabled);
-      syncOfflineBanner();
+      // Only a switch the user just flipped skips the debounce — see the
+      // interface note. Boot hydration and the settings sync go through the
+      // normal dwell/hold so a value arriving from elsewhere can't yank the
+      // banner off screen mid-hold.
+      syncOfflineBanner(immediate);
     },
 
     setApiReachable: (reachable: boolean) => {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useUser } from '#store/useAppStore';
 import { useStore } from '#store';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -11,8 +11,9 @@ import {
   UnitSystem,
   type UpdateSettingsInput,
 } from '#/graphql/generated/schemaTypes';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { alertService } from '#/services/alertService';
 import { t } from '#/i18n/t';
 import { storage } from '#/storage/mmkv';
 
@@ -29,6 +30,7 @@ export interface AppSettings {
 
 export const useAppSettings = () => {
   const user = useUser();
+  const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
     skip: !user?.id,
   });
@@ -48,6 +50,10 @@ export const useAppSettings = () => {
       betaFeatures: settings?.betaFeatures || [],
     };
   };
+
+  // Resolved once per render — also the snapshot the mutators revert to when the
+  // server rejects an optimistic change.
+  const memoizedSettings = getAppSettings();
 
   const toSettingsInput = (
     updates: Partial<AppSettings>,
@@ -83,32 +89,61 @@ export const useAppSettings = () => {
     return input;
   };
 
+  /** The cached entity carrying the settings fields, once the query has loaded. */
+  const settingsEntity = settings?.id
+    ? { __typename: 'UserSettings', id: settings.id }
+    : undefined;
+
+  const updateMultipleSettings = async (
+    updates: Partial<AppSettings>,
+    failureMessage: string = t('settings.updateFailed'),
+  ) => {
+    const keys = Object.keys(updates) as (keyof AppSettings)[];
+    const previous: Partial<AppSettings> = Object.fromEntries(
+      keys.map(key => [key, memoizedSettings[key]]),
+    );
+
+    const { persisted, result } =
+      await updateEntityFieldsLocalFirst<AppSettings>({
+        cache: client.cache,
+        entity: settingsEntity,
+        updates,
+        previous,
+        // localFirst: an unreachable API queues the change for replay instead of
+        // failing it, so the setting the user just flipped isn't lost.
+        mutate: () =>
+          updateSettings({
+            variables: { input: toSettingsInput(updates) },
+            context: { localFirst: true },
+          }),
+        logLabel: 'Update Settings',
+      });
+
+    // This call is the ONLY alerter for its own failure (there is no mutation
+    // `onError`) — callers must not add their own, see `alertIfRejected`'s
+    // contract. Two branches because they fail differently:
+    //  - `false` means the call THREW. `executeMutation` reported it (log +
+    //    telemetry) but shows the user nothing, and `alertIfRejected`
+    //    deliberately no-ops on a falsy result — so without this the setting
+    //    reverts with no explanation.
+    //  - anything else is a resolved rejection (union error member, or an
+    //    `errorPolicy: 'all'` transport error), which `alertIfRejected` owns.
+    if (!persisted) {
+      if (result === false) {
+        alertService.alert(t('labels.error'), failureMessage);
+      } else {
+        alertIfRejected(result, failureMessage);
+      }
+      return false;
+    }
+    return true;
+  };
+
+  /** Single-key convenience over {@link updateMultipleSettings}. */
   const updateAppSetting = async <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
-  ) => {
-    const input = toSettingsInput({ [key]: value } as Partial<AppSettings>);
-    const result = await executeMutation(
-      () => updateSettings({ variables: { input } }),
-      'Update Setting',
-    );
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
-      return false;
-    }
-    return result !== false;
-  };
-
-  const updateMultipleSettings = async (updates: Partial<AppSettings>) => {
-    const input = toSettingsInput(updates);
-    const result = await executeMutation(
-      () => updateSettings({ variables: { input } }),
-      'Update Settings',
-    );
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
-      return false;
-    }
-    return result !== false;
-  };
+  ) => updateMultipleSettings({ [key]: value } as Partial<AppSettings>);
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<AppSettings> = {
@@ -120,10 +155,8 @@ export const useAppSettings = () => {
       preferredUnitSystem: UnitSystem.Metric,
     };
 
-    return updateMultipleSettings(defaultSettings);
+    return updateMultipleSettings(defaultSettings, t('settings.resetFailed'));
   };
-
-  const memoizedSettings = getAppSettings();
 
   // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them
   // without triggering the GetUserSettings GraphQL query at startup.

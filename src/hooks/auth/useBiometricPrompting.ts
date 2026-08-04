@@ -20,10 +20,14 @@ export const useBiometricPrompting = () => {
 
   const shouldShowPostLoginBiometricPrompt = async (targetUser?: {
     id: string;
-    email: string;
+    email?: string | null;
   }): Promise<BiometricPromptDecision> => {
     const checkUser = targetUser || user;
-    if (!checkUser?.id || !checkUser?.email) {
+    // Keychain entries are namespaced by email, so an account with no readable
+    // email can't be matched against stored credentials — bail instead of
+    // prompting for a setup that would key off an empty account name.
+    const accountEmail = checkUser?.email;
+    if (!checkUser?.id || !accountEmail) {
       return { shouldShow: false, reason: 'No user found' };
     }
 
@@ -44,7 +48,7 @@ export const useBiometricPrompting = () => {
       }
 
       // Check if THIS user already has credentials saved
-      const hasCreds = await hasCredentialsForAccount(checkUser.email);
+      const hasCreds = await hasCredentialsForAccount(accountEmail);
       if (hasCreds) {
         return { shouldShow: false, reason: 'Already has biometric setup' };
       }

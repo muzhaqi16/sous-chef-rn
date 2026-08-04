@@ -48,10 +48,12 @@ fragment RecipeReviewFragment on RecipeReview {
       avatar
     }
   }
-  helpfulVotes {
-    id
-    user { id }
-  }
+  # Server-computed for the requesting user. Replaces scanning `helpfulVotes`
+  # for our own id: that list is windowed (clamped to 50 server-side), so on a
+  # popular review our own vote falls outside it and reads as "not voted" —
+  # which showed an un-voted button and made the toggle re-send `isHelpful:
+  # true` instead of un-voting.
+  viewerHasVotedHelpful
 }
 
 # Shared hydration shape for "basic recipe" reads. Spread by SearchRecipes,

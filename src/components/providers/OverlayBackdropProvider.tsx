@@ -20,13 +20,6 @@ import { SHEET } from '#constants/animations';
 import { Pressable } from '#components/atoms/themedComponents';
 import { logger } from '#/utils/environment';
 
-// DEBUG (temporary): how long a non-empty slot list must persist before the
-// watchdog warns a claim is likely stranded. A normal sheet open/close cycle
-// settles in well under 1s, so 5s is a wide margin — a stranded slot means
-// GlobalBackdrop's invisible Pressable is swallowing every touch app-wide,
-// including pull-to-refresh, until something incidentally clears it.
-const STRANDED_SLOT_WARN_MS = 5000;
-
 export interface BackdropClaimOptions {
   /** A fixed target opacity (provider creates + animates an internal SV via
    *  withTiming on claim/release), or a SharedValue the contributor drives
@@ -187,24 +180,6 @@ export const OverlayBackdropProvider: React.FC<
   // Track claim presence (not opacity) so taps are blocked across the whole
   // fade-in/out window.
   const isVisible = slots.length > 0;
-
-  // DEBUG (temporary): a normal sheet/tray open+close settles in well under
-  // 1s. If `isVisible` stays true continuously past STRANDED_SLOT_WARN_MS,
-  // some claimant's release() never fired — GlobalBackdrop's invisible
-  // Pressable is then swallowing every touch app-wide (pull-to-refresh
-  // included) until something incidentally clears the slot.
-  useEffect(() => {
-    if (!isVisible) return;
-    const ids = slots.map(s => s.id);
-    const timer = setTimeout(() => {
-      logger.warn(
-        `⚠️ [OverlayBackdrop] slot(s) [${ids.join(
-          ', ',
-        )}] still claimed after ${STRANDED_SLOT_WARN_MS}ms — likely stranded. GlobalBackdrop is swallowing every touch app-wide until this clears.`,
-      );
-    }, STRANDED_SLOT_WARN_MS);
-    return () => clearTimeout(timer);
-  }, [isVisible]);
 
   // Latest claim owns the backdrop-tap handler.
   const onPress =

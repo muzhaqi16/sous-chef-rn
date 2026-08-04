@@ -8,6 +8,7 @@ import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.gener
 import {
   CreateRecipeReviewDocument,
   DeleteRecipeReviewDocument,
+  ToggleReviewHelpfulDocument,
 } from '#features/recipes/graphql/recipeReview.generated';
 import { useRecipeReviews } from '../useRecipeReviews';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
@@ -40,7 +41,10 @@ function buildReviewNode(
   helpful: number,
   createdAt: string,
   user: { id: string },
-  votedByUserIds: string[] = [],
+  // Server-computed for the requesting user, so it's a flag rather than a
+  // voter list — the API windows `helpfulVotes` and it can no longer answer
+  // "did I vote".
+  viewerHasVotedHelpful: boolean = false,
 ) {
   return {
     __typename: 'RecipeReview',
@@ -62,11 +66,7 @@ function buildReviewNode(
         avatar: null,
       },
     },
-    helpfulVotes: votedByUserIds.map(uid => ({
-      __typename: 'ReviewHelpful',
-      id: `vote-${uid}-${id}`,
-      user: { __typename: 'User', id: uid },
-    })),
+    viewerHasVotedHelpful,
   };
 }
 
@@ -75,9 +75,16 @@ function buildGetRecipeReviewsMock(
   reviewNodes?: Array<ReturnType<typeof buildReviewNode>>,
 ): MockedResponse {
   const nodes = reviewNodes ?? [
-    buildReviewNode('rev-1', 5, 3, '2025-01-01T00:00:00Z', { id: 'user-2' }, [
-      'user-1',
-    ]),
+    // rev-1 is someone else's review that the viewer has marked helpful;
+    // rev-2 is the viewer's own, unvoted.
+    buildReviewNode(
+      'rev-1',
+      5,
+      3,
+      '2025-01-01T00:00:00Z',
+      { id: 'user-2' },
+      true,
+    ),
     buildReviewNode('rev-2', 4, 1, '2025-01-02T00:00:00Z', { id: 'user-1' }),
   ];
 
@@ -308,14 +315,64 @@ describe('useRecipeReviews', () => {
 
     await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
 
-    // rev-1 has helpfulVotes containing user-1
+    // rev-1 comes back with viewerHasVotedHelpful: true …
     expect(
       result.current.actions.hasVotedHelpful(result.current.state.reviews[0]),
     ).toBe(true);
-    // rev-2 has no helpful votes
+    // … rev-2 with false.
     expect(
       result.current.actions.hasVotedHelpful(result.current.state.reviews[1]),
     ).toBe(false);
+  });
+
+  it('toggleHelpful flips the button state and the count in the cache', async () => {
+    // The `update` callback is the only thing that moves the button before the
+    // response lands. It bumped `helpful` but left the vote flag alone, so the
+    // button stayed un-voted and the next tap re-sent isHelpful: true.
+    const { result } = renderHookWithApollo(
+      () =>
+        useRecipeReviews({
+          recipeId: 'recipe-1',
+          backendRecipe: makeBackendRecipe(),
+        }),
+      {
+        operationMocks: [
+          buildGetRecipeReviewsMock(),
+          {
+            request: {
+              query: ToggleReviewHelpfulDocument,
+              variables: { input: { reviewId: 'rev-2', isHelpful: true } },
+            },
+            result: {
+              data: {
+                toggleReviewHelpful: {
+                  __typename: 'ToggleReviewHelpfulPayload',
+                  reviewHelpful: {
+                    __typename: 'ReviewHelpful',
+                    id: 'vote-1',
+                    user: { __typename: 'User', id: 'user-1' },
+                  },
+                },
+              },
+            },
+          },
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    const target = result.current.state.reviews.find(r => r.id === 'rev-2')!;
+    expect(result.current.actions.hasVotedHelpful(target)).toBe(false);
+
+    await act(async () => {
+      await result.current.actions.toggleHelpful('rev-2', true);
+    });
+
+    await waitFor(() => {
+      const updated = result.current.state.reviews.find(r => r.id === 'rev-2')!;
+      expect(result.current.actions.hasVotedHelpful(updated)).toBe(true);
+      expect(updated.helpful).toBe(2);
+    });
   });
 
   it('createReview calls mutation and shows toast', async () => {

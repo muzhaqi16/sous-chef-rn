@@ -25,10 +25,17 @@ query ItemByUpcFilter($upc: String!, $upcFormat: UpcFormat) {
         shelfLifeDays
         shelfLifeOpenedDays
         tags
+        # `type` + `displayAsFraction` are here for the pantry add that follows
+        # a scan: `SearchResults` passes `displayUnit.id` to
+        # `buildOptimisticPantryItem`, which resolves it against the cached
+        # `Unit` and needs all five fields — a partial entity reads back as null
+        # and the optimistic row loses its unit for the whole offline session.
         displayUnit {
           id
           name
           symbol
+          type
+          displayAsFraction
         }
         brands {
           brand {
@@ -95,10 +102,17 @@ query ItemBySkuFilter($sku: String!, $skuStoreId: ID) {
         shelfLifeDays
         shelfLifeOpenedDays
         tags
+        # `type` + `displayAsFraction` are here for the pantry add that follows
+        # a scan: `SearchResults` passes `displayUnit.id` to
+        # `buildOptimisticPantryItem`, which resolves it against the cached
+        # `Unit` and needs all five fields — a partial entity reads back as null
+        # and the optimistic row loses its unit for the whole offline session.
         displayUnit {
           id
           name
           symbol
+          type
+          displayAsFraction
         }
         brands {
           brand {
@@ -304,10 +318,17 @@ mutation CreateItem($input: CreateItemInput!) {
         canEdit
         canSuggest
         netWeight
+        # `type` + `displayAsFraction` are here for the pantry add that follows
+        # a scan: `SearchResults` passes `displayUnit.id` to
+        # `buildOptimisticPantryItem`, which resolves it against the cached
+        # `Unit` and needs all five fields — a partial entity reads back as null
+        # and the optimistic row loses its unit for the whole offline session.
         displayUnit {
           id
           name
           symbol
+          type
+          displayAsFraction
         }
         convertedNetWeight {
           value

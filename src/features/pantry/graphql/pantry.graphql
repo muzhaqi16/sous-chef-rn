@@ -590,6 +590,13 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
         itemName
         quantity
         version
+        # `createdAt` is selected by GetPantry on every list node, so the create
+        # response (and the optimistic entity built from this selection) must
+        # carry it — otherwise the list's cache read is INCOMPLETE for the new
+        # item and Apollo drops the whole query result. Online that self-heals
+        # on the next network read; offline it strands the add (see
+        # buildOptimisticPantryItem).
+        createdAt
         updatedAt
         storageState
         expiresAt
@@ -606,10 +613,15 @@ mutation CreatePantryItem($input: CreatePantryItemInput!) {
           imageUrl
           images { url kind }
         }
+        # type + displayAsFraction for the same reason: PantryActionModal's
+        # fragment (spread into GetPantry's nodes) reads them off `unit`, so a
+        # unit first introduced by this response must arrive complete.
         unit {
           id
           name
           symbol
+          type
+          displayAsFraction
         }
         netWeightUnit {
           id
