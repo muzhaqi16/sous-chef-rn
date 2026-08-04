@@ -73,6 +73,14 @@ export const AppSettingsScreen: React.FC = () => {
     Telemetry.updateConfig(config);
   };
 
+  /**
+   * No `loading` on the switches: `SettingSwitch` forwards it to `disabled`, so
+   * the control went dead on the frame after the tap and every tap landing in
+   * that window was dropped — which is what "takes two taps" was. Nothing waits
+   * on the request now: the change is written to the cache before firing and
+   * queues for replay if the API is unreachable. `updating` is still tracked for
+   * the reset row, where it debounces a one-shot command.
+   */
   const handleSettingChange = <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
@@ -183,11 +191,11 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingSection title={t('settings.syncOffline')}>
         <SettingSwitch
+          testID="settings-auto-sync-switch"
           title={t('settings.autoSync')}
           description={t('settings.autoSyncDesc')}
           value={settings.autoSync}
           onValueChange={value => handleSettingChange('autoSync', value)}
-          loading={updating === 'autoSync'}
         />
         <SettingSwitch
           title={t('settings.offlineMode')}
@@ -199,11 +207,11 @@ export const AppSettingsScreen: React.FC = () => {
 
       <SettingSection title={t('settings.features')}>
         <SettingSwitch
+          testID="settings-show-tutorials-switch"
           title={t('settings.showTutorials')}
           description={t('settings.showTutorialsDesc')}
           value={settings.showTutorials}
           onValueChange={value => handleSettingChange('showTutorials', value)}
-          loading={updating === 'showTutorials'}
         />
 
         {settings.betaFeatures.length > 0 && (

@@ -413,3 +413,17 @@ export async function tapSystemAlertButton(buttonLabel: string) {
     );
   }
 }
+
+/**
+ * Read a switch's own value. iOS reports `'1'` / `'0'`; Android reports the
+ * toggle state on `value` too. Used to assert that a single tap actually
+ * changed a control, rather than that a tap was delivered.
+ */
+export async function getToggleValue(
+  testID: string,
+): Promise<string | undefined> {
+  const attributes = (await element(by.id(testID)).getAttributes()) as {
+    value?: string;
+  };
+  return attributes.value;
+}
