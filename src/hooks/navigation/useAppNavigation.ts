@@ -1,4 +1,4 @@
-import { useNavigation } from '@react-navigation/native';
+import { StackActions, useNavigation } from '@react-navigation/native';
 import type { RootStackParamList } from '#navigation/RootNavigator';
 import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
@@ -41,6 +41,18 @@ export function useAppNavigation() {
     // ─── Auth flow ─────────────────────────────────────────────────────────
     toAuth: () => navigation.navigate('Auth'),
     toLogin: () => navigation.navigate('Auth', { screen: 'Login' }),
+    /**
+     * Hand off to sign-in from a deep-link screen, dropping that screen from
+     * the stack.
+     *
+     * `toLogin` would leave it behind: deep-link screens live in a group with
+     * no `if`, so they outlive the `Auth` group that a login removes, and the
+     * abandoned screen — still holding its finished state — becomes the top
+     * route the moment the user signs in. `replace` is what the other
+     * transparent deep-link screens use for the same reason.
+     */
+    replaceWithLogin: () =>
+      navigation.dispatch(StackActions.replace('Auth', { screen: 'Login' })),
     toSignUp: () => navigation.navigate('Auth', { screen: 'SignUp' }),
     toForgotPassword: () =>
       navigation.navigate('Auth', { screen: 'ForgotPassword' }),

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View } from 'react-native';
+import React, { useRef } from 'react';
+import { View, type TextInput } from 'react-native';
 import {
   type FieldValues,
   Control,
@@ -75,13 +75,25 @@ interface DynamicFormFieldsProps<T extends FieldValues> {
   fields: FieldDef<T>[];
   control: Control<T>;
   errors: FieldErrors<T>;
+  /**
+   * Turn the keyboard's return key into "next", moving focus down the field
+   * list and leaving "done" on the last one. Off by default: it only suits
+   * forms that are a plain top-to-bottom stack of text inputs, which the
+   * pickers, checkboxes and autocompletes in the item/pantry forms are not.
+   */
+  focusChaining?: boolean;
 }
 
 export function DynamicFormFields<T extends FieldValues>({
   fields,
   control,
   errors,
+  focusChaining = false,
 }: DynamicFormFieldsProps<T>) {
+  // Focus is only reachable imperatively in React Native, so moving between
+  // fields needs a handle on each one. Populated by callback refs at commit,
+  // read only from the return-key handler.
+  const inputRefs = useRef<Array<TextInput | null>>([]);
   // Memoize the field components to prevent recreation
   const memoizedFields = (() => {
     return fields.map(
@@ -134,26 +146,29 @@ export function DynamicFormFields<T extends FieldValues>({
   return (
     <View style={styles.container}>
       {memoizedFields.map(
-        ({
-          name,
-          label,
-          placeholder,
-          Input,
-          props,
-          options,
-          renderValue,
-          transformValue,
-          transformOnBlur,
-          onSelectItem,
-          onUnitSelected,
-          onCategorySelected,
-          onStorageLocationSelected,
-          onStoreSelected,
-          onAddNewLocation,
-          storageLocations,
-          testID,
-          key,
-        }) => (
+        (
+          {
+            name,
+            label,
+            placeholder,
+            Input,
+            props,
+            options,
+            renderValue,
+            transformValue,
+            transformOnBlur,
+            onSelectItem,
+            onUnitSelected,
+            onCategorySelected,
+            onStorageLocationSelected,
+            onStoreSelected,
+            onAddNewLocation,
+            storageLocations,
+            testID,
+            key,
+          },
+          index,
+        ) => (
           <React.Fragment key={key}>
             <Controller
               control={control}
@@ -291,11 +306,35 @@ export function DynamicFormFields<T extends FieldValues>({
                     return <Input />;
                   }
 
-                  // Handle different input types and their specific props
+                  // Handle different input types and their specific props.
+                  // Chaining goes in before `...props` so a field can still
+                  // set its own returnKeyType or handler.
+                  const isLastField = index === fields.length - 1;
+                  const chainingProps: Record<string, unknown> =
+                    focusChaining && !isLastField
+                      ? {
+                          returnKeyType: 'next',
+                          // Hand focus straight over without letting the
+                          // keyboard drop and re-open in between.
+                          submitBehavior: 'submit',
+                          onSubmitEditing: () => {
+                            inputRefs.current[index + 1]?.focus();
+                          },
+                        }
+                      : focusChaining
+                      ? { returnKeyType: 'done' }
+                      : {};
+
                   const inputProps: Record<string, unknown> = {
                     label,
                     ...(placeholder && { placeholder }),
                     ...(testID && { testID }),
+                    ...(focusChaining && {
+                      ref: (node: TextInput | null) => {
+                        inputRefs.current[index] = node;
+                      },
+                    }),
+                    ...chainingProps,
                     ...props,
                   };
 

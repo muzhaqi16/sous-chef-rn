@@ -49,6 +49,22 @@ const LIST_BY_ID_QUERY = gql`
   }
 `;
 
+const TEMPLATES_QUERY = gql`
+  query TestShoppingListTemplates {
+    shoppingLists(filters: { isTemplate: true }) {
+      totalCount
+      edges {
+        cursor
+        node {
+          id
+          name
+          templateName
+        }
+      }
+    }
+  }
+`;
+
 const OWNER = { id: 'user-1', email: 'tani@example.com' };
 const LIST_ID = 'c0000000000000000000list1';
 
@@ -152,6 +168,49 @@ describe('buildOptimisticShoppingList', () => {
 });
 
 describe('addOptimisticShoppingList', () => {
+  it('leaves the templates connection alone — a new list is never a template', () => {
+    // `Query.shoppingLists` is keyed by `filters`, and a cache.modify write
+    // fans out across every variant. The template picker's variant selects
+    // `templateName`, which an optimistic list has no value for, so a leaked
+    // edge would make the whole read incomplete and blank the picker.
+    const cache = makeCache();
+    seedEmptyOverview(cache);
+    cache.writeQuery({
+      query: TEMPLATES_QUERY,
+      data: {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: 1,
+          edges: [
+            {
+              __typename: 'ShoppingListEdge',
+              cursor: 'tpl-cursor',
+              node: {
+                __typename: 'ShoppingList',
+                id: 'template-1',
+                name: 'Weekly Groceries',
+                templateName: 'Weekly Staples',
+              },
+            },
+          ],
+        },
+      },
+    });
+
+    addOptimisticShoppingList(cache, buildList(cache));
+
+    const templates = cache.readQuery<{
+      shoppingLists: {
+        totalCount: number;
+        edges: Array<{ node: { id: string } }>;
+      };
+    }>({ query: TEMPLATES_QUERY });
+    expect(templates?.shoppingLists.totalCount).toBe(1);
+    expect(templates?.shoppingLists.edges.map(e => e.node.id)).toEqual([
+      'template-1',
+    ]);
+  });
+
   it('adds the list to the cached overview connection', () => {
     const cache = makeCache();
     seedEmptyOverview(cache);

@@ -12,7 +12,8 @@ interface AuthData {
 }
 
 export function useAuthNavigation() {
-  const { toLogin, toSignUp, toForgotPassword } = useAppNavigation();
+  const { toLogin, toSignUp, toForgotPassword, replaceWithLogin } =
+    useAppNavigation();
   const setAuth = useAppStore(state => state.setAuth);
   const setRememberMe = useAppStore(state => state.setRememberMe);
   const setUserNavigationState = useAppStore(
@@ -87,5 +88,6 @@ export function useAuthNavigation() {
     navigateToForgotPassword,
     navigateToLogin,
     navigateToSignUp,
+    replaceWithLogin,
   };
 }

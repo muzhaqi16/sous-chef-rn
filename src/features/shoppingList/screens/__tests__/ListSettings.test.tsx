@@ -2,7 +2,7 @@
 
 import React from 'react';
 import type { TextInputProps } from 'react-native';
-import { screen, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/molecules/InfoRow';
 import { ListSettings } from '../ListSettings';
@@ -27,6 +27,7 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: fn,
     useUser: jest.fn(() => ({ id: 'u1', email: 'test@test.com' })),
+    useIsOnline: jest.fn(() => true),
   };
 });
 
@@ -57,6 +58,26 @@ jest.mock('#/hooks/home/useLazyHomeData', () => ({
 jest.mock('#features/shoppingList/hooks/useShoppingListsQuery', () => ({
   useShoppingListsQuery: () => ({ lists: [] }),
 }));
+
+jest.mock('#features/shoppingList/hooks/useShoppingListTemplates', () => ({
+  useShoppingListTemplates: jest.fn(() => ({
+    templates: [],
+    loading: false,
+  })),
+}));
+
+const mockCreateFromTemplate = jest.fn(async () => 'sl-new');
+jest.mock(
+  '#features/shoppingList/hooks/mutations/useShoppingListTemplate',
+  () => ({
+    useShoppingListTemplate: () => ({
+      markAsTemplate: jest.fn(),
+      createFromTemplate: mockCreateFromTemplate,
+      marking: false,
+      creating: false,
+    }),
+  }),
+);
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -115,8 +136,30 @@ jest.mock('#components/molecules/InfoRow', () => ({
     );
   },
 }));
+// Renders its options only while open, so a closed picker's labels can't
+// collide with the screen's own text in queries.
 jest.mock('#components/molecules/ModalPicker', () => ({
-  ModalPicker: () => null,
+  ModalPicker: ({
+    visible,
+    options,
+    onSelect,
+  }: {
+    visible: boolean;
+    options: { label: string; value: string }[];
+    onSelect: (value: string) => void;
+  }) => {
+    if (!visible) return null;
+    const { View, Text, Pressable } = require('react-native');
+    return (
+      <View>
+        {options.map(opt => (
+          <Pressable key={opt.value} onPress={() => onSelect(opt.value)}>
+            <Text>{`option:${opt.label}`}</Text>
+          </Pressable>
+        ))}
+      </View>
+    );
+  },
 }));
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: ({ label, ...props }: { label?: string } & TextInputProps) => {
@@ -379,5 +422,105 @@ describe('ListSettings', () => {
   it('shows "Personal (No Home)" as default home picker text', () => {
     render(<ListSettings route={createRoute} />);
     expect(screen.getByText('Personal (No Home)')).toBeTruthy();
+  });
+
+  describe('creating from a saved template', () => {
+    const templates = [
+      { id: 'tpl1', displayName: 'Weekly Staples', totalItems: 12 },
+      { id: 'tpl2', displayName: 'Party Supplies', totalItems: 5 },
+    ];
+
+    const setTemplates = (value: typeof templates) => {
+      const {
+        useShoppingListTemplates,
+      } = require('#features/shoppingList/hooks/useShoppingListTemplates');
+      useShoppingListTemplates.mockReturnValue({
+        templates: value,
+        loading: false,
+      });
+    };
+
+    beforeEach(() => setTemplates(templates));
+    afterAll(() => setTemplates([]));
+
+    it('offers the templates picker when creating', () => {
+      render(<ListSettings route={createRoute} />);
+      expect(screen.getByText('Start From Template')).toBeTruthy();
+      expect(screen.getByText('None (Blank List)')).toBeTruthy();
+    });
+
+    it('hides the templates picker when editing an existing list', () => {
+      render(<ListSettings route={editRoute} />);
+      expect(screen.queryByText('Start From Template')).toBeNull();
+    });
+
+    it('hides the picker when the user has no saved templates', () => {
+      setTemplates([]);
+      render(<ListSettings route={createRoute} />);
+      expect(screen.queryByText('Start From Template')).toBeNull();
+    });
+
+    it('lists every template as an option', () => {
+      render(<ListSettings route={createRoute} />);
+      fireEvent.press(screen.getByText('None (Blank List)'));
+      expect(screen.getByText('option:Weekly Staples')).toBeTruthy();
+      expect(screen.getByText('option:Party Supplies')).toBeTruthy();
+    });
+
+    it('names the list after the chosen template and drops home linking', () => {
+      render(<ListSettings route={createRoute} />);
+      fireEvent.press(screen.getByText('None (Blank List)'));
+      fireEvent.press(screen.getByText('option:Weekly Staples'));
+
+      expect(screen.getByDisplayValue('Weekly Staples')).toBeTruthy();
+      expect(
+        screen.getByText(
+          "Lists created from a template are personal and can't be linked to a home.",
+        ),
+      ).toBeTruthy();
+    });
+
+    it('creates from the template and opens the new list', async () => {
+      const {
+        useAppNavigation,
+      } = require('#hooks/navigation/useAppNavigation');
+      const { goBack } = useAppNavigation();
+
+      render(<ListSettings route={createRoute} />);
+      fireEvent.press(screen.getByText('None (Blank List)'));
+      fireEvent.press(screen.getByText('option:Party Supplies'));
+      fireEvent.press(screen.getByText('Create'));
+
+      await waitFor(() =>
+        expect(mockCreateFromTemplate).toHaveBeenCalledWith(
+          'tpl2',
+          'Party Supplies',
+        ),
+      );
+      expect(goBack).toHaveBeenCalled();
+    });
+
+    it('leaves the blank-list path alone when no template is chosen', async () => {
+      render(<ListSettings route={createRoute} />);
+      fireEvent.changeText(screen.getByDisplayValue(''), 'Groceries');
+      fireEvent.press(screen.getByText('Create'));
+
+      await waitFor(() =>
+        expect(mockCreateFromTemplate).not.toHaveBeenCalled(),
+      );
+    });
+
+    it('hides the picker while offline — the create is server-side', () => {
+      const { useIsOnline } = require('#store/useAppStore');
+      useIsOnline.mockReturnValue(false);
+
+      render(<ListSettings route={createRoute} />);
+      expect(screen.queryByText('None (Blank List)')).toBeNull();
+      expect(
+        screen.getByText('Creating from a template needs a connection'),
+      ).toBeTruthy();
+
+      useIsOnline.mockReturnValue(true);
+    });
   });
 });

@@ -1,7 +1,13 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
 import type { RootState } from '#store';
+import { ResetPasswordDocument } from '#operations/auth/auth.generated';
+import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
+import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 // --- Mocks ---
@@ -115,6 +121,11 @@ jest.mock('#components/base/Button', () => {
   };
 });
 
+const NEW_PASSWORD_INPUT = () =>
+  screen.getByTestId('password-input-Enter your new password');
+const CONFIRM_PASSWORD_INPUT = () =>
+  screen.getByTestId('password-input-Confirm your new password');
+
 describe('ResetPasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -151,6 +162,101 @@ describe('ResetPasswordScreen', () => {
     renderWithApollo(<ResetPasswordScreen />);
     await user.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the submit button disabled until the confirmation is filled in', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />);
+
+    const submit = screen.getByTestId('button-Reset Password');
+    expect(submit).toBeDisabled();
+
+    // A valid password alone is not enough — confirmation is still empty.
+    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+    expect(submit).toBeDisabled();
+  });
+
+  it('enables the submit button once both passwords are valid and match', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />);
+
+    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
+
+    expect(screen.getByTestId('button-Reset Password')).toBeEnabled();
+  });
+
+  it('keeps the submit button disabled when the passwords do not match', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />);
+
+    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123?');
+
+    expect(screen.getByTestId('button-Reset Password')).toBeDisabled();
+  });
+
+  it('keeps the submit button disabled for a password that fails complexity', async () => {
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />);
+
+    await user.type(NEW_PASSWORD_INPUT(), 'alllowercase');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'alllowercase');
+
+    expect(screen.getByTestId('button-Reset Password')).toBeDisabled();
+  });
+
+  it('shows the invalid-link view when the server reports the token spent', async () => {
+    // The auto-mocked wrapper swallows the submit, so run the callback for real
+    // to exercise the mutation and its result handling.
+    (executeWithLoadingState as jest.Mock).mockImplementation(
+      async (
+        fn: () => Promise<void>,
+        setLoading: (v: boolean) => void,
+        onError?: (e: unknown) => void,
+      ) => {
+        setLoading(true);
+        try {
+          await fn();
+        } catch (error) {
+          onError?.(error);
+        } finally {
+          setLoading(false);
+        }
+      },
+    );
+
+    const operationMocks: MockedResponse[] = [
+      {
+        request: {
+          query: ResetPasswordDocument,
+          variables: {
+            input: {
+              token: 'valid-token-0123456789',
+              newPassword: 'Test123!',
+            },
+          },
+        },
+        result: {
+          data: {
+            resetPassword: {
+              __typename: 'ResetPasswordPayload',
+              status: PasswordActionStatus.InvalidOrExpired,
+            },
+          },
+        },
+      },
+    ];
+
+    const user = userEvent.setup();
+    renderWithApollo(<ResetPasswordScreen />, { operationMocks });
+
+    await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
+    await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
+    await user.press(screen.getByTestId('button-Reset Password'));
+
+    // A spent link must take the user off the form — it can never succeed.
+    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
   });
 });
 

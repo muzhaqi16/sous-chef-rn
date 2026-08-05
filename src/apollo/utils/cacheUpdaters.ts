@@ -73,6 +73,13 @@ export interface AddToArrayOptions {
 export interface AddToConnectionOptions extends AddToArrayOptions {
   /** Update totalCount field (default: true) */
   updateTotalCount?: boolean;
+  /**
+   * Leave a cached variant untouched, matched on its `storeFieldName` (e.g.
+   * `shoppingLists({"filters":{"isTemplate":true}})`). A `cache.modify` write
+   * fans out across every `keyArgs` variant of the field, so this is how a
+   * filtered variant the new item doesn't belong to opts out.
+   */
+  skipStoreField?: (storeFieldName: string) => boolean;
 }
 
 /**
@@ -131,6 +138,7 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
       position = 'start',
       checkDuplicates = true,
       updateTotalCount = true,
+      skipStoreField,
     } = options;
 
     try {
@@ -138,8 +146,10 @@ export function createAddToQueryConnectionUpdater<T extends { id: string }>(
         fields: {
           [fieldName](
             existingConnection: ConnectionData = {},
-            { toReference, readField },
+            { toReference, readField, storeFieldName },
           ) {
+            if (skipStoreField?.(storeFieldName)) return existingConnection;
+
             const newItemRef = toReference(newItem, true);
             if (!newItemRef) return existingConnection;
 

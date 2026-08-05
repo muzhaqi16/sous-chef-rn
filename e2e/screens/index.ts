@@ -18,6 +18,7 @@ export { LandingAuthScreen } from './LandingAuthScreen';
 export { LoginScreen } from './LoginScreen';
 export { SignUpScreen } from './SignUpScreen';
 export { ForgotPasswordScreen } from './ForgotPasswordScreen';
+export { ResetPasswordScreen } from './ResetPasswordScreen';
 export { ShoppingListScreen } from './ShoppingListScreen';
 export { PantryScreen } from './PantryScreen';
 export { RecipesScreen } from './RecipesScreen';

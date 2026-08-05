@@ -21,6 +21,21 @@ buildscript {
 }
 
 allprojects {
+    // `com.google.guava:listenablefuture:1.0` is a stub jar holding only
+    // ListenableFuture, a class full Guava ships too. Detox pulls real Guava in
+    // via Espresso, so the androidTest classpath ends up with the class twice
+    // and `checkDebugAndroidTestDuplicateClasses` fails — which blocks every
+    // Detox build (see :react-native-vision-camera).
+    //
+    // Scoped to the test configurations on purpose: react-native-vision-camera
+    // compiles against ListenableFuture and the stub is the ONLY thing
+    // supplying it on the main classpath, so excluding it everywhere breaks
+    // that module's Kotlin compile. Under androidTest, Guava is present to
+    // supply the class, so dropping the stub there costs nothing.
+    configurations.matching { it.name.toLowerCase().contains('androidtest') }.configureEach {
+        exclude group: 'com.google.guava', module: 'listenablefuture'
+    }
+
     repositories {
         google()
         mavenCentral()

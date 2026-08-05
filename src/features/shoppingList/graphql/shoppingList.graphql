@@ -127,6 +127,28 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
   }
 }
 
+# Lists the user saved as templates, for the "start from template" picker on
+# the create screen. `shoppingLists` is cached per `filters`, so this variant is
+# separate from the overview connection the list selector reads.
+query GetShoppingListTemplates($first: Int, $after: String) {
+  shoppingLists(filters: { isTemplate: true }, first: $first, after: $after) {
+    edges {
+      cursor
+      node {
+        id
+        name
+        templateName
+        totalItems
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
 # Paginated items query for a single tab (unpurchased OR purchased)
 # Called twice in the hook — once per tab — so each has its own independent
 # cursor and cache entry (Apollo keyArgs: ['filters'] handles separation)

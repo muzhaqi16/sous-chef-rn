@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePostLoginState } from '#store/useAppStore';
@@ -60,8 +61,10 @@ export const PostLoginBiometricScreen = () => {
       style={styles.safeArea}
       testID="post-login-biometric-screen"
     >
-      <ScrollView
+      <KeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
+        bottomOffset={16}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.content}>
@@ -84,7 +87,7 @@ export const PostLoginBiometricScreen = () => {
             testID="post-login-biometric"
           />
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </ThemedSafeAreaView>
   );
 };

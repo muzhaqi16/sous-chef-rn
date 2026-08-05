@@ -1,6 +1,7 @@
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { ResendVerificationEmailDocument } from '#operations/auth/auth.generated';
 import { SignUpScreen } from '../SignUpScreen';
 
 // --- Mocks ---
@@ -55,6 +56,8 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       submitText,
       submitButtonTestID,
       onSubmit,
+      submitDisabled,
+      submitCountdown,
       onBackPress,
       footerText,
       footerLinkText,
@@ -66,6 +69,8 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
       submitText?: string;
       submitButtonTestID?: string;
       onSubmit?: () => void;
+      submitDisabled?: boolean;
+      submitCountdown?: number;
       onBackPress?: () => void;
       footerText?: string;
       footerLinkText?: string;
@@ -80,8 +85,17 @@ jest.mock('#components/templates/AuthFormTemplate', () => {
             <Text>Back</Text>
           </Pressable>
         ) : null}
-        <Pressable testID={submitButtonTestID} onPress={onSubmit}>
-          <Text>{submitText}</Text>
+        <Pressable
+          testID={submitButtonTestID}
+          onPress={onSubmit}
+          disabled={submitDisabled}
+          accessibilityState={{ disabled: !!submitDisabled }}
+        >
+          <Text>
+            {submitCountdown && submitCountdown > 0
+              ? `${submitText} (${submitCountdown}s)`
+              : submitText}
+          </Text>
         </Pressable>
         {footerText ? <Text>{footerText}</Text> : null}
         {footerLinkText ? (
@@ -183,6 +197,58 @@ describe('SignUpScreen', () => {
     // Resend is available on the confirmation (spec: verification hand-off).
     expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
     expect(mockRegister).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the resend cooldown as soon as the activation mail is sent', async () => {
+    // The mail has already gone out, so the first "Resend email" tap must not
+    // be able to fire a duplicate send seconds later.
+    mockRegister.mockResolvedValue(true);
+    const user = userEvent.setup();
+    renderWithApollo(<SignUpScreen />);
+
+    await user.press(screen.getByTestId('signup-submit-button'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
+    });
+    expect(screen.getByTestId('signup-resend-button')).toBeDisabled();
+    expect(screen.getByText('Resend email (30s)')).toBeTruthy();
+  });
+
+  it('does not send while the cooldown is running', async () => {
+    const recordedVariables: Record<string, unknown>[] = [];
+    mockRegister.mockResolvedValue(true);
+    const user = userEvent.setup();
+    renderWithApollo(<SignUpScreen />, {
+      operationMocks: [
+        {
+          request: {
+            query: ResendVerificationEmailDocument,
+            variables: variables => {
+              recordedVariables.push(variables);
+              return true;
+            },
+          },
+          result: {
+            data: {
+              resendVerificationEmail: {
+                __typename: 'ResendVerificationEmailPayload',
+                user: { __typename: 'User', id: '1' },
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await user.press(screen.getByTestId('signup-submit-button'));
+    await waitFor(() => {
+      expect(screen.getByTestId('signup-resend-button')).toBeTruthy();
+    });
+
+    await user.press(screen.getByTestId('signup-resend-button'));
+
+    expect(recordedVariables).toHaveLength(0);
   });
 
   it('stays on the form (no confirmation) when registration is rejected', async () => {
