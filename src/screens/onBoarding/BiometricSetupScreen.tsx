@@ -141,7 +141,7 @@ export const BiometricSetupScreen = () => {
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
   },

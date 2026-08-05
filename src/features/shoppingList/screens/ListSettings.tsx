@@ -12,6 +12,8 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
+import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
+import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
@@ -130,9 +132,19 @@ export const ListSettings: React.FC<
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
   const [showPatternPicker, setShowPatternPicker] = useState(false);
+  // Create mode only: the saved template the new list is copied from.
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
+    null,
+  );
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
   const { shoppingList, isShared, collaborators, ownerships } =
     useShoppingListDetails(listId);
+  // Only the create screen offers "start from template"; an existing list's
+  // settings shouldn't pay for the request.
+  const { templates } = useShoppingListTemplates({ skip: !!listId });
+  const selectedTemplate =
+    templates.find(tpl => tpl.id === selectedTemplateId) ?? null;
   const user = useUser();
   // Use lazy loading for homes data to avoid triggering Zustand store updates
   // that would cause ShoppingListMain to re-render
@@ -308,7 +320,22 @@ export const ListSettings: React.FC<
 
     executeWithLoadingState(
       async () => {
-        if (!listId) {
+        if (!listId && selectedTemplateId) {
+          // Create from a saved template — the server copies the template's
+          // items into the new list. It mints the id (so this can't be queued
+          // offline) and doesn't take a home, hence no homeId here; the
+          // default flag still rides on its own mutation afterwards.
+          const newListId = await createFromTemplate(
+            selectedTemplateId,
+            name.trim(),
+          );
+          if (!newListId) return;
+          if (isDefault) {
+            await setAsDefault(newListId);
+          }
+          setSelectedShoppingListId(newListId);
+          goBack();
+        } else if (!listId) {
           // Create new list
           const newList = await createShoppingList({
             name: name.trim(),
@@ -514,6 +541,22 @@ export const ListSettings: React.FC<
       setSaving,
       () => toastService.error(t('shoppingListScreens.failedToGenerateNext')),
     );
+  };
+
+  // Picking a template fills the name field with the template's name so the
+  // new list is named something recognizable, unless the user typed their own.
+  const handleSelectTemplate = (value: string) => {
+    setShowTemplatePicker(false);
+    const next = templates.find(tpl => tpl.id === value) ?? null;
+    setSelectedTemplateId(next?.id ?? null);
+    if (!name.trim() || name === selectedTemplate?.displayName) {
+      setName(next?.displayName ?? '');
+    }
+    // The template path can't carry a home, so drop a pending choice rather
+    // than keep state the create would silently ignore.
+    if (next) {
+      setSelectedHomeId(null);
+    }
   };
 
   // Lazy-load homes when opening the picker
@@ -723,7 +766,10 @@ export const ListSettings: React.FC<
               placeholder={t('shoppingListScreens.listNamePlaceholder')}
             />
 
-            {/* Home selector - only show for new lists */}
+            {/* Home selector - only show for new lists. A list created from a
+                template can't be linked to a home (createFromTemplate takes no
+                homeId), so the picker is inert while one is selected rather
+                than silently dropping the choice. */}
             {!listId && (
               <View style={commonStyles.settingsInputGroup}>
                 <Text style={commonStyles.settingsLabel}>
@@ -732,16 +778,28 @@ export const ListSettings: React.FC<
                 <Pressable
                   style={({ pressed }) => [
                     styles.pickerButton,
+                    !!selectedTemplate && styles.pickerButtonDisabled,
                     pressed && styles.pressed,
                   ]}
                   onPress={handleOpenHomePicker}
+                  disabled={!!selectedTemplate}
                 >
-                  <Text size="md">
-                    {homes?.find(h => h.id === selectedHomeId)?.name ||
-                      t('shoppingListScreens.personalNoHome')}
+                  <Text
+                    size="md"
+                    tone={selectedTemplate ? 'secondary' : 'primary'}
+                  >
+                    {selectedTemplate
+                      ? t('shoppingListScreens.personalNoHome')
+                      : homes?.find(h => h.id === selectedHomeId)?.name ||
+                        t('shoppingListScreens.personalNoHome')}
                   </Text>
                   <Icon name="chevron-down" size={20} tone="textSecondary" />
                 </Pressable>
+                {!!selectedTemplate && (
+                  <Text size="sm" tone="secondary" style={styles.fieldNote}>
+                    {t('shoppingListScreens.templateHomeNote')}
+                  </Text>
+                )}
               </View>
             )}
 
@@ -756,6 +814,46 @@ export const ListSettings: React.FC<
               </View>
               <BaseSwitch value={isDefault} onValueChange={setIsDefault} />
             </View>
+          </View>
+        )}
+
+        {/* Start a new list from a saved template (create mode). Hidden when
+            the user has no templates yet — they're created from an existing
+            list's settings. */}
+        {!listId && templates.length > 0 && (
+          <View style={commonStyles.settingsSection}>
+            <Text style={commonStyles.settingsSectionTitle}>
+              {t('shoppingListScreens.templateSection')}
+            </Text>
+
+            {/* createFromTemplate is online-only — the server mints the new
+                list's id, so it can't be queued. */}
+            <OfflineGate
+              compact
+              message={t('shoppingListScreens.templatesOfflineMessage')}
+            >
+              <View style={commonStyles.settingsInputGroup}>
+                <Text style={commonStyles.settingsLabel}>
+                  {t('shoppingListScreens.startFromTemplate')}
+                </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.pickerButton,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => setShowTemplatePicker(true)}
+                >
+                  <Text size="md">
+                    {selectedTemplate?.displayName ??
+                      t('shoppingListScreens.noTemplateBlankList')}
+                  </Text>
+                  <Icon name="chevron-down" size={20} tone="textSecondary" />
+                </Pressable>
+                <Text size="sm" tone="secondary" style={styles.fieldNote}>
+                  {t('shoppingListScreens.startFromTemplateDesc')}
+                </Text>
+              </View>
+            </OfflineGate>
           </View>
         )}
 
@@ -1091,6 +1189,22 @@ export const ListSettings: React.FC<
         onCancel={() => setShowHomePicker(false)}
       />
 
+      {/* Template picker (create mode) */}
+      <ModalPicker
+        visible={showTemplatePicker}
+        label={t('shoppingListScreens.selectTemplate')}
+        options={[
+          { label: t('shoppingListScreens.noTemplateBlankList'), value: '' },
+          ...templates.map(tpl => ({
+            label: tpl.displayName,
+            value: tpl.id,
+          })),
+        ]}
+        selected={selectedTemplateId ?? ''}
+        onSelect={handleSelectTemplate}
+        onCancel={() => setShowTemplatePicker(false)}
+      />
+
       {/* Recurring pattern picker */}
       <ModalPicker
         visible={showPatternPicker}
@@ -1168,6 +1282,12 @@ const styles = StyleSheet.create(theme => ({
     paddingHorizontal: theme.spacing['3'],
     paddingVertical: theme.spacing.sm + 2,
     backgroundColor: theme.colors.surface,
+  },
+  pickerButtonDisabled: {
+    opacity: 0.6,
+  },
+  fieldNote: {
+    marginTop: theme.spacing.sm,
   },
   leaveDescription: {
     marginTop: theme.spacing.sm,

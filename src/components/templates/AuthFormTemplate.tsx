@@ -23,6 +23,9 @@ interface Props<T extends FieldValues> {
   submitText: string;
   submitButtonTestID?: string;
   onSubmit: () => void;
+  submitDisabled?: boolean;
+  /** Seconds left on a cooldown, appended to the button label while > 0. */
+  submitCountdown?: number;
   footerText?: string;
   footerLinkText?: string;
   footerLinkTestID?: string;
@@ -33,6 +36,8 @@ interface Props<T extends FieldValues> {
   linkText?: string;
   linkTestID?: string;
   isLoading?: boolean;
+  /** Return key moves down the fields instead of just closing the keyboard. */
+  focusChaining?: boolean;
 }
 export function AuthFormTemplate<T extends FieldValues>({
   title,
@@ -44,6 +49,8 @@ export function AuthFormTemplate<T extends FieldValues>({
   submitText,
   submitButtonTestID,
   onSubmit,
+  submitDisabled,
+  submitCountdown,
   footerText,
   footerLinkText,
   footerLinkTestID,
@@ -54,6 +61,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   linkTestID,
   onLinkPress,
   isLoading = false,
+  focusChaining = false,
 }: Props<T>) {
   return (
     <View style={styles.formContainer}>
@@ -83,7 +91,12 @@ export function AuthFormTemplate<T extends FieldValues>({
         ) : null}
       </View>
 
-      <DynamicFormFields<T> fields={fields} control={control} errors={errors} />
+      <DynamicFormFields<T>
+        fields={fields}
+        control={control}
+        errors={errors}
+        focusChaining={focusChaining}
+      />
 
       {!!linkText && !!onLinkPress && (
         <View style={styles.linkRow}>
@@ -95,9 +108,13 @@ export function AuthFormTemplate<T extends FieldValues>({
 
       <View style={styles.action}>
         <Button
-          title={submitText}
+          title={
+            submitCountdown && submitCountdown > 0
+              ? `${submitText} (${submitCountdown}s)`
+              : submitText
+          }
           onPress={onSubmit}
-          disabled={isLoading}
+          disabled={isLoading || submitDisabled}
           loading={isLoading}
           testID={submitButtonTestID}
         />

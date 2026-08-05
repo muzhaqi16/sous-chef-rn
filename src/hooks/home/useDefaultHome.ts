@@ -66,13 +66,13 @@ export const useDefaultHome = () => {
   // PERFORMANCE: Use lazy queries with STABLE options to control when they execute
   // Using hardcoded 'cache-first' instead of dynamic policy prevents function recreation
   // on network status changes which caused query cascades
-  const [getHomes, { data: homes, loading, error, called }] = useLazyQuery(
-    GetHomesDocument,
-    {
-      fetchPolicy: 'cache-first',
-      errorPolicy: 'ignore',
-    },
-  );
+  const [
+    getHomes,
+    { data: homes, loading, error, called, refetch: refetchHomes },
+  ] = useLazyQuery(GetHomesDocument, {
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'ignore',
+  });
 
   // Allow pantry query to start immediately when persisted selections exist.
   // This runs in parallel with GetHomes instead of waiting for selection init.
@@ -216,6 +216,34 @@ export const useDefaultHome = () => {
     setIsHomeSelectionReady,
     client,
   ]);
+
+  // Complementary case to `needsClearing` above: a home is selected but the
+  // list came back EMPTY, so there is nothing to validate it against. That
+  // happens when the single fetch above ran before the home existed —
+  // onboarding creates the home after it, and no other screen refills this
+  // connection — leaving every consumer that resolves the home from the cached
+  // list (PantryMain's header, pantry permissions) on its "no home" fallback
+  // for the rest of the session. Refetch once per selected home; a list that is
+  // genuinely empty stays empty without re-triggering.
+  const hasSelectionButNoHomes = !!(
+    called &&
+    !loading &&
+    selectedHomeId &&
+    homesList.length === 0
+  );
+  const refetchedForHomeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!hasSelectionButNoHomes || !selectedHomeId) return;
+    if (refetchedForHomeIdRef.current === selectedHomeId) return;
+    refetchedForHomeIdRef.current = selectedHomeId;
+    logger.debug(
+      '🏠 Selected home missing from an empty homes list, refetching:',
+      selectedHomeId,
+    );
+    refetchHomes().catch(() => {
+      logger.warn('Failed to refetch homes for selected home');
+    });
+  }, [hasSelectionButNoHomes, selectedHomeId, refetchHomes]);
 
   // Sync remote defaults to local store (one-time initialization)
   // CONSOLIDATED: Both home and pantry are set in a single effect to prevent

@@ -12,6 +12,10 @@ import { Text } from '#components/atoms/Text';
 // need useUnistyles — the theme value is module-static.
 const ICON_SIZE_LG = 18;
 
+// Width of the accent ring drawn around the avatar. The image inside the ring
+// has to subtract this from the ring's corner radius, so the two live together.
+const AVATAR_BORDER_WIDTH = 2;
+
 // Sentinel used to split a translated greeting around the user's name without
 // false matches if the name itself appears in the surrounding text.
 const GREETING_NAME_TOKEN = 'NAME';
@@ -251,14 +255,18 @@ const styles = StyleSheet.create(theme => ({
     height: 48,
     borderRadius: theme.radii.xl - 2,
     borderCurve: 'continuous',
-    borderWidth: 2,
+    borderWidth: AVATAR_BORDER_WIDTH,
     borderColor: theme.colors.primary,
     overflow: 'hidden',
   },
+  // The image sits inside the border, so its corners follow the border's INNER
+  // curve — radius minus border width. Reusing the outer radius here cuts the
+  // corners 2pt too deep and leaves a gap in each corner of the ring, and the
+  // parent's `overflow: hidden` can't fill it back in: clipping only removes.
   avatarImageInner: {
     width: '100%',
     height: '100%',
-    borderRadius: theme.radii.xl - 2,
+    borderRadius: theme.radii.xl - 2 - AVATAR_BORDER_WIDTH,
     borderCurve: 'continuous',
   },
 }));

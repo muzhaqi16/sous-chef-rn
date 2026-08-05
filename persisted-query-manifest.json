@@ -687,6 +687,12 @@
       "body": "query GetShoppingListSuggestions($id: ID!, $limit: Int = 20) {\n  shoppingList(id: $id) {\n    id\n    recentlyDeleted: suggestions(limit: $limit, sources: [RECENTLY_DELETED]) {\n      id\n      itemId\n      name\n      source\n      imageUrl\n      category\n      defaultUnitId\n      defaultUnit {\n        id\n        name\n        symbol\n        __typename\n      }\n      item {\n        id\n        name\n        imageUrl\n        __typename\n      }\n      lastQuantity\n      lastUnitId\n      frequencyCount\n      popularityRank\n      shoppingListItemId\n      __typename\n    }\n    frequentlyAdded: suggestions(limit: $limit, sources: [FREQUENTLY_ADDED]) {\n      id\n      itemId\n      name\n      source\n      imageUrl\n      category\n      defaultUnitId\n      defaultUnit {\n        id\n        name\n        symbol\n        __typename\n      }\n      item {\n        id\n        name\n        imageUrl\n        __typename\n      }\n      lastQuantity\n      lastUnitId\n      frequencyCount\n      popularityRank\n      shoppingListItemId\n      __typename\n    }\n    popular: suggestions(limit: $limit, sources: [POPULAR]) {\n      id\n      itemId\n      name\n      source\n      imageUrl\n      category\n      defaultUnitId\n      defaultUnit {\n        id\n        name\n        symbol\n        __typename\n      }\n      item {\n        id\n        name\n        imageUrl\n        __typename\n      }\n      lastQuantity\n      lastUnitId\n      frequencyCount\n      popularityRank\n      shoppingListItemId\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "1e60c67ade060d52845f22660ee4f9f77b4cecc8686af1d16881d8d0fc2a62b8",
+      "name": "GetShoppingListTemplates",
+      "type": "query",
+      "body": "query GetShoppingListTemplates($first: Int, $after: String) {\n  shoppingLists(filters: {isTemplate: true}, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        id\n        name\n        templateName\n        totalItems\n        __typename\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
+    },
+    {
       "id": "1ecdf78d53f63136054d5a1c231d6a4ea9c17066b5f31db4dbfb87c3b0566a58",
       "name": "GetShoppingListsLite",
       "type": "query",

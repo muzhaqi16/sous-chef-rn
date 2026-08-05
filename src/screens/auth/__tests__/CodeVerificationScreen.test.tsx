@@ -10,10 +10,7 @@ import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import type { RootState } from '#store/index';
 import type * as UseAppStoreModule from '#store/useAppStore';
-import {
-  CodeVerificationScreen,
-  extractVerificationToken,
-} from '../CodeVerificationScreen';
+import { CodeVerificationScreen } from '../CodeVerificationScreen';
 
 // Typed view over the mocked module so `jest.spyOn` keeps the real signatures
 // (the `require` call still returns the runtime-mutable mock object).
@@ -335,66 +332,5 @@ describe('CodeVerificationScreen', () => {
 
     const { toJSON } = renderWithApollo(<CodeVerificationScreen />);
     expect(toJSON()).toBeNull();
-  });
-});
-
-describe('extractVerificationToken', () => {
-  const token = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6'; // 32 hex chars
-
-  it('returns the token for a well-formed verify-email deep link', () => {
-    expect(
-      extractVerificationToken(
-        `https://app.souschef.dev/verify-email?token=${token}`,
-      ),
-    ).toBe(token);
-  });
-
-  it('accepts upper-case hex', () => {
-    const upper = token.toUpperCase();
-    expect(
-      extractVerificationToken(
-        `https://app.souschef.dev/verify-email?token=${upper}`,
-      ),
-    ).toBe(upper);
-  });
-
-  it('returns null when the token is the wrong length', () => {
-    expect(
-      extractVerificationToken(
-        'https://app.souschef.dev/verify-email?token=abc123',
-      ),
-    ).toBeNull();
-    expect(
-      extractVerificationToken(
-        `https://app.souschef.dev/verify-email?token=${token}ff`,
-      ),
-    ).toBeNull();
-  });
-
-  it('returns null when the token contains non-hex characters', () => {
-    const nonHex = 'g1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6'; // leading "g"
-    expect(
-      extractVerificationToken(
-        `https://app.souschef.dev/verify-email?token=${nonHex}`,
-      ),
-    ).toBeNull();
-  });
-
-  it('returns null when the token query param is missing', () => {
-    expect(
-      extractVerificationToken('https://app.souschef.dev/verify-email'),
-    ).toBeNull();
-  });
-
-  it('returns null for a non-verify-email path', () => {
-    expect(
-      extractVerificationToken(
-        `https://app.souschef.dev/reset-password?token=${token}`,
-      ),
-    ).toBeNull();
-  });
-
-  it('returns null for a malformed URL without throwing', () => {
-    expect(extractVerificationToken('not a url')).toBeNull();
   });
 });

@@ -42,6 +42,7 @@ import {
   type CreateHomeMutationVariables,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { addToHomesCache } from '#hooks/home/hooks/utils';
 
 // Store & Navigation
 import {
@@ -135,7 +136,6 @@ async function performCreateHome(
     selectedHomeId: string | null;
     createHome: CreateHomeFn;
     createPantry: CreatePantryFn;
-    refetchHomes: () => Promise<unknown>;
     setSelectedHomeId: (id: string) => void;
     setSelectedPantryId: (id: string) => void;
     skipToStep: (step: string) => void;
@@ -364,7 +364,23 @@ const CreateHomeScreenComponent = () => {
   const hasPendingInvites = pendingInvites.length > 0;
 
   // GraphQL Mutations
-  const [createHome] = useMutation(CreateHomeDocument);
+  const [createHome] = useMutation(CreateHomeDocument, {
+    // The new home has to be written into the GetHomes connection here.
+    // `useDefaultHome` fires the app's only GetHomes fetch once per session and
+    // that already happened during onboarding, while this user still had zero
+    // homes — so the cached connection stays an authoritative empty list and
+    // nothing refills it. PantryMain resolves the selected home out of that
+    // cached list (cache-only), so without this write its header falls back to
+    // the "Your Home" placeholder until some other screen refetches homes.
+    update: (cache, { data }) => {
+      if (data?.createHome?.__typename !== 'CreateHomePayload') return;
+      // `cache.modify` skips fields the cache doesn't hold, so a missing
+      // connection reports no write rather than throwing — refetch instead.
+      if (!addToHomesCache(cache, data.createHome.home, { position: 'end' })) {
+        void refetchHomes();
+      }
+    },
+  });
   const [createPantry] = useMutation(CreatePantryDocument, {
     update: (cache, { data }) => {
       if (data?.createPantry?.__typename !== 'CreatePantryPayload') {
@@ -494,7 +510,6 @@ const CreateHomeScreenComponent = () => {
           selectedHomeId,
           createHome,
           createPantry,
-          refetchHomes,
           setSelectedHomeId,
           setSelectedPantryId,
           skipToStep,

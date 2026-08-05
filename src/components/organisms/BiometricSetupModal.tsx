@@ -105,7 +105,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.overlays.medium,
   },
   contentContainer: {
-    flex: 1,
+    // flexGrow so the card can scroll once the keyboard shrinks the avoiding
+    // view, instead of being clamped to it and clipped.
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.lg,

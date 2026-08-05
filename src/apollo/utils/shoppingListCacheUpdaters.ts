@@ -21,6 +21,7 @@ import { createOptimisticEntity } from './createOptimisticResponse';
 import { classifyCreateResult } from './classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import {
+  type AddToConnectionOptions,
   type ConnectionData,
   createAddToQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -881,11 +882,35 @@ const ShoppingListEmptyItemsVariantFragment = gql`
   }
 `;
 
-/** Adds a list to `Query.shoppingLists` (every cached filter variant). */
-export const addShoppingListToQueryCache = createAddToQueryConnectionUpdater(
+const addToShoppingListsQueryCache = createAddToQueryConnectionUpdater(
   'shoppingLists',
   'ShoppingList',
 );
+
+/**
+ * A list arriving through any create path is never a template, so the
+ * `filters: { isTemplate: true }` variant GetShoppingListTemplates reads is the
+ * one place it must not land. Beyond showing a plain list in the template
+ * picker, that variant selects `templateName` — a field an optimistic list
+ * doesn't carry — and one edge missing it makes the whole query read
+ * incomplete, blanking the picker until the next network response.
+ */
+const isTemplateListVariant = (storeFieldName: string) =>
+  matchesFilter(storeFieldName, 'isTemplate', true);
+
+/**
+ * Adds a list to `Query.shoppingLists` (every cached filter variant except the
+ * templates-only one).
+ */
+export const addShoppingListToQueryCache = (
+  cache: ApolloCache,
+  list: { id: string },
+  options: AddToConnectionOptions = {},
+): boolean =>
+  addToShoppingListsQueryCache(cache, list, {
+    ...options,
+    skipStoreField: isTemplateListVariant,
+  });
 
 const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
   'shoppingLists',

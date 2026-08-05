@@ -17,8 +17,13 @@ import { ResendVerificationEmailDocument } from '#operations/auth/auth.generated
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
+import { useResendBackoff } from '#hooks/auth/useResendBackoff';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
+import {
+  getRateLimitMessage,
+  isRateLimitError,
+} from '#/utils/errors/rateLimit';
 
 type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
 
@@ -34,6 +39,11 @@ export const SignUpScreen = (): React.JSX.Element => {
   // inline "check your inbox" confirmation (same for a new or already-registered
   // email — existence-blind) instead of navigating into the app.
   const [sentToEmail, setSentToEmail] = useState<string | null>(null);
+
+  // `resendVerificationEmail` is rate-limited server-side, so the button that
+  // fires it backs off the same way the code-verification and password-reset
+  // resends do — a user tapping it repeatedly hits a countdown, not a 429.
+  const { countdown, canResend, registerAttempt } = useResendBackoff();
 
   const [resendVerificationEmail] = useMutation(
     ResendVerificationEmailDocument,
@@ -60,12 +70,22 @@ export const SignUpScreen = (): React.JSX.Element => {
     );
 
     if (ok) {
+      // The activation mail has just gone out, so the cooldown starts here
+      // rather than on the first resend — otherwise the first tap could fire a
+      // duplicate send seconds after registration.
+      registerAttempt();
       setSentToEmail(email);
     }
   };
 
   const handleResend = () => {
-    if (!sentToEmail) return;
+    if (!sentToEmail || !canResend) return;
+
+    // Counted before the request: the cooldown opens synchronously, so a second
+    // tap lands on a disabled button and a failing send can't be retried in a
+    // tight loop.
+    registerAttempt();
+
     executeMutation(
       async () => {
         const result = await resendVerificationEmail({
@@ -77,11 +97,18 @@ export const SignUpScreen = (): React.JSX.Element => {
         const succeeded =
           result.data?.resendVerificationEmail?.__typename ===
             'ResendVerificationEmailPayload' && !result.error;
-        toast(
-          succeeded
-            ? { message: t('auth.resendVerificationSent'), type: 'success' }
-            : { message: t('auth.resendVerificationFailed'), type: 'error' },
-        );
+        if (succeeded) {
+          toast({ message: t('auth.resendVerificationSent'), type: 'success' });
+          return;
+        }
+        // A throttled send says how long to wait; the generic failure text
+        // would read as "try again now", which is the opposite of the truth.
+        toast({
+          message: isRateLimitError(result.error)
+            ? getRateLimitMessage(result.error)
+            : t('auth.resendVerificationFailed'),
+          type: 'error',
+        });
       },
       () =>
         toast({ message: t('auth.resendVerificationFailed'), type: 'error' }),
@@ -100,6 +127,8 @@ export const SignUpScreen = (): React.JSX.Element => {
           submitText={t('auth.resendEmail')}
           submitButtonTestID="signup-resend-button"
           onSubmit={handleResend}
+          submitDisabled={!canResend}
+          submitCountdown={countdown}
           footerText={t('auth.alreadyVerified')}
           footerLinkText={t('auth.signIn')}
           footerLinkTestID="signup-verification-login-link"
@@ -144,6 +173,7 @@ export const SignUpScreen = (): React.JSX.Element => {
         ]}
         control={form.control}
         errors={form.formState.errors}
+        focusChaining
         submitText={
           isRegistering ? t('auth.creatingAccount') : t('auth.signUp')
         }

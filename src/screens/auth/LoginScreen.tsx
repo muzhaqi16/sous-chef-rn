@@ -249,6 +249,7 @@ export function LoginScreen(): React.JSX.Element {
         ]}
         control={form.control}
         errors={form.formState.errors}
+        focusChaining
         linkText={t('auth.forgotPassword')}
         linkTestID="login-forgot-password-link"
         onLinkPress={() => {

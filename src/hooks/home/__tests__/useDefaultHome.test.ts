@@ -1,6 +1,9 @@
 import { waitFor } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
@@ -270,6 +273,54 @@ describe('useDefaultHome', () => {
     });
 
     await waitFor(() => expect(result.current.state.homes).toHaveLength(2));
+  });
+
+  it('refetches once when a home is selected but the list came back empty', async () => {
+    // Onboarding creates the home AFTER the hook's single fetch has already
+    // run, so the cached connection is an empty list while a home is selected.
+    // Left alone, the home never resolves and every consumer reading it from
+    // that list shows its "no home" fallback for the rest of the session.
+    mockStoreState.selectedHomeId = 'home-1';
+
+    const { result } = renderHookWithApollo(() => useDefaultHome(), {
+      operationMocks: [
+        { ...buildGetHomesMock([]), maxUsageCount: 1 },
+        buildGetHomesMock([buildHomeNode({ id: 'home-1', isDefault: true })]),
+        buildSetDefaultHomeMock('home-1'),
+      ],
+    });
+
+    await waitFor(() => expect(result.current.state.homes).toHaveLength(1));
+    expect(result.current.state.homes[0].id).toBe('home-1');
+  });
+
+  it('does not keep refetching when the account genuinely has no homes', async () => {
+    mockStoreState.selectedHomeId = 'home-1';
+
+    const { fired, mock } = recordMock(GetHomesDocument, {
+      data: {
+        homes: {
+          __typename: 'HomeConnection',
+          totalCount: 0,
+          edges: [],
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useDefaultHome(), {
+      operationMocks: [mock],
+    });
+
+    // Initial fetch plus exactly one self-heal attempt — the empty result
+    // must not feed back into another refetch.
+    await waitFor(() => expect(fired).toHaveLength(2));
+    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    expect(fired).toHaveLength(2);
   });
 
   it('exposes loading state and error fields', async () => {

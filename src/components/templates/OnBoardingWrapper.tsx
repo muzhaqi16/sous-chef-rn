@@ -1,6 +1,7 @@
 import { BackButton } from '#components/atoms/BackButton';
 import React, { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, View, ScrollView } from 'react-native';
+import { View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -89,20 +90,16 @@ export const OnBoardingWrapper = ({
           />
         </View>
       )}
-      <KeyboardAvoidingView
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScrollView
+        contentContainerStyle={styles.scrollContainer}
+        bottomOffset={16}
+        keyboardShouldPersistTaps="handled"
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          {!!displaySubtitle && (
-            <Text style={styles.subtitle}>{displaySubtitle}</Text>
-          )}
-          <View style={styles.content}>{children}</View>
-        </ScrollView>
-      </KeyboardAvoidingView>
+        {!!displaySubtitle && (
+          <Text style={styles.subtitle}>{displaySubtitle}</Text>
+        )}
+        <View style={styles.content}>{children}</View>
+      </KeyboardAwareScrollView>
       {/* Enhanced Navigation or Legacy Bottom Navigation */}
       {showNavigation && !isLegacyMode && onboardingContext ? (
         <ThemedOnboardingNavigation
@@ -205,13 +202,10 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.xs,
     borderCurve: 'continuous',
   },
-  keyboardAvoid: {
-    flex: 1,
-    flexDirection: 'column',
-  },
   scrollContainer: {
+    // flexGrow without flex so short screens still fill the viewport while
+    // taller ones (or ones pushed up by the keyboard) can actually scroll.
     flexGrow: 1,
-    flex: 1,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
   },
@@ -229,7 +223,7 @@ const styles = StyleSheet.create(theme => ({
     textAlign: 'center',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'space-around',
   },
   pressed: {

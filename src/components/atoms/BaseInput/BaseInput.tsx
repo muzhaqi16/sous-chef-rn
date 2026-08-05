@@ -31,6 +31,11 @@ export interface BaseInputProps extends TextInputProps {
   rightIcon?: ReactNode;
   showClearIcon?: boolean;
   onClear?: () => void;
+  /**
+   * Handed to the underlying TextInput. Focus is only reachable imperatively
+   * in React Native, so moving from one field to the next needs this.
+   */
+  ref?: React.Ref<TextInput>;
 }
 
 export const BaseInput: React.FC<BaseInputProps> = ({
@@ -46,6 +51,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   onBlur,
   value,
   multiline,
+  ref,
   ...textInputProps
 }) => {
   const [isFocused, setIsFocused] = useState(false);
@@ -83,6 +89,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           <View style={styles.leftIconWrapper}>{leftIcon}</View>
         )}
         <ThemedTextInput
+          ref={ref}
           style={[
             styles.input,
             multiline && styles.inputMultiline,
