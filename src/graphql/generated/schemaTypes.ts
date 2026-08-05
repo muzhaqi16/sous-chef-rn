@@ -5827,8 +5827,8 @@ export type ItemPriceHistory = {
   item: Item;
   price: Scalars['Float']['output'];
   /**
-   * Where this price came from. Backed by the Prisma `PriceSource` enum —
-   * previously typed `String!`, which hid a closed set behind a scalar.
+   * Where this price came from. Backed by the Prisma `PriceSource` enum, so
+   * the closed set is visible in the schema rather than hidden behind a scalar.
    */
   source: PriceSource;
 };
@@ -7755,9 +7755,9 @@ export type Mutation = {
   /** Record an action taken on an expiring item. */
   markExpirationAction: MarkExpirationActionResult;
   /**
-   * Mark an expiration notification as read (the canonical read/dismiss op —
-   * the former markExpirationNotificationDismissed was merged into this in the
-   * 2026 cutover; read is the single acknowledged state).
+   * Mark an expiration notification as read. This is the canonical read/dismiss
+   * operation: read is the single acknowledged state, so there is no separate
+   * dismiss.
    */
   markExpirationNotificationAsRead: MarkExpirationNotificationAsReadResult;
   /** Mark a home as the default for the current user. */
@@ -8087,7 +8087,7 @@ export type Mutation = {
    * `website` at a phishing page for all users. This is a logged, accepted
    * posture, not an oversight; overwrite hardening (moderate/queue, moderator-only
    * overwrite of populated fields, or per-store rate limiting) is DEFERRED and
-   * tracked separately (PR #184 re-review R9 / action-plan C2).
+   * tracked separately.
    */
   updateStoreInfo: UpdateStoreInfoResult;
   /** Update a template item */
@@ -10955,9 +10955,8 @@ export type NotificationEdge = Edge & {
 };
 
 /**
- * Consolidated notification event envelope. Replaces notificationCreated +
- * notificationUpdated (and the former lightweight notificationRead /
- * notificationDismissed streams) — subscribe once and branch on subtype.
+ * Consolidated notification event envelope: subscribe once and branch on
+ * subtype rather than opening a stream per event kind.
  * READ / DISMISSED are derived from the notification's status on update, so
  * read-state and dismissal transitions arrive on this stream too. Bulk
  * operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
@@ -12540,9 +12539,8 @@ export type Query = {
    * Fetch a single home by its join code.
    *
    * Requires authentication: you must be signed in to join a home, so there is
-   * no anonymous use for this. It was previously reachable anonymously to let a
-   * not-yet-signed-up recipient preview a join link, but that returned a full
-   * Home — including its stat fields — to anyone holding a code.
+   * no anonymous use for this. Serving it anonymously would hand a full Home —
+   * including its stat fields — to anyone holding a code.
    *
    * The anonymous pre-join preview is `resolveShareLink`, which is purpose-built
    * for it and returns a curated payload (name, member count, alreadyMember)
@@ -13971,7 +13969,7 @@ export type RegisterResult = ConflictError | ForbiddenError | NotFoundError | Re
  * Outcome of a registration request. Registration is existence-blind: the same
  * status is returned whether or not the email is already registered, and no
  * tokens are issued — the account is activated via the emailed verification
- * link, then the user logs in (audit M11).
+ * link, then the user logs in.
  */
 export enum RegistrationStatus {
   /** A verification link was sent (or would have been, for an available email). */
