@@ -1,4 +1,22 @@
 {
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "Prometheus",
+      "description": "Metrics store the mobile app pushes to over OTLP (Mimir).",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    },
+    {
+      "name": "DS_LOKI",
+      "label": "Loki",
+      "description": "Log store the mobile app pushes to over OTLP.",
+      "type": "datasource",
+      "pluginId": "loki",
+      "pluginName": "Loki"
+    }
+  ],
   "__requires": [
     {
       "type": "grafana",
@@ -704,7 +722,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\"",
+          "expr": "{service_name=\"sous-chef-app\"} | json | level=\"error\" | env=~\"$environment\" | platform=~\"$platform\"",
           "refId": "A"
         }
       ],
@@ -774,22 +792,22 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"error\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"error\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "A",
           "legendFormat": "Errors"
         },
         {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"warn\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"warn\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "B",
           "legendFormat": "Warnings"
         },
         {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"info\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"info\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "C",
           "legendFormat": "Info"
         },
         {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"debug\" [5m]))",
+          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"debug\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "D",
           "legendFormat": "Debug"
         }
@@ -1953,34 +1971,6 @@
   ],
   "templating": {
     "list": [
-      {
-        "current": {},
-        "hide": 0,
-        "includeAll": false,
-        "label": "Prometheus",
-        "multi": false,
-        "name": "DS_PROMETHEUS",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "current": {},
-        "hide": 0,
-        "includeAll": false,
-        "label": "Loki",
-        "multi": false,
-        "name": "DS_LOKI",
-        "options": [],
-        "query": "loki",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
       {
         "current": {
           "selected": false,

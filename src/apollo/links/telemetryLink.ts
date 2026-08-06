@@ -45,6 +45,12 @@ export const createTelemetryLink = () => {
       operation.query.definitions[0]?.kind === 'OperationDefinition'
         ? operation.query.definitions[0]?.operation || 'unknown'
         : 'unknown';
+    // A subscription stays open for the life of the screen, so the elapsed
+    // time at its first server push is a session length, not a request
+    // latency. Keep those observations out of the latency metrics entirely —
+    // a single PantryEvents socket has reported 194s, which alone drags every
+    // percentile in graphql_request_duration_ms past the top bucket.
+    const isSubscription = operationType === 'subscription';
 
     // In production only 1-in-PRODUCTION_SAMPLE_RATE operations reach this
     // point (see sampling gate above), so each sampled operation stands in for
@@ -95,11 +101,13 @@ export const createTelemetryLink = () => {
       // so one observation per sampled op is correct. Its _count/_sum therefore
       // under-report by the sample rate in prod — read request VOLUME from the
       // weighted graphql_requests_total counter, not from this histogram.
-      Telemetry.histogram('graphql_request_duration_ms', duration, {
-        type: operationType,
-        name: operationName,
-        has_errors: String(hasErrors),
-      });
+      if (!isSubscription) {
+        Telemetry.histogram('graphql_request_duration_ms', duration, {
+          type: operationType,
+          name: operationName,
+          has_errors: String(hasErrors),
+        });
+      }
 
       return duration;
     };
@@ -160,7 +168,7 @@ export const createTelemetryLink = () => {
               });
             }
 
-            if (duration > 1000) {
+            if (!isSubscription && duration > 1000) {
               Telemetry.warn(`Slow GraphQL query: ${operationName}`, {
                 duration_ms: duration,
                 operation_type: operationType,

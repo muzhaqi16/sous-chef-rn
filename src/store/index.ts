@@ -194,8 +194,13 @@ export const handleStoreRehydration = (
 
   // Clean up orphaned notifications on app startup
   // This ensures persisted notifications are filtered correctly
-  // after app updates or context changes
-  state?.cleanupOrphanedSubscriptions();
+  // after app updates or context changes.
+  // Optional-called like the setters below: production has reported
+  // `cleanupOrphanedSubscriptions is not a function` here, and an exception
+  // thrown at this point aborts the rest of the callback — the persisted
+  // home/pantry fast path and the offline-mode hydration below would never
+  // run for that launch.
+  state?.cleanupOrphanedSubscriptions?.();
 
   // PERF: If persisted home+pantry IDs exist, mark ready immediately
   // so usePantryQuery fires on the FIRST render instead of waiting
