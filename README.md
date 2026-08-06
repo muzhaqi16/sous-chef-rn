@@ -231,6 +231,11 @@ src/
 
 ## Contributing
 
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for setup
+instructions, the development workflow, and the contribution license terms.
+
+Quick rules:
+
 1. Follow the patterns documented in `docs/apollo-client-patterns.md`
 2. Use `useAppStore` with selectors (not `useStore()`)
 3. Use `FlatList` for dynamic lists
