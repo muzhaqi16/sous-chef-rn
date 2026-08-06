@@ -239,4 +239,9 @@ src/
 
 ## License
 
-[Your License Here]
+This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md).
+
+You are free to use, modify, and share this software for any noncommercial
+purpose. Commercial use and redistribution are not permitted.
+
+Required Notice: Copyright (c) 2026 Artan Muzhaqi (https://github.com/muzhaqi16)
