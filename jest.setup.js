@@ -61,6 +61,18 @@ require('./src/i18n/config');
 jest.mock('#/utils/environment');
 
 // ---------------------------------------------------------------------------
+// Telemetry — apply the shared mock from `src/services/telemetry/__mocks__/`
+// globally. The real facade reads `Environment` (auto-mocked to development
+// above) and the OTLP endpoints in `env.generated.ts`, which is enough to
+// enable its HTTP transport. Jest has no `fetch` mock, so any test that
+// triggers an error-level log flushes immediately and ships fixture strings
+// ('boom', 'Display failed', …) to the real Loki/Mimir hosts. Suites testing
+// the telemetry internals import `TelemetryService` / `HttpTransport`
+// directly and are unaffected.
+// ---------------------------------------------------------------------------
+jest.mock('#/services/telemetry');
+
+// ---------------------------------------------------------------------------
 // @react-native-firebase/messaging (FCM) — native module, absent under jest.
 // Provide a minimal mock so anything importing the native push provider (App.tsx
 // → nativePushProvider) loads. Suites that assert on push can override.
