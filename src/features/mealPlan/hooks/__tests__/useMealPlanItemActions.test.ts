@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { InMemoryCache } from '@apollo/client';
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import {
@@ -16,6 +16,7 @@ import {
   type CreateMealPlanItemInput,
   type UpdateMealPlanItemInput,
 } from '#/graphql/generated/schemaTypes';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { useMealPlanItemActions } from '../useMealPlanItemActions';
 
 const seedToggleItem = (overrides: Record<string, unknown> = {}) =>
@@ -267,6 +268,42 @@ describe('useMealPlanItemActions', () => {
   });
 
   describe('deleteItem', () => {
+    it('claims the row against subscription echoes while the delete is in flight', async () => {
+      // The subscription handler's isPendingDelete guard is only reachable
+      // because this registers; without it a stale ITEM_ADDED for the same id
+      // re-adds the meal after the optimistic removal.
+      const del = recordMock(DeleteMealPlanItemDocument, {
+        data: {
+          deleteMealPlanItem: {
+            __typename: 'DeleteMealPlanItemPayload',
+            mealPlanItem: { __typename: 'MealPlanItem', id: 'mpi-1' },
+          },
+        },
+        delay: 20,
+      });
+
+      const { result } = renderHookWithApollo(
+        () => useMealPlanItemActions('plan-1'),
+        { operationMocks: [del.mock] },
+      );
+
+      let pending: Promise<unknown> | undefined;
+      act(() => {
+        pending = result.current.deleteItem('mpi-1');
+      });
+
+      await waitFor(() =>
+        expect(subscriptionService.isPendingDelete('mpi-1')).toBe(true),
+      );
+
+      await act(async () => {
+        await pending;
+      });
+
+      // Released once the server has answered — the row is gone for good.
+      expect(subscriptionService.isPendingDelete('mpi-1')).toBe(false);
+    });
+
     it('returns true on success', async () => {
       const del = recordMock(DeleteMealPlanItemDocument, {
         data: {

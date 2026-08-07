@@ -37,6 +37,7 @@ import {
   createRemoveFromParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   executeCacheUpdate,
   executeMutation,
@@ -382,6 +383,21 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       }
     }, 'Delete Meal (optimistic)');
 
+    // Claim the row for the duration of the mutation. A meal-plan event for
+    // this same id — another member's earlier ITEM_ADDED still in flight, or
+    // the server's own echo — would otherwise re-add it to `mealPlanItems`
+    // after the optimistic removal above, and the meal would reappear.
+    // `useMealPlanSubscriptions` checks this before applying anything.
+    if (mealPlanId) {
+      subscriptionService.registerPendingDelete(
+        id,
+        mealPlanId,
+        'MealPlanItem',
+        'MealPlan',
+        'mealPlanItems',
+      );
+    }
+
     const result = await executeMutation(
       () =>
         deleteItemMutation({
@@ -390,6 +406,10 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
         }),
       'Delete Meal Plan Item error:',
     );
+
+    // Released on every outcome — `executeMutation` reports rather than throws,
+    // so this runs whether the delete committed, was refused, or was queued.
+    subscriptionService.unregisterPendingDelete(id);
 
     const outcome = classifyCreateResult(result);
 
