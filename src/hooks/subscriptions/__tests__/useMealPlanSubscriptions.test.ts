@@ -153,9 +153,13 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
-    expect(mockAddToMealPlans).toHaveBeenCalledWith(client.cache, plan, {
-      position: 'start',
-    });
+    // The ref, not the read-back object: handing the denormalized read to the
+    // updater would inline `home`/`user`/`createdBy` over their entity refs.
+    expect(mockAddToMealPlans).toHaveBeenCalledWith(
+      client.cache,
+      { __typename: 'MealPlan', id: 'plan-new' },
+      { position: 'start' },
+    );
     // The payload carried the list-card shape — no network round trip needed.
     expect(client.refetchQueries).not.toHaveBeenCalled();
   });
@@ -222,9 +226,11 @@ describe('useMealPlanSubscriptions', () => {
     expect(mockAddToMealPlanItems).toHaveBeenCalledWith(
       client.cache,
       'plan-1',
-      expect.objectContaining({ id: 'item-1' }),
+      { __typename: 'MealPlanItem', id: 'item-1' },
       { position: 'end' },
     );
+    // Server-computed nutrition totals now describe a different item set.
+    expect(client.refetchQueries).toHaveBeenCalled();
   });
 
   it('skips an incomplete item rather than blanking the screen', () => {
