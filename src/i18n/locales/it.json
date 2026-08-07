@@ -2560,6 +2560,7 @@
     "rotateJoinCodeMessage": "Questo invalida il codice attuale e ogni link condiviso. I membri già presenti restano. Continuare?",
     "rotateJoinCodeConfirm": "Rigenera",
     "makeOwner": "Rendi proprietario",
+    "changeRole": "Cambia ruolo",
     "transferOwnershipTitle": "Trasferisci proprietà",
     "transferOwnershipMessage": "Rendere {{name}} proprietario di questa casa? Diventerai un membro normale e solo lui potrà ritrasferirla.",
     "transferOwnershipConfirm": "Trasferisci",

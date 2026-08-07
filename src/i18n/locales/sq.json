@@ -2560,6 +2560,7 @@
     "rotateJoinCodeMessage": "Kjo çvlerëson kodin aktual dhe çdo lidhje të ndarë. Anëtarët ekzistues mbeten. Vazhdo?",
     "rotateJoinCodeConfirm": "Rigjenero",
     "makeOwner": "Bëje pronar",
+    "changeRole": "Ndrysho rolin",
     "transferOwnershipTitle": "Transfero pronësinë",
     "transferOwnershipMessage": "Ta bësh {{name}} pronarin e kësaj shtëpie? Do të bëhesh anëtar i zakonshëm dhe vetëm ai mund ta rikthejë.",
     "transferOwnershipConfirm": "Transfero",

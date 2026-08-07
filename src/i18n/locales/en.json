@@ -2560,6 +2560,7 @@
     "rotateJoinCodeMessage": "This invalidates the current code and any shared link. Members already in the home stay. Continue?",
     "rotateJoinCodeConfirm": "Regenerate",
     "makeOwner": "Make Owner",
+    "changeRole": "Change Role",
     "transferOwnershipTitle": "Transfer Ownership",
     "transferOwnershipMessage": "Make {{name}} the owner of this home? You'll become a regular member and only they can transfer it back.",
     "transferOwnershipConfirm": "Transfer",
