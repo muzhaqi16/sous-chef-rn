@@ -63,16 +63,17 @@ export function getTopLevelGraphQLError(
 // travels on both channels — the top-level `extensions.code` on rejected reads,
 // and the mutation result-union member's code. The AUTHZ_FORBIDDEN literal that
 // used to sit alongside it is retired and emitted by nothing.
-// A deleted/unshared record is NOT here: by-id queries resolve to null data
-// (not a NOT_FOUND error), so callers detect that case via a null field, not
-// this helper.
+// A missing record is NOT here, and never arrives as an error on this channel:
+// a by-id QUERY reports a miss as null data, so callers detect that case via a
+// null field. RESOURCE_NOT_FOUND is the MUTATION spelling of the same
+// condition — a write naming a row that isn't there.
 const RESOURCE_ACCESS_LOST_CODES = new Set<string>([ErrorCode.Forbidden]);
 
 /** True when a query error means the requesting user has lost access to a
- *  resource (access revoked). A deleted/missing record surfaces as null data,
- *  not an error, so check the field for null rather than calling this. Network
- *  and other errors return false, so callers won't evict cached data merely
- *  because the device went offline. */
+ *  resource (access revoked) — the row exists and is no longer theirs, which
+ *  is what separates it from a miss (null data). Network and other errors
+ *  return false, so callers won't evict cached data merely because the device
+ *  went offline. */
 export function isResourceAccessLostError(error: unknown): boolean {
   const top = getTopLevelGraphQLError(error);
   return top !== null && RESOURCE_ACCESS_LOST_CODES.has(top.code);

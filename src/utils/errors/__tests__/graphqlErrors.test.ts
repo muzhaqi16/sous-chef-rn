@@ -104,7 +104,9 @@ describe('isResourceAccessLostError', () => {
     );
   });
 
-  it('is false for RESOURCE_NOT_FOUND — by-id misses are now null data, not an error', () => {
+  // A by-id query reports a miss as null data, so this code never reaches the
+  // helper from a read; it is the mutation spelling of the same condition.
+  it('is false for RESOURCE_NOT_FOUND', () => {
     expect(isResourceAccessLostError(errorWithCode('RESOURCE_NOT_FOUND'))).toBe(
       false,
     );

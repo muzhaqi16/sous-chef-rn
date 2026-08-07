@@ -40,6 +40,7 @@ import {
   createRemoveFromQueryConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
   executeCacheUpdate,
@@ -245,6 +246,10 @@ export function useMealPlanActions() {
     // Local-first: mint the permanent cuid (the row's real PK) and write the
     // plan into the cache before firing, so creation works fully offline.
     const id = generateEntityId();
+    // The cache write below publishes this id to every consumer, including the
+    // detail query on MealPlanMain. Hold that query off until the server has a
+    // row to answer with — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
     const optimisticPlan = user
       ? buildOptimisticMealPlan(client.cache, id, input, user.id)
       : null;
@@ -265,6 +270,11 @@ export function useMealPlanActions() {
         }),
       'Create Meal Plan error:',
     );
+
+    // Released on every outcome: acknowledged and rejected both leave nothing
+    // for a detail read to miss, and a queued create has already been handed
+    // off to `queueStore` by the time the mutation resolves.
+    unconfirmedCreates.confirm(id);
 
     const outcome = classifyCreateResult(result);
 
