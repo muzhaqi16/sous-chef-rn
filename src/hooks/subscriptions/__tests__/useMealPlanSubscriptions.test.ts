@@ -21,15 +21,16 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 }));
 
 const mockAddToMealPlans = jest.fn();
+const mockAddToMealTemplates = jest.fn();
 const mockRemoveFromMealPlans = jest.fn();
 const mockRemoveFromMealTemplates = jest.fn();
 const mockAddToMealPlanItems = jest.fn();
 const mockRemoveFromMealPlanItems = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToQueryConnectionUpdater:
-    () =>
-    (...args: unknown[]) =>
-      mockAddToMealPlans(...args),
+  createAddToQueryConnectionUpdater: (fieldName: string) =>
+    fieldName === 'mealPlans'
+      ? (...args: unknown[]) => mockAddToMealPlans(...args)
+      : (...args: unknown[]) => mockAddToMealTemplates(...args),
   createRemoveFromQueryConnectionUpdater: (fieldName: string) =>
     fieldName === 'mealPlans'
       ? (...args: unknown[]) => mockRemoveFromMealPlans(...args)
@@ -308,6 +309,52 @@ describe('useMealPlanSubscriptions', () => {
 
     expect(mockRemoveFromMealPlans).not.toHaveBeenCalled();
     expect(useStore.getState().selectedMealPlanId).toBe('plan-1');
+  });
+
+  it('adds a template created elsewhere from the pushed payload', () => {
+    // The template browser is a sheet whose query mounts once with the screen,
+    // so "it'll arrive on the next read" never happens while it stays mounted.
+    const template = { __typename: 'MealTemplate', id: 'tpl-new' };
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const client = makeClient(jest.fn().mockReturnValue(template));
+
+    getOnData()(
+      {
+        subtype: MealPlanSubtype.MealTemplateChanged,
+        mutation: MutationType.Created,
+        templateId: 'tpl-new',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealTemplate', id: 'tpl-new' },
+      },
+      client,
+    );
+
+    expect(mockAddToMealTemplates).toHaveBeenCalledWith(
+      client.cache,
+      template,
+      {
+        position: 'start',
+      },
+    );
+  });
+
+  it('skips an incomplete template rather than blanking the list', () => {
+    const getOnData = captureCustomOnData();
+    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+
+    getOnData()(
+      {
+        subtype: MealPlanSubtype.MealTemplateChanged,
+        mutation: MutationType.Created,
+        templateId: 'tpl-new',
+        actorUserId: 'user-2',
+        node: { __typename: 'MealTemplate', id: 'tpl-new' },
+      },
+      makeClient(jest.fn().mockReturnValue(null)),
+    );
+
+    expect(mockAddToMealTemplates).not.toHaveBeenCalled();
   });
 
   it('drops a template deleted elsewhere', () => {

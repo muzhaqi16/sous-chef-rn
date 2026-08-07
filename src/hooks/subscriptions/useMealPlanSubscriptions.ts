@@ -38,6 +38,8 @@ import {
 import {
   MealPlanDisplayFragmentDoc,
   type MealPlanDisplayFragment,
+  MealTemplateDisplayFragmentDoc,
+  type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
@@ -67,6 +69,12 @@ const removeFromMealPlans = createRemoveFromQueryConnectionUpdater(
   'mealPlans',
   'MealPlan',
 );
+
+const addToMealTemplates =
+  createAddToQueryConnectionUpdater<MealTemplateDisplayFragment>(
+    'mealTemplates',
+    'MealTemplate',
+  );
 
 const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
   'mealTemplates',
@@ -212,10 +220,34 @@ function handleTemplateChanged(
 
   if (isDelete(payload.mutation)) {
     removeFromMealTemplates(client.cache, templateId, { evictItem: true });
+    return;
   }
-  // Create and update both arrive with the full MealTemplateDisplay shape, so
-  // Apollo's normalization covers the entity. A new template reaches the list
-  // on its next cache-and-network read.
+
+  // Same shape as the plan path: normalization covers an update, a create still
+  // has to join the list connection. Leaving that to the next cache-and-network
+  // read isn't enough — the template browser is a sheet whose query mounts once
+  // with the screen, so reopening it doesn't refetch, and the list would stay
+  // live for deletes while going stale for additions.
+  if (!isAdd(payload.mutation)) return;
+
+  const template = client.cache.readFragment<MealTemplateDisplayFragment>({
+    fragment: MealTemplateDisplayFragmentDoc,
+    fragmentName: 'MealTemplateDisplay',
+    from: { __typename: 'MealTemplate', id: templateId },
+  });
+  if (!template) {
+    // Incomplete read — adding a partial template would blank the list, so let
+    // a later read heal it instead. No refetch: unlike the plan overview,
+    // there is no always-mounted template query for one to reach.
+    if (__DEV__) {
+      logger.warn(
+        `[Subscription] MealPlanEvents payload incomplete for MealTemplateDisplay (${templateId})`,
+      );
+    }
+    return;
+  }
+
+  addToMealTemplates(client.cache, template, { position: 'start' });
 }
 
 function handleTemplateItemChanged(
