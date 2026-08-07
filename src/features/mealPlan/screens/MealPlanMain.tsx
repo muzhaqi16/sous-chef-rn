@@ -31,7 +31,7 @@ import { useTabBarAddButton } from '#hooks/navigation/useTabBarAddButton';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
-import { useMealPlan } from '#features/mealPlan/hooks/useMealPlan';
+import { useActiveMealPlan } from '#features/mealPlan/hooks/useActiveMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
 import { useMealPlanCalendar } from '#features/mealPlan/hooks/useMealPlanCalendar';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
@@ -108,7 +108,6 @@ const MealPlanMainInner: React.FC = () => {
   const { setOverlayOpen } = useTabBarSetters();
 
   // Plan selector state
-  const selectedMealPlanId = useAppStore(s => s.selectedMealPlanId);
   const setSelectedMealPlanId = useAppStore(s => s.setSelectedMealPlanId);
   const selectorRef = useRef<ItemSelectorRef>(null);
 
@@ -160,22 +159,25 @@ const MealPlanMainInner: React.FC = () => {
       initialLoading: plansInitialLoading,
     },
   } = useMealPlans();
-  const activePlanId =
-    selectedMealPlanId ?? currentPlan?.id ?? mealPlans[0]?.id ?? null;
 
   // The action cluster carries the offline pill (visible only while offline)
   // plus the per-plan actions; render it only when one of those would show,
   // so an online, plan-less header doesn't emit an empty action row.
   const isOfflineVisible = useIsOfflineBannerVisible();
 
-  // Fetch the active plan with items
+  // Resolve the active plan and fetch it. Owns the fallback when the selected
+  // plan turns out to be gone or no longer shared with this user.
   const {
+    activePlanId,
     mealPlan: activeMealPlan,
     mealPlanRef: activeMealPlanRef,
     items,
     nutritionSummary,
     refetch,
-  } = useMealPlan(activePlanId);
+  } = useActiveMealPlan({
+    currentPlanId: currentPlan?.id ?? null,
+    planIds: mealPlans.map(plan => plan.id),
+  });
 
   // Lifecycle: optimistic restoration, cache persistence, perf tracking
   useTabScreenLifecycle({

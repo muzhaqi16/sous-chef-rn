@@ -70,6 +70,10 @@ function handleRemovedFromHome(
     }
     store.setSelectedPantryId(null);
     store.setSelectedShoppingListId(null);
+    // The meal plan pick is persisted like the other two. Left set, it keeps
+    // naming a plan in the home we just lost, and every detail read for it
+    // comes back FORBIDDEN.
+    store.setSelectedMealPlanId(null);
   }
 
   toastService.error(t('accountEvents.removedFromHome'));

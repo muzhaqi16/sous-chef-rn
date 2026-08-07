@@ -25,16 +25,21 @@ import { Icon } from '#utils/iconUtils';
 // Pressable directly from 'react-native-gesture-handler' at the call site.
 export const Pressable = RNPressable;
 
+// `inputPlaceholder` is the palette's designated placeholder tone (neutral 500,
+// ~3.6:1). `textSecondary` is a body-text tone (neutral 700, ~7.5:1) — using it
+// here rendered placeholders as dark as real input, so an empty field read as
+// filled. `BaseInput` already used `inputPlaceholder`; these now agree with it.
+
 /** Plain RN TextInput with a theme-reactive placeholder color. */
 export const ThemedTextInput = withUnistyles(TextInput, theme => ({
-  placeholderTextColor: theme.colors.textSecondary,
+  placeholderTextColor: theme.colors.inputPlaceholder,
 }));
 
 /** TextInput inside a BottomSheet that needs a theme-reactive placeholder. */
 export const ThemedBottomSheetTextInput = withUnistyles(
   BottomSheetTextInput,
   theme => ({
-    placeholderTextColor: theme.colors.textSecondary,
+    placeholderTextColor: theme.colors.inputPlaceholder,
   }),
 );
 

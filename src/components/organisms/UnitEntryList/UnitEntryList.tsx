@@ -63,11 +63,30 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
     onEntriesChanged(updated);
   };
 
+  /** Sets the typed name and drops any selected id in ONE write. Splitting the
+   *  two across the text and selection callbacks would build two arrays from
+   *  the same pre-write `entries` in one tick, and the second would clobber
+   *  the typed name. */
+  const handleUnitTextChange = (
+    index: number,
+    field: 'unitName' | 'contentUnitName',
+    text: string,
+  ) => {
+    const idField = field === 'unitName' ? 'unitId' : 'contentUnitId';
+    const updated = entries.map((entry, i) =>
+      i === index ? { ...entry, [field]: text, [idField]: undefined } : entry,
+    );
+    onEntriesChanged(updated);
+  };
+
   const handleUnitSelected = (
     index: number,
     unitId: string | null,
     unitName: string | null,
   ) => {
+    // A null pair means "typing invalidated the previous selection", already
+    // applied by `handleUnitTextChange` — see the note there.
+    if (unitId == null && unitName == null) return;
     const updated = entries.map((entry, i) =>
       i === index
         ? {
@@ -85,6 +104,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
     unitId: string | null,
     unitName: string | null,
   ) => {
+    if (unitId == null && unitName == null) return;
     const updated = entries.map((entry, i) =>
       i === index
         ? {
@@ -124,7 +144,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     label={index === 0 ? 'Unit (Default)' : 'Unit'}
                     value={entry.unitName || ''}
                     onChangeText={(text: string) =>
-                      handleEntryChange(index, 'unitName', text)
+                      handleUnitTextChange(index, 'unitName', text)
                     }
                     placeholder="e.g., kg, lbs"
                     onUnitSelected={(unitId, unitName) =>
@@ -147,7 +167,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     label="Contains"
                     value={entry.contentUnitName || ''}
                     onChangeText={(text: string) =>
-                      handleEntryChange(index, 'contentUnitName', text)
+                      handleUnitTextChange(index, 'contentUnitName', text)
                     }
                     placeholder="e.g., can, bottle"
                     onUnitSelected={(unitId, unitName) =>

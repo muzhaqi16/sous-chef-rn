@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
@@ -9,6 +9,7 @@ import {
   DeleteMealPlanDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useMealPlanActions } from '../useMealPlanActions';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -68,6 +69,44 @@ describe('useMealPlanActions', () => {
         id: expect.stringMatching(/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/),
       },
     });
+  });
+
+  it('createMealPlan holds the minted id unconfirmed until the server answers', async () => {
+    const create = recordMock(CreateMealPlanDocument, {
+      data: {
+        createMealPlan: {
+          __typename: 'CreateMealPlanPayload',
+          mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Camping' },
+        },
+      },
+      delay: 20,
+    });
+
+    const { result } = renderHookWithApollo(() => useMealPlanActions(), {
+      operationMocks: [create.mock],
+    });
+
+    let pending: Promise<unknown> | undefined;
+    act(() => {
+      pending = result.current.createMealPlan({
+        name: 'Camping',
+        startDate: '2025-06-01',
+        endDate: '2025-06-07',
+      } as CreateMealPlanInput);
+    });
+
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+    const { id } = create.fired[0]?.input as { id: string };
+
+    // In flight: the plan is in the cache and drives the active-plan selection,
+    // but no server row exists for it yet.
+    expect(unconfirmedCreates.has(id)).toBe(true);
+
+    await act(async () => {
+      await pending;
+    });
+
+    expect(unconfirmedCreates.has(id)).toBe(false);
   });
 
   it('createMealPlan returns null when mutation returns no data', async () => {

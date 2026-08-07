@@ -62,6 +62,10 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
     unitId: string | null,
     unitName: string | null,
   ) => {
+    // A null pair means "typing invalidated the previous selection", which
+    // `handleUnitTextChange` already applied. Writing it here too would build a
+    // second array from the same pre-write `entries` and clobber the typed name.
+    if (unitId == null && unitName == null) return;
     const updated = entries.map((entry, i) =>
       i === index
         ? {
@@ -75,8 +79,9 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   };
 
   const handleUnitTextChange = (index: number, text: string) => {
+    // Sets the name and drops any previously selected unit id in ONE write.
     const updated = entries.map((entry, i) =>
-      i === index ? { ...entry, unitName: text } : entry,
+      i === index ? { ...entry, unitName: text, unitId: undefined } : entry,
     );
     onEntriesChanged(updated);
   };
