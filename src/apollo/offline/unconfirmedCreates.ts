@@ -32,8 +32,8 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
 const inFlight = new Set<string>();
 const listeners = new Set<() => void>();
 
-/** Live only while something is subscribed — see `subscribe`. */
-let unsubscribeFromQueue: (() => void) | null = null;
+/** Attached on first use and kept — notifying zero listeners is a no-op. */
+let watchingQueue = false;
 
 const notify = (): void => {
   listeners.forEach(listener => listener());
@@ -65,23 +65,18 @@ export const unconfirmedCreates = {
 
   /**
    * Subscribe to changes in either window. `useSyncExternalStore`-compatible.
-   *
-   * The queue subscription is attached with the first listener and dropped
-   * with the last, so an app with no detail screen mounted holds no listener
-   * on the queue at all.
+   * A queue replay draining the last pending create is what unskips a detail
+   * query for an offline-created row, so queue changes are relayed too.
    */
   subscribe(listener: () => void): () => void {
     listeners.add(listener);
-    if (listeners.size === 1) {
-      unsubscribeFromQueue = queueStore.subscribe(notify);
+    if (!watchingQueue) {
+      watchingQueue = true;
+      queueStore.subscribe(notify);
     }
 
     return () => {
       listeners.delete(listener);
-      if (listeners.size === 0) {
-        unsubscribeFromQueue?.();
-        unsubscribeFromQueue = null;
-      }
     };
   },
 };
