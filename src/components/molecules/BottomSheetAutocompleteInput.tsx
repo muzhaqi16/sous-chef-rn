@@ -261,6 +261,10 @@ export function BottomSheetAutocompleteInput<T>({
       <BottomSheetModal
         ref={bottomSheetRef}
         {...modalProps}
+        // 'push' stacks this picker on top of a host sheet (e.g. the Add-item
+        // sheet). The default 'switch' would minimize the host — it slides to
+        // the closed position and the whole flow appears to dismiss.
+        stackBehavior="push"
         keyboardBlurBehavior="none"
         enableContentPanningGesture={false}
       >

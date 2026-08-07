@@ -581,7 +581,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 24,
+        "w": 12,
         "x": 0,
         "y": 14
       },
@@ -603,6 +603,61 @@
         }
       ],
       "title": "Error Log Volume",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "${DS_LOKI}"
+      },
+      "description": "Error logs grouped by error class (OTel exception.type structured metadata). Empty for logs from app builds without exception semconv.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "showPoints": "never",
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            }
+          }
+        }
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 42,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum by (exception_type) (count_over_time({service_name=\"sous-chef-app\"} | json | level=\"error\" | env=~\"$environment\" | platform=~\"$platform\" | exception_type != \"\" [5m]))",
+          "refId": "A",
+          "legendFormat": "{{exception_type}}"
+        }
+      ],
+      "title": "Errors by Type",
       "type": "timeseries"
     },
     {

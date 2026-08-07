@@ -1,6 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -101,63 +102,71 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         Units
       </Text>
-      {entries.map((entry, index) => (
-        <View key={entry.id}>
-          <View style={styles.entryRow}>
-            <View style={styles.packageSizeField}>
-              <FormInput
-                label="Size"
-                value={entry.packageSize || ''}
-                onChangeText={(text: string) =>
-                  handleEntryChange(index, 'packageSize', text)
-                }
-                placeholder="e.g., 12"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={styles.unitField}>
-              <UnitAutocompleteField
-                variant="modal"
-                label={index === 0 ? 'Unit (Default)' : 'Unit'}
-                value={entry.unitName || ''}
-                onChangeText={(text: string) =>
-                  handleEntryChange(index, 'unitName', text)
-                }
-                placeholder="e.g., kg, lbs"
-                onUnitSelected={(unitId, unitName) =>
-                  handleUnitSelected(index, unitId, unitName)
-                }
-              />
-            </View>
-            <AppPressable
-              onPress={() => handleRemoveEntry(index)}
-              disabled={disabled}
-              style={styles.deleteButton}
-            >
-              <Icon name="trash-outline" size={20} tone="error" />
-            </AppPressable>
+      <DropdownStack>
+        {entries.map((entry, index) => (
+          <View key={entry.id}>
+            <DropdownStack>
+              <View style={styles.entryRow}>
+                <View style={styles.packageSizeField}>
+                  <FormInput
+                    label="Size"
+                    value={entry.packageSize || ''}
+                    onChangeText={(text: string) =>
+                      handleEntryChange(index, 'packageSize', text)
+                    }
+                    placeholder="e.g., 12"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+                <View style={styles.unitField}>
+                  <UnitAutocompleteField
+                    variant="inline"
+                    label={index === 0 ? 'Unit (Default)' : 'Unit'}
+                    value={entry.unitName || ''}
+                    onChangeText={(text: string) =>
+                      handleEntryChange(index, 'unitName', text)
+                    }
+                    placeholder="e.g., kg, lbs"
+                    onUnitSelected={(unitId, unitName) =>
+                      handleUnitSelected(index, unitId, unitName)
+                    }
+                  />
+                </View>
+                <AppPressable
+                  onPress={() => handleRemoveEntry(index)}
+                  disabled={disabled}
+                  style={styles.deleteButton}
+                >
+                  <Icon name="trash-outline" size={20} tone="error" />
+                </AppPressable>
+              </View>
+              {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
+                <View style={styles.contentUnitRow}>
+                  <UnitAutocompleteField
+                    variant="inline"
+                    label="Contains"
+                    value={entry.contentUnitName || ''}
+                    onChangeText={(text: string) =>
+                      handleEntryChange(index, 'contentUnitName', text)
+                    }
+                    placeholder="e.g., can, bottle"
+                    onUnitSelected={(unitId, unitName) =>
+                      handleContentUnitSelected(index, unitId, unitName)
+                    }
+                  />
+                </View>
+              )}
+            </DropdownStack>
           </View>
-          {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
-            <View style={styles.contentUnitRow}>
-              <UnitAutocompleteField
-                variant="modal"
-                label="Contains"
-                value={entry.contentUnitName || ''}
-                onChangeText={(text: string) =>
-                  handleEntryChange(index, 'contentUnitName', text)
-                }
-                placeholder="e.g., can, bottle"
-                onUnitSelected={(unitId, unitName) =>
-                  handleContentUnitSelected(index, unitId, unitName)
-                }
-              />
-            </View>
-          )}
-        </View>
-      ))}
-      <Button variant="secondary" onPress={handleAddEntry} disabled={disabled}>
-        Add Unit
-      </Button>
+        ))}
+        <Button
+          variant="secondary"
+          onPress={handleAddEntry}
+          disabled={disabled}
+        >
+          Add Unit
+        </Button>
+      </DropdownStack>
     </View>
   );
 };

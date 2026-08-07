@@ -99,6 +99,40 @@ export class HttpTransport implements TelemetryTransport {
                   const recordNano = Number.isFinite(parsedMs)
                     ? `${parsedMs}000000`
                     : nowNano;
+                  const attributes = [
+                    {
+                      key: 'level',
+                      value: { stringValue: log.level },
+                    },
+                    {
+                      key: 'environment',
+                      value: { stringValue: this.config.environment },
+                    },
+                    {
+                      key: 'platform',
+                      value: { stringValue: this.config.platform },
+                    },
+                  ];
+                  // OTel exception semantic conventions — record attributes
+                  // so Grafana reads error logs as exceptions natively.
+                  if (log.exception) {
+                    attributes.push(
+                      {
+                        key: 'exception.type',
+                        value: { stringValue: log.exception.type },
+                      },
+                      {
+                        key: 'exception.message',
+                        value: { stringValue: log.exception.message },
+                      },
+                    );
+                    if (log.exception.stacktrace) {
+                      attributes.push({
+                        key: 'exception.stacktrace',
+                        value: { stringValue: log.exception.stacktrace },
+                      });
+                    }
+                  }
                   return {
                     timeUnixNano: recordNano,
                     body: {
@@ -112,20 +146,7 @@ export class HttpTransport implements TelemetryTransport {
                     },
                     severityText: log.level.toUpperCase(),
                     severityNumber: LOG_SEVERITY_NUMBER[log.level],
-                    attributes: [
-                      {
-                        key: 'level',
-                        value: { stringValue: log.level },
-                      },
-                      {
-                        key: 'environment',
-                        value: { stringValue: this.config.environment },
-                      },
-                      {
-                        key: 'platform',
-                        value: { stringValue: this.config.platform },
-                      },
-                    ],
+                    attributes,
                   };
                 }),
               },

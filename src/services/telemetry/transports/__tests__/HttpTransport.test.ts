@@ -159,6 +159,42 @@ describe('HttpTransport', () => {
       // timeUnixNano derived from the record's own timestamp (2024-01-01T00:00:00Z),
       // not the flush time, so Loki preserves per-event ordering.
       expect(logRecords[0].timeUnixNano).toBe('1704067200000000000');
+
+      // No exception on the entry → no exception.* attributes on the record.
+      const attributeKeys = logRecords[0].attributes.map(
+        (a: OtlpAttribute) => a.key,
+      );
+      expect(attributeKeys).not.toContain('exception.type');
+    });
+
+    it('emits OTel exception.* attributes for entries carrying an exception', async () => {
+      const transport = new HttpTransport(makeConfig());
+
+      await transport.sendLogs([
+        {
+          level: 'error',
+          message: 'Unhandled Promise Rejection: boom',
+          timestamp: '2024-01-01T00:00:00Z',
+          exception: {
+            type: 'TypeError',
+            message: 'boom',
+            stacktrace: 'TypeError: boom\n  at foo.js:1',
+          },
+        },
+      ]);
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      const record = body.resourceLogs[0].scopeLogs[0].logRecords[0];
+      expect(record.attributes).toEqual(
+        expect.arrayContaining([
+          { key: 'exception.type', value: { stringValue: 'TypeError' } },
+          { key: 'exception.message', value: { stringValue: 'boom' } },
+          {
+            key: 'exception.stacktrace',
+            value: { stringValue: 'TypeError: boom\n  at foo.js:1' },
+          },
+        ]),
+      );
     });
 
     it('throws on a non-ok response so the service re-buffers instead of losing logs', async () => {

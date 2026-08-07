@@ -5,6 +5,7 @@ import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -220,91 +221,93 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             />
 
             {/* Quantity and Unit Input */}
-            <View style={styles.section}>
-              <View style={styles.quantityUnitRow}>
-                <View style={styles.quantityField}>
-                  <FractionInput
-                    label={t('moveToPantry.quantity')}
-                    value={quantityInput}
-                    onChangeText={setQuantityInput}
-                    placeholder={t('moveToPantry.quantityPlaceholder')}
-                    keyboardType="numeric"
-                    required
-                  />
-                </View>
-                <View style={styles.unitField}>
-                  <UnitAutocompleteField
-                    variant="inline"
-                    label={t('moveToPantry.unit')}
-                    value={unitValue}
-                    onChangeText={setUnitValue}
-                    placeholder={t('moveToPantry.unitPlaceholder')}
-                    required
-                    onUnitSelected={id => {
-                      setUnitId(id);
-                    }}
-                  />
+            <DropdownStack>
+              <View style={styles.section}>
+                <View style={styles.quantityUnitRow}>
+                  <View style={styles.quantityField}>
+                    <FractionInput
+                      label={t('moveToPantry.quantity')}
+                      value={quantityInput}
+                      onChangeText={setQuantityInput}
+                      placeholder={t('moveToPantry.quantityPlaceholder')}
+                      keyboardType="numeric"
+                      required
+                    />
+                  </View>
+                  <View style={styles.unitField}>
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label={t('moveToPantry.unit')}
+                      value={unitValue}
+                      onChangeText={setUnitValue}
+                      placeholder={t('moveToPantry.unitPlaceholder')}
+                      required
+                      onUnitSelected={id => {
+                        setUnitId(id);
+                      }}
+                    />
+                  </View>
                 </View>
               </View>
-            </View>
 
-            {/* Storage State */}
-            <StorageStateControl
-              value={storageState}
-              onChange={setStorageState}
-            />
-
-            {/* Expiration Date */}
-            <ExpirationDateField
-              expirationDate={expirationDate}
-              showPicker={showDatePicker}
-              onOpenPicker={() => setShowDatePicker(true)}
-              onChange={handleDateChange}
-              onClear={clearExpirationDate}
-            />
-
-            {/* Purchase Price (Optional) */}
-            <View style={styles.section}>
-              <FormInput
-                label={t('moveToPantry.purchasePrice')}
-                value={actualPriceInput}
-                onChangeText={setActualPriceInput}
-                placeholder="0.00"
-                keyboardType="decimal-pad"
+              {/* Storage State */}
+              <StorageStateControl
+                value={storageState}
+                onChange={setStorageState}
               />
-            </View>
 
-            {/* Notes (Optional) */}
-            <View style={styles.section}>
-              <FormInput
-                label={t('moveToPantry.notesOptional')}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder={t('moveToPantry.notesPlaceholder')}
-                multiline
-                numberOfLines={2}
+              {/* Expiration Date */}
+              <ExpirationDateField
+                expirationDate={expirationDate}
+                showPicker={showDatePicker}
+                onOpenPicker={() => setShowDatePicker(true)}
+                onChange={handleDateChange}
+                onClear={clearExpirationDate}
               />
-            </View>
 
-            {/* Remove from List Toggle */}
-            <View style={styles.toggleSection}>
-              <View style={styles.toggleInfo}>
-                <Text size="base" weight="medium">
-                  {t('moveToPantry.removeFromShopping')}
-                </Text>
-                <Text
-                  size="sm"
-                  tone="secondary"
-                  style={styles.toggleDescription}
-                >
-                  {t('moveToPantry.removeFromShoppingDesc')}
-                </Text>
+              {/* Purchase Price (Optional) */}
+              <View style={styles.section}>
+                <FormInput
+                  label={t('moveToPantry.purchasePrice')}
+                  value={actualPriceInput}
+                  onChangeText={setActualPriceInput}
+                  placeholder="0.00"
+                  keyboardType="decimal-pad"
+                />
               </View>
-              <BaseSwitch
-                value={removeFromList}
-                onValueChange={setRemoveFromList}
-              />
-            </View>
+
+              {/* Notes (Optional) */}
+              <View style={styles.section}>
+                <FormInput
+                  label={t('moveToPantry.notesOptional')}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder={t('moveToPantry.notesPlaceholder')}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
+
+              {/* Remove from List Toggle */}
+              <View style={styles.toggleSection}>
+                <View style={styles.toggleInfo}>
+                  <Text size="base" weight="medium">
+                    {t('moveToPantry.removeFromShopping')}
+                  </Text>
+                  <Text
+                    size="sm"
+                    tone="secondary"
+                    style={styles.toggleDescription}
+                  >
+                    {t('moveToPantry.removeFromShoppingDesc')}
+                  </Text>
+                </View>
+                <BaseSwitch
+                  value={removeFromList}
+                  onValueChange={setRemoveFromList}
+                />
+              </View>
+            </DropdownStack>
           </>
         )}
       </BottomSheetFormScrollView>
@@ -343,7 +346,6 @@ const styles = StyleSheet.create(theme => ({
   },
   unitField: {
     flex: 0.6,
-    zIndex: 10,
   },
   toggleSection: {
     flexDirection: 'row',

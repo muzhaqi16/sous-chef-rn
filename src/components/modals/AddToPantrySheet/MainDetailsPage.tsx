@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/molecules/FormInput';
 import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
@@ -84,47 +85,49 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
         testID="add-pantry-item-name-input"
       />
 
-      {/* Brand */}
-      <View style={[styles.section, { zIndex: 10 }]}>
-        <BrandAutocompleteField
-          variant="inline"
-          label={t('addToPantry.brand')}
-          value={brand}
-          onChangeText={setBrand}
-          placeholder={t('addToPantry.brandPlaceholder')}
-          suggestedBrands={suggestedBrands}
-          onBrandSelected={handleBrandSelected}
+      <DropdownStack>
+        {/* Brand */}
+        <View style={styles.section}>
+          <BrandAutocompleteField
+            variant="inline"
+            label={t('addToPantry.brand')}
+            value={brand}
+            onChangeText={setBrand}
+            placeholder={t('addToPantry.brandPlaceholder')}
+            suggestedBrands={suggestedBrands}
+            onBrandSelected={handleBrandSelected}
+          />
+        </View>
+
+        {/* Category */}
+        <View style={styles.section}>
+          <CategoryAutocompleteField
+            variant="inline"
+            label={t('addToPantry.category')}
+            value={category}
+            onChangeText={setCategory}
+            placeholder={t('addToPantry.categoryPlaceholder')}
+          />
+        </View>
+
+        {/* Expiration Date */}
+        <DatePickerField
+          label={t('addToPantry.expirationDate')}
+          value={expirationDate}
+          onChange={setExpirationDate}
+          placeholder={t('addToPantry.expirationPlaceholder')}
+          minimumDate={new Date()}
         />
-      </View>
 
-      {/* Category */}
-      <View style={[styles.section, { zIndex: 9 }]}>
-        <CategoryAutocompleteField
-          variant="inline"
-          label={t('addToPantry.category')}
-          value={category}
-          onChangeText={setCategory}
-          placeholder={t('addToPantry.categoryPlaceholder')}
+        {/* Storage State */}
+        <SegmentedControl
+          label={t('addToPantry.storage')}
+          options={STORAGE_STATES}
+          value={storageState}
+          onChange={setStorageState}
+          formatLabel={formatStorageStateLabel}
         />
-      </View>
-
-      {/* Expiration Date */}
-      <DatePickerField
-        label={t('addToPantry.expirationDate')}
-        value={expirationDate}
-        onChange={setExpirationDate}
-        placeholder={t('addToPantry.expirationPlaceholder')}
-        minimumDate={new Date()}
-      />
-
-      {/* Storage State */}
-      <SegmentedControl
-        label={t('addToPantry.storage')}
-        options={STORAGE_STATES}
-        value={storageState}
-        onChange={setStorageState}
-        formatLabel={formatStorageStateLabel}
-      />
+      </DropdownStack>
     </BottomSheetKeyboardAwareScrollView>
   );
 };

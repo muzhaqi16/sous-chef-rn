@@ -47,6 +47,23 @@ interface SerializedOperation {
 }
 
 /**
+ * Describe an error object that carries no usable `message`, using the
+ * clues that remain — its name (or constructor) and its own property
+ * names — so it stays attributable in logs instead of collapsing to a
+ * bare "Unknown error". Uses `getOwnPropertyNames` because Error fields
+ * (`message`, `stack`, custom codes) are often non-enumerable.
+ */
+function describeMessagelessError(error: Record<string, unknown>): string {
+  const ctor = (error as { constructor?: { name?: unknown } }).constructor;
+  const ctorName =
+    typeof ctor?.name === 'string' && ctor.name !== 'Object' ? ctor.name : '';
+  const name = (typeof error.name === 'string' && error.name) || ctorName;
+  const props = Object.getOwnPropertyNames(error).slice(0, 10).join(', ');
+  const hints = [name, props && `props: ${props}`].filter(Boolean).join('; ');
+  return hints ? `Unknown error (${hints})` : 'Unknown error';
+}
+
+/**
  * JSON-friendly, fully-narrowed error shape returned by {@link serializeError}.
  *
  * The well-known Apollo/JS error fields are typed so readers index them
@@ -68,7 +85,13 @@ export interface SerializedError {
 }
 
 export function serializeError(error: unknown, maxDepth = 4): SerializedError {
-  if (!error) return { message: 'Unknown error' };
+  // Name the falsy value so "rejected with null" and "rejected with
+  // undefined/''/0" are distinguishable in logs.
+  if (!error) {
+    const description =
+      error === null ? 'null' : error === '' ? 'empty string' : String(error);
+    return { message: `Unknown error (${description})` };
+  }
   if (typeof error === 'string') return { message: error };
   if (!isRecord(error)) return { message: String(error) };
 
@@ -120,7 +143,7 @@ export function serializeError(error: unknown, maxDepth = 4): SerializedError {
     message:
       typeof error.message === 'string' && error.message
         ? error.message
-        : 'Unknown error',
+        : describeMessagelessError(error),
   };
 
   // Add error code if present (common in GraphQL errors)

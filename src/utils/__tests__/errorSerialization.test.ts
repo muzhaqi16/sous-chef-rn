@@ -7,10 +7,20 @@ import {
 
 describe('errorSerialization', () => {
   describe('serializeError', () => {
-    it('handles falsy input', () => {
-      expect(serializeError(null)).toEqual({ message: 'Unknown error' });
-      expect(serializeError(undefined)).toEqual({ message: 'Unknown error' });
-      expect(serializeError(0)).toEqual({ message: 'Unknown error' });
+    it('names the falsy value it was given', () => {
+      expect(serializeError(null)).toEqual({
+        message: 'Unknown error (null)',
+      });
+      expect(serializeError(undefined)).toEqual({
+        message: 'Unknown error (undefined)',
+      });
+      expect(serializeError(0)).toEqual({ message: 'Unknown error (0)' });
+      expect(serializeError('')).toEqual({
+        message: 'Unknown error (empty string)',
+      });
+      expect(serializeError(false)).toEqual({
+        message: 'Unknown error (false)',
+      });
     });
 
     it('handles string input', () => {
@@ -120,6 +130,22 @@ describe('errorSerialization', () => {
       const result = serializeError(error);
       const extraInfo = result.extraInfo as { items: number[] };
       expect(extraInfo.items).toEqual([1, 2, 3]);
+    });
+
+    describe('message-less errors', () => {
+      it('names an Error subclass with an empty message', () => {
+        class CameraRuntimeError extends Error {}
+        const error = new CameraRuntimeError('');
+        error.name = 'CameraRuntimeError';
+        const result = serializeError(error);
+        expect(result.message).toMatch(/^Unknown error \(CameraRuntimeError/);
+      });
+
+      it('lists own properties of a message-less plain object', () => {
+        const result = serializeError({ code: 'E_TIMEOUT', domain: 'camera' });
+        expect(result.message).toBe('Unknown error (props: code, domain)');
+        expect(result.code).toBe('E_TIMEOUT');
+      });
     });
   });
 

@@ -25,6 +25,7 @@ import {
   UnitEntryList,
   type UnitEntry,
 } from '#/components/organisms/UnitEntryList/UnitEntryList';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import {
   NetWeightEntryList,
   type NetWeightEntry,
@@ -379,7 +380,9 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         onPagePress={setCurrentPage}
       />
 
-      <View style={styles.form}>
+      {/* Explicit zIndex + collapsable so inline dropdowns near the bottom of
+          the form paint above the sibling submit-button container. */}
+      <View style={[styles.form, { zIndex: 1 }]} collapsable={false}>
         {activeTab.primary.length > 0 && (
           <DynamicFormFields
             fields={activeTab.primary}
@@ -407,7 +410,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         )}
 
         {activePage === 'Inventory' && (
-          <>
+          <DropdownStack>
             <View style={styles.section}>
               <NetWeightEntryList
                 entries={netWeightEntries}
@@ -428,7 +431,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 />
               </View>
             )}
-          </>
+          </DropdownStack>
         )}
 
         {activeTab.advanced.length > 0 && (

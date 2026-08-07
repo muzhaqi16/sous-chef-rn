@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/molecules/FormInput';
 import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
@@ -96,34 +97,36 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         {t('addToPantry.purchaseInfo')}
       </Text>
 
-      <View style={[styles.section, { zIndex: 10 }]}>
-        <StoreAutocompleteField
-          variant="inline"
-          label={t('addToPantry.store')}
-          value={storeName}
-          onChangeText={setStoreName}
-          placeholder={t('addToPantry.storePlaceholder')}
-          onStoreSelected={handleStoreSelected}
-          helperText={t('labels.storeSelectHint')}
+      <DropdownStack>
+        <View style={styles.section}>
+          <StoreAutocompleteField
+            variant="inline"
+            label={t('addToPantry.store')}
+            value={storeName}
+            onChangeText={setStoreName}
+            placeholder={t('addToPantry.storePlaceholder')}
+            onStoreSelected={handleStoreSelected}
+            helperText={t('labels.storeSelectHint')}
+          />
+        </View>
+
+        <FormInput
+          label={t('addToPantry.cost')}
+          value={costPerUnit}
+          onChangeText={setCostPerUnit}
+          placeholder={t('addToPantry.costPlaceholder')}
+          keyboardType="decimal-pad"
+          useBottomSheetInput
         />
-      </View>
 
-      <FormInput
-        label={t('addToPantry.cost')}
-        value={costPerUnit}
-        onChangeText={setCostPerUnit}
-        placeholder={t('addToPantry.costPlaceholder')}
-        keyboardType="decimal-pad"
-        useBottomSheetInput
-      />
-
-      <SegmentedControl
-        label={t('addToPantry.acquisitionMethod')}
-        options={ACQUISITION_METHOD_OPTIONS}
-        value={acquisitionMethod}
-        onChange={setAcquisitionMethod}
-        formatLabel={formatMethodLabel}
-      />
+        <SegmentedControl
+          label={t('addToPantry.acquisitionMethod')}
+          options={ACQUISITION_METHOD_OPTIONS}
+          value={acquisitionMethod}
+          onChange={setAcquisitionMethod}
+          formatLabel={formatMethodLabel}
+        />
+      </DropdownStack>
     </BottomSheetKeyboardAwareScrollView>
   );
 };

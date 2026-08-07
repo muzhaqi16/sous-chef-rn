@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
@@ -85,47 +86,51 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         {t('netWeightEntry.sectionTitle')}
       </Text>
-      {entries.map((entry, index) => (
-        <View key={entry.id} style={styles.entryRow}>
-          <View style={styles.valueField}>
-            <FormInput
-              label={t('netWeightEntry.weightLabel')}
-              value={entry.value || ''}
-              onChangeText={(text: string) => handleValueChange(index, text)}
-              placeholder={t('netWeightEntry.weightPlaceholder')}
-              keyboardType="decimal-pad"
-            />
+      <DropdownStack>
+        {entries.map((entry, index) => (
+          <View key={entry.id} style={styles.entryRow}>
+            <View style={styles.valueField}>
+              <FormInput
+                label={t('netWeightEntry.weightLabel')}
+                value={entry.value || ''}
+                onChangeText={(text: string) => handleValueChange(index, text)}
+                placeholder={t('netWeightEntry.weightPlaceholder')}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={styles.unitField}>
+              <UnitAutocompleteField
+                variant="inline"
+                label={t('netWeightEntry.unitLabel')}
+                value={entry.unitName || ''}
+                onChangeText={(text: string) =>
+                  handleUnitTextChange(index, text)
+                }
+                placeholder={t('netWeightEntry.unitPlaceholder')}
+                onUnitSelected={(unitId, unitName) =>
+                  handleUnitSelected(index, unitId, unitName)
+                }
+              />
+            </View>
+            <AppPressable
+              onPress={() => handleRemoveEntry(index)}
+              disabled={disabled}
+              style={styles.deleteButton}
+            >
+              <Icon name="trash-outline" size={20} tone="error" />
+            </AppPressable>
           </View>
-          <View style={styles.unitField}>
-            <UnitAutocompleteField
-              variant="modal"
-              label={t('netWeightEntry.unitLabel')}
-              value={entry.unitName || ''}
-              onChangeText={(text: string) => handleUnitTextChange(index, text)}
-              placeholder={t('netWeightEntry.unitPlaceholder')}
-              onUnitSelected={(unitId, unitName) =>
-                handleUnitSelected(index, unitId, unitName)
-              }
-            />
-          </View>
-          <AppPressable
-            onPress={() => handleRemoveEntry(index)}
+        ))}
+        {!!canAddEntry && (
+          <Button
+            variant="secondary"
+            onPress={handleAddEntry}
             disabled={disabled}
-            style={styles.deleteButton}
           >
-            <Icon name="trash-outline" size={20} tone="error" />
-          </AppPressable>
-        </View>
-      ))}
-      {!!canAddEntry && (
-        <Button
-          variant="secondary"
-          onPress={handleAddEntry}
-          disabled={disabled}
-        >
-          {t('netWeightEntry.addButton')}
-        </Button>
-      )}
+            {t('netWeightEntry.addButton')}
+          </Button>
+        )}
+      </DropdownStack>
     </View>
   );
 };

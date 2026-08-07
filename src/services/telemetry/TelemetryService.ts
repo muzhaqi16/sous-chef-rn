@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import {
   TelemetryConfig,
   LogEntry,
+  LogExceptionDetails,
   MetricEntry,
   ErrorDetails,
   TelemetryTransport,
@@ -116,6 +117,7 @@ export class TelemetryService {
     level: LogEntry['level'],
     message: string,
     extra?: Record<string, unknown>,
+    exception?: LogExceptionDetails,
   ): void {
     if (
       !this.config.enabled ||
@@ -143,6 +145,16 @@ export class TelemetryService {
         ...scrubLogExtra(extra),
       },
     };
+
+    if (exception) {
+      logEntry.exception = {
+        type: exception.type,
+        message: scrubString(exception.message),
+      };
+      if (exception.stacktrace) {
+        logEntry.exception.stacktrace = scrubString(exception.stacktrace);
+      }
+    }
 
     this.logBuffer.push(logEntry);
     // Cap at insert time too — the buffer also grows while flushes are
@@ -245,13 +257,22 @@ export class TelemetryService {
   }
 
   trackError(error: ErrorDetails): void {
-    this.log('error', error.message, {
-      error_stack: error.stack,
-      error_component: error.component,
-      error_operation: error.operation,
-      is_fatal: error.isFatal,
-      ...error.context,
-    });
+    this.log(
+      'error',
+      error.message,
+      {
+        error_stack: error.stack,
+        error_component: error.component,
+        error_operation: error.operation,
+        is_fatal: error.isFatal,
+        ...error.context,
+      },
+      {
+        type: error.name || 'Error',
+        message: error.message,
+        stacktrace: error.stack,
+      },
+    );
 
     this.incrementCounter('app_errors_total', 1, {
       component: error.component || 'unknown',
@@ -542,6 +563,7 @@ export class TelemetryService {
           const serialized = serializeError(reason);
           this.trackError({
             message: `Unhandled Promise Rejection: ${serialized.message}`,
+            name: serialized.name,
             stack: serialized.stack,
             context: {
               rejection_id: id,
