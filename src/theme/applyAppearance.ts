@@ -103,6 +103,11 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
           textPrimary: '#000000',
           textSecondary: '#1A1A1A',
           textTertiary: '#333333',
+          // Boosted alongside the text tones — the default placeholder sits at
+          // ~3.6:1, which is exactly what high contrast exists to lift. Kept
+          // lighter than textTertiary so a placeholder still reads as a hint
+          // rather than as entered text.
+          inputPlaceholder: '#4D4D4D',
           border: '#666666',
           borderLight: '#999999',
         };
@@ -112,6 +117,7 @@ export function applyAppearanceToRuntime(prefs: AppearancePreferences): void {
           textPrimary: '#FFFFFF',
           textSecondary: '#E0E0E0',
           textTertiary: '#CCCCCC',
+          inputPlaceholder: '#B3B3B3',
           border: '#999999',
           borderLight: '#666666',
         };

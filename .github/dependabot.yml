@@ -1,0 +1,64 @@
+# Dependabot configuration.
+#
+# Scope note: this file controls PULL REQUESTS (version updates, and — for the
+# options that support it — security updates). It does NOT control Dependabot
+# ALERTS. Alert noise is filtered with auto-triage rules under
+# Settings > Advanced Security > Dependabot, which are UI/API-only.
+#
+# Ecosystems deliberately omitted:
+#   - cocoapods (ios/Podfile) — not a supported Dependabot ecosystem.
+#   - gradle (android/), bundler (Gemfile) — build toolchain where an
+#     unprompted bump usually breaks the build rather than fixing anything.
+#     Omitting them only skips proactive VERSION updates; security updates
+#     still cover them, since those run off the dependency graph and do not
+#     require an entry here.
+#
+# `labels` is intentionally unset throughout. A label named there that does not
+# already exist in the repo is silently dropped, and setting the option at all
+# replaces the defaults — so leaving it unset is what actually gets PRs
+# labelled. Dependabot creates its own defaults as needed (`dependencies`, plus
+# an ecosystem label), which is enough to filter notifications on.
+version: 2
+
+updates:
+  - package-ecosystem: 'npm'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    # Only packages listed in package.json. Transitive dependencies are not
+    # raised on their own — when one of them has a vulnerability, Dependabot
+    # still fixes it by bumping the direct parent that pulls it in.
+    allow:
+      - dependency-type: 'direct'
+    # Let a release sit before proposing it, so freshly-published (and quickly
+    # yanked) versions never reach a PR. Majors wait longest.
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+      semver-minor-days: 7
+      semver-patch-days: 3
+    # One PR per group instead of one per package.
+    groups:
+      production-dependencies:
+        dependency-type: 'production'
+        update-types: ['minor', 'patch']
+      development-dependencies:
+        dependency-type: 'development'
+        update-types: ['minor', 'patch']
+      # Security fixes are grouped separately so they stay reviewable on their
+      # own rather than riding along with routine version bumps.
+      security-updates:
+        applies-to: 'security-updates'
+        patterns: ['*']
+    open-pull-requests-limit: 5
+
+  # Workflow actions are a supply-chain surface and are all direct by
+  # definition, so there is no transitive noise to filter here.
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: 'monthly'
+    groups:
+      github-actions:
+        patterns: ['*']
+    open-pull-requests-limit: 3

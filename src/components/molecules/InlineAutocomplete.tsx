@@ -1,9 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { View, ScrollView } from 'react-native';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+// Themed wrapper rather than gorhom's raw `BottomSheetTextInput`: the raw one
+// sets no `placeholderTextColor`, so it fell back to the OS default and ignored
+// the app theme entirely (visibly wrong against the dark theme).
+import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 
@@ -77,8 +80,6 @@ export function InlineAutocomplete<T>({
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Ref-backed value tracking to prevent cursor jumping
-  const inputValueRef = useRef(value);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Items sliced to max results
@@ -105,25 +106,23 @@ export function InlineAutocomplete<T>({
     setSearchTerm(value);
   }
 
-  // Keep ref in sync with value prop
-  useEffect(() => {
-    inputValueRef.current = value;
-  }, [value]);
-
   // The debounced notify below fires up to `debounceMs` AFTER the keystroke, by
   // which time the parent may have rebuilt `onChangeText` around newer state —
   // an entry list whose callback closes over its rows array is the common case.
   // Invoking the captured prop would map over the stale array and silently drop
   // whatever changed in between (e.g. a row added while the user was typing), so
   // always call the latest one.
+  //
+  // This has to be a LAYOUT effect: a passive effect is flushed in a separate
+  // task after the commit, and an already-due debounce timer can run inside that
+  // gap — reading the very stale callback this ref exists to avoid. Layout
+  // effects run synchronously during the commit, so no timer can interleave.
   const onChangeTextRef = useRef(onChangeText);
-  useEffect(() => {
+  useLayoutEffect(() => {
     onChangeTextRef.current = onChangeText;
   });
 
   const handleTextChange = (text: string) => {
-    // Store value immediately in ref
-    inputValueRef.current = text;
     setSearchTerm(text);
     setShowDropdown(true);
 
@@ -170,7 +169,7 @@ export function InlineAutocomplete<T>({
     <View style={styles.container} collapsable={false}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.inputContainer}>
-        <BottomSheetTextInput
+        <ThemedBottomSheetTextInput
           style={styles.input}
           value={searchTerm}
           onChangeText={handleTextChange}
