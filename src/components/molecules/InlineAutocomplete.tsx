@@ -110,6 +110,17 @@ export function InlineAutocomplete<T>({
     inputValueRef.current = value;
   }, [value]);
 
+  // The debounced notify below fires up to `debounceMs` AFTER the keystroke, by
+  // which time the parent may have rebuilt `onChangeText` around newer state —
+  // an entry list whose callback closes over its rows array is the common case.
+  // Invoking the captured prop would map over the stale array and silently drop
+  // whatever changed in between (e.g. a row added while the user was typing), so
+  // always call the latest one.
+  const onChangeTextRef = useRef(onChangeText);
+  useEffect(() => {
+    onChangeTextRef.current = onChangeText;
+  });
+
   const handleTextChange = (text: string) => {
     // Store value immediately in ref
     inputValueRef.current = text;
@@ -123,7 +134,7 @@ export function InlineAutocomplete<T>({
 
     // Notify parent after debounce
     debounceTimerRef.current = setTimeout(() => {
-      onChangeText(text);
+      onChangeTextRef.current(text);
       debounceTimerRef.current = null;
     }, debounceMs);
   };

@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  userEvent,
+  fireEvent,
+} from '@testing-library/react-native';
 import { NetWeightEntryList, NetWeightEntry } from '../NetWeightEntryList';
 
 jest.mock('#utils/iconUtils', () => ({
@@ -38,15 +43,23 @@ jest.mock('#/components/molecules/FormInput', () => ({
 jest.mock(
   '#/components/molecules/AutocompleteField/UnitAutocompleteField',
   () => ({
+    // Mirrors the real component: a keystroke reports the text AND invalidates
+    // any previous selection via `onUnitSelected(null, null, null)`.
     UnitAutocompleteField: ({
       label,
       value,
       onChangeText,
+      onUnitSelected,
       placeholder,
     }: {
       label?: string;
       value: string;
       onChangeText: (text: string) => void;
+      onUnitSelected?: (
+        unitId: string | null,
+        unitName: string | null,
+        unitType?: string | null,
+      ) => void;
       placeholder?: string;
     }) => {
       const RN = require('react-native');
@@ -57,7 +70,10 @@ jest.mock(
         R.createElement(RN.Text, null, label),
         R.createElement(RN.TextInput, {
           value,
-          onChangeText,
+          onChangeText: (text: string) => {
+            onChangeText(text);
+            onUnitSelected?.(null, null, null);
+          },
           placeholder,
           testID: `unit-input-${label}`,
         }),
@@ -138,5 +154,26 @@ describe('NetWeightEntryList', () => {
     render(<NetWeightEntryList {...defaultProps} />);
     expect(screen.getByText('Weight')).toBeTruthy();
     expect(screen.getByText('Unit')).toBeTruthy();
+  });
+
+  // A typed unit that is never picked from the dropdown still has to reach the
+  // submitted entry: the keystroke reports the text and then clears the stale
+  // selection, and the clear must not wipe the text alongside the ids.
+  it('keeps a typed unit name when no suggestion is selected', () => {
+    render(
+      <NetWeightEntryList
+        {...defaultProps}
+        entries={[{ id: 'e1', unitId: 'u-old', unitName: 'lb' }]}
+      />,
+    );
+
+    fireEvent.changeText(screen.getByTestId('unit-input-Unit'), 'oz');
+
+    const finalEntries = defaultProps.onEntriesChanged.mock.calls.at(
+      -1,
+    )?.[0] as NetWeightEntry[];
+    expect(finalEntries[0].unitName).toBe('oz');
+    // Typing invalidates the previously selected unit.
+    expect(finalEntries[0].unitId).toBeUndefined();
   });
 });
