@@ -109,6 +109,7 @@ export const Telemetry = {
     const { component, operation, isFatal, ...rest } = context || {};
     const details = {
       message: typeof error === 'string' ? error : error.message,
+      name: typeof error === 'string' ? undefined : error.name,
       stack: typeof error === 'string' ? undefined : error.stack,
       component: typeof component === 'string' ? component : undefined,
       operation: typeof operation === 'string' ? operation : undefined,

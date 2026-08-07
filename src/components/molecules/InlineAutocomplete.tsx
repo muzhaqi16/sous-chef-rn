@@ -43,6 +43,16 @@ export interface InlineAutocompleteProps<T> {
  *
  * Anti-flicker is handled upstream by useAutocompleteSearch — this component
  * receives stable, pre-processed items and focuses on presentation only.
+ *
+ * **Stacking contract:** the suggestion list is an absolutely-positioned
+ * overlay, and RN `zIndex` only orders siblings — so every sibling this
+ * dropdown can overlap, at every ancestor level up to where the overlap
+ * happens, needs an explicit non-zero zIndex (descending top-to-bottom) on a
+ * `collapsable={false}` view. Wrap vertically stacked form rows in
+ * `DropdownStack` (`#components/atoms/DropdownStack`), which applies both
+ * automatically — do not hand-roll zIndex chains. Miss a level and the
+ * dropdown paints UNDER the inputs below it (Android view flattening can also
+ * silently discard a layout-only wrapper's zIndex).
  */
 export function InlineAutocomplete<T>({
   label,
@@ -144,7 +154,9 @@ export function InlineAutocomplete<T>({
   styles.useVariants({ error: !!error });
 
   return (
-    <View style={styles.container}>
+    // collapsable={false}: this view carries the dropdown's own zIndex; if
+    // Android view flattening pruned it, the overlay would lose its stacking.
+    <View style={styles.container} collapsable={false}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View style={styles.inputContainer}>
         <BottomSheetTextInput

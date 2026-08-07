@@ -36,11 +36,24 @@ export interface TelemetryConfig {
   };
 }
 
+/**
+ * OpenTelemetry exception semantic-convention fields carried on an error
+ * log record. `HttpTransport` emits them as the `exception.type` /
+ * `exception.message` / `exception.stacktrace` OTLP log-record attributes
+ * so Grafana's exception views can read error logs natively.
+ */
+export interface LogExceptionDetails {
+  type: string;
+  message: string;
+  stacktrace?: string;
+}
+
 export interface LogEntry {
   level: 'debug' | 'info' | 'warn' | 'error';
   message: string;
   timestamp: string;
   extra?: Record<string, unknown>;
+  exception?: LogExceptionDetails;
 }
 
 export interface MetricEntry {
@@ -60,6 +73,8 @@ export interface MetricEntry {
 
 export interface ErrorDetails {
   message: string;
+  /** Error class name (`error.name`), emitted as `exception.type`. */
+  name?: string;
   stack?: string;
   component?: string;
   operation?: string;

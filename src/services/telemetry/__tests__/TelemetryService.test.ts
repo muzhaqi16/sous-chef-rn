@@ -499,6 +499,46 @@ describe('TelemetryService', () => {
         ]),
       );
     });
+
+    it('attaches OTel exception fields to the error log record', () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      service.trackError({
+        name: 'TypeError',
+        message: 'x is not a function',
+        stack: 'TypeError: x is not a function\n  at foo.js:1',
+      });
+
+      expect(mockSendLogs).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            exception: {
+              type: 'TypeError',
+              message: 'x is not a function',
+              stacktrace: expect.stringContaining('foo.js'),
+            },
+          }),
+        ]),
+      );
+    });
+
+    it('defaults exception.type to Error when no name is given', () => {
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      service.trackError({ message: 'plain failure' });
+
+      expect(mockSendLogs).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            exception: { type: 'Error', message: 'plain failure' },
+          }),
+        ]),
+      );
+    });
   });
 
   // ------------------------------------------------------------------ trackEvent

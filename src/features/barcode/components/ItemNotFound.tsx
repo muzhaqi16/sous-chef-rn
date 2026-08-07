@@ -16,9 +16,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.notFoundIcon}>
-        <Icon name="qr-code-outline" size={48} tone="textSecondary" />
-      </Text>
+      <Icon name="qr-code-outline" size={48} tone="textSecondary" />
       <Text size="xl" weight="semibold" align="center">
         Item Not Found
       </Text>
@@ -49,9 +47,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
-  },
-  notFoundIcon: {
-    fontSize: theme.sizes.avatar.lg,
   },
   notFoundMessage: {
     fontFamily: 'monospace',

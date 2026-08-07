@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import { FormInput } from '#components/molecules/FormInput';
 import { StorageLocationAutocompleteField } from '#components/molecules/AutocompleteField/StorageLocationAutocompleteField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
@@ -63,47 +64,49 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       keyboardShouldPersistTaps="handled"
       bottomOffset={16}
     >
-      {/* Storage Location */}
-      <View style={[styles.section, { zIndex: 10 }]}>
-        <StorageLocationAutocompleteField
-          variant="inline"
-          label={t('addToPantry.storageLocation')}
-          value={storageLocation}
-          onChangeText={setStorageLocation}
-          placeholder={t('addToPantry.storageLocationPlaceholder')}
-          storageLocations={storageLocations}
-          onStorageLocationSelected={handleStorageLocationSelected}
-          onAddNewLocation={handleAddNewLocation}
+      <DropdownStack>
+        {/* Storage Location */}
+        <View style={styles.section}>
+          <StorageLocationAutocompleteField
+            variant="inline"
+            label={t('addToPantry.storageLocation')}
+            value={storageLocation}
+            onChangeText={setStorageLocation}
+            placeholder={t('addToPantry.storageLocationPlaceholder')}
+            storageLocations={storageLocations}
+            onStorageLocationSelected={handleStorageLocationSelected}
+            onAddNewLocation={handleAddNewLocation}
+          />
+        </View>
+
+        {/* Condition */}
+        <SegmentedControl
+          label={t('addToPantry.condition')}
+          options={ITEM_CONDITION_OPTIONS}
+          value={condition}
+          onChange={setCondition}
+          formatLabel={formatConditionLabel}
         />
-      </View>
 
-      {/* Condition */}
-      <SegmentedControl
-        label={t('addToPantry.condition')}
-        options={ITEM_CONDITION_OPTIONS}
-        value={condition}
-        onChange={setCondition}
-        formatLabel={formatConditionLabel}
-      />
+        {/* Tags */}
+        <FormInput
+          label={t('addToPantry.tags')}
+          value={tags}
+          onChangeText={setTags}
+          placeholder={t('addToPantry.tagsPlaceholder')}
+          useBottomSheetInput
+        />
 
-      {/* Tags */}
-      <FormInput
-        label={t('addToPantry.tags')}
-        value={tags}
-        onChangeText={setTags}
-        placeholder={t('addToPantry.tagsPlaceholder')}
-        useBottomSheetInput
-      />
-
-      {/* Notes */}
-      <FormInput
-        label={t('addToPantry.notes')}
-        value={storageNotes}
-        onChangeText={setStorageNotes}
-        placeholder={t('addToPantry.notesPlaceholder')}
-        multiline
-        useBottomSheetInput
-      />
+        {/* Notes */}
+        <FormInput
+          label={t('addToPantry.notes')}
+          value={storageNotes}
+          onChangeText={setStorageNotes}
+          placeholder={t('addToPantry.notesPlaceholder')}
+          multiline
+          useBottomSheetInput
+        />
+      </DropdownStack>
     </BottomSheetKeyboardAwareScrollView>
   );
 };

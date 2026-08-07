@@ -382,6 +382,24 @@ cache is provably complete for the dataset (only then is unconditional `true` co
 the debounce cycle — e.g., switching from "app" to "banana" won't flash "app" results.
 Consumer hooks do not need to implement their own relevance checks.
 
+### Autocomplete UI Variants & Dropdown Stacking
+
+- **Inside a bottom sheet, prefer `variant="inline"`** for `*AutocompleteField`
+  components. The modal variant opens a second `BottomSheetModal`, which stacks
+  a near-identical sheet over the host (confusing) — reserve it for full-screen
+  hosts (e.g. `AddEditItem`). Any modal-variant picker that CAN be presented
+  while another sheet is open must keep `stackBehavior="push"` (gorhom's
+  default `'switch'` minimizes the host sheet, which reads as the whole sheet
+  crashing closed). `BottomSheetAutocompleteInput` sets this.
+- **Every sibling an inline dropdown can overlap needs an explicit, non-zero,
+  descending zIndex on a `collapsable={false}` view — at every ancestor level
+  up to where the overlap happens.** RN `zIndex` only orders siblings, and
+  Android view flattening prunes layout-only wrappers (silently discarding
+  their zIndex). **Wrap vertically stacked form content in `DropdownStack`**
+  (`src/components/atoms/DropdownStack.tsx`), which applies both automatically;
+  do not hand-roll zIndex chains. Miss a level and the dropdown paints UNDER
+  the inputs below it — on device only, invisible to typecheck/lint/jest.
+
 ### Apollo: Fragment composition + `useFragment` convention
 
 `dataMasking: true` is enabled globally (`src/apollo/client.ts`). The project

@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from 'react-i18next';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { DropdownStack } from '#components/atoms/DropdownStack';
 import {
   BottomSheetModal,
   useStandardBottomSheet,
@@ -153,64 +154,66 @@ export const RecipeIngredientEditor = forwardRef<
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.autocompleteWrapper}>
-          <ItemAutocompleteField
-            variant="inline"
-            label={t('recipes.ingredientName')}
-            value={name}
-            onChangeText={handleNameChange}
-            onSelectItem={handleItemSelect}
-            placeholder={t('recipes.ingredientNamePlaceholder')}
-            required
+        <DropdownStack>
+          <View style={styles.autocompleteWrapper}>
+            <ItemAutocompleteField
+              variant="inline"
+              label={t('recipes.ingredientName')}
+              value={name}
+              onChangeText={handleNameChange}
+              onSelectItem={handleItemSelect}
+              placeholder={t('recipes.ingredientNamePlaceholder')}
+              required
+            />
+          </View>
+
+          <FieldRow>
+            <EditableCounter
+              label={t('recipes.quantity')}
+              value={quantity}
+              onChangeText={setQuantity}
+              min={0}
+              step={0.25}
+            />
+            <UnitAutocompleteField
+              variant="modal"
+              label={t('recipes.unit')}
+              value={unit}
+              onChangeText={setUnit}
+              onUnitSelected={handleUnitSelect}
+              placeholder={t('recipes.unitPlaceholder')}
+            />
+          </FieldRow>
+
+          <FormInput
+            label={t('recipes.preparation')}
+            value={preparation}
+            onChangeText={setPreparation}
+            placeholder={t('recipes.preparationPlaceholder')}
+            useBottomSheetInput
           />
-        </View>
 
-        <FieldRow>
-          <EditableCounter
-            label={t('recipes.quantity')}
-            value={quantity}
-            onChangeText={setQuantity}
-            min={0}
-            step={0.25}
+          <FormInput
+            label={t('recipes.section')}
+            value={section}
+            onChangeText={setSection}
+            placeholder={t('recipes.sectionPlaceholder')}
+            useBottomSheetInput
           />
-          <UnitAutocompleteField
-            variant="modal"
-            label={t('recipes.unit')}
-            value={unit}
-            onChangeText={setUnit}
-            onUnitSelected={handleUnitSelect}
-            placeholder={t('recipes.unitPlaceholder')}
+
+          <FormInput
+            label={t('recipes.notes')}
+            value={notes}
+            onChangeText={setNotes}
+            placeholder={t('recipes.notesPlaceholder')}
+            useBottomSheetInput
           />
-        </FieldRow>
 
-        <FormInput
-          label={t('recipes.preparation')}
-          value={preparation}
-          onChangeText={setPreparation}
-          placeholder={t('recipes.preparationPlaceholder')}
-          useBottomSheetInput
-        />
-
-        <FormInput
-          label={t('recipes.section')}
-          value={section}
-          onChangeText={setSection}
-          placeholder={t('recipes.sectionPlaceholder')}
-          useBottomSheetInput
-        />
-
-        <FormInput
-          label={t('recipes.notes')}
-          value={notes}
-          onChangeText={setNotes}
-          placeholder={t('recipes.notesPlaceholder')}
-          useBottomSheetInput
-        />
-
-        <View style={styles.switchRow}>
-          <Text size="md">{t('recipes.optional')}</Text>
-          <BaseSwitch value={isOptional} onValueChange={setIsOptional} />
-        </View>
+          <View style={styles.switchRow}>
+            <Text size="md">{t('recipes.optional')}</Text>
+            <BaseSwitch value={isOptional} onValueChange={setIsOptional} />
+          </View>
+        </DropdownStack>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -232,7 +235,6 @@ const styles = StyleSheet.create(theme => ({
     overflow: 'visible',
   },
   autocompleteWrapper: {
-    zIndex: 10,
     marginBottom: theme.spacing.md,
   },
   switchRow: {
