@@ -1,4 +1,5 @@
 import { Dimensions } from 'react-native';
+import { t } from '#/i18n/t';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
@@ -25,10 +26,16 @@ export const MVCP_DISABLED = { disabled: true };
 export const INITIAL_RENDER_WINDOW = 24;
 export const RENDER_WINDOW_STEP = 24;
 
-// Default filter tabs for pantry (fallback if none provided)
-export const DEFAULT_PANTRY_TABS: FilterTabConfig<LocationFilter>[] = [
-  { id: 'all', label: 'All' },
-  { id: 'fridge', label: 'Fridge', icon: 'thermometer-outline' },
-  { id: 'freezer', label: 'Freezer', icon: 'snow-outline' },
-  { id: 'pantry', label: 'Pantry', icon: 'cube-outline' },
+/**
+ * Default filter tabs (fallback when a host passes none).
+ *
+ * A function, not a const: evaluated at import time these labels would freeze
+ * whatever language was active when the module first loaded, and a later
+ * language change would never reach them.
+ */
+export const getDefaultPantryTabs = (): FilterTabConfig<LocationFilter>[] => [
+  { id: 'all', label: t('pantryTabs.all') },
+  { id: 'fridge', label: t('pantryTabs.fridge'), icon: 'thermometer-outline' },
+  { id: 'freezer', label: t('pantryTabs.freezer'), icon: 'snow-outline' },
+  { id: 'pantry', label: t('pantryTabs.pantry'), icon: 'cube-outline' },
 ];

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, TextInput } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -20,10 +21,11 @@ interface IngredientMatchRowProps {
 
 type BadgeColor = 'success' | 'warning' | 'error';
 
-const BADGE_CONFIG: Record<string, { label: string; color: BadgeColor }> = {
-  available: { label: 'Available', color: 'success' },
-  partial: { label: 'Partial', color: 'warning' },
-  missing: { label: 'Missing', color: 'error' },
+/** Key paths — module-level table, resolved by the row that renders it. */
+const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
+  available: { labelKey: 'ingredientMatch.available', color: 'success' },
+  partial: { labelKey: 'ingredientMatch.partial', color: 'warning' },
+  missing: { labelKey: 'ingredientMatch.missing', color: 'error' },
 };
 
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
@@ -31,6 +33,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   index,
   onUpdate,
 }) => {
+  const { t } = useTranslation();
   const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
@@ -51,7 +54,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           </Text>
           <View style={styles.badge}>
             <Text size="xs" weight="semibold" style={styles.badgeText}>
-              {isOptional ? 'Optional' : badge.label}
+              {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
             </Text>
           </View>
         </View>

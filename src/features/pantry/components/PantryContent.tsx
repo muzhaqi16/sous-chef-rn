@@ -59,7 +59,7 @@ import {
 import {
   DRAW_DISTANCE,
   MVCP_DISABLED,
-  DEFAULT_PANTRY_TABS,
+  getDefaultPantryTabs,
   INITIAL_RENDER_WINDOW,
   RENDER_WINDOW_STEP,
 } from './pantryDisplay/constants';
@@ -95,7 +95,7 @@ export const PantryContent = React.forwardRef<
       locationFilter,
       onLocationFilterChange,
       locationCounts,
-      tabs = DEFAULT_PANTRY_TABS,
+      tabs,
       onAddLocation,
       searchQuery,
       onSearchChange,
@@ -371,10 +371,12 @@ export const PantryContent = React.forwardRef<
       onLocationFilterChange(id);
     };
 
+    const resolvedTabs = tabs ?? getDefaultPantryTabs();
+
     const tabsWithAddButton = (() => {
-      if (!onAddLocation) return tabs;
+      if (!onAddLocation) return resolvedTabs;
       return [
-        ...tabs,
+        ...resolvedTabs,
         {
           id: '__add__' as LocationFilter,
           label: '',
@@ -544,7 +546,7 @@ export const PantryContent = React.forwardRef<
                   searchQuery={searchQuery}
                   itemCount={items.length}
                   locationFilter={locationFilter}
-                  tabs={tabs}
+                  tabs={resolvedTabs}
                   onAddItem={onAddItem}
                   noHomeSelected={noHomeSelected}
                   noHomes={noHomes}

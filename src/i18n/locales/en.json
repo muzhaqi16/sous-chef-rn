@@ -3234,7 +3234,8 @@
     "noItemWithCode": "No item found with barcode: {{barcode}}",
     "addItemHint": "You can add this item to the database by tapping the button below.",
     "addItem": "Add Item",
-    "newVersion": "New Version"
+    "newVersion": "New Version",
+    "scanAnother": "Scan Another"
   },
   "tabBar": {
     "actionButton": "Action button",
@@ -3409,5 +3410,29 @@
   },
   "editableField": {
     "saveFailed": "Failed to save"
+  },
+  "expiration": {
+    "noExpiryDate": "No expiry date",
+    "expiredDaysAgo_one": "Expired {{count}} day ago",
+    "expiredDaysAgo_other": "Expired {{count}} days ago",
+    "expiresToday": "Expires today!",
+    "expiresTomorrow": "Expires tomorrow!",
+    "expiresInDays_one": "Expires in {{count}} day",
+    "expiresInDays_other": "Expires in {{count}} days",
+    "daysLeft_one": "{{count}} day left",
+    "daysLeft_other": "{{count}} days left",
+    "expired": "Expired",
+    "expiresTodayShort": "Expires today",
+    "daysToExpire_one": "{{count}} day to expire",
+    "daysToExpire_other": "{{count}} days to expire"
+  },
+  "ingredientMatch": {
+    "available": "Available",
+    "partial": "Partial",
+    "missing": "Missing",
+    "optional": "Optional"
+  },
+  "listTemplate": {
+    "loading": "Loading..."
   }
 }

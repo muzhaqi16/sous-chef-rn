@@ -1,4 +1,7 @@
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
+// Plural keys need the options form, which the module-level t does not take.
+import { getI18n } from '#/i18n/config';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -53,21 +56,32 @@ export const getExpirationStatus = (
   expiresIn: number | null,
 ): ExpirationStatus => {
   if (expiresIn === null) {
-    return { text: 'No expiry date', type: 'normal' };
+    return { text: t('expiration.noExpiryDate'), type: 'normal' };
   }
   if (expiresIn < 0) {
-    return { text: `Expired ${Math.abs(expiresIn)} days ago`, type: 'expired' };
+    return {
+      text: getI18n().t('expiration.expiredDaysAgo', {
+        count: Math.abs(expiresIn),
+      }),
+      type: 'expired',
+    };
   }
   if (expiresIn === 0) {
-    return { text: 'Expires today!', type: 'critical' };
+    return { text: t('expiration.expiresToday'), type: 'critical' };
   }
   if (expiresIn === 1) {
-    return { text: 'Expires tomorrow!', type: 'warning' };
+    return { text: t('expiration.expiresTomorrow'), type: 'warning' };
   }
   if (expiresIn <= 3) {
-    return { text: `Expires in ${expiresIn} days`, type: 'warning' };
+    return {
+      text: getI18n().t('expiration.expiresInDays', { count: expiresIn }),
+      type: 'warning',
+    };
   }
-  return { text: `${expiresIn} days left`, type: 'normal' };
+  return {
+    text: getI18n().t('expiration.daysLeft', { count: expiresIn }),
+    type: 'normal',
+  };
 };
 
 // Default category emojis
@@ -216,13 +230,16 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
     (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays < 0) return { text: 'Expired', isExpired: true, isUrgent: true };
+  if (diffDays < 0)
+    return { text: t('expiration.expired'), isExpired: true, isUrgent: true };
   if (diffDays === 0)
-    return { text: 'Expires today', isExpired: false, isUrgent: true };
-  if (diffDays === 1)
-    return { text: '1 day to expire', isExpired: false, isUrgent: true };
+    return {
+      text: t('expiration.expiresTodayShort'),
+      isExpired: false,
+      isUrgent: true,
+    };
   return {
-    text: `${diffDays} days to expire`,
+    text: getI18n().t('expiration.daysToExpire', { count: diffDays }),
     isExpired: false,
     isUrgent: diffDays <= 3,
   };
