@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 // RNGH's Pressable (not the themed RN re-export): this mock card is mounted
 // inside a ReanimatedSwipeable in the swipe-hint tutorial, and RN's Pressable
@@ -13,14 +14,20 @@ interface MockItemCardProps {
   onCheckboxPress?: () => void;
 }
 
+/** Key paths — module-level demo data, resolved by the card that renders it. */
 const MOCK_DATA = {
   pantry: {
     emoji: '🥬',
-    title: 'Spinach',
-    subtitle: 'Expires in 3 days',
+    titleKey: 'swipeHint.spinach',
+    subtitleKey: 'swipeHint.spinachSubtitle',
     meta: '500g',
   },
-  shopping: { emoji: '🥛', title: 'Milk', subtitle: 'Dairy', meta: '2L' },
+  shopping: {
+    emoji: '🥛',
+    titleKey: 'swipeHint.milk',
+    subtitleKey: 'swipeHint.milkSubtitle',
+    meta: '2L',
+  },
 };
 
 /**
@@ -31,6 +38,7 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
   mode,
   onCheckboxPress,
 }) => {
+  const { t } = useTranslation();
   const data = MOCK_DATA[mode];
   const [checked, setChecked] = useState(false);
 
@@ -62,7 +70,7 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
       </View>
       <View style={styles.content}>
         <Text size="md" weight="semibold" numberOfLines={1}>
-          {data.title}
+          {t(data.titleKey)}
         </Text>
         <Text
           size="sm"
@@ -70,7 +78,7 @@ export const MockItemCard: React.FC<MockItemCardProps> = ({
           style={styles.subtitle}
           numberOfLines={1}
         >
-          {data.subtitle}
+          {t(data.subtitleKey)}
         </Text>
       </View>
       <Text size="sm" weight="medium" tone="secondary">

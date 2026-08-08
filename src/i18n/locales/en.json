@@ -3433,6 +3433,20 @@
     "optional": "Optional"
   },
   "listTemplate": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "loadingItems": "Loading your items"
+  },
+  "validation": {
+    "email": "Please enter a valid email address",
+    "minLength": "Must be at least {{count}} characters long",
+    "maxLength": "Must be no more than {{count}} characters long",
+    "noSpecialChars": "Only letters, numbers, and spaces are allowed",
+    "required": "This field is required"
+  },
+  "swipeHint": {
+    "spinach": "Spinach",
+    "spinachSubtitle": "Expires in 3 days",
+    "milk": "Milk",
+    "milkSubtitle": "Dairy"
   }
 }

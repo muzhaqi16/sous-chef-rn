@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ItemList } from '../organisms/ItemList';
@@ -85,6 +86,7 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   customListComponent: CustomListComponent,
   customListProps = {},
 }: ListTemplateProps<TItem>) => {
+  const { t } = useTranslation();
   // Don't show loading state if custom component exists - let it handle its own loading
   const isLoading = loading && items.length === 0 && !CustomListComponent;
 
@@ -92,8 +94,9 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   const effectiveEmptyState = isLoading
     ? {
         icon: emptyState?.icon || 'cube-outline',
-        title: 'Loading...',
-        description: emptyState?.loadingDescription || 'Loading your items',
+        title: t('listTemplate.loading'),
+        description:
+          emptyState?.loadingDescription || t('listTemplate.loadingItems'),
       }
     : emptyState;
 

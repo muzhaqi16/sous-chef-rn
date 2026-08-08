@@ -431,7 +431,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             : undefined
         }
         secondaryAction={{
-          label: 'Scan Another',
+          label: t('barcode.scanAnother'),
           onPress: onScanAnother,
         }}
       />
