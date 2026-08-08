@@ -24,7 +24,7 @@ import { DetailSection } from '#components/molecules/DetailSection';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 import {
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 
@@ -176,8 +176,10 @@ export const ShoppingListItemDetail: React.FC<
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
   // of showing the raw number.
-  const priorityKey = PRIORITY_KEYS[item.priority];
-  const priorityLabel = priorityKey ? t(priorityLabelKey(priorityKey)) : null;
+  const priorityOption = PRIORITY_OPTION_BY_VALUE[item.priority];
+  const priorityLabel = priorityOption
+    ? t(priorityLabelKey(priorityOption))
+    : null;
 
   const estimatedPrice = item.priceEstimate?.estimated;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;

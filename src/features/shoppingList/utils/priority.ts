@@ -8,23 +8,31 @@
  * can't drift apart.
  */
 
-/** SegmentedControl option keys, low → high. */
+/**
+ * SegmentedControl option ids, low → high.
+ *
+ * These are option ids, not i18n keys — `priorityLabelKey` composes each one
+ * into a whole key under `shoppingListScreens.*`.
+ */
 export const PRIORITY_OPTIONS = ['low', 'medium', 'high'];
 
-/** Option key → API integer. */
+/** Option id → API integer. */
 export const PRIORITY_VALUES: Record<string, number> = {
   low: 0,
   medium: 1,
   high: 2,
 };
 
-/** API integer → option key (for displaying a stored value). */
-export const PRIORITY_KEYS: Record<number, string> = {
+/** API integer → option id (for displaying a stored value). */
+export const PRIORITY_OPTION_BY_VALUE: Record<number, string> = {
   0: 'low',
   1: 'medium',
   2: 'high',
 };
 
-/** i18n key for an option key (`'low'` → `'shoppingListScreens.priorityLow'`). */
-export const priorityLabelKey = (key: string): string =>
-  `shoppingListScreens.priority${key[0].toUpperCase()}${key.slice(1)}`;
+/**
+ * Composes an option id into the whole i18n key for its label, resolved under
+ * `shoppingListScreens.*` — `'low'` → `'shoppingListScreens.priorityLow'`.
+ */
+export const priorityLabelKey = (option: string): string =>
+  `shoppingListScreens.priority${option[0].toUpperCase()}${option.slice(1)}`;

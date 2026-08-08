@@ -8,7 +8,10 @@ import {
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { alertMutationFailure } from './alertMutationFailure';
+import {
+  alertMutationFailure,
+  type AlertCaseKeySuffixes,
+} from './alertMutationFailure';
 import {
   buildSuggestibleItemChanges,
   type EditableItemSnapshot,
@@ -29,11 +32,16 @@ const FAILED: ItemEditResult = { status: 'failed' };
 // The 5-pending cap is the only CONFLICT either mutation raises, so the
 // typename alone identifies it. Should a second conflict appear, key on
 // `payload.code` instead — this copy would be actively wrong for it.
-const SUGGEST_FAILURE_CASES: Record<
-  string,
-  { titleKey: string; bodyKey: string }
-> = {
-  ConflictError: { titleKey: 'pendingCapTitle', bodyKey: 'pendingCapBody' },
+//
+// The values are i18n key suffixes, not whole keys: `alertMutationFailure`
+// composes each under the call's `keyPrefix`, which is `'suggestItemEdit'` at
+// both sites below — so `'pendingCapTitle'` resolves
+// `suggestItemEdit.pendingCapTitle`.
+const SUGGEST_FAILURE_CASES: Record<string, AlertCaseKeySuffixes> = {
+  ConflictError: {
+    titleSuffix: 'pendingCapTitle',
+    bodySuffix: 'pendingCapBody',
+  },
 };
 
 /**
