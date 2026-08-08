@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -18,6 +19,8 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
   loading,
   confidence,
 }) => {
+  const { t } = useTranslation();
+
   if (!previewText && !loading) return null;
 
   const isApproximate = confidence != null && confidence < 0.8;
@@ -32,7 +35,7 @@ export const ConversionPreview: React.FC<ConversionPreviewProps> = ({
           {isApproximate ? (
             <Text size="xs" tone="warning">
               {' '}
-              (approx.)
+              {t('conversionPreview.approximate')}
             </Text>
           ) : null}
         </Text>

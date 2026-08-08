@@ -76,11 +76,11 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
           </Text>
         )}
         <Text size="sm" tone="secondary" style={styles.itemBarcode}>
-          Barcode: {item.upc}
+          {t('barcode.barcodeValue', { barcode: item.upc })}
         </Text>
         {format ? (
           <Text size="xs" tone="tertiary" style={styles.itemFormat}>
-            Format: {format}
+            {t('barcode.formatValue', { format })}
           </Text>
         ) : null}
       </View>

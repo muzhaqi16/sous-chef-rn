@@ -69,9 +69,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
         </FieldRow>
       </View>
       {!!isWeightLocked && (
-        <Text style={styles.lockedHint}>
-          Weight locked after use — correct from item details
-        </Text>
+        <Text style={styles.lockedHint}>{t('itemForm.netWeightLocked')}</Text>
       )}
     </View>
   );

@@ -110,8 +110,10 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                   ) : null}
                   {!!location.parentLocation?.name && (
                     <Text tone="secondary" style={styles.parentInfo}>
-                      {' '}
-                      • Inside {location.parentLocation.name}
+                      {' • '}
+                      {t('storageLocationCard.insideParent', {
+                        parent: location.parentLocation.name,
+                      })}
                     </Text>
                   )}
                 </Text>

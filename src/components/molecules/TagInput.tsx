@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Keyboard, ScrollView } from 'react-native';
 import {
   Pressable,
@@ -26,6 +27,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   maxTags = 10,
   editable = true,
 }) => {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState('');
   const [inputKey, setInputKey] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
@@ -132,7 +134,7 @@ export const TagInput: React.FC<TagInputProps> = ({
       {/* Tag limit indicator */}
       {!!editable && tags.length >= maxTags && (
         <Text size="sm" tone="secondary" align="right">
-          Maximum {maxTags} tags reached
+          {t('tagInput.maxTagsReached', { count: maxTags })}
         </Text>
       )}
       {/* Suggestions dropdown */}

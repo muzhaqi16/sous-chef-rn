@@ -373,7 +373,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : folders.length > 0 && searchQuery ? (
             <View style={styles.emptyContainer}>
               <Text size="base" tone="secondary" align="center">
-                No folders match "{searchQuery}"
+                {t('folderPicker.noMatches', { query: searchQuery })}
               </Text>
             </View>
           ) : null}

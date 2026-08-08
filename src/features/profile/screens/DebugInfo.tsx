@@ -162,8 +162,7 @@ export const DebugInfo: React.FC = () => {
             align="center"
             style={styles.footerText}
           >
-            This information is useful when debugging API connection issues or
-            reporting bugs.
+            {t('debugInfo.footer')}
           </Text>
         </View>
       </ScrollView>

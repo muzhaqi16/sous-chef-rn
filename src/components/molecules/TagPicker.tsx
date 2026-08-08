@@ -169,7 +169,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         ) : tags.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
             <Text size="base" tone="secondary" align="center">
-              No tags match "{searchQuery}"
+              {t('tagPicker.noMatches', { query: searchQuery })}
             </Text>
           </View>
         ) : (

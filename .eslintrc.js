@@ -156,6 +156,65 @@ module.exports = {
       },
     },
     {
+      // Hardcoded user-facing English in JSX text.
+      //
+      // This is the class of i18n miss that a regex scanner structurally
+      // cannot see: JSX splits one sentence into several text nodes around
+      // embedded expressions, so `Maximum {maxTags} tags reached` is three
+      // AST nodes and never matches a "quoted English sentence" pattern. The
+      // rule walks JSXText nodes instead, so a sentence is caught however it
+      // is fragmented. Fix by adding a key to src/i18n/locales/en.json and
+      // calling `t()` — not by suppressing (inline eslint-disable is banned
+      // repo-wide by `eslint-comments/no-use`; carve-outs belong in `words`
+      // below, where they are reviewable in one place).
+      //
+      // Scope: production `.tsx` under `src/` only.
+      // - `.ts` is excluded because JSX text cannot exist there (TypeScript
+      //   requires `.tsx` for JSX), so the rule would have nothing to check.
+      // - Tests/mocks are excluded: their strings are fixtures, not shipped
+      //   copy. Generated code is already dropped by the top-level
+      //   ignorePatterns.
+      //
+      // What this does NOT cover: string props (`placeholder="…"`), object
+      // literals, and template literals. `mode: 'jsx-only'` / `'all'` would
+      // reach them, but every design-system prop on this codebase's `<Text>`
+      // / `<Icon>` (`size`, `tone`, `weight`, `name`) is a string literal, so
+      // those modes report thousands of non-copy hits and would need a
+      // per-prop allowlist longer than the rule is worth. JSX text is where
+      // untranslated copy actually accumulates.
+      files: ['src/**/*.tsx'],
+      excludedFiles: ['**/__tests__/**', '**/__mocks__/**', '**/*.test.tsx'],
+      plugins: ['i18next'],
+      rules: {
+        'i18next/no-literal-string': [
+          'error',
+          {
+            mode: 'jsx-text-only',
+            words: {
+              // Replaces the plugin's default exclude list (the option is
+              // swapped wholesale, not merged), so both entries below are
+              // load-bearing.
+              exclude: [
+                // Any run with no letter in any script. One rule covers every
+                // non-copy glyph this codebase renders as JSX text: emoji
+                // including the variation selector the plugin's own
+                // `/^\p{Emoji}+$/u` default misses (🍽️ = U+1F37D U+FE0F, and
+                // U+FE0F is Emoji_Component, not Emoji), symbol glyphs used as
+                // controls (✕, •, →), and currency/number/punctuation runs
+                // ($, 1/4, 12.50). A translatable sentence always has letters,
+                // so nothing real hides behind this.
+                /^[^\p{L}]+$/u,
+                // The product name ships untranslated in every locale.
+                'Sous Chef',
+              ],
+            },
+            message:
+              'Hardcoded user-facing string. Add a key to src/i18n/locales/en.json (English only — translators fill es/it/sq) and render it via t(). For counts use i18next interpolation with {{count}} and _one/_other plural keys; give each plural form its own whole sentence rather than interpolating a word into one',
+          },
+        ],
+      },
+    },
+    {
       // Justified exceptions to the BottomSheetModal-import restriction:
       // - useStandardBottomSheet.tsx is the canonical re-export site
       //   (aliases gorhom's component as GorhomBottomSheetModal and wraps

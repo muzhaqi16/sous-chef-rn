@@ -324,22 +324,23 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                 {!!isDualTracked && !isSingleUnitDualTracked && (
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     {' '}
-                    (
-                    {pantryItem.quantityBreakdown
-                      ? `${
-                          pantryItem.quantityBreakdown.fullPackages
-                        } full + ${Math.floor(
-                          pantryItem.quantityBreakdown.looseContentUnits,
-                        )} loose ${
-                          pantryItem.quantityBreakdown.contentUnit?.symbol || ''
-                        }`
-                      : hasContentUnit
-                      ? `${contentUnitCount} ${
-                          pantryItem.packageBreakdown!.contentUnit.symbol ||
-                          pantryItem.packageBreakdown!.contentUnit.name
-                        }`
-                      : `${effectiveNetWeight} ${pantryItem.netWeightUnit?.symbol}`}{' '}
-                    remaining)
+                    {t('pantryAction.remainingAmount', {
+                      amount: pantryItem.quantityBreakdown
+                        ? `${
+                            pantryItem.quantityBreakdown.fullPackages
+                          } full + ${Math.floor(
+                            pantryItem.quantityBreakdown.looseContentUnits,
+                          )} loose ${
+                            pantryItem.quantityBreakdown.contentUnit?.symbol ||
+                            ''
+                          }`
+                        : hasContentUnit
+                        ? `${contentUnitCount} ${
+                            pantryItem.packageBreakdown!.contentUnit.symbol ||
+                            pantryItem.packageBreakdown!.contentUnit.name
+                          }`
+                        : `${effectiveNetWeight} ${pantryItem.netWeightUnit?.symbol}`,
+                    })}
                   </Text>
                 )}
               </View>

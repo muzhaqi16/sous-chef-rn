@@ -127,7 +127,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
           align="center"
           style={styles.servingSize}
         >
-          Per {macros.servingSize}
+          {t('nutritionSummary.perServing', { serving: macros.servingSize })}
         </Text>
       )}
 

@@ -244,7 +244,7 @@ export function BottomSheetAutocompleteInput<T>({
   const defaultLoadingComponent = () => (
     <BottomSheetView style={styles.messageContainer}>
       <Text size="base" tone="secondary">
-        Loading...
+        {t('loading.loading')}
       </Text>
     </BottomSheetView>
   );

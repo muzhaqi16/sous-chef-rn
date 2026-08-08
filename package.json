@@ -172,6 +172,7 @@
     "detox": "^20.46.0",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-i18next": "^6.1.5",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-no-barrel-files": "^1.2.2",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
@@ -13,12 +14,13 @@ export const LoadingState: React.FC<LoadingStateProps> = ({
   message,
   barcode,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <SousChefLoader size="small" showBrand={false} message={message} />
       {barcode ? (
         <Text size="sm" tone="secondary" style={styles.barcodeText}>
-          Barcode: {barcode}
+          {t('barcode.barcodeValue', { barcode })}
         </Text>
       ) : null}
     </View>

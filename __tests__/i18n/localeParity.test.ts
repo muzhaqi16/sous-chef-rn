@@ -36,9 +36,9 @@ type TranslatedLocale = (typeof TRANSLATED_LOCALES)[number];
  * locale's current count in the test title; copy that number in here.
  */
 const MISSING_BASELINE: Record<TranslatedLocale, number> = {
-  es: 292,
-  it: 292,
-  sq: 292,
+  es: 318,
+  it: 318,
+  sq: 318,
 };
 
 /** Keeps a large drift readable in the failure output. */

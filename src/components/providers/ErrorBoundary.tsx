@@ -61,7 +61,8 @@ const DefaultErrorFallback: React.FC<{
         </Text>
         {!!context && !!__DEV__ && (
           <Text size="xs" align="center" tone="tertiary" style={styles.context}>
-            Context: {context}
+            {t('errors.boundary.contextPrefix', 'Context: ')}
+            {context}
           </Text>
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
