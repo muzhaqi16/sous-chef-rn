@@ -1,0 +1,41 @@
+# Repoints which of an item's photos is the hero. Server-gated exactly like any
+# other direct item edit (creator or admin), so callers must route on the item's
+# viewer-scoped `canEdit` before offering the affordance — everyone else gets a
+# ForbiddenError.
+#
+# The payload re-selects the whole gallery through the carousel's own fragment
+# rather than the `{ id isPrimary }` the API docs show. Apollo normalizes
+# ItemPhoto by id, so a narrower selection would write a PARTIAL entity for any
+# photo the cache has not already seen in full, and the carousel's `useFragment`
+# read then comes back `complete: false` — which blanks that page rather than
+# just missing a field. Selecting the fragment keeps every written photo whole.
+#
+# `imageUrl` rides along because it is the single-image field every list row and
+# card reads; without it the gallery reorders while every card still shows the
+# demoted photo until the next refetch.
+mutation MarkPrimaryItemImage($input: MarkPrimaryItemImageInput!) {
+  markPrimaryItemImage(input: $input) {
+    __typename
+    ... on MarkPrimaryItemImagePayload {
+      item {
+        id
+        imageUrl
+        photos {
+          id
+          ...ItemPhotoCarousel_itemPhoto
+        }
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on NotFoundError {
+      resource
+      resourceId
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

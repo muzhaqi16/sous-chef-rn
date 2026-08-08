@@ -123,6 +123,17 @@ export interface ItemImageUploadOptions extends ImageUploadOptions {
    * gallery's ordering and its per-photo label; an untagged photo sorts last.
    */
   perspective?: string;
+  /**
+   * Ask for this photo to become the item's hero, demoting the incumbent.
+   *
+   * Honoured only once the photo is APPROVED and only if the caller may edit
+   * the item, so a submission to someone else's catalog item (which lands
+   * PENDING) silently keeps the existing hero. An item's *first* photo becomes
+   * primary on its own, so this only matters when repointing a gallery that
+   * already has one — which is why the picker exposes it rather than the
+   * upload defaulting it to the first file.
+   */
+  makePrimary?: boolean;
 }
 
 export const useImageUpload = () => {
@@ -379,9 +390,10 @@ export const useImageUpload = () => {
     itemId: string,
     options: ItemImageUploadOptions = {},
   ): Promise<string | null> => {
-    // The angle is set on confirm, not on the presign: until the object is
-    // confirmed there is no ItemImage row to tag.
+    // The angle and the hero flag are both set on confirm, not on the presign:
+    // until the object is confirmed there is no ItemImage row to tag.
     const perspective = toImagePerspective(options.perspective);
+    const { makePrimary } = options;
     const result = await executeMutation(
       () =>
         uploadImage(
@@ -392,7 +404,7 @@ export const useImageUpload = () => {
           async (key: string) => {
             const { data } = await confirmItemUpload({
               variables: {
-                input: { itemId, key, perspective },
+                input: { itemId, key, perspective, makePrimary },
               },
             });
             return data?.confirmItemImageUpload?.__typename ===
@@ -435,7 +447,7 @@ export const useImageUpload = () => {
    * length against what they passed before reporting success.
    */
   const uploadItemImages = async (
-    files: Array<ImageFile & { perspective?: string }>,
+    files: Array<ImageFile & { perspective?: string; isPrimary?: boolean }>,
     itemId: string,
     options: ImageUploadOptions = {},
   ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
@@ -448,6 +460,7 @@ export const useImageUpload = () => {
       const imageUrl = await uploadItemImage(file, itemId, {
         onProgress: p => options?.onProgress?.((index + p) / files.length),
         perspective: file.perspective,
+        makePrimary: file.isPrimary,
         suppressAlert: true,
         onError: error => {
           if (error instanceof UserFacingUploadError) fatal = error;

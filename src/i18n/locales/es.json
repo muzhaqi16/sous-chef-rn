@@ -2928,6 +2928,16 @@
     "viewPhoto": "Ver foto",
     "viewPhotoLabeled": "Ver foto: {{perspective}}",
     "counter": "{{current}} de {{total}}",
+    "setAsMain": "Establecer como foto principal",
+    "mainPhoto": "Foto principal",
+    "setPrimary": {
+      "rateLimitedTitle": "Espera un momento",
+      "notFoundTitle": "Foto no encontrada",
+      "notFoundBody": "Esta foto ya no está en el artículo; puede que se haya eliminado.",
+      "rejectedTitle": "No se pudo establecer la foto",
+      "failedTitle": "No se pudo establecer la foto",
+      "failedBody": "Algo salió mal al actualizar la foto principal. Inténtalo de nuevo."
+    },
     "perspective": {
       "front": "Frente",
       "back": "Reverso",

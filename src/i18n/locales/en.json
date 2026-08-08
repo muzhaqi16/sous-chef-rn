@@ -2928,6 +2928,16 @@
     "viewPhoto": "View photo",
     "viewPhotoLabeled": "View {{perspective}} photo",
     "counter": "{{current}} of {{total}}",
+    "setAsMain": "Set as main photo",
+    "mainPhoto": "Main photo",
+    "setPrimary": {
+      "rateLimitedTitle": "Slow down a moment",
+      "notFoundTitle": "Photo not found",
+      "notFoundBody": "This photo isn't on the item any more — it may have been removed.",
+      "rejectedTitle": "Couldn't set that photo",
+      "failedTitle": "Couldn't set that photo",
+      "failedBody": "Something went wrong updating the main photo. Please try again."
+    },
     "perspective": {
       "front": "Front",
       "back": "Back",

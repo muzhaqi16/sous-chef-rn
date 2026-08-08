@@ -40,6 +40,7 @@ import {
   materializedPhoto,
   type ItemPhotoRef,
 } from '#components/molecules/ItemPhotoCarousel';
+import { useMarkPrimaryItemImage } from '#hooks/items/useMarkPrimaryItemImage';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
@@ -75,6 +76,12 @@ interface ItemPhotoViewerProps {
   /** Page to open on — the photo the user tapped. */
   initialIndex: number;
   onClose: () => void;
+  /**
+   * The item's viewer-scoped `Item.canEdit`. Gates the "set as main photo"
+   * action, which the server refuses for anyone but the item's creator or an
+   * admin. Omitted means read-only — no affordance.
+   */
+  canEdit?: boolean;
 }
 
 /**
@@ -92,6 +99,7 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
   photos,
   initialIndex,
   onClose,
+  canEdit = false,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -164,16 +172,23 @@ export const ItemPhotoViewer: React.FC<ItemPhotoViewerProps> = ({
           <Icon name="close" size={24} color="#fff" />
         </Pressable>
 
+        {/* box-none so the photo keeps receiving the taps that close it, while
+            the action button inside still gets its own. */}
         <View
           style={[styles.caption, { bottom: insets.bottom + 16 }]}
-          pointerEvents="none"
+          pointerEvents="box-none"
         >
-          {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
-          {total > 1 && (
-            <Text size="sm" style={styles.counter}>
-              {t('itemPhotos.counter', { current: index + 1, total })}
-            </Text>
+          {!!canEdit && !!photos[index] && (
+            <SetPrimaryAction photoRef={photos[index]} />
           )}
+          <View style={styles.captionStack} pointerEvents="none">
+            {!!photos[index] && <PhotoCaption photoRef={photos[index]} />}
+            {total > 1 && (
+              <Text size="sm" style={styles.counter}>
+                {t('itemPhotos.counter', { current: index + 1, total })}
+              </Text>
+            )}
+          </View>
         </View>
       </GestureHandlerRootView>
     </Modal>
@@ -387,6 +402,62 @@ const ZoomablePhoto: React.FC<{
   );
 };
 
+/**
+ * "Set as main photo" for the photo currently on screen, or a static badge once
+ * it is the hero.
+ *
+ * Rendered only when the item's `canEdit` is true, and only for an APPROVED
+ * photo: the server refuses to promote a PENDING one, so offering it there
+ * would be an affordance whose only outcome is a ValidationError.
+ */
+const SetPrimaryAction: React.FC<{ photoRef: ItemPhotoRef }> = ({
+  photoRef,
+}) => {
+  const { t } = useTranslation();
+  const { markPrimary, loading } = useMarkPrimaryItemImage();
+  const result = useFragment({
+    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
+    fragmentName: 'ItemPhotoCarousel_itemPhoto',
+    from: photoRef,
+  });
+
+  const photo: ItemPhotoCarousel_ItemPhotoFragment | null = result.complete
+    ? result.data
+    : materializedPhoto(photoRef);
+  if (!photo || photo.status !== ItemImageStatus.Approved) return null;
+
+  if (photo.isPrimary) {
+    return (
+      <View style={styles.primaryBadge}>
+        <Icon name="star" size={14} tone="rating" />
+        <Text size="sm" weight="medium" style={styles.captionText}>
+          {t('itemPhotos.mainPhoto')}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <Pressable
+      style={styles.primaryAction}
+      onPress={() => {
+        void markPrimary(photo.id);
+      }}
+      /* Deliberately not `disabled={loading}`: this is a one-shot promote, and
+         a disabled button reads as a dead tap. The re-render that follows a
+         success swaps this for the badge. */
+      accessibilityRole="button"
+      accessibilityState={{ busy: loading }}
+      accessibilityLabel={t('itemPhotos.setAsMain')}
+    >
+      <Icon name="star-outline" size={14} color="#fff" />
+      <Text size="sm" weight="medium" style={styles.captionText}>
+        {t('itemPhotos.setAsMain')}
+      </Text>
+    </Pressable>
+  );
+};
+
 /** Perspective label + pending state for the photo currently on screen. */
 const PhotoCaption: React.FC<{ photoRef: ItemPhotoRef }> = ({ photoRef }) => {
   const { t } = useTranslation();
@@ -452,6 +523,32 @@ const styles = StyleSheet.create(theme => ({
     right: 0,
     alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  captionStack: {
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  primaryAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+    borderRadius: theme.radii.full,
+    borderCurve: 'continuous',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  primaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
+    borderRadius: theme.radii.full,
+    borderCurve: 'continuous',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   captionRow: {
     flexDirection: 'row',

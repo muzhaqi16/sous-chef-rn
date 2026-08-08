@@ -2928,6 +2928,16 @@
     "viewPhoto": "Shiko foton",
     "viewPhotoLabeled": "Shiko foton: {{perspective}}",
     "counter": "{{current}} nga {{total}}",
+    "setAsMain": "Vendos si foto kryesore",
+    "mainPhoto": "Foto kryesore",
+    "setPrimary": {
+      "rateLimitedTitle": "Prit një moment",
+      "notFoundTitle": "Fotoja nuk u gjet",
+      "notFoundBody": "Kjo foto nuk gjendet më te artikulli — mund të jetë hequr.",
+      "rejectedTitle": "Fotoja nuk u vendos dot",
+      "failedTitle": "Fotoja nuk u vendos dot",
+      "failedBody": "Diçka shkoi keq gjatë përditësimit të fotos kryesore. Provo përsëri."
+    },
     "perspective": {
       "front": "Para",
       "back": "Prapa",

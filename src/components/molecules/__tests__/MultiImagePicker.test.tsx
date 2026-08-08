@@ -204,4 +204,91 @@ describe('MultiImagePicker', () => {
     expect(perspectives).toEqual(['front', 'back', 'left', 'right']);
     expect(new Set(perspectives).size).toBe(perspectives.length);
   });
+
+  // The star reaches confirmItemImageUpload as `makePrimary`, so it repoints
+  // the item's hero for every viewer — not a local preview flag.
+  describe('primary selection', () => {
+    const twoImages: SelectedImage[] = [
+      {
+        uri: 'file://img1.jpg',
+        type: 'image/jpeg',
+        fileName: 'img1.jpg',
+        perspective: 'front',
+        isPrimary: true,
+      },
+      {
+        uri: 'file://img2.jpg',
+        type: 'image/jpeg',
+        fileName: 'img2.jpg',
+        perspective: 'back',
+      },
+    ];
+
+    // The suggestion path lands photos PENDING and the server drops
+    // makePrimary, so the affordance must stay off unless a host opts in.
+    it('offers no star by default', () => {
+      render(<MultiImagePicker {...defaultProps} images={twoImages} />);
+      expect(screen.queryByLabelText('Set as main photo')).toBeNull();
+      expect(screen.queryByLabelText('Main photo')).toBeNull();
+    });
+
+    it('seeds the first image as primary when images are added', () => {
+      const onImagesChanged = jest.fn();
+      render(
+        <MultiImagePicker
+          {...defaultProps}
+          images={[]}
+          onImagesChanged={onImagesChanged}
+          allowPrimarySelection
+        />,
+      );
+
+      fireEvent.press(screen.getByTestId('image-picker-multi'));
+
+      const assigned = onImagesChanged.mock.calls[0][0] as SelectedImage[];
+      expect(assigned.map(image => !!image.isPrimary)).toEqual([
+        true,
+        false,
+        false,
+        false,
+      ]);
+    });
+
+    it('moves the flag exclusively to the tapped image', () => {
+      const onImagesChanged = jest.fn();
+      render(
+        <MultiImagePicker
+          {...defaultProps}
+          images={twoImages}
+          onImagesChanged={onImagesChanged}
+          allowPrimarySelection
+        />,
+      );
+
+      fireEvent.press(screen.getByLabelText('Set as main photo'));
+
+      const updated = onImagesChanged.mock.calls[0][0] as SelectedImage[];
+      expect(updated.map(image => !!image.isPrimary)).toEqual([false, true]);
+    });
+
+    // Without the re-seed the batch uploads with no makePrimary at all and the
+    // item silently keeps whatever hero it already had.
+    it('re-seeds the flag when the primary image is removed', () => {
+      const onImagesChanged = jest.fn();
+      render(
+        <MultiImagePicker
+          {...defaultProps}
+          images={twoImages}
+          onImagesChanged={onImagesChanged}
+          allowPrimarySelection
+        />,
+      );
+
+      fireEvent.press(screen.getAllByLabelText('Remove image')[0]);
+
+      const updated = onImagesChanged.mock.calls[0][0] as SelectedImage[];
+      expect(updated).toHaveLength(1);
+      expect(updated[0].isPrimary).toBe(true);
+    });
+  });
 });

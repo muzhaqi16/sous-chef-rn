@@ -12,6 +12,12 @@ import { Text } from '#components/atoms/Text';
 
 export interface SelectedImage extends ImageFile {
   perspective: string;
+  /**
+   * Marks the photo to become the item's hero once uploaded. Only ever set
+   * when the host passes `allowPrimarySelection`; exactly one image in the list
+   * carries it.
+   */
+  isPrimary?: boolean;
 }
 
 interface MultiImagePickerProps {
@@ -21,7 +27,33 @@ interface MultiImagePickerProps {
   disabled?: boolean;
   maxImages?: number;
   label?: string;
+  /**
+   * Offer a "main photo" star per thumbnail.
+   *
+   * Only pass this where the server will honour the choice: the photos have to
+   * land APPROVED and the user has to be able to edit the item. On the
+   * suggestion path they land PENDING and `makePrimary` is ignored, so the star
+   * would promise something review might never grant.
+   */
+  allowPrimarySelection?: boolean;
 }
+
+/**
+ * Guarantees exactly one primary once the affordance is live, so the star is
+ * never shown with nothing selected. Index 0 is the seed because it is the
+ * photo the user picked first — the same one the server would land on for a
+ * fresh item, which makes turning the feature on a no-op until they choose.
+ */
+const withPrimary = (
+  list: SelectedImage[],
+  enabled: boolean,
+): SelectedImage[] => {
+  if (!enabled || list.length === 0) return list;
+  if (list.some(image => image.isPrimary)) return list;
+  return list.map((image, i) =>
+    i === 0 ? { ...image, isPrimary: true } : image,
+  );
+};
 
 const getNextAvailablePerspective = (
   existingImages: SelectedImage[],
@@ -42,6 +74,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   disabled = false,
   maxImages = 6,
   label = 'Product Images',
+  allowPrimarySelection = false,
 }) => {
   const { t } = useTranslation();
   const perspectiveOptions = CAPTURE_PERSPECTIVES.map(p => ({
@@ -67,7 +100,9 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
       });
     }
 
-    onImagesChanged([...images, ...assigned]);
+    onImagesChanged(
+      withPrimary([...images, ...assigned], allowPrimarySelection),
+    );
   };
 
   const handleSingleImageSelected = (file: ImageFile) => {
@@ -76,12 +111,14 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
       ...file,
       perspective: getNextAvailablePerspective(images),
     };
-    onImagesChanged([...images, newImage]);
+    onImagesChanged(withPrimary([...images, newImage], allowPrimarySelection));
   };
 
   const handleRemoveImage = (index: number) => {
+    // Dropping the primary leaves the list with none, so re-seed it rather than
+    // uploading a batch that silently keeps the item's existing hero.
     const updated = images.filter((_, i) => i !== index);
-    onImagesChanged(updated);
+    onImagesChanged(withPrimary(updated, allowPrimarySelection));
   };
 
   const handlePerspectiveChange = (index: number, perspective: string) => {
@@ -89,6 +126,12 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
       i === index ? { ...img, perspective } : img,
     );
     onImagesChanged(updated);
+  };
+
+  const handleSetPrimary = (index: number) => {
+    onImagesChanged(
+      images.map((img, i) => ({ ...img, isPrimary: i === index })),
+    );
   };
 
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
@@ -149,6 +192,27 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               >
                 <Icon name="close" size={14} tone="white" />
               </AppPressable>
+              {!!allowPrimarySelection && (
+                <AppPressable
+                  style={styles.primaryButton}
+                  onPress={() => handleSetPrimary(index)}
+                  disabled={disabled || image.isPrimary}
+                  hitSlop={11}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: !!image.isPrimary }}
+                  accessibilityLabel={t(
+                    image.isPrimary
+                      ? 'itemPhotos.mainPhoto'
+                      : 'itemPhotos.setAsMain',
+                  )}
+                >
+                  <Icon
+                    name={image.isPrimary ? 'star' : 'star-outline'}
+                    size={14}
+                    tone={image.isPrimary ? 'rating' : 'white'}
+                  />
+                </AppPressable>
+              )}
             </View>
             <AppPressable
               style={styles.perspectiveButton}
@@ -251,6 +315,19 @@ const styles = StyleSheet.create(theme => ({
     position: 'absolute',
     top: 2,
     right: 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: theme.radii.full,
+    width: 22,
+    height: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Opposite corner from remove: the two are 22pt targets on an 80pt thumbnail,
+  // and adjacent ones would be a coin-flip under a fingertip.
+  primaryButton: {
+    position: 'absolute',
+    bottom: 2,
+    left: 2,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: theme.radii.full,
     width: 22,

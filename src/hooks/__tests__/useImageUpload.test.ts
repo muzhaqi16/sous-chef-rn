@@ -361,6 +361,100 @@ describe('useImageUpload', () => {
     });
   });
 
+  // The hero flag rides the confirm, not the presign — until the object is
+  // confirmed there is no ItemImage row to promote.
+  describe('makePrimary', () => {
+    const file = { uri: 'file://a.jpg', fileName: 'a.jpg', fileSize: 1024 };
+
+    // Same driver the presigned-POST block installs: without it `send()` never
+    // fires `onload`, the upload never reaches its confirm, and the test hangs
+    // to the 30s timeout instead of failing on an assertion.
+    beforeEach(() => {
+      mockXhr.send.mockImplementation(() => {
+        setImmediate(() => mockXhr.onload?.({} as ProgressEvent));
+      });
+    });
+
+    afterEach(() => {
+      mockXhr.send.mockReset();
+    });
+
+    function recordConfirm() {
+      return recordMock(ConfirmItemImageUploadDocument, {
+        data: {
+          confirmItemImageUpload: {
+            __typename: 'ConfirmItemImageUploadPayload',
+            url: 'https://cdn.test/a.jpg',
+          },
+        },
+        maxUsageCount: 10,
+      });
+    }
+
+    it('forwards makePrimary to confirmItemImageUpload', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(file, 'item-1', {
+          perspective: 'front',
+          makePrimary: true,
+        });
+      });
+
+      expect(fired).toContainEqual({
+        input: expect.objectContaining({ makePrimary: true }),
+      });
+    });
+
+    // Unset must stay unset rather than becoming `false`: an item's first photo
+    // is promoted automatically, and sending false on every other upload is the
+    // caller asserting a choice it did not make.
+    it('leaves makePrimary undefined when the caller does not ask', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(file, 'item-1', {
+          perspective: 'front',
+        });
+      });
+
+      expect(fired[0]).toMatchObject({
+        input: { makePrimary: undefined },
+      });
+    });
+
+    // The batch carries the flag per file, so the starred photo is promoted no
+    // matter where it sits in the run.
+    it('promotes only the flagged file in a batch', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImages(
+          [
+            { ...file, perspective: 'front' },
+            { ...file, perspective: 'back', isPrimary: true },
+          ],
+          'item-1',
+        );
+      });
+
+      const flags = fired.map(
+        variables =>
+          (variables as { input: { makePrimary?: boolean } }).input.makePrimary,
+      );
+      expect(flags).toEqual([undefined, true]);
+    });
+  });
+
   it('exposes all expected functions', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(typeof result.current.uploadProfileImage).toBe('function');

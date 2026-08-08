@@ -497,6 +497,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
+          canEdit={!!item.item?.canEdit}
         />
       )}
     </>

@@ -400,6 +400,12 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 errorService.reportError(error, { operation: 'selectImage' });
               }}
               disabled={loading}
+              /* Every mode but `edit` writes through as the item's owner, so
+                 the photos land APPROVED and `makePrimary` is honoured. On the
+                 suggestion path they land PENDING and the server ignores it —
+                 offering the star there would promise a hero that review may
+                 never grant. */
+              allowPrimarySelection={!requiresEditNote(mode)}
             />
             {!!editing && (
               <Text size="sm" tone="secondary" style={styles.notice}>
