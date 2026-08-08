@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   type AccessibilityActionEvent,
@@ -58,6 +59,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   swipeMode,
   enabled = true,
 }) => {
+  const { t } = useTranslation();
   // Calculate thresholds based on number of actions
   // Fewer actions = smaller threshold for more natural swipe feel
   const leftActionCount = [
@@ -133,16 +135,22 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   // users can discover swipe actions without swiping
   const accessibilityActions = (() => {
     const actions: AccessibilityActionInfo[] = [];
-    if (onEdit) actions.push({ name: 'edit', label: 'Edit' });
-    if (onDelete) actions.push({ name: 'delete', label: 'Delete' });
+    if (onEdit) actions.push({ name: 'edit', label: t('swipeActions.edit') });
+    if (onDelete)
+      actions.push({ name: 'delete', label: t('swipeActions.delete') });
     if (onTogglePurchase)
       actions.push({
         name: 'togglePurchase',
-        label: isPurchased ? 'Mark as unpurchased' : 'Mark as purchased',
+        label: isPurchased
+          ? t('swipeActions.markUnpurchased')
+          : t('swipeActions.markPurchased'),
       });
-    if (onConsume) actions.push({ name: 'consume', label: 'Consume' });
-    if (onWaste) actions.push({ name: 'waste', label: 'Record waste' });
-    if (onRestock) actions.push({ name: 'restock', label: 'Restock' });
+    if (onConsume)
+      actions.push({ name: 'consume', label: t('swipeActions.consume') });
+    if (onWaste)
+      actions.push({ name: 'waste', label: t('swipeActions.recordWaste') });
+    if (onRestock)
+      actions.push({ name: 'restock', label: t('swipeActions.restock') });
     return actions;
   })();
 

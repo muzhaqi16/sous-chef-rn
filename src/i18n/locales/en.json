@@ -3066,7 +3066,13 @@
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "No pantry selected. Please select a pantry first.",
     "addFailed": "Failed to add pantry item. Please try again.",
-    "updateFailed": "Failed to update pantry item. Please try again."
+    "updateFailed": "Failed to update pantry item. Please try again.",
+    "itemName": "Item Name",
+    "category": "Category",
+    "brandOptional": "Brand (optional)",
+    "placeholderItemName": "e.g., Rice, Pasta",
+    "placeholderCategory": "e.g., Grains, Dairy",
+    "brand": "Brand"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
@@ -3337,5 +3343,24 @@
       "title": "Move to pantry",
       "subtitle": "Tap to move this item to your pantry"
     }
+  },
+  "swipeActions": {
+    "edit": "Edit",
+    "delete": "Delete",
+    "markPurchased": "Mark as purchased",
+    "markUnpurchased": "Mark as unpurchased",
+    "consume": "Consume",
+    "recordWaste": "Record waste",
+    "restock": "Restock"
+  },
+  "expirationAction": {
+    "cooked": "Cooked",
+    "consumed": "Consumed",
+    "shared": "Shared with someone",
+    "extended": "Extended shelf life",
+    "wasted": "Wasted / Discarded",
+    "noAction": "No action taken",
+    "expiringSoon": "Expiring soon",
+    "alreadyExpired": "Already expired"
   }
 }
