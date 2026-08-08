@@ -3,10 +3,7 @@ import {
   getRateLimitMessage,
   isRateLimitError,
 } from '#/utils/errors/rateLimit';
-
-// Minimal structural type for the translation function so this doesn't depend
-// on i18next's generic key typing — both callers pass their `useTranslation` t.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+import type { Translate } from '#/i18n/types';
 
 /**
  * The alert copy for one `__typename` branch, held as i18n key *suffixes*

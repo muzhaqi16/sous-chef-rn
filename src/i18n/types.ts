@@ -10,18 +10,20 @@ import type { TFunction } from 'i18next';
  * signature.
  *
  * **Why not `(key: string, options?: Record<string, unknown>) => string`?**
- * That shape is not equivalent — it is strictly looser in ways that cost
- * real safety:
+ * That shape is looser, and having several hand-rolled spellings of it made a
+ * single concept unreviewable. Two concrete wins:
  *
- * - **It accepts any string as a key.** Every typo and every key the locale
- *   JSON doesn't define type-checks clean and fails only at runtime, where
- *   i18next echoes the raw key back into the UI. `TFunction` derives its key
- *   type from the registered resources, so a missing key is a compile error.
- * - **It drops i18next's return-type narrowing.** `TFunction` accounts for
- *   interpolation, plurals, `defaultValue`, and `returnObjects`; a fixed
- *   `=> string` claims a guarantee the real function doesn't always make.
  * - **`Record<string, unknown>` is not `TOptions`.** It permits arbitrary
- *   option keys while rejecting nothing, so misspelled options (`count` vs
- *   `counts`) pass silently.
+ *   option keys while rejecting nothing, so misspelled options pass silently.
+ * - **It drops i18next's return-type narrowing** for `defaultValue` and
+ *   `returnObjects`; a fixed `=> string` claims a guarantee the real function
+ *   does not always make.
+ *
+ * **What this does NOT do: validate keys.** Without an i18next
+ * `CustomTypeOptions` augmentation, `ParseKeys` resolves to plain `string`, so
+ * `t('typo.notAKey')` compiles clean here and renders the raw dot-path at
+ * runtime. That augmentation was measured and rejected — it caught zero real
+ * bugs while costing ~5.4x type instantiations and roughly doubling check time.
+ * Key existence is enforced instead by `__tests__/i18n/keysExist.test.ts`.
  */
 export type Translate = TFunction<'translation'>;
