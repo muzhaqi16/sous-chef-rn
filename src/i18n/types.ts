@@ -20,13 +20,10 @@ import type { TFunction } from 'i18next';
  *   does not always make.
  *
  * **What this does NOT do: validate keys.** Without an i18next
- * `CustomTypeOptions` augmentation, `ParseKeys` resolves to plain `string`, so a
- * mistyped key such as `typo.notAKey` compiles clean here and renders the raw
- * dot-path at runtime. That augmentation was measured and rejected — it caught
- * zero real bugs while costing ~5.4x type instantiations and roughly doubling
- * check time. Key existence is enforced instead by
- * `__tests__/i18n/keysExist.test.ts`. That guard scans source text for the
- * literal call form, so a key named in prose is written bare, as above — spelled
- * as a call it would be scanned as a real reference and reported missing.
+ * `CustomTypeOptions` augmentation, `ParseKeys` resolves to plain `string`, so
+ * `t('typo.notAKey')` compiles clean here and renders the raw dot-path at
+ * runtime. That augmentation was measured and rejected — it caught zero real
+ * bugs while costing ~5.4x type instantiations and roughly doubling check time.
+ * Key existence is enforced instead by `__tests__/i18n/keysExist.test.ts`.
  */
 export type Translate = TFunction<'translation'>;
