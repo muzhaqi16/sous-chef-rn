@@ -2179,7 +2179,9 @@
     "movedItems_one": "Moved {{count}} item to pantry{{skipped}}",
     "movedItems_other": "Moved {{count}} items to pantry{{skipped}}",
     "skippedSuffix": " ({{skippedCount}} skipped)",
-    "noItemsMoved": "No items could be moved to pantry"
+    "noItemsMoved": "No items could be moved to pantry",
+    "noPantryTitle": "No Pantry Available",
+    "noPantryBody": "Please create a pantry in your home first."
   },
   "pantryAction": {
     "useByDefault": "Use by",
@@ -2335,7 +2337,10 @@
       "addAgain": "Add Again",
       "favorites": "Your Favorites",
       "popular": "Popular"
-    }
+    },
+    "noListTitle": "No List Selected",
+    "noListBody": "Please select or create a shopping list first.",
+    "createList": "Create List"
   },
   "dietaryProfile": {
     "errorTitle": "Error",
@@ -3124,5 +3129,18 @@
   },
   "barcodeInfo": {
     "format": "Format"
+  },
+  "shoppingListTabs": {
+    "clearPurchasedTitle": "Clear All Purchased Items",
+    "clearPurchasedBody_one": "Are you sure you want to remove 1 purchased item from this list?",
+    "clearPurchasedBody_other": "Are you sure you want to remove all {{count}} purchased items from this list?",
+    "clearAll": "Clear All",
+    "moveAllTitle": "Move All to Pantry",
+    "moveAllBody_one": "Move 1 purchased item to your pantry?",
+    "moveAllBody_other": "Move all {{count}} purchased items to your pantry?",
+    "moveAll": "Move All",
+    "clearShoppingTitle": "Clear All Shopping Items",
+    "clearShoppingBody_one": "Are you sure you want to remove 1 item from your shopping list?",
+    "clearShoppingBody_other": "Are you sure you want to remove all {{count}} items from your shopping list?"
   }
 }

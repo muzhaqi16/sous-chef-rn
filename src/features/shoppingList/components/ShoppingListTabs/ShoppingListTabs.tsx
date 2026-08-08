@@ -259,7 +259,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     destructive = true,
   ) => {
     alertService.alert(title, message, [
-      { text: 'Cancel', style: 'cancel' },
+      { text: t('labels.cancel'), style: 'cancel' },
       {
         text: confirmText,
         style: destructive ? 'destructive' : 'default',
@@ -272,11 +272,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (purchasedItems.length === 0) return;
     const count = purchasedItems.length;
     confirmAction(
-      'Clear All Purchased Items',
-      `Are you sure you want to remove ${
-        count === 1 ? '1 purchased item' : `all ${count} purchased items`
-      } from this list?`,
-      'Clear All',
+      t('shoppingListTabs.clearPurchasedTitle'),
+      t('shoppingListTabs.clearPurchasedBody', { count }),
+      t('shoppingListTabs.clearAll'),
       () => {
         onClearAllPurchased?.();
       },
@@ -287,11 +285,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (purchasedItems.length === 0 || !onBatchMoveToPantry) return;
     const count = purchasedItems.length;
     confirmAction(
-      'Move All to Pantry',
-      `Move ${
-        count === 1 ? '1 purchased item' : `all ${count} purchased items`
-      } to your pantry?`,
-      'Move All',
+      t('shoppingListTabs.moveAllTitle'),
+      t('shoppingListTabs.moveAllBody', { count }),
+      t('shoppingListTabs.moveAll'),
       onBatchMoveToPantry,
       false,
     );
@@ -301,11 +297,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     if (unpurchasedItems.length === 0) return;
     const count = unpurchasedItems.length;
     confirmAction(
-      'Clear All Shopping Items',
-      `Are you sure you want to remove ${
-        count === 1 ? '1 item' : `all ${count} items`
-      } from your shopping list?`,
-      'Clear All',
+      t('shoppingListTabs.clearShoppingTitle'),
+      t('shoppingListTabs.clearShoppingBody', { count }),
+      t('shoppingListTabs.clearAll'),
       () => {
         onClearAllShopping?.();
       },
@@ -349,7 +343,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   if (showClear) {
     actionButtons.push({
-      label: 'Clear',
+      label: t('labels.clear'),
       onPress: currentClearHandler,
       testID: 'shopping-list-clear-all',
     });

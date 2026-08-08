@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '#/i18n/t';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
 
@@ -58,12 +59,12 @@ export function useAddItemSheet(
     if (!currentListId) {
       Telemetry.trackEvent('add_item_no_list_selected');
       alertService.alert(
-        'No List Selected',
-        'Please select or create a shopping list first.',
+        t('addItemSheet.noListTitle'),
+        t('addItemSheet.noListBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Create List',
+            text: t('addItemSheet.createList'),
             onPress: () => {
               Telemetry.trackEvent('create_list_from_add_item');
               onNavigateToListSettings?.();

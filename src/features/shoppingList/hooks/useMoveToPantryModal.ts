@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '#/i18n/t';
 import { alertService } from '#/services/alertService';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
@@ -90,9 +91,9 @@ export function useMoveToPantryModal(
     // We check pantries.length here but the actual check happens after the async fetch
     if (pantries.length === 0 && homeDataLoaded) {
       alertService.alert(
-        'No Pantry Available',
-        'Please create a pantry in your home first.',
-        [{ text: 'OK' }],
+        t('moveToPantry.noPantryTitle'),
+        t('moveToPantry.noPantryBody'),
+        [{ text: t('labels.ok') }],
       );
       return;
     }
