@@ -1,6 +1,8 @@
 import { Cuisine } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n/t';
 import {
   POPULAR_CUISINES,
+  cuisineLabelKey,
   getCuisineLabel,
   getAllCuisineOptions,
 } from '../cuisines';
@@ -11,31 +13,37 @@ describe('cuisines constants', () => {
       expect(POPULAR_CUISINES).toHaveLength(8);
     });
 
-    it('each cuisine has a label and a value', () => {
+    it('each cuisine has a label key and a value', () => {
       for (const cuisine of POPULAR_CUISINES) {
-        expect(cuisine.label).toBeDefined();
-        expect(typeof cuisine.label).toBe('string');
+        expect(typeof cuisine.labelKey).toBe('string');
         expect(cuisine.value).toBeDefined();
       }
     });
 
-    it('includes Italian as a popular cuisine', () => {
+    it('keys its label off the enum value, not a hardcoded string', () => {
       const italian = POPULAR_CUISINES.find(c => c.value === Cuisine.Italian);
       expect(italian).toBeDefined();
-      expect(italian!.label).toBe('Italian');
+      expect(italian!.labelKey).toBe(cuisineLabelKey(Cuisine.Italian));
     });
   });
 
   describe('getCuisineLabel', () => {
-    it('returns the label for a popular cuisine', () => {
-      expect(getCuisineLabel(Cuisine.Italian)).toBe('Italian');
-      expect(getCuisineLabel(Cuisine.Mexican)).toBe('Mexican');
-      expect(getCuisineLabel(Cuisine.Japanese)).toBe('Japanese');
+    it('resolves a cuisine through the locale table', () => {
+      expect(getCuisineLabel(Cuisine.Italian, t)).toBe('Italian');
+      expect(getCuisineLabel(Cuisine.Mexican, t)).toBe('Mexican');
+      expect(getCuisineLabel(Cuisine.Japanese, t)).toBe('Japanese');
     });
 
-    it('returns the raw value for a non-popular cuisine', () => {
-      // For cuisines not in POPULAR_CUISINES, it falls back to the enum value string
-      expect(getCuisineLabel(Cuisine.French)).toBe(Cuisine.French);
+    // Non-popular cuisines resolve through the same table now; the title-cased
+    // enum name is only the fallback for a key the locale file lacks.
+    it('resolves a non-popular cuisine too', () => {
+      expect(getCuisineLabel(Cuisine.French, t)).toBe('French');
+    });
+
+    it('falls back to the title-cased enum name for an unmapped cuisine', () => {
+      expect(getCuisineLabel('NOT_A_CUISINE' as Cuisine, t)).toBe(
+        'Not A Cuisine',
+      );
     });
   });
 
@@ -48,26 +56,25 @@ describe('cuisines constants', () => {
 
     it('popular cuisines come first', () => {
       const all = getAllCuisineOptions();
-      // First 8 should be the popular ones
       for (let i = 0; i < POPULAR_CUISINES.length; i++) {
         expect(all[i].value).toBe(POPULAR_CUISINES[i].value);
       }
     });
 
-    it('remaining cuisines have formatted labels', () => {
+    it('gives remaining cuisines the same key shape as popular ones', () => {
       const all = getAllCuisineOptions();
-      // Find a non-popular cuisine
       const eastEuropean = all.find(c => c.value === Cuisine.EasternEuropean);
       expect(eastEuropean).toBeDefined();
-      // EASTERN_EUROPEAN -> "Eastern European"
-      expect(eastEuropean!.label).toBe('Eastern European');
+      expect(eastEuropean!.labelKey).toBe(
+        cuisineLabelKey(Cuisine.EasternEuropean),
+      );
+      expect(t(eastEuropean!.labelKey)).toBe('Eastern European');
     });
 
-    it('each option has a label and value', () => {
+    it('each option has a label key and value', () => {
       const all = getAllCuisineOptions();
       for (const option of all) {
-        expect(option.label).toBeDefined();
-        expect(typeof option.label).toBe('string');
+        expect(typeof option.labelKey).toBe('string');
         expect(option.value).toBeDefined();
       }
     });

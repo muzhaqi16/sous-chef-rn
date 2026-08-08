@@ -1,26 +1,37 @@
 import { Cuisine } from '#/graphql/generated/schemaTypes';
 
 export interface PopularCuisine {
-  label: string;
+  /** i18n key path — resolved by the consumer, which has the hook. */
+  labelKey: string;
   value: Cuisine;
 }
 
+/** Every cuisine resolves through the same key path, popular or not. */
+export const cuisineLabelKey = (value: Cuisine): string => `cuisines.${value}`;
+
 export const POPULAR_CUISINES: PopularCuisine[] = [
-  { label: 'Italian', value: Cuisine.Italian },
-  { label: 'Mexican', value: Cuisine.Mexican },
-  { label: 'Chinese', value: Cuisine.Chinese },
-  { label: 'Japanese', value: Cuisine.Japanese },
-  { label: 'Indian', value: Cuisine.Indian },
-  { label: 'Thai', value: Cuisine.Thai },
-  { label: 'Mediterranean', value: Cuisine.Mediterranean },
-  { label: 'American', value: Cuisine.American },
+  { labelKey: cuisineLabelKey(Cuisine.Italian), value: Cuisine.Italian },
+  { labelKey: cuisineLabelKey(Cuisine.Mexican), value: Cuisine.Mexican },
+  { labelKey: cuisineLabelKey(Cuisine.Chinese), value: Cuisine.Chinese },
+  { labelKey: cuisineLabelKey(Cuisine.Japanese), value: Cuisine.Japanese },
+  { labelKey: cuisineLabelKey(Cuisine.Indian), value: Cuisine.Indian },
+  { labelKey: cuisineLabelKey(Cuisine.Thai), value: Cuisine.Thai },
+  {
+    labelKey: cuisineLabelKey(Cuisine.Mediterranean),
+    value: Cuisine.Mediterranean,
+  },
+  { labelKey: cuisineLabelKey(Cuisine.American), value: Cuisine.American },
 ];
 
-// Helper function to convert enum value to display label
-export const getCuisineLabel = (value: Cuisine): string => {
-  const cuisine = POPULAR_CUISINES.find(c => c.value === value);
-  return cuisine?.label || value;
-};
+/**
+ * Display label for a cuisine. Takes `t` because this is module scope — the
+ * fallback is the title-cased enum name, so an unmapped cuisine still reads
+ * as words rather than LATIN_AMERICAN.
+ */
+export const getCuisineLabel = (
+  value: Cuisine,
+  t: (key: string, fallback?: string) => string,
+): string => t(cuisineLabelKey(value), formatCuisineLabel(value));
 
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {
@@ -30,7 +41,7 @@ export const getAllCuisineOptions = () => {
   const remainingCuisines = allCuisines
     .filter(c => !popularValues.includes(c))
     .map(value => ({
-      label: formatCuisineLabel(value),
+      labelKey: cuisineLabelKey(value),
       value,
     }));
 

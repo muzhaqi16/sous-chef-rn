@@ -80,13 +80,14 @@ interface HighlightBadgeProps {
 }
 
 const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
+  const { t } = useTranslation();
   const variant = toVariant(highlight.type);
   badgeStyles.useVariants({ variant });
 
   return (
     <View style={badgeStyles.badge}>
       <Text size="xs" weight="medium" style={badgeStyles.label}>
-        {highlight.label}
+        {t(highlight.labelKey)}
       </Text>
     </View>
   );

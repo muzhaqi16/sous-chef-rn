@@ -3243,5 +3243,43 @@
     "tapToEnable": "Tap to enable {{method}} login",
     "useToLogin": "Use {{method}} to login",
     "genericMethod": "biometric"
+  },
+  "cuisines": {
+    "AFRICAN": "African",
+    "AMERICAN": "American",
+    "BRITISH": "British",
+    "CAJUN": "Cajun",
+    "CARIBBEAN": "Caribbean",
+    "CHINESE": "Chinese",
+    "EASTERN_EUROPEAN": "Eastern European",
+    "FRENCH": "French",
+    "GERMAN": "German",
+    "GREEK": "Greek",
+    "INDIAN": "Indian",
+    "IRISH": "Irish",
+    "ITALIAN": "Italian",
+    "JAPANESE": "Japanese",
+    "JEWISH": "Jewish",
+    "KOREAN": "Korean",
+    "LATIN_AMERICAN": "Latin American",
+    "MEDITERRANEAN": "Mediterranean",
+    "MEXICAN": "Mexican",
+    "MIDDLE_EASTERN": "Middle Eastern",
+    "NORDIC": "Nordic",
+    "SOUTHERN": "Southern",
+    "SPANISH": "Spanish",
+    "THAI": "Thai",
+    "VIETNAMESE": "Vietnamese"
+  },
+  "nutritionHighlights": {
+    "highProtein": "High Protein",
+    "lowFat": "Low Fat",
+    "goodFiber": "Good Fiber",
+    "lowSugar": "Low Sugar",
+    "highSodium": "High Sodium",
+    "vitaminC": "Vitamin C",
+    "iron": "Iron",
+    "calcium": "Calcium",
+    "potassium": "Potassium"
   }
 }

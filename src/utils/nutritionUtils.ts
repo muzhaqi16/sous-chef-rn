@@ -141,47 +141,71 @@ export function generateHighlights(
 
   // High protein (>= 10g per serving)
   if (nutritions.protein && nutritions.protein.amount >= 10) {
-    highlights.push({ label: 'High Protein', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.highProtein',
+      type: 'positive',
+    });
   }
 
   // Low fat (<= 3g per serving)
   if (nutritions.totalFat && nutritions.totalFat.amount <= 3) {
-    highlights.push({ label: 'Low Fat', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.lowFat',
+      type: 'positive',
+    });
   }
 
   // Good fiber (>= 3g per serving)
   if (nutritions.fiber && nutritions.fiber.amount >= 3) {
-    highlights.push({ label: 'Good Fiber', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.goodFiber',
+      type: 'positive',
+    });
   }
 
   // Low sugar (<= 5g per serving)
   if (nutritions.sugar && nutritions.sugar.amount <= 5) {
-    highlights.push({ label: 'Low Sugar', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.lowSugar',
+      type: 'positive',
+    });
   }
 
   // High sodium (>= 600mg per serving) - caution
   if (nutritions.sodium && nutritions.sodium.amount >= 600) {
-    highlights.push({ label: 'High Sodium', type: 'caution' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.highSodium',
+      type: 'caution',
+    });
   }
 
   // Good source of Vitamin C (>= 10% DV, roughly 9mg)
   if (nutritions.vitaminC && nutritions.vitaminC.amount >= 9) {
-    highlights.push({ label: 'Vitamin C', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.vitaminC',
+      type: 'positive',
+    });
   }
 
   // Good source of Iron (>= 10% DV, roughly 1.8mg)
   if (nutritions.iron && nutritions.iron.amount >= 1.8) {
-    highlights.push({ label: 'Iron', type: 'positive' });
+    highlights.push({ labelKey: 'nutritionHighlights.iron', type: 'positive' });
   }
 
   // Good source of Calcium (>= 10% DV, roughly 130mg)
   if (nutritions.calcium && nutritions.calcium.amount >= 130) {
-    highlights.push({ label: 'Calcium', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.calcium',
+      type: 'positive',
+    });
   }
 
   // Good source of Potassium (>= 10% DV, roughly 470mg)
   if (nutritions.potassium && nutritions.potassium.amount >= 470) {
-    highlights.push({ label: 'Potassium', type: 'positive' });
+    highlights.push({
+      labelKey: 'nutritionHighlights.potassium',
+      type: 'positive',
+    });
   }
 
   return highlights;

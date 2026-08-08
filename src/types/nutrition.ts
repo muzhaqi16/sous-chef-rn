@@ -75,7 +75,8 @@ export interface MacroSummary {
  * Smart highlight badge (e.g., "High Protein", "Low Fat")
  */
 export interface NutritionHighlight {
-  label: string;
+  /** i18n key path — generateHighlights runs in module scope, no hook. */
+  labelKey: string;
   type: 'positive' | 'neutral' | 'caution';
 }
 

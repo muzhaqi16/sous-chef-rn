@@ -56,7 +56,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
         {cuisinesToShow.map(cuisine => (
           <AnimatedChip
             key={cuisine.value}
-            label={cuisine.label}
+            label={t(cuisine.labelKey)}
             selected={selectedCuisines.includes(cuisine.value)}
             onPress={() => handleToggleCuisine(cuisine.value)}
           />
