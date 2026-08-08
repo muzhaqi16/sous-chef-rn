@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
@@ -37,11 +38,12 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
   expanded,
   onToggle,
 }) => {
+  const { t } = useTranslation();
   if (usageRecords.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Usage History"
+      title={t('pantryItemDetail.usageHistory')}
       count={usageRecords.length}
       expanded={expanded}
       onToggle={onToggle}

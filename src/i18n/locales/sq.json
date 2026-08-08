@@ -134,7 +134,9 @@
     "entityItem": "Artikull",
     "entityHome": "Shtëpia",
     "entityMember": "Anëtar",
-    "entityInvite": "Ftesë"
+    "entityInvite": "Ftesë",
+    "notFoundTitle": "Nuk u gjet",
+    "validUnits": "Njësitë e vlefshme: {{units}}"
   },
   "success": {
     "itemAdded": "Artikulli u shtua",
@@ -242,7 +244,8 @@
     "validationError": "Gabim validimi",
     "item": "Artikull",
     "addNamed": "Shto {{name}}",
-    "dismissNamed": "Hiq {{name}}"
+    "dismissNamed": "Hiq {{name}}",
+    "discard": "Hidh"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -743,7 +746,46 @@
     "noShoppingListSelectedTitle": "Asnjë listë blerjesh e zgjedhur",
     "noShoppingListSelectedMessage": "Ju lutemi zgjidhni fillimisht një listë blerjesh.",
     "goToShoppingLists": "Shko te listat e blerjeve",
-    "noRecipeSuggestions": "Nuk ka sugjerime recetash në dispozicion"
+    "noRecipeSuggestions": "Nuk ka sugjerime recetash në dispozicion",
+    "notes": "Shënime",
+    "tags": "Etiketa",
+    "usageHistory": "Historiku i përdorimit",
+    "fields": {
+      "quantity": "Sasia",
+      "netWeight": "Pesha neto",
+      "remainingWeight": "Pesha e mbetur",
+      "inventory": "Inventari",
+      "package": "Paketimi",
+      "shelfLife": "Afati i ruajtjes",
+      "brand": "Marka",
+      "storage": "Ruajtja",
+      "store": "Dyqani",
+      "condition": "Gjendja",
+      "acquired": "Marrë më",
+      "costPerUnit": "Kosto/njësi",
+      "totalCost": "Kostoja totale",
+      "minStock": "Stoku minimal",
+      "restockAt": "Rimbush në",
+      "purchased": "Blerë",
+      "lastUsed": "Përdorur së fundi",
+      "added": "Shtuar"
+    },
+    "batch": {
+      "number": "Grupi #{{number}}",
+      "opened": "Hapur",
+      "wasted": "Shpenzuar",
+      "depleted": "Mbaruar",
+      "expired": "Skaduar",
+      "expiresToday": "Skadon sot",
+      "daysLeft_one": "{{count}} ditë e mbetur",
+      "daysLeft_other": "{{count}} ditë të mbetura"
+    },
+    "deleteTitle": "Fshi artikullin",
+    "deleteBody": "Je i sigurt që do ta fshish këtë artikull?",
+    "discardBatchesTitle": "Hidh grupet e skaduara",
+    "discardBatchesBody": "Kjo do t'i shënojë të gjitha grupet e skaduara si të shpenzuara.",
+    "discardItemTitle": "Hidh artikullin e skaduar",
+    "discardItemBody": "Kjo do të shënojë {{quantity}} {{unit}} të mbetura si të shpenzuara për shkak të skadimit."
   },
   "shoppingListScreens": {
     "emptyTitle": "Lista jote është bosh",
@@ -2508,7 +2550,8 @@
     "tutorialPantrySettingsTitle": "Cilësimet e qilarit",
     "tutorialPantrySettingsSubtitle": "Kalo mes listave të qilarit dhe krijo qilarë të rinj",
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
-    "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd"
+    "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd",
+    "outOfStock": "Pa stok"
   },
   "homeManagement": {
     "title": "Shtëpitë e Mia",

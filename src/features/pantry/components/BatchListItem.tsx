@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -19,7 +20,15 @@ interface BatchListItemProps {
   onWaste?: (batchId: string) => void;
 }
 
-const getExpiryText = (expiresAt: string | null | undefined) => {
+/**
+ * Takes `t` rather than using the module-level helper: `daysLeft` is a plural
+ * key, and only the hook's `t` accepts the `{ count }` option that selects
+ * between the _one and _other forms.
+ */
+const getExpiryText = (
+  expiresAt: string | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+) => {
   if (!expiresAt) return null;
   const now = new Date();
   const expiry = new Date(expiresAt);
@@ -27,15 +36,25 @@ const getExpiryText = (expiresAt: string | null | undefined) => {
     (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays < 0) return { text: 'Expired', isExpired: true };
-  if (diffDays === 0) return { text: 'Expires today', isExpired: false };
-  if (diffDays === 1) return { text: '1 day left', isExpired: false };
-  return { text: `${diffDays} days left`, isExpired: false };
+  if (diffDays < 0)
+    return { text: t('pantryItemDetail.batch.expired'), isExpired: true };
+  if (diffDays === 0)
+    return { text: t('pantryItemDetail.batch.expiresToday'), isExpired: false };
+  return {
+    text: t('pantryItemDetail.batch.daysLeft', { count: diffDays }),
+    isExpired: false,
+  };
 };
 
+/**
+ * `undefined` as the locale makes Intl use the device's own, so the date reads
+ * natively for the user. A hardcoded 'en-US' rendered "Mar 3" inside otherwise
+ * translated UI, and put the month before the day for every locale that writes
+ * it the other way round.
+ */
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return null;
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return new Date(dateString).toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
   });
@@ -47,6 +66,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   onOpen,
   onWaste,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
   // updated by openBatch / wasteBatch mutations). Falls back to the source
@@ -58,7 +78,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   });
   const batch = fragmentResult.complete ? fragmentResult.data : batchSource;
 
-  const expiryInfo = getExpiryText(batch.expiresAt);
+  const expiryInfo = getExpiryText(batch.expiresAt, t);
   const isActive = batch.status === BatchStatus.Active;
 
   return (
@@ -66,26 +86,26 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
       <View style={styles.leftSection}>
         <View style={styles.titleRow}>
           <Text size="base" weight="medium">
-            Batch #{batch.batchNumber}
+            {t('pantryItemDetail.batch.number', { number: batch.batchNumber })}
           </Text>
           {!!batch.isOpened && (
             <View style={styles.openedBadge}>
               <Text size="xs" weight="medium" tone="accent">
-                Opened
+                {t('pantryItemDetail.batch.opened')}
               </Text>
             </View>
           )}
           {batch.status === BatchStatus.Wasted && (
             <View style={styles.wastedBadge}>
               <Text size="xs" weight="medium" tone="error">
-                Wasted
+                {t('pantryItemDetail.batch.wasted')}
               </Text>
             </View>
           )}
           {batch.status === BatchStatus.Depleted && (
             <View style={styles.depletedBadge}>
               <Text size="xs" weight="medium" tone="tertiary">
-                Depleted
+                {t('pantryItemDetail.batch.depleted')}
               </Text>
             </View>
           )}

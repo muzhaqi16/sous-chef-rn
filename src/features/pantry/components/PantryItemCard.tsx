@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -170,6 +171,7 @@ interface PantryItemCardProps {
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   pantryItemRef,
 }) => {
+  const { t } = useTranslation();
   const { data: pantryItem, complete } = useFragment({
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
@@ -283,7 +285,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     if (isOutOfStock) {
       return (
         <Text weight="medium" tone="warning" style={styles.outOfStock}>
-          Out of stock
+          {t('pantryScreen.outOfStock')}
         </Text>
       );
     }

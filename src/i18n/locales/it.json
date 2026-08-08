@@ -134,7 +134,9 @@
     "entityItem": "Elemento",
     "entityHome": "Casa",
     "entityMember": "Membro",
-    "entityInvite": "Invito"
+    "entityInvite": "Invito",
+    "notFoundTitle": "Non trovato",
+    "validUnits": "Unità valide: {{units}}"
   },
   "success": {
     "itemAdded": "Articolo aggiunto",
@@ -242,7 +244,8 @@
     "validationError": "Errore di convalida",
     "item": "Articolo",
     "addNamed": "Aggiungi {{name}}",
-    "dismissNamed": "Ignora {{name}}"
+    "dismissNamed": "Ignora {{name}}",
+    "discard": "Scarta"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -743,7 +746,46 @@
     "noShoppingListSelectedTitle": "Nessuna lista della spesa selezionata",
     "noShoppingListSelectedMessage": "Seleziona prima una lista della spesa.",
     "goToShoppingLists": "Vai alle liste della spesa",
-    "noRecipeSuggestions": "Nessun suggerimento di ricetta disponibile"
+    "noRecipeSuggestions": "Nessun suggerimento di ricetta disponibile",
+    "notes": "Note",
+    "tags": "Tag",
+    "usageHistory": "Cronologia d'uso",
+    "fields": {
+      "quantity": "Quantità",
+      "netWeight": "Peso netto",
+      "remainingWeight": "Peso rimanente",
+      "inventory": "Inventario",
+      "package": "Confezione",
+      "shelfLife": "Conservazione",
+      "brand": "Marca",
+      "storage": "Conservazione",
+      "store": "Negozio",
+      "condition": "Condizione",
+      "acquired": "Acquisito",
+      "costPerUnit": "Costo/unità",
+      "totalCost": "Costo totale",
+      "minStock": "Scorta minima",
+      "restockAt": "Rifornire a",
+      "purchased": "Acquistato",
+      "lastUsed": "Ultimo utilizzo",
+      "added": "Aggiunto"
+    },
+    "batch": {
+      "number": "Lotto n. {{number}}",
+      "opened": "Aperto",
+      "wasted": "Sprecato",
+      "depleted": "Esaurito",
+      "expired": "Scaduto",
+      "expiresToday": "Scade oggi",
+      "daysLeft_one": "{{count}} giorno rimasto",
+      "daysLeft_other": "{{count}} giorni rimasti"
+    },
+    "deleteTitle": "Elimina articolo",
+    "deleteBody": "Vuoi davvero eliminare questo articolo?",
+    "discardBatchesTitle": "Scarta i lotti scaduti",
+    "discardBatchesBody": "Questo segnerà tutti i lotti scaduti come sprecati.",
+    "discardItemTitle": "Scarta articolo scaduto",
+    "discardItemBody": "Questo segnerà i {{quantity}} {{unit}} rimanenti come sprecati per scadenza."
   },
   "shoppingListScreens": {
     "emptyTitle": "La tua lista è vuota",
@@ -2508,7 +2550,8 @@
     "tutorialPantrySettingsTitle": "Impostazioni della dispensa",
     "tutorialPantrySettingsSubtitle": "Passa tra gli elenchi delle dispense e crea nuove dispense",
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
-    "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa"
+    "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa",
+    "outOfStock": "Esaurito"
   },
   "homeManagement": {
     "title": "Le Mie Case",

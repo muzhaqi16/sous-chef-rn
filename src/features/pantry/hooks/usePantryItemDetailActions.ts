@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n/t';
+// The module-level `t` takes a fallback string, not options, so an interpolated
+// key has to go through the i18next instance directly — same split as
+// src/utils/errorHandlers.ts.
+import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import {
   executeCacheUpdate,
@@ -161,12 +165,12 @@ export function usePantryItemDetailActions({
 
   const handleDelete = () => {
     alertService.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
+      t('pantryItemDetail.deleteTitle'),
+      t('pantryItemDetail.deleteBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
             executeMutation(
@@ -291,12 +295,12 @@ export function usePantryItemDetailActions({
 
     if (hasBatches) {
       alertService.alert(
-        'Discard Expired Batches',
-        'This will mark all expired batches as wasted.',
+        t('pantryItemDetail.discardBatchesTitle'),
+        t('pantryItemDetail.discardBatchesBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('labels.discard'),
             style: 'destructive',
             onPress: () => convertExpiredBatches(item.id),
           },
@@ -304,14 +308,15 @@ export function usePantryItemDetailActions({
       );
     } else {
       alertService.alert(
-        'Discard Expired Item',
-        `This will mark the remaining ${item.quantity} ${
-          item.unit?.name || ''
-        } as wasted due to expiration.`,
+        t('pantryItemDetail.discardItemTitle'),
+        getI18n().t('pantryItemDetail.discardItemBody', {
+          quantity: item.quantity,
+          unit: item.unit?.name || '',
+        }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('labels.discard'),
             style: 'destructive',
             onPress: () => convertExpiredToWaste(item.id),
           },

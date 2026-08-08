@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
@@ -61,10 +62,20 @@ const CLOSED_MODAL: ActiveModal = { type: null };
  * - Edit item (navigation)
  * - Delete item (mutation)
  */
+/**
+ * "Item Updated" — the version-conflict alert title, built the same way
+ * `alertVersionConflict` builds it. Parameterized on the entity rather than
+ * hardcoded so languages that read "Updated {entity}" can reorder it.
+ */
+const entityUpdatedTitle = (
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string => t('errors.entityUpdatedTitle', { entity: t('errors.entityItem') });
+
 export function usePantryItemActions({
   removeItem,
   navigateTo,
 }: UsePantryItemActionsOptions) {
+  const { t } = useTranslation();
   const client = useApolloClient();
   // Single state for all modals — only one can be open at a time
   const [activeModal, setActiveModal] = useState<ActiveModal>(CLOSED_MODAL);
@@ -172,25 +183,28 @@ export function usePantryItemActions({
     const message =
       typeof payload.message === 'string'
         ? (payload.message as string)
-        : 'Something went wrong';
+        : t('errors.somethingWentWrong');
 
     if (isNotFoundErrorPayload(payload)) {
       const resource =
         typeof payload.resource === 'string' ? payload.resource : undefined;
-      alertService.alert('Not Found', getNotFoundMessage(resource));
+      alertService.alert(
+        t('errors.notFoundTitle'),
+        getNotFoundMessage(resource),
+      );
     } else if (isInvalidUnitPayload(code)) {
       const rawValidUnits = (payload as { validUnits?: unknown }).validUnits;
       const validList = Array.isArray(rawValidUnits)
         ? (rawValidUnits as string[]).join(', ')
         : undefined;
       const detail = validList
-        ? `${message}\n\nValid units: ${validList}`
+        ? `${message}\n\n${t('errors.validUnits', { units: validList })}`
         : message;
-      alertService.alert('Invalid Unit', detail);
+      alertService.alert(t('errors.invalidUnitTitle'), detail);
     } else if (isVersionConflictPayload(code)) {
-      alertService.alert('Item Updated', message);
+      alertService.alert(entityUpdatedTitle(t), message);
     } else {
-      alertService.alert('Error', message);
+      alertService.alert(t('labels.error'), message);
     }
 
     return true;
@@ -252,18 +266,24 @@ export function usePantryItemActions({
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert('Item Updated', getVersionConflictMessage());
+            alertService.alert(
+              entityUpdatedTitle(t),
+              getVersionConflictMessage(),
+            );
             return;
           }
           if (isInvalidUnitError(error)) {
-            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            alertService.alert(
+              t('errors.invalidUnitTitle'),
+              getInvalidUnitMessage(error),
+            );
             return;
           }
           const errorMessage =
             (error instanceof Error && error.message) ||
             'Failed to record item usage. Please try again.';
           errorService.reportError(error, { operation: 'consumePantryItem' });
-          alertService.alert('Error', errorMessage);
+          alertService.alert(t('labels.error'), errorMessage);
         }
       },
     );
@@ -330,11 +350,17 @@ export function usePantryItemActions({
         revertOptimistic?.();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert('Item Updated', getVersionConflictMessage());
+            alertService.alert(
+              entityUpdatedTitle(t),
+              getVersionConflictMessage(),
+            );
             return;
           }
           if (isInvalidUnitError(error)) {
-            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            alertService.alert(
+              t('errors.invalidUnitTitle'),
+              getInvalidUnitMessage(error),
+            );
             return;
           }
           const errorMessage =
@@ -343,7 +369,7 @@ export function usePantryItemActions({
           errorService.reportError(error, {
             operation: 'recordPantryItemWaste',
           });
-          alertService.alert('Error', errorMessage);
+          alertService.alert(t('labels.error'), errorMessage);
         }
       },
     );
@@ -436,18 +462,24 @@ export function usePantryItemActions({
         revertOptimistic();
         if (!isNetworkError(error)) {
           if (isVersionConflictError(error)) {
-            alertService.alert('Item Updated', getVersionConflictMessage());
+            alertService.alert(
+              entityUpdatedTitle(t),
+              getVersionConflictMessage(),
+            );
             return;
           }
           if (isInvalidUnitError(error)) {
-            alertService.alert('Invalid Unit', getInvalidUnitMessage(error));
+            alertService.alert(
+              t('errors.invalidUnitTitle'),
+              getInvalidUnitMessage(error),
+            );
             return;
           }
           const errorMessage =
             (error instanceof Error && error.message) ||
             'Failed to restock item. Please try again.';
           errorService.reportError(error, { operation: 'restockPantryItem' });
-          alertService.alert('Error', errorMessage);
+          alertService.alert(t('labels.error'), errorMessage);
         }
       },
     );

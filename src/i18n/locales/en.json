@@ -134,7 +134,9 @@
     "entityItem": "Item",
     "entityHome": "Home",
     "entityMember": "Member",
-    "entityInvite": "Invite"
+    "entityInvite": "Invite",
+    "notFoundTitle": "Not Found",
+    "validUnits": "Valid units: {{units}}"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -242,7 +244,8 @@
     "validationError": "Validation Error",
     "item": "Item",
     "addNamed": "Add {{name}}",
-    "dismissNamed": "Dismiss {{name}}"
+    "dismissNamed": "Dismiss {{name}}",
+    "discard": "Discard"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -743,7 +746,46 @@
     "noShoppingListSelectedTitle": "No Shopping List Selected",
     "noShoppingListSelectedMessage": "Please select a shopping list first.",
     "goToShoppingLists": "Go to Shopping Lists",
-    "noRecipeSuggestions": "No recipe suggestions available"
+    "noRecipeSuggestions": "No recipe suggestions available",
+    "notes": "Notes",
+    "tags": "Tags",
+    "usageHistory": "Usage History",
+    "fields": {
+      "quantity": "Quantity",
+      "netWeight": "Net Weight",
+      "remainingWeight": "Remaining Weight",
+      "inventory": "Inventory",
+      "package": "Package",
+      "shelfLife": "Shelf Life",
+      "brand": "Brand",
+      "storage": "Storage",
+      "store": "Store",
+      "condition": "Condition",
+      "acquired": "Acquired",
+      "costPerUnit": "Cost/Unit",
+      "totalCost": "Total Cost",
+      "minStock": "Min Stock",
+      "restockAt": "Restock At",
+      "purchased": "Purchased",
+      "lastUsed": "Last Used",
+      "added": "Added"
+    },
+    "batch": {
+      "number": "Batch #{{number}}",
+      "opened": "Opened",
+      "wasted": "Wasted",
+      "depleted": "Depleted",
+      "expired": "Expired",
+      "expiresToday": "Expires today",
+      "daysLeft_one": "{{count}} day left",
+      "daysLeft_other": "{{count}} days left"
+    },
+    "deleteTitle": "Delete Item",
+    "deleteBody": "Are you sure you want to delete this item?",
+    "discardBatchesTitle": "Discard Expired Batches",
+    "discardBatchesBody": "This will mark all expired batches as wasted.",
+    "discardItemTitle": "Discard Expired Item",
+    "discardItemBody": "This will mark the remaining {{quantity}} {{unit}} as wasted due to expiration."
   },
   "shoppingListScreens": {
     "emptyTitle": "Your list is empty",
@@ -2508,7 +2550,8 @@
     "tutorialPantrySettingsTitle": "Pantry settings",
     "tutorialPantrySettingsSubtitle": "Switch between pantry lists and create new pantries",
     "tutorialAddItemsTitle": "Add items quickly",
-    "tutorialAddItemsSubtitle": "Tap + to add items to your pantry"
+    "tutorialAddItemsSubtitle": "Tap + to add items to your pantry",
+    "outOfStock": "Out of stock"
   },
   "homeManagement": {
     "title": "My Homes",

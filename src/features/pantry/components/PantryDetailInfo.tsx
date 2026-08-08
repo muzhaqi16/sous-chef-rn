@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -49,6 +50,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   onCorrectWeight,
   correctWeightDisabled = false,
 }) => {
+  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
   // component renders correctly under test fixtures + tolerates stale state.
@@ -68,7 +70,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
     <>
       {/* Quantity Row */}
       <InfoRow
-        label="Quantity"
+        label={t('pantryItemDetail.fields.quantity')}
         value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
         icon="apps-outline"
         showColon={false}
@@ -79,7 +81,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Net Weight Row */}
       {!!netWeightText && (
         <InfoRow
-          label="Net Weight"
+          label={t('pantryItemDetail.fields.netWeight')}
           value={netWeightText}
           icon="scale-outline"
           showColon={false}
@@ -108,7 +110,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Remaining Weight Row */}
       {!!remainingNetWeightText && (
         <InfoRow
-          label="Remaining Weight"
+          label={t('pantryItemDetail.fields.remainingWeight')}
           value={remainingNetWeightText}
           icon="scale-outline"
           showColon={false}
@@ -120,7 +122,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Inventory Breakdown Row */}
       {!!quantityBreakdownText && (
         <InfoRow
-          label="Inventory"
+          label={t('pantryItemDetail.fields.inventory')}
           value={quantityBreakdownText}
           icon="layers-outline"
           showColon={false}
@@ -132,7 +134,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Package Details Row */}
       {!!packageBreakdownText && (
         <InfoRow
-          label="Package"
+          label={t('pantryItemDetail.fields.package')}
           value={packageBreakdownText}
           icon="layers-outline"
           showColon={false}
@@ -144,7 +146,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Shelf Life Row */}
       {(shelfLifeDays != null || shelfLifeOpenedDays != null) && (
         <InfoRow
-          label="Shelf Life"
+          label={t('pantryItemDetail.fields.shelfLife')}
           value={
             shelfLifeOpenedDays != null && shelfLifeDays != null
               ? `${shelfLifeDays}d (${shelfLifeOpenedDays}d once opened)`
@@ -162,7 +164,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Brand Row */}
       {!!brandName && (
         <InfoRow
-          label="Brand"
+          label={t('pantryItemDetail.fields.brand')}
           value={brandName}
           icon="pricetag-outline"
           showColon={false}
@@ -174,7 +176,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Storage Location */}
       {!!item.storageLocation && (
         <InfoRow
-          label="Storage"
+          label={t('pantryItemDetail.fields.storage')}
           value={
             typeof item.storageLocation === 'string'
               ? item.storageLocation
@@ -190,7 +192,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Store Row */}
       {!!item.store?.name && (
         <InfoRow
-          label="Store"
+          label={t('pantryItemDetail.fields.store')}
           value={item.store.name}
           icon="storefront-outline"
           showColon={false}
@@ -202,11 +204,13 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Condition Row - only show if not GOOD */}
       {!!formatCondition(item.condition) && (
         <ThemedConditionInfoRow
-          label="Condition"
+          label={t('pantryItemDetail.fields.condition')}
           value={formatCondition(item.condition)}
           icon="fitness-outline"
-          uniProps={t => ({
-            iconColor: isCriticalCondition ? t.colors.error : t.colors.warning,
+          uniProps={theme => ({
+            iconColor: isCriticalCondition
+              ? theme.colors.error
+              : theme.colors.warning,
           })}
           valueStyle={[
             isCriticalCondition && styles.valueError,
@@ -220,7 +224,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Acquired Via Row */}
       {!!formatAcquisitionMethod(item.acquisitionMethod) && (
         <InfoRow
-          label="Acquired"
+          label={t('pantryItemDetail.fields.acquired')}
           value={formatAcquisitionMethod(item.acquisitionMethod)}
           icon="bag-handle-outline"
           showColon={false}
@@ -232,7 +236,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Cost Per Unit Row */}
       {!!formatCurrency(item.costPerUnit) && (
         <InfoRow
-          label="Cost/Unit"
+          label={t('pantryItemDetail.fields.costPerUnit')}
           value={formatCurrency(item.costPerUnit)}
           icon="cash-outline"
           showColon={false}
@@ -244,7 +248,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Total Cost Row */}
       {!!formatCurrency(item.totalCost) && (
         <InfoRow
-          label="Total Cost"
+          label={t('pantryItemDetail.fields.totalCost')}
           value={formatCurrency(item.totalCost)}
           icon="wallet-outline"
           showColon={false}
@@ -256,7 +260,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Min Stock Row */}
       {item.minQuantity != null && item.minQuantity > 0 && (
         <InfoRow
-          label="Min Stock"
+          label={t('pantryItemDetail.fields.minStock')}
           value={`${item.minQuantity} ${item.unit?.name ?? ''}`}
           icon="alert-circle-outline"
           showColon={false}
@@ -268,7 +272,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Restock At Row */}
       {item.restockQuantity != null && item.restockQuantity > 0 && (
         <InfoRow
-          label="Restock At"
+          label={t('pantryItemDetail.fields.restockAt')}
           value={`${item.restockQuantity} ${item.unit?.name ?? ''}`}
           icon="refresh-outline"
           showColon={false}
@@ -280,7 +284,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Purchase Date Row */}
       {!!item.purchase?.purchaseDate && (
         <InfoRow
-          label="Purchased"
+          label={t('pantryItemDetail.fields.purchased')}
           value={`${formatDate(item.purchase.purchaseDate)}${
             item.purchase.unitPrice != null && item.purchase.unitPrice > 0
               ? ` @ ${formatCurrency(item.purchase.unitPrice)}`
@@ -296,7 +300,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Usage Info Row */}
       {!!item.lastUsedAt && (
         <InfoRow
-          label="Last Used"
+          label={t('pantryItemDetail.fields.lastUsed')}
           value={formatDate(item.lastUsedAt)}
           icon="time-outline"
           showColon={false}
@@ -316,7 +320,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
               tone="secondary"
               style={styles.notesLabel}
             >
-              Notes
+              {t('pantryItemDetail.notes')}
             </Text>
           </View>
           <Text size="base" style={styles.notesText}>
@@ -328,7 +332,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {!!item.tags && item.tags.length > 0 && (
         <View style={styles.tagsSection}>
           <Text size="sm" tone="secondary" style={styles.tagsLabel}>
-            Tags
+            {t('pantryItemDetail.tags')}
           </Text>
           <View style={styles.tagsContainer}>
             {item.tags.map(tag => (
@@ -343,7 +347,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       )}
       {/* Added Info */}
       <InfoRow
-        label="Added"
+        label={t('pantryItemDetail.fields.added')}
         value={formatDate(item.createdAt)}
         icon="calendar-outline"
         showColon={false}
