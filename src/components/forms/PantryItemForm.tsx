@@ -453,8 +453,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'tags',
-      label: 'Tags',
-      placeholder: 'Enter tags separated by commas',
+      label: t('itemForm.tags'),
+      placeholder: t('itemForm.tagsPlaceholder'),
       component: FormInput,
       renderValue: (value: unknown) =>
         Array.isArray(value)

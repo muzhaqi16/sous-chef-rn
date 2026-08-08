@@ -4,6 +4,7 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { executeMutation, unwrapPayload } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { t } from '#/i18n/t';
 
 interface UseAddLowStockToShoppingListOptions {
   homeId: string | undefined;
@@ -35,14 +36,14 @@ export function useAddLowStockToShoppingList({
         return unwrapPayload(
           data?.addLowStockItemsToShoppingList,
           'AddLowStockItemsToShoppingListPayload',
-          'Failed to add low stock items',
+          t('errors.addLowStockFailed'),
         );
       },
       (error: unknown) => {
         toastService.error(
           error instanceof Error
             ? error.message
-            : 'Failed to add low stock items',
+            : t('errors.addLowStockFailed'),
         );
       },
     );

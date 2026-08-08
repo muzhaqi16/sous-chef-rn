@@ -3,6 +3,7 @@ import {
   NotificationPriority,
 } from '#store/slices/notificationSlice';
 import { safeParseDate } from '#utils/dateUtils';
+import { t } from '#/i18n/t';
 
 export interface NotificationGroups {
   urgent: NotificationItem[];
@@ -54,9 +55,9 @@ export const groupNotificationsByDate = (
 
 export const createSectionListData = (groups: NotificationGroups) => {
   return [
-    { title: '🚨 Urgent', data: groups.urgent },
-    { title: 'Today', data: groups.today },
-    { title: 'Yesterday', data: groups.yesterday },
-    { title: 'Older', data: groups.older },
+    { title: t('notificationGroups.urgent'), data: groups.urgent },
+    { title: t('notificationGroups.today'), data: groups.today },
+    { title: t('notificationGroups.yesterday'), data: groups.yesterday },
+    { title: t('notificationGroups.older'), data: groups.older },
   ].filter(section => section.data.length > 0);
 };

@@ -1,5 +1,6 @@
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import type { AddItemSheetConfig } from '../types';
+import { t } from '#/i18n/t';
 
 /**
  * Configuration for AddToShoppingListSheet.
@@ -12,7 +13,7 @@ import type { AddItemSheetConfig } from '../types';
  */
 export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
   {
-    title: 'Add to Shopping List',
+    title: t('addItemSheet.addToShoppingList'),
     testIDPrefix: 'add-shopping-item',
     placeholderIcon: 'cart-outline',
     searchPlaceholder: 'Search or scan item...',

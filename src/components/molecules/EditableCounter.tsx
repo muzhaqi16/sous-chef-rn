@@ -79,8 +79,8 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           text: value,
         }}
         accessibilityActions={[
-          { name: 'increment', label: 'Increase quantity' },
-          { name: 'decrement', label: 'Decrease quantity' },
+          { name: 'increment', label: t('editableCounter.increase') },
+          { name: 'decrement', label: t('editableCounter.decrease') },
         ]}
         onAccessibilityAction={event => {
           switch (event.nativeEvent.actionName) {

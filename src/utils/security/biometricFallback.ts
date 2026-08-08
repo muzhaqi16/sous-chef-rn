@@ -10,6 +10,7 @@ import {
   type SetOptions,
 } from 'react-native-keychain';
 import { Platform } from 'react-native';
+import { t } from '#/i18n/t';
 
 /** Read a human-readable message off an unknown thrown value. */
 const errorMessage = (error: unknown): string | undefined =>
@@ -263,17 +264,17 @@ export class BiometricManager {
     let authPrompt: AuthenticationPrompt;
     if (capability.isAvailable) {
       authPrompt = {
-        title: 'Unlock your saved credentials',
-        subtitle: 'Use your biometric or device passcode',
-        description: 'Authenticate to access your saved login information',
-        cancel: 'Cancel',
+        title: t('biometricPrompt.title'),
+        subtitle: t('biometricPrompt.subtitleBiometric'),
+        description: t('biometricPrompt.description'),
+        cancel: t('labels.cancel'),
       };
     } else {
       authPrompt = {
-        title: 'Unlock your saved credentials',
-        subtitle: 'Enter your device passcode',
-        description: 'Authenticate to access your saved login information',
-        cancel: 'Cancel',
+        title: t('biometricPrompt.title'),
+        subtitle: t('biometricPrompt.subtitlePasscode'),
+        description: t('biometricPrompt.description'),
+        cancel: t('labels.cancel'),
       };
     }
 
@@ -338,8 +339,8 @@ export class BiometricManager {
       const result = await getGenericPassword({
         service,
         authenticationPrompt: {
-          title: 'Check credentials',
-          cancel: 'Cancel',
+          title: t('biometricPrompt.checkCredentials'),
+          cancel: t('labels.cancel'),
         },
       });
       return !!result;

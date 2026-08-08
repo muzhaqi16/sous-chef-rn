@@ -136,7 +136,11 @@
     "entityMember": "Member",
     "entityInvite": "Invite",
     "notFoundTitle": "Not Found",
-    "validUnits": "Valid units: {{units}}"
+    "validUnits": "Valid units: {{units}}",
+    "handlerFailed": "Something went wrong. Please try again.",
+    "unexpected": "An unexpected error occurred",
+    "addLowStockFailed": "Failed to add low stock items",
+    "saveLoginFailed": "Failed to save login information"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -252,7 +256,8 @@
     "viewDetails": "View Details",
     "rename": "Rename",
     "tapToViewDetails": "Tap to view details",
-    "loading": "Loading"
+    "loading": "Loading",
+    "leave": "Leave"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -2346,7 +2351,9 @@
     },
     "noListTitle": "No List Selected",
     "noListBody": "Please select or create a shopping list first.",
-    "createList": "Create List"
+    "createList": "Create List",
+    "addToPantry": "Add to Pantry",
+    "addToShoppingList": "Add to Shopping List"
   },
   "dietaryProfile": {
     "errorTitle": "Error",
@@ -3072,7 +3079,11 @@
     "brandOptional": "Brand (optional)",
     "placeholderItemName": "e.g., Rice, Pasta",
     "placeholderCategory": "e.g., Grains, Dairy",
-    "brand": "Brand"
+    "brand": "Brand",
+    "tags": "Tags",
+    "tagsPlaceholder": "Enter tags separated by commas",
+    "location": "Location",
+    "notesPlaceholder": "Any additional notes..."
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
@@ -3362,5 +3373,41 @@
     "noAction": "No action taken",
     "expiringSoon": "Expiring soon",
     "alreadyExpired": "Already expired"
+  },
+  "homeRoles": {
+    "owner": "Owner",
+    "admin": "Admin",
+    "member": "Member",
+    "guest": "Guest"
+  },
+  "biometricPrompt": {
+    "title": "Unlock your saved credentials",
+    "subtitleBiometric": "Use your biometric or device passcode",
+    "subtitlePasscode": "Enter your device passcode",
+    "description": "Authenticate to access your saved login information",
+    "checkCredentials": "Check credentials",
+    "keychainTitle": "Unlock saved credentials",
+    "useManualLogin": "Use manual login"
+  },
+  "notificationGroups": {
+    "urgent": "🚨 Urgent",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "older": "Older"
+  },
+  "dateRange": {
+    "week": "Week",
+    "month": "Month",
+    "quarter": "Quarter",
+    "year": "Year"
+  },
+  "pantryTabs": {
+    "all": "All",
+    "fridge": "Fridge",
+    "freezer": "Freezer",
+    "pantry": "Pantry"
+  },
+  "editableField": {
+    "saveFailed": "Failed to save"
   }
 }

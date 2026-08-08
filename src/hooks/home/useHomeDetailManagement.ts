@@ -59,11 +59,15 @@ export interface RolePickerState {
   memberName: string;
 }
 
+/**
+ * Key paths, not labels — this array is module-level, so calling t() here would
+ * bake in whatever language was active at import time.
+ */
 export const ROLE_OPTIONS = [
-  { label: 'Owner', value: MembershipRole.Owner },
-  { label: 'Admin', value: MembershipRole.Admin },
-  { label: 'Member', value: MembershipRole.Member },
-  { label: 'Guest', value: MembershipRole.Guest },
+  { labelKey: 'homeRoles.owner', value: MembershipRole.Owner },
+  { labelKey: 'homeRoles.admin', value: MembershipRole.Admin },
+  { labelKey: 'homeRoles.member', value: MembershipRole.Member },
+  { labelKey: 'homeRoles.guest', value: MembershipRole.Guest },
 ];
 
 const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
@@ -352,9 +356,13 @@ export function useHomeDetailManagement(homeId: string) {
         t('home.leaveTitle'),
         getI18n().t('home.leaveBody', { name: homeName }),
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           {
-            text: 'Leave',
+            text: t('labels.cancel'),
+            style: 'cancel',
+            onPress: () => resolve(false),
+          },
+          {
+            text: t('labels.leave'),
             style: 'destructive',
             onPress: async () => {
               const result = await executeMutation(

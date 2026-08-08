@@ -67,7 +67,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       },
       setSaving,
       err => {
-        setError(err instanceof Error ? err.message : 'Failed to save');
+        setError(
+          err instanceof Error ? err.message : t('editableField.saveFailed'),
+        );
       },
     );
   };

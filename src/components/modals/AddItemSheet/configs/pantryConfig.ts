@@ -1,5 +1,6 @@
 import type { PantryItemSuggestion } from '#features/pantry/hooks/usePantryItemSuggestions';
 import type { AddItemSheetConfig } from '../types';
+import { t } from '#/i18n/t';
 
 /**
  * Configuration for AddToPantrySheet.
@@ -11,7 +12,7 @@ import type { AddItemSheetConfig } from '../types';
  * - Deferred fetch for smooth sheet animation
  */
 export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
-  title: 'Add to Pantry',
+  title: t('addItemSheet.addToPantry'),
   testIDPrefix: 'add-pantry-item',
   placeholderIcon: 'cube-outline',
   searchPlaceholder: 'Search or scan item...',

@@ -4,6 +4,7 @@ import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
+import { t } from '#/i18n/t';
 
 export interface RememberMeCredentials {
   email: string;
@@ -42,7 +43,7 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
             operation: 'processCredentialAcceptance',
           });
           toast({
-            message: 'Failed to save login information',
+            message: t('errors.saveLoginFailed'),
             type: 'error',
           });
         },

@@ -49,8 +49,8 @@ export function useQueryWithComplexityHandling<
         t('complexity.body'),
         (
           [
-            { text: 'Cancel', style: 'cancel' },
-            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+            { text: t('labels.cancel'), style: 'cancel' },
+            onRetry ? { text: t('labels.retry'), onPress: onRetry } : undefined,
           ] as (AlertButton | undefined)[]
         ).filter((b): b is AlertButton => b != null),
       );
@@ -75,8 +75,8 @@ export function useQueryWithComplexityHandling<
         t('complexity.body'),
         (
           [
-            { text: 'Cancel', style: 'cancel' },
-            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+            { text: t('labels.cancel'), style: 'cancel' },
+            onRetry ? { text: t('labels.retry'), onPress: onRetry } : undefined,
           ] as (AlertButton | undefined)[]
         ).filter((b): b is AlertButton => b != null),
       );

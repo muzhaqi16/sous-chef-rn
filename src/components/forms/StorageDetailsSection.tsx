@@ -71,7 +71,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   const locationFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'location',
-      label: 'Location',
+      label: t('itemForm.location'),
       placeholder: 'e.g., Top shelf, Drawer 2',
       component: 'storageLocationAutocomplete',
       storageLocations,
@@ -84,7 +84,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
     {
       name: 'notes',
       label: mode === 'edit' ? 'Storage Notes' : 'Notes',
-      placeholder: 'Any additional notes...',
+      placeholder: t('itemForm.notesPlaceholder'),
       component: FormTextArea,
       props: { numberOfLines: 3 },
     },

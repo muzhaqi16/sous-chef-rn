@@ -17,7 +17,6 @@
  */
 
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n/t';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -35,6 +34,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { Telemetry } from '#/services/telemetry';
+import { t } from '#/i18n/t';
 
 /**
  * Result type for error operations
@@ -430,7 +430,7 @@ export class ErrorService {
         success: false,
         error: {
           code: 'ERROR_HANDLER_FAILED',
-          message: 'Something went wrong. Please try again.',
+          message: t('errors.handlerFailed'),
           category: 'Unknown',
           shouldRetry: false,
           isAuthError: false,
@@ -451,7 +451,7 @@ export class ErrorService {
     return (
       result.error || {
         code: 'UNKNOWN_ERROR',
-        message: 'An unexpected error occurred',
+        message: t('errors.unexpected'),
         category: 'Unknown',
         shouldRetry: false,
         isAuthError: false,

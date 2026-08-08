@@ -379,7 +379,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       <ModalPicker
         visible={rolePickerState.visible}
         label={t('homeDetail.selectRoleLabel')}
-        options={ROLE_OPTIONS}
+        options={ROLE_OPTIONS.map(role => ({
+          label: t(role.labelKey),
+          value: role.value,
+        }))}
         selected={rolePickerState.currentRole}
         onSelect={handleRoleSelect}
         onCancel={closeRolePicker}
