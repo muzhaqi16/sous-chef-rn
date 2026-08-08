@@ -31,14 +31,18 @@ type TranslatedLocale = (typeof TRANSLATED_LOCALES)[number];
  * either translate it in the same change or make the decision to widen the gap
  * explicit.
  *
+ * All three locales are at full parity, so every baseline is 0 — that is a
+ * reached state, not an unset placeholder. At 0 the ceiling has become a hard
+ * gate: an English-only key fails the suite immediately.
+ *
  * To lower it after translating: run
  * `npx jest __tests__/i18n/localeParity --verbose`. Each ceiling test names its
  * locale's current count in the test title; copy that number in here.
  */
 const MISSING_BASELINE: Record<TranslatedLocale, number> = {
-  es: 321,
-  it: 321,
-  sq: 321,
+  es: 0,
+  it: 0,
+  sq: 0,
 };
 
 /** Keeps a large drift readable in the failure output. */
