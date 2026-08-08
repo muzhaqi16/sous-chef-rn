@@ -81,7 +81,7 @@ describe('StorageDetailsSection', () => {
     render(<Wrapper />);
     expect(screen.getByText('Storage State')).toBeTruthy();
     // Each StorageState value renders as a selectable pill.
-    expect(screen.getByText(StorageState.Refrigerated)).toBeTruthy();
+    expect(screen.getByText('Refrigerated')).toBeTruthy();
   });
 
   it('renders date picker', () => {

@@ -3099,7 +3099,10 @@
     "tagsPlaceholder": "Enter tags separated by commas",
     "location": "Location",
     "notesPlaceholder": "Any additional notes...",
-    "netWeightLocked": "Weight locked after use — correct from item details"
+    "netWeightLocked": "Weight locked after use — correct from item details",
+    "locationPlaceholder": "e.g., Top shelf, Drawer 2",
+    "storageNotes": "Storage Notes",
+    "notes": "Notes"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",

@@ -25,10 +25,20 @@ import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
 } from '#/utils/items/itemEnumLabels';
+import type { Translate } from '#/i18n/types';
 
-const STORAGE_STATE_OPTIONS: ChipOption<StorageState>[] = Object.values(
-  StorageState,
-).map(state => ({ key: state, label: state }));
+/**
+ * A function, not a const: built at import time these labels would freeze
+ * whatever language loaded first, and a later language change would never reach
+ * the chips. `enumKeyCoverage.test.ts` asserts every StorageState member has a
+ * key here, so codegen adding one fails the suite rather than shipping a raw
+ * SCREAMING_SNAKE value.
+ */
+const getStorageStateOptions = (t: Translate): ChipOption<StorageState>[] =>
+  Object.values(StorageState).map(state => ({
+    key: state,
+    label: t(`storageState.${state}`),
+  }));
 
 interface StorageDetailsSectionProps {
   control: Control<PantryItemFormData>;
@@ -72,7 +82,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
     {
       name: 'location',
       label: t('itemForm.location'),
-      placeholder: 'e.g., Top shelf, Drawer 2',
+      placeholder: t('itemForm.locationPlaceholder'),
       component: 'storageLocationAutocomplete',
       storageLocations,
       onStorageLocationSelected,
@@ -83,7 +93,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   const notesFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'notes',
-      label: mode === 'edit' ? 'Storage Notes' : 'Notes',
+      label: mode === 'edit' ? t('itemForm.storageNotes') : t('itemForm.notes'),
       placeholder: t('itemForm.notesPlaceholder'),
       component: FormTextArea,
       props: { numberOfLines: 3 },
@@ -103,7 +113,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
         <Label>{t('itemForm.storageState')}</Label>
         <ChipScrollRow
           chipStyle={styles.statePill}
-          options={STORAGE_STATE_OPTIONS}
+          options={getStorageStateOptions(t)}
           selected={storageState}
           onSelect={onStorageStateChange}
           edgeFadeColor="background"
