@@ -2,8 +2,12 @@ import type { SharedValue } from 'react-native-reanimated';
 
 export interface OnboardingStep {
   id: string;
-  title: string;
-  subtitle?: string;
+  /**
+   * i18n key paths, not display strings — ONBOARDING_STEPS is module-level and
+   * cannot call a hook. OnBoardingWrapper resolves them.
+   */
+  titleKey: string;
+  subtitleKey?: string;
   isCompleted?: boolean;
   isActive?: boolean;
 }

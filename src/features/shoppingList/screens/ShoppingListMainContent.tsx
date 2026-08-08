@@ -594,8 +594,8 @@ export const ShoppingListMainContent: React.FC<
         return (
           <SpotlightCoachMark
             targetRect={targetRect}
-            title={stepConfig.title}
-            subtitle={stepConfig.subtitle}
+            title={t(stepConfig.titleKey)}
+            subtitle={t(stepConfig.subtitleKey)}
             stepIndex={stepConfig.stepIndex}
             totalSteps={TUTORIAL_TOTAL_STEPS}
             onDismiss={tutorial.skipAll}

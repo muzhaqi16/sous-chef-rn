@@ -59,38 +59,38 @@ interface OnboardingProviderProps {
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'CreateHome',
-    title: 'Create Home',
-    subtitle: 'Set up your household',
+    titleKey: 'onboardingSteps.CreateHome.title',
+    subtitleKey: 'onboardingSteps.CreateHome.subtitle',
   },
   {
     id: 'CreateShoppingList',
-    title: 'Shopping List',
-    subtitle: 'Create your first list',
+    titleKey: 'onboardingSteps.CreateShoppingList.title',
+    subtitleKey: 'onboardingSteps.CreateShoppingList.subtitle',
   },
   {
     id: 'SelectPantryItems',
-    title: 'Pantry Items',
-    subtitle: 'Select what you have',
+    titleKey: 'onboardingSteps.SelectPantryItems.title',
+    subtitleKey: 'onboardingSteps.SelectPantryItems.subtitle',
   },
   {
     id: 'ProfilePictureUpload',
-    title: 'Profile Picture',
-    subtitle: 'Add your photo',
+    titleKey: 'onboardingSteps.ProfilePictureUpload.title',
+    subtitleKey: 'onboardingSteps.ProfilePictureUpload.subtitle',
   },
   {
     id: 'InviteMembers',
-    title: 'Invite Members',
-    subtitle: 'Share with family',
+    titleKey: 'onboardingSteps.InviteMembers.title',
+    subtitleKey: 'onboardingSteps.InviteMembers.subtitle',
   },
   {
     id: 'BiometricSetup',
-    title: 'Security',
-    subtitle: 'Set up biometrics',
+    titleKey: 'onboardingSteps.BiometricSetup.title',
+    subtitleKey: 'onboardingSteps.BiometricSetup.subtitle',
   },
   {
     id: 'OnboardingComplete',
-    title: 'Complete',
-    subtitle: "You're all set!",
+    titleKey: 'onboardingSteps.OnboardingComplete.title',
+    subtitleKey: 'onboardingSteps.OnboardingComplete.subtitle',
   },
 ];
 

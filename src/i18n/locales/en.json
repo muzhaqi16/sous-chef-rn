@@ -3281,5 +3281,61 @@
     "iron": "Iron",
     "calcium": "Calcium",
     "potassium": "Potassium"
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Create Home",
+      "subtitle": "Set up your household"
+    },
+    "CreateShoppingList": {
+      "title": "Shopping List",
+      "subtitle": "Create your first list"
+    },
+    "SelectPantryItems": {
+      "title": "Pantry Items",
+      "subtitle": "Select what you have"
+    },
+    "ProfilePictureUpload": {
+      "title": "Profile Picture",
+      "subtitle": "Add your photo"
+    },
+    "InviteMembers": {
+      "title": "Invite Members",
+      "subtitle": "Share with family"
+    },
+    "BiometricSetup": {
+      "title": "Security",
+      "subtitle": "Set up biometrics"
+    },
+    "OnboardingComplete": {
+      "title": "Complete",
+      "subtitle": "You're all set!"
+    }
+  },
+  "shoppingListTutorial": {
+    "addButton": {
+      "title": "Add an item",
+      "subtitle": "Tap + to add items to your shopping list"
+    },
+    "swipeActions": {
+      "title": "Swipe to manage items",
+      "subtitle": "Swipe any item left to edit, or right to delete"
+    },
+    "checkbox": {
+      "title": "Mark as purchased",
+      "subtitle": "Tap the checkbox to mark this item as purchased"
+    },
+    "longPress": {
+      "title": "Record the price",
+      "subtitle": "Press and hold an item to enter its actual quantity and price before marking it purchased"
+    },
+    "purchasedTab": {
+      "title": "View purchased items",
+      "subtitle": "Tap to see your purchased items"
+    },
+    "moveToPantry": {
+      "title": "Move to pantry",
+      "subtitle": "Tap to move this item to your pantry"
+    }
   }
 }

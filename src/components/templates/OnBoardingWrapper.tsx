@@ -58,8 +58,13 @@ export const OnBoardingWrapper = ({
   const onboardingContext = useOnboardingContextSafe();
 
   const isLegacyMode = !onboardingContext;
-  const displayTitle = title || onboardingContext?.currentStep?.title;
-  const displaySubtitle = subtitle || onboardingContext?.currentStep?.subtitle;
+  // The step table is module-level, so it carries key paths and the title is
+  // resolved here where the hook lives.
+  const stepTitleKey = onboardingContext?.currentStep?.titleKey;
+  const stepSubtitleKey = onboardingContext?.currentStep?.subtitleKey;
+  const displayTitle = title || (stepTitleKey ? t(stepTitleKey) : undefined);
+  const displaySubtitle =
+    subtitle || (stepSubtitleKey ? t(stepSubtitleKey) : undefined);
 
   return (
     <ThemedSafeAreaView style={styles.safeArea} testID={testID}>
