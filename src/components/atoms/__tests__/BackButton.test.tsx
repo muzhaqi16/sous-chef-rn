@@ -21,9 +21,9 @@ describe('BackButton', () => {
     expect(mockOnPress).toHaveBeenCalledTimes(1);
   });
 
-  it('has accessibility label "Go back"', () => {
+  it('has accessibility label "Go Back"', () => {
     render(<BackButton onPress={mockOnPress} />);
-    expect(screen.getByLabelText('Go back')).toBeTruthy();
+    expect(screen.getByLabelText('Go Back')).toBeTruthy();
   });
 
   it('does not call onPress when disabled', async () => {

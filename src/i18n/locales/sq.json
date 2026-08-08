@@ -245,7 +245,9 @@
     "item": "Artikull",
     "addNamed": "Shto {{name}}",
     "dismissNamed": "Hiq {{name}}",
-    "discard": "Hidh"
+    "discard": "Hidh",
+    "clearInput": "Pastro fushën",
+    "noDataAvailable": "Nuk ka të dhëna"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -3003,5 +3005,9 @@
       "nutrition_label": "Ushqyesit",
       "ingredient_list": "Përbërësit"
     }
+  },
+  "quantityBadge": {
+    "a11yLabel": "Sasia: {{quantity}}. Prek për të modifikuar",
+    "a11yHint": "Hap redaktuesin e sasisë"
   }
 }

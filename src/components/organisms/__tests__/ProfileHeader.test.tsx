@@ -19,7 +19,7 @@ jest.mock('../../atoms/BackButton', () => {
   const { Pressable, Text } = require('react-native');
   return {
     BackButton: ({ onPress }: BackButtonProps) => (
-      <Pressable onPress={onPress} accessibilityLabel="Go back">
+      <Pressable onPress={onPress} accessibilityLabel="Go Back">
         <Text>Back</Text>
       </Pressable>
     ),
@@ -64,7 +64,7 @@ describe('ProfileHeader', () => {
   it('calls onBack when back button pressed', async () => {
     const user = userEvent.setup();
     render(<ProfileHeader {...defaultProps} />);
-    await user.press(screen.getByLabelText('Go back'));
+    await user.press(screen.getByLabelText('Go Back'));
     expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
   });
 

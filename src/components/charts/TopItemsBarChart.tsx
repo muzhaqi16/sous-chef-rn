@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -27,6 +28,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
   showSecondaryValue = false,
   secondaryValuePrefix = '$',
 }) => {
+  const { t } = useTranslation();
   if (!data || data.length === 0) {
     return (
       <View style={[styles.container, { minHeight: height }]}>
@@ -37,7 +39,7 @@ export const TopItemsBarChart: React.FC<TopItemsBarChartProps> = ({
         )}
         <View style={styles.emptyState}>
           <Text size="sm" tone="secondary">
-            No data available
+            {t('labels.noDataAvailable')}
           </Text>
         </View>
       </View>

@@ -245,7 +245,9 @@
     "item": "Articolo",
     "addNamed": "Aggiungi {{name}}",
     "dismissNamed": "Ignora {{name}}",
-    "discard": "Scarta"
+    "discard": "Scarta",
+    "clearInput": "Cancella campo",
+    "noDataAvailable": "Nessun dato disponibile"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -3003,5 +3005,9 @@
       "nutrition_label": "Valori nutrizionali",
       "ingredient_list": "Ingredienti"
     }
+  },
+  "quantityBadge": {
+    "a11yLabel": "Quantità: {{quantity}}. Tocca per modificare",
+    "a11yHint": "Apre l'editor della quantità"
   }
 }

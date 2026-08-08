@@ -1,4 +1,5 @@
 import { BackButton } from '#components/atoms/BackButton';
+import { useTranslation } from 'react-i18next';
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -50,6 +51,7 @@ export const OnBoardingWrapper = ({
   allowStepNavigation = false,
   testID,
 }: OnboardingWrapperProps) => {
+  const { t } = useTranslation();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
 
   // Always call the hook, but handle if context is not provided
@@ -108,18 +110,18 @@ export const OnBoardingWrapper = ({
             onboardingContext.canGoNext || onboardingContext.isLastStep
           }
           showSkipButton={!!skipAction}
-          uniProps={t => ({
+          uniProps={theme => ({
             backAction: {
-              label: 'Back',
+              label: t('labels.back'),
               onPress: onboardingContext.goToPreviousStep,
-              backgroundColor: t.colors.surface,
-              labelColor: t.colors.textPrimary,
+              backgroundColor: theme.colors.surface,
+              labelColor: theme.colors.textPrimary,
             },
             continueAction: continueAction || {
-              label: 'Continue',
+              label: t('labels.continue'),
               onPress: onboardingContext.goToNextStep,
-              backgroundColor: t.colors.primary,
-              labelColor: t.colors.background,
+              backgroundColor: theme.colors.primary,
+              labelColor: theme.colors.background,
             },
           })}
           skipAction={skipAction}
@@ -133,7 +135,7 @@ export const OnBoardingWrapper = ({
               style={styles.skipButton}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={styles.skipText}>{t('labels.skip')}</Text>
             </AppPressable>
           )}
           {step != null && totalSteps != null && (

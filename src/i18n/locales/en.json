@@ -245,7 +245,9 @@
     "item": "Item",
     "addNamed": "Add {{name}}",
     "dismissNamed": "Dismiss {{name}}",
-    "discard": "Discard"
+    "discard": "Discard",
+    "clearInput": "Clear input",
+    "noDataAvailable": "No data available"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -3003,5 +3005,9 @@
       "nutrition_label": "Nutrition",
       "ingredient_list": "Ingredients"
     }
+  },
+  "quantityBadge": {
+    "a11yLabel": "Quantity: {{quantity}}. Tap to edit",
+    "a11yHint": "Opens quantity editor"
   }
 }

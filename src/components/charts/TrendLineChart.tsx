@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Platform } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { CartesianChart, Line, Area } from 'victory-native';
@@ -31,6 +32,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
   title,
   subtitle,
 }) => {
+  const { t } = useTranslation();
   const { theme } = useUnistyles();
   const lineColor = color || theme.colors.primary;
 
@@ -52,7 +54,7 @@ export const TrendLineChart: React.FC<TrendLineChartProps> = ({
         )}
         <View style={styles.emptyState}>
           <Text size="sm" tone="secondary">
-            No data available
+            {t('labels.noDataAvailable')}
           </Text>
         </View>
       </View>

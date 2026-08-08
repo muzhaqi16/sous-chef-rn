@@ -245,7 +245,9 @@
     "item": "Artículo",
     "addNamed": "Añadir {{name}}",
     "dismissNamed": "Descartar {{name}}",
-    "discard": "Descartar"
+    "discard": "Descartar",
+    "clearInput": "Borrar entrada",
+    "noDataAvailable": "No hay datos disponibles"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -3003,5 +3005,9 @@
       "nutrition_label": "Nutrición",
       "ingredient_list": "Ingredientes"
     }
+  },
+  "quantityBadge": {
+    "a11yLabel": "Cantidad: {{quantity}}. Toca para editar",
+    "a11yHint": "Abre el editor de cantidad"
   }
 }
