@@ -27,7 +27,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_VALUES,
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -166,7 +166,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
-  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
+  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   // Handle form submission
   const handleSave = () => {
@@ -409,8 +409,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <SegmentedControl
         label={t('shoppingListScreens.priority')}
         options={PRIORITY_OPTIONS}
-        value={PRIORITY_KEYS[priority] ?? 'low'}
-        onChange={key => updateField('priority', PRIORITY_VALUES[key] ?? 0)}
+        value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
+        onChange={option =>
+          updateField('priority', PRIORITY_VALUES[option] ?? 0)
+        }
         formatLabel={formatPriorityLabel}
       />
 

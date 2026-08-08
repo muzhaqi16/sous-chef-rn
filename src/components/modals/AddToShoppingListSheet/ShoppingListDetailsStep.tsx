@@ -18,7 +18,7 @@ import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_VALUES,
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
@@ -108,7 +108,7 @@ export const ShoppingListDetailsStep: React.FC<
   );
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
 
-  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
+  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   const handleSave = () => {
     if (!itemName.trim()) {
@@ -272,8 +272,8 @@ export const ShoppingListDetailsStep: React.FC<
         <SegmentedControl
           label={t('shoppingListScreens.priority')}
           options={PRIORITY_OPTIONS}
-          value={PRIORITY_KEYS[priority] ?? 'low'}
-          onChange={key => setPriority(PRIORITY_VALUES[key] ?? 0)}
+          value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
+          onChange={option => setPriority(PRIORITY_VALUES[option] ?? 0)}
           formatLabel={formatPriorityLabel}
         />
 
