@@ -2923,6 +2923,19 @@
     "nameMax": "Emri duhet të ketë më pak se 50 karaktere",
     "nameChars": "Emri mund të përmbajë vetëm shkronja, hapësira, viza dhe apostrofa"
   },
+  "imagePicker": {
+    "productImages": "Fotot e produktit",
+    "addPhoto": "Shto foto",
+    "addPhotos": "Shto foto",
+    "addMore": "Shto më shumë",
+    "selectUpTo": "Zgjidh deri në {{max}} foto",
+    "removeImage": "Hiq foton",
+    "changePerspective": "Ndrysho këndin e fotos",
+    "selectPerspective": "Zgjidh këndin",
+    "invalidImageTitle": "Foto e pavlefshme",
+    "cameraPermissionTitle": "Leja e kamerës",
+    "cameraPermissionBody": "Kërkohet leja e kamerës. Aktivizoje te cilësimet e pajisjes."
+  },
   "itemPhotos": {
     "pendingReview": "Në pritje të shqyrtimit",
     "viewPhoto": "Shiko foton",

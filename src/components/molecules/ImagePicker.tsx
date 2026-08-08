@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -68,6 +69,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   isProfile = false,
   children,
 }) => {
+  const { t } = useTranslation();
   const [sheetVisible, setSheetVisible] = useState(false);
   const {
     request: requestCamera,
@@ -117,7 +119,10 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onImageSelected(imageFile);
       } else {
         onError?.(result.error);
-        alertService.alert('Invalid Image', result.error.message);
+        alertService.alert(
+          t('imagePicker.invalidImageTitle'),
+          result.error.message,
+        );
       }
     }
   };
@@ -125,11 +130,11 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   const handleCameraPress = async () => {
     if (isBlocked) {
       alertService.alert(
-        'Camera Permission',
-        'Camera permission is required. Please enable it in your device settings.',
+        t('imagePicker.cameraPermissionTitle'),
+        t('imagePicker.cameraPermissionBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: openSettings },
+          { text: t('labels.cancel'), style: 'cancel' },
+          { text: t('labels.openSettings'), onPress: openSettings },
         ],
       );
       return;
@@ -188,7 +193,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
       >
         <Icon name="camera-outline" size={24} tone="primary" />
         <Text size="base" weight="medium" tone="accent">
-          Add Photo
+          {t('imagePicker.addPhoto')}
         </Text>
       </AppPressable>
       {renderSheet()}

@@ -2923,6 +2923,19 @@
     "nameMax": "Name must be less than 50 characters",
     "nameChars": "Name can only contain letters, spaces, hyphens, and apostrophes"
   },
+  "imagePicker": {
+    "productImages": "Product Images",
+    "addPhoto": "Add Photo",
+    "addPhotos": "Add Photos",
+    "addMore": "Add More",
+    "selectUpTo": "Select up to {{max}} images",
+    "removeImage": "Remove image",
+    "changePerspective": "Change image perspective",
+    "selectPerspective": "Select Perspective",
+    "invalidImageTitle": "Invalid Image",
+    "cameraPermissionTitle": "Camera Permission",
+    "cameraPermissionBody": "Camera permission is required. Please enable it in your device settings."
+  },
   "itemPhotos": {
     "pendingReview": "Pending review",
     "viewPhoto": "View photo",

@@ -2923,6 +2923,19 @@
     "nameMax": "Il nome deve contenere meno di 50 caratteri",
     "nameChars": "Il nome può contenere solo lettere, spazi, trattini e apostrofi"
   },
+  "imagePicker": {
+    "productImages": "Immagini del prodotto",
+    "addPhoto": "Aggiungi foto",
+    "addPhotos": "Aggiungi foto",
+    "addMore": "Aggiungi altre",
+    "selectUpTo": "Seleziona fino a {{max}} immagini",
+    "removeImage": "Rimuovi immagine",
+    "changePerspective": "Cambia la prospettiva dell'immagine",
+    "selectPerspective": "Seleziona prospettiva",
+    "invalidImageTitle": "Immagine non valida",
+    "cameraPermissionTitle": "Autorizzazione fotocamera",
+    "cameraPermissionBody": "È necessaria l'autorizzazione alla fotocamera. Attivala nelle impostazioni del dispositivo."
+  },
   "itemPhotos": {
     "pendingReview": "In attesa di revisione",
     "viewPhoto": "Vedi foto",

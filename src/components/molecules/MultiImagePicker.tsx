@@ -73,10 +73,13 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   onError,
   disabled = false,
   maxImages = 6,
-  label = 'Product Images',
+  label,
   allowPrimarySelection = false,
 }) => {
   const { t } = useTranslation();
+  // Resolved here rather than as a default parameter: the fallback is
+  // translated, and a default parameter would have to be an English literal.
+  const resolvedLabel = label ?? t('imagePicker.productImages');
   const perspectiveOptions = CAPTURE_PERSPECTIVES.map(p => ({
     label: getPerspectiveLabel(p, t),
     value: p,
@@ -140,7 +143,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
     return (
       <View style={styles.container}>
         <Text size="base" weight="medium" style={styles.label}>
-          {label}
+          {resolvedLabel}
         </Text>
         <ImagePicker
           onImageSelected={handleSingleImageSelected}
@@ -153,10 +156,10 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
           <View style={styles.placeholderContainer}>
             <Icon name="camera-outline" size={32} tone="textSecondary" />
             <Text size="base" tone="secondary" align="center">
-              Add Photos
+              {t('imagePicker.addPhotos')}
             </Text>
             <Text size="sm" tone="secondary" align="center">
-              Select up to {maxImages} images
+              {t('imagePicker.selectUpTo', { max: maxImages })}
             </Text>
           </View>
         </ImagePicker>
@@ -167,7 +170,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   return (
     <View style={styles.container}>
       <Text size="base" weight="medium" style={styles.label}>
-        {label} ({images.length}/{maxImages})
+        {resolvedLabel} ({images.length}/{maxImages})
       </Text>
       <ScrollView
         horizontal
@@ -188,7 +191,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 disabled={disabled}
                 hitSlop={11}
                 accessibilityRole="button"
-                accessibilityLabel="Remove image"
+                accessibilityLabel={t('imagePicker.removeImage')}
               >
                 <Icon name="close" size={14} tone="white" />
               </AppPressable>
@@ -219,7 +222,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
               onPress={() => setPickerIndex(index)}
               disabled={disabled}
               accessibilityRole="button"
-              accessibilityLabel="Change image perspective"
+              accessibilityLabel={t('imagePicker.changePerspective')}
             >
               <Text
                 size="xs"
@@ -246,14 +249,14 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
             <View style={styles.addMoreButton}>
               <Icon name="camera-outline" size={24} tone="primary" />
               <Text size="xs" weight="medium" tone="accent">
-                Add More
+                {t('imagePicker.addMore')}
               </Text>
             </View>
           </ImagePicker>
         )}
       </ScrollView>
       <ModalPicker
-        label="Select Perspective"
+        label={t('imagePicker.selectPerspective')}
         visible={pickerIndex !== null}
         options={perspectiveOptions}
         selected={
