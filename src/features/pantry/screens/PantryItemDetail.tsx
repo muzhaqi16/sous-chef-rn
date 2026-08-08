@@ -28,7 +28,7 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
   formatPackageBreakdownFull,
   formatNetWeightDisplay,
@@ -44,6 +44,7 @@ import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHisto
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { GalleryHero } from '#components/templates/GalleryHero';
+import { ItemPhotoViewer } from '#components/organisms/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { Icon } from '#/utils/iconUtils';
@@ -92,6 +93,7 @@ export const PantryItemDetail: React.FC<
 
   const [purchaseHistoryExpanded, setPurchaseHistoryExpanded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   const { data, refetch } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
@@ -212,9 +214,9 @@ export const PantryItemDetail: React.FC<
   const storageStateDisplay = formatStorageState(item?.storageState);
   const brandName = item?.brand?.name || null;
   const categoryName = item?.item?.categories?.[0]?.category?.name || null;
-  const itemImages = parseImages(item?.item?.images);
+  const itemPhotos = galleryPhotos(item?.item?.photos);
   const itemNutritions = parseNutritions(item?.item?.nutritions);
-  const showImages = hasImages(itemImages) || !!imageUrl;
+  const showImages = itemPhotos.length > 0 || !!imageUrl;
   const showNutrition = hasNutritionData(itemNutritions);
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
@@ -319,9 +321,10 @@ export const PantryItemDetail: React.FC<
           showImages
             ? heroHeight => (
                 <GalleryHero
-                  images={itemImages}
+                  photos={itemPhotos}
                   fallbackImageUrl={imageUrl}
                   height={heroHeight}
+                  onPhotoPress={setViewerIndex}
                 />
               )
             : undefined
@@ -486,6 +489,14 @@ export const PantryItemDetail: React.FC<
           pantryItemId={itemId}
           onClose={() => actions.setCorrectWeightVisible(false)}
           onConfirm={actions.handleCorrectWeight}
+        />
+      )}
+      {itemPhotos.length > 0 && (
+        <ItemPhotoViewer
+          visible={viewerIndex !== null}
+          photos={itemPhotos}
+          initialIndex={viewerIndex ?? 0}
+          onClose={() => setViewerIndex(null)}
         />
       )}
     </>

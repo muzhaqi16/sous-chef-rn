@@ -6,6 +6,7 @@ import {
   createAddToParentArrayUpdater,
   createRemoveFromParentConnectionUpdater,
   createRemoveFromParentArrayUpdater,
+  skipUnmatchedFilterVariants,
 } from '../cacheUpdaters';
 import { logger } from '#/utils/environment';
 
@@ -960,5 +961,49 @@ describe('createRemoveFromParentArrayUpdater', () => {
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Parent entity not found'),
     );
+  });
+});
+
+describe('skipUnmatchedFilterVariants', () => {
+  const skip = skipUnmatchedFilterVariants({ category: 'DINNER' });
+
+  it('writes into the unfiltered variant', () => {
+    expect(skip('mealTemplates')).toBe(false);
+    expect(skip('mealTemplates({})')).toBe(false);
+  });
+
+  it('treats empty filter values as unfiltered', () => {
+    expect(
+      skip('mealTemplates({"filters":{"category":null,"search":""}})'),
+    ).toBe(false);
+    expect(skip('mealTemplates({"filters":{"tags":[]}})')).toBe(false);
+  });
+
+  it('writes into a filtered variant the entity matches', () => {
+    expect(skip('mealTemplates({"filters":{"category":"DINNER"}})')).toBe(
+      false,
+    );
+  });
+
+  // The bug this exists for: a cache.modify fans out across every keyArgs
+  // variant, so a DINNER template was landing in the BREAKFAST list.
+  it('skips a filtered variant the entity does not match', () => {
+    expect(skip('mealTemplates({"filters":{"category":"BREAKFAST"}})')).toBe(
+      true,
+    );
+  });
+
+  // Replicating the server's search matching client-side is how a cache write
+  // starts disagreeing with the next read.
+  it('skips any filter it cannot evaluate', () => {
+    expect(skip('mealTemplates({"filters":{"search":"pasta"}})')).toBe(true);
+    expect(skip('mealTemplates({"filters":{"minDuration":3}})')).toBe(true);
+    expect(
+      skip('mealTemplates({"filters":{"category":"DINNER","search":"pasta"}})'),
+    ).toBe(true);
+  });
+
+  it('skips when the args cannot be parsed', () => {
+    expect(skip('mealTemplates({not json)')).toBe(true);
   });
 });

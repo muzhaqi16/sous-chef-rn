@@ -1,20 +1,17 @@
-import type { ItemImage, ImageSize, ImageTab } from '#/types/nutrition';
+import { ImagePerspective } from '#/graphql/generated/schemaTypes';
 
 // =============================================================================
 // IMAGE SIZE SELECTION
 // =============================================================================
 
-export type PreferredSize = ImageSize['size'];
+export type PreferredSize =
+  | 'xlarge'
+  | 'large'
+  | 'medium'
+  | 'small'
+  | 'thumbnail';
 
 type ImageVariant = { url: string; kind?: string | null };
-
-const SIZE_PRIORITY: PreferredSize[] = [
-  'small',
-  'medium',
-  'large',
-  'xlarge',
-  'thumbnail',
-];
 
 const PREFERRED_SIZE_TO_KIND: Partial<Record<PreferredSize, string>> = {
   thumbnail: 'THUMBNAIL',
@@ -43,6 +40,10 @@ export function pickImageUrl(
  * Resolves the best available image URL from any common data shape.
  * Handles: Item (direct), PantryItem/ShoppingListItem (nested .item),
  * PantryItemSuggestion (own imageUrl + nested .item fallback).
+ *
+ * This is the LIST/CARD path — it reads `Item.images`, which returns at most
+ * one row (the primary photo's best asset). Screens showing a gallery read
+ * `Item.photos` instead; see `photoDisplayUrl`.
  *
  * @param preferredSize - Preferred image size. Defaults to 'small' for list/card
  *   contexts. Pass 'large' for detail/gallery screens.
@@ -83,15 +84,10 @@ export function resolveImageUrl(
     return ownUrl;
   }
 
-  // 4. Try nested .item via getItemImageUrl (handles imageUrl + legacy images fallback)
+  // 4. Try nested .item via getItemImageUrl
   if (source.item) {
     const fromItem = getItemImageUrl(source.item, preferredSize);
     if (fromItem) return fromItem;
-  }
-
-  // 5. Try own images array via legacy path (for direct Item objects)
-  if (source.images) {
-    return getItemImageUrl(source, preferredSize);
   }
 
   return null;
@@ -123,150 +119,156 @@ export const getItemImageUrl = (
     return imageUrl;
   }
 
-  // 3. Fallback: extract from legacy images JSON array (perspective/sizes structure)
-  if (item?.images) {
-    const parsed = parseImages(item.images);
-    const primary = getPrimaryImage(parsed);
-    if (primary) {
-      return getBestImageUrl(primary, preferredSize);
-    }
-  }
-
   return null;
 };
 
 // =============================================================================
-// IMAGE ARRAY PARSING
+// GALLERY (Item.photos)
 // =============================================================================
 
 /**
- * Parse JSON images field to typed ItemImage array
+ * How many photos the detail carousel renders.
+ *
+ * Not a product limit — `MultiImagePicker` already caps user uploads at 6. This
+ * bounds PUBLIC catalog items, which aggregate provider images and can carry
+ * many more. Sized to hold the whole perspective set (7) plus one, because
+ * `galleryPhotos` reserves a slot per perspective before filling the rest.
  */
-export function parseImages(imagesJson: unknown): ItemImage[] {
-  if (!imagesJson || !Array.isArray(imagesJson)) {
-    return [];
+export const MAX_GALLERY_PHOTOS = 8;
+
+/** The `Item.photos` shape these helpers need. Structural so the generated
+ *  fragment type satisfies it without a cast. */
+export interface PhotoLike {
+  url: string;
+  perspective?: string | null;
+  variants?: readonly ImageVariant[] | null;
+}
+
+/**
+ * Best URL to render for one photo at a given size.
+ *
+ * `variants` is empty until the processing job has run, so the original `url`
+ * is the documented fallback — never return null here, a photo always has an
+ * asset to show.
+ */
+export function photoDisplayUrl(
+  photo: PhotoLike,
+  preferredSize: PreferredSize = 'large',
+): string {
+  const kind = PREFERRED_SIZE_TO_KIND[preferredSize];
+  if (kind && photo.variants) {
+    const variant = photo.variants.find(v => v.kind === kind);
+    if (variant) return variant.url;
   }
-
-  return imagesJson.filter(
-    (img): img is ItemImage =>
-      img &&
-      typeof img === 'object' &&
-      typeof img.perspective === 'string' &&
-      Array.isArray(img.sizes),
-  );
+  return photo.url;
 }
 
 /**
- * Check if images array has any valid images
+ * A photo's perspective when the caller handed us materialized data. Structural
+ * rather than a generic constraint: constraining `T` makes TypeScript infer the
+ * constraint itself for a possibly-undefined argument, which erased the element
+ * type at every call site. Masked refs carry no fields and read as null here,
+ * which degrades this to a plain in-order slice.
  */
-export function hasImages(images: ItemImage[]): boolean {
-  return images.length > 0 && images.some(img => img.sizes.length > 0);
-}
-
-/**
- * Get best available image URL for a given image, preferring the specified size.
- * Falls back through SIZE_PRIORITY order if preferred size is unavailable.
- */
-export function getBestImageUrl(
-  image: ItemImage,
-  preferredSize: PreferredSize = 'small',
-): string | null {
-  if (!image.sizes || image.sizes.length === 0) {
+function readPerspective(photo: unknown): string | null {
+  if (
+    typeof photo !== 'object' ||
+    photo === null ||
+    !('perspective' in photo)
+  ) {
     return null;
   }
-
-  // Try preferred size first
-  const preferred = image.sizes.find(s => s.size === preferredSize);
-  if (preferred) {
-    return preferred.url;
-  }
-
-  // Fall back through priority order
-  for (const size of SIZE_PRIORITY) {
-    const found = image.sizes.find(s => s.size === size);
-    if (found) {
-      return found.url;
-    }
-  }
-
-  // Last resort: return first available
-  return image.sizes[0]?.url ?? null;
+  const value = photo.perspective;
+  return typeof value === 'string' ? value : null;
 }
 
 /**
- * Get primary/featured image from array
+ * The photos to render, capped at `MAX_GALLERY_PHOTOS`.
+ *
+ * A plain `slice(0, N)` is wrong here. `Item.photos` orders primary, then
+ * *featured* photos — any perspective, unbounded — and only then the
+ * front/back/left/right/top/nutrition_label/ingredient_list run. A catalog item
+ * carrying several featured provider shots therefore pushes `nutrition_label`
+ * and `ingredient_list` past the cap, dropping exactly the angles the fullscreen
+ * viewer exists to show. So: reserve a slot for the first photo of each distinct
+ * perspective, then fill what's left in order.
+ *
+ * Selection changes which photos survive, never their order — the returned array
+ * is always in the server's sequence, which the gallery's paging depends on.
  */
-export function getPrimaryImage(images: ItemImage[]): ItemImage | null {
-  // First try featured image
-  const featured = images.find(img => img.featured);
-  if (featured) return featured;
+export function galleryPhotos<T>(photos: readonly T[] | null | undefined): T[] {
+  if (!photos || photos.length === 0) return [];
+  if (photos.length <= MAX_GALLERY_PHOTOS) return [...photos];
 
-  // Then try front perspective
-  const front = images.find(img => img.perspective === 'front');
-  if (front) return front;
+  const keep = new Set<number>();
+  const seenPerspectives = new Set<string>();
+  photos.forEach((photo, index) => {
+    const perspective = readPerspective(photo);
+    if (!perspective || seenPerspectives.has(perspective)) return;
+    seenPerspectives.add(perspective);
+    if (keep.size < MAX_GALLERY_PHOTOS) keep.add(index);
+  });
+  for (let i = 0; i < photos.length && keep.size < MAX_GALLERY_PHOTOS; i += 1) {
+    keep.add(i);
+  }
 
-  // Return first available
-  return images[0] ?? null;
+  return [...keep].sort((a, b) => a - b).map(index => photos[index]);
 }
 
 // =============================================================================
-// TABBED GALLERY GROUPING
+// PERSPECTIVE
 // =============================================================================
 
 /**
- * Get display label for a perspective
+ * Perspectives the capture flow offers, in gallery order. Matches the server's
+ * ordering so the slot a user picks is the position the photo lands in.
  */
-export function getPerspectiveLabel(perspective: string): string {
-  const labels: Record<string, string> = {
-    front: 'Front',
-    back: 'Back',
-    left: 'Left',
-    right: 'Right',
-    nutrition_label: 'Nutrition',
-    ingredient_list: 'Ingredients',
-  };
-  return (
-    labels[perspective] ||
-    perspective.charAt(0).toUpperCase() + perspective.slice(1)
-  );
+export const CAPTURE_PERSPECTIVES: string[] = [
+  'front',
+  'back',
+  'left',
+  'right',
+  'top',
+  'nutrition_label',
+  'ingredient_list',
+];
+
+const PERSPECTIVE_TO_ENUM: Record<string, ImagePerspective> = {
+  front: ImagePerspective.Front,
+  back: ImagePerspective.Back,
+  left: ImagePerspective.Left,
+  right: ImagePerspective.Right,
+  top: ImagePerspective.Top,
+  nutrition_label: ImagePerspective.NutritionLabel,
+  ingredient_list: ImagePerspective.IngredientList,
+};
+
+/**
+ * Map the lower-cased perspective the picker works in to the `ImagePerspective`
+ * enum `confirmItemImageUpload` takes. Unknown values return undefined so the
+ * upload still goes through untagged rather than failing validation.
+ */
+export function toImagePerspective(
+  perspective: string | null | undefined,
+): ImagePerspective | undefined {
+  if (!perspective) return undefined;
+  return PERSPECTIVE_TO_ENUM[perspective.toLowerCase()];
 }
 
 /**
- * Group images by perspective for tabbed gallery display
+ * Localized display label for a perspective.
+ *
+ * Takes `t` rather than returning English: these labels are rendered as visible
+ * caption text in the photo viewer and spliced into accessibility copy, so a
+ * hardcoded table put "Nutrition" inside otherwise-Spanish UI. An unrecognised
+ * perspective (a provider value outside our set) falls back to its capitalized
+ * raw form, which is still better than a missing-key marker.
  */
-export function groupImagesByPerspective(images: ItemImage[]): ImageTab[] {
-  const groups = new Map<string, ItemImage[]>();
-
-  for (const image of images) {
-    const key = image.perspective;
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-    groups.get(key)!.push(image);
-  }
-
-  // Define perspective display order
-  const perspectiveOrder = [
-    'front',
-    'back',
-    'left',
-    'right',
-    'nutrition_label',
-    'ingredient_list',
-  ];
-
-  return Array.from(groups.entries())
-    .sort(([a], [b]) => {
-      const aIndex = perspectiveOrder.indexOf(a);
-      const bIndex = perspectiveOrder.indexOf(b);
-      // Unknown perspectives go to the end
-      const aOrder = aIndex === -1 ? 999 : aIndex;
-      const bOrder = bIndex === -1 ? 999 : bIndex;
-      return aOrder - bOrder;
-    })
-    .map(([key, imgs]) => ({
-      key,
-      label: getPerspectiveLabel(key),
-      images: imgs,
-    }));
+export function getPerspectiveLabel(
+  perspective: string,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): string {
+  return t(`itemPhotos.perspective.${perspective}`, {
+    defaultValue: perspective.charAt(0).toUpperCase() + perspective.slice(1),
+  });
 }

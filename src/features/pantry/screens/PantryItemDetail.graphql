@@ -27,6 +27,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     id
     imageUrl
     images { url kind }
+    photos {
+      id
+      ...ItemPhotoCarousel_itemPhoto
+    }
     name
     shelfLifeDays
     shelfLifeOpenedDays

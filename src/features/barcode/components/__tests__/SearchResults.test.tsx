@@ -95,7 +95,7 @@ jest.mock('../ActionButtons', () => ({
     primaryAction,
     secondaryAction,
   }: {
-    primaryAction: MockAction;
+    primaryAction?: MockAction;
     secondaryAction: MockAction;
   }) => {
     const RN = require('react-native');
@@ -103,11 +103,13 @@ jest.mock('../ActionButtons', () => ({
     return R.createElement(
       RN.View,
       null,
-      R.createElement(
-        RN.Pressable,
-        { onPress: primaryAction.onPress, testID: 'primary-btn' },
-        R.createElement(RN.Text, null, primaryAction.label),
-      ),
+      primaryAction
+        ? R.createElement(
+            RN.Pressable,
+            { onPress: primaryAction.onPress, testID: 'primary-btn' },
+            R.createElement(RN.Text, null, primaryAction.label),
+          )
+        : null,
       R.createElement(
         RN.Pressable,
         { onPress: secondaryAction.onPress, testID: 'secondary-btn' },
@@ -162,9 +164,15 @@ describe('SearchResults', () => {
     expect(screen.getByText('Scan Another')).toBeTruthy();
   });
 
-  it('renders Add Item when no source', () => {
+  // The screen is only reached from a pantry or shopping list, both of which
+  // pass a source — but `scan/result` is deep-linkable, so a link can land a
+  // user here with no destination. Offering a button that silently no-ops (its
+  // handler returns early on `!source`) is worse than offering none.
+  it('offers no add action when there is no source to add to', () => {
     renderWithProviders(<SearchResults {...defaultProps} source={undefined} />);
-    expect(screen.getByText('Add Item')).toBeTruthy();
+    expect(screen.queryByTestId('primary-btn')).toBeNull();
+    // The card and the escape hatch still render.
+    expect(screen.getByText('Scan Another')).toBeTruthy();
   });
 
   it('sends quantity 1 (not the net weight) when adding a scanned item to the pantry', async () => {

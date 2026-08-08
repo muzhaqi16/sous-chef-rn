@@ -395,14 +395,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       return 'Added';
     }
 
-    switch (source) {
-      case 'pantry':
-        return 'Add to Pantry';
-      case 'shoppingList':
-        return 'Add to Shopping List';
-      default:
-        return 'Add Item';
-    }
+    return source === 'pantry' ? 'Add to Pantry' : 'Add to Shopping List';
   };
 
   return (
@@ -419,12 +412,24 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       />
 
       <ActionButtons
-        primaryAction={{
-          label: getButtonLabel(),
-          onPress: handleAddItem,
-          disabled: isAdded,
-          loading: isLoading,
-        }}
+        /*
+         * No source means we do not know where the item would go. This screen is
+         * only ever reached from a pantry or a shopping list, both of which pass
+         * one — but the route is deep-linkable (`scan/result`), so a link can
+         * land a user here with nothing to add to. Offering a button that
+         * silently no-ops is worse than offering none; they can still read the
+         * product card and scan another.
+         */
+        primaryAction={
+          source
+            ? {
+                label: getButtonLabel(),
+                onPress: handleAddItem,
+                disabled: isAdded,
+                loading: isLoading,
+              }
+            : undefined
+        }
         secondaryAction={{
           label: 'Scan Another',
           onPress: onScanAnother,

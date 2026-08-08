@@ -21,7 +21,8 @@ const UNKNOWN_MEMBERSHIP_PERMISSIONS: PantryPermissions = {
   canView: true,
   canAddItems: true,
   canEditItems: true,
-  canManagePantry: true,
+  canCreatePantry: true,
+  canDeletePantry: true,
 };
 
 /**

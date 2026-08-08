@@ -119,20 +119,30 @@ export async function uploadPendingImages<
   T extends { id: string; imageUrl?: string | null },
 >(
   createdItem: T,
-  uploadItemImage: (image: ImageFile, itemId: string) => Promise<string | null>,
+  uploadItemImage: (
+    image: ImageFile,
+    itemId: string,
+    options?: { perspective?: string },
+  ) => Promise<string | null>,
+  uploadItemImages: (
+    images: Array<ImageFile & { perspective?: string }>,
+    itemId: string,
+  ) => Promise<Array<{ imageUrl: string }>>,
 ): Promise<T> {
   let finalItem = createdItem;
 
   const pendingImagesJson = storage.getString('temp_pending_item_images');
   if (pendingImagesJson && createdItem.id) {
-    const images = JSON.parse(pendingImagesJson);
-    let firstImageUrl: string | null = null;
-    for (const image of images) {
-      const imageUrl = await uploadItemImage(image, createdItem.id);
-      if (imageUrl && !firstImageUrl) {
-        firstImageUrl = imageUrl;
-      }
-    }
+    // Stashed from the multi-image picker, so each entry carries the angle the
+    // user assigned it. Forwarding it is what orders the item's gallery.
+    //
+    // Goes through the batch helper rather than looping `uploadItemImage`: the
+    // presign endpoint caps at 20/minute, and a hand-rolled loop pops one alert
+    // per photo and keeps spending the hourly budget after the cap trips.
+    const images: Array<ImageFile & { perspective?: string }> =
+      JSON.parse(pendingImagesJson);
+    const uploaded = await uploadItemImages(images, createdItem.id);
+    const firstImageUrl = uploaded[0]?.imageUrl ?? null;
     if (firstImageUrl) {
       finalItem = { ...createdItem, imageUrl: firstImageUrl };
     }

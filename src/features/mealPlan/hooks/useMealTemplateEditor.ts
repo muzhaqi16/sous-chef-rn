@@ -32,6 +32,7 @@ import {
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
+  skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import {
@@ -102,6 +103,12 @@ export function useMealTemplateEditor() {
         ) {
           addToMealTemplates(cache, data.createMealTemplate.mealTemplate, {
             position: 'start',
+            // Scope the write to variants this template belongs to: the
+            // browser sheet caches one `mealTemplates` entry per category/search
+            // the user has visited, and cache.modify fans out across all of them.
+            skipStoreField: skipUnmatchedFilterVariants({
+              category: data.createMealTemplate.mealTemplate.category,
+            }),
           });
         }
       },
@@ -139,6 +146,9 @@ export function useMealTemplateEditor() {
         });
         addToMealTemplates(client.cache, optimisticTemplate, {
           position: 'start',
+          skipStoreField: skipUnmatchedFilterVariants({
+            category: optimisticTemplate.category,
+          }),
         });
       }, 'Create Meal Template (optimistic)');
     }

@@ -24,6 +24,7 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   createAddToQueryConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
+  skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n/t';
@@ -66,6 +67,12 @@ export function useMealTemplateActions() {
         if (payload?.__typename === 'CreateTemplateFromMealPlanPayload') {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
+            // Scope the write to variants this template belongs to: the
+            // browser sheet caches one `mealTemplates` entry per category/search
+            // the user has visited, and cache.modify fans out across all of them.
+            skipStoreField: skipUnmatchedFilterVariants({
+              category: payload.mealTemplate.category,
+            }),
           });
         }
       },
@@ -94,6 +101,9 @@ export function useMealTemplateActions() {
         if (payload?.__typename === 'DuplicateTemplatePayload') {
           addToMealTemplates(cache, payload.mealTemplate, {
             position: 'start',
+            skipStoreField: skipUnmatchedFilterVariants({
+              category: payload.mealTemplate.category,
+            }),
           });
         }
       },
@@ -188,7 +198,12 @@ export function useMealTemplateActions() {
             fragmentName: 'MealTemplateDisplay',
             data: snapshot,
           });
-          addToMealTemplates(client.cache, snapshot, { position: 'start' });
+          addToMealTemplates(client.cache, snapshot, {
+            position: 'start',
+            skipStoreField: skipUnmatchedFilterVariants({
+              category: snapshot.category,
+            }),
+          });
         }, 'Restore refused Template delete');
       }
       return false;

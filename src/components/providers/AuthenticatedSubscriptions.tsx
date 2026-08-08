@@ -2,6 +2,7 @@ import React from 'react';
 import { useShoppingListSubscriptions } from '#/hooks/subscriptions/useShoppingListSubscriptions';
 import { usePantrySubscriptions } from '#/hooks/subscriptions/usePantrySubscriptions';
 import { useHomeSubscriptions } from '#/hooks/subscriptions/useHomeSubscriptions';
+import { useMealPlanSubscriptions } from '#/hooks/subscriptions/useMealPlanSubscriptions';
 
 import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
 import { useListAnimationOptional } from '#/context/ListAnimationContext';
@@ -42,6 +43,7 @@ export const AuthenticatedSubscriptions: React.FC<
   );
   usePantrySubscriptions(userId);
   useHomeSubscriptions(userId);
+  useMealPlanSubscriptions(userId);
 
   useUserSubscriptions(userId);
 

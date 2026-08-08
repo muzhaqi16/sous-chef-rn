@@ -79,8 +79,8 @@ jest.mock('#components/molecules/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 
-jest.mock('#components/molecules/ImageGalleryTabs', () => ({
-  ImageGalleryTabs: () => null,
+jest.mock('#components/molecules/ItemPhotoCarousel', () => ({
+  ItemPhotoCarousel: () => null,
 }));
 
 jest.mock('#components/modals/AdjustQuantityModal', () => ({

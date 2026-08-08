@@ -15,6 +15,7 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import { toImagePerspective } from '#utils/imageUtils';
 import {
   MAX_IMAGE_SIZE,
   MAX_PROFILE_SIZE,
@@ -107,6 +108,21 @@ export interface ImageUploadOptions {
   onProgress?: (progress: number) => void;
   onSuccess?: (imageUrl: string) => void;
   onError?: (error: Error) => void;
+  /**
+   * Skip the per-call failure alert. Set by batch callers that report once for
+   * the whole run. Lives here rather than on the item-specific options because
+   * `uploadImage`'s offline short-circuit must honour it too — that branch
+   * alerts before any item-specific code runs.
+   */
+  suppressAlert?: boolean;
+}
+
+export interface ItemImageUploadOptions extends ImageUploadOptions {
+  /**
+   * Which angle the photo shows ('front', 'nutrition_label', …). Drives the
+   * gallery's ordering and its per-photo label; an untagged photo sorts last.
+   */
+  perspective?: string;
 }
 
 export const useImageUpload = () => {
@@ -218,17 +234,24 @@ export const useImageUpload = () => {
     confirmUploadFn: (key: string) => Promise<string | null>,
     options: ImageUploadOptions = {},
   ): Promise<string | null> => {
-    const { onProgress, onSuccess, onError } = options;
+    const { onProgress, onSuccess, onError, suppressAlert } = options;
 
     // Check if online before attempting upload
     const state = useStore.getState();
     if (!state.isOnline) {
-      const offlineError = new Error(t('imageUpload.offlineError'));
-      onError?.(offlineError);
-      alertService.alert(
-        t('imageUpload.offlineTitle'),
+      // UserFacingUploadError, not a bare Error: being offline is fatal for a
+      // whole batch, and the batch runner recognises this type as "stop now".
+      // Every remaining photo would take this same branch and alert again.
+      const offlineError = new UserFacingUploadError(
         t('imageUpload.offlineBody'),
       );
+      onError?.(offlineError);
+      if (!suppressAlert) {
+        alertService.alert(
+          t('imageUpload.offlineTitle'),
+          t('imageUpload.offlineBody'),
+        );
+      }
       return null;
     }
 
@@ -354,8 +377,11 @@ export const useImageUpload = () => {
   const uploadItemImage = async (
     file: ImageFile,
     itemId: string,
-    options: ImageUploadOptions = {},
+    options: ItemImageUploadOptions = {},
   ): Promise<string | null> => {
+    // The angle is set on confirm, not on the presign: until the object is
+    // confirmed there is no ItemImage row to tag.
+    const perspective = toImagePerspective(options.perspective);
     const result = await executeMutation(
       () =>
         uploadImage(
@@ -365,7 +391,9 @@ export const useImageUpload = () => {
           itemId,
           async (key: string) => {
             const { data } = await confirmItemUpload({
-              variables: { input: { itemId, key } },
+              variables: {
+                input: { itemId, key, perspective },
+              },
             });
             return data?.confirmItemImageUpload?.__typename ===
               'ConfirmItemImageUploadPayload'
@@ -377,29 +405,80 @@ export const useImageUpload = () => {
       error => {
         logger.error('Item image upload failed:', error);
         const errorMessage = uploadErrorMessage(t, error, false);
-        options.onError?.(new Error(errorMessage));
-        alertService.alert(t('imageUpload.failedTitle'), errorMessage);
+        // Forward the original when it is already user-facing: `uploadItemImages`
+        // needs to tell a rate limit (retry later, stop now) apart from one bad
+        // file (skip it, keep going).
+        options.onError?.(
+          error instanceof UserFacingUploadError
+            ? error
+            : new Error(errorMessage),
+        );
+        if (!options.suppressAlert) {
+          alertService.alert(t('imageUpload.failedTitle'), errorMessage);
+        }
       },
     );
     return result || null;
   };
 
+  /**
+   * Upload several angles of one item, sequentially.
+   *
+   * Presign has a 20/minute and a 100/hour per-user ceiling, and a six-photo
+   * batch can hit either; being offline is the same shape of problem. Once one
+   * of those trips, every remaining photo is guaranteed to fail the same way, so
+   * the run stops and reports once — looping on would stack an alert per photo
+   * and burn the user's hourly budget for nothing. Any other failure (one
+   * unreadable file) only skips that photo.
+   *
+   * Returns the photos that actually uploaded, so callers MUST compare the
+   * length against what they passed before reporting success.
+   */
   const uploadItemImages = async (
     files: Array<ImageFile & { perspective?: string }>,
     itemId: string,
     options: ImageUploadOptions = {},
   ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
     const results: Array<{ imageUrl: string; perspective: string }> = [];
+    let fatal: UserFacingUploadError | null = null;
+
     for (let i = 0; i < files.length; i += 1) {
       const file = files[i];
       const index = i;
       const imageUrl = await uploadItemImage(file, itemId, {
         onProgress: p => options?.onProgress?.((index + p) / files.length),
+        perspective: file.perspective,
+        suppressAlert: true,
+        onError: error => {
+          if (error instanceof UserFacingUploadError) fatal = error;
+        },
       });
       if (imageUrl) {
         results.push({ imageUrl, perspective: file.perspective || 'front' });
       }
+      if (fatal) break;
     }
+
+    if (fatal) {
+      const remaining = files.length - results.length;
+      options.onError?.(fatal);
+      alertService.alert(
+        t('imageUpload.failedTitle'),
+        t('imageUpload.batchThrottledBody', {
+          count: remaining,
+          reason: (fatal as UserFacingUploadError).userMessage,
+        }),
+      );
+    } else if (results.length < files.length) {
+      options.onError?.(new Error('Some images failed to upload'));
+      alertService.alert(
+        t('imageUpload.failedTitle'),
+        t('imageUpload.batchPartialBody', {
+          count: files.length - results.length,
+        }),
+      );
+    }
+
     return results;
   };
 

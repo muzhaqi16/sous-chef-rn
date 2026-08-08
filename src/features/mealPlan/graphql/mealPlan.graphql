@@ -246,3 +246,98 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
     }
   }
 }
+
+# ============================================
+# SUBSCRIPTIONS
+# ============================================
+
+# Consolidated meal-plan domain stream for one home. One subscription carries
+# plan, plan-item, template and template-item changes, discriminated by
+# `subtype`. Keeps the per-user concurrent-subscription count low (the server
+# caps it cluster-wide).
+#
+# Home-scoped by nature: a personal plan (`homeId: null`) has nobody to share
+# with, so it emits no events and needs none — the only device that can change
+# it is this one.
+#
+# The MealPlan branch spells its fields out with `planServings` / `planCost`
+# aliases rather than spreading `MealPlanDisplay`. `MealPlan.servings` is `Int!`
+# and `MealPlan.actualCost` is `Float!`, while the item types hold both as
+# nullable, and GraphQL's SameResponseShape rule rejects one response key
+# resolving to both — correctly, because they are different things: a plan's
+# servings is the plan-wide default, an item's is that meal's override. Merging
+# them onto one key would be a modelling error, not a convenience.
+#
+# Aliases are cache-transparent: Apollo normalizes by field name, so
+# `planServings: servings` writes `MealPlan.servings`. The handler then reads
+# the entity back through `MealPlanDisplay` — the canonical shape — and adds it
+# to the overview only if that read is COMPLETE. If this selection ever drifts
+# from the fragment, the read misses and the handler refetches instead of
+# writing a partial plan into the connection, which would blank the list.
+#
+# Item branches keep their shared spreads: `MealPlanItemActions_optimisticFullItem`
+# is the same union of cell fragments the local-first create writes, so both
+# writers stay complete for what MealPlanMain reads.
+subscription MealPlanEvents($homeId: ID!) {
+  mealPlanEvents(homeId: $homeId) {
+    subtype
+    mutation
+    mealPlanId
+    templateId
+    actorUserId
+    timestamp
+    node {
+      __typename
+      ... on MealPlan {
+        id
+        name
+        description
+        planType
+        startDate
+        endDate
+        planServings: servings
+        totalCalories
+        totalProtein
+        totalCarbs
+        totalFat
+        planCost: actualCost
+        budgetAmount
+        homeId
+        home {
+          id
+          name
+          myMembership {
+            id
+            role
+          }
+        }
+        user {
+          id
+        }
+        createdBy {
+          id
+          profile {
+            id
+            displayName
+            avatar
+          }
+        }
+        version
+        createdAt
+        updatedAt
+      }
+      ... on MealPlanItem {
+        id
+        ...MealPlanItemActions_optimisticFullItem
+      }
+      ... on MealTemplate {
+        id
+        ...MealTemplateDisplay
+      }
+      ... on MealTemplateItem {
+        id
+        ...MealTemplateItemFragment
+      }
+    }
+  }
+}

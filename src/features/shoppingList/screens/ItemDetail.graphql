@@ -64,6 +64,10 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     id
     imageUrl
     images { url kind }
+    photos {
+      id
+      ...ItemPhotoCarousel_itemPhoto
+    }
     nutritions
     displayUnit {
       id

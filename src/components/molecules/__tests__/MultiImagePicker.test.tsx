@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { MultiImagePicker, type SelectedImage } from '../MultiImagePicker';
 import type { ImageFile } from '../ImagePicker';
 
@@ -8,42 +8,44 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#utils/imageUtils', () => ({
-  getPerspectiveLabel: jest.fn((perspective: string) => {
-    const labels: Record<string, string> = {
-      front: 'Front',
-      back: 'Back',
-      left: 'Left',
-      right: 'Right',
-      nutrition_label: 'Nutrition Label',
-      ingredient_list: 'Ingredient List',
-    };
-    return labels[perspective] || perspective;
-  }),
-}));
-
 jest.mock('../ImagePicker', () => ({
   ImagePicker: ({
     children,
     onImageSelected,
+    onMultiImageSelected,
   }: {
     children?: React.ReactNode;
     onImageSelected?: (image: ImageFile) => void;
+    onMultiImageSelected?: (images: ImageFile[]) => void;
   }) => {
     const { Pressable } = require('react-native');
     return (
-      <Pressable
-        testID="image-picker"
-        onPress={() =>
-          onImageSelected?.({
-            uri: 'file://new-image.jpg',
-            type: 'image/jpeg',
-            fileName: 'new.jpg',
-          })
-        }
-      >
-        {children}
-      </Pressable>
+      <>
+        <Pressable
+          testID="image-picker"
+          onPress={() =>
+            onImageSelected?.({
+              uri: 'file://new-image.jpg',
+              type: 'image/jpeg',
+              fileName: 'new.jpg',
+            })
+          }
+        >
+          {children}
+        </Pressable>
+        <Pressable
+          testID="image-picker-multi"
+          onPress={() =>
+            onMultiImageSelected?.(
+              Array.from({ length: 4 }, (_, i) => ({
+                uri: `file://multi-${i}.jpg`,
+                type: 'image/jpeg',
+                fileName: `multi-${i}.jpg`,
+              })),
+            )
+          }
+        />
+      </>
     );
   },
 }));
@@ -180,5 +182,26 @@ describe('MultiImagePicker', () => {
     ];
     render(<MultiImagePicker {...defaultProps} images={images} />);
     expect(screen.getByLabelText('Remove image')).toBeTruthy();
+  });
+
+  // Perspectives now ride the upload to confirmItemImageUpload, so a collision
+  // is persisted catalog data — three photos filed as "Back" — not just a
+  // mislabeled row in this picker.
+  it('assigns a distinct perspective to every image in one multi-select', () => {
+    const onImagesChanged = jest.fn();
+    render(
+      <MultiImagePicker
+        {...defaultProps}
+        images={[]}
+        onImagesChanged={onImagesChanged}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('image-picker-multi'));
+
+    const assigned = onImagesChanged.mock.calls[0][0] as SelectedImage[];
+    const perspectives = assigned.map(image => image.perspective);
+    expect(perspectives).toEqual(['front', 'back', 'left', 'right']);
+    expect(new Set(perspectives).size).toBe(perspectives.length);
   });
 });

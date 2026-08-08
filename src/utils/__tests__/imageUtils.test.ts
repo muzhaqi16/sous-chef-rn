@@ -4,14 +4,13 @@ import {
   pickImageUrl,
   resolveImageUrl,
   getItemImageUrl,
-  parseImages,
-  hasImages,
-  getBestImageUrl,
-  getPrimaryImage,
   getPerspectiveLabel,
-  groupImagesByPerspective,
+  photoDisplayUrl,
+  galleryPhotos,
+  toImagePerspective,
+  MAX_GALLERY_PHOTOS,
 } from '../imageUtils';
-import type { ItemImage } from '#/types/nutrition';
+import { ImagePerspective } from '#/graphql/generated/schemaTypes';
 
 describe('imageUtils', () => {
   // ==========================================================================
@@ -64,201 +63,163 @@ describe('imageUtils', () => {
   });
 
   // ==========================================================================
-  // parseImages
+  // photoDisplayUrl
   // ==========================================================================
-  describe('parseImages', () => {
-    it('returns empty array for null', () => {
-      expect(parseImages(null)).toEqual([]);
-    });
-
-    it('returns empty array for undefined', () => {
-      expect(parseImages(undefined)).toEqual([]);
-    });
-
-    it('returns empty array for non-array', () => {
-      expect(parseImages('string')).toEqual([]);
-      expect(parseImages(42)).toEqual([]);
-      expect(parseImages({})).toEqual([]);
-    });
-
-    it('filters out invalid items without perspective', () => {
-      const input = [
-        { sizes: [{ size: 'small', url: 'http://a.com/a.jpg' }] },
-        {
-          perspective: 'front',
-          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
-          featured: false,
-          sourcePriority: 1,
-        },
-      ];
-      expect(parseImages(input)).toHaveLength(1);
-    });
-
-    it('filters out items without sizes array', () => {
-      const input = [
-        { perspective: 'front', sizes: 'not-array' },
-        {
-          perspective: 'back',
-          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
-          featured: false,
-          sourcePriority: 1,
-        },
-      ];
-      expect(parseImages(input)).toHaveLength(1);
-    });
-
-    it('filters out null items', () => {
-      const input = [
-        null,
-        undefined,
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-      ];
-      expect(parseImages(input)).toHaveLength(1);
-    });
-
-    it('parses valid ItemImage array', () => {
-      const input = [
-        {
-          perspective: 'front',
-          sizes: [{ size: 'small', url: 'http://a.com/s.jpg' }],
-          featured: true,
-          sourcePriority: 1,
-        },
-        {
-          perspective: 'back',
-          sizes: [{ size: 'large', url: 'http://a.com/l.jpg' }],
-          featured: false,
-          sourcePriority: 2,
-        },
-      ];
-      const result = parseImages(input);
-      expect(result).toHaveLength(2);
-      expect(result[0].perspective).toBe('front');
-    });
-  });
-
-  // ==========================================================================
-  // hasImages
-  // ==========================================================================
-  describe('hasImages', () => {
-    it('returns false for empty array', () => {
-      expect(hasImages([])).toBe(false);
-    });
-
-    it('returns false when all images have empty sizes', () => {
-      const images: ItemImage[] = [
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-      ];
-      expect(hasImages(images)).toBe(false);
-    });
-
-    it('returns true when at least one image has sizes', () => {
-      const images: ItemImage[] = [
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-        {
-          perspective: 'back',
-          sizes: [{ size: 'small', url: 'http://a.com/b.jpg' }],
-          featured: false,
-          sourcePriority: 1,
-        },
-      ];
-      expect(hasImages(images)).toBe(true);
-    });
-  });
-
-  // ==========================================================================
-  // getBestImageUrl
-  // ==========================================================================
-  describe('getBestImageUrl', () => {
-    it('returns null for empty sizes', () => {
-      const image: ItemImage = {
-        perspective: 'front',
-        sizes: [],
-        featured: false,
-        sourcePriority: 0,
-      };
-      expect(getBestImageUrl(image)).toBeNull();
-    });
-
-    it('returns preferred size when available', () => {
-      const image: ItemImage = {
-        perspective: 'front',
-        featured: false,
-        sourcePriority: 0,
-        sizes: [
-          { size: 'large', url: 'http://a.com/large.jpg' },
-          { size: 'small', url: 'http://a.com/small.jpg' },
+  describe('photoDisplayUrl', () => {
+    it('prefers the SIZE_512 rendition at large', () => {
+      const photo = {
+        url: 'https://cdn.example.com/original.jpg',
+        variants: [
+          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
         ],
       };
-      expect(getBestImageUrl(image, 'large')).toBe('http://a.com/large.jpg');
+      expect(photoDisplayUrl(photo, 'large')).toBe(
+        'https://cdn.example.com/512.jpg',
+      );
     });
 
-    it('defaults to small size', () => {
-      const image: ItemImage = {
-        perspective: 'front',
-        featured: false,
-        sourcePriority: 0,
-        sizes: [
-          { size: 'small', url: 'http://a.com/small.jpg' },
-          { size: 'large', url: 'http://a.com/large.jpg' },
+    it('prefers the THUMBNAIL rendition at small', () => {
+      const photo = {
+        url: 'https://cdn.example.com/original.jpg',
+        variants: [
+          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+          { url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' },
         ],
       };
-      expect(getBestImageUrl(image)).toBe('http://a.com/small.jpg');
+      expect(photoDisplayUrl(photo, 'small')).toBe(
+        'https://cdn.example.com/thumb.jpg',
+      );
     });
 
-    it('falls back through SIZE_PRIORITY when preferred size is not available', () => {
-      const image: ItemImage = {
-        perspective: 'front',
-        featured: false,
-        sourcePriority: 0,
-        sizes: [{ size: 'medium', url: 'http://a.com/medium.jpg' }],
+    // Renditions are generated asynchronously; a photo uploaded seconds ago has
+    // none, and must still render rather than showing a broken frame.
+    it('falls back to the original when renditions are missing', () => {
+      const photo = {
+        url: 'https://cdn.example.com/original.jpg',
+        variants: [],
       };
-      // preferred 'xlarge' not found, falls through to 'small' (not found), then 'medium'
-      expect(getBestImageUrl(image, 'xlarge')).toBe('http://a.com/medium.jpg');
+      expect(photoDisplayUrl(photo, 'large')).toBe(
+        'https://cdn.example.com/original.jpg',
+      );
     });
 
-    it('returns first available as last resort', () => {
-      const image: ItemImage = {
-        perspective: 'front',
-        featured: false,
-        sourcePriority: 0,
-        sizes: [{ size: 'thumbnail', url: 'http://a.com/thumb.jpg' }],
+    it('falls back to the original when the requested size has no rendition', () => {
+      const photo = {
+        url: 'https://cdn.example.com/original.jpg',
+        variants: [
+          { url: 'https://cdn.example.com/thumb.jpg', kind: 'THUMBNAIL' },
+        ],
       };
-      // 'thumbnail' is in SIZE_PRIORITY so it should be found
-      expect(getBestImageUrl(image, 'xlarge')).toBe('http://a.com/thumb.jpg');
+      expect(photoDisplayUrl(photo, 'xlarge')).toBe(
+        'https://cdn.example.com/original.jpg',
+      );
     });
   });
 
   // ==========================================================================
-  // getPrimaryImage
+  // galleryPhotos
   // ==========================================================================
-  describe('getPrimaryImage', () => {
-    it('returns null for empty array', () => {
-      expect(getPrimaryImage([])).toBeNull();
+  describe('galleryPhotos', () => {
+    it('returns empty for null/undefined/empty', () => {
+      expect(galleryPhotos(null)).toEqual([]);
+      expect(galleryPhotos(undefined)).toEqual([]);
+      expect(galleryPhotos([])).toEqual([]);
     });
 
-    it('returns featured image first', () => {
-      const images: ItemImage[] = [
-        { perspective: 'back', sizes: [], featured: false, sourcePriority: 0 },
-        { perspective: 'front', sizes: [], featured: true, sourcePriority: 1 },
-      ];
-      expect(getPrimaryImage(images)?.perspective).toBe('front');
+    // The server's ordering is the contract — re-sorting locally would fight it.
+    it('preserves server order', () => {
+      const photos = [{ id: 'c' }, { id: 'a' }, { id: 'b' }];
+      expect(galleryPhotos(photos).map(p => p.id)).toEqual(['c', 'a', 'b']);
     });
 
-    it('returns front perspective when no featured image', () => {
-      const images: ItemImage[] = [
-        { perspective: 'back', sizes: [], featured: false, sourcePriority: 0 },
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 1 },
-      ];
-      expect(getPrimaryImage(images)?.perspective).toBe('front');
+    it('caps at MAX_GALLERY_PHOTOS', () => {
+      const photos = Array.from({ length: 12 }, (_, i) => ({ id: String(i) }));
+      expect(galleryPhotos(photos)).toHaveLength(MAX_GALLERY_PHOTOS);
     });
 
-    it('returns first image as fallback', () => {
-      const images: ItemImage[] = [
-        { perspective: 'left', sizes: [], featured: false, sourcePriority: 0 },
-        { perspective: 'right', sizes: [], featured: false, sourcePriority: 1 },
+    // `Item.photos` puts featured photos — any perspective, unbounded — ahead of
+    // the perspective run, so a plain slice drops the label shots on a catalog
+    // item with lots of provider imagery. Those are the whole point of the
+    // fullscreen viewer.
+    it('keeps each perspective when featured photos would crowd them out', () => {
+      const featured = Array.from({ length: 10 }, (_, i) => ({
+        id: `featured-${i}`,
+        perspective: null,
+      }));
+      const photos = [
+        ...featured,
+        { id: 'front', perspective: 'front' },
+        { id: 'nutrition', perspective: 'nutrition_label' },
+        { id: 'ingredients', perspective: 'ingredient_list' },
       ];
-      expect(getPrimaryImage(images)?.perspective).toBe('left');
+
+      const ids = galleryPhotos(photos).map(p => p.id);
+      expect(ids).toContain('front');
+      expect(ids).toContain('nutrition');
+      expect(ids).toContain('ingredients');
+      expect(ids).toHaveLength(MAX_GALLERY_PHOTOS);
+    });
+
+    it('returns survivors in server order, not selection order', () => {
+      const photos = [
+        ...Array.from({ length: 10 }, (_, i) => ({
+          id: `f${i}`,
+          perspective: null,
+        })),
+        { id: 'nutrition', perspective: 'nutrition_label' },
+      ];
+
+      const ids = galleryPhotos(photos).map(p => p.id);
+      // The reserved photo is last in the source, so it must stay last.
+      expect(ids[ids.length - 1]).toBe('nutrition');
+    });
+
+    it('keeps only the first photo of a repeated perspective', () => {
+      const photos = [
+        ...Array.from({ length: 10 }, (_, i) => ({
+          id: `f${i}`,
+          perspective: null,
+        })),
+        { id: 'front-a', perspective: 'front' },
+        { id: 'front-b', perspective: 'front' },
+      ];
+
+      const ids = galleryPhotos(photos).map(p => p.id);
+      expect(ids).toContain('front-a');
+      expect(ids).not.toContain('front-b');
+    });
+  });
+
+  // ==========================================================================
+  // toImagePerspective
+  // ==========================================================================
+  describe('toImagePerspective', () => {
+    it('maps every capture perspective to its enum member', () => {
+      expect(toImagePerspective('front')).toBe(ImagePerspective.Front);
+      expect(toImagePerspective('back')).toBe(ImagePerspective.Back);
+      expect(toImagePerspective('left')).toBe(ImagePerspective.Left);
+      expect(toImagePerspective('right')).toBe(ImagePerspective.Right);
+      expect(toImagePerspective('top')).toBe(ImagePerspective.Top);
+      expect(toImagePerspective('nutrition_label')).toBe(
+        ImagePerspective.NutritionLabel,
+      );
+      expect(toImagePerspective('ingredient_list')).toBe(
+        ImagePerspective.IngredientList,
+      );
+    });
+
+    it('is case-insensitive', () => {
+      expect(toImagePerspective('FRONT')).toBe(ImagePerspective.Front);
+    });
+
+    // Undefined (not a throw) so an unrecognised angle uploads untagged rather
+    // than failing input validation and losing the photo.
+    it('returns undefined for unknown or empty values', () => {
+      expect(toImagePerspective('sideways')).toBeUndefined();
+      expect(toImagePerspective('')).toBeUndefined();
+      expect(toImagePerspective(null)).toBeUndefined();
+      expect(toImagePerspective(undefined)).toBeUndefined();
     });
   });
 
@@ -266,88 +227,26 @@ describe('imageUtils', () => {
   // getPerspectiveLabel
   // ==========================================================================
   describe('getPerspectiveLabel', () => {
-    it('returns known labels', () => {
-      expect(getPerspectiveLabel('front')).toBe('Front');
-      expect(getPerspectiveLabel('back')).toBe('Back');
-      expect(getPerspectiveLabel('left')).toBe('Left');
-      expect(getPerspectiveLabel('right')).toBe('Right');
-      expect(getPerspectiveLabel('nutrition_label')).toBe('Nutrition');
-      expect(getPerspectiveLabel('ingredient_list')).toBe('Ingredients');
+    // Stand-in for i18next: returns the key so the test can assert which one was
+    // asked for, and honours `defaultValue` the way i18next does for a miss.
+    const translate = (key: string) => key;
+
+    it('looks the label up under itemPhotos.perspective', () => {
+      expect(getPerspectiveLabel('front', translate)).toBe(
+        'itemPhotos.perspective.front',
+      );
+      expect(getPerspectiveLabel('nutrition_label', translate)).toBe(
+        'itemPhotos.perspective.nutrition_label',
+      );
     });
 
-    it('capitalizes unknown perspectives', () => {
-      expect(getPerspectiveLabel('custom')).toBe('Custom');
-      expect(getPerspectiveLabel('topDown')).toBe('TopDown');
-    });
-  });
-
-  // ==========================================================================
-  // groupImagesByPerspective
-  // ==========================================================================
-  describe('groupImagesByPerspective', () => {
-    it('returns empty array for empty input', () => {
-      expect(groupImagesByPerspective([])).toEqual([]);
-    });
-
-    it('groups images by perspective', () => {
-      const images: ItemImage[] = [
-        { perspective: 'front', sizes: [], featured: true, sourcePriority: 0 },
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 1 },
-        { perspective: 'back', sizes: [], featured: false, sourcePriority: 0 },
-      ];
-      const result = groupImagesByPerspective(images);
-      expect(result).toHaveLength(2);
-      expect(result[0].key).toBe('front');
-      expect(result[0].images).toHaveLength(2);
-      expect(result[1].key).toBe('back');
-      expect(result[1].images).toHaveLength(1);
-    });
-
-    it('sorts by perspective order', () => {
-      const images: ItemImage[] = [
-        {
-          perspective: 'nutrition_label',
-          sizes: [],
-          featured: false,
-          sourcePriority: 0,
-        },
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-        { perspective: 'back', sizes: [], featured: false, sourcePriority: 0 },
-      ];
-      const result = groupImagesByPerspective(images);
-      expect(result.map(t => t.key)).toEqual([
-        'front',
-        'back',
-        'nutrition_label',
-      ]);
-    });
-
-    it('places unknown perspectives at the end', () => {
-      const images: ItemImage[] = [
-        {
-          perspective: 'custom',
-          sizes: [],
-          featured: false,
-          sourcePriority: 0,
-        },
-        { perspective: 'front', sizes: [], featured: false, sourcePriority: 0 },
-      ];
-      const result = groupImagesByPerspective(images);
-      expect(result[0].key).toBe('front');
-      expect(result[1].key).toBe('custom');
-    });
-
-    it('includes correct labels', () => {
-      const images: ItemImage[] = [
-        {
-          perspective: 'ingredient_list',
-          sizes: [],
-          featured: false,
-          sourcePriority: 0,
-        },
-      ];
-      const result = groupImagesByPerspective(images);
-      expect(result[0].label).toBe('Ingredients');
+    // A provider can supply a perspective outside our set; a capitalized raw
+    // value beats showing a missing-key marker.
+    it('falls back to the capitalized raw value for an unknown perspective', () => {
+      const missing = (_key: string, options?: Record<string, unknown>) =>
+        String(options?.defaultValue ?? '');
+      expect(getPerspectiveLabel('custom', missing)).toBe('Custom');
+      expect(getPerspectiveLabel('topDown', missing)).toBe('TopDown');
     });
   });
 
@@ -392,32 +291,12 @@ describe('imageUtils', () => {
       );
     });
 
-    it('falls back to legacy images parsing', () => {
-      const item = {
-        images: [
-          {
-            perspective: 'front',
-            featured: true,
-            sourcePriority: 1,
-            sizes: [
-              { size: 'small', url: 'https://cdn.example.com/front-small.jpg' },
-            ],
-          },
-        ],
-      };
-      // When kind lookup fails (images are ItemImage[], not ImageVariant[]),
-      // it falls through to the legacy path
-      expect(getItemImageUrl(item, 'small')).toBe(
-        'https://cdn.example.com/front-small.jpg',
-      );
-    });
-
     it('returns null when no valid source exists', () => {
       const item = { images: [] };
       expect(getItemImageUrl(item)).toBeNull();
     });
 
-    it('uses medium kind for large preferred size', () => {
+    it('uses SIZE_512 kind for large preferred size', () => {
       const item = {
         images: [{ url: 'https://cdn.example.com/512.jpg', kind: 'SIZE_512' }],
       };
@@ -485,25 +364,6 @@ describe('imageUtils', () => {
         },
       };
       expect(resolveImageUrl(source)).toBe('https://cdn.example.com/item.jpg');
-    });
-
-    it('resolves from own images via legacy path', () => {
-      const source = {
-        images: [
-          {
-            perspective: 'front',
-            featured: true,
-            sourcePriority: 1,
-            sizes: [
-              { size: 'small', url: 'https://cdn.example.com/legacy.jpg' },
-            ],
-          },
-        ],
-      };
-      // No kind match for xlarge in PREFERRED_SIZE_TO_KIND
-      expect(resolveImageUrl(source, 'xlarge')).toBe(
-        'https://cdn.example.com/legacy.jpg',
-      );
     });
 
     it('returns null when nothing matches', () => {

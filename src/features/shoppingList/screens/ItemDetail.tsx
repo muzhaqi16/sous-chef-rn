@@ -12,8 +12,9 @@ import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
 import { NutritionSummary } from '#components/molecules/NutritionSummary';
 import { GalleryHero } from '#components/templates/GalleryHero';
+import { ItemPhotoViewer } from '#components/organisms/ItemPhotoViewer/ItemPhotoViewer';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
-import { resolveImageUrl, parseImages, hasImages } from '#utils/imageUtils';
+import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -66,6 +67,7 @@ export const ShoppingListItemDetail: React.FC<
   // screen falls back to a clean no-hero header instead of a broken-image
   // placeholder. Keyed by URI so it resets automatically for a different image.
   const [failedHeroUri, setFailedHeroUri] = useState<string | null>(null);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // cache-and-network: the detail selects fields the list never caches
   // (createdAt, priority, source, addedBy, purchase history, nutrition,
@@ -106,9 +108,9 @@ export const ShoppingListItemDetail: React.FC<
 
   // Images and nutrition from catalog item
   // Must be called before early return to follow rules of hooks
-  const itemImages = parseImages(item?.item?.images);
+  const itemPhotos = galleryPhotos(item?.item?.photos);
   const itemNutritions = parseNutritions(item?.item?.nutritions);
-  const showImages = hasImages(itemImages);
+  const showImages = itemPhotos.length > 0;
   const showNutrition = hasNutritionData(itemNutritions);
 
   if (!item) {
@@ -181,185 +183,201 @@ export const ShoppingListItemDetail: React.FC<
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
   return (
-    <CollapsingHeroDetail
-      testID="shopping-item-detail"
-      onBack={() => goBack()}
-      title={item.itemName ?? ''}
-      actions={[
-        {
-          icon: 'create-outline',
-          onPress: handleEdit,
-          testID: 'shopping-item-edit-button',
-        },
-      ]}
-      renderHero={
-        hasHero
-          ? heroHeight =>
-              showImages ? (
-                <GalleryHero
-                  images={itemImages}
-                  fallbackImageUrl={imageUrl}
-                  height={heroHeight}
-                />
-              ) : (
-                <CachedImage
-                  testID="shopping-item-hero-image"
-                  uri={imageUrl ?? ''}
-                  style={[styles.heroFull, { height: heroHeight }]}
-                  displaySize={heroHeight}
-                  resizeMode="cover"
-                  onError={() => setFailedHeroUri(imageUrl)}
-                />
-              )
-          : undefined
-      }
-    >
-      <DetailTitleRow
+    <>
+      <CollapsingHeroDetail
+        testID="shopping-item-detail"
+        onBack={() => goBack()}
         title={item.itemName ?? ''}
-        numberOfLines={2}
-        style={styles.titleRow}
-      />
+        actions={[
+          {
+            icon: 'create-outline',
+            onPress: handleEdit,
+            testID: 'shopping-item-edit-button',
+          },
+        ]}
+        renderHero={
+          hasHero
+            ? heroHeight =>
+                showImages ? (
+                  <GalleryHero
+                    photos={itemPhotos}
+                    fallbackImageUrl={imageUrl}
+                    height={heroHeight}
+                    onPhotoPress={setViewerIndex}
+                    // Re-arms the collapse guard on the gallery branch: before
+                    // photos existed every item took the CachedImage path below,
+                    // so a dead CDN url always collapsed the hero rather than
+                    // leaving a 280pt placeholder band.
+                    onUnrenderable={() => setFailedHeroUri(imageUrl)}
+                  />
+                ) : (
+                  <CachedImage
+                    testID="shopping-item-hero-image"
+                    uri={imageUrl ?? ''}
+                    style={[styles.heroFull, { height: heroHeight }]}
+                    displaySize={heroHeight}
+                    resizeMode="cover"
+                    onError={() => setFailedHeroUri(imageUrl)}
+                  />
+                )
+            : undefined
+        }
+      >
+        <DetailTitleRow
+          title={item.itemName ?? ''}
+          numberOfLines={2}
+          style={styles.titleRow}
+        />
 
-      {!!item.purchaseInfo?.isPurchased && (
-        <View style={styles.statusBadge}>
-          <Icon name="checkmark-circle" size={18} tone="success" />
-          <Text
-            size="sm"
-            weight="semibold"
-            tone="success"
-            style={styles.statusBadgeText}
-          >
-            {t('shoppingListScreens.purchased')}
-          </Text>
-        </View>
-      )}
-
-      <DetailSection title={t('shoppingListScreens.information')}>
-        <DetailRow label={t('shoppingListScreens.quantity')}>
-          <FormattedItemSubtitle
-            quantity={item.quantity}
-            quantityInput={item.quantityInput}
-            displayFormat={item.displayFormat}
-            unitSymbol={unitSymbol}
-          />
-        </DetailRow>
-        {!!item.category && (
-          <DetailRow label={t('shoppingListScreens.category')}>
-            <Text size="sm" weight="medium">
-              {item.category}
-            </Text>
-          </DetailRow>
-        )}
-        {estimatedPrice != null && (
-          <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
-            <Text size="sm" weight="medium">
-              {`$${estimatedPrice.toFixed(2)}`}
-            </Text>
-          </DetailRow>
-        )}
-        {!!item.purchaseInfo?.isPurchased &&
-          item.purchaseInfo.purchasedQuantity != null && (
-            <DetailRow label={t('shoppingListScreens.purchased')}>
-              <Text size="sm" weight="medium">
-                {item.purchaseInfo.purchasedPrice != null
-                  ? `${
-                      item.purchaseInfo.purchasedQuantity
-                    } @ $${item.purchaseInfo.purchasedPrice.toFixed(2)}`
-                  : `${item.purchaseInfo.purchasedQuantity}`}
-              </Text>
-            </DetailRow>
-          )}
-        {!!priorityLabel && (
-          <DetailRow label={t('shoppingListScreens.priority')}>
-            <Text size="sm" weight="medium">
-              {priorityLabel}
-            </Text>
-          </DetailRow>
-        )}
-        {!!preferredStoreName && (
-          <DetailRow label={t('shoppingListScreens.store')}>
-            <Text size="sm" weight="medium">
-              {preferredStoreName}
-            </Text>
-          </DetailRow>
-        )}
-        {!!item.notes && (
-          <View style={styles.notesRow}>
-            <Text size="sm" tone="secondary">
-              {t('shoppingListScreens.notes')}
-            </Text>
-            <Text size="sm" weight="medium">
-              {item.notes}
+        {!!item.purchaseInfo?.isPurchased && (
+          <View style={styles.statusBadge}>
+            <Icon name="checkmark-circle" size={18} tone="success" />
+            <Text
+              size="sm"
+              weight="semibold"
+              tone="success"
+              style={styles.statusBadgeText}
+            >
+              {t('shoppingListScreens.purchased')}
             </Text>
           </View>
         )}
-      </DetailSection>
 
-      {!!showNutrition && (
-        <DetailSection title={t('dietary.nutritionGoals')}>
-          <NutritionSummary
-            nutritions={itemNutritions}
-            showHighlights
-            compact
-          />
-        </DetailSection>
-      )}
-
-      <DetailSection>
-        <ClickableInfoPanel
-          title={t('shoppingListScreens.purchaseHistoryTitle')}
-          items={purchaseHistoryItems}
-          onPress={handleViewHistory}
-          emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
-        />
-      </DetailSection>
-
-      <DetailSection title={t('shoppingListScreens.additionalDetails')}>
-        {!!item.addedBy && (
-          <DetailRow label={t('shoppingListScreens.addedBy')}>
-            <Text size="sm" weight="medium">
-              {item.addedBy.profile?.displayName ||
-                item.addedBy.email ||
-                t('labels.someone')}
-            </Text>
+        <DetailSection title={t('shoppingListScreens.information')}>
+          <DetailRow label={t('shoppingListScreens.quantity')}>
+            <FormattedItemSubtitle
+              quantity={item.quantity}
+              quantityInput={item.quantityInput}
+              displayFormat={item.displayFormat}
+              unitSymbol={unitSymbol}
+            />
           </DetailRow>
-        )}
-        {!!item.lastEditedBy?.profile?.displayName &&
-          item.lastEditedBy.id !== item.addedBy?.id && (
-            <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
+          {!!item.category && (
+            <DetailRow label={t('shoppingListScreens.category')}>
               <Text size="sm" weight="medium">
-                {item.lastEditedBy.profile.displayName}
+                {item.category}
               </Text>
             </DetailRow>
           )}
-        <DetailRow label={t('shoppingListScreens.addedOn')}>
-          <Text size="sm" weight="medium">
-            {formatDate(item.createdAt)}
-          </Text>
-        </DetailRow>
-        {item.updatedAt !== item.createdAt && (
-          <DetailRow label={t('shoppingListScreens.lastUpdated')}>
+          {estimatedPrice != null && (
+            <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
+              <Text size="sm" weight="medium">
+                {`$${estimatedPrice.toFixed(2)}`}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.purchaseInfo?.isPurchased &&
+            item.purchaseInfo.purchasedQuantity != null && (
+              <DetailRow label={t('shoppingListScreens.purchased')}>
+                <Text size="sm" weight="medium">
+                  {item.purchaseInfo.purchasedPrice != null
+                    ? `${
+                        item.purchaseInfo.purchasedQuantity
+                      } @ $${item.purchaseInfo.purchasedPrice.toFixed(2)}`
+                    : `${item.purchaseInfo.purchasedQuantity}`}
+                </Text>
+              </DetailRow>
+            )}
+          {!!priorityLabel && (
+            <DetailRow label={t('shoppingListScreens.priority')}>
+              <Text size="sm" weight="medium">
+                {priorityLabel}
+              </Text>
+            </DetailRow>
+          )}
+          {!!preferredStoreName && (
+            <DetailRow label={t('shoppingListScreens.store')}>
+              <Text size="sm" weight="medium">
+                {preferredStoreName}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.notes && (
+            <View style={styles.notesRow}>
+              <Text size="sm" tone="secondary">
+                {t('shoppingListScreens.notes')}
+              </Text>
+              <Text size="sm" weight="medium">
+                {item.notes}
+              </Text>
+            </View>
+          )}
+        </DetailSection>
+
+        {!!showNutrition && (
+          <DetailSection title={t('dietary.nutritionGoals')}>
+            <NutritionSummary
+              nutritions={itemNutritions}
+              showHighlights
+              compact
+            />
+          </DetailSection>
+        )}
+
+        <DetailSection>
+          <ClickableInfoPanel
+            title={t('shoppingListScreens.purchaseHistoryTitle')}
+            items={purchaseHistoryItems}
+            onPress={handleViewHistory}
+            emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
+          />
+        </DetailSection>
+
+        <DetailSection title={t('shoppingListScreens.additionalDetails')}>
+          {!!item.addedBy && (
+            <DetailRow label={t('shoppingListScreens.addedBy')}>
+              <Text size="sm" weight="medium">
+                {item.addedBy.profile?.displayName ||
+                  item.addedBy.email ||
+                  t('labels.someone')}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.lastEditedBy?.profile?.displayName &&
+            item.lastEditedBy.id !== item.addedBy?.id && (
+              <DetailRow label={t('shoppingListScreens.lastEditedBy')}>
+                <Text size="sm" weight="medium">
+                  {item.lastEditedBy.profile.displayName}
+                </Text>
+              </DetailRow>
+            )}
+          <DetailRow label={t('shoppingListScreens.addedOn')}>
             <Text size="sm" weight="medium">
-              {formatDate(item.updatedAt)}
+              {formatDate(item.createdAt)}
             </Text>
           </DetailRow>
-        )}
-        {!!item.source?.isAutoAdded && (
-          <DetailRow label={t('shoppingListScreens.autoAdded')}>
-            <Text size="sm" weight="medium">
-              {item.source?.autoAddReason || t('shoppingListScreens.yes')}
-            </Text>
-          </DetailRow>
-        )}
-        {!!item.source?.isFromMealPlan && (
-          <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
-            <Text size="sm" weight="medium">
-              {t('shoppingListScreens.yes')}
-            </Text>
-          </DetailRow>
-        )}
-      </DetailSection>
-    </CollapsingHeroDetail>
+          {item.updatedAt !== item.createdAt && (
+            <DetailRow label={t('shoppingListScreens.lastUpdated')}>
+              <Text size="sm" weight="medium">
+                {formatDate(item.updatedAt)}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.source?.isAutoAdded && (
+            <DetailRow label={t('shoppingListScreens.autoAdded')}>
+              <Text size="sm" weight="medium">
+                {item.source?.autoAddReason || t('shoppingListScreens.yes')}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.source?.isFromMealPlan && (
+            <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
+              <Text size="sm" weight="medium">
+                {t('shoppingListScreens.yes')}
+              </Text>
+            </DetailRow>
+          )}
+        </DetailSection>
+      </CollapsingHeroDetail>
+      {itemPhotos.length > 0 && (
+        <ItemPhotoViewer
+          visible={viewerIndex !== null}
+          photos={itemPhotos}
+          initialIndex={viewerIndex ?? 0}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
+    </>
   );
 };
 

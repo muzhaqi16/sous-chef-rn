@@ -24,7 +24,9 @@ jest.mock('#/services/alertService', () => ({
 // resolves rather than throws, so it can't be provoked through a mocked link.
 jest.mock('#/utils/compilerSafeWrappers');
 
-const mockUploadItemImages = jest.fn().mockResolvedValue([]);
+const mockUploadItemImages = jest
+  .fn()
+  .mockResolvedValue([{ imageUrl: 'https://cdn.example.com/a.jpg' }]);
 // `uploading` is part of the hook's contract, not incidental: the photos-only
 // path runs no mutation, so it is the only thing that can gate the submit
 // button while bytes are in flight.
@@ -162,6 +164,23 @@ describe('useSuggestItemEdit', () => {
     expect(outcome).toEqual({ status: 'imagesOnly' });
     expect(fired).toHaveLength(0);
     expect(mockUploadItemImages).toHaveBeenCalled();
+  });
+
+  // Photos are the whole submission here, so an aborted batch must not close
+  // the form behind a "submitted for review" alert the user will believe.
+  it('fails the photos-only path when no photo reached the server', async () => {
+    mockUploadItemImages.mockResolvedValueOnce([]);
+    const { mock } = recordMock(CreateItemSuggestionDocument, {
+      data: suggestionPayload(NOTE),
+    });
+    const { result } = renderHook([mock]);
+
+    const outcome = await result.current.submitEdit(
+      snapshot({ name: 'Skim Milk' }),
+      form({ selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }] }),
+    );
+
+    expect(outcome).toEqual({ status: 'failed' });
   });
 
   it('reports the 5-pending cap distinctly from other failures', async () => {

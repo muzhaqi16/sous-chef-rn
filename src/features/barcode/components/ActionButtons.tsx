@@ -4,7 +4,12 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/base/Button';
 
 interface ActionButtonsProps {
-  primaryAction: {
+  /**
+   * Omit when there is no action to offer — the secondary action then stands
+   * alone. Rendering a primary button that cannot do anything is worse than
+   * rendering none.
+   */
+  primaryAction?: {
     label: string;
     onPress: () => void;
     disabled?: boolean;
@@ -22,16 +27,18 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
 }) => {
   return (
     <View style={styles.actionButtons}>
-      <Button
-        onPress={primaryAction.onPress}
-        variant="primary"
-        size="large"
-        fullWidth
-        disabled={primaryAction.disabled}
-        loading={primaryAction.loading}
-      >
-        {primaryAction.label}
-      </Button>
+      {!!primaryAction && (
+        <Button
+          onPress={primaryAction.onPress}
+          variant="primary"
+          size="large"
+          fullWidth
+          disabled={primaryAction.disabled}
+          loading={primaryAction.loading}
+        >
+          {primaryAction.label}
+        </Button>
+      )}
 
       <Button
         onPress={secondaryAction.onPress}

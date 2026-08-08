@@ -98,8 +98,13 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
         <View style={styles.memberActions}>
           <AppPressable style={styles.actionButton} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} />
-            <Text size="sm" weight="medium" style={styles.actionButtonText}>
-              Change Role
+            <Text
+              size="sm"
+              weight="medium"
+              numberOfLines={1}
+              style={styles.actionButtonText}
+            >
+              {t('homeDetail.changeRole')}
             </Text>
           </AppPressable>
           {!!isOwner && !!onTransferOwnership && (
@@ -108,7 +113,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
               onPress={onTransferOwnership}
             >
               <Icon name="ribbon-outline" size={18} tone="primary" />
-              <Text size="sm" weight="medium" tone="accent">
+              <Text size="sm" weight="medium" tone="accent" numberOfLines={1}>
                 {t('homeDetail.makeOwner')}
               </Text>
             </AppPressable>
@@ -122,15 +127,20 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
                 name={showPermissions ? 'chevron-up' : 'options-outline'}
                 size={18}
               />
-              <Text size="sm" weight="medium" style={styles.actionButtonText}>
+              <Text
+                size="sm"
+                weight="medium"
+                numberOfLines={1}
+                style={styles.actionButtonText}
+              >
                 {t('homeDetail.permissions')}
               </Text>
             </AppPressable>
           )}
           <AppPressable style={styles.actionButton} onPress={onRemove}>
             <Icon name="person-remove" size={18} />
-            <Text size="sm" weight="medium" tone="error">
-              Remove
+            <Text size="sm" weight="medium" tone="error" numberOfLines={1}>
+              {t('labels.remove')}
             </Text>
           </AppPressable>
         </View>
@@ -184,13 +194,20 @@ const styles = StyleSheet.create(theme => ({
   },
   memberActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: theme.spacing.sm,
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   actionButton: {
-    flex: 1,
+    // Two per row, not four. Sharing one row between four actions left each
+    // label about 70px — too narrow for "Permissions" to fit at all, so it
+    // broke mid-word and the icon ended up centred against a two-line block.
+    // A basis just under half keeps every label on one line beside its icon,
+    // and `flexGrow` lets a lone third action fill its row.
+    flexBasis: '48%',
+    flexGrow: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
