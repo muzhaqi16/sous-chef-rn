@@ -189,6 +189,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "ApproveItemImageResult": [
+      "ApproveItemImagePayload",
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "ApproveItemResult": [
       "ApproveItemPayload",
       "ConflictError",
@@ -335,6 +342,7 @@
       "InviteLogConnection",
       "ItemConnection",
       "ItemEditSuggestionConnection",
+      "ItemImageConnection",
       "ItemPriceHistoryConnection",
       "ItemStoreSkuConnection",
       "ItemUnitConversionConnection",
@@ -890,6 +898,7 @@
       "InviteLogEdge",
       "ItemEdge",
       "ItemEditSuggestionEdge",
+      "ItemImageEdge",
       "ItemPriceHistoryEdge",
       "ItemStoreSkuEdge",
       "ItemUnitConversionEdge",
@@ -1233,6 +1242,13 @@
       "RegisterPayload",
       "ValidationError"
     ],
+    "RejectItemImageResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "RejectItemImagePayload",
+      "ValidationError"
+    ],
     "RejectItemResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1371,6 +1387,13 @@
       "ForbiddenError",
       "NotFoundError",
       "SendTestNotificationPayload",
+      "ValidationError"
+    ],
+    "SetPrimaryItemImageResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "NotFoundError",
+      "SetPrimaryItemImagePayload",
       "ValidationError"
     ],
     "ShareShoppingListResult": [

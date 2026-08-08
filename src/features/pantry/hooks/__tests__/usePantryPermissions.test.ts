@@ -30,7 +30,8 @@ describe('usePantryPermissions', () => {
         canView: true,
         canAddItems: true,
         canEditItems: true,
-        canManagePantry: true,
+        canCreatePantry: true,
+        canDeletePantry: true,
       });
     });
 
@@ -49,7 +50,8 @@ describe('usePantryPermissions', () => {
       withHome({ id: 'h1', myMembership: { role: MembershipRole.Owner } });
       const { result } = renderHook(() => usePantryPermissions());
       expect(result.current.canAddItems).toBe(true);
-      expect(result.current.canManagePantry).toBe(true);
+      expect(result.current.canCreatePantry).toBe(true);
+      expect(result.current.canDeletePantry).toBe(true);
     });
 
     it('denies a guest that was not explicitly granted access', () => {
@@ -59,8 +61,38 @@ describe('usePantryPermissions', () => {
         canView: false,
         canAddItems: false,
         canEditItems: false,
-        canManagePantry: false,
+        canCreatePantry: false,
+        canDeletePantry: false,
       });
+    });
+
+    // Creating a pantry is gated on canEditPantry, not canManageHome. A member
+    // holds the former by default and the latter never — bundling the two hid
+    // the Create button on an otherwise fully functional form.
+    it('lets a default member create a pantry but not delete one', () => {
+      withHome({ id: 'h1', myMembership: { role: MembershipRole.Member } });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current.canCreatePantry).toBe(true);
+      expect(result.current.canDeletePantry).toBe(false);
+    });
+
+    it('lets a member with canManageHome delete a pantry', () => {
+      withHome({
+        id: 'h1',
+        myMembership: { role: MembershipRole.Member, canManageHome: true },
+      });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current.canDeletePantry).toBe(true);
+    });
+
+    it('denies create to a member explicitly denied pantry edit', () => {
+      withHome({
+        id: 'h1',
+        myMembership: { role: MembershipRole.Member, canEditPantry: false },
+      });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current.canEditItems).toBe(false);
+      expect(result.current.canCreatePantry).toBe(false);
     });
 
     it('honours an explicit grant on a guest', () => {

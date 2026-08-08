@@ -1,5 +1,6 @@
 'use no memo';
 
+import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
@@ -13,10 +14,13 @@ jest.mock('../../../apollo/links/refreshToken');
 
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
+const mockHasPendingDeletes = jest.fn(() => false);
+
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   subscriptionService: {
     register: (config: SubscriptionConfig) => mockRegister(config),
     isPendingDelete: (id: string) => mockIsPendingDelete(id),
+    hasPendingDeletes: () => mockHasPendingDeletes(),
   },
 }));
 
@@ -27,6 +31,10 @@ const mockRemoveFromMealTemplates = jest.fn();
 const mockAddToMealPlanItems = jest.fn();
 const mockRemoveFromMealPlanItems = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  // The updater factories are stubbed so each call site can be asserted, but
+  // the pure helpers keep their real behaviour — a fully-partial factory drops
+  // whatever the module gains next.
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: (fieldName: string) =>
     fieldName === 'mealPlans'
       ? (...args: unknown[]) => mockAddToMealPlans(...args)
@@ -63,15 +71,32 @@ const makeClient = (readFragment: jest.Mock = jest.fn()) => ({
   refetchQueries: jest.fn(),
 });
 
+/**
+ * The plan-aggregates refetch is debounced and waits out in-flight deletes, so
+ * a synchronous assertion right after the event sees nothing. Run the timers to
+ * reach the read the handler actually scheduled.
+ */
+const flushAggregateRefresh = () => {
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
+};
+
 beforeEach(() => {
+  jest.useFakeTimers();
   jest.clearAllMocks();
   mockRegister.mockReturnValue({});
   mockIsPendingDelete.mockReturnValue(false);
+  mockHasPendingDeletes.mockReturnValue(false);
   useStore.setState({
     selectedHomeId: 'home-1',
     isHomeSelectionReady: true,
     selectedMealPlanId: null,
   });
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('useMealPlanSubscriptions', () => {
@@ -181,6 +206,7 @@ describe('useMealPlanSubscriptions', () => {
     );
 
     expect(mockAddToMealPlans).not.toHaveBeenCalled();
+    flushAggregateRefresh();
     expect(client.refetchQueries).toHaveBeenCalled();
   });
 
@@ -230,6 +256,7 @@ describe('useMealPlanSubscriptions', () => {
       { position: 'end' },
     );
     // Server-computed nutrition totals now describe a different item set.
+    flushAggregateRefresh();
     expect(client.refetchQueries).toHaveBeenCalled();
   });
 
@@ -339,9 +366,7 @@ describe('useMealPlanSubscriptions', () => {
     expect(mockAddToMealTemplates).toHaveBeenCalledWith(
       client.cache,
       template,
-      {
-        position: 'start',
-      },
+      expect.objectContaining({ position: 'start' }),
     );
   });
 

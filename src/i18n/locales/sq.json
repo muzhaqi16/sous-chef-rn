@@ -2892,7 +2892,9 @@
     "coverUpdateFailedBody": "Nuk u përditësua dot kopertina e profilit",
     "itemImageUpdateFailedBody": "Nuk u përditësua dot imazhi i artikullit",
     "itemTooLargeBody": "Imazhi është shumë i madh. Fotot e artikujve duhet të jenë nën {{size}} MB.",
-    "unreadableBody": "Nuk arritëm ta lexojmë atë skedar imazhi. Provo një tjetër."
+    "unreadableBody": "Nuk arritëm ta lexojmë atë skedar imazhi. Provo një tjetër.",
+    "batchThrottledBody": "{{reason}} {{count}} foto nuk u ngarkuan — provo sërish së shpejti.",
+    "batchPartialBody": "{{count}} foto nuk u ngarkuan dot."
   },
   "mealTemplateActions": {
     "planCreated": "Plani i vakteve u krijua nga modeli!",
@@ -2920,5 +2922,20 @@
     "nameMin": "Emri duhet të ketë të paktën 2 karaktere",
     "nameMax": "Emri duhet të ketë më pak se 50 karaktere",
     "nameChars": "Emri mund të përmbajë vetëm shkronja, hapësira, viza dhe apostrofa"
+  },
+  "itemPhotos": {
+    "pendingReview": "Në pritje të shqyrtimit",
+    "viewPhoto": "Shiko foton",
+    "viewPhotoLabeled": "Shiko foton: {{perspective}}",
+    "counter": "{{current}} nga {{total}}",
+    "perspective": {
+      "front": "Para",
+      "back": "Prapa",
+      "left": "Majtas",
+      "right": "Djathtas",
+      "top": "Lart",
+      "nutrition_label": "Ushqyesit",
+      "ingredient_list": "Përbërësit"
+    }
   }
 }

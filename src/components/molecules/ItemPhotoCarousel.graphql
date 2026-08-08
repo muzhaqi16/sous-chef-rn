@@ -1,0 +1,18 @@
+# One page of the item photo carousel. `Item.photos` arrives in gallery order
+# (primary, featured, then by perspective), so the carousel renders it as-is.
+#
+# `status` is selected because a photo uploaded to a catalog item the user
+# cannot directly edit lands PENDING: the API returns it to its submitter (and
+# to admins) but to nobody else, so the carousel must badge it rather than
+# present it as live.
+fragment ItemPhotoCarousel_itemPhoto on ItemPhoto {
+  id
+  url
+  perspective
+  isPrimary
+  status
+  variants {
+    url
+    kind
+  }
+}

@@ -92,6 +92,7 @@ export function pantryItemData(
         name: 'Milk',
         imageUrl: null,
         images: [],
+        photos: [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
         nutritions: null,

@@ -92,33 +92,5 @@ export interface NutrientEntry {
 
 export type NutrientCategory = 'macro' | 'vitamin' | 'mineral' | 'other';
 
-// =============================================================================
-// IMAGE TYPES
-// =============================================================================
-
-/**
- * Image size variant from API
- */
-export interface ImageSize {
-  size: 'xlarge' | 'large' | 'medium' | 'small' | 'thumbnail';
-  url: string;
-}
-
-/**
- * Item image from API with perspective and multiple sizes
- */
-export interface ItemImage {
-  perspective: string; // 'front' | 'back' | 'left' | 'right' | 'top' | 'nutrition_label' | etc.
-  featured: boolean;
-  sizes: ImageSize[];
-  sourcePriority: number;
-}
-
-/**
- * Grouped images for tabbed display
- */
-export interface ImageTab {
-  key: string;
-  label: string;
-  images: ItemImage[];
-}
+// Image types live in `#utils/imageUtils` (`PhotoLike`, `PreferredSize`) and in
+// the generated schema types (`ItemPhoto`, `ItemImage`, `ImagePerspective`).

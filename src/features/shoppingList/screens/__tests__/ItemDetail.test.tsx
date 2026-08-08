@@ -22,10 +22,12 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
+// `resolveImageUrl` is mocked so each test can drive hero resolution directly;
+// everything else keeps its real implementation (a partial factory would drop
+// `galleryPhotos` and the perspective helpers the gallery needs).
 jest.mock('#utils/imageUtils', () => ({
+  ...jest.requireActual('#utils/imageUtils'),
   resolveImageUrl: jest.fn(() => null),
-  parseImages: jest.fn(() => []),
-  hasImages: jest.fn(() => false),
 }));
 jest.mock('#utils/nutritionUtils', () => ({
   parseNutritions: jest.fn(() => []),
@@ -52,8 +54,8 @@ jest.mock('#components/molecules/ClickableInfoPanel', () => ({
 jest.mock('#components/molecules/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
-jest.mock('#components/molecules/ImageGalleryTabs', () => ({
-  ImageGalleryTabs: () => null,
+jest.mock('#components/molecules/ItemPhotoCarousel', () => ({
+  ItemPhotoCarousel: () => null,
 }));
 jest.mock('#components/atoms/FormattedItemSubtitle', () => ({
   FormattedItemSubtitle: () => {

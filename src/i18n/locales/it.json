@@ -2892,7 +2892,9 @@
     "coverUpdateFailedBody": "Impossibile aggiornare la copertina del profilo",
     "itemImageUpdateFailedBody": "Impossibile aggiornare l'immagine dell'articolo",
     "itemTooLargeBody": "Immagine troppo grande. Le foto degli articoli devono essere inferiori a {{size}} MB.",
-    "unreadableBody": "Non siamo riusciti a leggere questo file immagine. Provane un altro."
+    "unreadableBody": "Non siamo riusciti a leggere questo file immagine. Provane un altro.",
+    "batchThrottledBody": "{{reason}} {{count}} foto non caricate — riprova tra poco.",
+    "batchPartialBody": "Impossibile caricare {{count}} foto."
   },
   "mealTemplateActions": {
     "planCreated": "Piano dei pasti creato dal modello!",
@@ -2920,5 +2922,20 @@
     "nameMin": "Il nome deve contenere almeno 2 caratteri",
     "nameMax": "Il nome deve contenere meno di 50 caratteri",
     "nameChars": "Il nome può contenere solo lettere, spazi, trattini e apostrofi"
+  },
+  "itemPhotos": {
+    "pendingReview": "In attesa di revisione",
+    "viewPhoto": "Vedi foto",
+    "viewPhotoLabeled": "Vedi foto: {{perspective}}",
+    "counter": "{{current}} di {{total}}",
+    "perspective": {
+      "front": "Fronte",
+      "back": "Retro",
+      "left": "Sinistra",
+      "right": "Destra",
+      "top": "Alto",
+      "nutrition_label": "Valori nutrizionali",
+      "ingredient_list": "Ingredienti"
+    }
   }
 }

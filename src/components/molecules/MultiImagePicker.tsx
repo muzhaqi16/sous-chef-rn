@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Image } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
+import { useTranslation } from 'react-i18next';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { getPerspectiveLabel } from '#utils/imageUtils';
+import { getPerspectiveLabel, CAPTURE_PERSPECTIVES } from '#utils/imageUtils';
 import { ImagePicker, type ImageFile } from './ImagePicker';
 import { ModalPicker } from './ModalPicker';
 import { Text } from '#components/atoms/Text';
@@ -22,25 +23,11 @@ interface MultiImagePickerProps {
   label?: string;
 }
 
-const PERSPECTIVES = [
-  'front',
-  'back',
-  'left',
-  'right',
-  'nutrition_label',
-  'ingredient_list',
-];
-
-const PERSPECTIVE_OPTIONS = PERSPECTIVES.map(p => ({
-  label: getPerspectiveLabel(p),
-  value: p,
-}));
-
 const getNextAvailablePerspective = (
   existingImages: SelectedImage[],
 ): string => {
   const usedPerspectives = new Set(existingImages.map(img => img.perspective));
-  for (const perspective of PERSPECTIVES) {
+  for (const perspective of CAPTURE_PERSPECTIVES) {
     if (!usedPerspectives.has(perspective)) {
       return perspective;
     }
@@ -56,29 +43,31 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
   maxImages = 6,
   label = 'Product Images',
 }) => {
+  const { t } = useTranslation();
+  const perspectiveOptions = CAPTURE_PERSPECTIVES.map(p => ({
+    label: getPerspectiveLabel(p, t),
+    value: p,
+  }));
+
   const handleMultiImagesSelected = (newFiles: ImageFile[]) => {
     const remaining = maxImages - images.length;
     const filesToAdd = newFiles.slice(0, remaining);
 
-    const newImages: SelectedImage[] = filesToAdd.map((file, index) => {
-      // Build perspective set from existing + already-assigned new images
-      const allSoFar = [
-        ...images,
-        ...filesToAdd.slice(0, index).map((f, i) => ({
-          ...f,
-          perspective: getNextAvailablePerspective([
-            ...images,
-            ...filesToAdd.slice(0, i).map(ff => ({ ...ff, perspective: '' })),
-          ]),
-        })),
-      ];
-      return {
+    // Assign in one forward pass, feeding each result back in. The previous
+    // version rebuilt the "already taken" set per file and blanked the
+    // perspectives inside it, so every file after the first saw a used-set of
+    // {''} and got 'front' — four photos came out front/back/back/back. Those
+    // labels now reach confirmItemImageUpload, so a collision is persisted
+    // catalog data, not just a mislabeled row.
+    const assigned: SelectedImage[] = [];
+    for (const file of filesToAdd) {
+      assigned.push({
         ...file,
-        perspective: getNextAvailablePerspective(allSoFar),
-      };
-    });
+        perspective: getNextAvailablePerspective([...images, ...assigned]),
+      });
+    }
 
-    onImagesChanged([...images, ...newImages]);
+    onImagesChanged([...images, ...assigned]);
   };
 
   const handleSingleImageSelected = (file: ImageFile) => {
@@ -174,7 +163,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
                 style={styles.perspectiveText}
                 numberOfLines={1}
               >
-                {getPerspectiveLabel(image.perspective)}
+                {getPerspectiveLabel(image.perspective, t)}
               </Text>
               <Icon name="chevron-down" size={14} tone="textSecondary" />
             </AppPressable>
@@ -202,7 +191,7 @@ export const MultiImagePicker: React.FC<MultiImagePickerProps> = ({
       <ModalPicker
         label="Select Perspective"
         visible={pickerIndex !== null}
-        options={PERSPECTIVE_OPTIONS}
+        options={perspectiveOptions}
         selected={
           pickerIndex !== null ? images[pickerIndex]?.perspective ?? '' : ''
         }

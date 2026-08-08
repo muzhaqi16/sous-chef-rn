@@ -2892,7 +2892,9 @@
     "coverUpdateFailedBody": "No se pudo actualizar la portada del perfil",
     "itemImageUpdateFailedBody": "No se pudo actualizar la imagen del artículo",
     "itemTooLargeBody": "La imagen es demasiado grande. Las fotos de artículos deben pesar menos de {{size}} MB.",
-    "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro."
+    "unreadableBody": "No pudimos leer ese archivo de imagen. Prueba con otro.",
+    "batchThrottledBody": "{{reason}} No se subieron {{count}} foto(s); inténtalo de nuevo en breve.",
+    "batchPartialBody": "No se pudieron subir {{count}} foto(s)."
   },
   "mealTemplateActions": {
     "planCreated": "¡Plan de comidas creado a partir de la plantilla!",
@@ -2920,5 +2922,20 @@
     "nameMin": "El nombre debe tener al menos 2 caracteres",
     "nameMax": "El nombre debe tener menos de 50 caracteres",
     "nameChars": "El nombre solo puede contener letras, espacios, guiones y apóstrofos"
+  },
+  "itemPhotos": {
+    "pendingReview": "Pendiente de revisión",
+    "viewPhoto": "Ver foto",
+    "viewPhotoLabeled": "Ver foto: {{perspective}}",
+    "counter": "{{current}} de {{total}}",
+    "perspective": {
+      "front": "Frente",
+      "back": "Reverso",
+      "left": "Izquierda",
+      "right": "Derecha",
+      "top": "Arriba",
+      "nutrition_label": "Nutrición",
+      "ingredient_list": "Ingredientes"
+    }
   }
 }

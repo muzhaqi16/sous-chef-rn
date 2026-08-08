@@ -388,7 +388,7 @@ export const PantrySettings: React.FC<
         onBack={goBack}
         rightElement={
           (
-            !pantryId ? permissions.canManagePantry : permissions.canEditItems
+            !pantryId ? permissions.canCreatePantry : permissions.canEditItems
           ) ? (
             <Pressable
               onPress={handleSave}
@@ -456,8 +456,8 @@ export const PantrySettings: React.FC<
           </View>
         )}
 
-        {/* Only show danger zone if editing existing pantry and user can manage */}
-        {!!pantryId && permissions.canManagePantry ? (
+        {/* Only show danger zone if editing existing pantry and user can delete */}
+        {!!pantryId && permissions.canDeletePantry ? (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
               {t('pantrySettings.dangerZone')}

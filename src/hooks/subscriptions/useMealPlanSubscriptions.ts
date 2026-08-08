@@ -9,9 +9,13 @@
  * plan (`homeId: null`) can only be changed by this device, so there is
  * nothing to push and nothing missed.
  *
- * Every subtype applies the pushed payload — no refetch on the happy path.
+ * Every subtype applies the pushed payload rather than refetching for it.
  * Apollo normalizes each event's node on arrival, so the handler's only job is
  * connection and array membership, which a normalized write cannot infer:
+ *
+ * The one exception is a meal plan's server-computed nutrition totals, which no
+ * pushed node carries. Those go through `refreshPlanAggregates`, which is
+ * debounced and waits out any in-flight delete — see its own note.
  *
  * - **Plans and plan items** join or leave their collection using the entity
  *   read back from the cache. Reading back rather than trusting the payload is
@@ -53,6 +57,7 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromParentArrayUpdater,
   createRemoveFromQueryConnectionUpdater,
+  skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
@@ -185,16 +190,51 @@ function handlePlanChanged(
   void client.refetchQueries({ include: [GetMealPlansDocument] });
 }
 
+/** Debounce window for the aggregates refetch. */
+const AGGREGATE_REFRESH_DELAY_MS = 400;
 /**
- * The plan's nutrition totals are computed server-side and stored as their own
- * fields, so changing `mealPlanItems` leaves them describing the old set. They
- * can't be evicted — `MealPlanMain_mealPlan` selects them, and an evicted field
- * makes that read incomplete and blanks the screen — so re-read the plan.
- * Refetches only what is mounted; offline the totals stay stale until the next
- * successful read, which beats blanking.
+ * Retry ceiling while deletes are in flight. `registerPendingDelete` self-clears
+ * after 30s, so this only has to outlast that — it exists to bound the loop, not
+ * to time it.
  */
-function refreshPlanAggregates(client: SubscriptionApolloClient) {
-  void client.refetchQueries({ include: [GetMealPlanDocument] });
+const AGGREGATE_REFRESH_MAX_ATTEMPTS = 80;
+
+let aggregateRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Re-read the plan so its server-computed nutrition totals catch up.
+ *
+ * The totals are their own fields, so changing `mealPlanItems` leaves them
+ * describing the old set. They can't be evicted — `MealPlanMain_mealPlan`
+ * selects them, and an evicted field makes that read incomplete and blanks the
+ * screen — so the only fix is a re-read. Refetches only what is mounted;
+ * offline the totals stay stale until the next successful read, which beats
+ * blanking.
+ *
+ * Coalesced and delete-aware, because a naive refetch-per-event is wrong twice
+ * over. Applying a 7-day template pushes ~21 item events, and one full plan
+ * query each is 21 round-trips for one final answer. Worse, a refetch landing
+ * while a delete is still in flight writes the server's copy of the row the
+ * user just removed straight back into the cache — the deleted meal reappears,
+ * then vanishes again when the delete's own echo arrives. So: debounce, and
+ * hold off entirely until no delete is pending.
+ */
+function refreshPlanAggregates(
+  client: SubscriptionApolloClient,
+  attempt: number = 0,
+) {
+  if (aggregateRefreshTimer) clearTimeout(aggregateRefreshTimer);
+  aggregateRefreshTimer = setTimeout(() => {
+    aggregateRefreshTimer = null;
+    if (
+      subscriptionService.hasPendingDeletes() &&
+      attempt < AGGREGATE_REFRESH_MAX_ATTEMPTS
+    ) {
+      refreshPlanAggregates(client, attempt + 1);
+      return;
+    }
+    void client.refetchQueries({ include: [GetMealPlanDocument] });
+  }, AGGREGATE_REFRESH_DELAY_MS);
 }
 
 function handlePlanItemChanged(
@@ -223,6 +263,12 @@ function handlePlanItemChanged(
         itemId,
       );
     }
+    // The echo is dropped, but the plan's totals still moved. Scheduling here
+    // is what makes the user's own delete — the common case, where the echo
+    // almost always arrives while the mutation is still in flight — update the
+    // calories/protein/carbs/fat in the header. The scheduler waits out the
+    // pending delete before it reads.
+    refreshPlanAggregates(client);
     return;
   }
 
@@ -311,10 +357,20 @@ function handleTemplateChanged(
   }
 
   // The id, not the read-back object — see handlePlanChanged.
+  //
+  // Scoped to the variants this template belongs to: `Query.mealTemplates` is
+  // keyed on `filters`, so the browser sheet accumulates one entry per
+  // category/search the user has visited and a bare cache.modify would drop a
+  // remotely-created DINNER template into the BREAKFAST list.
   addToMealTemplates(
     client.cache,
     { __typename: 'MealTemplate', id: templateId },
-    { position: 'start' },
+    {
+      position: 'start',
+      skipStoreField: skipUnmatchedFilterVariants({
+        category: template.category,
+      }),
+    },
   );
 }
 

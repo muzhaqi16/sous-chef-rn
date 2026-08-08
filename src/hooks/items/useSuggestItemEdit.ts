@@ -83,7 +83,15 @@ export function useSuggestItemEdit() {
         );
         return { status: 'noChanges' };
       }
-      await uploadImages(uploadItemImages, images, original.id);
+      const uploaded = await uploadImages(
+        uploadItemImages,
+        images,
+        original.id,
+      );
+      // Photos are the entire submission on this path, so zero uploaded is a
+      // failed submission — telling the user it was received would close the
+      // form over a batch that never left the device.
+      if (uploaded === 0) return FAILED;
       alertService.alert(
         t('suggestItemEdit.photosOnlyTitle'),
         t('suggestItemEdit.photosOnlyBody'),
@@ -201,16 +209,25 @@ export function useSuggestItemEdit() {
   return { submitEdit, loading: suggesting || updating || uploading };
 }
 
+/**
+ * Returns how many photos actually landed.
+ *
+ * `uploadItemImages` stops the run at the first fatal failure (rate limit,
+ * offline) and returns a short array, so the count is the only way to tell a
+ * successful submission from one where nothing reached the server. It alerts
+ * with the specific reason itself, so callers only decide what to report.
+ */
 async function uploadImages(
   upload: ReturnType<typeof useImageUpload>['uploadItemImages'],
   images: AddItemSubmitPayload['selectedImages'],
   itemId: string,
-): Promise<void> {
-  if (images.length === 0) return;
-  await executeMutation(
+): Promise<number> {
+  if (images.length === 0) return 0;
+  const result = await executeMutation(
     () => upload(images, itemId),
     'Error uploading item images:',
   );
+  return result === false ? 0 : result.length;
 }
 
 /** 'updated' | 'forbidden' | null (any other failure). */

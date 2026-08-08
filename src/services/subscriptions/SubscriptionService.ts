@@ -159,6 +159,17 @@ export class SubscriptionService {
   }
 
   /**
+   * Whether any delete is currently in flight.
+   *
+   * Used by handlers that re-read a parent from the network: such a read
+   * returns the server's copy of rows the user has already removed locally, so
+   * it has to wait until the deletes settle or it resurrects them.
+   */
+  hasPendingDeletes(): boolean {
+    return this.pendingDeletes.size > 0;
+  }
+
+  /**
    * Register that a parent entity (shopping list, pantry) is being deleted.
    * Subscriptions for this entity will be skipped during the deletion process.
    *

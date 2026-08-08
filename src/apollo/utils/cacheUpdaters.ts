@@ -98,6 +98,59 @@ export interface RemoveFromArrayOptions {
 // =============================================================================
 
 /**
+ * Build a `skipStoreField` guard for a connection keyed on a `filters` argument.
+ *
+ * A `cache.modify` runs its modifier against every cached variant of the field,
+ * so writing a new entity fans it out into filtered views it does not belong to
+ * — a DINNER template lands in the BREAKFAST list and in whatever search results
+ * happen to be cached.
+ *
+ * The unfiltered variant always takes the write. A filtered one takes it only
+ * when every active filter is a key in `equals` and matches. Anything else — a
+ * search string, a tag set, a duration range — skips: replicating the server's
+ * matching here is how a cache write starts disagreeing with the next read, and
+ * a briefly-missing row heals on that read while a wrongly-placed one does not.
+ *
+ * @example
+ * addToMealTemplates(cache, template, {
+ *   skipStoreField: skipUnmatchedFilterVariants({ category: template.category }),
+ * });
+ */
+export function skipUnmatchedFilterVariants(
+  equals: Record<string, unknown>,
+): (storeFieldName: string) => boolean {
+  return storeFieldName => {
+    const argsStart = storeFieldName.indexOf('(');
+    if (argsStart === -1) return false;
+
+    const args = storeFieldName.slice(argsStart + 1, -1);
+    if (!args) return false;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(args);
+    } catch {
+      // Unparseable args mean we cannot prove the variant matches, and the
+      // safe direction is to leave it for the next read.
+      return true;
+    }
+
+    const filters = (parsed as { filters?: unknown } | null)?.filters;
+    if (!filters || typeof filters !== 'object') return false;
+
+    return Object.entries(filters).some(([key, value]) => {
+      const isActive =
+        value !== null &&
+        value !== undefined &&
+        value !== '' &&
+        !(Array.isArray(value) && value.length === 0);
+      if (!isActive) return false;
+      return !(key in equals) || equals[key] !== value;
+    });
+  };
+}
+
+/**
  * Creates a function to add items to a Query root Connection field
  *
  * Use this for Query fields that return Connection objects (with edges/pageInfo):

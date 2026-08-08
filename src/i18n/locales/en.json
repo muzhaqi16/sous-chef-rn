@@ -2892,7 +2892,9 @@
     "updateFailedTitle": "Update Failed",
     "avatarUpdateFailedBody": "Failed to update profile avatar",
     "coverUpdateFailedBody": "Failed to update profile cover",
-    "itemImageUpdateFailedBody": "Failed to update item image"
+    "itemImageUpdateFailedBody": "Failed to update item image",
+    "batchThrottledBody": "{{reason}} {{count}} photo(s) were not uploaded — try again shortly.",
+    "batchPartialBody": "{{count}} photo(s) could not be uploaded."
   },
   "mealTemplateActions": {
     "planCreated": "Meal plan created from template!",
@@ -2920,5 +2922,20 @@
     "nameMin": "Name must be at least 2 characters",
     "nameMax": "Name must be less than 50 characters",
     "nameChars": "Name can only contain letters, spaces, hyphens, and apostrophes"
+  },
+  "itemPhotos": {
+    "pendingReview": "Pending review",
+    "viewPhoto": "View photo",
+    "viewPhotoLabeled": "View {{perspective}} photo",
+    "counter": "{{current}} of {{total}}",
+    "perspective": {
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top",
+      "nutrition_label": "Nutrition",
+      "ingredient_list": "Ingredients"
+    }
   }
 }

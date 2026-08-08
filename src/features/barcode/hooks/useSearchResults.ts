@@ -173,7 +173,7 @@ export const useSearchResults = (barcode: string, format?: string) => {
   } = useSearchState();
   const { showBottomSheet, hideBottomSheet } = useBottomSheetState();
 
-  const { uploadItemImage } = useImageUpload();
+  const { uploadItemImage, uploadItemImages } = useImageUpload();
 
   // Ref to store brand name from form for use in mutation callback
   const pendingBrandNameRef = useRef<string | undefined>(undefined);
@@ -194,7 +194,12 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
           // Upload pending images (module-level function avoids try-catch in hook)
           const result = await executeMutation(
-            () => uploadPendingImages(createdItem, uploadItemImage),
+            () =>
+              uploadPendingImages(
+                createdItem,
+                uploadItemImage,
+                uploadItemImages,
+              ),
             'Error handling pending image upload:',
           );
           const finalItem = result !== false ? result : createdItem;

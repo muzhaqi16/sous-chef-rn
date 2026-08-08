@@ -7,7 +7,8 @@ export interface PantryPermissions {
   canView: boolean;
   canAddItems: boolean;
   canEditItems: boolean; // covers edit/consume/restock/remove
-  canManagePantry: boolean; // create/delete pantry
+  canCreatePantry: boolean; // API gate: ACTIVE membership with canEditPantry
+  canDeletePantry: boolean; // API gate: OWNER || ADMIN || canManageHome
 }
 
 /**
@@ -25,14 +26,16 @@ const NO_PERMISSIONS: PantryPermissions = {
   canView: false,
   canAddItems: false,
   canEditItems: false,
-  canManagePantry: false,
+  canCreatePantry: false,
+  canDeletePantry: false,
 };
 
 const FULL_PERMISSIONS: PantryPermissions = {
   canView: true,
   canAddItems: true,
   canEditItems: true,
-  canManagePantry: true,
+  canCreatePantry: true,
+  canDeletePantry: true,
 };
 
 /**
@@ -42,6 +45,11 @@ const FULL_PERMISSIONS: PantryPermissions = {
  * - OWNER/ADMIN: Full permissions always
  * - MEMBER: Permissive defaults (!== false) — has access unless explicitly denied
  * - GUEST: Restrictive defaults (=== true) — no access unless explicitly granted
+ *
+ * Creating a pantry and editing one share a single API gate — an ACTIVE
+ * membership with `canEditPantry` — so `canCreatePantry` tracks `canEditItems`
+ * rather than the home-management flag. Deleting is the one that needs
+ * `canManageHome`, which defaults to false for every role.
  */
 export function getPantryPermissions(
   membership: HomeMembership | null | undefined,
@@ -59,19 +67,23 @@ export function getPantryPermissions(
 
   // GUEST: restrictive defaults — only allowed if explicitly granted
   if (role === MembershipRole.Guest) {
+    const guestCanEditPantry = membership.canEditPantry === true;
     return {
       canView: membership.canViewPantry === true,
       canAddItems: membership.canAddItems === true,
-      canEditItems: membership.canEditPantry === true,
-      canManagePantry: false, // Guests can never manage pantries
+      canEditItems: guestCanEditPantry,
+      canCreatePantry: guestCanEditPantry,
+      canDeletePantry: false, // Guests can never delete a pantry
     };
   }
 
   // MEMBER: permissive defaults — allowed unless explicitly denied
+  const canEditPantry = membership.canEditPantry !== false;
   return {
     canView: membership.canViewPantry !== false,
     canAddItems: membership.canAddItems !== false,
-    canEditItems: membership.canEditPantry !== false,
-    canManagePantry: membership.canManageHome === true,
+    canEditItems: canEditPantry,
+    canCreatePantry: canEditPantry,
+    canDeletePantry: membership.canManageHome === true,
   };
 }

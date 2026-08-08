@@ -914,6 +914,18 @@ export type ApproveAndMergePayload = {
  */
 export type ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
+export type ApproveItemImagePayload = {
+  __typename: 'ApproveItemImagePayload';
+  item: Item;
+};
+
+/**
+ * Result of ApproveItemImage. Select on ApproveItemImagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type ApproveItemImageResult = ApproveItemImagePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
+
 export type ApproveItemInput = {
   itemId: Scalars['ID']['input'];
 };
@@ -1797,6 +1809,18 @@ export type CompleteShoppingListResult = CompleteShoppingListPayload | ConflictE
 export type ConfirmItemImageUploadInput = {
   itemId: Scalars['ID']['input'];
   key: Scalars['String']['input'];
+  /**
+   * Request this photo as the item's hero. Honoured only once the photo is
+   * APPROVED and only if the caller may edit the item; the previous primary is
+   * demoted in the same transaction. An item's first photo becomes primary
+   * automatically, so this is for deliberately repointing it.
+   */
+  makePrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  /**
+   * Which angle this photo shows. Omitted leaves it untagged, which sorts last
+   * in the gallery — send it whenever the capture flow knows the angle.
+   */
+  perspective?: InputMaybe<ImagePerspective>;
 };
 
 export type ConfirmItemImageUploadPayload = {
@@ -5118,24 +5142,45 @@ export type ImageInput = {
   hash?: InputMaybe<Scalars['String']['input']>;
   height?: InputMaybe<Scalars['Int']['input']>;
   isPrimary?: InputMaybe<Scalars['Boolean']['input']>;
+  /** Rendition axis only. Send MAIN for a photo; the size variants are generated, not supplied. */
   kind?: InputMaybe<ImageKind>;
-  perspective?: InputMaybe<Scalars['String']['input']>;
+  /** Which angle this photo shows. Validated — an unrecognised value is rejected rather than stored un-groupable. */
+  perspective?: InputMaybe<ImagePerspective>;
   source?: InputMaybe<Scalars['String']['input']>;
   url: Scalars['String']['input'];
   width?: InputMaybe<Scalars['Int']['input']>;
 };
 
+/**
+ * A pure rendition axis: MAIN is an original photo, the rest are sizes derived
+ * from one. What a photo DEPICTS is ImagePerspective, carried on
+ * ItemPhoto.perspective — the two axes were previously mixed in this enum,
+ * which made a front shot indistinguishable from a second size of the same
+ * picture.
+ */
 export enum ImageKind {
-  Barcode = 'BARCODE',
-  Front = 'FRONT',
-  Gallery = 'GALLERY',
-  IngredientList = 'INGREDIENT_LIST',
   Main = 'MAIN',
-  NutritionLabel = 'NUTRITION_LABEL',
   Size_128 = 'SIZE_128',
   Size_256 = 'SIZE_256',
   Size_512 = 'SIZE_512',
   Thumbnail = 'THUMBNAIL'
+}
+
+/**
+ * Which angle of the product a photo was taken from — the semantic axis
+ * ImageKind conflates with rendition size. Persisted lower-cased
+ * (FRONT -> "front", NUTRITION_LABEL -> "nutrition_label"), which is the
+ * vocabulary already stored in ItemImage.perspective and the one the gallery
+ * orders by.
+ */
+export enum ImagePerspective {
+  Back = 'BACK',
+  Front = 'FRONT',
+  IngredientList = 'INGREDIENT_LIST',
+  Left = 'LEFT',
+  NutritionLabel = 'NUTRITION_LABEL',
+  Right = 'RIGHT',
+  Top = 'TOP'
 }
 
 export enum ImageUploadPurpose {
@@ -5155,6 +5200,12 @@ export type IngredientUsageInput = {
 /** Sub-input for creating a new item inline (when itemId is not provided) */
 export type InlineItemInput = {
   brand?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Category reference for the item created inline — a category name, slug, or
+   * id. Resolved against the catalog taxonomy; a name that matches nothing
+   * creates a CUSTOM category and links it, the same way a new brand name is
+   * handled. An unknown id resolves to no category. Never fails the add.
+   */
   category?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   displayUnitId?: InputMaybe<Scalars['ID']['input']>;
@@ -5432,8 +5483,15 @@ export type Item = {
   externalSources: Array<ExternalSourceMapping>;
   healthBenefits: Array<HealthBenefit>;
   id: Scalars['ID']['output'];
+  /** Number of distinct photos, NOT of image rows — size renditions are excluded. */
   imageCount: Scalars['Int']['output'];
+  /** URL of the primary photo, or its thumbnail rendition when one exists. */
   imageUrl: Maybe<Scalars['String']['output']>;
+  /**
+   * At most ONE image row — the best single asset for the primary photo, or the
+   * best match for an explicit kind. This field cannot express a gallery; select
+   * "photos" for that.
+   */
   images: Array<ItemImage>;
   ingredients: Maybe<Scalars['JSON']['output']>;
   /** Whether this item has been soft-deleted (admin visibility) */
@@ -5482,6 +5540,25 @@ export type Item = {
   nutritions: Maybe<Scalars['JSON']['output']>;
   /** Number of PENDING community edit suggestions for this item. */
   pendingSuggestionCount: Scalars['Int']['output'];
+  /**
+   * Every distinct photo of this item, each carrying its own size renditions.
+   *
+   * Ordered deterministically: the primary photo first, then featured ones, then
+   * by perspective (front, back, left, right, top, nutrition_label,
+   * ingredient_list, then any unrecognised value), then oldest first, with id as
+   * the final tiebreak.
+   *
+   * Contains only APPROVED photos, plus the viewer's own still-PENDING
+   * submissions (admins see every photo regardless of status) — so a submission
+   * awaiting review is visible to the person who sent it and to nobody else.
+   *
+   * PRIVATE cache scope precisely because of that viewer-dependence: Item is
+   * otherwise a PUBLIC, 30-minute-cacheable type, and caching one submitter's
+   * pending photo into a shared entry would leak it to everyone. Select
+   * "imageUrl"/"imageCount" instead where a publicly cacheable projection is
+   * what you want — those stay approved-only for every viewer.
+   */
+  photos: Array<ItemPhoto>;
   popularity: Scalars['Int']['output'];
   preferredTrackingUnit: Maybe<Unit>;
   preferredTrackingUnitId: Maybe<Scalars['ID']['output']>;
@@ -5748,7 +5825,11 @@ export type ItemFilters = {
   workflow?: InputMaybe<WorkflowFilterInput>;
 };
 
-/** Typed image record for items (replaces JSON images field) */
+/**
+ * One image ROW. This is either a photo or a size rendition derived from one —
+ * "kind" conflates the two axes, so a bare ItemImage cannot tell you which.
+ * Select Item.photos to get that structure.
+ */
 export type ItemImage = {
   __typename: 'ItemImage';
   createdAt: Maybe<Scalars['DateTime']['output']>;
@@ -5760,8 +5841,59 @@ export type ItemImage = {
   perspective: Maybe<Scalars['String']['output']>;
   size: Maybe<Scalars['Int']['output']>;
   source: Maybe<Scalars['String']['output']>;
+  /** Set when this row is a size rendition, pointing at the photo it came from. */
+  sourceImageId: Maybe<Scalars['ID']['output']>;
+  /**
+   * Review state. Only APPROVED photos are public; a PENDING one is visible
+   * solely to its submitter and to admins.
+   */
+  status: ItemImageStatus;
   url: Scalars['String']['output'];
 };
+
+/**
+ * A page of ItemImage results. Read "edges" for the rows and "pageInfo" to decide
+ * whether to request another page.
+ */
+export type ItemImageConnection = Connection & {
+  __typename: 'ItemImageConnection';
+  /** The rows in this page, in the connection's sort order. */
+  edges: Array<ItemImageEdge>;
+  /** Cursors and flags describing where this page sits in the full result. */
+  pageInfo: PageInfo;
+  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
+  totalCount: Maybe<Scalars['Int']['output']>;
+};
+
+/**
+ * One ItemImage in a paginated result, paired with the cursor that identifies its
+ * position. Pass the cursor as "after" to resume from just past this edge.
+ */
+export type ItemImageEdge = Edge & {
+  __typename: 'ItemImageEdge';
+  /** Opaque position marker for this edge. Do not parse or construct it. */
+  cursor: Scalars['String']['output'];
+  /** The ItemImage this edge wraps. */
+  node: ItemImage;
+};
+
+/** Filters for the admin item-photo review queue. */
+export type ItemImageFilters = {
+  itemId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<ItemImageStatus>;
+};
+
+/**
+ * Review state of a submitted item photo. Uploads against a catalog item the
+ * submitter cannot directly edit land PENDING and stay out of the public
+ * gallery until an admin reviews them; every other write path is APPROVED on
+ * arrival. REJECTED rows are retained rather than reaped.
+ */
+export enum ItemImageStatus {
+  Approved = 'APPROVED',
+  Pending = 'PENDING',
+  Rejected = 'REJECTED'
+}
 
 /** Sub-input for item lookup by identifier */
 export type ItemLookupInput = {
@@ -5817,6 +5949,38 @@ export type ItemOrderBy = {
   shelfLife?: InputMaybe<SortOrder>;
   unitPrice?: InputMaybe<SortOrder>;
   updatedAt?: InputMaybe<SortOrder>;
+};
+
+/**
+ * One real photo of an item, with its size renditions attached.
+ *
+ * This is the gallery unit: an item with a front shot and a back-label shot has
+ * exactly two ItemPhoto entries, no matter how many ItemImage rows the
+ * processing pipeline derived from them.
+ */
+export type ItemPhoto = {
+  __typename: 'ItemPhoto';
+  createdAt: Scalars['DateTime']['output'];
+  featured: Scalars['Boolean']['output'];
+  id: Scalars['ID']['output'];
+  /** Whether this is the item's hero photo. At most one photo per item is. */
+  isPrimary: Scalars['Boolean']['output'];
+  /** Which angle this photo shows, lower-cased (e.g. "front"). Null if untagged. */
+  perspective: Maybe<Scalars['String']['output']>;
+  /** Provenance, e.g. "user_uploaded", "usda", "kroger". */
+  source: Maybe<Scalars['String']['output']>;
+  /**
+   * Review state of this photo. Always APPROVED unless the viewer is its
+   * submitter or an admin, since no other viewer is shown a pending photo.
+   */
+  status: ItemImageStatus;
+  /** URL of the original upload. */
+  url: Scalars['String']['output'];
+  /**
+   * Size renditions derived from this photo (THUMBNAIL, SIZE_512, …). Empty
+   * until the processing job has run — fall back to "url" while it is.
+   */
+  variants: Array<ItemImage>;
 };
 
 /** Price history for items - may contain user-specific pricing data */
@@ -7895,6 +8059,13 @@ export type Mutation = {
   restoreItem: RestoreItemResult;
   /** Send a test notification of a specific type to the current user. */
   sendTestNotification: SendTestNotificationResult;
+  /**
+   * Repoint which of an item's photos is the hero, demoting the incumbent in the
+   * same transaction. Takes the same gate as any other direct item edit, so a
+   * non-owner cannot repoint a public catalog item's hero photo. The target must
+   * be an APPROVED photo of that item, not a size rendition.
+   */
+  setPrimaryItemImage: SetPrimaryItemImageResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
   /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
@@ -10008,6 +10179,19 @@ export type MutationRestoreItemArgs = {
  */
 export type MutationSendTestNotificationArgs = {
   input: SendTestNotificationInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
+export type MutationSetPrimaryItemImageArgs = {
+  input: SetPrimaryItemImageInput;
 };
 
 
@@ -13976,6 +14160,18 @@ export enum RegistrationStatus {
   VerificationSent = 'VERIFICATION_SENT'
 }
 
+export type RejectItemImagePayload = {
+  __typename: 'RejectItemImagePayload';
+  item: Item;
+};
+
+/**
+ * Result of RejectItemImage. Select on RejectItemImagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type RejectItemImageResult = ConflictError | ForbiddenError | NotFoundError | RejectItemImagePayload | ValidationError;
+
 /** Input for rejecting a user-created item */
 export type RejectItemInput = {
   itemId: Scalars['ID']['input'];
@@ -14041,6 +14237,7 @@ export type RemoveItemFromShoppingListPayload = {
  */
 export type RemoveItemFromShoppingListResult = ConflictError | ForbiddenError | NotFoundError | RemoveItemFromShoppingListPayload | ValidationError;
 
+/** Note that "id" is the ITEM's id — this clears the item's whole gallery. */
 export type RemoveItemImageInput = {
   id: Scalars['ID']['input'];
 };
@@ -14334,6 +14531,16 @@ export type ReviewHelpful = {
   user: Maybe<User>;
 };
 
+/**
+ * Shared by approveItemImage and rejectItemImage — the two differ only in the
+ * verdict they record, which is carried by the mutation name.
+ */
+export type ReviewItemImageInput = {
+  /** The ItemImage row being reviewed. */
+  imageId: Scalars['ID']['input'];
+  reviewNote?: InputMaybe<Scalars['String']['input']>;
+};
+
 /** Approve or reject a pending suggestion (admin only). */
 export type ReviewItemSuggestionInput = {
   id: Scalars['ID']['input'];
@@ -14479,6 +14686,23 @@ export type SessionInfoInput = {
   sessionDuration?: InputMaybe<Scalars['Int']['input']>;
   sessionId?: InputMaybe<Scalars['String']['input']>;
 };
+
+export type SetPrimaryItemImageInput = {
+  /** The ItemImage row to promote, NOT the item. */
+  imageId: Scalars['ID']['input'];
+};
+
+export type SetPrimaryItemImagePayload = {
+  __typename: 'SetPrimaryItemImagePayload';
+  item: Item;
+};
+
+/**
+ * Result of SetPrimaryItemImage. Select on SetPrimaryItemImagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type SetPrimaryItemImageResult = ConflictError | ForbiddenError | NotFoundError | SetPrimaryItemImagePayload | ValidationError;
 
 /**
  * A shareable deep link expressed in both forms so clients can choose:
