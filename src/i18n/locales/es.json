@@ -89,6 +89,7 @@
     "boundary": {
       "title": "Algo salió mal",
       "message": "Ocurrió un error inesperado",
+      "contextPrefix": "Contexto: ",
       "retry": "Reintentar"
     },
     "rateLimitGeneric": "Demasiadas solicitudes. Inténtalo de nuevo más tarde.",
@@ -136,7 +137,11 @@
     "entityMember": "Miembro",
     "entityInvite": "Invitación",
     "notFoundTitle": "No encontrado",
-    "validUnits": "Unidades válidas: {{units}}"
+    "validUnits": "Unidades válidas: {{units}}",
+    "handlerFailed": "Algo salió mal. Inténtalo de nuevo.",
+    "unexpected": "Ocurrió un error inesperado",
+    "addLowStockFailed": "No se pudieron añadir los artículos con stock bajo",
+    "saveLoginFailed": "No se pudo guardar la información de inicio de sesión"
   },
   "success": {
     "itemAdded": "Artículo añadido",
@@ -170,6 +175,7 @@
   "loading": {
     "authenticating": "Autenticando...",
     "loading": "Cargando...",
+    "loadingNamed": "Cargando {{name}}...",
     "waitingForAuth": "Esperando autenticación...",
     "processing": "Procesando...",
     "savingChanges": "Guardando cambios...",
@@ -248,7 +254,12 @@
     "discard": "Descartar",
     "clearInput": "Borrar entrada",
     "noDataAvailable": "No hay datos disponibles",
-    "moreOptions": "Más opciones"
+    "moreOptions": "Más opciones",
+    "viewDetails": "Ver detalles",
+    "rename": "Renombrar",
+    "tapToViewDetails": "Toca para ver los detalles",
+    "loading": "Cargando",
+    "leave": "Abandonar"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -683,7 +694,9 @@
     "macroFat": "Grasas",
     "macroFiber": "Fibra",
     "macroSugar": "Azúcar",
-    "macroSodium": "Sodio"
+    "macroSodium": "Sodio",
+    "helpful": "Útil",
+    "helpfulWithCount": "Útil ({{count}})"
   },
   "recipeFilters": {
     "title": "Filtros",
@@ -781,14 +794,20 @@
       "expired": "Caducado",
       "expiresToday": "Caduca hoy",
       "daysLeft_one": "queda {{count}} día",
-      "daysLeft_other": "quedan {{count}} días"
+      "daysLeft_other": "quedan {{count}} días",
+      "depletedOn": "Agotado el {{date}}",
+      "costPerUnit": "${{cost}}/unidad",
+      "sectionHeader_one": "Lotes ({{count}} activo)",
+      "sectionHeader_other": "Lotes ({{count}} activos)"
     },
     "deleteTitle": "Eliminar artículo",
     "deleteBody": "¿Seguro que quieres eliminar este artículo?",
     "discardBatchesTitle": "Descartar lotes caducados",
     "discardBatchesBody": "Esto marcará todos los lotes caducados como desperdiciados.",
     "discardItemTitle": "Descartar artículo caducado",
-    "discardItemBody": "Esto marcará los {{quantity}} {{unit}} restantes como desperdiciados por caducidad."
+    "discardItemBody": "Esto marcará los {{quantity}} {{unit}} restantes como desperdiciados por caducidad.",
+    "moreUsageEntries_one": "+{{count}} entrada más",
+    "moreUsageEntries_other": "+{{count}} entradas más"
   },
   "shoppingListScreens": {
     "emptyTitle": "Tu lista está vacía",
@@ -1375,7 +1394,14 @@
     "categoryPantry": "Despensa",
     "categoryRecipe": "Recetas",
     "categoryShopping": "Compras",
-    "categorySystem": "Sistema"
+    "categorySystem": "Sistema",
+    "markAllRead": "Marcar leídas",
+    "clearAll": "Borrar todo",
+    "actionRequiredTitle": "Acción requerida",
+    "actionRequiredBody": "Esta notificación requiere una acción: {{action}}",
+    "goToNotifications": "Ir a las notificaciones",
+    "urgentUnread_one": "{{count}} notificación urgente",
+    "urgentUnread_other": "{{count}} notificaciones urgentes"
   },
   "settings": {
     "appSettings": "Ajustes de la app",
@@ -1816,7 +1842,8 @@
     "unitKcal": "kcal",
     "unitGrams": "g",
     "caloriesValue": "{{count}} kcal",
-    "coverage": "{{count}} ({{percent}}%)"
+    "coverage": "{{count}} ({{percent}}%)",
+    "perServing": "Por {{serving}}"
   },
   "nutritionGoal": {
     "overallScore": "Puntuación general",
@@ -1900,7 +1927,8 @@
     "newNameLabel": "Nombre del nuevo plan",
     "newNamePlaceholder": "Introduce el nombre del plan",
     "startDateLabel": "Fecha de inicio",
-    "infoText": "Todas las comidas se copiarán al nuevo rango de fechas con la misma estructura."
+    "infoText": "Todas las comidas se copiarán al nuevo rango de fechas con la misma estructura.",
+    "endDateSubtext": "hasta {{date}}"
   },
   "editCustomMeal": {
     "title": "Editar comida personalizada",
@@ -2176,11 +2204,14 @@
     "movedItems_one": "Se movió {{count}} artículo a la despensa{{skipped}}",
     "movedItems_other": "Se movieron {{count}} artículos a la despensa{{skipped}}",
     "skippedSuffix": " ({{skippedCount}} omitidos)",
-    "noItemsMoved": "No se pudo mover ningún artículo a la despensa"
+    "noItemsMoved": "No se pudo mover ningún artículo a la despensa",
+    "noPantryTitle": "No hay despensa disponible",
+    "noPantryBody": "Primero crea una despensa en tu hogar."
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
-    "availableDefault": "Disponible:"
+    "availableDefault": "Disponible:",
+    "remainingAmount": "(restante: {{amount}})"
   },
   "correctWeight": {
     "invalidWeight": "Introduce un peso válido",
@@ -2332,7 +2363,12 @@
       "addAgain": "Añadir de nuevo",
       "favorites": "Tus favoritos",
       "popular": "Popular"
-    }
+    },
+    "noListTitle": "Ninguna lista seleccionada",
+    "noListBody": "Selecciona o crea primero una lista de compras.",
+    "createList": "Crear lista",
+    "addToPantry": "Añadir a la despensa",
+    "addToShoppingList": "Añadir a la lista de compras"
   },
   "dietaryProfile": {
     "errorTitle": "Error",
@@ -2671,7 +2707,26 @@
     "contributor": "Colaborador",
     "editor": "Editor",
     "admin": "Administrador",
-    "owner": "Propietario"
+    "owner": "Propietario",
+    "permissions": {
+      "viewItems": "Ver artículos",
+      "viewHistory": "Ver historial",
+      "exportList": "Exportar lista",
+      "addItems": "Añadir artículos",
+      "editItems": "Editar artículos",
+      "removeItems": "Quitar artículos",
+      "markPurchased": "Marcar como comprado",
+      "inviteOthers": "Invitar a otros"
+    },
+    "descriptions": {
+      "viewer": "Puede ver la lista de compras",
+      "shopper": "Puede marcar artículos como comprados",
+      "contributor": "Puede añadir artículos y marcarlos como comprados",
+      "editor": "Puede añadir, editar y quitar artículos",
+      "admin": "Control total, incluida la invitación a otros",
+      "owner": "Control total sobre la lista de compras"
+    },
+    "permissionsTitle": "Permisos:"
   },
   "shoppingListSelector": {
     "title": "Selecciona Lista de Compras",
@@ -2980,7 +3035,9 @@
     "selectPerspective": "Seleccionar perspectiva",
     "invalidImageTitle": "Imagen no válida",
     "cameraPermissionTitle": "Permiso de cámara",
-    "cameraPermissionBody": "Se requiere permiso de cámara. Actívalo en los ajustes de tu dispositivo."
+    "cameraPermissionBody": "Se requiere permiso de cámara. Actívalo en los ajustes de tu dispositivo.",
+    "takePhoto": "Tomar foto",
+    "chooseFromLibrary": "Elegir de la galería"
   },
   "itemPhotos": {
     "pendingReview": "Pendiente de revisión",
@@ -3031,6 +3088,407 @@
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
     "addFailed": "No se pudo añadir el artículo. Inténtalo de nuevo.",
-    "updateFailed": "No se pudo actualizar el artículo. Inténtalo de nuevo."
+    "updateFailed": "No se pudo actualizar el artículo. Inténtalo de nuevo.",
+    "itemName": "Nombre del artículo",
+    "category": "Categoría",
+    "brandOptional": "Marca (opcional)",
+    "placeholderItemName": "p. ej., arroz, pasta",
+    "placeholderCategory": "p. ej., cereales, lácteos",
+    "brand": "Marca",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "Introduce etiquetas separadas por comas",
+    "location": "Ubicación",
+    "notesPlaceholder": "Cualquier nota adicional...",
+    "netWeightLocked": "El peso se bloquea tras su uso: corrígelo desde los detalles del artículo",
+    "locationPlaceholder": "p. ej., estante superior, cajón 2",
+    "storageNotes": "Notas de almacenamiento",
+    "notes": "Notas"
+  },
+  "folderPicker": {
+    "selectFolder": "Seleccionar carpeta",
+    "noFolder": "Sin carpeta",
+    "createNew": "Crear carpeta nueva",
+    "loading": "Cargando carpetas...",
+    "longPressHint": "Mantén pulsada una carpeta para editarla o eliminarla",
+    "searchPlaceholder": "Buscar carpetas...",
+    "namePlaceholder": "Introduce el nombre de la carpeta...",
+    "duplicate": "Ya existe una carpeta llamada \"{{name}}\".",
+    "manageTitle": "Gestionar carpeta",
+    "deleteConfirm": "¿Eliminar esta carpeta?",
+    "deleteFolder": "Eliminar carpeta",
+    "deleteHint": "Las recetas se moverán a Sin carpeta",
+    "renamePlaceholder": "Introduce el nuevo nombre de la carpeta...",
+    "noMatches": "Ninguna carpeta coincide con \"{{query}}\"",
+    "deleteConfirmBody": "Las recetas de esta carpeta se moverán a \"{{folder}}\"."
+  },
+  "multiSelectChipSheet": {
+    "clearAll": "Borrar todo",
+    "noItems": "No hay opciones disponibles",
+    "searchPlaceholder": "Buscar...",
+    "noMatches": "Ninguna opción coincide con \"{{query}}\""
+  },
+  "nutrition": {
+    "noData": "No hay datos nutricionales disponibles",
+    "servingSize": "Tamaño de la ración"
+  },
+  "tagPicker": {
+    "filterByTags": "Filtrar por etiquetas",
+    "searchPlaceholder": "Buscar etiquetas...",
+    "clearAll": "Borrar todo",
+    "loading": "Cargando etiquetas...",
+    "noTags": "No hay etiquetas disponibles",
+    "noMatches": "Ninguna etiqueta coincide con \"{{query}}\""
+  },
+  "editableCounter": {
+    "decrease": "Reducir cantidad",
+    "increase": "Aumentar cantidad",
+    "hint": "Toca para editar manualmente o usa los botones para ajustar"
+  },
+  "autocomplete": {
+    "offlineTitle": "Búsqueda no disponible sin conexión",
+    "offlineSubtitle": "Aún puedes escribir un valor personalizado y pulsar Listo",
+    "selectStorageLocation": "Selecciona una ubicación de almacenamiento",
+    "storageLocationPlaceholder": "Seleccionar ubicación",
+    "storageLocationSearch": "Escribe para buscar ubicaciones...",
+    "noStorageLocations": "Aún no hay ubicaciones",
+    "noMatchingLocations": "No hay ubicaciones coincidentes",
+    "tapAddToCreate": "Toca \"Añadir\" abajo para crear \"{{term}}\"",
+    "typeToSearch": "Escribe al menos 2 caracteres para buscar o añadir uno nuevo"
+  },
+  "cuisineSelector": {
+    "title": "Cocinas preferidas",
+    "subtitle": "Selecciona tus cocinas favoritas",
+    "showAll": "Ver todas las cocinas",
+    "showLess": "Ver menos",
+    "addFailed": "No se pudo añadir la cocina"
+  },
+  "tutorial": {
+    "youGotIt": "¡Lo tienes!",
+    "skipTutorial": "Omitir tutorial"
+  },
+  "loadingOverlay": {
+    "authenticating": "Autenticando...",
+    "loading": "Cargando...",
+    "waitingForAuth": "Esperando autenticación..."
+  },
+  "quantitySelector": {
+    "selectQuantity": "Seleccionar cantidad",
+    "selectUnit": "Seleccionar unidad"
+  },
+  "unitEntryList": {
+    "title": "Unidades",
+    "addUnit": "Añadir unidad",
+    "size": "Tamaño",
+    "contains": "Contiene"
+  },
+  "createHome": {
+    "namePlaceholder": "Introduce el nombre del hogar",
+    "allowJoinCode": "Permitir que otros se unan con un código",
+    "pantryFailedTitle": "Aviso",
+    "pantryFailedBody": "No se pudo crear la despensa, pero puedes crearla más tarde desde ajustes.",
+    "skipPantryTitle": "¿Omitir la creación de la despensa?",
+    "skipPantryBody": "Tienes un hogar pero ninguna despensa. Puedes crear una más tarde desde ajustes."
+  },
+  "homeMembers": {
+    "noMembers": "Sin miembros",
+    "pendingInvitations": "Invitaciones pendientes"
+  },
+  "storageLocationCard": {
+    "default": "Predeterminada",
+    "setDefault": "Hacer predeterminada",
+    "insideParent": "Dentro de {{parent}}"
+  },
+  "collaborators": {
+    "editPermissions": "Editar permisos"
+  },
+  "barcodeInfo": {
+    "format": "Formato"
+  },
+  "shoppingListTabs": {
+    "clearPurchasedTitle": "Borrar todos los artículos comprados",
+    "clearPurchasedBody_one": "¿Seguro que quieres quitar 1 artículo comprado de esta lista?",
+    "clearPurchasedBody_other": "¿Seguro que quieres quitar los {{count}} artículos comprados de esta lista?",
+    "clearAll": "Borrar todo",
+    "moveAllTitle": "Mover todo a la despensa",
+    "moveAllBody_one": "¿Mover 1 artículo comprado a tu despensa?",
+    "moveAllBody_other": "¿Mover los {{count}} artículos comprados a tu despensa?",
+    "moveAll": "Mover todo",
+    "clearShoppingTitle": "Borrar todos los artículos de la lista",
+    "clearShoppingBody_one": "¿Seguro que quieres quitar 1 artículo de tu lista de compras?",
+    "clearShoppingBody_other": "¿Seguro que quieres quitar los {{count}} artículos de tu lista de compras?"
+  },
+  "home": {
+    "joinSuccessTitle": "Éxito",
+    "joinSuccessBody": "¡Te has unido al hogar!",
+    "enterJoinCode": "Introduce un código para unirte",
+    "invalidHomeId": "ID de hogar no válido",
+    "notFound": "Hogar no encontrado",
+    "leaveTitle": "Abandonar hogar",
+    "leaveBody": "¿Seguro que quieres abandonar \"{{name}}\"? Perderás acceso a este hogar y a sus despensas y listas de compras."
+  },
+  "offline": {
+    "title": "Sin conexión",
+    "body": "Esta función requiere conexión a internet"
+  },
+  "complexity": {
+    "title": "Solicitud demasiado grande",
+    "body": "La solicitud era demasiado compleja. Inténtalo con menos artículos o simplifícala."
+  },
+  "deduction": {
+    "invalidWaste": "Introduce una cantidad de desperdicio válida",
+    "invalidQuantity": "Introduce una cantidad válida",
+    "pleaseWait": "Espera",
+    "stillCalculating": "Calculando la cantidad disponible...",
+    "exceedsAvailableConsume": "No puedes consumir más de la cantidad disponible ({{amount}} {{unit}})",
+    "exceedsAvailableWaste": "No puedes desperdiciar más de la cantidad disponible ({{amount}} {{unit}})"
+  },
+  "duplicateItem": {
+    "title": "El artículo ya está en la despensa",
+    "body": "Este artículo ya está en tu despensa. ¿Quieres reponerlo o añadir una entrada aparte?",
+    "restock": "Reponer",
+    "addAnyway": "Añadir igualmente"
+  },
+  "scanner": {
+    "noHomeTitle": "Ningún hogar seleccionado",
+    "noHomeBody": "Debes ser miembro de un hogar para escanear artículos.",
+    "manageHomes": "Gestionar hogares"
+  },
+  "barcode": {
+    "itemNotFound": "Artículo no encontrado",
+    "noItemWithCode": "No se encontró ningún artículo con el código de barras: {{barcode}}",
+    "addItemHint": "Puedes añadir este artículo a la base de datos tocando el botón de abajo.",
+    "addItem": "Añadir artículo",
+    "newVersion": "Nueva versión",
+    "scanAnother": "Escanear otro",
+    "barcodeValue": "Código de barras: {{barcode}}",
+    "formatValue": "Formato: {{format}}"
+  },
+  "tabBar": {
+    "actionButton": "Botón de acción",
+    "actionButtonHint": "Abre la acción de la pestaña actual"
+  },
+  "debugInfo": {
+    "title": "Información de depuración",
+    "copiedTitle": "Copiado",
+    "copiedAll": "Información de depuración copiada al portapapeles",
+    "copiedSection": "Se copió {{section}} al portapapeles",
+    "notAvailable": "La información de depuración solo está disponible en compilaciones de desarrollo y staging.",
+    "header": "Información de depuración detallada para diagnosticar las conexiones con la API y la configuración de la app.",
+    "copyAll": "Copiar toda la información",
+    "copy": "Copiar",
+    "footer": "Esta información es útil para depurar problemas de conexión con la API o para reportar errores."
+  },
+  "biometrics": {
+    "disableTitle": "Desactivar la autenticación biométrica",
+    "disableBody": "Se eliminarán tus credenciales guardadas. Puedes volver a activarla más tarde.",
+    "disable": "Desactivar",
+    "disableFailed": "No se pudo desactivar la autenticación biométrica.",
+    "checkingAvailability": "Comprobando disponibilidad...",
+    "notAvailable": "No disponible en este dispositivo",
+    "tapToEnable": "Toca para activar el inicio de sesión con {{method}}",
+    "useToLogin": "Usa {{method}} para iniciar sesión",
+    "genericMethod": "biometría"
+  },
+  "cuisines": {
+    "AFRICAN": "Africana",
+    "AMERICAN": "Estadounidense",
+    "BRITISH": "Británica",
+    "CAJUN": "Cajún",
+    "CARIBBEAN": "Caribeña",
+    "CHINESE": "China",
+    "EASTERN_EUROPEAN": "Europa del Este",
+    "FRENCH": "Francesa",
+    "GERMAN": "Alemana",
+    "GREEK": "Griega",
+    "INDIAN": "India",
+    "IRISH": "Irlandesa",
+    "ITALIAN": "Italiana",
+    "JAPANESE": "Japonesa",
+    "JEWISH": "Judía",
+    "KOREAN": "Coreana",
+    "LATIN_AMERICAN": "Latinoamericana",
+    "MEDITERRANEAN": "Mediterránea",
+    "MEXICAN": "Mexicana",
+    "MIDDLE_EASTERN": "Oriente Medio",
+    "NORDIC": "Nórdica",
+    "SOUTHERN": "Sureña (EE. UU.)",
+    "SPANISH": "Española",
+    "THAI": "Tailandesa",
+    "VIETNAMESE": "Vietnamita"
+  },
+  "nutritionHighlights": {
+    "highProtein": "Alto en proteínas",
+    "lowFat": "Bajo en grasas",
+    "goodFiber": "Rico en fibra",
+    "lowSugar": "Bajo en azúcar",
+    "highSodium": "Alto en sodio",
+    "vitaminC": "Vitamina C",
+    "iron": "Hierro",
+    "calcium": "Calcio",
+    "potassium": "Potasio"
+  },
+  "onboardingSteps": {
+    "CreateHome": {
+      "title": "Crear hogar",
+      "subtitle": "Configura tu hogar"
+    },
+    "CreateShoppingList": {
+      "title": "Lista de compras",
+      "subtitle": "Crea tu primera lista"
+    },
+    "SelectPantryItems": {
+      "title": "Artículos de despensa",
+      "subtitle": "Selecciona lo que tienes"
+    },
+    "ProfilePictureUpload": {
+      "title": "Foto de perfil",
+      "subtitle": "Añade tu foto"
+    },
+    "InviteMembers": {
+      "title": "Invitar miembros",
+      "subtitle": "Comparte con tu familia"
+    },
+    "BiometricSetup": {
+      "title": "Seguridad",
+      "subtitle": "Configura la biometría"
+    },
+    "OnboardingComplete": {
+      "title": "Completado",
+      "subtitle": "¡Todo listo!"
+    }
+  },
+  "shoppingListTutorial": {
+    "addButton": {
+      "title": "Añade un artículo",
+      "subtitle": "Toca + para añadir artículos a tu lista de compras"
+    },
+    "swipeActions": {
+      "title": "Desliza para gestionar los artículos",
+      "subtitle": "Desliza un artículo a la izquierda para editarlo o a la derecha para eliminarlo"
+    },
+    "checkbox": {
+      "title": "Marca como comprado",
+      "subtitle": "Toca la casilla para marcar este artículo como comprado"
+    },
+    "longPress": {
+      "title": "Registra el precio",
+      "subtitle": "Mantén pulsado un artículo para introducir su cantidad y precio reales antes de marcarlo como comprado"
+    },
+    "purchasedTab": {
+      "title": "Ver artículos comprados",
+      "subtitle": "Toca para ver tus artículos comprados"
+    },
+    "moveToPantry": {
+      "title": "Mover a la despensa",
+      "subtitle": "Toca para mover este artículo a tu despensa"
+    }
+  },
+  "swipeActions": {
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "markPurchased": "Marcar como comprado",
+    "markUnpurchased": "Marcar como no comprado",
+    "consume": "Consumir",
+    "recordWaste": "Registrar desperdicio",
+    "restock": "Reponer"
+  },
+  "expirationAction": {
+    "cooked": "Cocinado",
+    "consumed": "Consumido",
+    "shared": "Compartido con alguien",
+    "extended": "Vida útil ampliada",
+    "wasted": "Desperdiciado / Descartado",
+    "noAction": "Sin acción",
+    "expiringSoon": "Caduca pronto",
+    "alreadyExpired": "Ya caducado"
+  },
+  "homeRoles": {
+    "owner": "Propietario",
+    "admin": "Administrador",
+    "member": "Miembro",
+    "guest": "Invitado"
+  },
+  "biometricPrompt": {
+    "title": "Desbloquea tus credenciales guardadas",
+    "subtitleBiometric": "Usa tu biometría o el código del dispositivo",
+    "subtitlePasscode": "Introduce el código de tu dispositivo",
+    "description": "Autentícate para acceder a tu información de inicio de sesión guardada",
+    "checkCredentials": "Comprobar credenciales",
+    "keychainTitle": "Desbloquear credenciales guardadas",
+    "useManualLogin": "Iniciar sesión manualmente"
+  },
+  "notificationGroups": {
+    "urgent": "🚨 Urgente",
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "older": "Anteriores"
+  },
+  "dateRange": {
+    "week": "Semana",
+    "month": "Mes",
+    "quarter": "Trimestre",
+    "year": "Año"
+  },
+  "pantryTabs": {
+    "all": "Todos",
+    "fridge": "Nevera",
+    "freezer": "Congelador",
+    "pantry": "Despensa"
+  },
+  "editableField": {
+    "saveFailed": "No se pudo guardar"
+  },
+  "expiration": {
+    "noExpiryDate": "Sin fecha de caducidad",
+    "expiredDaysAgo_one": "Caducó hace {{count}} día",
+    "expiredDaysAgo_other": "Caducó hace {{count}} días",
+    "expiresToday": "¡Caduca hoy!",
+    "expiresTomorrow": "¡Caduca mañana!",
+    "expiresInDays_one": "Caduca en {{count}} día",
+    "expiresInDays_other": "Caduca en {{count}} días",
+    "daysLeft_one": "queda {{count}} día",
+    "daysLeft_other": "quedan {{count}} días",
+    "expired": "Caducado",
+    "expiresTodayShort": "Caduca hoy",
+    "daysToExpire_one": "{{count}} día para caducar",
+    "daysToExpire_other": "{{count}} días para caducar"
+  },
+  "ingredientMatch": {
+    "available": "Disponible",
+    "partial": "Parcial",
+    "missing": "Faltante",
+    "optional": "Opcional",
+    "matchedPantryItem": "Coincide: {{name}} ({{amount}} disponible)",
+    "qtyLabel": "Cant.:"
+  },
+  "listTemplate": {
+    "loading": "Cargando...",
+    "loadingItems": "Cargando tus artículos"
+  },
+  "validation": {
+    "email": "Introduce una dirección de email válida",
+    "minLength": "Debe tener al menos {{count}} caracteres",
+    "maxLength": "No debe superar los {{count}} caracteres",
+    "noSpecialChars": "Solo se permiten letras, números y espacios",
+    "required": "Este campo es obligatorio"
+  },
+  "swipeHint": {
+    "spinach": "Espinacas",
+    "spinachSubtitle": "Caduca en 3 días",
+    "milk": "Leche",
+    "milkSubtitle": "Lácteos"
+  },
+  "conversionPreview": {
+    "approximate": "(aprox.)"
+  },
+  "itemSubtitle": {
+    "percentRemaining": "({{percent}}% restante)"
+  },
+  "fractionInput": {
+    "formatsHint": "Formatos: 1/4, 1 1/4, 0.75 o 2"
+  },
+  "tagInput": {
+    "maxTagsReached_one": "Máximo de {{count}} etiqueta alcanzado",
+    "maxTagsReached_other": "Máximo de {{count}} etiquetas alcanzado"
   }
 }
