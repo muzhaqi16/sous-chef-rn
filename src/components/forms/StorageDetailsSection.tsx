@@ -93,14 +93,14 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Storage Details
+        {t('itemForm.storageDetails')}
       </Text>
 
       {/* Storage State - horizontally scrollable pills, matching the
           Storage Locations Type/Temperature selectors. Long options like
           REFRIGERATED scroll off the edge instead of wrapping. */}
       <View style={styles.field}>
-        <Label>Storage State</Label>
+        <Label>{t('itemForm.storageState')}</Label>
         <ChipScrollRow
           chipStyle={styles.statePill}
           options={STORAGE_STATE_OPTIONS}
@@ -131,10 +131,10 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
       {/* Expiration Date - using reusable DatePickerField molecule */}
       <DatePickerField
-        label="Expiration Date"
+        label={t('itemForm.expirationDate')}
         value={expirationDate ?? null}
         onChange={onDateChange}
-        placeholder="Select date"
+        placeholder={t('itemForm.selectDate')}
       />
 
       {/* Notes */}

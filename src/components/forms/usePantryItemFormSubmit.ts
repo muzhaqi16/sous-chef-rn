@@ -95,10 +95,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
     }
 
     if (!params.currentPantryId) {
-      alertService.alert(
-        'Error',
-        'No pantry selected. Please select a pantry first.',
-      );
+      alertService.alert(t('labels.error'), t('itemForm.noPantrySelected'));
       return;
     }
     // Capture the narrowed (non-null) id so it survives into the async closure
@@ -207,10 +204,12 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
             params.mode === 'add' ? 'addPantryItem' : 'updatePantryItem',
         });
         alertService.alert(
-          'Error',
-          `Failed to ${
-            params.mode === 'add' ? 'add' : 'update'
-          } pantry item. Please try again.`,
+          t('labels.error'),
+          t(
+            params.mode === 'add'
+              ? 'itemForm.addFailed'
+              : 'itemForm.updateFailed',
+          ),
         );
       },
     );

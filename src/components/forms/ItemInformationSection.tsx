@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,6 +38,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   onBrandSelected,
   onCategorySelected,
 }) => {
+  const { t } = useTranslation();
   const getFields = (): FieldDef<PantryItemFormData>[] => {
     if (mode === 'add') {
       return [
@@ -94,7 +96,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Item Information
+        {t('itemForm.itemInformation')}
       </Text>
       <DynamicFormFields
         fields={getFields()}

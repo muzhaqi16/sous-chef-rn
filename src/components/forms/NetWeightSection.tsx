@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Controller, type Control } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -24,11 +25,12 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   isWeightLocked,
   onNetWeightUnitSelected,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
-      <Text style={styles.sectionTitle}>Net Weight</Text>
+      <Text style={styles.sectionTitle}>{t('itemForm.netWeightTitle')}</Text>
       <Text style={styles.sectionDescription}>
-        Net weight is used for consumption tracking and is optional.
+        {t('itemForm.netWeightHelp')}
       </Text>
       <View
         pointerEvents={isWeightLocked ? 'none' : 'auto'}
@@ -40,11 +42,11 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
             name="netWeight"
             render={({ field: { onChange, onBlur, value } }) => (
               <FormInput
-                label="Net Weight"
+                label={t('itemForm.netWeightTitle')}
                 value={value || ''}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                placeholder="e.g., 14.5"
+                placeholder={t('itemForm.placeholderNetWeight')}
                 keyboardType="decimal-pad"
                 editable={!isWeightLocked}
               />
@@ -56,11 +58,11 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
             render={({ field: { onChange, value } }) => (
               <UnitAutocompleteField
                 variant="modal"
-                label="Unit"
+                label={t('itemForm.unit')}
                 value={value || ''}
                 onChangeText={onChange}
                 onUnitSelected={onNetWeightUnitSelected}
-                placeholder="oz, g, ml"
+                placeholder={t('itemForm.placeholderNetWeightUnit')}
               />
             )}
           />

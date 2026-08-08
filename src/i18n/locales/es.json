@@ -247,7 +247,8 @@
     "dismissNamed": "Descartar {{name}}",
     "discard": "Descartar",
     "clearInput": "Borrar entrada",
-    "noDataAvailable": "No hay datos disponibles"
+    "noDataAvailable": "No hay datos disponibles",
+    "moreOptions": "Más opciones"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -3009,5 +3010,27 @@
   "quantityBadge": {
     "a11yLabel": "Cantidad: {{quantity}}. Toca para editar",
     "a11yHint": "Abre el editor de cantidad"
+  },
+  "itemForm": {
+    "itemInformation": "Información del artículo",
+    "netWeightTitle": "Peso neto",
+    "netWeightHelp": "El peso neto se usa para el seguimiento del consumo y es opcional.",
+    "unit": "Unidad",
+    "itemNotFound": "Artículo no encontrado",
+    "alertWhenBelow": "Avisar cuando baje de",
+    "restockTo": "Reponer hasta",
+    "storageDetails": "Detalles de almacenamiento",
+    "storageState": "Estado de almacenamiento",
+    "expirationDate": "Fecha de caducidad",
+    "selectDate": "Seleccionar fecha",
+    "placeholderQuantity": "p. ej., 1, 1 1/4",
+    "placeholderUnit": "uds, docena",
+    "placeholderAlertBelow": "p. ej., 2",
+    "placeholderRestockTo": "p. ej., 6",
+    "placeholderNetWeight": "p. ej., 14,5",
+    "placeholderNetWeightUnit": "oz, g, ml",
+    "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
+    "addFailed": "No se pudo añadir el artículo. Inténtalo de nuevo.",
+    "updateFailed": "No se pudo actualizar el artículo. Inténtalo de nuevo."
   }
 }

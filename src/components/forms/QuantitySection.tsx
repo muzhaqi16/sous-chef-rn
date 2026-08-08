@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -32,6 +33,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   testID,
   unitTestID,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
@@ -48,7 +50,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
               label={mode === 'add' ? 'Quantity *' : 'Current Quantity'}
               value={value ?? ''}
               onChangeText={onChange}
-              placeholder="e.g., 1, 1 1/4"
+              placeholder={t('itemForm.placeholderQuantity')}
               error={errors.quantityInput?.message?.toString()}
               testID={testID}
             />
@@ -60,10 +62,10 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           render={({ field: { onChange, value } }) => (
             <UnitAutocompleteField
               variant="modal"
-              label="Unit"
+              label={t('itemForm.unit')}
               value={value || ''}
               onChangeText={onChange}
-              placeholder="pcs, dozen"
+              placeholder={t('itemForm.placeholderUnit')}
               onUnitSelected={onUnitSelected}
               testID={unitTestID}
             />
@@ -78,11 +80,11 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           name="minQuantity"
           render={({ field: { onChange, onBlur, value } }) => (
             <FormInput
-              label="Alert When Below"
+              label={t('itemForm.alertWhenBelow')}
               value={value?.toString() || ''}
               onChangeText={onChange}
               onBlur={onBlur}
-              placeholder="e.g., 2"
+              placeholder={t('itemForm.placeholderAlertBelow')}
               keyboardType="decimal-pad"
               error={errors.minQuantity?.message?.toString()}
             />
@@ -93,11 +95,11 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           name="restockQuantity"
           render={({ field: { onChange, onBlur, value } }) => (
             <FormInput
-              label="Restock To"
+              label={t('itemForm.restockTo')}
               value={value?.toString() || ''}
               onChangeText={onChange}
               onBlur={onBlur}
-              placeholder="e.g., 6"
+              placeholder={t('itemForm.placeholderRestockTo')}
               keyboardType="decimal-pad"
               error={errors.restockQuantity?.message?.toString()}
             />

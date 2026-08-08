@@ -247,7 +247,8 @@
     "dismissNamed": "Dismiss {{name}}",
     "discard": "Discard",
     "clearInput": "Clear input",
-    "noDataAvailable": "No data available"
+    "noDataAvailable": "No data available",
+    "moreOptions": "More options"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -3009,5 +3010,27 @@
   "quantityBadge": {
     "a11yLabel": "Quantity: {{quantity}}. Tap to edit",
     "a11yHint": "Opens quantity editor"
+  },
+  "itemForm": {
+    "itemInformation": "Item Information",
+    "netWeightTitle": "Net Weight",
+    "netWeightHelp": "Net weight is used for consumption tracking and is optional.",
+    "unit": "Unit",
+    "itemNotFound": "Item not found",
+    "alertWhenBelow": "Alert When Below",
+    "restockTo": "Restock To",
+    "storageDetails": "Storage Details",
+    "storageState": "Storage State",
+    "expirationDate": "Expiration Date",
+    "selectDate": "Select date",
+    "placeholderQuantity": "e.g., 1, 1 1/4",
+    "placeholderUnit": "pcs, dozen",
+    "placeholderAlertBelow": "e.g., 2",
+    "placeholderRestockTo": "e.g., 6",
+    "placeholderNetWeight": "e.g., 14.5",
+    "placeholderNetWeightUnit": "oz, g, ml",
+    "noPantrySelected": "No pantry selected. Please select a pantry first.",
+    "addFailed": "Failed to add pantry item. Please try again.",
+    "updateFailed": "Failed to update pantry item. Please try again."
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';
@@ -100,6 +101,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   itemId,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { goBack } = useNavigation();
 
   // Consolidated unit state using UnitSelection type
@@ -442,7 +444,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (mode === 'edit' && !existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <Text style={styles.errorText}>Item not found</Text>
+        <Text style={styles.errorText}>{t('itemForm.itemNotFound')}</Text>
       </View>
     );
   }
@@ -463,7 +465,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       transformValue: (value: unknown) => {
         return String(value ?? '')
           .split(',')
-          .map(t => t.trim())
+          .map(tag => tag.trim())
           .filter(Boolean);
       },
       transformOnBlur: true,
@@ -605,7 +607,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
                 {mode === 'edit' && (
                   <CollapsibleSection
-                    title="More options"
+                    title={t('labels.moreOptions')}
                     expanded={showTags}
                     onToggle={() => setTagsExpanded(prev => !prev)}
                   >

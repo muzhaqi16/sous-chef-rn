@@ -247,7 +247,8 @@
     "dismissNamed": "Hiq {{name}}",
     "discard": "Hidh",
     "clearInput": "Pastro fushën",
-    "noDataAvailable": "Nuk ka të dhëna"
+    "noDataAvailable": "Nuk ka të dhëna",
+    "moreOptions": "Më shumë opsione"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -3009,5 +3010,27 @@
   "quantityBadge": {
     "a11yLabel": "Sasia: {{quantity}}. Prek për të modifikuar",
     "a11yHint": "Hap redaktuesin e sasisë"
+  },
+  "itemForm": {
+    "itemInformation": "Informacioni i artikullit",
+    "netWeightTitle": "Pesha neto",
+    "netWeightHelp": "Pesha neto përdoret për ndjekjen e konsumit dhe është opsionale.",
+    "unit": "Njësia",
+    "itemNotFound": "Artikulli nuk u gjet",
+    "alertWhenBelow": "Njofto kur nën",
+    "restockTo": "Rimbush deri në",
+    "storageDetails": "Detajet e ruajtjes",
+    "storageState": "Gjendja e ruajtjes",
+    "expirationDate": "Data e skadimit",
+    "selectDate": "Zgjidh datën",
+    "placeholderQuantity": "p.sh., 1, 1 1/4",
+    "placeholderUnit": "copë, duzinë",
+    "placeholderAlertBelow": "p.sh., 2",
+    "placeholderRestockTo": "p.sh., 6",
+    "placeholderNetWeight": "p.sh., 14.5",
+    "placeholderNetWeightUnit": "oz, g, ml",
+    "noPantrySelected": "Nuk është zgjedhur asnjë qilar. Zgjidh një qilar së pari.",
+    "addFailed": "Shtimi i artikullit dështoi. Provo përsëri.",
+    "updateFailed": "Përditësimi i artikullit dështoi. Provo përsëri."
   }
 }
