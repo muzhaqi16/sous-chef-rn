@@ -366,14 +366,17 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
           const wasDeclined = navState?.biometricDeclinedPermanently;
 
           let subtitle: string;
+          // `biometricType` is a device-reported name (Face ID, Touch ID)
+          // and stays as-is; only the sentence around it is translated.
+          const method = biometricType || t('biometrics.genericMethod');
           if (biometricLoading) {
-            subtitle = 'Checking availability...';
+            subtitle = t('biometrics.checkingAvailability');
           } else if (!biometricAvailable) {
-            subtitle = 'Not available on this device';
+            subtitle = t('biometrics.notAvailable');
           } else if (wasDeclined && !biometricEnabled) {
-            subtitle = `Tap to enable ${biometricType || 'biometric'} login`;
+            subtitle = t('biometrics.tapToEnable', { method });
           } else {
-            subtitle = `Use ${biometricType || 'biometric'} to login`;
+            subtitle = t('biometrics.useToLogin', { method });
           }
 
           return {

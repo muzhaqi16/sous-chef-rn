@@ -269,14 +269,14 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                     />
                     <View>
                       <Text size="md" weight="semibold">
-                        {roleInfo.label}
+                        {t(roleInfo.labelKey)}
                       </Text>
                       <Text
                         size="sm"
                         tone="secondary"
                         style={styles.roleDescription}
                       >
-                        {roleInfo.description}
+                        {t(roleInfo.descriptionKey)}
                       </Text>
                     </View>
                   </View>
@@ -291,7 +291,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       weight="semibold"
                       style={styles.permissionsTitle}
                     >
-                      Permissions:
+                      {t('collaboratorRoles.permissionsTitle')}
                     </Text>
                     <View style={styles.permissionsList}>
                       {roleInfo.permissions.map((permission, index) => (
@@ -309,7 +309,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                               !permission.granted && styles.permissionDenied
                             }
                           >
-                            {permission.label}
+                            {t(permission.labelKey)}
                           </Text>
                         </View>
                       ))}

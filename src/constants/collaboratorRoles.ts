@@ -1,102 +1,137 @@
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import type { IconName } from '#utils/iconUtils';
 
+/**
+ * i18n key paths, not display strings — this table is module-level and cannot
+ * call a hook. The `*Key` names are deliberate: rendering one raw is then a
+ * visibly wrong string rather than a silently English one.
+ */
 export interface RoleInfo {
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   icon: IconName;
-  permissions: Array<{ label: string; granted: boolean }>;
+  permissions: Array<{ labelKey: string; granted: boolean }>;
 }
 
 export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
   [CollaboratorRole.Viewer]: {
-    label: 'Viewer',
-    description: 'Can view the shopping list',
+    labelKey: 'collaboratorRoles.viewer',
+    descriptionKey: 'collaboratorRoles.descriptions.viewer',
     icon: 'eye-outline',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Add items', granted: false },
-      { label: 'Edit items', granted: false },
-      { label: 'Remove items', granted: false },
-      { label: 'Mark purchased', granted: false },
-      { label: 'Invite others', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: false },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: false,
+      },
+      {
+        labelKey: 'collaboratorRoles.permissions.inviteOthers',
+        granted: false,
+      },
     ],
   },
   [CollaboratorRole.Shopper]: {
-    label: 'Shopper',
-    description: 'Can mark items as purchased',
+    labelKey: 'collaboratorRoles.shopper',
+    descriptionKey: 'collaboratorRoles.descriptions.shopper',
     icon: 'cart-outline',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Mark purchased', granted: true },
-      { label: 'Add items', granted: false },
-      { label: 'Edit items', granted: false },
-      { label: 'Remove items', granted: false },
-      { label: 'Invite others', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: true,
+      },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: false },
+      {
+        labelKey: 'collaboratorRoles.permissions.inviteOthers',
+        granted: false,
+      },
     ],
   },
   [CollaboratorRole.Contributor]: {
-    label: 'Contributor',
-    description: 'Can add items and mark as purchased',
+    labelKey: 'collaboratorRoles.contributor',
+    descriptionKey: 'collaboratorRoles.descriptions.contributor',
     icon: 'add-circle-outline',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Add items', granted: true },
-      { label: 'Mark purchased', granted: true },
-      { label: 'Edit items', granted: false },
-      { label: 'Remove items', granted: false },
-      { label: 'Invite others', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: true,
+      },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: false },
+      {
+        labelKey: 'collaboratorRoles.permissions.inviteOthers',
+        granted: false,
+      },
     ],
   },
   [CollaboratorRole.Editor]: {
-    label: 'Editor',
-    description: 'Can add, edit, and remove items',
+    labelKey: 'collaboratorRoles.editor',
+    descriptionKey: 'collaboratorRoles.descriptions.editor',
     icon: 'create-outline',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Add items', granted: true },
-      { label: 'Edit items', granted: true },
-      { label: 'Remove items', granted: true },
-      { label: 'Mark purchased', granted: true },
-      { label: 'Invite others', granted: false },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: true,
+      },
+      {
+        labelKey: 'collaboratorRoles.permissions.inviteOthers',
+        granted: false,
+      },
     ],
   },
   [CollaboratorRole.Admin]: {
-    label: 'Admin',
-    description: 'Full control including inviting others',
+    labelKey: 'collaboratorRoles.admin',
+    descriptionKey: 'collaboratorRoles.descriptions.admin',
     icon: 'settings-outline',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Add items', granted: true },
-      { label: 'Edit items', granted: true },
-      { label: 'Remove items', granted: true },
-      { label: 'Mark purchased', granted: true },
-      { label: 'Invite others', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: true,
+      },
+      { labelKey: 'collaboratorRoles.permissions.inviteOthers', granted: true },
     ],
   },
   [CollaboratorRole.Owner]: {
-    label: 'Owner',
-    description: 'Full control over the shopping list',
+    labelKey: 'collaboratorRoles.owner',
+    descriptionKey: 'collaboratorRoles.descriptions.owner',
     icon: 'star',
     permissions: [
-      { label: 'View items', granted: true },
-      { label: 'View history', granted: true },
-      { label: 'Export list', granted: true },
-      { label: 'Add items', granted: true },
-      { label: 'Edit items', granted: true },
-      { label: 'Remove items', granted: true },
-      { label: 'Mark purchased', granted: true },
-      { label: 'Invite others', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.viewHistory', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.exportList', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.removeItems', granted: true },
+      {
+        labelKey: 'collaboratorRoles.permissions.markPurchased',
+        granted: true,
+      },
+      { labelKey: 'collaboratorRoles.permissions.inviteOthers', granted: true },
     ],
   },
 };

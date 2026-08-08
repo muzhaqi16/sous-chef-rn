@@ -2685,7 +2685,26 @@
     "contributor": "Contributor",
     "editor": "Editor",
     "admin": "Admin",
-    "owner": "Owner"
+    "owner": "Owner",
+    "permissions": {
+      "viewItems": "View items",
+      "viewHistory": "View history",
+      "exportList": "Export list",
+      "addItems": "Add items",
+      "editItems": "Edit items",
+      "removeItems": "Remove items",
+      "markPurchased": "Mark purchased",
+      "inviteOthers": "Invite others"
+    },
+    "descriptions": {
+      "viewer": "Can view the shopping list",
+      "shopper": "Can mark items as purchased",
+      "contributor": "Can add items and mark as purchased",
+      "editor": "Can add, edit, and remove items",
+      "admin": "Full control including inviting others",
+      "owner": "Full control over the shopping list"
+    },
+    "permissionsTitle": "Permissions:"
   },
   "shoppingListSelector": {
     "title": "Select Shopping List",
@@ -3218,6 +3237,11 @@
     "disableTitle": "Disable Biometric Authentication",
     "disableBody": "This will remove your saved credentials. You can re-enable it later.",
     "disable": "Disable",
-    "disableFailed": "Failed to disable biometric authentication."
+    "disableFailed": "Failed to disable biometric authentication.",
+    "checkingAvailability": "Checking availability...",
+    "notAvailable": "Not available on this device",
+    "tapToEnable": "Tap to enable {{method}} login",
+    "useToLogin": "Use {{method}} to login",
+    "genericMethod": "biometric"
   }
 }

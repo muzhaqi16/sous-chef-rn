@@ -26,22 +26,13 @@ const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingListCollaborator',
 );
 
-const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
-  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
-  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
-  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
-  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
-  [CollaboratorRole.Admin]: 'collaboratorRoles.admin',
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
-};
-
 type T = (key: string, opts?: Record<string, unknown>) => string;
 
 const buildRoleOptions = (t: T) =>
   INVITE_ROLES.map(role => ({
     key: role,
     icon: ROLE_PERMISSIONS[role].icon,
-    label: t(ROLE_LABEL_KEYS[role]),
+    label: t(ROLE_PERMISSIONS[role].labelKey),
   }));
 
 interface ShareInviteSectionProps {
