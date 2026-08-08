@@ -1,3 +1,6 @@
+import { t } from '#/i18n/t';
+// Interpolated keys — the module-level t takes a fallback, not options.
+import { getI18n } from '#/i18n/config';
 import { alertService } from '#/services/alertService';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
@@ -17,18 +20,18 @@ export function validateDeductionQuantity(
   const value = parseFractionalInput(quantityInput);
   if (value === null || isNaN(value) || value <= 0) {
     alertService.alert(
-      'Error',
+      t('labels.error'),
       actionVerb === 'waste'
-        ? 'Please enter a valid waste amount'
-        : 'Please enter a valid quantity',
+        ? t('deduction.invalidWaste')
+        : t('deduction.invalidQuantity'),
     );
     return null;
   }
 
   if (shared.isConvertedUnit && shared.availableLoading) {
     alertService.alert(
-      'Please Wait',
-      'Still calculating available quantity...',
+      t('deduction.pleaseWait'),
+      t('deduction.stillCalculating'),
     );
     return null;
   }
@@ -43,10 +46,13 @@ export function validateDeductionQuantity(
 
   if (value > cap) {
     alertService.alert(
-      'Error',
-      `Cannot ${actionVerb} more than available quantity (${formatQuantity(
-        cap,
-      )} ${shared.activeUnitSymbol})`,
+      t('labels.error'),
+      getI18n().t(
+        actionVerb === 'waste'
+          ? 'deduction.exceedsAvailableWaste'
+          : 'deduction.exceedsAvailableConsume',
+        { amount: formatQuantity(cap), unit: shared.activeUnitSymbol },
+      ),
     );
     return null;
   }

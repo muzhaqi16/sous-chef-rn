@@ -3114,7 +3114,11 @@
   },
   "createHome": {
     "namePlaceholder": "Enter home name",
-    "allowJoinCode": "Allow others to join with a code"
+    "allowJoinCode": "Allow others to join with a code",
+    "pantryFailedTitle": "Notice",
+    "pantryFailedBody": "Pantry creation failed but you can create it later from settings.",
+    "skipPantryTitle": "Skip Pantry Creation?",
+    "skipPantryBody": "You have a home but no pantry. You can create one later from settings."
   },
   "homeMembers": {
     "noMembers": "No members",
@@ -3142,5 +3146,41 @@
     "clearShoppingTitle": "Clear All Shopping Items",
     "clearShoppingBody_one": "Are you sure you want to remove 1 item from your shopping list?",
     "clearShoppingBody_other": "Are you sure you want to remove all {{count}} items from your shopping list?"
+  },
+  "home": {
+    "joinSuccessTitle": "Success",
+    "joinSuccessBody": "You have successfully joined the home!",
+    "enterJoinCode": "Please enter a join code",
+    "invalidHomeId": "Invalid home ID",
+    "notFound": "Home not found",
+    "leaveTitle": "Leave Home",
+    "leaveBody": "Are you sure you want to leave \"{{name}}\"? You will lose access to this home and its pantries and shopping lists."
+  },
+  "offline": {
+    "title": "Offline",
+    "body": "This feature requires an internet connection"
+  },
+  "complexity": {
+    "title": "Request Too Large",
+    "body": "The request was too complex. Please try with fewer items or simplify your request."
+  },
+  "deduction": {
+    "invalidWaste": "Please enter a valid waste amount",
+    "invalidQuantity": "Please enter a valid quantity",
+    "pleaseWait": "Please Wait",
+    "stillCalculating": "Still calculating available quantity...",
+    "exceedsAvailableConsume": "Cannot consume more than available quantity ({{amount}} {{unit}})",
+    "exceedsAvailableWaste": "Cannot waste more than available quantity ({{amount}} {{unit}})"
+  },
+  "duplicateItem": {
+    "title": "Item Already in Pantry",
+    "body": "This item is already in your pantry. Would you like to restock it or add a separate entry?",
+    "restock": "Restock",
+    "addAnyway": "Add Anyway"
+  },
+  "scanner": {
+    "noHomeTitle": "No Home Selected",
+    "noHomeBody": "You need to be a member of a home to scan items.",
+    "manageHomes": "Manage Homes"
   }
 }

@@ -27,6 +27,8 @@ export type MembershipPermissionKey =
   | 'canInviteOthers'
   | 'canManageHome';
 import { t } from '#/i18n/t';
+// Interpolated key — the module-level t takes a fallback, not options.
+import { getI18n } from '#/i18n/config';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
@@ -100,7 +102,7 @@ export function useHomeDetailManagement(homeId: string) {
       // Mutation returns updated scalar fields; Apollo auto-merges by __typename + id
       onError: error => {
         alertService.alert(
-          'Error',
+          t('labels.error'),
           error.message || t('errors.updateHomeNameFailed'),
         );
       },
@@ -347,8 +349,8 @@ export function useHomeDetailManagement(homeId: string) {
   const leaveHome = (homeName: string): Promise<boolean> => {
     return new Promise(resolve => {
       alertService.alert(
-        'Leave Home',
-        `Are you sure you want to leave "${homeName}"? You will lose access to this home and its pantries and shopping lists.`,
+        t('home.leaveTitle'),
+        getI18n().t('home.leaveBody', { name: homeName }),
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           {

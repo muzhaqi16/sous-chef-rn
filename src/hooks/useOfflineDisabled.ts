@@ -1,3 +1,4 @@
+import { t } from '#/i18n/t';
 import { alertService } from '#/services/alertService';
 import { useCanUseNetwork } from '#hooks/settings/useOfflineMode';
 
@@ -33,10 +34,7 @@ export function useOfflineDisabled(customMessage?: string) {
   const canUseNetwork = useCanUseNetwork();
 
   const showOfflineMessage = () => {
-    alertService.alert(
-      'Offline',
-      customMessage ?? 'This feature requires an internet connection',
-    );
+    alertService.alert(t('offline.title'), customMessage ?? t('offline.body'));
   };
 
   return {

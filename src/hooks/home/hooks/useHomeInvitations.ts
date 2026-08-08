@@ -109,8 +109,8 @@ export function useHomeInvitations({
           }
 
           alertService.alert(
-            'Success',
-            'You have successfully joined the home!',
+            t('home.joinSuccessTitle'),
+            t('home.joinSuccessBody'),
           );
         }
       },
@@ -155,7 +155,7 @@ export function useHomeInvitations({
 
   const joinHomeByCode = async (joinCode: string) => {
     if (!joinCode.trim()) {
-      alertService.alert('Error', 'Please enter a join code');
+      alertService.alert(t('labels.error'), t('home.enterJoinCode'));
       return false;
     }
 

@@ -180,7 +180,7 @@ export function useHomeSelection({
 
     // Validate homeId exists
     if (!homeId) {
-      alertService.alert('Error', 'Invalid home ID');
+      alertService.alert(t('labels.error'), t('home.invalidHomeId'));
       return false;
     }
 
@@ -188,7 +188,7 @@ export function useHomeSelection({
     // This prevents race condition where cache updates but Zustand hasn't
     const targetHome = homes?.find(home => home.id === homeId);
     if (!targetHome) {
-      alertService.alert('Error', 'Home not found');
+      alertService.alert(t('labels.error'), t('home.notFound'));
       return false;
     }
 
