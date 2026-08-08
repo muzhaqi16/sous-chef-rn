@@ -28,6 +28,7 @@ import {
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
 import { logger } from '#/utils/environment';
+import type { Translate } from '#/i18n/types';
 
 /**
  * An upload failure whose message is already localized and safe to show. Used
@@ -41,10 +42,6 @@ class UserFacingUploadError extends Error {
     this.userMessage = userMessage;
   }
 }
-
-// Minimal structural type for the translation function so this doesn't depend
-// on i18next's generic `TFunction` namespace typing.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Turns an upload failure into copy a user can act on.

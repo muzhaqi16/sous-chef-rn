@@ -52,6 +52,7 @@ import {
 } from './FilteredItemsActionsContext';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
 
 // ── Types ──
 
@@ -86,11 +87,9 @@ interface ModeConfig {
   showCartAction: boolean;
 }
 
-type TFn = ReturnType<typeof useTranslation>['t'];
-
 function formatExpirySubtitle(
   expiresAt: string | null | undefined,
-  t: TFn,
+  t: Translate,
 ): string {
   if (!expiresAt) return '';
   const days = differenceInCalendarDays(new Date(expiresAt), new Date());
@@ -100,7 +99,9 @@ function formatExpirySubtitle(
   return t('filteredPantry.expiresInDays', { count: days });
 }
 
-function buildModeConfig(t: TFn): Record<FilteredPantryItemsMode, ModeConfig> {
+function buildModeConfig(
+  t: Translate,
+): Record<FilteredPantryItemsMode, ModeConfig> {
   return {
     lowStock: {
       title: t('filteredPantry.lowStockTitle'),

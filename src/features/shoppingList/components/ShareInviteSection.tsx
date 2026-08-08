@@ -15,6 +15,7 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
+import type { Translate } from '#/i18n/types';
 import {
   executeWithLoadingState,
   unwrapPayload,
@@ -26,9 +27,7 @@ const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingListCollaborator',
 );
 
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-const buildRoleOptions = (t: T) =>
+const buildRoleOptions = (t: Translate) =>
   INVITE_ROLES.map(role => ({
     key: role,
     icon: ROLE_PERMISSIONS[role].icon,

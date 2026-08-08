@@ -12,8 +12,7 @@ import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
+import type { Translate } from '#/i18n/types';
 
 // Wrap chart primitives with withUnistyles so the per-call `uniProps` prop
 // (used at consumer sites for theme-derived colors) is recognized at the type
@@ -31,7 +30,7 @@ interface SharedTabProps {
 }
 
 // Helper functions to format enum values via translation keys
-function formatPurpose(purpose: string, t: T): string {
+function formatPurpose(purpose: string, t: Translate): string {
   const map: Record<string, string> = {
     ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
     COOKING: 'pantryAnalytics.purposeCooking',
@@ -46,7 +45,7 @@ function formatPurpose(purpose: string, t: T): string {
   return map[purpose] ? t(map[purpose]) : purpose;
 }
 
-function formatSource(source: string, t: T): string {
+function formatSource(source: string, t: Translate): string {
   const map: Record<string, string> = {
     MANUAL: 'pantryAnalytics.sourceManual',
     RECIPE_AUTO: 'pantryAnalytics.sourceRecipeAuto',
@@ -57,7 +56,7 @@ function formatSource(source: string, t: T): string {
   return map[source] ? t(map[source]) : source;
 }
 
-function formatReason(reason: string, t: T): string {
+function formatReason(reason: string, t: Translate): string {
   const map: Record<string, string> = {
     BURNT: 'pantryAnalytics.reasonBurnt',
     COOKING_FAIL: 'pantryAnalytics.reasonCookingFail',

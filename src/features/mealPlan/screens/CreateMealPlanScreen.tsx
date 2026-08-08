@@ -26,12 +26,11 @@ import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
 
 const PLAN_TYPES = [MealPlanType.Weekly, MealPlanType.Monthly];
 
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-function getPlanTypeFormatter(t: T) {
+function getPlanTypeFormatter(t: Translate) {
   return (value: string): string => {
     if (value === MealPlanType.Weekly) return t('mealPlan.weekly');
     if (value === MealPlanType.Monthly) return t('mealPlan.monthly');

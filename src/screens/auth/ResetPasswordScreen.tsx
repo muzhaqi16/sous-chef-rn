@@ -31,6 +31,7 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -97,9 +98,7 @@ interface ResetPasswordForm {
   confirmPassword: string;
 }
 
-type T = (key: string) => string;
-
-const getResetPasswordSchema = (t: T) =>
+const getResetPasswordSchema = (t: Translate) =>
   object().shape({
     newPassword: string()
       .required(t('auth.passwordRequired'))
