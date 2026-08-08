@@ -251,7 +251,8 @@
     "moreOptions": "More options",
     "viewDetails": "View Details",
     "rename": "Rename",
-    "tapToViewDetails": "Tap to view details"
+    "tapToViewDetails": "Tap to view details",
+    "loading": "Loading"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
