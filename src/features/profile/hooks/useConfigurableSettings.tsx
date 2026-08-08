@@ -388,12 +388,12 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
                 setShowBiometricModal(true);
               } else {
                 alertService.alert(
-                  'Disable Biometric Authentication',
-                  'This will remove your saved credentials. You can re-enable it later.',
+                  t('biometrics.disableTitle'),
+                  t('biometrics.disableBody'),
                   [
-                    { text: 'Cancel', style: 'cancel' },
+                    { text: t('labels.cancel'), style: 'cancel' },
                     {
-                      text: 'Disable',
+                      text: t('biometrics.disable'),
                       style: 'destructive',
                       onPress: async () => {
                         const result = await executeMutation(async () => {
@@ -404,8 +404,8 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
                         }, 'Failed to disable biometric authentication');
                         if (result === false) {
                           alertService.alert(
-                            'Error',
-                            'Failed to disable biometric authentication.',
+                            t('labels.error'),
+                            t('biometrics.disableFailed'),
                           );
                         }
                       },

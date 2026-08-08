@@ -1378,7 +1378,12 @@
     "categoryPantry": "Pantry",
     "categoryRecipe": "Recipe",
     "categoryShopping": "Shopping",
-    "categorySystem": "System"
+    "categorySystem": "System",
+    "markAllRead": "Mark all read",
+    "clearAll": "Clear all",
+    "actionRequiredTitle": "Action Required",
+    "actionRequiredBody": "This notification requires action: {{action}}",
+    "goToNotifications": "Go to Notifications"
   },
   "settings": {
     "appSettings": "App Settings",
@@ -3068,7 +3073,11 @@
     "servingSize": "Serving Size"
   },
   "tagPicker": {
-    "filterByTags": "Filter by Tags"
+    "filterByTags": "Filter by Tags",
+    "searchPlaceholder": "Search tags...",
+    "clearAll": "Clear all",
+    "loading": "Loading tags...",
+    "noTags": "No tags available"
   },
   "editableCounter": {
     "decrease": "Decrease quantity",
@@ -3182,5 +3191,32 @@
     "noHomeTitle": "No Home Selected",
     "noHomeBody": "You need to be a member of a home to scan items.",
     "manageHomes": "Manage Homes"
+  },
+  "barcode": {
+    "itemNotFound": "Item Not Found",
+    "noItemWithCode": "No item found with barcode: {{barcode}}",
+    "addItemHint": "You can add this item to the database by tapping the button below.",
+    "addItem": "Add Item",
+    "newVersion": "New Version"
+  },
+  "tabBar": {
+    "actionButton": "Action button",
+    "actionButtonHint": "Opens the action for the current tab"
+  },
+  "debugInfo": {
+    "title": "Debug Info",
+    "copiedTitle": "Copied",
+    "copiedAll": "Debug information copied to clipboard",
+    "copiedSection": "{{section}} copied to clipboard",
+    "notAvailable": "Debug info is only available in development and staging builds.",
+    "header": "Detailed debug information for troubleshooting API connections and app configuration.",
+    "copyAll": "Copy All Info",
+    "copy": "Copy"
+  },
+  "biometrics": {
+    "disableTitle": "Disable Biometric Authentication",
+    "disableBody": "This will remove your saved credentials. You can re-enable it later.",
+    "disable": "Disable",
+    "disableFailed": "Failed to disable biometric authentication."
   }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { PressableScale } from '#components/atoms/PressableScale';
@@ -10,6 +11,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   iconLibrary,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ disabled });
 
   return (
@@ -20,8 +22,8 @@ export const AddButton: React.FC<AddButtonProps> = ({
       haptic="medium"
       style={styles.addButton}
       accessibilityRole="button"
-      accessibilityLabel="Action button"
-      accessibilityHint="Opens the action for the current tab"
+      accessibilityLabel={t('tabBar.actionButton')}
+      accessibilityHint={t('tabBar.actionButtonHint')}
       accessibilityState={{ disabled }}
       disabled={disabled}
     >

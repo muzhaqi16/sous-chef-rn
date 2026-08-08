@@ -104,7 +104,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
               <Icon name="add-circle-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
-                New Version
+                {t('barcode.newVersion')}
               </Text>
             </Pressable>
           )}

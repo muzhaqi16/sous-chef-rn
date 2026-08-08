@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -14,11 +15,12 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
   barcode,
   onAddItem,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.container}>
       <Icon name="qr-code-outline" size={48} tone="textSecondary" />
       <Text size="xl" weight="semibold" align="center">
-        Item Not Found
+        {t('barcode.itemNotFound')}
       </Text>
       <Text
         size="sm"
@@ -26,14 +28,14 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
         align="center"
         style={styles.notFoundMessage}
       >
-        No item found with barcode: {barcode}
+        {t('barcode.noItemWithCode', { barcode })}
       </Text>
       <Text size="sm" tone="accent" align="center" style={styles.addItemHint}>
-        You can add this item to the database by tapping the button below.
+        {t('barcode.addItemHint')}
       </Text>
       {!!onAddItem && (
         <Button onPress={onAddItem} variant="primary" size="medium">
-          Add Item
+          {t('barcode.addItem')}
         </Button>
       )}
     </View>

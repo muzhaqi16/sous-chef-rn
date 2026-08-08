@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -30,6 +31,7 @@ interface NotificationActionHandlerProps {
 export const NotificationActionHandler: React.FC<
   NotificationActionHandlerProps
 > = ({ children }) => {
+  const { t } = useTranslation();
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
@@ -168,12 +170,14 @@ export const NotificationActionHandler: React.FC<
       default:
         // Unknown action, show alert
         alertService.alert(
-          'Action Required',
-          `This notification requires action: ${notification.actionType}`,
+          t('notifications.actionRequiredTitle'),
+          t('notifications.actionRequiredBody', {
+            action: notification.actionType,
+          }),
           [
-            { text: 'OK' },
+            { text: t('labels.ok') },
             {
-              text: 'Go to Notifications',
+              text: t('notifications.goToNotifications'),
               onPress: () => {
                 toNotifications();
               },

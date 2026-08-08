@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -13,6 +14,7 @@ import { useCanAccessDevTools } from '#store/useAppStore';
 import { Text } from '#components/atoms/Text';
 
 export const DebugInfo: React.FC = () => {
+  const { t } = useTranslation();
   const canAccessDevTools = useCanAccessDevTools();
   const config = Environment.getConfig();
   const apiConfig = Environment.getApiConfig();
@@ -68,7 +70,7 @@ export const DebugInfo: React.FC = () => {
       .join('\n\n');
 
     Clipboard.setString(allDebugInfo);
-    alertService.alert('Copied', 'Debug information copied to clipboard');
+    alertService.alert(t('debugInfo.copiedTitle'), t('debugInfo.copiedAll'));
   };
 
   const handleCopySection = (
@@ -80,16 +82,19 @@ export const DebugInfo: React.FC = () => {
       .join('\n');
 
     Clipboard.setString(sectionInfo);
-    alertService.alert('Copied', `${sectionName} copied to clipboard`);
+    alertService.alert(
+      t('debugInfo.copiedTitle'),
+      t('debugInfo.copiedSection', { section: sectionName }),
+    );
   };
 
   // Only show in development, local, or staging builds — or for users with dev tools access
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <ProfileScreenWrapper title="Debug Info">
+      <ProfileScreenWrapper title={t('debugInfo.title')}>
         <View style={styles.notAvailableContainer}>
           <Text size="md" tone="secondary" align="center">
-            Debug info is only available in development and staging builds.
+            {t('debugInfo.notAvailable')}
           </Text>
         </View>
       </ProfileScreenWrapper>
@@ -97,7 +102,7 @@ export const DebugInfo: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title="Debug Info">
+    <ProfileScreenWrapper title={t('debugInfo.title')}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text
@@ -106,12 +111,11 @@ export const DebugInfo: React.FC = () => {
             lineHeight="normal"
             style={styles.headerText}
           >
-            Detailed debug information for troubleshooting API connections and
-            app configuration.
+            {t('debugInfo.header')}
           </Text>
           <AppPressable style={styles.copyAllButton} onPress={handleCopyAll}>
             <Text size="sm" weight="semibold" style={styles.copyAllButtonText}>
-              Copy All Info
+              {t('debugInfo.copyAll')}
             </Text>
           </AppPressable>
         </View>
@@ -127,7 +131,7 @@ export const DebugInfo: React.FC = () => {
                 onPress={() => handleCopySection(sectionName, sectionData)}
               >
                 <Text size="xs" weight="semibold" tone="accent">
-                  Copy
+                  {t('debugInfo.copy')}
                 </Text>
               </AppPressable>
             </View>
