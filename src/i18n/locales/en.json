@@ -790,7 +790,8 @@
       "expired": "Expired",
       "expiresToday": "Expires today",
       "daysLeft_one": "{{count}} day left",
-      "daysLeft_other": "{{count}} days left"
+      "daysLeft_other": "{{count}} days left",
+      "depletedOn": "Depleted {{date}}"
     },
     "deleteTitle": "Delete Item",
     "deleteBody": "Are you sure you want to delete this item?",

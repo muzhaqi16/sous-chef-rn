@@ -151,7 +151,9 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
 
         {batch.depletedAt ? (
           <Text size="xs" tone="tertiary" style={styles.metaText}>
-            Depleted {formatDate(batch.depletedAt)}
+            {t('pantryItemDetail.batch.depletedOn', {
+              date: formatDate(batch.depletedAt),
+            })}
           </Text>
         ) : null}
       </View>
