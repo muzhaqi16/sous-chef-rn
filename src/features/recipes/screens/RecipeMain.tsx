@@ -38,10 +38,10 @@ import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';
 import { ActiveFilterChipsRow } from '#features/recipes/components/ActiveFilterChipsRow';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
 
 // ── Recipe tutorial steps (titles/subtitles resolved at usage via t()) ──
-type T = (key: string, opts?: Record<string, unknown>) => string;
-const getRecipeTutorialSteps = (t: T): TutorialStep[] => [
+const getRecipeTutorialSteps = (t: Translate): TutorialStep[] => [
   {
     featureId: 'recipe_tutorial_saved',
     title: t('recipes.savedRecipes'),

@@ -8,9 +8,7 @@ import type { NotificationPayload } from '#store/slices/notificationSlice';
 
 // Real i18n instance (auto-initialized on config import) so the test exercises
 // the actual locale keys + interpolation rather than a stubbed translator.
-const i18n = getI18n();
-const t = (key: string, options?: Record<string, unknown>): string =>
-  i18n.t(key, options);
+const t = getI18n().t;
 
 const makeExpiry = (payload: NotificationPayload) => ({
   type: NotificationType.ExpiryReminder,

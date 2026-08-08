@@ -13,8 +13,7 @@ import { Icon } from '#/utils/iconUtils';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { errorMessageOr } from '#/services/errorService';
-
-type TFn = ReturnType<typeof useTranslation>['t'];
+import type { Translate } from '#/i18n/types';
 
 interface InviteUserModalProps {
   visible: boolean;
@@ -26,7 +25,7 @@ interface InviteUserModalProps {
   allowedRoles?: MembershipRole[];
 }
 
-function buildRoleOptions(t: TFn) {
+function buildRoleOptions(t: Translate) {
   return [
     {
       value: MembershipRole.Member,
