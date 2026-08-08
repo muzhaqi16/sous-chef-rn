@@ -6,6 +6,7 @@ import React, {
   ComponentRef,
 } from 'react';
 import { View, Modal } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -86,6 +87,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   onDismiss,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const { t } = useTranslation();
   const [completed, setCompleted] = useState(false);
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
 
@@ -95,7 +97,9 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   const pendingTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const scheduleTimer = (cb: () => void, delayMs: number): void => {
     const id = setTimeout(() => {
-      pendingTimersRef.current = pendingTimersRef.current.filter(t => t !== id);
+      pendingTimersRef.current = pendingTimersRef.current.filter(
+        handle => handle !== id,
+      );
       cb();
     }, delayMs);
     pendingTimersRef.current.push(id);
@@ -208,7 +212,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             <Animated.View style={[styles.checkContainer, checkAnimatedStyle]}>
               <Icon name="checkmark-circle" size={64} tone="success" />
               <Text size="lg" weight="semibold" style={styles.completedText}>
-                You got it!
+                {t('tutorial.youGotIt')}
               </Text>
             </Animated.View>
           </View>
@@ -237,10 +241,10 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             style={styles.skipButton}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Skip tutorial"
+            accessibilityLabel={t('tutorial.skipTutorial')}
           >
             <Text size="md" weight="medium" tone="tertiary">
-              Skip
+              {t('labels.skip')}
             </Text>
           </Pressable>
 

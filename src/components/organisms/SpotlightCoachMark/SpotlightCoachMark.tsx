@@ -395,7 +395,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           ]}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Skip tutorial"
+          accessibilityLabel={t('tutorial.skipTutorial')}
         >
           <Text size="md" weight="medium" style={styles.skipText}>
             {totalSteps != null && totalSteps > 1

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -21,6 +22,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
   onAdd,
   onRemove,
 }) => {
+  const { t } = useTranslation();
   const [showAllCuisines, setShowAllCuisines] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -33,7 +35,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
       const success = await onAdd(cuisine);
       setIsAdding(false);
       if (!success) {
-        alertService.alert('Error', 'Failed to add cuisine');
+        alertService.alert(t('labels.error'), t('cuisineSelector.addFailed'));
       }
     }
   };
@@ -45,9 +47,9 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={commonStyles.subtitle}>Preferred Cuisines</Text>
+      <Text style={commonStyles.subtitle}>{t('cuisineSelector.title')}</Text>
       <Text style={[commonStyles.bodySecondary, styles.subtitle]}>
-        Select your favorite cuisines
+        {t('cuisineSelector.subtitle')}
       </Text>
       {/* Cuisine Chips Grid */}
       <View style={styles.chipGrid}>
@@ -73,7 +75,7 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
               tone="accent"
               style={styles.showMoreText}
             >
-              Show All Cuisines
+              {t('cuisineSelector.showAll')}
             </Text>
           </AppPressable>
         )}
@@ -84,7 +86,9 @@ export const CuisineSelector: React.FC<CuisineSelectorProps> = ({
             onPress={() => setShowAllCuisines(false)}
           >
             <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
-            <Text style={styles.showMoreText}>Show Less</Text>
+            <Text style={styles.showMoreText}>
+              {t('cuisineSelector.showLess')}
+            </Text>
           </AppPressable>
         )}
       </View>

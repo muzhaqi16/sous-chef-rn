@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { logger } from '#/utils/environment';
 import { View } from 'react-native';
 import {
@@ -42,6 +43,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onAvatarPress,
   progress,
 }) => {
+  const { t } = useTranslation();
   const animatedTheme = useAnimatedTheme();
 
   // Avatar: scale from 1 → 0.55 (GPU composited, no layout recalc)
@@ -114,7 +116,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       <View style={styles.header}>
         <ThemedBackButton
           onPress={onBack}
-          uniProps={t => ({ color: t.colors.textPrimary })}
+          uniProps={theme => ({ color: theme.colors.textPrimary })}
         />
         <AppPressable onPress={onAvatarPress} style={styles.avatarContainer}>
           <Animated.View
@@ -148,8 +150,8 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         <ThemedIconButton
           name="ellipsis-vertical"
           onPress={onMore}
-          uniProps={t => ({ color: t.colors.textPrimary })}
-          accessibilityLabel="More options"
+          uniProps={theme => ({ color: theme.colors.textPrimary })}
+          accessibilityLabel={t('labels.moreOptions')}
         />
       </View>
       {(!!name || !!subtitle) && (

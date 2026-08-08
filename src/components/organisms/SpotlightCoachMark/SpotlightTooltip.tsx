@@ -83,7 +83,7 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
       stepIndex >= totalSteps - 1 ? (
         <Pressable onPress={onDismiss} style={styles.nextButton} hitSlop={8}>
           <Text size="md" weight="medium" tone="accent">
-            Done
+            {t('labels.done')}
           </Text>
         </Pressable>
       ) : onNext ? (

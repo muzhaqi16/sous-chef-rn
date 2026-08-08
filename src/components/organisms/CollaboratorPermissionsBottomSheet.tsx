@@ -225,10 +225,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetHeader
-        title="Edit Permissions"
+        title={t('collaborators.editPermissions')}
         onCancel={() => setIsVisible(false)}
         onConfirm={handleSubmit}
-        confirmLabel="Update"
+        confirmLabel={t('labels.update')}
         confirmDisabled={isSubmitting || !selectedRole}
       />
       <BottomSheetScrollView

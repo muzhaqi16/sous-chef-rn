@@ -3080,5 +3080,49 @@
     "noMatchingLocations": "No matching locations",
     "tapAddToCreate": "Tap \"Add\" below to create \"{{term}}\"",
     "typeToSearch": "Type at least 2 characters to search or add new"
+  },
+  "cuisineSelector": {
+    "title": "Preferred Cuisines",
+    "subtitle": "Select your favorite cuisines",
+    "showAll": "Show All Cuisines",
+    "showLess": "Show Less",
+    "addFailed": "Failed to add cuisine"
+  },
+  "tutorial": {
+    "youGotIt": "You got it!",
+    "skipTutorial": "Skip tutorial"
+  },
+  "loadingOverlay": {
+    "authenticating": "Authenticating...",
+    "loading": "Loading...",
+    "waitingForAuth": "Waiting for authentication..."
+  },
+  "quantitySelector": {
+    "selectQuantity": "Select Quantity",
+    "selectUnit": "Select Unit"
+  },
+  "unitEntryList": {
+    "title": "Units",
+    "addUnit": "Add Unit",
+    "size": "Size",
+    "contains": "Contains"
+  },
+  "createHome": {
+    "namePlaceholder": "Enter home name",
+    "allowJoinCode": "Allow others to join with a code"
+  },
+  "homeMembers": {
+    "noMembers": "No members",
+    "pendingInvitations": "Pending Invitations"
+  },
+  "storageLocationCard": {
+    "default": "Default",
+    "setDefault": "Set Default"
+  },
+  "collaborators": {
+    "editPermissions": "Edit Permissions"
+  },
+  "barcodeInfo": {
+    "format": "Format"
   }
 }

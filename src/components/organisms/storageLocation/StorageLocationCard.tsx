@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -45,6 +46,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   onDelete,
   onSetDefault,
 }) => {
+  const { t } = useTranslation();
   const formatType = (type: string): string => {
     return type
       .split('_')
@@ -84,7 +86,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text style={commonStyles.title}>{location.name}</Text>
                   <View style={styles.badges}>
-                    {!!isDefault && <Badge variant="primary">Default</Badge>}
+                    {!!isDefault && (
+                      <Badge variant="primary">
+                        {t('storageLocationCard.default')}
+                      </Badge>
+                    )}
                     {!!temperatureLabel && (
                       <Badge variant="primary">{temperatureLabel}</Badge>
                     )}
@@ -131,7 +137,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               >
                 <Icon name="star-outline" size={18} />
                 <Text size="sm" weight="medium">
-                  Set Default
+                  {t('storageLocationCard.setDefault')}
                 </Text>
               </AppPressable>
             )}
@@ -141,7 +147,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon name="create-outline" size={18} />
               <Text size="sm" weight="medium">
-                Edit
+                {t('labels.edit')}
               </Text>
             </AppPressable>
             <AppPressable
@@ -150,7 +156,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon name="trash-outline" size={18} tone="error" />
               <Text size="sm" weight="medium" tone="error">
-                Delete
+                {t('labels.delete')}
               </Text>
             </AppPressable>
           </View>

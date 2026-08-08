@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Modal } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -53,29 +54,42 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
 // Specialized loading overlays for different contexts
 export const AuthLoadingOverlay: React.FC<{ visible: boolean }> = ({
   visible,
-}) => (
-  <LoadingOverlay
-    visible={visible}
-    message="Authenticating..."
-    transparent={false}
-  />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <LoadingOverlay
+      visible={visible}
+      message={t('loadingOverlay.authenticating')}
+      transparent={false}
+    />
+  );
+};
 
 export const NavigationLoadingOverlay: React.FC<{ visible: boolean }> = ({
   visible,
-}) => (
-  <LoadingOverlay visible={visible} message="Loading..." transparent={true} />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <LoadingOverlay
+      visible={visible}
+      message={t('loadingOverlay.loading')}
+      transparent={true}
+    />
+  );
+};
 
 export const BiometricLoadingOverlay: React.FC<{ visible: boolean }> = ({
   visible,
-}) => (
-  <LoadingOverlay
-    visible={visible}
-    message="Waiting for authentication..."
-    transparent={false}
-  />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <LoadingOverlay
+      visible={visible}
+      message={t('loadingOverlay.waitingForAuth')}
+      transparent={false}
+    />
+  );
+};
 
 const styles = StyleSheet.create(theme => ({
   overlay: {

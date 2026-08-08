@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { DropdownStack } from '#components/atoms/DropdownStack';
@@ -38,6 +39,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   onEntriesChanged,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const handleAddEntry = () => {
     const isFirst = entries.length === 0;
     onEntriesChanged([...entries, createDefaultEntry(isFirst)]);
@@ -120,7 +122,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Units
+        {t('unitEntryList.title')}
       </Text>
       <DropdownStack>
         {entries.map((entry, index) => (
@@ -129,7 +131,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
               <View style={styles.entryRow}>
                 <View style={styles.packageSizeField}>
                   <FormInput
-                    label="Size"
+                    label={t('unitEntryList.size')}
                     value={entry.packageSize || ''}
                     onChangeText={(text: string) =>
                       handleEntryChange(index, 'packageSize', text)
@@ -164,7 +166,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                 <View style={styles.contentUnitRow}>
                   <UnitAutocompleteField
                     variant="inline"
-                    label="Contains"
+                    label={t('unitEntryList.contains')}
                     value={entry.contentUnitName || ''}
                     onChangeText={(text: string) =>
                       handleUnitTextChange(index, 'contentUnitName', text)
@@ -184,7 +186,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
           onPress={handleAddEntry}
           disabled={disabled}
         >
-          Add Unit
+          {t('unitEntryList.addUnit')}
         </Button>
       </DropdownStack>
     </View>

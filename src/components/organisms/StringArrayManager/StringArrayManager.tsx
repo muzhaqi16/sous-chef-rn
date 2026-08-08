@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { errorService } from '#/services/errorService';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -145,6 +146,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   showAddButton = true,
   containerStyle,
 }) => {
+  const { t } = useTranslation();
   const [isAddingModal, setIsAddingModal] = useState(false);
   const [newItem, setNewItem] = useState('');
   const [error, setError] = useState('');
@@ -263,7 +265,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             title={addButtonLabel}
             onCancel={handleCancel}
             onConfirm={handleAdd}
-            confirmLabel="Add"
+            confirmLabel={t('labels.add')}
             confirmDisabled={loading}
           />
 

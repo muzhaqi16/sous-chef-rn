@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Unit } from '#/graphql/generated/schemaTypes';
@@ -23,6 +24,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   onUnitChange,
   units = [], // Provide default empty array
 }) => {
+  const { t } = useTranslation();
   // Transform units data for PickerSelect component
   const pickerItems = units.map(unitItem => ({
     label: `${unitItem.name} (${unitItem.symbol})`,
@@ -33,7 +35,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.selectors}>
-        <Label>Select Quantity</Label>
+        <Label>{t('quantitySelector.selectQuantity')}</Label>
 
         <Counter
           count={quantity}
@@ -43,7 +45,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({
       </View>
 
       <View style={styles.selectors}>
-        <Label>Select Unit</Label>
+        <Label>{t('quantitySelector.selectUnit')}</Label>
         <View style={styles.pickerWrapper}>
           <PickerSelect
             initialValue={unit}
