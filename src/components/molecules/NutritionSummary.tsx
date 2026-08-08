@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ViewStyle, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -100,6 +101,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   style,
 }) => {
   styles.useVariants({ compact });
+  const { t } = useTranslation();
 
   const nutritions =
     typeof nutritionsRaw === 'object' && nutritionsRaw !== null
@@ -131,24 +133,24 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {/* Macro circles row */}
       <View style={styles.macrosRow}>
         <MacroCircle
-          label="Calories"
+          label={t('nutritionSummary.macroCalories')}
           value={formatCalories(macros.calories)}
           tone="calories"
         />
         <MacroCircle
-          label="Protein"
+          label={t('nutritionSummary.macroProtein')}
           value={formatNutritionValue(macros.protein, '')}
           unit="g"
           tone="protein"
         />
         <MacroCircle
-          label="Carbs"
+          label={t('nutritionSummary.macroCarbs')}
           value={formatNutritionValue(macros.carbs, '')}
           unit="g"
           tone="carbs"
         />
         <MacroCircle
-          label="Fat"
+          label={t('nutritionSummary.macroFat')}
           value={formatNutritionValue(macros.fat, '')}
           unit="g"
           tone="fat"
@@ -173,7 +175,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {!!onPress && (
         <View style={styles.actionRow}>
           <Text size="sm" weight="medium" tone="accent">
-            View Details
+            {t('labels.viewDetails')}
           </Text>
           <Icon name="chevron-forward" size={20} />
         </View>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { NutritionsData, NutrientCategory } from '#/types/nutrition';
@@ -27,6 +28,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
   actualServingGrams,
   style,
 }) => {
+  const { t } = useTranslation();
   const nutritions =
     typeof nutritionsRaw === 'object' && nutritionsRaw !== null
       ? (nutritionsRaw as NutritionsData)
@@ -46,7 +48,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
       <View style={[styles.container, style]}>
         <View style={styles.emptyState}>
           <Text size="sm" tone="secondary" style={styles.emptyText}>
-            No nutrition data available
+            {t('nutrition.noData')}
           </Text>
         </View>
       </View>
@@ -67,7 +69,7 @@ export const NutritionDetailList: React.FC<NutritionDetailListProps> = ({
       {!!displayServingSize && (
         <View style={styles.servingHeader}>
           <Text size="sm" weight="medium" tone="secondary">
-            Serving Size
+            {t('nutrition.servingSize')}
           </Text>
           <Text size="sm" weight="semibold">
             {displayServingSize}

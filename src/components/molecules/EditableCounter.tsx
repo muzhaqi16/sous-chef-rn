@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, type GestureResponderEvent } from 'react-native';
 import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
@@ -43,6 +44,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   required = false,
   testID,
 }) => {
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
 
   styles.useVariants({ focused: isFocused, disabled });
@@ -101,7 +103,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           ]}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Decrease quantity"
+          accessibilityLabel={t('editableCounter.decrease')}
           accessibilityHint={`Current quantity is ${value}`}
           accessibilityState={{ disabled }}
         >
@@ -126,7 +128,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           textAlign="center"
           accessible
           accessibilityLabel={label ? `${label} value` : 'Quantity value'}
-          accessibilityHint="Tap to edit manually or use buttons to adjust"
+          accessibilityHint={t('editableCounter.hint')}
           testID={testID}
         />
 
@@ -140,7 +142,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           ]}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Increase quantity"
+          accessibilityLabel={t('editableCounter.increase')}
           accessibilityHint={`Current quantity is ${value}`}
           accessibilityState={{ disabled }}
         >

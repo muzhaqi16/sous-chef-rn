@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetView, BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -42,6 +43,7 @@ export function MultiSelectChipSheet<T extends string = string>({
   loading = false,
   singleSelect = false,
 }: MultiSelectChipSheetProps<T>) {
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -91,8 +93,8 @@ export function MultiSelectChipSheet<T extends string = string>({
           title={title}
           onCancel={onClose}
           onConfirm={onDone}
-          cancelLabel="Cancel"
-          confirmLabel="Done"
+          cancelLabel={t('labels.cancel')}
+          confirmLabel={t('labels.done')}
           confirmDisabled={loading}
         />
 
@@ -102,7 +104,7 @@ export function MultiSelectChipSheet<T extends string = string>({
             <Icon name="search" size={18} tone="textSecondary" />
             <ThemedBottomSheetTextInput
               style={styles.searchInput}
-              placeholder="Search..."
+              placeholder={t('multiSelectChipSheet.searchPlaceholder')}
               defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -123,7 +125,7 @@ export function MultiSelectChipSheet<T extends string = string>({
               style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="sm" tone="accent" weight="medium">
-                Clear all
+                {t('multiSelectChipSheet.clearAll')}
               </Text>
             </Pressable>
           )}
@@ -161,7 +163,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         ) : (
           <View style={styles.emptyContainer}>
             <Text size="base" tone="secondary" align="center">
-              No items available
+              {t('multiSelectChipSheet.noItems')}
             </Text>
           </View>
         )}

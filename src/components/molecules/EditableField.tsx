@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -29,6 +30,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   validation,
   readOnly,
 }) => {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -88,7 +90,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             disabled={saving}
           >
             <Text weight="semibold" tone="secondary">
-              Cancel
+              {t('labels.cancel')}
             </Text>
           </AppPressable>
           <AppPressable
@@ -100,7 +102,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
               <WhiteActivityIndicator size="small" />
             ) : (
               <Text weight="semibold" style={styles.saveButtonText}>
-                Save
+                {t('labels.save')}
               </Text>
             )}
           </AppPressable>

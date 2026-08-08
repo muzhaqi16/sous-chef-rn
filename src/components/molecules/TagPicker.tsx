@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -36,6 +37,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   loading = false,
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onCancel,
@@ -60,7 +62,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
   const handleToggleTag = (tag: string) => {
     const newSelection = selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
+      ? selectedTags.filter(existing => existing !== tag)
       : [...selectedTags, tag];
     onSelect(newSelection);
   };
@@ -102,7 +104,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       >
         <View style={styles.header}>
           <Text size="lg" weight="semibold">
-            Filter by Tags
+            {t('tagPicker.filterByTags')}
           </Text>
         </View>
 

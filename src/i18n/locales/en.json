@@ -248,7 +248,10 @@
     "discard": "Discard",
     "clearInput": "Clear input",
     "noDataAvailable": "No data available",
-    "moreOptions": "More options"
+    "moreOptions": "More options",
+    "viewDetails": "View Details",
+    "rename": "Rename",
+    "tapToViewDetails": "Tap to view details"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -2980,7 +2983,9 @@
     "selectPerspective": "Select Perspective",
     "invalidImageTitle": "Invalid Image",
     "cameraPermissionTitle": "Camera Permission",
-    "cameraPermissionBody": "Camera permission is required. Please enable it in your device settings."
+    "cameraPermissionBody": "Camera permission is required. Please enable it in your device settings.",
+    "takePhoto": "Take Photo",
+    "chooseFromLibrary": "Choose from Library"
   },
   "itemPhotos": {
     "pendingReview": "Pending review",
@@ -3032,5 +3037,48 @@
     "noPantrySelected": "No pantry selected. Please select a pantry first.",
     "addFailed": "Failed to add pantry item. Please try again.",
     "updateFailed": "Failed to update pantry item. Please try again."
+  },
+  "folderPicker": {
+    "selectFolder": "Select Folder",
+    "noFolder": "No Folder",
+    "createNew": "Create New Folder",
+    "loading": "Loading folders...",
+    "longPressHint": "Long press a folder to edit or delete",
+    "searchPlaceholder": "Search folders...",
+    "namePlaceholder": "Enter folder name...",
+    "duplicate": "A folder named \"{{name}}\" already exists.",
+    "manageTitle": "Manage Folder",
+    "deleteConfirm": "Delete this folder?",
+    "deleteFolder": "Delete Folder",
+    "deleteHint": "Recipes will be moved to No Folder",
+    "renamePlaceholder": "Enter new folder name..."
+  },
+  "multiSelectChipSheet": {
+    "clearAll": "Clear all",
+    "noItems": "No items available",
+    "searchPlaceholder": "Search..."
+  },
+  "nutrition": {
+    "noData": "No nutrition data available",
+    "servingSize": "Serving Size"
+  },
+  "tagPicker": {
+    "filterByTags": "Filter by Tags"
+  },
+  "editableCounter": {
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "hint": "Tap to edit manually or use buttons to adjust"
+  },
+  "autocomplete": {
+    "offlineTitle": "Search unavailable offline",
+    "offlineSubtitle": "You can still type a custom value and press done",
+    "selectStorageLocation": "Select a storage location",
+    "storageLocationPlaceholder": "Select storage location",
+    "storageLocationSearch": "Type to search storage locations...",
+    "noStorageLocations": "No storage locations yet",
+    "noMatchingLocations": "No matching locations",
+    "tapAddToCreate": "Tap \"Add\" below to create \"{{term}}\"",
+    "typeToSearch": "Type at least 2 characters to search or add new"
   }
 }

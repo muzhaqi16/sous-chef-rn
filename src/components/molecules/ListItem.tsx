@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, TextStyle } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -49,6 +50,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   isPurchased = false,
   themeColors,
 }) => {
+  const { t } = useTranslation();
   const overrideIconColor = themeColors?.textSecondary;
 
   // Select variants based on purchased state
@@ -76,8 +78,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           <ThemedIcon
             name={leftIcon}
             size={24}
-            uniProps={t => ({
-              color: overrideIconColor ?? t.colors.textSecondary,
+            uniProps={theme => ({
+              color: overrideIconColor ?? theme.colors.textSecondary,
             })}
           />
         </View>
@@ -109,8 +111,8 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         <ThemedIcon
           name={rightIcon}
           size={24}
-          uniProps={t => ({
-            color: overrideIconColor ?? t.colors.textSecondary,
+          uniProps={theme => ({
+            color: overrideIconColor ?? theme.colors.textSecondary,
           })}
         />
       )}
@@ -133,7 +135,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
           onPress={onPress}
           accessibilityRole="button"
           accessibilityLabel={accessibilityLabel}
-          accessibilityHint="Tap to view details"
+          accessibilityHint={t('labels.tapToViewDetails')}
           accessibilityState={{ disabled: isPurchased }}
         >
           {content}

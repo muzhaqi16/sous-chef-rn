@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -26,6 +27,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
   emptyMessage,
   style,
 }) => {
+  const { t } = useTranslation();
   const hasItems = items.length > 0;
 
   return (
@@ -60,7 +62,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
 
             <View style={styles.actionRow}>
               <Text size="sm" weight="medium" tone="accent">
-                View Details
+                {t('labels.viewDetails')}
               </Text>
               <Icon name="chevron-forward" size={20} />
             </View>

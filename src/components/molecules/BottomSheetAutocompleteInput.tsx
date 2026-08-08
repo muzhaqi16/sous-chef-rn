@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import {
@@ -99,6 +100,7 @@ export function BottomSheetAutocompleteInput<T>({
   onModalOpen,
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
+  const { t } = useTranslation();
   const [userDismissed, setUserDismissed] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -202,10 +204,10 @@ export function BottomSheetAutocompleteInput<T>({
             tone="secondary"
             style={styles.emptyText}
           >
-            Search unavailable offline
+            {t('autocomplete.offlineTitle')}
           </Text>
           <Text size="sm" tone="secondary" align="center">
-            You can still type a custom value and press done
+            {t('autocomplete.offlineSubtitle')}
           </Text>
         </BottomSheetView>
       );
