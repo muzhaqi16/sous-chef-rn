@@ -6858,6 +6858,22 @@ Always include a __typename so the variant can be discriminated.
 """
 union MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError | ValidationError
 
+input MarkPrimaryItemImageInput {
+  """The ItemImage row to promote, NOT the item."""
+  imageId: ID!
+}
+
+type MarkPrimaryItemImagePayload {
+  item: Item!
+}
+
+"""
+Result of MarkPrimaryItemImage. Select on MarkPrimaryItemImagePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union MarkPrimaryItemImageResult = ConflictError | ForbiddenError | MarkPrimaryItemImagePayload | NotFoundError | ValidationError
+
 """Input for marking a recipe as cooked"""
 input MarkRecipeAsCookedInput {
   deductFromPantry: Boolean!
@@ -7949,6 +7965,13 @@ type Mutation {
   """Mark a pantry item as expired."""
   markPantryItemExpired(input: MarkPantryItemExpiredInput!): MarkPantryItemExpiredResult!
   """
+  Repoint which of an item's photos is the hero, demoting the incumbent in the
+  same transaction. Takes the same gate as any other direct item edit, so a
+  non-owner cannot repoint a public catalog item's hero photo. The target must
+  be an APPROVED photo of that item, not a size rendition.
+  """
+  markPrimaryItemImage(input: MarkPrimaryItemImageInput!): MarkPrimaryItemImageResult!
+  """
   Mark a recipe as cooked, logging it and (optionally) auto-deducting its
   ingredients from the pantry by FIFO matching. Use this for the quick
   "I cooked this" flow. For reviewed, item-level deduction where the client
@@ -8071,13 +8094,6 @@ type Mutation {
   restoreItem(input: RestoreItemInput!): RestoreItemResult!
   """Send a test notification of a specific type to the current user."""
   sendTestNotification(input: SendTestNotificationInput!): SendTestNotificationResult!
-  """
-  Repoint which of an item's photos is the hero, demoting the incumbent in the
-  same transaction. Takes the same gate as any other direct item edit, so a
-  non-owner cannot repoint a public catalog item's hero photo. The target must
-  be an APPROVED photo of that item, not a size rendition.
-  """
-  setPrimaryItemImage(input: SetPrimaryItemImageInput!): SetPrimaryItemImageResult!
   """Share a shopping list publicly with an optional share code."""
   shareShoppingList(input: ShareShoppingListInput!): ShareShoppingListResult!
   """
@@ -11301,22 +11317,6 @@ input SessionInfoInput {
   sessionDuration: Int
   sessionId: String
 }
-
-input SetPrimaryItemImageInput {
-  """The ItemImage row to promote, NOT the item."""
-  imageId: ID!
-}
-
-type SetPrimaryItemImagePayload {
-  item: Item!
-}
-
-"""
-Result of SetPrimaryItemImage. Select on SetPrimaryItemImagePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SetPrimaryItemImageResult = ConflictError | ForbiddenError | NotFoundError | SetPrimaryItemImagePayload | ValidationError
 
 """
 A shareable deep link expressed in both forms so clients can choose:
