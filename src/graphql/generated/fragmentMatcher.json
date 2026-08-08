@@ -1096,6 +1096,13 @@
       "NotFoundError",
       "ValidationError"
     ],
+    "MarkPrimaryItemImageResult": [
+      "ConflictError",
+      "ForbiddenError",
+      "MarkPrimaryItemImagePayload",
+      "NotFoundError",
+      "ValidationError"
+    ],
     "MarkRecipeAsCookedResult": [
       "ConflictError",
       "ForbiddenError",
@@ -1387,13 +1394,6 @@
       "ForbiddenError",
       "NotFoundError",
       "SendTestNotificationPayload",
-      "ValidationError"
-    ],
-    "SetPrimaryItemImageResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SetPrimaryItemImagePayload",
       "ValidationError"
     ],
     "ShareShoppingListResult": [

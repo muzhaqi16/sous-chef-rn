@@ -6842,6 +6842,23 @@ export type MarkPantryItemExpiredPayload = {
  */
 export type MarkPantryItemExpiredResult = ConflictError | ForbiddenError | MarkPantryItemExpiredPayload | NotFoundError | ValidationError;
 
+export type MarkPrimaryItemImageInput = {
+  /** The ItemImage row to promote, NOT the item. */
+  imageId: Scalars['ID']['input'];
+};
+
+export type MarkPrimaryItemImagePayload = {
+  __typename: 'MarkPrimaryItemImagePayload';
+  item: Item;
+};
+
+/**
+ * Result of MarkPrimaryItemImage. Select on MarkPrimaryItemImagePayload for the
+ * success case; every other member is a business error carrying a message.
+ * Always include a __typename so the variant can be discriminated.
+ */
+export type MarkPrimaryItemImageResult = ConflictError | ForbiddenError | MarkPrimaryItemImagePayload | NotFoundError | ValidationError;
+
 /** Input for marking a recipe as cooked */
 export type MarkRecipeAsCookedInput = {
   deductFromPantry: Scalars['Boolean']['input'];
@@ -7937,6 +7954,13 @@ export type Mutation = {
   /** Mark a pantry item as expired. */
   markPantryItemExpired: MarkPantryItemExpiredResult;
   /**
+   * Repoint which of an item's photos is the hero, demoting the incumbent in the
+   * same transaction. Takes the same gate as any other direct item edit, so a
+   * non-owner cannot repoint a public catalog item's hero photo. The target must
+   * be an APPROVED photo of that item, not a size rendition.
+   */
+  markPrimaryItemImage: MarkPrimaryItemImageResult;
+  /**
    * Mark a recipe as cooked, logging it and (optionally) auto-deducting its
    * ingredients from the pantry by FIFO matching. Use this for the quick
    * "I cooked this" flow. For reviewed, item-level deduction where the client
@@ -8059,13 +8083,6 @@ export type Mutation = {
   restoreItem: RestoreItemResult;
   /** Send a test notification of a specific type to the current user. */
   sendTestNotification: SendTestNotificationResult;
-  /**
-   * Repoint which of an item's photos is the hero, demoting the incumbent in the
-   * same transaction. Takes the same gate as any other direct item edit, so a
-   * non-owner cannot repoint a public catalog item's hero photo. The target must
-   * be an APPROVED photo of that item, not a size rendition.
-   */
-  setPrimaryItemImage: SetPrimaryItemImageResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
   /** Offline-sync twin of deletePantryItem — idempotent by a client-minted id. */
@@ -9748,6 +9765,19 @@ export type MutationMarkPantryItemExpiredArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
+export type MutationMarkPrimaryItemImageArgs = {
+  input: MarkPrimaryItemImageInput;
+};
+
+
+/**
+ * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
+ * on the root Mutation type prevents any mutation response from being
+ * served from a CDN if HTTP batching is ever re-enabled (currently off,
+ * see src/index.ts) or if a caller proxies responses. Per-field overrides
+ * win, so payload types that genuinely benefit from caching (e.g. read-
+ * through reservation tokens) can opt back in.
+ */
 export type MutationMarkRecipeAsCookedArgs = {
   input: MarkRecipeAsCookedInput;
 };
@@ -10179,19 +10209,6 @@ export type MutationRestoreItemArgs = {
  */
 export type MutationSendTestNotificationArgs = {
   input: SendTestNotificationInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSetPrimaryItemImageArgs = {
-  input: SetPrimaryItemImageInput;
 };
 
 
@@ -14686,23 +14703,6 @@ export type SessionInfoInput = {
   sessionDuration?: InputMaybe<Scalars['Int']['input']>;
   sessionId?: InputMaybe<Scalars['String']['input']>;
 };
-
-export type SetPrimaryItemImageInput = {
-  /** The ItemImage row to promote, NOT the item. */
-  imageId: Scalars['ID']['input'];
-};
-
-export type SetPrimaryItemImagePayload = {
-  __typename: 'SetPrimaryItemImagePayload';
-  item: Item;
-};
-
-/**
- * Result of SetPrimaryItemImage. Select on SetPrimaryItemImagePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SetPrimaryItemImageResult = ConflictError | ForbiddenError | NotFoundError | SetPrimaryItemImagePayload | ValidationError;
 
 /**
  * A shareable deep link expressed in both forms so clients can choose:
