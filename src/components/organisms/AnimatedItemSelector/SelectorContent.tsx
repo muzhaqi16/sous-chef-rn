@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
@@ -18,11 +19,12 @@ interface SelectorContentProps<T extends SelectableItem> {
 }
 
 const LoadingState = () => {
+  const { t } = useTranslation();
   return (
     <Animated.View entering={FadeIn} style={styles.loadingContainer}>
       <ThemedActivityIndicator size="large" />
       <Text size="md" tone="secondary" style={styles.loadingText}>
-        Loading...
+        {t('loading.loading')}
       </Text>
     </Animated.View>
   );

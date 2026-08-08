@@ -136,7 +136,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           tone={hasVotedHelpful ? 'primary' : 'textSecondary'}
         />
         <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
-          Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
+          {review.helpful > 0
+            ? t('recipes.helpfulWithCount', { count: review.helpful })
+            : t('recipes.helpful')}
         </Text>
       </AppPressable>
     </View>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import {
@@ -49,6 +50,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   useBottomSheetInput = false,
   required = false,
 }) => {
+  const { t } = useTranslation();
   const contextValue = useIsBottomSheetInput();
   const InputComponent =
     useBottomSheetInput || contextValue
@@ -98,7 +100,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       />
       {!hasError && !!value && !!isFocused && (
         <Text size="xs" tone="secondary" style={styles.hintText}>
-          Formats: 1/4, 1 1/4, 0.75, or 2
+          {t('fractionInput.formatsHint')}
         </Text>
       )}
     </FormFieldWrapper>

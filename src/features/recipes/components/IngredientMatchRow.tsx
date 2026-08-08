@@ -61,19 +61,21 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
 
         {!!match.matchedPantryItem && (
           <Text size="sm" tone="secondary" numberOfLines={1}>
-            Matched: {match.matchedPantryItem.itemName} (
-            {match.matchedPantryItem.quantity}
-            {match.matchedPantryItem.unit?.symbol
-              ? ` ${match.matchedPantryItem.unit.symbol}`
-              : ''}{' '}
-            available)
+            {t('ingredientMatch.matchedPantryItem', {
+              name: match.matchedPantryItem.itemName,
+              amount: `${match.matchedPantryItem.quantity}${
+                match.matchedPantryItem.unit?.symbol
+                  ? ` ${match.matchedPantryItem.unit.symbol}`
+                  : ''
+              }`,
+            })}
           </Text>
         )}
 
         <View style={styles.bottomRow}>
           <View style={styles.quantityRow}>
             <Text size="sm" tone="secondary">
-              Qty:
+              {t('ingredientMatch.qtyLabel')}
             </Text>
             <TextInput
               style={styles.quantityInput}

@@ -135,7 +135,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         {loading ? (
           <View style={styles.loadingContainer}>
             <Text size="base" tone="secondary">
-              Loading...
+              {t('loading.loading')}
             </Text>
           </View>
         ) : filteredItems.length > 0 ? (
@@ -157,7 +157,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         ) : items.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
             <Text size="base" tone="secondary" align="center">
-              No items match "{searchQuery}"
+              {t('multiSelectChipSheet.noMatches', { query: searchQuery })}
             </Text>
           </View>
         ) : (

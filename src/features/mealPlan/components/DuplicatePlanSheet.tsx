@@ -139,7 +139,9 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               {format(newStartDate, 'EEE, MMM d')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.dateSubtext}>
-              to {format(newEndDate, 'EEE, MMM d')}
+              {t('duplicatePlan.endDateSubtext', {
+                date: format(newEndDate, 'EEE, MMM d'),
+              })}
             </Text>
           </View>
           <Pressable

@@ -105,7 +105,9 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
         })}
         {usageRecords.length > 5 && (
           <Text size="sm" tone="secondary" style={styles.moreEntries}>
-            +{usageRecords.length - 5} more entries
+            {t('pantryItemDetail.moreUsageEntries', {
+              count: usageRecords.length - 5,
+            })}
           </Text>
         )}
       </View>

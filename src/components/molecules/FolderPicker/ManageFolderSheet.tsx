@@ -113,7 +113,9 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               align="center"
               style={styles.deleteConfirmText}
             >
-              Recipes in this folder will be moved to "No Folder".
+              {t('folderPicker.deleteConfirmBody', {
+                folder: t('folderPicker.noFolder'),
+              })}
             </Text>
             <View style={styles.deleteConfirmButtons}>
               <AppPressable

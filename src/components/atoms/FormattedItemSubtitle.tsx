@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#/components/molecules/QuantityDisplay';
@@ -30,6 +31,8 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   unitSymbol,
   additionalInfo,
 }) => {
+  const { t } = useTranslation();
+
   // Check if this is a partially consumed single item
   // When initialQuantity is 1 and 0 < quantity < 1, display as "1" with remaining weight
   const isPartialSingleItem =
@@ -119,7 +122,9 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         {!!isPartialSingleItem && (
           <Text size="sm" tone="secondary">
             {' '}
-            ({Math.round(quantity! * 100)}% remaining)
+            {t('itemSubtitle.percentRemaining', {
+              percent: Math.round(quantity! * 100),
+            })}
           </Text>
         )}
         {!!additionalInfo && (
@@ -172,7 +177,9 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
         {!!isPartialSingleItem && (
           <Text size="sm" tone="secondary">
             {' '}
-            ({Math.round(quantity! * 100)}% remaining)
+            {t('itemSubtitle.percentRemaining', {
+              percent: Math.round(quantity! * 100),
+            })}
           </Text>
         )}
         {!!additionalInfo && (

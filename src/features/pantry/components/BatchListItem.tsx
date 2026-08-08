@@ -134,7 +134,9 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
 
         {batch.costPerUnit != null && batch.costPerUnit > 0 ? (
           <Text size="xs" tone="tertiary" style={styles.metaText}>
-            ${batch.costPerUnit.toFixed(2)}/unit
+            {t('pantryItemDetail.batch.costPerUnit', {
+              cost: batch.costPerUnit.toFixed(2),
+            })}
           </Text>
         ) : null}
 
