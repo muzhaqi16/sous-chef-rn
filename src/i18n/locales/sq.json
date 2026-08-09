@@ -1211,7 +1211,10 @@
     "reasonSpilled": "I derdhur",
     "reasonSpoiled": "I prishur",
     "reasonTaste": "Shije",
-    "reasonUnknownLoss": "Humbje e panjohur"
+    "reasonUnknownLoss": "Humbje e panjohur",
+    "offlineTitle": "Asnjë të dhënë jashtë linje",
+    "offlineDescription": "Këto grafikë nuk janë ngarkuar ende për këtë periudhë. Rilidhu për t'i parë.",
+    "noDataAvailable": "Nuk ka të dhëna"
   },
   "performance": {
     "title": "Paneli i performancës",

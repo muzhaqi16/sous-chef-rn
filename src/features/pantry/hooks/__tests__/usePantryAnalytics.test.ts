@@ -13,6 +13,19 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
+jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
+  useBlocksCacheMissQueries: jest.fn(() => false),
+}));
+
+const mockedNetworkBlocked = jest.requireMock(
+  '#hooks/app/useBlocksCacheMissQueries',
+) as { useBlocksCacheMissQueries: jest.Mock };
+
+const setNetworkBlocked = (blocked: boolean) =>
+  mockedNetworkBlocked.useBlocksCacheMissQueries.mockReturnValue(blocked);
+
+beforeEach(() => setNetworkBlocked(false));
+
 const usageData = {
   __typename: 'PantryUsageAnalytics',
   totalUsageCount: 42,
@@ -90,6 +103,27 @@ function defaultMocks(
         },
       },
     },
+  ];
+}
+
+/**
+ * The usage query fails; waste and ledger resolve. Keeping the other two
+ * healthy is what makes the per-query classification observable — a blanket
+ * flag would wrongly mark all three.
+ */
+function failingMocks(pantryId = 'pantry-1'): MockedResponse[] {
+  const filter = { dateRange: DateRange.LastMonth, topItemsLimit: 10 };
+  return [
+    {
+      request: {
+        query: GetPantryUsageAnalyticsDocument,
+        variables: { pantryId, filter },
+      },
+      error: new Error('Query failed'),
+    },
+    ...defaultMocks(pantryId).filter(
+      mock => mock.request.query !== GetPantryUsageAnalyticsDocument,
+    ),
   ];
 }
 
@@ -188,7 +222,9 @@ describe('usePantryAnalytics', () => {
     it('starts true and resolves to false once mocks settle', async () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }),
+        },
       );
 
       expect(result.current.loading).toBe(true);
@@ -207,59 +243,69 @@ describe('usePantryAnalytics', () => {
 
   describe('error state', () => {
     it('exposes usage query error', async () => {
-      const filter = { dateRange: DateRange.LastMonth, topItemsLimit: 10 };
-      const mocks: MockedResponse[] = [
-        {
-          request: {
-            query: GetPantryUsageAnalyticsDocument,
-            variables: { pantryId: 'pantry-1', filter },
-          },
-          error: new Error('Query failed'),
-        },
-        {
-          request: {
-            query: GetPantryWasteAnalyticsDocument,
-            variables: { pantryId: 'pantry-1', filter },
-          },
-          result: {
-            data: {
-              pantry: {
-                __typename: 'Pantry',
-                id: 'pantry-1',
-                wasteAnalytics: wasteData,
-              },
-            },
-          },
-        },
-        {
-          request: {
-            query: GetPantryLedgerAnalyticsDocument,
-            variables: {
-              pantryId: 'pantry-1',
-              filter,
-              granularity: PeriodGranularity.Weekly,
-            },
-          },
-          result: {
-            data: {
-              pantry: {
-                __typename: 'Pantry',
-                id: 'pantry-1',
-                ledgerAnalytics: ledgerData,
-              },
-            },
-          },
-        },
-      ];
-
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloTestWrapper({ operationMocks: mocks }) },
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: failingMocks() }),
+        },
       );
 
       await waitFor(() => expect(result.current.usageError).toBeDefined());
       expect(result.current.wasteError).toBeUndefined();
       expect(result.current.ledgerError).toBeUndefined();
+    });
+
+    it('reports a failure while online as an error, not as offline', async () => {
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: failingMocks() }),
+        },
+      );
+
+      await waitFor(() => expect(result.current.usageError).toBeDefined());
+      expect(result.current.usageOffline).toBe(false);
+    });
+  });
+
+  /**
+   * These queries are filtered, so every date range is its own cache entry.
+   * Offline, switching the range is a guaranteed miss and `offlineModeLink`
+   * answers with a synthetic error — which must not reach the screen as a red
+   * chart error, because nothing has actually failed.
+   */
+  describe('offline classification', () => {
+    it('surfaces a cache miss with no network leg as offline, not an error', async () => {
+      setNetworkBlocked(true);
+
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: failingMocks() }),
+        },
+      );
+
+      await waitFor(() => expect(result.current.usageOffline).toBe(true));
+      expect(result.current.usageError).toBeUndefined();
+      expect(result.current.usageData).toBeNull();
+    });
+
+    it('leaves the other queries alone when only one misses', async () => {
+      setNetworkBlocked(true);
+
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: failingMocks() }),
+        },
+      );
+
+      await waitFor(() => expect(result.current.usageOffline).toBe(true));
+      // Only the usage query is mocked as failing; the other two resolve, so a
+      // blanket "we're offline" flag would be wrong for them.
+      expect(result.current.wasteOffline).toBe(false);
+      expect(result.current.ledgerOffline).toBe(false);
+      expect(result.current.wasteData).not.toBeNull();
     });
   });
 
@@ -267,7 +313,9 @@ describe('usePantryAnalytics', () => {
     it('exposes a refetch function', async () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
-        { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }),
+        },
       );
 
       await waitFor(() => expect(result.current.loading).toBe(false));

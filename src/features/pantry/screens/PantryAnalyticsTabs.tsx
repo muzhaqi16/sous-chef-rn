@@ -7,6 +7,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { ChartSection } from '#components/analytics/ChartSection';
+import { EmptyState } from '#components/base/EmptyState';
 import { TrendLineChart as BaseTrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#components/charts/TopItemsBarChart';
@@ -100,13 +101,56 @@ const GranularityButton: React.FC<{
   );
 };
 
+/**
+ * Offline with nothing cached for the current filters.
+ *
+ * One notice per tab, not one per chart: offline is a property of the whole
+ * screen, and eleven identical boxes stacked down a scroll view read as eleven
+ * separate failures. It stays inside the ScrollView so pull-to-refresh remains
+ * reachable — that is the retry, once the connection is back.
+ */
+const OfflineTabState: React.FC<SharedTabProps> = ({
+  refreshing,
+  onRefresh,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      style={styles.tabContent}
+      contentContainerStyle={styles.offlineContent}
+      refreshControl={
+        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <EmptyState
+        icon="cloud-offline-outline"
+        title={t('pantryAnalytics.offlineTitle')}
+        description={t('pantryAnalytics.offlineDescription')}
+        action={{
+          label: t('labels.refresh'),
+          onPress: onRefresh,
+          variant: 'outline',
+        }}
+      />
+    </ScrollView>
+  );
+};
+
 export const UsageTab: React.FC<
   SharedTabProps & {
     usageData: AnalyticsResult['usageData'];
     usageLoading: AnalyticsResult['usageLoading'];
     usageError: AnalyticsResult['usageError'];
+    usageOffline: AnalyticsResult['usageOffline'];
   }
-> = ({ usageData, usageLoading, usageError, refreshing, onRefresh }) => {
+> = ({
+  usageData,
+  usageLoading,
+  usageError,
+  usageOffline,
+  refreshing,
+  onRefresh,
+}) => {
   const { t } = useTranslation();
 
   const usagePurposeData =
@@ -126,6 +170,10 @@ export const UsageTab: React.FC<
       label: item.itemName,
       value: item.count,
     })) ?? [];
+
+  if (usageOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -211,8 +259,16 @@ export const WasteTab: React.FC<
     wasteData: AnalyticsResult['wasteData'];
     wasteLoading: AnalyticsResult['wasteLoading'];
     wasteError: AnalyticsResult['wasteError'];
+    wasteOffline: AnalyticsResult['wasteOffline'];
   }
-> = ({ wasteData, wasteLoading, wasteError, refreshing, onRefresh }) => {
+> = ({
+  wasteData,
+  wasteLoading,
+  wasteError,
+  wasteOffline,
+  refreshing,
+  onRefresh,
+}) => {
   const { t } = useTranslation();
 
   const wasteReasonData =
@@ -227,6 +283,10 @@ export const WasteTab: React.FC<
       value: item.count,
       secondaryValue: item.estimatedValue ?? undefined,
     })) ?? [];
+
+  if (wasteOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -332,6 +392,7 @@ export const LedgerTab: React.FC<
     ledgerData: AnalyticsResult['ledgerData'];
     ledgerLoading: AnalyticsResult['ledgerLoading'];
     ledgerError: AnalyticsResult['ledgerError'];
+    ledgerOffline: AnalyticsResult['ledgerOffline'];
     ledgerGranularity: AnalyticsResult['ledgerGranularity'];
     setLedgerGranularity: AnalyticsResult['setLedgerGranularity'];
   }
@@ -339,6 +400,7 @@ export const LedgerTab: React.FC<
   ledgerData,
   ledgerLoading,
   ledgerError,
+  ledgerOffline,
   ledgerGranularity,
   setLedgerGranularity,
   refreshing,
@@ -374,6 +436,10 @@ export const LedgerTab: React.FC<
       label: t('pantryAnalytics.granularityMonthly'),
     },
   ];
+
+  if (ledgerOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -626,6 +692,16 @@ const styles = StyleSheet.create(theme => ({
   tabScrollContent: {
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
+  },
+  // Standalone rather than composed with `tabScrollContent` — combining two
+  // `styles.*` on one element breaks the Unistyles v3 proxy. Fills the tab so
+  // the notice centers, while leaving the ScrollView scrollable enough to
+  // trigger pull-to-refresh.
+  offlineContent: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   summaryRow: {
     flexDirection: 'row',

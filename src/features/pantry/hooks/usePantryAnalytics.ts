@@ -14,6 +14,7 @@ import {
   type AnalyticsFilters,
 } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']
@@ -35,12 +36,16 @@ interface UsePantryAnalyticsReturn {
   usageData: UsageAnalytics | null;
   usageLoading: boolean;
   usageError: Error | undefined;
+  /** No network was attempted and nothing was cached for these filters. */
+  usageOffline: boolean;
   wasteData: WasteAnalytics | null;
   wasteLoading: boolean;
   wasteError: Error | undefined;
+  wasteOffline: boolean;
   ledgerData: LedgerAnalytics | null;
   ledgerLoading: boolean;
   ledgerError: Error | undefined;
+  ledgerOffline: boolean;
   loading: boolean;
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
@@ -54,6 +59,7 @@ export function usePantryAnalytics({
   initialDateRange = DateRange.LastMonth,
   ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
 }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
+  const networkBlocked = useBlocksCacheMissQueries();
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
   const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
     initialLedgerGranularity,
@@ -108,16 +114,47 @@ export function usePantryAnalytics({
     await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
   };
 
+  const usageAnalytics = usageQueryData?.pantry?.usageAnalytics ?? null;
+  const wasteAnalytics = wasteQueryData?.pantry?.wasteAnalytics ?? null;
+  const ledgerAnalytics = ledgerQueryData?.pantry?.ledgerAnalytics ?? null;
+
+  /**
+   * Splits `offlineModeLink`'s synthetic "no cached data" error away from a
+   * genuine failure. These queries are filtered (`dateRange`, `granularity`),
+   * so each combination is its own cache entry — offline, changing a filter is
+   * a guaranteed miss even when the screen was fully populated a second ago.
+   * Reporting that as an error puts a red alert on a screen where nothing is
+   * actually wrong, so it is surfaced as an offline state instead.
+   *
+   * Only when there is no data: a cached hit alongside a failed background
+   * revalidation is still worth showing, and stays a plain (non-blocking)
+   * error.
+   */
+  const classify = (error: unknown, data: unknown) => {
+    const unavailableOffline = networkBlocked && !!error && data === null;
+    return {
+      error: unavailableOffline ? undefined : (error as Error | undefined),
+      offline: unavailableOffline,
+    };
+  };
+
+  const usage = classify(usageError, usageAnalytics);
+  const waste = classify(wasteError, wasteAnalytics);
+  const ledger = classify(ledgerError, ledgerAnalytics);
+
   return {
-    usageData: usageQueryData?.pantry?.usageAnalytics ?? null,
+    usageData: usageAnalytics,
     usageLoading,
-    usageError: usageError as Error | undefined,
-    wasteData: wasteQueryData?.pantry?.wasteAnalytics ?? null,
+    usageError: usage.error,
+    usageOffline: usage.offline,
+    wasteData: wasteAnalytics,
     wasteLoading,
-    wasteError: wasteError as Error | undefined,
-    ledgerData: ledgerQueryData?.pantry?.ledgerAnalytics ?? null,
+    wasteError: waste.error,
+    wasteOffline: waste.offline,
+    ledgerData: ledgerAnalytics,
     ledgerLoading,
-    ledgerError: ledgerError as Error | undefined,
+    ledgerError: ledger.error,
+    ledgerOffline: ledger.offline,
     loading: usageLoading || wasteLoading || ledgerLoading,
     dateRange,
     setDateRange,

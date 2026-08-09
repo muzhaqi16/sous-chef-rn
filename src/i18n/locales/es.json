@@ -1211,7 +1211,10 @@
     "reasonSpilled": "Derramado",
     "reasonSpoiled": "Estropeado",
     "reasonTaste": "Sabor",
-    "reasonUnknownLoss": "Pérdida desconocida"
+    "reasonUnknownLoss": "Pérdida desconocida",
+    "offlineTitle": "Sin datos sin conexión",
+    "offlineDescription": "Estos gráficos aún no se han cargado para este período. Vuelve a conectarte para verlos.",
+    "noDataAvailable": "No hay datos disponibles"
   },
   "performance": {
     "title": "Panel de rendimiento",

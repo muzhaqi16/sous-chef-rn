@@ -102,6 +102,20 @@ export const isApiUnavailable = (
 ): boolean => !state.isOnline || state.apiReachable === false;
 
 /**
+ * Whether a query that misses the cache is answered with an offline error
+ * instead of reaching the network.
+ *
+ * Deliberately narrower than `isApiUnavailable`: when only the reachability
+ * breaker is open, `offlineModeLink` still forwards a cache miss as an organic
+ * probe, so a failure there is a real network error and must be reported as
+ * one. Screens use this to tell "we never tried" apart from "we tried and it
+ * failed" — `offlineModeLink` reads the same selector so the two cannot drift.
+ */
+export const blocksCacheMissQueries = (
+  state: Pick<NetworkState, 'isOnline' | 'offlineModeEnabled'>,
+): boolean => !state.isOnline || state.offlineModeEnabled;
+
+/**
  * The reason the user should be told we're offline, at this instant and with no
  * debouncing. Priority: losing the device's connection explains everything else,
  * so it outranks an unreachable API, which in turn outranks the user's own

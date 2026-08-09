@@ -1211,7 +1211,10 @@
     "reasonSpilled": "Versato",
     "reasonSpoiled": "Andato a male",
     "reasonTaste": "Gusto",
-    "reasonUnknownLoss": "Perdita sconosciuta"
+    "reasonUnknownLoss": "Perdita sconosciuta",
+    "offlineTitle": "Nessun dato offline",
+    "offlineDescription": "Questi grafici non sono ancora stati caricati per questo periodo. Riconnettiti per vederli.",
+    "noDataAvailable": "Nessun dato disponibile"
   },
   "performance": {
     "title": "Dashboard prestazioni",

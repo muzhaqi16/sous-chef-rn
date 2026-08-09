@@ -29,6 +29,9 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
     usageError,
     wasteError,
     ledgerError,
+    usageOffline,
+    wasteOffline,
+    ledgerOffline,
     dateRange,
     setDateRange,
     ledgerGranularity,
@@ -58,6 +61,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             usageData={usageData}
             usageLoading={usageLoading}
             usageError={usageError}
+            usageOffline={usageOffline}
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />
@@ -68,6 +72,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             wasteData={wasteData}
             wasteLoading={wasteLoading}
             wasteError={wasteError}
+            wasteOffline={wasteOffline}
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />
@@ -78,6 +83,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
             ledgerData={ledgerData}
             ledgerLoading={ledgerLoading}
             ledgerError={ledgerError}
+            ledgerOffline={ledgerOffline}
             ledgerGranularity={ledgerGranularity}
             setLedgerGranularity={setLedgerGranularity}
             refreshing={refreshing}

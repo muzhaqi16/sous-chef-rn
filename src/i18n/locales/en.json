@@ -1211,7 +1211,10 @@
     "reasonSpilled": "Spilled",
     "reasonSpoiled": "Spoiled",
     "reasonTaste": "Taste",
-    "reasonUnknownLoss": "Unknown Loss"
+    "reasonUnknownLoss": "Unknown Loss",
+    "offlineTitle": "No data offline",
+    "offlineDescription": "These charts haven't been loaded for this period yet. Reconnect to see them.",
+    "noDataAvailable": "No data available"
   },
   "performance": {
     "title": "Performance Dashboard",
