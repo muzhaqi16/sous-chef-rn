@@ -109,8 +109,19 @@ export function usePantryAnalytics({
   useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
   useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
+  /**
+   * `allSettled`, not `all`, so a refresh always resolves: callers clear their
+   * spinner in the caller's own `finally`, and each query reports its own
+   * error/offline state.
+   *
+   * Today `all` would behave the same — `watchQuery.errorPolicy: 'all'`
+   * (src/apollo/client.ts) makes a failing refetch resolve with `{data, error}`
+   * rather than reject. That is the only reason `all` was safe, which is a lot
+   * of load for a default to bear when the offline state now offers a Refresh
+   * button that fires exactly when these fail.
+   */
   const refetch = async () => {
-    await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
+    await Promise.allSettled([refetchUsage(), refetchWaste(), refetchLedger()]);
   };
 
   const usageAnalytics = usageQueryData?.pantry?.usageAnalytics ?? null;

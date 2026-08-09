@@ -5,6 +5,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
+import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
 import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
 import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -41,10 +42,12 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
 
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+  // The offline state offers a Refresh button, so this fires precisely when the
+  // refetch is most likely to fail. `executeRefreshWithFinally` guarantees the
+  // spinner is cleared either way (try/finally is banned in component bodies —
+  // it makes the React Compiler bail out of the whole component).
+  const handleRefresh = () => {
+    executeRefreshWithFinally(refetch, setRefreshing);
   };
 
   const routes: TabRoute[] = [

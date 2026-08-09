@@ -310,6 +310,24 @@ describe('usePantryAnalytics', () => {
   });
 
   describe('refetch', () => {
+    it('resolves even when a query fails, so callers can clear their spinner', async () => {
+      // A contract test, not a regression test: it passes under `Promise.all`
+      // too, because `watchQuery.errorPolicy: 'all'` stops a failing refetch
+      // from rejecting in the first place. It pins the guarantee callers rely
+      // on — `handleRefresh` must be able to clear `refreshing` — so that
+      // changing either the errorPolicy or the combinator fails here rather
+      // than stranding a spinner on screen.
+      const { result } = renderHook(
+        () => usePantryAnalytics({ pantryId: 'pantry-1' }),
+        {
+          wrapper: createApolloTestWrapper({ operationMocks: failingMocks() }),
+        },
+      );
+
+      await waitFor(() => expect(result.current.usageError).toBeDefined());
+      await expect(result.current.refetch()).resolves.toBeUndefined();
+    });
+
     it('exposes a refetch function', async () => {
       const { result } = renderHook(
         () => usePantryAnalytics({ pantryId: 'pantry-1' }),
