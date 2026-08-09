@@ -797,7 +797,7 @@
       "daysLeft_other": "{{count}} ditë të mbetura",
       "depletedOn": "Mbaruar më {{date}}",
       "costPerUnit": "${{cost}}/njësi",
-      "sectionHeader_one": "Grupet ({{count}} aktiv)",
+      "sectionHeader_one": "Grupi ({{count}} aktiv)",
       "sectionHeader_other": "Grupet ({{count}} aktive)"
     },
     "deleteTitle": "Fshi artikullin",
@@ -2211,7 +2211,9 @@
   "pantryAction": {
     "useByDefault": "Përdor deri më",
     "availableDefault": "I disponueshëm:",
-    "remainingAmount": "({{amount}} të mbetura)"
+    "remainingAmount": "({{amount}} të mbetura)",
+    "quantityBreakdown": "{{packages}} pa hapur + {{loose}} {{unit}} të lira",
+    "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Shkruaj një peshë të vlefshme",
@@ -3179,7 +3181,12 @@
     "title": "Njësitë",
     "addUnit": "Shto njësi",
     "size": "Madhësia",
-    "contains": "Përmban"
+    "sizePlaceholder": "p.sh. 12",
+    "unitLabel": "Njësia",
+    "unitDefaultLabel": "Njësia (parazgjedhur)",
+    "unitPlaceholder": "p.sh. kg, lb",
+    "contains": "Përmban",
+    "containsPlaceholder": "p.sh. kanaçe, shishe"
   },
   "createHome": {
     "namePlaceholder": "Shkruaj emrin e shtëpisë",
@@ -3196,7 +3203,10 @@
   "storageLocationCard": {
     "default": "Parazgjedhur",
     "setDefault": "Vendos si parazgjedhur",
-    "insideParent": "Ndodhet te {{parent}}"
+    "insideParent": "Ndodhet te {{parent}}",
+    "itemCount_one": "{{count}} artikull",
+    "itemCount_other": "{{count}} artikuj",
+    "units": "njësi"
   },
   "collaborators": {
     "editPermissions": "Modifiko lejet"
@@ -3206,15 +3216,15 @@
   },
   "shoppingListTabs": {
     "clearPurchasedTitle": "Pastro të gjithë artikujt e blerë",
-    "clearPurchasedBody_one": "Je i sigurt që do të heqësh 1 artikull të blerë nga kjo listë?",
+    "clearPurchasedBody_one": "Je i sigurt që do të heqësh {{count}} artikull të blerë nga kjo listë?",
     "clearPurchasedBody_other": "Je i sigurt që do t'i heqësh të gjithë {{count}} artikujt e blerë nga kjo listë?",
     "clearAll": "Pastro të gjitha",
     "moveAllTitle": "Zhvendos të gjitha te qilari",
-    "moveAllBody_one": "Ta zhvendosësh 1 artikull të blerë te qilari yt?",
+    "moveAllBody_one": "Ta zhvendosësh {{count}} artikull të blerë te qilari yt?",
     "moveAllBody_other": "T'i zhvendosësh të gjithë {{count}} artikujt e blerë te qilari yt?",
     "moveAll": "Zhvendos të gjitha",
     "clearShoppingTitle": "Pastro të gjithë artikujt e listës",
-    "clearShoppingBody_one": "Je i sigurt që do të heqësh 1 artikull nga lista jote e blerjeve?",
+    "clearShoppingBody_one": "Je i sigurt që do të heqësh {{count}} artikull nga lista jote e blerjeve?",
     "clearShoppingBody_other": "Je i sigurt që do t'i heqësh të gjithë {{count}} artikujt nga lista jote e blerjeve?"
   },
   "home": {
@@ -3311,7 +3321,7 @@
     "MEXICAN": "Meksikane",
     "MIDDLE_EASTERN": "E Lindjes së Mesme",
     "NORDIC": "Nordike",
-    "SOUTHERN": "Jugore",
+    "SOUTHERN": "Jugore (SHBA)",
     "SPANISH": "Spanjolle",
     "THAI": "Tajlandeze",
     "VIETNAMESE": "Vietnameze"
@@ -3400,7 +3410,9 @@
     "wasted": "Hedhur / Shpërdoruar",
     "noAction": "Pa asnjë veprim",
     "expiringSoon": "Po skadon së shpejti",
-    "alreadyExpired": "Tashmë i skaduar"
+    "alreadyExpired": "Tashmë i skaduar",
+    "title": "Çfarë ndodhi me {{itemName}}?",
+    "thisItem": "këtë artikull"
   },
   "homeRoles": {
     "owner": "Pronar",

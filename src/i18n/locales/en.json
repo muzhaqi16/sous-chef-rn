@@ -797,7 +797,7 @@
       "daysLeft_other": "{{count}} days left",
       "depletedOn": "Depleted {{date}}",
       "costPerUnit": "${{cost}}/unit",
-      "sectionHeader_one": "Batches ({{count}} active)",
+      "sectionHeader_one": "Batch ({{count}} active)",
       "sectionHeader_other": "Batches ({{count}} active)"
     },
     "deleteTitle": "Delete Item",
@@ -2211,7 +2211,9 @@
   "pantryAction": {
     "useByDefault": "Use by",
     "availableDefault": "Available:",
-    "remainingAmount": "({{amount}} remaining)"
+    "remainingAmount": "({{amount}} remaining)",
+    "quantityBreakdown": "{{packages}} full + {{loose}} loose {{unit}}",
+    "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Please enter a valid weight",
@@ -3179,7 +3181,12 @@
     "title": "Units",
     "addUnit": "Add Unit",
     "size": "Size",
-    "contains": "Contains"
+    "sizePlaceholder": "e.g., 12",
+    "unitLabel": "Unit",
+    "unitDefaultLabel": "Unit (Default)",
+    "unitPlaceholder": "e.g., kg, lbs",
+    "contains": "Contains",
+    "containsPlaceholder": "e.g., can, bottle"
   },
   "createHome": {
     "namePlaceholder": "Enter home name",
@@ -3196,7 +3203,10 @@
   "storageLocationCard": {
     "default": "Default",
     "setDefault": "Set Default",
-    "insideParent": "Inside {{parent}}"
+    "insideParent": "Inside {{parent}}",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items",
+    "units": "units"
   },
   "collaborators": {
     "editPermissions": "Edit Permissions"
@@ -3206,15 +3216,15 @@
   },
   "shoppingListTabs": {
     "clearPurchasedTitle": "Clear All Purchased Items",
-    "clearPurchasedBody_one": "Are you sure you want to remove 1 purchased item from this list?",
+    "clearPurchasedBody_one": "Are you sure you want to remove {{count}} purchased item from this list?",
     "clearPurchasedBody_other": "Are you sure you want to remove all {{count}} purchased items from this list?",
     "clearAll": "Clear All",
     "moveAllTitle": "Move All to Pantry",
-    "moveAllBody_one": "Move 1 purchased item to your pantry?",
+    "moveAllBody_one": "Move {{count}} purchased item to your pantry?",
     "moveAllBody_other": "Move all {{count}} purchased items to your pantry?",
     "moveAll": "Move All",
     "clearShoppingTitle": "Clear All Shopping Items",
-    "clearShoppingBody_one": "Are you sure you want to remove 1 item from your shopping list?",
+    "clearShoppingBody_one": "Are you sure you want to remove {{count}} item from your shopping list?",
     "clearShoppingBody_other": "Are you sure you want to remove all {{count}} items from your shopping list?"
   },
   "home": {
@@ -3311,7 +3321,7 @@
     "MEXICAN": "Mexican",
     "MIDDLE_EASTERN": "Middle Eastern",
     "NORDIC": "Nordic",
-    "SOUTHERN": "Southern",
+    "SOUTHERN": "Southern (US)",
     "SPANISH": "Spanish",
     "THAI": "Thai",
     "VIETNAMESE": "Vietnamese"
@@ -3400,7 +3410,9 @@
     "wasted": "Wasted / Discarded",
     "noAction": "No action taken",
     "expiringSoon": "Expiring soon",
-    "alreadyExpired": "Already expired"
+    "alreadyExpired": "Already expired",
+    "title": "What happened with {{itemName}}?",
+    "thisItem": "this item"
   },
   "homeRoles": {
     "owner": "Owner",

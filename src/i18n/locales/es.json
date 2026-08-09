@@ -797,7 +797,7 @@
       "daysLeft_other": "quedan {{count}} días",
       "depletedOn": "Agotado el {{date}}",
       "costPerUnit": "${{cost}}/unidad",
-      "sectionHeader_one": "Lotes ({{count}} activo)",
+      "sectionHeader_one": "Lote ({{count}} activo)",
       "sectionHeader_other": "Lotes ({{count}} activos)"
     },
     "deleteTitle": "Eliminar artículo",
@@ -946,7 +946,7 @@
     "unit": "Unidad",
     "unitPlaceholder": "ud, kg, etc.",
     "estimatedPrice": "Precio estimado",
-    "estimatedPricePlaceholder": "p. ej., 4,99",
+    "estimatedPricePlaceholder": "p. ej., 4.99",
     "notes": "Notas",
     "notesPlaceholder": "Cualquier nota especial...",
     "pleaseEnterItemName": "Introduce un nombre de artículo",
@@ -2211,7 +2211,9 @@
   "pantryAction": {
     "useByDefault": "Consumir antes de",
     "availableDefault": "Disponible:",
-    "remainingAmount": "(restante: {{amount}})"
+    "remainingAmount": "(restante: {{amount}})",
+    "quantityBreakdown": "{{packages}} sin abrir + {{loose}} {{unit}} sueltos",
+    "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Introduce un peso válido",
@@ -2339,7 +2341,7 @@
     "store": "Tienda",
     "storePlaceholder": "ej., Costco, Mercadona",
     "cost": "Costo por unidad",
-    "costPlaceholder": "ej., 4,99",
+    "costPlaceholder": "ej., 4.99",
     "acquisitionMethod": "Cómo se adquirió",
     "methodPurchased": "Comprado",
     "methodHomegrown": "De cosecha propia",
@@ -3084,7 +3086,7 @@
     "placeholderUnit": "uds, docena",
     "placeholderAlertBelow": "p. ej., 2",
     "placeholderRestockTo": "p. ej., 6",
-    "placeholderNetWeight": "p. ej., 14,5",
+    "placeholderNetWeight": "p. ej., 14.5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
     "addFailed": "No se pudo añadir el artículo. Inténtalo de nuevo.",
@@ -3179,7 +3181,12 @@
     "title": "Unidades",
     "addUnit": "Añadir unidad",
     "size": "Tamaño",
-    "contains": "Contiene"
+    "sizePlaceholder": "p. ej., 12",
+    "unitLabel": "Unidad",
+    "unitDefaultLabel": "Unidad (predeterminada)",
+    "unitPlaceholder": "p. ej., kg, lb",
+    "contains": "Contiene",
+    "containsPlaceholder": "p. ej., lata, botella"
   },
   "createHome": {
     "namePlaceholder": "Introduce el nombre del hogar",
@@ -3196,7 +3203,10 @@
   "storageLocationCard": {
     "default": "Predeterminada",
     "setDefault": "Hacer predeterminada",
-    "insideParent": "Dentro de {{parent}}"
+    "insideParent": "Dentro de {{parent}}",
+    "itemCount_one": "{{count}} artículo",
+    "itemCount_other": "{{count}} artículos",
+    "units": "unidades"
   },
   "collaborators": {
     "editPermissions": "Editar permisos"
@@ -3206,15 +3216,15 @@
   },
   "shoppingListTabs": {
     "clearPurchasedTitle": "Borrar todos los artículos comprados",
-    "clearPurchasedBody_one": "¿Seguro que quieres quitar 1 artículo comprado de esta lista?",
+    "clearPurchasedBody_one": "¿Seguro que quieres quitar {{count}} artículo comprado de esta lista?",
     "clearPurchasedBody_other": "¿Seguro que quieres quitar los {{count}} artículos comprados de esta lista?",
     "clearAll": "Borrar todo",
     "moveAllTitle": "Mover todo a la despensa",
-    "moveAllBody_one": "¿Mover 1 artículo comprado a tu despensa?",
+    "moveAllBody_one": "¿Mover {{count}} artículo comprado a tu despensa?",
     "moveAllBody_other": "¿Mover los {{count}} artículos comprados a tu despensa?",
     "moveAll": "Mover todo",
     "clearShoppingTitle": "Borrar todos los artículos de la lista",
-    "clearShoppingBody_one": "¿Seguro que quieres quitar 1 artículo de tu lista de compras?",
+    "clearShoppingBody_one": "¿Seguro que quieres quitar {{count}} artículo de tu lista de compras?",
     "clearShoppingBody_other": "¿Seguro que quieres quitar los {{count}} artículos de tu lista de compras?"
   },
   "home": {
@@ -3400,7 +3410,9 @@
     "wasted": "Desperdiciado / Descartado",
     "noAction": "Sin acción",
     "expiringSoon": "Caduca pronto",
-    "alreadyExpired": "Ya caducado"
+    "alreadyExpired": "Ya caducado",
+    "title": "¿Qué pasó con {{itemName}}?",
+    "thisItem": "este artículo"
   },
   "homeRoles": {
     "owner": "Propietario",

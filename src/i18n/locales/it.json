@@ -797,7 +797,7 @@
       "daysLeft_other": "{{count}} giorni rimasti",
       "depletedOn": "Esaurito il {{date}}",
       "costPerUnit": "${{cost}}/unità",
-      "sectionHeader_one": "Lotti ({{count}} attivo)",
+      "sectionHeader_one": "Lotto ({{count}} attivo)",
       "sectionHeader_other": "Lotti ({{count}} attivi)"
     },
     "deleteTitle": "Elimina articolo",
@@ -946,7 +946,7 @@
     "unit": "Unità",
     "unitPlaceholder": "pz, kg, ecc.",
     "estimatedPrice": "Prezzo stimato",
-    "estimatedPricePlaceholder": "es. 4,99",
+    "estimatedPricePlaceholder": "es. 4.99",
     "notes": "Note",
     "notesPlaceholder": "Eventuali note speciali...",
     "pleaseEnterItemName": "Inserisci il nome di un articolo",
@@ -2211,7 +2211,9 @@
   "pantryAction": {
     "useByDefault": "Da consumare entro",
     "availableDefault": "Disponibile:",
-    "remainingAmount": "({{amount}} rimanenti)"
+    "remainingAmount": "({{amount}} rimanenti)",
+    "quantityBreakdown": "{{packages}} da aprire + {{loose}} {{unit}} sfusi",
+    "amountWithUnit": "{{amount}} {{unit}}"
   },
   "correctWeight": {
     "invalidWeight": "Inserisci un peso valido",
@@ -2339,7 +2341,7 @@
     "store": "Negozio",
     "storePlaceholder": "es., Costco, Esselunga",
     "cost": "Costo per unità",
-    "costPlaceholder": "es., 4,99",
+    "costPlaceholder": "es., 4.99",
     "acquisitionMethod": "Come acquisito",
     "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
@@ -2945,7 +2947,7 @@
   "netWeightEntry": {
     "sectionTitle": "Pesi netti",
     "weightLabel": "Peso",
-    "weightPlaceholder": "es. 3,4",
+    "weightPlaceholder": "es. 3.4",
     "unitLabel": "Unità",
     "unitPlaceholder": "es. oz, g",
     "addButton": "Aggiungi peso netto"
@@ -3084,7 +3086,7 @@
     "placeholderUnit": "pz, dozzina",
     "placeholderAlertBelow": "es. 2",
     "placeholderRestockTo": "es. 6",
-    "placeholderNetWeight": "es. 14,5",
+    "placeholderNetWeight": "es. 14.5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "Nessuna dispensa selezionata. Seleziona prima una dispensa.",
     "addFailed": "Impossibile aggiungere l'articolo. Riprova.",
@@ -3179,7 +3181,12 @@
     "title": "Unità",
     "addUnit": "Aggiungi unità",
     "size": "Formato",
-    "contains": "Contiene"
+    "sizePlaceholder": "es. 12",
+    "unitLabel": "Unità",
+    "unitDefaultLabel": "Unità (predefinita)",
+    "unitPlaceholder": "es. kg, lb",
+    "contains": "Contiene",
+    "containsPlaceholder": "es. lattina, bottiglia"
   },
   "createHome": {
     "namePlaceholder": "Inserisci il nome della casa",
@@ -3196,7 +3203,10 @@
   "storageLocationCard": {
     "default": "Predefinita",
     "setDefault": "Imposta come predefinita",
-    "insideParent": "Dentro {{parent}}"
+    "insideParent": "Dentro {{parent}}",
+    "itemCount_one": "{{count}} articolo",
+    "itemCount_other": "{{count}} articoli",
+    "units": "unità"
   },
   "collaborators": {
     "editPermissions": "Modifica permessi"
@@ -3206,15 +3216,15 @@
   },
   "shoppingListTabs": {
     "clearPurchasedTitle": "Cancella tutti gli articoli acquistati",
-    "clearPurchasedBody_one": "Sei sicuro di voler rimuovere 1 articolo acquistato da questa lista?",
+    "clearPurchasedBody_one": "Sei sicuro di voler rimuovere {{count}} articolo acquistato da questa lista?",
     "clearPurchasedBody_other": "Sei sicuro di voler rimuovere tutti i {{count}} articoli acquistati da questa lista?",
     "clearAll": "Cancella tutto",
     "moveAllTitle": "Sposta tutto nella dispensa",
-    "moveAllBody_one": "Spostare 1 articolo acquistato nella tua dispensa?",
+    "moveAllBody_one": "Spostare {{count}} articolo acquistato nella tua dispensa?",
     "moveAllBody_other": "Spostare tutti i {{count}} articoli acquistati nella tua dispensa?",
     "moveAll": "Sposta tutto",
     "clearShoppingTitle": "Cancella tutti gli articoli della spesa",
-    "clearShoppingBody_one": "Sei sicuro di voler rimuovere 1 articolo dalla tua lista della spesa?",
+    "clearShoppingBody_one": "Sei sicuro di voler rimuovere {{count}} articolo dalla tua lista della spesa?",
     "clearShoppingBody_other": "Sei sicuro di voler rimuovere tutti i {{count}} articoli dalla tua lista della spesa?"
   },
   "home": {
@@ -3400,7 +3410,9 @@
     "wasted": "Sprecato / Buttato",
     "noAction": "Nessuna azione",
     "expiringSoon": "In scadenza",
-    "alreadyExpired": "Già scaduto"
+    "alreadyExpired": "Già scaduto",
+    "title": "Che fine ha fatto {{itemName}}?",
+    "thisItem": "questo articolo"
   },
   "homeRoles": {
     "owner": "Proprietario",

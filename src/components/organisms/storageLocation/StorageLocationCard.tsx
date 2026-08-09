@@ -9,12 +9,22 @@ import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/base/Badge';
 import { Text } from '#components/atoms/Text';
+import { STORAGE_TYPE_VALUES } from './storageLocationFormConfig';
 
-const TEMPERATURE_LABELS: Record<string, string> = {
-  REFRIGERATED: 'Refrigerated',
-  FROZEN: 'Frozen',
-  AMBIENT: 'Ambient',
+/** Key paths, not resolved strings — `t` is only available inside the
+ *  component, and resolving at module load would freeze the language. */
+const TEMPERATURE_LABEL_KEYS: Record<string, string> = {
+  REFRIGERATED: 'storageState.REFRIGERATED',
+  FROZEN: 'storageState.FROZEN',
+  AMBIENT: 'storageState.AMBIENT',
 };
+
+const STORAGE_TYPE_LABEL_KEYS: Record<string, string> = Object.fromEntries(
+  STORAGE_TYPE_VALUES.map(({ value, key }) => [
+    value,
+    `storageLocationForm.${key}`,
+  ]),
+);
 
 /** The storage-location fields this card renders. */
 interface StorageLocationCardLocation {
@@ -47,6 +57,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   onSetDefault,
 }) => {
   const { t } = useTranslation();
+  /** Fallback for a type the schema gained after this table was written. */
   const formatType = (type: string): string => {
     return type
       .split('_')
@@ -55,9 +66,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   };
 
   const hasColor = !!location.color;
-  const temperatureLabel = location.temperature
-    ? TEMPERATURE_LABELS[location.temperature]
-    : null;
+  const typeLabelKey = STORAGE_TYPE_LABEL_KEYS[location.type];
+  const typeLabel = typeLabelKey ? t(typeLabelKey) : formatType(location.type);
+  const temperatureLabelKey = location.temperature
+    ? TEMPERATURE_LABEL_KEYS[location.temperature]
+    : undefined;
   const hasCapacity = location.capacity != null && location.capacity > 0;
 
   return (
@@ -91,21 +104,21 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                         {t('storageLocationCard.default')}
                       </Badge>
                     )}
-                    {!!temperatureLabel && (
-                      <Badge variant="primary">{temperatureLabel}</Badge>
+                    {!!temperatureLabelKey && (
+                      <Badge variant="primary">{t(temperatureLabelKey)}</Badge>
                     )}
                   </View>
                 </View>
                 <Text style={[commonStyles.caption, styles.subtitle]}>
-                  {!location.parentLocation && (
-                    <Text>{formatType(location.type)} • </Text>
-                  )}
-                  {location.currentItemCount}{' '}
-                  {location.currentItemCount === 1 ? 'item' : 'items'}
+                  {!location.parentLocation && <Text>{typeLabel} • </Text>}
+                  {t('storageLocationCard.itemCount', {
+                    count: location.currentItemCount,
+                  })}
                   {hasCapacity ? (
                     <Text>
                       {' '}
-                      / {location.capacity} {location.capacityUnit || 'units'}
+                      / {location.capacity}{' '}
+                      {location.capacityUnit || t('storageLocationCard.units')}
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (

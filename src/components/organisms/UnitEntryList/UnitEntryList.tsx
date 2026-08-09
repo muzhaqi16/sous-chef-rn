@@ -136,19 +136,23 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     onChangeText={(text: string) =>
                       handleEntryChange(index, 'packageSize', text)
                     }
-                    placeholder="e.g., 12"
+                    placeholder={t('unitEntryList.sizePlaceholder')}
                     keyboardType="decimal-pad"
                   />
                 </View>
                 <View style={styles.unitField}>
                   <UnitAutocompleteField
                     variant="inline"
-                    label={index === 0 ? 'Unit (Default)' : 'Unit'}
+                    label={
+                      index === 0
+                        ? t('unitEntryList.unitDefaultLabel')
+                        : t('unitEntryList.unitLabel')
+                    }
                     value={entry.unitName || ''}
                     onChangeText={(text: string) =>
                       handleUnitTextChange(index, 'unitName', text)
                     }
-                    placeholder="e.g., kg, lbs"
+                    placeholder={t('unitEntryList.unitPlaceholder')}
                     onUnitSelected={(unitId, unitName) =>
                       handleUnitSelected(index, unitId, unitName)
                     }
@@ -171,7 +175,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     onChangeText={(text: string) =>
                       handleUnitTextChange(index, 'contentUnitName', text)
                     }
-                    placeholder="e.g., can, bottle"
+                    placeholder={t('unitEntryList.containsPlaceholder')}
                     onUnitSelected={(unitId, unitName) =>
                       handleContentUnitSelected(index, unitId, unitName)
                     }

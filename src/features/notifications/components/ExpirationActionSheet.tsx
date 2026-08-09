@@ -81,8 +81,8 @@ const getExpirySubtitle = (
 ): string => {
   if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
   if (daysUntilExpiry <= 0) return t('expirationAction.alreadyExpired');
-  if (daysUntilExpiry === 1) return 'Expires tomorrow';
-  return `Expires in ${daysUntilExpiry} days`;
+  if (daysUntilExpiry === 1) return t('expiration.expiresTomorrow');
+  return t('expiration.expiresInDays', { count: daysUntilExpiry });
 };
 
 function OptionRow({
@@ -132,7 +132,8 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     snapPoints: ['50%'],
   });
 
-  const itemName = notification?.pantryItemName || 'this item';
+  const itemName =
+    notification?.pantryItemName || t('expirationAction.thisItem');
   const subtitle = notification
     ? getExpirySubtitle(notification.daysUntilExpiry, t)
     : '';
@@ -152,7 +153,9 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Title style={styles.title}>{`What happened with ${itemName}?`}</Title>
+        <Title style={styles.title}>
+          {t('expirationAction.title', { itemName })}
+        </Title>
         <Text size="sm" tone="secondary" style={styles.subtitle}>
           {subtitle}
         </Text>
