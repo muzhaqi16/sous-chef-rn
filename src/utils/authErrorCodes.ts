@@ -1,5 +1,4 @@
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
  * Classification of the auth refusal codes, across both channels they arrive
@@ -32,19 +31,12 @@ import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
  * the session nor spend a refresh — the caller prompts for verification and the
  * gate lifts on the next request.
  *
- * Which vocabulary a code comes from depends on the channel it arrives on:
+ * Every code here is a generated enum member, so a rename or removal on the next
+ * `npm run codegen` fails the build instead of silently producing a predicate
+ * that never matches. Which enum depends on the channel the code arrives on:
  * `ErrorCode` types the `code` field on a result-union member, while
- * `TopLevelErrorCode` names the vocabulary of `errors[].extensions.code`.
- * Conditions that travel on both channels carry the same string in both.
- *
- * `ErrorCode` is generated, so a rename or removal there fails the next
- * `npm run codegen` instead of silently producing a predicate that never
- * matches. `TopLevelErrorCode` no longer is — the API's admin cleanup left it
- * unreachable from the schema, so it is now a client-owned mirror in
- * `#/utils/errors/topLevelErrorCodes`, and its two entries below carry no such
- * guarantee. `topLevelErrorCodes.test.ts` re-establishes it for the codes that
- * also exist on the union channel; `UNAUTHENTICATED`, `AUTH_TOKEN_INVALID` and
- * `AUTH_REFRESH_TOKEN_MISSING` are top-level-only and so are unguarded.
+ * `TopLevelErrorCode` publishes the vocabulary of `errors[].extensions.code`.
+ * Conditions that travel on both channels carry the same string in both enums.
  */
 
 // The credentials themselves are gone: the password changed elsewhere, or the

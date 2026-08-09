@@ -1,5 +1,5 @@
 import { getI18n } from '#/i18n/config';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 // Match on the exact code — never on a `RATE_` prefix. OPERATION_RATE_LIMITED
 // deliberately doesn't carry it (docs/api/errors.md), so a prefix test would

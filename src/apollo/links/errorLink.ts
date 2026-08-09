@@ -5,8 +5,7 @@ import {
   CombinedProtocolErrors,
 } from '@apollo/client/errors';
 import type { DefinitionNode } from 'graphql';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isKnownServerError } from '#utils/subscriptionErrorHandler';
 import { isNetworkError } from '#/utils/isNetworkError';
 import {
@@ -59,9 +58,10 @@ const isAccountInactiveError = (code: string, reason: string) =>
 // "API Key Errors"); an earlier version also substring-matched "api key" in the
 // message, which let a refusal whose wording happened to differ fall through to
 // the auth branch below and trigger a pointless token refresh.
-// API_KEY_RATE_LIMITED is in the API's internal registry but was absent from
-// the TopLevelErrorCode vocabulary, which admitted only codes with an emitter —
-// so it stays a literal, retained defensively rather than promoted.
+// API_KEY_RATE_LIMITED is in the API's internal registry but absent from the
+// published TopLevelErrorCode enum, which admits only codes that have an
+// emitter — so it stays a literal and is retained defensively rather than
+// promoted.
 const API_KEY_ERROR_CODES: string[] = [
   TopLevelErrorCode.ApiKeyMissing,
   TopLevelErrorCode.ApiKeyInvalid,

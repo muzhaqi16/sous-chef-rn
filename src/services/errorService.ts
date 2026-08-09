@@ -16,8 +16,7 @@
  * ```
  */
 
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {

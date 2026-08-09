@@ -3,8 +3,7 @@ import {
   CombinedProtocolErrors,
   ServerError,
 } from '@apollo/client/errors';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isAuthRefusalCode } from '#/utils/authErrorCodes';
 import { isErrorTypename } from '#/utils/errors/mutationPayload';
 import type { QueueError } from './types';

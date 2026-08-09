@@ -1,4 +1,4 @@
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
  * Invalid Unit Error Details

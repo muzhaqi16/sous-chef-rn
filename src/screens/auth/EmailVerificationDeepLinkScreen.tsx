@@ -24,8 +24,7 @@ import {
   getRateLimitMessage,
   isRateLimitError,
 } from '#/utils/errors/rateLimit';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
+import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
