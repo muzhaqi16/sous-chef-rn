@@ -14,6 +14,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface CorrectWeightModalProps {
   visible: boolean;
@@ -80,7 +81,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
   const handleConfirm = () => {
     if (!pantryItem) return;
 
-    const netWeight = parseFloat(weightInput);
+    const netWeight = parseDecimalInput(weightInput);
     if (isNaN(netWeight) || netWeight <= 0) {
       alertService.alert(t('labels.error'), t('correctWeight.invalidWeight'));
       return;

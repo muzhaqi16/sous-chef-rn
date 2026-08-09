@@ -1140,7 +1140,9 @@
     "gotIt": "Got It",
     "deleteTitle": "Delete Storage Location",
     "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
-    "ok": "OK"
+    "ok": "OK",
+    "offlineTitle": "Not loaded yet",
+    "offlineDescription": "Your storage locations haven't been loaded on this device. Reconnect to see them."
   },
   "pantryAnalytics": {
     "title": "Pantry Analytics",
@@ -2313,9 +2315,6 @@
     "expirationDate": "Expiration Date",
     "expirationPlaceholder": "Select date",
     "storage": "Storage",
-    "stateAmbient": "Ambient",
-    "stateRefrigerated": "Refrigerated",
-    "stateFrozen": "Frozen",
     "restockFailed": "Failed to restock item.",
     "addFailedRetry": "Failed to add item. Please try again.",
     "addFailed": "Failed to add item",

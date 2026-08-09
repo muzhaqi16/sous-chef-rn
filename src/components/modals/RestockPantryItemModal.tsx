@@ -18,6 +18,7 @@ import {
   type PantryActionSharedState,
 } from './PantryActionModal';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -66,9 +67,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     }
 
     const costPerUnit = costPerUnitInput
-      ? parseFloat(costPerUnitInput)
+      ? parseDecimalInput(costPerUnitInput)
       : undefined;
-    const totalCost = totalCostInput ? parseFloat(totalCostInput) : undefined;
+    const totalCost = totalCostInput
+      ? parseDecimalInput(totalCostInput)
+      : undefined;
 
     // Pass the quantity and unit directly — the backend handles conversion
     onConfirm(

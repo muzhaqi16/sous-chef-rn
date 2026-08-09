@@ -30,6 +30,7 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -117,17 +118,17 @@ export function useUpdatePantryItem({
     if (dirtyFields.tags) optimisticUpdate.tags = input.tags || [];
     if (dirtyFields.minQuantity) {
       optimisticUpdate.minQuantity = input.minQuantity
-        ? parseFloat(input.minQuantity)
+        ? parseDecimalInput(input.minQuantity)
         : null;
     }
     if (dirtyFields.restockQuantity) {
       optimisticUpdate.restockQuantity = input.restockQuantity
-        ? parseFloat(input.restockQuantity)
+        ? parseDecimalInput(input.restockQuantity)
         : null;
     }
     if (dirtyFields.netWeight) {
       optimisticUpdate.netWeight = input.netWeight
-        ? parseFloat(input.netWeight)
+        ? parseDecimalInput(input.netWeight)
         : null;
     }
     if (dirtyFields.location && selectedStorageLocation) {

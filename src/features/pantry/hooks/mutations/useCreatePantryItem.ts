@@ -34,6 +34,7 @@ import {
 import { handleMutationError } from '#/utils/errorHandlers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { CreatePantryItemParams } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface UseCreatePantryItemOptions {
   pantryId: string | undefined;
@@ -123,10 +124,10 @@ export function useCreatePantryItem({
         ? {
             thresholds: {
               ...(input.minQuantity && {
-                minQuantity: parseFloat(input.minQuantity),
+                minQuantity: parseDecimalInput(input.minQuantity),
               }),
               ...(input.restockQuantity && {
-                restockQuantity: parseFloat(input.restockQuantity),
+                restockQuantity: parseDecimalInput(input.restockQuantity),
               }),
             },
           }
@@ -137,7 +138,7 @@ export function useCreatePantryItem({
       ...(input.netWeight && input.netWeightUnitId
         ? {
             netWeight: {
-              netWeight: parseFloat(input.netWeight),
+              netWeight: parseDecimalInput(input.netWeight),
               netWeightUnitId: input.netWeightUnitId,
             },
           }
@@ -189,7 +190,7 @@ export function useCreatePantryItem({
               expiresAt: input.expirationDate?.toISOString() ?? null,
               location: input.location?.trim() || null,
               minQuantity: input.minQuantity
-                ? parseFloat(input.minQuantity)
+                ? parseDecimalInput(input.minQuantity)
                 : null,
             },
             client.cache,

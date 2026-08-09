@@ -10,6 +10,7 @@ import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { errorMessageOr } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface NumberInputSheetProps {
   visible: boolean;
@@ -59,7 +60,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
     setError('');
 
     const numValue = allowDecimals
-      ? parseFloat(inputValue)
+      ? parseDecimalInput(inputValue)
       : parseInt(inputValue);
 
     if (isNaN(numValue) || inputValue.trim() === '') {

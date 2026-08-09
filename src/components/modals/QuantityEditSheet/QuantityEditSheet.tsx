@@ -17,6 +17,7 @@ import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface ItemUnit {
   id: string;
@@ -82,7 +83,7 @@ const parseFractionInput = (input: string): number | null => {
   }
 
   // Decimal or whole number
-  const num = parseFloat(trimmed);
+  const num = parseDecimalInput(trimmed);
   return isNaN(num) || num < 0 ? null : num;
 };
 

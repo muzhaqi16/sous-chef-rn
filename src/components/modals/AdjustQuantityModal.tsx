@@ -15,6 +15,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -83,7 +84,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       return;
     }
 
-    const parsedWeight = parseFloat(remainingWeightInput);
+    const parsedWeight = parseDecimalInput(remainingWeightInput);
     const remainingNetWeight =
       !isNaN(parsedWeight) && parsedWeight >= 0 ? parsedWeight : undefined;
 

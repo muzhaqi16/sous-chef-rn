@@ -27,6 +27,7 @@ import { alertService } from '#/services/alertService';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { makeIdNameHandler } from '../makeIdNameHandler';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -136,7 +137,9 @@ export const ShoppingListDetailsStep: React.FC<
     }
 
     const unitData = buildUnitInput();
-    const netWeightValue = netWeight.trim() ? parseFloat(netWeight) : undefined;
+    const netWeightValue = netWeight.trim()
+      ? parseDecimalInput(netWeight)
+      : undefined;
     executeWithLoadingState(
       async () => {
         await addItem({

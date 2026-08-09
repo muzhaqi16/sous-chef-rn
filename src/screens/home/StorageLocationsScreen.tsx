@@ -71,6 +71,7 @@ export const StorageLocationsScreen: React.FC<
     setDefaultLocation,
     createLocation,
     error,
+    offline,
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
@@ -270,7 +271,21 @@ export const StorageLocationsScreen: React.FC<
             />
           )}
 
-          {locations.length === 0 ? (
+          {locations.length === 0 && offline ? (
+            // Not "there are none" — we never reached the server and have
+            // nothing cached. Offering "Add location" here would invite a
+            // duplicate of something that may already exist.
+            <EmptyState
+              icon="cloud-offline-outline"
+              title={t('storageLocations.offlineTitle')}
+              description={t('storageLocations.offlineDescription')}
+              action={{
+                label: t('labels.refresh'),
+                onPress: handleRefresh,
+                variant: 'outline',
+              }}
+            />
+          ) : locations.length === 0 ? (
             <EmptyState
               icon="server-outline"
               title={t('storageLocations.noLocations')}

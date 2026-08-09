@@ -28,6 +28,7 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface UseUpdatePantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -86,7 +87,9 @@ export function useUpdatePantryItemQuantity({
       return;
     }
 
-    const newQuantity = parseFloat(quantityInput || quantityValue.toString());
+    const newQuantity = parseDecimalInput(
+      quantityInput || quantityValue.toString(),
+    );
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(currentItem, {

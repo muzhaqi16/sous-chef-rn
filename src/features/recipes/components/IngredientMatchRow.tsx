@@ -9,6 +9,7 @@ import {
   getAvailabilityStatus,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
@@ -81,7 +82,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
               style={styles.quantityInput}
               value={String(adjustedQuantity)}
               onChangeText={text => {
-                const num = parseFloat(text);
+                const num = parseDecimalInput(text);
                 if (!isNaN(num) && num >= 0) {
                   onUpdate(index, { adjustedQuantity: num });
                 }

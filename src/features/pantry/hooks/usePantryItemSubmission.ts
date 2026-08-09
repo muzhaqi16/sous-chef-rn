@@ -25,6 +25,7 @@ import {
   executeCacheUpdate,
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface PantryItemSubmissionParams {
   pantryId: string | undefined;
@@ -149,7 +150,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     let displayUnitId;
     let totalPackageNetWeight: number | undefined;
     if (showPackageDetails && packageSize && contentUnit) {
-      const pkgSize = parseFloat(packageSize);
+      const pkgSize = parseDecimalInput(packageSize);
       if (!isNaN(pkgSize) && pkgSize > 0) {
         itemUnits = [
           {
@@ -169,7 +170,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       }
       // Set net weight if provided
       if (itemNetWeight) {
-        const nw = parseFloat(itemNetWeight);
+        const nw = parseDecimalInput(itemNetWeight);
         if (!isNaN(nw) && nw > 0) {
           netWeight = nw;
           displayUnitId = weightUnitId || undefined;
@@ -182,7 +183,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
 
     // Compute the effective pantry-level net weight
     const effectivePantryNetWeight = pantryNetWeight
-      ? parseFloat(pantryNetWeight) || undefined
+      ? parseDecimalInput(pantryNetWeight) || undefined
       : totalPackageNetWeight;
     const effectiveNetWeightUnitId =
       pantryNetWeightUnitId ||
@@ -192,7 +193,9 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     // comes from picking an existing store (PurchaseInfoInput has no free-text
     // store name). acquisitionMethod is always meaningful, so include it
     // whenever any purchase field is set (or the method isn't the default).
-    const parsedCost = costPerUnit.trim() ? parseFloat(costPerUnit) : undefined;
+    const parsedCost = costPerUnit.trim()
+      ? parseDecimalInput(costPerUnit)
+      : undefined;
     const costValue =
       parsedCost !== undefined && !isNaN(parsedCost) && parsedCost > 0
         ? parsedCost
@@ -244,9 +247,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       thresholds:
         minQuantity || restockQuantity
           ? {
-              minQuantity: minQuantity ? parseFloat(minQuantity) : undefined,
+              minQuantity: minQuantity
+                ? parseDecimalInput(minQuantity)
+                : undefined,
               restockQuantity: restockQuantity
-                ? parseFloat(restockQuantity)
+                ? parseDecimalInput(restockQuantity)
                 : undefined,
             }
           : undefined,
@@ -291,7 +296,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
                 !selectedStorageLocationId && storageLocation.trim()
                   ? storageLocation.trim()
                   : null,
-              minQuantity: minQuantity ? parseFloat(minQuantity) : null,
+              minQuantity: minQuantity ? parseDecimalInput(minQuantity) : null,
             },
             client.cache,
           ),

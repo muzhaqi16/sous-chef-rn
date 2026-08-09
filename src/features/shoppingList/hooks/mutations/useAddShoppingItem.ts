@@ -29,6 +29,7 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
@@ -70,7 +71,7 @@ export function useAddShoppingItem({
     // optimistic entity still needs a numeric quantity — parseFloat takes the
     // leading number ("1/3" → 1), matching the screen form's optimistic value.
     const optimisticQuantity = input.quantityInput
-      ? parseFloat(input.quantityInput) || 1
+      ? parseDecimalInput(input.quantityInput) || 1
       : input.quantity ?? 1;
 
     // One item per add — the batch mutation wraps it below. `shoppingListId`
@@ -88,7 +89,7 @@ export function useAddShoppingItem({
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
       ...(input.estimatedPrice && {
-        pricing: { estimatedPrice: parseFloat(input.estimatedPrice) },
+        pricing: { estimatedPrice: parseDecimalInput(input.estimatedPrice) },
       }),
       ...((input.brandName || input.brandId) && {
         brand: {

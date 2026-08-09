@@ -946,7 +946,7 @@
     "unit": "Unità",
     "unitPlaceholder": "pz, kg, ecc.",
     "estimatedPrice": "Prezzo stimato",
-    "estimatedPricePlaceholder": "es. 4.99",
+    "estimatedPricePlaceholder": "es. 4,99",
     "notes": "Note",
     "notesPlaceholder": "Eventuali note speciali...",
     "pleaseEnterItemName": "Inserisci il nome di un articolo",
@@ -1140,7 +1140,9 @@
     "gotIt": "Capito",
     "deleteTitle": "Elimina posizione",
     "deleteConfirm": "Sei sicuro di voler eliminare \"{{name}}\"? Non può essere annullato.",
-    "ok": "OK"
+    "ok": "OK",
+    "offlineTitle": "Non ancora caricate",
+    "offlineDescription": "Le tue posizioni di conservazione non sono state caricate su questo dispositivo. Riconnettiti per vederle."
   },
   "pantryAnalytics": {
     "title": "Analitica dispensa",
@@ -2313,9 +2315,6 @@
     "expirationDate": "Data di scadenza",
     "expirationPlaceholder": "Seleziona data",
     "storage": "Conservazione",
-    "stateAmbient": "Ambiente",
-    "stateRefrigerated": "Refrigerato",
-    "stateFrozen": "Congelato",
     "restockFailed": "Impossibile rifornire l'articolo.",
     "addFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
     "addFailed": "Impossibile aggiungere l'articolo",
@@ -2345,7 +2344,7 @@
     "store": "Negozio",
     "storePlaceholder": "es., Costco, Esselunga",
     "cost": "Costo per unità",
-    "costPlaceholder": "es., 4.99",
+    "costPlaceholder": "es., 4,99",
     "acquisitionMethod": "Come acquisito",
     "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
@@ -2951,7 +2950,7 @@
   "netWeightEntry": {
     "sectionTitle": "Pesi netti",
     "weightLabel": "Peso",
-    "weightPlaceholder": "es. 3.4",
+    "weightPlaceholder": "es. 3,4",
     "unitLabel": "Unità",
     "unitPlaceholder": "es. oz, g",
     "addButton": "Aggiungi peso netto"
@@ -3090,7 +3089,7 @@
     "placeholderUnit": "pz, dozzina",
     "placeholderAlertBelow": "es. 2",
     "placeholderRestockTo": "es. 6",
-    "placeholderNetWeight": "es. 14.5",
+    "placeholderNetWeight": "es. 14,5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "Nessuna dispensa selezionata. Seleziona prima una dispensa.",
     "addFailed": "Impossibile aggiungere l'articolo. Riprova.",

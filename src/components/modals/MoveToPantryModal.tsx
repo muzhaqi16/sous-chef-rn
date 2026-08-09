@@ -21,6 +21,7 @@ import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryMod
 import { PantrySelector } from './moveToPantry/PantrySelector';
 import { StorageStateControl } from './moveToPantry/StorageStateControl';
 import { ExpirationDateField } from './moveToPantry/ExpirationDateField';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -144,7 +145,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
     // Parse price value (optional)
     const actualPrice = actualPriceInput
-      ? parseFloat(actualPriceInput)
+      ? parseDecimalInput(actualPriceInput)
       : undefined;
 
     onConfirm({

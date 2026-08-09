@@ -6,6 +6,7 @@ import {
   type UnitSpecInput,
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 type FormState = {
   itemName: string;
@@ -157,7 +158,9 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
 
     // Pricing — nest into PricingEstimatesInput
     if (dirtyFields.estimatedPrice && formState.estimatedPrice) {
-      input.pricing = { estimatedPrice: parseFloat(formState.estimatedPrice) };
+      input.pricing = {
+        estimatedPrice: parseDecimalInput(formState.estimatedPrice),
+      };
     }
 
     if (dirtyFields.priority) {

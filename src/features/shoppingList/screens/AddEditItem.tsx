@@ -48,6 +48,7 @@ import {
   executeWithLoadingState,
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 type RouteParams = {
   listId: string;
@@ -242,7 +243,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const id = generateEntityId();
         const optimisticItem = createOptimisticShoppingListItem(id, {
           itemName,
-          quantity: parseFloat(quantityInput) || 1,
+          quantity: parseDecimalInput(quantityInput) || 1,
           quantityInput,
           unitName: unit || null,
           category: category || null,
@@ -268,7 +269,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                   notes,
                   category,
                   ...(estimatedPrice && {
-                    pricing: { estimatedPrice: parseFloat(estimatedPrice) },
+                    pricing: {
+                      estimatedPrice: parseDecimalInput(estimatedPrice),
+                    },
                   }),
                   // Always send priority (0/1/2) so "low" (0) persists — matches
                   // the in-sheet add path and lets an edit lower priority back to

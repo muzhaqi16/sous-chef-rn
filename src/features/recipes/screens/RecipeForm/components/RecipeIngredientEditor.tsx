@@ -19,6 +19,7 @@ import { generateId } from '#/utils/generateId';
 import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '../useRecipeForm';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -112,7 +113,7 @@ export const RecipeIngredientEditor = forwardRef<
     onSave({
       id: editingId ?? `temp-ing-${generateId()}`,
       name: name.trim(),
-      quantity: parseFloat(quantity) || 1,
+      quantity: parseDecimalInput(quantity) || 1,
       itemId,
       unitId,
       preparation: preparation.trim(),

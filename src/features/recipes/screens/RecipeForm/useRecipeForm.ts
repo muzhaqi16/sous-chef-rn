@@ -14,6 +14,7 @@ import {
 import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -279,7 +280,8 @@ export function useRecipeForm() {
         cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
       },
       nutrition: {
-        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+        caloriesPerServing:
+          parseDecimalInput(state.caloriesPerServing) || undefined,
       },
       dietary: {
         diets: state.diets.length > 0 ? state.diets : undefined,
@@ -321,7 +323,8 @@ export function useRecipeForm() {
         cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
       },
       nutrition: {
-        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+        caloriesPerServing:
+          parseDecimalInput(state.caloriesPerServing) || undefined,
       },
       dietary: {
         diets: state.diets.length > 0 ? state.diets : undefined,

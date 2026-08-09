@@ -946,7 +946,7 @@
     "unit": "Njësia",
     "unitPlaceholder": "copë, kg, etj.",
     "estimatedPrice": "Çmimi i parashikuar",
-    "estimatedPricePlaceholder": "p.sh. 4.99",
+    "estimatedPricePlaceholder": "p.sh. 4,99",
     "notes": "Shënime",
     "notesPlaceholder": "Çdo shënim i veçantë...",
     "pleaseEnterItemName": "Shkruaj emrin e një artikulli",
@@ -1140,7 +1140,9 @@
     "gotIt": "Kuptova",
     "deleteTitle": "Fshi vendin e ruajtjes",
     "deleteConfirm": "Je i sigurt që do ta fshish \"{{name}}\"? Ky veprim nuk mund të zhbëhet.",
-    "ok": "OK"
+    "ok": "OK",
+    "offlineTitle": "Ende pa ngarkuar",
+    "offlineDescription": "Vendndodhjet e ruajtjes nuk janë ngarkuar në këtë pajisje. Rilidhu për t'i parë."
   },
   "pantryAnalytics": {
     "title": "Analitika e qilarit",
@@ -2313,9 +2315,6 @@
     "expirationDate": "Data e skadimit",
     "expirationPlaceholder": "Zgjidh datën",
     "storage": "Ruajtja",
-    "stateAmbient": "Ambient",
-    "stateRefrigerated": "Në frigorifer",
-    "stateFrozen": "I ngrirë",
     "restockFailed": "Nuk u riplotësua dot artikulli.",
     "addFailedRetry": "Nuk u shtua dot artikulli. Provoje sërish.",
     "addFailed": "Nuk u shtua dot artikulli",
@@ -2345,7 +2344,7 @@
     "store": "Dyqani",
     "storePlaceholder": "p.sh., Costco, Conad",
     "cost": "Kostoja për njësi",
-    "costPlaceholder": "p.sh., 4.99",
+    "costPlaceholder": "p.sh., 4,99",
     "acquisitionMethod": "Si u sigurua",
     "methodPurchased": "Blerë",
     "methodHomegrown": "Rritur në shtëpi",
@@ -2951,7 +2950,7 @@
   "netWeightEntry": {
     "sectionTitle": "Peshat neto",
     "weightLabel": "Pesha",
-    "weightPlaceholder": "p.sh. 3.4",
+    "weightPlaceholder": "p.sh. 3,4",
     "unitLabel": "Njësia",
     "unitPlaceholder": "p.sh. oz, g",
     "addButton": "Shto peshë neto"
@@ -3090,7 +3089,7 @@
     "placeholderUnit": "copë, duzinë",
     "placeholderAlertBelow": "p.sh., 2",
     "placeholderRestockTo": "p.sh., 6",
-    "placeholderNetWeight": "p.sh., 14.5",
+    "placeholderNetWeight": "p.sh., 14,5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "Nuk është zgjedhur asnjë qilar. Zgjidh një qilar së pari.",
     "addFailed": "Shtimi i artikullit dështoi. Provo përsëri.",

@@ -18,6 +18,7 @@ import {
   executeCacheUpdate,
 } from '#/utils/compilerSafeWrappers';
 import { useCreateStorageLocation } from './useCreateStorageLocation';
+import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
 import { t } from '#/i18n/t';
 
 /**
@@ -119,6 +120,13 @@ export function useStorageLocationManagement(
       errorPolicy: 'ignore', // Return cached data on network errors instead of empty array
     },
   );
+
+  // `errorPolicy: 'ignore'` swallows offlineModeLink's synthetic cache-miss
+  // error, so "we never tried and have nothing" has to be read from the absence
+  // of data rather than from an error. Without it an offline user sees the
+  // ordinary empty state, which invites them to create a location that may
+  // already exist on the server.
+  const networkBlocked = useBlocksCacheMissQueries();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
   // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.
@@ -243,6 +251,7 @@ export function useStorageLocationManagement(
     tree,
     loading,
     initialLoading: !data && loading,
+    offline: networkBlocked && !data,
     creating,
     updating,
     error,

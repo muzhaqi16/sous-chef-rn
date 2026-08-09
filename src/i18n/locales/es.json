@@ -946,7 +946,7 @@
     "unit": "Unidad",
     "unitPlaceholder": "ud, kg, etc.",
     "estimatedPrice": "Precio estimado",
-    "estimatedPricePlaceholder": "p. ej., 4.99",
+    "estimatedPricePlaceholder": "p. ej., 4,99",
     "notes": "Notas",
     "notesPlaceholder": "Cualquier nota especial...",
     "pleaseEnterItemName": "Introduce un nombre de artículo",
@@ -1140,7 +1140,9 @@
     "gotIt": "Entendido",
     "deleteTitle": "Eliminar ubicación",
     "deleteConfirm": "¿Seguro que quieres eliminar \"{{name}}\"? Esto no se puede deshacer.",
-    "ok": "OK"
+    "ok": "OK",
+    "offlineTitle": "Aún no se ha cargado",
+    "offlineDescription": "Tus ubicaciones de almacenamiento no se han cargado en este dispositivo. Vuelve a conectarte para verlas."
   },
   "pantryAnalytics": {
     "title": "Analíticas de la despensa",
@@ -2313,9 +2315,6 @@
     "expirationDate": "Fecha de caducidad",
     "expirationPlaceholder": "Seleccionar fecha",
     "storage": "Almacenamiento",
-    "stateAmbient": "Ambiente",
-    "stateRefrigerated": "Refrigerado",
-    "stateFrozen": "Congelado",
     "restockFailed": "No se pudo reponer el artículo.",
     "addFailedRetry": "No se pudo añadir el artículo. Inténtalo de nuevo.",
     "addFailed": "No se pudo añadir el artículo",
@@ -2345,7 +2344,7 @@
     "store": "Tienda",
     "storePlaceholder": "ej., Costco, Mercadona",
     "cost": "Costo por unidad",
-    "costPlaceholder": "ej., 4.99",
+    "costPlaceholder": "ej., 4,99",
     "acquisitionMethod": "Cómo se adquirió",
     "methodPurchased": "Comprado",
     "methodHomegrown": "De cosecha propia",
@@ -2951,7 +2950,7 @@
   "netWeightEntry": {
     "sectionTitle": "Pesos netos",
     "weightLabel": "Peso",
-    "weightPlaceholder": "p. ej., 3.4",
+    "weightPlaceholder": "p. ej., 3,4",
     "unitLabel": "Unidad",
     "unitPlaceholder": "p. ej., oz, g",
     "addButton": "Añadir peso neto"
@@ -3090,7 +3089,7 @@
     "placeholderUnit": "uds, docena",
     "placeholderAlertBelow": "p. ej., 2",
     "placeholderRestockTo": "p. ej., 6",
-    "placeholderNetWeight": "p. ej., 14.5",
+    "placeholderNetWeight": "p. ej., 14,5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
     "addFailed": "No se pudo añadir el artículo. Inténtalo de nuevo.",
