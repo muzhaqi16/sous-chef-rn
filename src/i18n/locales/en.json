@@ -1989,7 +1989,8 @@
     "title": "Browse Templates",
     "searchPlaceholder": "Search templates...",
     "noTemplates": "No templates found",
-    "categoryAll": "All"
+    "categoryAll": "All",
+    "offline": "Templates aren't available offline. Reconnect to browse them."
   },
   "templateCard": {
     "usedTimes": "Used {{count}}x",

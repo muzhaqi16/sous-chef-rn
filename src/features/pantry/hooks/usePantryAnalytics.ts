@@ -14,7 +14,7 @@ import {
   type AnalyticsFilters,
 } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']
@@ -59,7 +59,6 @@ export function usePantryAnalytics({
   initialDateRange = DateRange.LastMonth,
   ledgerGranularity: initialLedgerGranularity = PeriodGranularity.Weekly,
 }: UsePantryAnalyticsOptions): UsePantryAnalyticsReturn {
-  const networkBlocked = useBlocksCacheMissQueries();
   const [dateRange, setDateRange] = useState<DateRange>(initialDateRange);
   const [ledgerGranularity, setLedgerGranularity] = useState<PeriodGranularity>(
     initialLedgerGranularity,
@@ -118,29 +117,21 @@ export function usePantryAnalytics({
   const wasteAnalytics = wasteQueryData?.pantry?.wasteAnalytics ?? null;
   const ledgerAnalytics = ledgerQueryData?.pantry?.ledgerAnalytics ?? null;
 
-  /**
-   * Splits `offlineModeLink`'s synthetic "no cached data" error away from a
-   * genuine failure. These queries are filtered (`dateRange`, `granularity`),
-   * so each combination is its own cache entry — offline, changing a filter is
-   * a guaranteed miss even when the screen was fully populated a second ago.
-   * Reporting that as an error puts a red alert on a screen where nothing is
-   * actually wrong, so it is surfaced as an offline state instead.
-   *
-   * Only when there is no data: a cached hit alongside a failed background
-   * revalidation is still worth showing, and stays a plain (non-blocking)
-   * error.
-   */
-  const classify = (error: unknown, data: unknown) => {
-    const unavailableOffline = networkBlocked && !!error && data === null;
-    return {
-      error: unavailableOffline ? undefined : (error as Error | undefined),
-      offline: unavailableOffline,
-    };
-  };
-
-  const usage = classify(usageError, usageAnalytics);
-  const waste = classify(wasteError, wasteAnalytics);
-  const ledger = classify(ledgerError, ledgerAnalytics);
+  // Filtered by `dateRange` / `granularity`, so each combination is its own
+  // cache entry — offline, changing a filter is a guaranteed miss even when the
+  // screen was populated a second ago. See `useOfflineAwareError`.
+  const usage = useOfflineAwareError(
+    usageError as Error | undefined,
+    usageAnalytics !== null,
+  );
+  const waste = useOfflineAwareError(
+    wasteError as Error | undefined,
+    wasteAnalytics !== null,
+  );
+  const ledger = useOfflineAwareError(
+    ledgerError as Error | undefined,
+    ledgerAnalytics !== null,
+  );
 
   return {
     usageData: usageAnalytics,

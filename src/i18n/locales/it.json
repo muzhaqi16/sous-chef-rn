@@ -1989,7 +1989,8 @@
     "title": "Sfoglia modelli",
     "searchPlaceholder": "Cerca modelli...",
     "noTemplates": "Nessun modello trovato",
-    "categoryAll": "Tutti"
+    "categoryAll": "Tutti",
+    "offline": "I modelli non sono disponibili offline. Riconnettiti per sfogliarli."
   },
   "templateCard": {
     "usedTimes": "Usato {{count}} volte",

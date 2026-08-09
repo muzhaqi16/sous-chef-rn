@@ -4,6 +4,7 @@ import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplat
 import { type TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import type { HookReturn } from '#hooks/types';
 
 interface UseMealTemplatesOptions {
@@ -14,6 +15,12 @@ interface MealTemplatesState {
   templates: MealTemplateDisplayFragment[];
   loading: boolean;
   error: Error | undefined;
+  /**
+   * No network was attempted and nothing was cached for the current search and
+   * category. Distinct from an empty result — the list being blank here means
+   * "we don't know", not "there are none".
+   */
+  offline: boolean;
   hasMore: boolean;
   totalCount: number | undefined;
   searchQuery: string;
@@ -60,11 +67,22 @@ export function useMealTemplates(
     fetchMore,
   });
 
+  // `search` and `category` are live controls, so every combination is its own
+  // cache entry — offline, the first search is a guaranteed miss. Without this
+  // the sheet would claim "no templates found", which is a different statement
+  // from "we couldn't check".
+  const templates = connectionData.items as MealTemplateDisplayFragment[];
+  const classified = useOfflineAwareError(
+    error as Error | undefined,
+    templates.length > 0,
+  );
+
   return {
     state: {
-      templates: connectionData.items as MealTemplateDisplayFragment[],
+      templates,
       loading,
-      error: error as Error | undefined,
+      error: classified.error,
+      offline: classified.offline,
       hasMore: connectionData.hasMore,
       totalCount: connectionData.totalCount,
       searchQuery,

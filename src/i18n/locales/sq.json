@@ -1989,7 +1989,8 @@
     "title": "Shfleto modelet",
     "searchPlaceholder": "Kërko modele...",
     "noTemplates": "Nuk u gjet asnjë model",
-    "categoryAll": "Të gjitha"
+    "categoryAll": "Të gjitha",
+    "offline": "Modelet nuk janë të disponueshme jashtë linje. Rilidhu për t'i shfletuar."
   },
   "templateCard": {
     "usedTimes": "Përdorur {{count}} herë",

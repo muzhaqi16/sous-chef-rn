@@ -94,7 +94,14 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
   const {
-    state: { templates, loading, searchQuery, selectedCategory, hasMore },
+    state: {
+      templates,
+      loading,
+      offline,
+      searchQuery,
+      selectedCategory,
+      hasMore,
+    },
     actions: { setSearchQuery, setSelectedCategory, loadMore },
   } = useMealTemplates();
 
@@ -139,9 +146,15 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
           </View>
         ) : templates.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Icon name="document-text-outline" size={48} tone="textTertiary" />
-            <Text size="base" tone="secondary">
-              {t('templateBrowser.noTemplates')}
+            <Icon
+              name={offline ? 'cloud-offline-outline' : 'document-text-outline'}
+              size={48}
+              tone="textTertiary"
+            />
+            <Text size="base" tone="secondary" align="center">
+              {offline
+                ? t('templateBrowser.offline')
+                : t('templateBrowser.noTemplates')}
             </Text>
           </View>
         ) : (

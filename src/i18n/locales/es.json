@@ -1989,7 +1989,8 @@
     "title": "Explorar plantillas",
     "searchPlaceholder": "Buscar plantillas...",
     "noTemplates": "No se encontraron plantillas",
-    "categoryAll": "Todas"
+    "categoryAll": "Todas",
+    "offline": "Las plantillas no están disponibles sin conexión. Vuelve a conectarte para verlas."
   },
   "templateCard": {
     "usedTimes": "Usada {{count}}x",
