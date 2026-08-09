@@ -5,7 +5,7 @@ import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
 import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';

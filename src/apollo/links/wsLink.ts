@@ -6,7 +6,7 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/utils/deviceId';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LaunchArguments } from 'react-native-launch-arguments';

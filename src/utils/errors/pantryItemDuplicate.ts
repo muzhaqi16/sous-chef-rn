@@ -1,6 +1,6 @@
 import { t } from '#/i18n/t';
 import { alertService } from '#/services/alertService';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
 
 export interface PantryItemDuplicateInfo {
   existingPantryItemId: string;

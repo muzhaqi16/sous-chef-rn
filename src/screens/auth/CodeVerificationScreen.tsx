@@ -24,7 +24,7 @@ import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { TopLevelErrorCode } from '#/utils/errors/topLevelErrorCodes';
 
 type CodeVerificationValues = {
   code: string;
