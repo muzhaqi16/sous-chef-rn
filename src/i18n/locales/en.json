@@ -3238,7 +3238,8 @@
   },
   "offline": {
     "title": "Offline",
-    "body": "This feature requires an internet connection"
+    "body": "This feature requires an internet connection",
+    "noCachedData": "This isn't available offline yet. Reconnect to load it."
   },
   "complexity": {
     "title": "Request Too Large",
@@ -3412,7 +3413,15 @@
     "expiringSoon": "Expiring soon",
     "alreadyExpired": "Already expired",
     "title": "What happened with {{itemName}}?",
-    "thisItem": "this item"
+    "thisItem": "this item",
+    "toast": {
+      "CONSUMED": "Marked as consumed",
+      "COOKED": "Marked as cooked",
+      "EXTENDED": "Shelf life extended",
+      "NO_ACTION": "Dismissed",
+      "SHARED": "Marked as shared",
+      "WASTE": "Marked as wasted"
+    }
   },
   "homeRoles": {
     "owner": "Owner",
@@ -3502,5 +3511,30 @@
   "tagInput": {
     "maxTagsReached_one": "Maximum {{count}} tag reached",
     "maxTagsReached_other": "Maximum {{count}} tags reached"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventory adjusted",
+    "COOKING": "Cooking",
+    "GENERAL": "Consumed",
+    "GIFT": "Gift",
+    "MEAL_PREP": "Meal prep",
+    "RESTOCK": "Restocked",
+    "SNACK": "Snack",
+    "TRANSFER": "Transfer",
+    "WASTE": "Wasted"
+  },
+  "unitType": {
+    "AREA": "Area",
+    "COUNT": "Count",
+    "LENGTH": "Length",
+    "TIME": "Time",
+    "VOLUME": "Volume",
+    "WEIGHT": "Weight"
+  },
+  "storageStateShort": {
+    "AMBIENT": "Dry pantry",
+    "FROZEN": "Freezer",
+    "NONE": "None",
+    "REFRIGERATED": "Fridge"
   }
 }

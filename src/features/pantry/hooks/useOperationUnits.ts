@@ -1,4 +1,6 @@
 import { useQuery } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
+import type { Translate } from '#/i18n/types';
 import {
   ConsumptionUnitsForItemDocument,
   RestockUnitsForItemDocument,
@@ -77,15 +79,6 @@ interface UseOperationUnitsResult {
 // Constants
 // ---------------------------------------------------------------------------
 
-const TYPE_LABELS: Record<UnitType, string> = {
-  [UnitType.Weight]: 'Weight',
-  [UnitType.Volume]: 'Volume',
-  [UnitType.Count]: 'Count',
-  [UnitType.Length]: 'Length',
-  [UnitType.Area]: 'Area',
-  [UnitType.Time]: 'Time',
-};
-
 const TYPE_ORDER: UnitType[] = [
   UnitType.Volume,
   UnitType.Weight,
@@ -128,6 +121,7 @@ function toRankedUnitInfo(
 function buildGroups(
   units: RankedUnitInfo[],
   trackingUnitType: UnitType | undefined,
+  translate: Translate,
 ): RankedUnitGroup[] {
   const byType = new Map<UnitType, RankedUnitInfo[]>();
   for (const unit of units) {
@@ -144,15 +138,15 @@ function buildGroups(
   if (trackingUnitType && byType.has(trackingUnitType)) {
     orderedTypes.push(trackingUnitType);
   }
-  for (const t of TYPE_ORDER) {
-    if (byType.has(t) && !orderedTypes.includes(t)) {
-      orderedTypes.push(t);
+  for (const orderedType of TYPE_ORDER) {
+    if (byType.has(orderedType) && !orderedTypes.includes(orderedType)) {
+      orderedTypes.push(orderedType);
     }
   }
 
   return orderedTypes.map(type => ({
     type,
-    label: TYPE_LABELS[type],
+    label: translate(`unitType.${type}`),
     // Units arrive pre-sorted by rank from the API — preserve that order
     units: byType.get(type)!,
   }));
@@ -182,6 +176,7 @@ export function useOperationUnits({
   netWeightUnitId,
   operation,
 }: UseOperationUnitsOptions): UseOperationUnitsResult {
+  const { t } = useTranslation();
   const isConsumption =
     operation === PantryOperation.Consume ||
     operation === PantryOperation.Waste;
@@ -211,7 +206,7 @@ export function useOperationUnits({
   const error = isConsumption ? consumptionResult.error : restockResult.error;
 
   const allUnits = rawUnits.map(ru => toRankedUnitInfo(ru, trackingUnitId));
-  const groups = buildGroups(allUnits, trackingUnitType);
+  const groups = buildGroups(allUnits, trackingUnitType, t);
 
   // Default unit = first in ranked list (rank 1), prefer net weight unit for dual-tracked items
   const defaultRankedUnit =

@@ -211,7 +211,7 @@ export const PantryItemDetail: React.FC<
   const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
-  const storageStateDisplay = formatStorageState(item?.storageState);
+  const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name || null;
   const categoryName = item?.item?.categories?.[0]?.category?.name || null;
   const itemPhotos = galleryPhotos(item?.item?.photos);

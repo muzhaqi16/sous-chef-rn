@@ -15,6 +15,7 @@
  */
 
 import { useMutation } from '@apollo/client/react';
+import { useTranslation } from 'react-i18next';
 import {
   MarkExpirationActionDocument,
   MarkExpirationNotificationAsReadDocument,
@@ -26,16 +27,8 @@ import { errorService } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { toastService } from '#/services/toastService';
 
-const ACTION_LABELS: Record<ExpirationAction, string> = {
-  [ExpirationAction.Cooked]: 'Marked as cooked',
-  [ExpirationAction.Consumed]: 'Marked as consumed',
-  [ExpirationAction.Shared]: 'Marked as shared',
-  [ExpirationAction.Extended]: 'Shelf life extended',
-  [ExpirationAction.Waste]: 'Marked as wasted',
-  [ExpirationAction.NoAction]: 'Dismissed',
-};
-
 export function useExpirationNotificationSync() {
+  const { t } = useTranslation();
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
   // The server merged the former dismiss mutation into
   // markExpirationNotificationAsRead — marking read IS the dismissal.
@@ -53,7 +46,7 @@ export function useExpirationNotificationSync() {
     // Also mark the generic notification as read
     useStore.getState().markAsRead(notificationId);
 
-    toastService.success(ACTION_LABELS[action]);
+    toastService.success(t(`expirationAction.toast.${action}`));
 
     executeMutation(
       () =>

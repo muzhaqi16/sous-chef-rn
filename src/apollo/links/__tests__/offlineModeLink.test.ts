@@ -8,6 +8,7 @@ import {
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createOfflineModeLink } from '../offlineModeLink';
 import { useStore } from '#store';
+import { getI18n } from '#/i18n/config';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
@@ -66,6 +67,18 @@ function makeForward(): ApolloLink.ForwardFunction {
   );
 }
 
+/**
+ * Screens render `error.message` verbatim, so this string is UI copy. It used
+ * to be built as `Offline: no cached data available for ${operationName}`,
+ * which put a GraphQL operation name on screen in untranslated English. Assert
+ * the localized copy and the absence of the operation name rather than a
+ * substring of the old wording, which any rewording would defeat.
+ */
+function expectUserFacingOfflineMessage(message: string | undefined): void {
+  expect(message).toBe(getI18n().t('offline.noCachedData'));
+  expect(message).not.toContain('GetItems');
+}
+
 describe('createOfflineModeLink', () => {
   const mockedGetState = useStore.getState as jest.Mock;
   const link = createOfflineModeLink();
@@ -114,7 +127,7 @@ describe('createOfflineModeLink', () => {
     // The error is load-bearing: an error-free `{ data: null }` makes Apollo 4
     // write `{}` against the selection set ("Missing field X" warning spam).
     expect(value?.data).toBeNull();
-    expect(value?.errors?.[0]?.message).toContain('Offline');
+    expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
   });
 
   it('blocks cache-miss queries when the device is offline (error result)', () => {
@@ -130,7 +143,7 @@ describe('createOfflineModeLink', () => {
     expect(emitted).toBe(true);
     expect(completed).toBe(true);
     expect(value?.data).toBeNull();
-    expect(value?.errors?.[0]?.message).toContain('Offline');
+    expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
   });
 
   it('forwards cache-miss queries when only the circuit breaker is open (organic probe)', () => {

@@ -3238,7 +3238,8 @@
   },
   "offline": {
     "title": "Offline",
-    "body": "Kjo veçori kërkon lidhje interneti"
+    "body": "Kjo veçori kërkon lidhje interneti",
+    "noCachedData": "Kjo nuk është ende e disponueshme jashtë linje. Rilidhu për ta ngarkuar."
   },
   "complexity": {
     "title": "Kërkesë shumë e madhe",
@@ -3412,7 +3413,15 @@
     "expiringSoon": "Po skadon së shpejti",
     "alreadyExpired": "Tashmë i skaduar",
     "title": "Çfarë ndodhi me {{itemName}}?",
-    "thisItem": "këtë artikull"
+    "thisItem": "këtë artikull",
+    "toast": {
+      "CONSUMED": "Shënuar si i konsumuar",
+      "COOKED": "Shënuar si i gatuar",
+      "EXTENDED": "Afati i ruajtjes u zgjat",
+      "NO_ACTION": "U hoq",
+      "SHARED": "Shënuar si i ndarë",
+      "WASTE": "Shënuar si i hedhur"
+    }
   },
   "homeRoles": {
     "owner": "Pronar",
@@ -3502,5 +3511,30 @@
   "tagInput": {
     "maxTagsReached_one": "U arrit kufiri prej {{count}} etikete",
     "maxTagsReached_other": "U arrit kufiri prej {{count}} etiketash"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventari u rregullua",
+    "COOKING": "Gatuar",
+    "GENERAL": "Konsumuar",
+    "GIFT": "Dhuratë",
+    "MEAL_PREP": "Përgatitje vaktesh",
+    "RESTOCK": "Rifurnizuar",
+    "SNACK": "Meze",
+    "TRANSFER": "Transferim",
+    "WASTE": "Hedhur"
+  },
+  "unitType": {
+    "AREA": "Sipërfaqe",
+    "COUNT": "Sasi",
+    "LENGTH": "Gjatësi",
+    "TIME": "Kohë",
+    "VOLUME": "Vëllim",
+    "WEIGHT": "Peshë"
+  },
+  "storageStateShort": {
+    "AMBIENT": "Qilar",
+    "FROZEN": "Ngrirje",
+    "NONE": "Asnjë",
+    "REFRIGERATED": "Frigorifer"
   }
 }

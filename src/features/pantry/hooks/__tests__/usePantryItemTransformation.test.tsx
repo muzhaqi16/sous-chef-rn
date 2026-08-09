@@ -13,22 +13,30 @@ import {
   formatRemainingNetWeight,
   formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
+import { getI18n } from '#/i18n/config';
+
+// The real instance (jest.setup.js initializes it), so these assertions still
+// verify the copy in en.json rather than a stub's echo.
+const t = getI18n().t;
 
 describe('formatStorageState', () => {
   it('formats REFRIGERATED as Fridge', () => {
-    expect(formatStorageState('REFRIGERATED')).toBe('Fridge');
+    expect(formatStorageState('REFRIGERATED', t)).toBe('Fridge');
   });
   it('formats FROZEN as Freezer', () => {
-    expect(formatStorageState('FROZEN')).toBe('Freezer');
+    expect(formatStorageState('FROZEN', t)).toBe('Freezer');
   });
   it('formats AMBIENT as Dry pantry', () => {
-    expect(formatStorageState('AMBIENT')).toBe('Dry pantry');
+    expect(formatStorageState('AMBIENT', t)).toBe('Dry pantry');
+  });
+  it('formats NONE rather than leaking the raw enum', () => {
+    expect(formatStorageState('NONE', t)).toBe('None');
   });
   it('returns empty string for null', () => {
-    expect(formatStorageState(null)).toBe('');
+    expect(formatStorageState(null, t)).toBe('');
   });
   it('returns original string for unknown state', () => {
-    expect(formatStorageState('UNKNOWN')).toBe('UNKNOWN');
+    expect(formatStorageState('UNKNOWN', t)).toBe('UNKNOWN');
   });
 });
 

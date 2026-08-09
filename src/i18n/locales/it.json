@@ -3238,7 +3238,8 @@
   },
   "offline": {
     "title": "Offline",
-    "body": "Questa funzione richiede una connessione a internet"
+    "body": "Questa funzione richiede una connessione a internet",
+    "noCachedData": "Questo non è ancora disponibile offline. Riconnettiti per caricarlo."
   },
   "complexity": {
     "title": "Richiesta troppo grande",
@@ -3412,7 +3413,15 @@
     "expiringSoon": "In scadenza",
     "alreadyExpired": "Già scaduto",
     "title": "Che fine ha fatto {{itemName}}?",
-    "thisItem": "questo articolo"
+    "thisItem": "questo articolo",
+    "toast": {
+      "CONSUMED": "Segnato come consumato",
+      "COOKED": "Segnato come cucinato",
+      "EXTENDED": "Durata di conservazione estesa",
+      "NO_ACTION": "Ignorato",
+      "SHARED": "Segnato come condiviso",
+      "WASTE": "Segnato come sprecato"
+    }
   },
   "homeRoles": {
     "owner": "Proprietario",
@@ -3502,5 +3511,30 @@
   "tagInput": {
     "maxTagsReached_one": "Raggiunto il massimo di {{count}} tag",
     "maxTagsReached_other": "Raggiunto il massimo di {{count}} tag"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventario corretto",
+    "COOKING": "Cucinato",
+    "GENERAL": "Consumato",
+    "GIFT": "Regalo",
+    "MEAL_PREP": "Preparazione pasti",
+    "RESTOCK": "Rifornito",
+    "SNACK": "Spuntino",
+    "TRANSFER": "Trasferimento",
+    "WASTE": "Sprecato"
+  },
+  "unitType": {
+    "AREA": "Area",
+    "COUNT": "Quantità",
+    "LENGTH": "Lunghezza",
+    "TIME": "Tempo",
+    "VOLUME": "Volume",
+    "WEIGHT": "Peso"
+  },
+  "storageStateShort": {
+    "AMBIENT": "Dispensa",
+    "FROZEN": "Congelatore",
+    "NONE": "Nessuno",
+    "REFRIGERATED": "Frigo"
   }
 }

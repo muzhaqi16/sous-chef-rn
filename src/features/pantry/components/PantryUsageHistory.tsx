@@ -7,17 +7,6 @@ import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 
-const usagePurposeLabels: Record<string, string> = {
-  [UsagePurpose.General]: 'Consumed',
-  [UsagePurpose.Cooking]: 'Cooking',
-  [UsagePurpose.Snack]: 'Snack',
-  [UsagePurpose.MealPrep]: 'Meal prep',
-  [UsagePurpose.Restock]: 'Restocked',
-  [UsagePurpose.Waste]: 'Wasted',
-  [UsagePurpose.Gift]: 'Gift',
-  [UsagePurpose.Transfer]: 'Transfer',
-};
-
 interface UsageRecord {
   id: string;
   usedAt: string;
@@ -52,9 +41,13 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
         {usageRecords.slice(0, 5).map(({ node: usage }) => {
           const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
           const isRestock = usage.purpose === UsagePurpose.Restock;
-          const purposeLabel = isAdjustment
-            ? 'Inventory adjusted'
-            : usagePurposeLabels[usage.purpose] ?? usage.purpose;
+          // Falls back to the raw value for a purpose the server has but this
+          // client's enum predates; `enumKeyCoverage.test.ts` guards the
+          // members we do know about.
+          const purposeLabel = t(
+            `usagePurpose.${usage.purpose}`,
+            usage.purpose,
+          );
           const quantityPrefix = isAdjustment
             ? usage.quantityUsed >= 0
               ? '+'

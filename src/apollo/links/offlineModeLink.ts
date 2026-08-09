@@ -3,6 +3,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
+import { t } from '#/i18n/t';
 
 /**
  * Operations that must always reach the network, even in offline mode.
@@ -106,9 +107,13 @@ export const createOfflineModeLink = () => {
         data: null,
         errors: [
           {
-            message: `Offline: no cached data available for ${
-              operationName || 'query'
-            }`,
+            // Surfaced to the user verbatim by screens that render
+            // `error.message`, so it stays localized and free of internals —
+            // the operation name is in the log line above, not here.
+            message: t(
+              'offline.noCachedData',
+              "This isn't available offline yet. Reconnect to load it.",
+            ),
           },
         ],
       });

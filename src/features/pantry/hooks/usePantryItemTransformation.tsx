@@ -1,5 +1,6 @@
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n/t';
+import type { Translate } from '#/i18n/types';
 // Plural keys need the options form, which the module-level t does not take.
 import { getI18n } from '#/i18n/config';
 
@@ -18,16 +19,19 @@ export interface ExpirationStatus {
   type: ExpirationStatusType;
 }
 
-// Helper to format storage state for display
-export const formatStorageState = (state?: string | null): string => {
-  if (!state) return '';
-  const mapping: Record<string, string> = {
-    [StorageState.Refrigerated]: 'Fridge',
-    [StorageState.Frozen]: 'Freezer',
-    [StorageState.Ambient]: 'Dry pantry',
-  };
-  return mapping[state] || state;
-};
+/**
+ * The short register used on the item detail screen ("Fridge", not
+ * "Refrigerated"), so it reads as a location rather than a setting. Kept as its
+ * own namespace rather than reusing `storageState.*`, which is the long form
+ * the pickers show.
+ *
+ * `t` is a parameter because resolving at module load would freeze whatever
+ * language happened to load first.
+ */
+export const formatStorageState = (
+  state: string | null | undefined,
+  translate: Translate,
+): string => (state ? translate(`storageStateShort.${state}`, state) : '');
 
 // Helper to calculate days until expiry (negative if expired)
 export const calculateExpiresIn = (

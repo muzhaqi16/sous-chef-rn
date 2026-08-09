@@ -5,12 +5,15 @@ import {
   Cuisine,
   Diet,
   Difficulty,
+  ExpirationAction,
   HealthGoal,
   ImagePerspective,
   Intolerance,
   ItemType,
   RecipeStatus,
   StorageState,
+  UnitType,
+  UsagePurpose,
 } from '#/graphql/generated/schemaTypes';
 
 /**
@@ -136,6 +139,41 @@ const CASES: EnumNamespace[] = [
     members: ImagePerspective,
     namespace: 'itemPhotos.perspective',
     keyFragment: lowerCased,
+  },
+  // src/features/pantry/components/PantryUsageHistory.tsx — the usage-history
+  // row label.
+  {
+    enumName: 'UsagePurpose',
+    members: UsagePurpose,
+    namespace: 'usagePurpose',
+    keyFragment: verbatim,
+  },
+  // src/features/pantry/hooks/useOperationUnits.ts — `buildGroups` labels each
+  // unit group in the picker.
+  {
+    enumName: 'UnitType',
+    members: UnitType,
+    namespace: 'unitType',
+    keyFragment: verbatim,
+  },
+  // src/features/pantry/hooks/usePantryItemTransformation.tsx —
+  // `formatStorageState`, the short register used on the item detail screen.
+  // A separate namespace from `storageState`, which is the long form the
+  // pickers show.
+  {
+    enumName: 'StorageState',
+    members: StorageState,
+    namespace: 'storageStateShort',
+    keyFragment: verbatim,
+  },
+  // src/features/notifications/hooks/useExpirationNotificationSync.ts — the
+  // confirmation toast. Distinct from `expirationAction.*`, which labels the
+  // options in the sheet ("Cooked" vs "Marked as cooked").
+  {
+    enumName: 'ExpirationAction',
+    members: ExpirationAction,
+    namespace: 'expirationAction.toast',
+    keyFragment: verbatim,
   },
 ];
 
