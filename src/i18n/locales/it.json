@@ -3528,7 +3528,12 @@
     "spinach": "Spinaci",
     "spinachSubtitle": "Scade tra 3 giorni",
     "milk": "Latte",
-    "milkSubtitle": "Latticini"
+    "milkSubtitle": "Latticini",
+    "pantrySeeActions": "Scorri a destra per vedere le azioni",
+    "pantryEditDelete": "Ora scorri a sinistra per modificare ed eliminare",
+    "shoppingEdit": "Scorri a sinistra per modificare",
+    "shoppingDelete": "Ora scorri a destra per eliminare",
+    "shoppingMarkPurchased": "Tocca la casella per segnare come acquistato"
   },
   "conversionPreview": {
     "approximate": "(circa)"

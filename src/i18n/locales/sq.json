@@ -3528,7 +3528,12 @@
     "spinach": "Spinaq",
     "spinachSubtitle": "Skadon për 3 ditë",
     "milk": "Qumësht",
-    "milkSubtitle": "Bulmet"
+    "milkSubtitle": "Bulmet",
+    "pantrySeeActions": "Rrëshqit djathtas për të parë veprimet",
+    "pantryEditDelete": "Tani rrëshqit majtas për të ndryshuar dhe fshirë",
+    "shoppingEdit": "Rrëshqit majtas për të ndryshuar",
+    "shoppingDelete": "Tani rrëshqit djathtas për të fshirë",
+    "shoppingMarkPurchased": "Prek kutinë për ta shënuar si të blerë"
   },
   "conversionPreview": {
     "approximate": "(afërsisht)"

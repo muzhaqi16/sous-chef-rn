@@ -3528,7 +3528,12 @@
     "spinach": "Spinach",
     "spinachSubtitle": "Expires in 3 days",
     "milk": "Milk",
-    "milkSubtitle": "Dairy"
+    "milkSubtitle": "Dairy",
+    "pantrySeeActions": "Swipe right to see item actions",
+    "pantryEditDelete": "Now swipe left for edit & delete",
+    "shoppingEdit": "Swipe left to edit",
+    "shoppingDelete": "Now swipe right to delete",
+    "shoppingMarkPurchased": "Tap the checkbox to mark purchased"
   },
   "conversionPreview": {
     "approximate": "(approx.)"

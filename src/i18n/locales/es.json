@@ -3528,7 +3528,12 @@
     "spinach": "Espinacas",
     "spinachSubtitle": "Caduca en 3 días",
     "milk": "Leche",
-    "milkSubtitle": "Lácteos"
+    "milkSubtitle": "Lácteos",
+    "pantrySeeActions": "Desliza a la derecha para ver las acciones",
+    "pantryEditDelete": "Ahora desliza a la izquierda para editar y eliminar",
+    "shoppingEdit": "Desliza a la izquierda para editar",
+    "shoppingDelete": "Ahora desliza a la derecha para eliminar",
+    "shoppingMarkPurchased": "Toca la casilla para marcar como comprado"
   },
   "conversionPreview": {
     "approximate": "(aprox.)"

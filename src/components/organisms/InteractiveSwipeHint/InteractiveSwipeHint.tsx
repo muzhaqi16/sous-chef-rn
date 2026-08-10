@@ -36,33 +36,42 @@ export interface InteractiveSwipeHintProps {
 interface StepConfig {
   type: 'swipe' | 'tap';
   direction: 'left' | 'right' | 'any';
-  instruction: string;
+  /**
+   * A key path, not a resolved string. These tables are built at import time,
+   * so a resolved string would freeze whichever language loaded first and never
+   * follow a language change; the consumer calls `t` at render instead.
+   */
+  instructionKey: string;
 }
 
 const PANTRY_STEPS: StepConfig[] = [
   {
     type: 'swipe',
     direction: 'right',
-    instruction: 'Swipe right to see item actions',
+    instructionKey: 'swipeHint.pantrySeeActions',
   },
   {
     type: 'swipe',
     direction: 'left',
-    instruction: 'Now swipe left for edit & delete',
+    instructionKey: 'swipeHint.pantryEditDelete',
   },
 ];
 
 const SHOPPING_STEPS: StepConfig[] = [
-  { type: 'swipe', direction: 'left', instruction: 'Swipe left to edit' },
+  {
+    type: 'swipe',
+    direction: 'left',
+    instructionKey: 'swipeHint.shoppingEdit',
+  },
   {
     type: 'swipe',
     direction: 'right',
-    instruction: 'Now swipe right to delete',
+    instructionKey: 'swipeHint.shoppingDelete',
   },
   {
     type: 'tap',
     direction: 'any',
-    instruction: 'Tap the checkbox to mark purchased',
+    instructionKey: 'swipeHint.shoppingMarkPurchased',
   },
 ];
 
@@ -255,7 +264,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             align="center"
             style={styles.instruction}
           >
-            {step?.instruction}
+            {step?.instructionKey ? t(step.instructionKey) : null}
           </Text>
 
           {/* Card area — Swipeable for swipe steps, plain card for tap steps */}
