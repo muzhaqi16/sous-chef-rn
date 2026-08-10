@@ -47,20 +47,29 @@ export async function getAuthTokens(): Promise<AuthTokens> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
+      // `login` returns the `LoginResult` union, so the payload fields are only
+      // reachable through an inline fragment. Selecting them directly fails
+      // validation ("Cannot query field \"accessToken\" on type
+      // \"LoginResult\""), token injection throws, and the caller falls back to
+      // a slow UI login — which then needs `login-screen` to exist and fails
+      // with a misleading timeout.
       query: `
         mutation Login($input: LoginInput!) {
           login(input: $input) {
-            accessToken
-            refreshToken
-            user {
-              id
-              email
-              emailVerified
-              role
-              onBoarded
-              createdAt
-              updatedAt
-              timezone
+            __typename
+            ... on AuthPayload {
+              accessToken
+              refreshToken
+              user {
+                id
+                email
+                emailVerified
+                role
+                onBoarded
+                createdAt
+                updatedAt
+                timezone
+              }
             }
           }
         }
@@ -88,7 +97,15 @@ export async function getAuthTokens(): Promise<AuthTokens> {
     );
   }
 
-  const { accessToken, refreshToken, user } = json.data.login;
+  // A refusal (bad credentials, locked account) resolves as a different union
+  // member with no `accessToken`, which would otherwise cache `undefined` and
+  // fail later as an unauthenticated request rather than a login problem.
+  const { __typename, accessToken, refreshToken, user } = json.data.login;
+  if (!accessToken) {
+    throw new Error(
+      `Login returned ${__typename} rather than AuthPayload — no access token. Check the test account (${TEST_USER.email}) exists and is not locked.`,
+    );
+  }
   cachedTokens = { accessToken, refreshToken, user };
   cacheTimestamp = now;
 

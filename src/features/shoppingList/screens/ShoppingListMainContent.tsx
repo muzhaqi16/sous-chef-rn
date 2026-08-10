@@ -307,6 +307,7 @@ export const ShoppingListMainContent: React.FC<
   const searchBarHeader = (
     <View style={styles.searchBarContainer}>
       <SearchBar
+        testID="shopping-list-search-input"
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={t('shoppingListScreen.searchPlaceholder')}

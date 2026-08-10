@@ -112,29 +112,29 @@ export class ShoppingListScreen extends BaseScreen {
 
     // Wait for "Add Manually" button to appear (indicates sheet is open)
     try {
-      await waitFor(element(by.id('add-shopping-add-manually-button')))
+      await waitFor(element(by.id('add-shopping-item-add-manually-button')))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
       // Modal didn't open - retry the tap
       console.log('Modal did not open, retrying add button tap...');
       await this.tapAddButton();
-      await waitFor(element(by.id('add-shopping-add-manually-button')))
+      await waitFor(element(by.id('add-shopping-item-add-manually-button')))
         .toBeVisible()
         .withTimeout(3000);
     }
-    await element(by.id('add-shopping-add-manually-button')).tap();
+    await element(by.id('add-shopping-item-add-manually-button')).tap();
 
     // Wait for add item screen to appear
-    await waitFor(element(by.id('add-item-modal'))).toBeVisible().withTimeout(5000);
+    await waitFor(element(by.id('add-shopping-item-modal'))).toBeVisible().withTimeout(5000);
 
     // Fill in item details - use replaceText to avoid Android stylus popup
-    const nameInput = element(by.id('add-item-name-input'));
+    const nameInput = element(by.id('add-shopping-item-name-input'));
     await nameInput.replaceText(name);
 
     if (quantity !== undefined) {
       const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
-      const quantityInput = element(by.id('add-item-quantity-input'));
+      const quantityInput = element(by.id('add-shopping-item-quantity-input'));
 
       // Use replaceText instead of clearAndType for better reliability
       await quantityInput.replaceText(quantityStr);
@@ -142,11 +142,11 @@ export class ShoppingListScreen extends BaseScreen {
 
     if (unit) {
       // Use replaceText for unit to avoid Android stylus popup
-      const unitInput = element(by.id('add-item-unit-picker'));
+      const unitInput = element(by.id('add-shopping-item-unit-picker'));
       await unitInput.replaceText(unit);
 
       // Press enter to confirm the unit
-      await element(by.id('add-item-unit-picker')).tapReturnKey();
+      await element(by.id('add-shopping-item-unit-picker')).tapReturnKey();
 
       // Wait for autocomplete to process
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -154,13 +154,13 @@ export class ShoppingListScreen extends BaseScreen {
 
     // Tap outside inputs to dismiss keyboard and ensure submit button is accessible
     // The modal container is safe to tap without closing the modal
-    await element(by.id('add-item-modal')).tap({ x: 10, y: 10 });
+    await element(by.id('add-shopping-item-modal')).tap({ x: 10, y: 10 });
 
     // Wait for keyboard to fully dismiss
     await new Promise(resolve => setTimeout(resolve, 500));
 
     // Submit - tap the checkmark button in the header
-    await this.tapByID('add-item-submit-button');
+    await this.tapByID('add-shopping-item-submit-button');
 
     // Check if error modal appeared (e.g., "Please enter a valid quantity")
     try {
@@ -183,7 +183,7 @@ export class ShoppingListScreen extends BaseScreen {
     }
 
     // Wait for modal to close (15s max to account for GraphQL mutation + Apollo cache updates)
-    await waitFor(element(by.id('add-item-modal')))
+    await waitFor(element(by.id('add-shopping-item-modal')))
       .not.toBeVisible()
       .withTimeout(15000);
 
