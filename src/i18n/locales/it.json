@@ -397,7 +397,8 @@
     "fullNameMin": "Il nome completo deve contenere almeno 2 caratteri",
     "newPasswordConfirmRequired": "Conferma la tua nuova password",
     "currentPasswordRequired": "La password attuale è obbligatoria",
-    "newPasswordMustDiffer": "La nuova password deve essere diversa da quella attuale"
+    "newPasswordMustDiffer": "La nuova password deve essere diversa da quella attuale",
+    "emailPlaceholder": "es. mario@esempio.com"
   },
   "recipes": {
     "name": "Nome della ricetta",
@@ -696,7 +697,9 @@
     "macroSugar": "Zuccheri",
     "macroSodium": "Sodio",
     "helpful": "Utile",
-    "helpfulWithCount": "Utile ({{count}})"
+    "helpfulWithCount": "Utile ({{count}})",
+    "reviewCount_one": "{{count}} recensione",
+    "reviewCount_other": "{{count}} recensioni"
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -3107,7 +3110,11 @@
     "netWeightLocked": "Peso bloccato dopo l'uso — correggilo dai dettagli dell'articolo",
     "locationPlaceholder": "es. ripiano alto, cassetto 2",
     "storageNotes": "Note di conservazione",
-    "notes": "Note"
+    "notes": "Note",
+    "addTitle": "Aggiungi articolo alla dispensa",
+    "editTitle": "Modifica articolo della dispensa",
+    "quantityUnit": "Quantità e unità",
+    "quantityStock": "Quantità e scorte"
   },
   "folderPicker": {
     "selectFolder": "Seleziona cartella",
@@ -3142,7 +3149,10 @@
     "clearAll": "Cancella tutto",
     "loading": "Caricamento tag...",
     "noTags": "Nessun tag disponibile",
-    "noMatches": "Nessun tag corrisponde a \"{{query}}\""
+    "noMatches": "Nessun tag corrisponde a \"{{query}}\"",
+    "noneSelected": "Nessun tag selezionato",
+    "selectedCount_one": "{{count}} tag selezionato",
+    "selectedCount_other": "{{count}} tag selezionati"
   },
   "editableCounter": {
     "decrease": "Diminuisci quantità",
@@ -3158,7 +3168,23 @@
     "noStorageLocations": "Nessuna posizione di conservazione",
     "noMatchingLocations": "Nessuna posizione corrispondente",
     "tapAddToCreate": "Tocca \"Aggiungi\" qui sotto per creare \"{{term}}\"",
-    "typeToSearch": "Digita almeno 2 caratteri per cercare o aggiungerne uno nuovo"
+    "typeToSearch": "Digita almeno 2 caratteri per cercare o aggiungerne uno nuovo",
+    "selectBrand": "Seleziona una marca",
+    "brandSearch": "Digita per cercare marche...",
+    "noBrands": "Nessuna marca trovata",
+    "noMatchingBrands": "Nessuna marca corrispondente",
+    "selectCategory": "Seleziona una categoria",
+    "categorySearch": "Digita per cercare categorie...",
+    "noCategories": "Nessuna categoria trovata",
+    "selectItem": "Cerca un articolo",
+    "itemSearch": "Digita per cercare articoli...",
+    "noItems": "Nessun articolo trovato",
+    "selectStore": "Seleziona un negozio",
+    "storeSearch": "Digita per cercare negozi...",
+    "noStores": "Nessun negozio trovato",
+    "selectUnit": "Seleziona un'unità",
+    "unitSearch": "Digita per cercare unità...",
+    "noUnits": "Nessuna unità trovata"
   },
   "cuisineSelector": {
     "title": "Cucine preferite",
@@ -3275,7 +3301,9 @@
     "newVersion": "Nuova versione",
     "scanAnother": "Scansiona un altro",
     "barcodeValue": "Codice a barre: {{barcode}}",
-    "formatValue": "Formato: {{format}}"
+    "formatValue": "Formato: {{format}}",
+    "sku": "SKU",
+    "upc": "UPC/Codice a barre"
   },
   "tabBar": {
     "actionButton": "Pulsante azione",
@@ -3506,7 +3534,9 @@
     "approximate": "(circa)"
   },
   "itemSubtitle": {
-    "percentRemaining": "({{percent}}% rimanente)"
+    "percentRemaining": "({{percent}}% rimanente)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} rimanenti"
   },
   "fractionInput": {
     "formatsHint": "Formati: 1/4, 1 1/4, 0.75 o 2"
@@ -3539,5 +3569,21 @@
     "FROZEN": "Congelatore",
     "NONE": "Nessuno",
     "REFRIGERATED": "Frigo"
+  },
+  "a11y": {
+    "actionButton": "Pulsante {{name}}",
+    "tapToViewDetails": "Tocca per vedere i dettagli",
+    "counterValue": "{{label}}, {{value}}",
+    "quantityLabel": "Quantità",
+    "valueSuffix": "Valore di {{label}}",
+    "quantityValue": "Valore quantità",
+    "swipeForActions": "Scorri a sinistra o a destra per altre azioni"
+  },
+  "multiSelect": {
+    "noneSelected": "Nessun elemento selezionato"
+  },
+  "batchSection": {
+    "showAll": "Mostra tutti i lotti",
+    "hideInactive": "Nascondi lotti inattivi"
   }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Image,
@@ -104,6 +105,7 @@ export const Card: React.FC<CardProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({
     layout,
     disabled,
@@ -219,7 +221,7 @@ export const Card: React.FC<CardProps> = ({
         style={({ pressed }) => pressed && styles.pressed}
         accessibilityRole="button"
         accessibilityLabel={cardLabel}
-        accessibilityHint={accessibilityHint || 'Tap to view details'}
+        accessibilityHint={accessibilityHint || t('a11y.tapToViewDetails')}
         accessibilityState={{ disabled }}
       >
         {cardContent}

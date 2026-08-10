@@ -37,7 +37,9 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        {mode === 'add' ? 'Quantity & Unit' : 'Quantity & Stock'}
+        {mode === 'add'
+          ? t('itemForm.quantityUnit')
+          : t('itemForm.quantityStock')}
       </Text>
 
       {/* Row 1: Quantity + Tracking Unit */}

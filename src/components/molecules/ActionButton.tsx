@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedIconButton } from '../atoms/themedComponents';
@@ -21,14 +22,18 @@ export const ActionButton: React.FC<ActionButtonProps> = ({
   accessibilityLabel,
   testID,
 }) => {
+  const { t } = useTranslation();
   return (
     <View style={[styles.button, style]} testID={testID}>
       <ThemedIconButton
         name={name || 'add'}
         size={size}
-        uniProps={t => ({ color: color ?? t.colors.primary })}
+        uniProps={theme => ({ color: color ?? theme.colors.primary })}
         onPress={onPress}
-        accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
+        accessibilityLabel={
+          accessibilityLabel ||
+          t('a11y.actionButton', { name: name || t('labels.add') })
+        }
       />
     </View>
   );

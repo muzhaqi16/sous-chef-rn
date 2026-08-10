@@ -70,7 +70,7 @@ export const ClickableInfoPanel: React.FC<ClickableInfoPanelProps> = ({
         ) : (
           <View style={styles.emptyContainer}>
             <Text size="sm" tone="secondary" style={styles.emptyText}>
-              {emptyMessage || 'No data available'}
+              {emptyMessage || t('labels.noDataAvailable')}
             </Text>
           </View>
         )}

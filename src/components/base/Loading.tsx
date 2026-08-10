@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   View,
   Modal,
@@ -55,6 +56,7 @@ export const Loading: React.FC<LoadingProps> = ({
   color,
   style,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ inline: variant === 'inline', overlayOpacity });
 
   // Don't render if not visible (for overlay/fullscreen variants)
@@ -108,7 +110,7 @@ export const Loading: React.FC<LoadingProps> = ({
         <SousChefLoader
           size="small"
           showBrand={false}
-          message={message || 'Loading'}
+          message={message || t('labels.loading')}
         />
         {!!submessage && (
           <Text

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -23,6 +24,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
   rating4Count,
   rating5Count,
 }) => {
+  const { t } = useTranslation();
   const counts = [
     rating5Count,
     rating4Count,
@@ -50,7 +52,7 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
           ))}
         </View>
         <Text size="xs" tone="secondary">
-          {totalReviews} {totalReviews === 1 ? 'review' : 'reviews'}
+          {t('recipes.reviewCount', { count: totalReviews })}
         </Text>
       </View>
 

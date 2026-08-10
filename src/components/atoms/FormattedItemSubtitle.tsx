@@ -90,8 +90,15 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           {' × '}
         </Text>
         <Text size="sm" tone="secondary">
-          {displayWeight} {unitSymbol}
-          {isPartialSingleItem ? ' remaining' : ''}
+          {isPartialSingleItem
+            ? t('itemSubtitle.weightRemaining', {
+                weight: displayWeight,
+                unit: unitSymbol,
+              })
+            : t('itemSubtitle.weight', {
+                weight: displayWeight,
+                unit: unitSymbol,
+              })}
         </Text>
         {!!additionalInfo && (
           <>

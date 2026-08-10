@@ -397,7 +397,8 @@
     "fullNameMin": "Emri i plotë duhet të ketë të paktën 2 karaktere",
     "newPasswordConfirmRequired": "Të lutemi konfirmo fjalëkalimin e ri",
     "currentPasswordRequired": "Fjalëkalimi aktual është i detyrueshëm",
-    "newPasswordMustDiffer": "Fjalëkalimi i ri duhet të jetë i ndryshëm nga ai aktual"
+    "newPasswordMustDiffer": "Fjalëkalimi i ri duhet të jetë i ndryshëm nga ai aktual",
+    "emailPlaceholder": "p.sh. besnik@shembull.com"
   },
   "recipes": {
     "name": "Emri i recetës",
@@ -696,7 +697,9 @@
     "macroSugar": "Sheqer",
     "macroSodium": "Natrium",
     "helpful": "I dobishëm",
-    "helpfulWithCount": "I dobishëm ({{count}})"
+    "helpfulWithCount": "I dobishëm ({{count}})",
+    "reviewCount_one": "{{count}} recension",
+    "reviewCount_other": "{{count}} recensione"
   },
   "recipeFilters": {
     "title": "Filtrat",
@@ -3107,7 +3110,11 @@
     "netWeightLocked": "Pesha kyçet pas përdorimit — korrigjoje te detajet e artikullit",
     "locationPlaceholder": "p.sh., Rafti i sipërm, Sirtari 2",
     "storageNotes": "Shënime ruajtjeje",
-    "notes": "Shënime"
+    "notes": "Shënime",
+    "addTitle": "Shto artikull në qilar",
+    "editTitle": "Ndrysho artikullin e qilarit",
+    "quantityUnit": "Sasia dhe njësia",
+    "quantityStock": "Sasia dhe stoku"
   },
   "folderPicker": {
     "selectFolder": "Zgjidh dosjen",
@@ -3142,7 +3149,10 @@
     "clearAll": "Pastro të gjitha",
     "loading": "Po ngarkohen etiketat...",
     "noTags": "Asnjë etiketë e disponueshme",
-    "noMatches": "Asnjë etiketë nuk përputhet me \"{{query}}\""
+    "noMatches": "Asnjë etiketë nuk përputhet me \"{{query}}\"",
+    "noneSelected": "Asnjë etiketë e zgjedhur",
+    "selectedCount_one": "{{count}} etiketë e zgjedhur",
+    "selectedCount_other": "{{count}} etiketa të zgjedhura"
   },
   "editableCounter": {
     "decrease": "Zvogëlo sasinë",
@@ -3158,7 +3168,23 @@
     "noStorageLocations": "Ende pa vendndodhje ruajtjeje",
     "noMatchingLocations": "Asnjë vendndodhje që përputhet",
     "tapAddToCreate": "Trokit \"Shto\" më poshtë për të krijuar \"{{term}}\"",
-    "typeToSearch": "Shkruaj të paktën 2 karaktere për të kërkuar ose për të shtuar një të ri"
+    "typeToSearch": "Shkruaj të paktën 2 karaktere për të kërkuar ose për të shtuar një të ri",
+    "selectBrand": "Zgjidh një markë",
+    "brandSearch": "Shkruaj për të kërkuar marka...",
+    "noBrands": "Nuk u gjet asnjë markë",
+    "noMatchingBrands": "Asnjë markë përputhëse",
+    "selectCategory": "Zgjidh një kategori",
+    "categorySearch": "Shkruaj për të kërkuar kategori...",
+    "noCategories": "Nuk u gjet asnjë kategori",
+    "selectItem": "Kërko një artikull",
+    "itemSearch": "Shkruaj për të kërkuar artikuj...",
+    "noItems": "Nuk u gjet asnjë artikull",
+    "selectStore": "Zgjidh një dyqan",
+    "storeSearch": "Shkruaj për të kërkuar dyqane...",
+    "noStores": "Nuk u gjet asnjë dyqan",
+    "selectUnit": "Zgjidh një njësi",
+    "unitSearch": "Shkruaj për të kërkuar njësi...",
+    "noUnits": "Nuk u gjet asnjë njësi"
   },
   "cuisineSelector": {
     "title": "Kuzhinat e preferuara",
@@ -3275,7 +3301,9 @@
     "newVersion": "Version i ri",
     "scanAnother": "Skano një tjetër",
     "barcodeValue": "Barkodi: {{barcode}}",
-    "formatValue": "Formati: {{format}}"
+    "formatValue": "Formati: {{format}}",
+    "sku": "SKU",
+    "upc": "UPC/Barkod"
   },
   "tabBar": {
     "actionButton": "Butoni i veprimit",
@@ -3506,7 +3534,9 @@
     "approximate": "(afërsisht)"
   },
   "itemSubtitle": {
-    "percentRemaining": "({{percent}}% e mbetur)"
+    "percentRemaining": "({{percent}}% e mbetur)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} të mbetura"
   },
   "fractionInput": {
     "formatsHint": "Formatet: 1/4, 1 1/4, 0.75 ose 2"
@@ -3539,5 +3569,21 @@
     "FROZEN": "Ngrirje",
     "NONE": "Asnjë",
     "REFRIGERATED": "Frigorifer"
+  },
+  "a11y": {
+    "actionButton": "Butoni {{name}}",
+    "tapToViewDetails": "Prek për të parë detajet",
+    "counterValue": "{{label}}, {{value}}",
+    "quantityLabel": "Sasia",
+    "valueSuffix": "Vlera e {{label}}",
+    "quantityValue": "Vlera e sasisë",
+    "swipeForActions": "Rrëshqit majtas ose djathtas për më shumë veprime"
+  },
+  "multiSelect": {
+    "noneSelected": "Asnjë element i zgjedhur"
+  },
+  "batchSection": {
+    "showAll": "Shfaq të gjitha grupet",
+    "hideInactive": "Fshih grupet joaktive"
   }
 }

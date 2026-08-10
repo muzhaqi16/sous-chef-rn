@@ -72,7 +72,10 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         style={styles.container}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel={`${label || 'Quantity'}, ${value}`}
+        accessibilityLabel={t('a11y.counterValue', {
+          label: label || t('a11y.quantityLabel'),
+          value,
+        })}
         accessibilityValue={{
           min: min,
           now: parseFractionalInput(value) ?? 0,
@@ -127,7 +130,9 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           selectTextOnFocus
           textAlign="center"
           accessible
-          accessibilityLabel={label ? `${label} value` : 'Quantity value'}
+          accessibilityLabel={
+            label ? t('a11y.valueSuffix', { label }) : t('a11y.quantityValue')
+          }
           accessibilityHint={t('editableCounter.hint')}
           testID={testID}
         />

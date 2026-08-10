@@ -116,7 +116,7 @@ export function MultiSelectChipSheet<T extends string = string>({
         <View style={styles.selectionRow}>
           <Text size="sm" tone="secondary">
             {selectedItems.length === 0
-              ? 'No items selected'
+              ? t('multiSelect.noneSelected')
               : `${selectedItems.length} selected`}
           </Text>
           {selectedItems.length > 0 && (

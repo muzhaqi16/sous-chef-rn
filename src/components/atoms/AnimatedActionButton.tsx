@@ -1,4 +1,5 @@
 import React, { useLayoutEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StyleProp, ViewStyle, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';
@@ -35,6 +36,7 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
   isHighlighted = false,
   testID,
 }) => {
+  const { t } = useTranslation();
   const animatedTheme = useAnimatedTheme();
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -79,9 +81,12 @@ export const AnimatedActionButton: React.FC<AnimatedActionButtonProps> = ({
         <ThemedIconButton
           name={name || 'add'}
           size={size}
-          uniProps={t => ({ color: color ?? t.colors.primary })}
+          uniProps={theme => ({ color: color ?? theme.colors.primary })}
           onPress={onPress}
-          accessibilityLabel={accessibilityLabel || `${name || 'Add'} button`}
+          accessibilityLabel={
+            accessibilityLabel ||
+            t('a11y.actionButton', { name: name || t('labels.add') })
+          }
         />
       </Animated.View>
     </View>

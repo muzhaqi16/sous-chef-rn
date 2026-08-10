@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import React from 'react';
 import {
   useUnitAutocomplete,
@@ -34,6 +35,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   testID,
   onUnitSelected,
 }) => {
+  const { t } = useTranslation();
   const unit = useUnitAutocomplete();
 
   return (
@@ -71,9 +73,9 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
       autoCapitalize="none"
       inlineMinSearchLength={1}
       maxResults={6}
-      modalTitle="Select a unit"
-      modalSearchPlaceholder="Type to search units..."
-      modalEmptyText="No units found"
+      modalTitle={t('autocomplete.selectUnit')}
+      modalSearchPlaceholder={t('autocomplete.unitSearch')}
+      modalEmptyText={t('autocomplete.noUnits')}
       modalEmptySubtext="Try a different search term"
       modalMinSearchLength={1}
       onSearchChange={unit.handleSearchTermChange}

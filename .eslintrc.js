@@ -189,7 +189,78 @@ module.exports = {
         'i18next/no-literal-string': [
           'error',
           {
-            mode: 'jsx-text-only',
+            mode: 'jsx-only',
+            // An INCLUDE list, not an exclude list. Measured: `jsx-only` with
+            // the plugin's default attribute handling reports 1132 findings,
+            // 75% of them from four design-system props (`tone`, `name`,
+            // `testID`, `icon`) whose values are enum-ish identifiers, never
+            // copy. Excluding those would mean maintaining ~50 entries that
+            // grows with every new prop. Naming the handful of props that DO
+            // carry copy is smaller, stable, and precise — it cut the same scan
+            // to 60.
+            //
+            // `unit` is deliberately absent: `unit="g"` / `unit="kcal"` are
+            // measurement symbols, not translatable copy.
+            'jsx-attributes': {
+              include: [
+                'title',
+                'label',
+                'placeholder',
+                'message',
+                'description',
+                'subtitle',
+                'text',
+                'emptyText',
+                'emptyMessage',
+                'emptyTitle',
+                'header',
+                'heading',
+                'caption',
+                'hint',
+                'helperText',
+                'errorText',
+                'confirmText',
+                'cancelText',
+                'confirmLabel',
+                'cancelLabel',
+                'buttonText',
+                'buttonLabel',
+                'actionLabel',
+                'accessibilityLabel',
+                'accessibilityHint',
+                'modalTitle',
+                'modalSearchPlaceholder',
+                'modalEmptyText',
+                'searchPlaceholder',
+              ],
+            },
+            // Swapped wholesale rather than merged (same as `words.exclude`
+            // below), so the plugin's own defaults have to be repeated — drop
+            // `t` and every translated call gets flagged for its key string.
+            // The additions are machine vocabulary that happens to contain
+            // letters: date-fns patterns ('MMM d', 'EEEE') and telemetry event
+            // names.
+            callees: {
+              exclude: [
+                'i18n(ext)?',
+                't',
+                'require',
+                'addEventListener',
+                'removeEventListener',
+                'postMessage',
+                'getElementById',
+                'dispatch',
+                'commit',
+                'includes',
+                'indexOf',
+                'endsWith',
+                'startsWith',
+                'format',
+                'formatISO',
+                'parse',
+                'trackEvent',
+              ],
+            },
             words: {
               // Replaces the plugin's default exclude list (the option is
               // swapped wholesale, not merged), so both entries below are

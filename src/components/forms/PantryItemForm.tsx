@@ -502,7 +502,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       >
         <Header
           variant="form"
-          title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
+          title={
+            mode === 'add' ? t('itemForm.addTitle') : t('itemForm.editTitle')
+          }
           onClose={() => goBack()}
           rightActions={[
             {

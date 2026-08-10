@@ -397,7 +397,8 @@
     "fullNameMin": "El nombre completo debe tener al menos 2 caracteres",
     "newPasswordConfirmRequired": "Por favor confirma tu nueva contraseña",
     "currentPasswordRequired": "La contraseña actual es obligatoria",
-    "newPasswordMustDiffer": "La nueva contraseña debe ser diferente de la actual"
+    "newPasswordMustDiffer": "La nueva contraseña debe ser diferente de la actual",
+    "emailPlaceholder": "p. ej., juan@ejemplo.com"
   },
   "recipes": {
     "name": "Nombre de la receta",
@@ -696,7 +697,9 @@
     "macroSugar": "Azúcar",
     "macroSodium": "Sodio",
     "helpful": "Útil",
-    "helpfulWithCount": "Útil ({{count}})"
+    "helpfulWithCount": "Útil ({{count}})",
+    "reviewCount_one": "{{count}} reseña",
+    "reviewCount_other": "{{count}} reseñas"
   },
   "recipeFilters": {
     "title": "Filtros",
@@ -3107,7 +3110,11 @@
     "netWeightLocked": "El peso se bloquea tras su uso: corrígelo desde los detalles del artículo",
     "locationPlaceholder": "p. ej., estante superior, cajón 2",
     "storageNotes": "Notas de almacenamiento",
-    "notes": "Notas"
+    "notes": "Notas",
+    "addTitle": "Añadir artículo a la despensa",
+    "editTitle": "Editar artículo de la despensa",
+    "quantityUnit": "Cantidad y unidad",
+    "quantityStock": "Cantidad y existencias"
   },
   "folderPicker": {
     "selectFolder": "Seleccionar carpeta",
@@ -3142,7 +3149,10 @@
     "clearAll": "Borrar todo",
     "loading": "Cargando etiquetas...",
     "noTags": "No hay etiquetas disponibles",
-    "noMatches": "Ninguna etiqueta coincide con \"{{query}}\""
+    "noMatches": "Ninguna etiqueta coincide con \"{{query}}\"",
+    "noneSelected": "Ninguna etiqueta seleccionada",
+    "selectedCount_one": "{{count}} etiqueta seleccionada",
+    "selectedCount_other": "{{count}} etiquetas seleccionadas"
   },
   "editableCounter": {
     "decrease": "Reducir cantidad",
@@ -3158,7 +3168,23 @@
     "noStorageLocations": "Aún no hay ubicaciones",
     "noMatchingLocations": "No hay ubicaciones coincidentes",
     "tapAddToCreate": "Toca \"Añadir\" abajo para crear \"{{term}}\"",
-    "typeToSearch": "Escribe al menos 2 caracteres para buscar o añadir uno nuevo"
+    "typeToSearch": "Escribe al menos 2 caracteres para buscar o añadir uno nuevo",
+    "selectBrand": "Selecciona una marca",
+    "brandSearch": "Escribe para buscar marcas...",
+    "noBrands": "No se encontraron marcas",
+    "noMatchingBrands": "No hay marcas coincidentes",
+    "selectCategory": "Selecciona una categoría",
+    "categorySearch": "Escribe para buscar categorías...",
+    "noCategories": "No se encontraron categorías",
+    "selectItem": "Buscar un artículo",
+    "itemSearch": "Escribe para buscar artículos...",
+    "noItems": "No se encontraron artículos",
+    "selectStore": "Selecciona una tienda",
+    "storeSearch": "Escribe para buscar tiendas...",
+    "noStores": "No se encontraron tiendas",
+    "selectUnit": "Selecciona una unidad",
+    "unitSearch": "Escribe para buscar unidades...",
+    "noUnits": "No se encontraron unidades"
   },
   "cuisineSelector": {
     "title": "Cocinas preferidas",
@@ -3275,7 +3301,9 @@
     "newVersion": "Nueva versión",
     "scanAnother": "Escanear otro",
     "barcodeValue": "Código de barras: {{barcode}}",
-    "formatValue": "Formato: {{format}}"
+    "formatValue": "Formato: {{format}}",
+    "sku": "SKU",
+    "upc": "UPC/Código de barras"
   },
   "tabBar": {
     "actionButton": "Botón de acción",
@@ -3506,7 +3534,9 @@
     "approximate": "(aprox.)"
   },
   "itemSubtitle": {
-    "percentRemaining": "({{percent}}% restante)"
+    "percentRemaining": "({{percent}}% restante)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} restante"
   },
   "fractionInput": {
     "formatsHint": "Formatos: 1/4, 1 1/4, 0.75 o 2"
@@ -3539,5 +3569,21 @@
     "FROZEN": "Congelador",
     "NONE": "Ninguno",
     "REFRIGERATED": "Nevera"
+  },
+  "a11y": {
+    "actionButton": "Botón {{name}}",
+    "tapToViewDetails": "Toca para ver los detalles",
+    "counterValue": "{{label}}, {{value}}",
+    "quantityLabel": "Cantidad",
+    "valueSuffix": "Valor de {{label}}",
+    "quantityValue": "Valor de cantidad",
+    "swipeForActions": "Desliza a la izquierda o derecha para más acciones"
+  },
+  "multiSelect": {
+    "noneSelected": "Ningún elemento seleccionado"
+  },
+  "batchSection": {
+    "showAll": "Mostrar todos los lotes",
+    "hideInactive": "Ocultar lotes inactivos"
   }
 }

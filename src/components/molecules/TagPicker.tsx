@@ -126,10 +126,10 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         <View style={styles.selectionRow}>
           <Text size="sm" tone="secondary">
             {selectedTags.length === 0
-              ? 'No tags selected'
-              : `${selectedTags.length} tag${
-                  selectedTags.length > 1 ? 's' : ''
-                } selected`}
+              ? t('tagPicker.noneSelected')
+              : t('tagPicker.selectedCount', {
+                  count: selectedTags.length,
+                })}
           </Text>
           {selectedTags.length > 0 && (
             <Pressable

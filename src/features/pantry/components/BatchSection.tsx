@@ -110,7 +110,9 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
               style={styles.showAllButton}
             >
               <Text size="sm" weight="medium" tone="accent">
-                {showAll ? 'Hide inactive batches' : 'Show all batches'}
+                {showAll
+                  ? t('batchSection.hideInactive')
+                  : t('batchSection.showAll')}
               </Text>
             </AppPressable>
           )}

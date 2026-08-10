@@ -397,7 +397,8 @@
     "fullNameMin": "Full name must be at least 2 characters",
     "newPasswordConfirmRequired": "Please confirm your new password",
     "currentPasswordRequired": "Current password is required",
-    "newPasswordMustDiffer": "New password must be different from current password"
+    "newPasswordMustDiffer": "New password must be different from current password",
+    "emailPlaceholder": "e.g. john@example.com"
   },
   "recipes": {
     "name": "Recipe Name",
@@ -696,7 +697,9 @@
     "macroSugar": "Sugar",
     "macroSodium": "Sodium",
     "helpful": "Helpful",
-    "helpfulWithCount": "Helpful ({{count}})"
+    "helpfulWithCount": "Helpful ({{count}})",
+    "reviewCount_one": "{{count}} review",
+    "reviewCount_other": "{{count}} reviews"
   },
   "recipeFilters": {
     "title": "Filters",
@@ -3107,7 +3110,11 @@
     "netWeightLocked": "Weight locked after use — correct from item details",
     "locationPlaceholder": "e.g., Top shelf, Drawer 2",
     "storageNotes": "Storage Notes",
-    "notes": "Notes"
+    "notes": "Notes",
+    "addTitle": "Add Pantry Item",
+    "editTitle": "Edit Pantry Item",
+    "quantityUnit": "Quantity & Unit",
+    "quantityStock": "Quantity & Stock"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
@@ -3142,7 +3149,10 @@
     "clearAll": "Clear all",
     "loading": "Loading tags...",
     "noTags": "No tags available",
-    "noMatches": "No tags match \"{{query}}\""
+    "noMatches": "No tags match \"{{query}}\"",
+    "noneSelected": "No tags selected",
+    "selectedCount_one": "{{count}} tag selected",
+    "selectedCount_other": "{{count}} tags selected"
   },
   "editableCounter": {
     "decrease": "Decrease quantity",
@@ -3158,7 +3168,23 @@
     "noStorageLocations": "No storage locations yet",
     "noMatchingLocations": "No matching locations",
     "tapAddToCreate": "Tap \"Add\" below to create \"{{term}}\"",
-    "typeToSearch": "Type at least 2 characters to search or add new"
+    "typeToSearch": "Type at least 2 characters to search or add new",
+    "selectBrand": "Select a brand",
+    "brandSearch": "Type to search brands...",
+    "noBrands": "No brands found",
+    "noMatchingBrands": "No matching brands",
+    "selectCategory": "Select a category",
+    "categorySearch": "Type to search categories...",
+    "noCategories": "No categories found",
+    "selectItem": "Search for an item",
+    "itemSearch": "Type to search items...",
+    "noItems": "No items found",
+    "selectStore": "Select a store",
+    "storeSearch": "Type to search stores...",
+    "noStores": "No stores found",
+    "selectUnit": "Select a unit",
+    "unitSearch": "Type to search units...",
+    "noUnits": "No units found"
   },
   "cuisineSelector": {
     "title": "Preferred Cuisines",
@@ -3275,7 +3301,9 @@
     "newVersion": "New Version",
     "scanAnother": "Scan Another",
     "barcodeValue": "Barcode: {{barcode}}",
-    "formatValue": "Format: {{format}}"
+    "formatValue": "Format: {{format}}",
+    "sku": "SKU",
+    "upc": "UPC/Barcode"
   },
   "tabBar": {
     "actionButton": "Action button",
@@ -3506,7 +3534,9 @@
     "approximate": "(approx.)"
   },
   "itemSubtitle": {
-    "percentRemaining": "({{percent}}% remaining)"
+    "percentRemaining": "({{percent}}% remaining)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} remaining"
   },
   "fractionInput": {
     "formatsHint": "Formats: 1/4, 1 1/4, 0.75, or 2"
@@ -3539,5 +3569,21 @@
     "FROZEN": "Freezer",
     "NONE": "None",
     "REFRIGERATED": "Fridge"
+  },
+  "a11y": {
+    "actionButton": "{{name}} button",
+    "tapToViewDetails": "Tap to view details",
+    "counterValue": "{{label}}, {{value}}",
+    "quantityLabel": "Quantity",
+    "valueSuffix": "{{label}} value",
+    "quantityValue": "Quantity value",
+    "swipeForActions": "Swipe left or right for more actions"
+  },
+  "multiSelect": {
+    "noneSelected": "No items selected"
+  },
+  "batchSection": {
+    "showAll": "Show all batches",
+    "hideInactive": "Hide inactive batches"
   }
 }
