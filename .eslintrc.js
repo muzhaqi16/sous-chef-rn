@@ -169,19 +169,23 @@ module.exports = {
       // below, where they are reviewable in one place).
       //
       // Scope: production `.tsx` under `src/` only.
-      // - `.ts` is excluded because JSX text cannot exist there (TypeScript
-      //   requires `.tsx` for JSX), so the rule would have nothing to check.
+      // - `.ts` is excluded because this rule runs in `jsx-only` mode and JSX
+      //   cannot exist there (TypeScript requires `.tsx`). Untranslated copy
+      //   in `.ts` — toasts and alerts raised from hooks and services — is
+      //   caught by the user-facing-sink selectors in `no-restricted-syntax`
+      //   instead. The two rules split the surface between them: this one owns
+      //   JSX, those own everything else.
       // - Tests/mocks are excluded: their strings are fixtures, not shipped
       //   copy. Generated code is already dropped by the top-level
       //   ignorePatterns.
       //
-      // What this does NOT cover: string props (`placeholder="…"`), object
-      // literals, and template literals. `mode: 'jsx-only'` / `'all'` would
-      // reach them, but every design-system prop on this codebase's `<Text>`
-      // / `<Icon>` (`size`, `tone`, `weight`, `name`) is a string literal, so
-      // those modes report thousands of non-copy hits and would need a
-      // per-prop allowlist longer than the rule is worth. JSX text is where
-      // untranslated copy actually accumulates.
+      // What this does NOT cover: a string that reaches JSX through a
+      // variable, which no static mode sees — a module-level
+      // `const LABELS = { … }` rendered as `{LABELS[key]}` reads as an
+      // identifier at the point of use. Those are found by grepping for
+      // module-level tables of English values, and are also the shape that
+      // freezes the import-time language, so they should be factories taking
+      // `t` or tables of key paths.
       files: ['src/**/*.tsx'],
       excludedFiles: ['**/__tests__/**', '**/__mocks__/**', '**/*.test.tsx'],
       plugins: ['i18next'],
