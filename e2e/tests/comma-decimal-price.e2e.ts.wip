@@ -1,0 +1,74 @@
+/**
+ * On-device validation for locale-aware decimal parsing.
+ *
+ * `keyboardType` renders the separator key of the DEVICE locale, so a Spanish
+ * or Italian phone offers `,`. Every numeric field used to read its value with
+ * `parseFloat`, and `parseFloat('1,5')` is `1` — not a rejection the user can
+ * see and correct, but a silently wrong number written to the server.
+ *
+ * `parseDecimalInput` has thorough unit tests, but they pin the parser in
+ * isolation and cannot catch a call site the sweep missed. This drives the path
+ * that actually broke: keystroke → form state → mutation input → server → the
+ * quantity rendered back on the row.
+ *
+ * Quantity is the probe because the add sheet owns that field and
+ * `useAddShoppingItem` parses it with `parseDecimalInput`. The estimated-price
+ * field lives on the full-screen editor, which "Add Manually" does not open —
+ * it switches the sheet to its own details step.
+ */
+import { element, by, waitFor } from 'detox';
+import { ShoppingListScreen } from '../screens';
+import { bootstrapAuthenticatedSession } from '../helpers';
+import { TIMEOUTS } from '../helpers/waitFor';
+
+/**
+ * `add-shopping-item`, from `configs/shoppingListConfig.ts`. Note the page
+ * object's `addItem()` still uses `add-shopping-…`, which no longer matches.
+ */
+const SHEET = 'add-shopping-item';
+
+describe('comma-typed decimal quantity', () => {
+  const shoppingList = new ShoppingListScreen();
+  const itemName = `Comma${Date.now()}`;
+
+  beforeAll(async () => {
+    await bootstrapAuthenticatedSession();
+  });
+
+  it('saves 1,5 as 1.5 rather than truncating to 1', async () => {
+    await shoppingList.navigateToTab();
+    await shoppingList.tapAddButton();
+
+    await waitFor(element(by.id(`${SHEET}-add-manually-button`)))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.DEFAULT);
+    await element(by.id(`${SHEET}-add-manually-button`)).tap();
+
+    await waitFor(element(by.id(`${SHEET}-name-input`)))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.DEFAULT);
+    await element(by.id(`${SHEET}-name-input`)).replaceText(itemName);
+
+    // The comma, exactly as a Spanish/Italian keypad emits it.
+    await element(by.id(`${SHEET}-quantity-input`)).replaceText('1,5');
+
+    await element(by.id(`${SHEET}-submit-button`)).tap();
+
+    // Filter to the new row: the list is long and Detox's `toBeVisible` only
+    // matches what is actually on screen, so a freshly-added row below the fold
+    // would fail for the wrong reason.
+    await waitFor(element(by.id('shopping-list-search-input')))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.NETWORK);
+    await element(by.id('shopping-list-search-input')).replaceText(itemName);
+
+    await waitFor(element(by.text(itemName)))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.NETWORK);
+
+    // The row must render 1.5. Before the fix this saved as 1.
+    await waitFor(element(by.text('1.5')).atIndex(0))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.NETWORK);
+  });
+});

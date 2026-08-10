@@ -401,6 +401,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
       {/* Estimated Price Field */}
       <FormInput
+        testID={isEdit ? 'edit-item-price-input' : 'add-item-price-input'}
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}

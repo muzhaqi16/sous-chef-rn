@@ -202,6 +202,7 @@ export const AppSettingsScreen: React.FC = () => {
           onValueChange={value => handleSettingChange('autoSync', value)}
         />
         <SettingSwitch
+          testID="settings-offline-mode-switch"
           title={t('settings.offlineMode')}
           description={t('settings.offlineModeDesc')}
           value={offlineModeEnabled}
