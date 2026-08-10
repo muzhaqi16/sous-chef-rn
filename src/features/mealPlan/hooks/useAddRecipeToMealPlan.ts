@@ -3,6 +3,7 @@ import { MealType } from '#/graphql/generated/schemaTypes';
 import { useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n/t';
 
 interface UseAddRecipeToMealPlanOptions {
   planId?: string | null;
@@ -45,7 +46,7 @@ export function useAddRecipeToMealPlan(
     date: Date;
   }) => {
     if (!activePlanId) {
-      toastService.error('No active meal plan. Create one first.');
+      toastService.error(t('toasts.noActiveMealPlan'));
       return false;
     }
     const result = await createItem({
@@ -55,7 +56,7 @@ export function useAddRecipeToMealPlan(
       date: date.toISOString(),
     });
     if (result?.__typename === 'CreateMealPlanItemPayload') {
-      toastService.success('Added to meal plan');
+      toastService.success(t('toasts.addedToMealPlan'));
       return true;
     }
     return false;

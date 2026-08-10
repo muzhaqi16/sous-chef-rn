@@ -43,6 +43,7 @@ import {
   executeMutation,
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { t } from '#/i18n/t';
 
 const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
   'MealPlan',
@@ -267,7 +268,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // for the permanent write.
     const fullItem = readItemSnapshot(id) as OptimisticMealPlanItem | null;
     if (!fullItem) {
-      toastService.error('Failed to update meal');
+      toastService.error(t('toasts.mealUpdateFailed'));
       return null;
     }
 
@@ -355,9 +356,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     if (markingComplete) {
       if (hasRecipe && deductFromPantry) {
-        toastService.success('Meal completed! Pantry items deducted.');
+        toastService.success(t('toasts.mealCompletedDeducted'));
       } else {
-        toastService.success('Meal completed!');
+        toastService.success(t('toasts.mealCompleted'));
       }
     }
 

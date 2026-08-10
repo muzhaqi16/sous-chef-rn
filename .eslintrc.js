@@ -746,6 +746,33 @@ module.exports = {
         message:
           'Avoid inline import() types. Import the type at the top of the file instead.',
       },
+      // --- Untranslated copy reaching a user-facing sink -------------------
+      //
+      // The i18next rule above covers the JSX surface (text + copy-carrying
+      // attributes). It cannot see these, because a toast or alert is an
+      // ordinary function call in a .ts hook or service.
+      //
+      // This is deliberately sink-shaped rather than shape-shaped. Scanning
+      // for "English-looking literals" was tried repeatedly and each new
+      // detector found a fresh batch the previous ones missed — the set of
+      // SHAPES a string can take is open-ended, but the set of SINKS that put
+      // text on screen is small and enumerable. Naming the sink is what makes
+      // the check finite.
+      //
+      // The `{3}` guard skips single letters and symbol arguments (toast
+      // positions, '✕') without needing a word allowlist.
+      {
+        selector:
+          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
+        message:
+          'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n/t works outside components.',
+      },
+      {
+        selector:
+          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > TemplateLiteral',
+        message:
+          'Template literal passed to a user-facing toast/alert. Interpolate through i18next instead — t(key, { name }) — so the sentence stays reorderable, and use _one/_other keys for counts rather than appending an "s".',
+      },
       {
         selector:
           'CallExpression[callee.name="scheduleOnRN"] > :matches(ArrowFunctionExpression, FunctionExpression)',

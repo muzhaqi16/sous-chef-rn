@@ -207,12 +207,14 @@ export const NotificationActionHandler: React.FC<
           toPantryMain();
         });
       } else {
-        toastService.success(`Welcome to ${invitation.entityName}!`);
+        toastService.success(
+          t('toasts.welcomeToEntity', { name: invitation.entityName }),
+        );
         toPantryMain();
       }
     } else {
       toastService.success(
-        `You can now collaborate on ${invitation.entityName}`,
+        t('toasts.canCollaborateOn', { name: invitation.entityName }),
       );
       toShoppingListMain();
     }

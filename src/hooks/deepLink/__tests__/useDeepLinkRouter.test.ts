@@ -3,6 +3,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import { useDeepLinkRouter } from '../useDeepLinkRouter';
+import { getI18n } from '#/i18n/config';
 
 // Mock the centralized navigation facade — the only navigation API used by
 // useDeepLinkRouter after the centralization refactor.
@@ -139,8 +140,14 @@ describe('useDeepLinkRouter', () => {
       result.current.handleEmailVerification(expiredToken);
     });
 
+    // Asserts the localized copy, and that the internal validation reason is
+    // no longer interpolated into it — that detail belongs in the log line,
+    // not on screen.
     expect(toastService.error).toHaveBeenCalledWith(
-      expect.stringContaining('Invalid or expired'),
+      getI18n().t('toasts.verificationLinkInvalid'),
+    );
+    expect(toastService.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('expired token'),
     );
   });
 
@@ -261,8 +268,14 @@ describe('useDeepLinkRouter', () => {
       result.current.handleEmailVerification(token);
     });
 
+    // Asserts the localized copy, and that the internal validation reason is
+    // no longer interpolated into it — that detail belongs in the log line,
+    // not on screen.
     expect(toastService.error).toHaveBeenCalledWith(
-      expect.stringContaining('Invalid or expired'),
+      getI18n().t('toasts.verificationLinkInvalid'),
+    );
+    expect(toastService.error).not.toHaveBeenCalledWith(
+      expect.stringContaining('expired token'),
     );
   });
 });

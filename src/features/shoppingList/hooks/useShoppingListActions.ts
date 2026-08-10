@@ -16,6 +16,7 @@ import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
+import { t } from '#/i18n/t';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -65,7 +66,7 @@ async function executeTogglePurchase(
         { component: 'ShoppingListMain', operation: 'togglePurchase' },
       );
       haptic.error();
-      toastService.error('Failed to toggle item');
+      toastService.error(t('toasts.itemToggleFailed'));
     },
   );
   if (result === false) return;
@@ -88,7 +89,7 @@ async function executeDeleteItem(
         { component: 'ShoppingListMain', operation: 'deleteItem' },
       );
       haptic.error();
-      toastService.error('Failed to delete item');
+      toastService.error(t('toasts.itemDeleteFailed'));
     },
   );
   if (result === false) return;
@@ -136,7 +137,7 @@ async function executeAddItemFromSearch(
       } else {
         Telemetry.trackEvent('add_item_failed', { source: 'search' });
         haptic.error();
-        toastService.error('Failed to add item');
+        toastService.error(t('toasts.itemAddFailed'));
         setSearchQuery(trimmed);
       }
     },
@@ -146,7 +147,7 @@ async function executeAddItemFromSearch(
         { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
       );
       haptic.error();
-      toastService.error('Failed to add item');
+      toastService.error(t('toasts.itemAddFailed'));
       setSearchQuery(trimmed);
     },
   );
@@ -370,7 +371,7 @@ export function useShoppingListActions({
   // Add item from search handler
   const handleAddItemFromSearch = async (itemName: string) => {
     if (!currentListId) {
-      toastService.error('Please select a shopping list first');
+      toastService.error(t('toasts.selectShoppingListFirst'));
       return;
     }
 

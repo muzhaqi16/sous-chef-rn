@@ -66,6 +66,7 @@ import {
   clearTempRegistrationPassword,
 } from '#/storage/keychain';
 import { storage } from '#/storage/mmkv';
+import { t } from '#/i18n/t';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
@@ -505,7 +506,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
       useStore.getState().clearAuth();
     }
   } catch {
-    toastService.error('Something went wrong. Please try again.');
+    toastService.error(t('toasts.somethingWentWrongRetry'));
   }
   useStore.getState().setAuthIsLoading(false);
 }

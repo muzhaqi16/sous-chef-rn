@@ -162,7 +162,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
     // Show toast for protected folders
     if (isProtectedFolder(folder)) {
-      toastService.info(`"${folder}" cannot be renamed or deleted`);
+      toastService.info(t('toasts.folderProtected', { folder }));
       return;
     }
 

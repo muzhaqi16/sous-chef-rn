@@ -1,48 +1,51 @@
 import { object, string } from 'yup';
 import { nameRule, normalizeSmartPunctuation } from './common';
+import { getI18n } from '#/i18n/config';
+
+/**
+ * Schemas are built once at module scope, so a message resolved eagerly would
+ * freeze whichever language was active at import time. Yup accepts a function
+ * and calls it when the rule fails, so the lookup lands after any language
+ * change. Same pattern as `validation/item.ts`.
+ */
+const msg = (key: string, options?: Record<string, unknown>) => (): string =>
+  getI18n().t(`profileValidation.${key}`, options);
 
 // display name rule
 const displayNameRule = string()
   .transform(normalizeSmartPunctuation)
-  .min(3, 'Display name must be at least 3 characters')
-  .max(30, 'Display name must be less than 30 characters')
-  .matches(
-    /^[a-zA-Z0-9_.-]+$/,
-    'Display name can only contain letters, numbers, underscores, periods, and hyphens',
-  );
+  .min(3, msg('displayNameMin', { count: 3 }))
+  .max(30, msg('displayNameMax', { count: 30 }))
+  .matches(/^[a-zA-Z0-9_.-]+$/, msg('displayNameChars'));
 
 // bio rule
-const bioRule = string().max(500, 'Bio must be less than 500 characters');
+const bioRule = string().max(500, msg('bioMax', { count: 500 }));
 
 // phone rule - flexible format allowing spaces, dashes, parentheses
-const phoneRule = string().test(
-  'valid-phone',
-  'Please enter a valid phone number',
-  value => {
-    if (!value) return true; // Allow empty (optional field)
-    // Strip all non-digit characters except leading +
-    const hasPlus = value.startsWith('+');
-    const digitsOnly = value.replace(/\D/g, '');
-    // Must have 7-15 digits (international numbers vary in length)
-    if (digitsOnly.length < 7 || digitsOnly.length > 15) return false;
-    // Only allow valid characters: digits, spaces, dashes, parentheses, plus
-    if (!/^[+]?[\d\s\-().]+$/.test(value)) return false;
-    // Plus sign only allowed at the start
-    if (!hasPlus && value.includes('+')) return false;
-    return true;
-  },
-);
+const phoneRule = string().test('valid-phone', msg('phoneInvalid'), value => {
+  if (!value) return true; // Allow empty (optional field)
+  // Strip all non-digit characters except leading +
+  const hasPlus = value.startsWith('+');
+  const digitsOnly = value.replace(/\D/g, '');
+  // Must have 7-15 digits (international numbers vary in length)
+  if (digitsOnly.length < 7 || digitsOnly.length > 15) return false;
+  // Only allow valid characters: digits, spaces, dashes, parentheses, plus
+  if (!/^[+]?[\d\s\-().]+$/.test(value)) return false;
+  // Plus sign only allowed at the start
+  if (!hasPlus && value.includes('+')) return false;
+  return true;
+});
 
 // website/URL rule
 const urlRule = string()
-  .url('Please enter a valid URL')
-  .matches(/^https?:\/\/.+/, 'URL must start with http:// or https://');
+  .url(msg('urlInvalid'))
+  .matches(/^https?:\/\/.+/, msg('urlScheme'));
 
 // date of birth rule - simplified
 const dateOfBirthRule = string()
   .transform(normalizeSmartPunctuation)
-  .matches(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format')
-  .test('valid-date', 'Please enter a valid date', value => {
+  .matches(/^\d{4}-\d{2}-\d{2}$/, msg('dateFormat'))
+  .test('valid-date', msg('dateInvalid'), value => {
     if (!value) return true;
 
     const [year, month, day] = value.split('-').map(Number);
@@ -60,7 +63,7 @@ const dateOfBirthRule = string()
       date.getDate() === day
     );
   })
-  .test('reasonable-age', 'Please enter a reasonable birth date', value => {
+  .test('reasonable-age', msg('dateUnreasonable'), value => {
     if (!value) return true;
 
     const birthYear = parseInt(value.split('-')[0]);

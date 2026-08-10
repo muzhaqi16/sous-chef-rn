@@ -121,9 +121,7 @@ export const useDeepLinkRouter = () => {
     const validation = validateDeepLinkToken(token, 'email_verification');
     if (!validation.valid) {
       logger.error('Invalid email verification token:', validation.error);
-      toastService.error(
-        `Invalid or expired verification link: ${validation.error}`,
-      );
+      toastService.error(t('toasts.verificationLinkInvalid'));
       return;
     }
 
@@ -134,7 +132,7 @@ export const useDeepLinkRouter = () => {
         token,
         timestamp: Date.now(),
       });
-      toastService.info('Sign in to finish verifying your email.');
+      toastService.info(t('toasts.signInToVerifyEmail'));
       toAuth();
       return;
     }
@@ -152,7 +150,7 @@ export const useDeepLinkRouter = () => {
     const validation = validateDeepLinkToken(token, 'password_reset');
     if (!validation.valid) {
       logger.error('Invalid password reset token:', validation.error);
-      toastService.error(`Invalid or expired reset link: ${validation.error}`);
+      toastService.error(t('toasts.resetLinkInvalid'));
       return;
     }
 
@@ -170,7 +168,7 @@ export const useDeepLinkRouter = () => {
     const validation = validateDeepLinkToken(token, 'invitation');
     if (!validation.valid) {
       logger.error('Invalid invitation token:', validation.error);
-      toastService.error(`Invalid or expired invitation: ${validation.error}`);
+      toastService.error(t('toasts.invitationLinkInvalid'));
       return;
     }
 
@@ -181,7 +179,7 @@ export const useDeepLinkRouter = () => {
         token,
         timestamp: Date.now(),
       });
-      toastService.info('Sign in to accept this invitation.');
+      toastService.info(t('toasts.signInToAcceptInvite'));
       toAuth();
       return;
     }
@@ -318,7 +316,7 @@ export const useDeepLinkRouter = () => {
       );
       if (!validation.valid) {
         logger.error(`Invalid ${actionType} token:`, validation.error);
-        toastService.error(`Invalid or expired link: ${validation.error}`);
+        toastService.error(t('toasts.linkInvalid'));
         return;
       }
 
