@@ -58,21 +58,32 @@ print(n['id'], n['itemName'], (n.get('priceEstimate') or {}).get('estimated'))
 read -r ITEM_ID ITEM_NAME BEFORE <<<"$(read_item)"
 echo "→ target: $ITEM_NAME ($ITEM_ID), stored price before = $BEFORE"
 
-echo "→ driving the edit screen on device (typing 4,99)"
-E2E_ITEM_ID="$ITEM_ID" E2E_ITEM_NAME="$ITEM_NAME" npx detox test -c ios.sim.debug \
+# Rotate the value so it always differs from what is stored. A run that typed
+# the value already saved would pass without the app doing anything — the
+# vacuous-pass trap this exercise kept falling into.
+if [ "$BEFORE" = "4.99" ]; then
+  TYPED="3,77"; EXPECT="3.77"
+else
+  TYPED="4,99"; EXPECT="4.99"
+fi
+echo "→ will type '$TYPED' and expect '$EXPECT' stored"
+
+echo "→ driving the edit screen on device (typing $TYPED)"
+E2E_ITEM_ID="$ITEM_ID" E2E_ITEM_NAME="$ITEM_NAME" E2E_PRICE="$TYPED" npx detox test -c ios.sim.debug \
   e2e/tests/comma-decimal-price.e2e.ts --loglevel error
 
 read -r _ _ AFTER <<<"$(read_item)"
 echo "→ stored price after = $AFTER"
 
-if [ "$AFTER" = "4.99" ]; then
-  echo "✓ PASS — 4,99 persisted as 4.99"
+if [ "$AFTER" = "$EXPECT" ]; then
+  echo "✓ PASS — $TYPED persisted as $EXPECT (was $BEFORE)"
   exit 0
 fi
 
-if [ "$AFTER" = "4.0" ] || [ "$AFTER" = "4" ]; then
+TRUNCATED="${TYPED%%,*}"
+if [ "$AFTER" = "$TRUNCATED" ] || [ "$AFTER" = "$TRUNCATED.0" ]; then
   echo "✗ FAIL — persisted as $AFTER: the comma was truncated (parseFloat behaviour)"
 else
-  echo "✗ FAIL — persisted as $AFTER, expected 4.99"
+  echo "✗ FAIL — persisted as $AFTER, expected $EXPECT"
 fi
 exit 1

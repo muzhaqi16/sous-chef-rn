@@ -33,6 +33,8 @@ import { TIMEOUTS } from '../helpers/waitFor';
 
 const ITEM_ID = process.env.E2E_ITEM_ID;
 const ITEM_NAME = process.env.E2E_ITEM_NAME;
+/** Rotated by the script so a run can never re-type the value already stored. */
+const PRICE = process.env.E2E_PRICE ?? '4,99';
 
 describe('comma-typed decimal price', () => {
   const shoppingList = new ShoppingListScreen();
@@ -85,7 +87,7 @@ describe('comma-typed decimal price', () => {
       .withTimeout(20000);
 
     // The comma, exactly as a Spanish/Italian keypad emits it.
-    await element(by.id('edit-item-price-input')).replaceText('4,99');
+    await element(by.id('edit-item-price-input')).replaceText(PRICE);
 
     // Dismiss the keyboard via the return key, NOT by tapping the modal at
     // (10, 10) — that corner is the header's back button, so it closed the
