@@ -929,6 +929,17 @@ mutation ToggleShoppingListItemPurchased(
       shoppingListItem {
         id
         ...useToggleShoppingItem_item
+        # Marking an item purchased creates a purchase row server-side, so this
+        # summary changes with every toggle. Selected here (not in the fragment,
+        # which mirrors the optimistic shape) so Apollo writes the new count
+        # through on the response. Without it the normalized item keeps the old
+        # `purchaseCount: 0`, and ItemDetail — which reads exactly these fields —
+        # paints "no purchase history" from cache until its own refetch lands.
+        purchaseHistory {
+          previouslyPurchased
+          purchaseCount
+          lastPurchaseDate
+        }
         shoppingList {
           id
           totalItems
