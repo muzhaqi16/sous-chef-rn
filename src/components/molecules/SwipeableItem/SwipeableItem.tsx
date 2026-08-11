@@ -202,7 +202,11 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         containerStyle={styles.swipeableContainer}
         childrenContainerStyle={styles.childrenContainer}
       >
-        <SwipeableContent onPress={onPress} onLongPress={onLongPress}>
+        <SwipeableContent
+          testID={testIDPrefix}
+          onPress={onPress}
+          onLongPress={onLongPress}
+        >
           {children}
         </SwipeableContent>
       </Swipeable>

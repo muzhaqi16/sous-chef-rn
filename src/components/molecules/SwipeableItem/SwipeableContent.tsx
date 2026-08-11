@@ -12,6 +12,10 @@ import { RIPPLE } from '#constants/ripple';
 
 interface SwipeableContentProps {
   children: React.ReactNode;
+  /** Identifies the row itself. Detox recommends matching by id rather than by
+   *  text — text matchers are locale-dependent and, once a list is filtered by
+   *  the same string, collide with the search field. */
+  testID?: string;
   onPress?: () => void;
   onLongPress?: () => void;
   accessibilityLabel?: string;
@@ -20,6 +24,7 @@ interface SwipeableContentProps {
 
 export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   children,
+  testID,
   onPress,
   onLongPress,
   accessibilityLabel,
@@ -29,6 +34,7 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   return (
     <View style={styles.itemContainer}>
       <Pressable
+        testID={testID}
         onPress={onPress}
         onLongPress={onLongPress}
         delayLongPress={150}
