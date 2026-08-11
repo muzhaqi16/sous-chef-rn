@@ -495,16 +495,6 @@ export type AutocompleteResult = {
   totalCount: Scalars['Int']['output'];
 };
 
-export enum AutomatedFlag {
-  AbuseLanguage = 'ABUSE_LANGUAGE',
-  DuplicateContent = 'DUPLICATE_CONTENT',
-  FakeReviews = 'FAKE_REVIEWS',
-  MultipleAccounts = 'MULTIPLE_ACCOUNTS',
-  PromotionalContent = 'PROMOTIONAL_CONTENT',
-  SpamDetected = 'SPAM_DETECTED',
-  SuspiciousBehavior = 'SUSPICIOUS_BEHAVIOR'
-}
-
 export enum BaseDimension {
   Count = 'COUNT',
   Mass = 'MASS',
@@ -16689,7 +16679,11 @@ export type UpdateUserAppealInput = {
 
 export type UpdateUserAppealPayload = {
   __typename: 'UpdateUserAppealPayload';
-  userModeration: Maybe<UserModeration>;
+  /**
+   * The appellant's own view of their record, after the appeal is written.
+   * Present on both branches; it is what a non-admin caller reads.
+   */
+  myModeration: Maybe<MyModerationStatus>;
 };
 
 /**
@@ -17283,47 +17277,6 @@ export type UserEventParents = {
   __typename: 'UserEventParents';
   homeId: Maybe<Scalars['ID']['output']>;
   shoppingListId: Maybe<Scalars['ID']['output']>;
-};
-
-export type UserModeration = {
-  __typename: 'UserModeration';
-  abuseScore: Scalars['Float']['output'];
-  appealNotes: Maybe<Scalars['String']['output']>;
-  appealStatus: Maybe<AppealStatus>;
-  appealedAt: Maybe<Scalars['DateTime']['output']>;
-  automatedFlags: Array<AutomatedFlag>;
-  banReason: Maybe<Scalars['String']['output']>;
-  bannedAt: Maybe<Scalars['DateTime']['output']>;
-  createdAt: Scalars['DateTime']['output'];
-  createdBy: Maybe<User>;
-  createdById: Maybe<Scalars['ID']['output']>;
-  deletedBy: Maybe<User>;
-  deletedById: Maybe<Scalars['ID']['output']>;
-  id: Scalars['ID']['output'];
-  isBanned: Scalars['Boolean']['output'];
-  isSuspended: Scalars['Boolean']['output'];
-  lastModifiedBy: Maybe<User>;
-  lastModifiedById: Maybe<Scalars['ID']['output']>;
-  lastViolationAt: Maybe<Scalars['DateTime']['output']>;
-  moderatorNotes: Maybe<Scalars['String']['output']>;
-  restrictedUntil: Maybe<Scalars['DateTime']['output']>;
-  restrictionReason: Maybe<Scalars['String']['output']>;
-  restrictions: Array<ModerationRestriction>;
-  reviewStartedAt: Maybe<Scalars['DateTime']['output']>;
-  riskScore: Scalars['Float']['output'];
-  spamScore: Scalars['Float']['output'];
-  status: ModerationStatus;
-  suspendedAt: Maybe<Scalars['DateTime']['output']>;
-  suspendedUntil: Maybe<Scalars['DateTime']['output']>;
-  suspensionReason: Maybe<Scalars['String']['output']>;
-  trustLevel: TrustLevel;
-  underReview: Scalars['Boolean']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-  user: User;
-  userId: Scalars['ID']['output'];
-  version: Scalars['Int']['output'];
-  violationCount: Scalars['Int']['output'];
-  warningCount: Scalars['Int']['output'];
 };
 
 /** Sub-input for notification settings within user settings */

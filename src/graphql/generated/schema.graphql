@@ -786,16 +786,6 @@ type AutocompleteResult {
   totalCount: Int!
 }
 
-enum AutomatedFlag {
-  ABUSE_LANGUAGE
-  DUPLICATE_CONTENT
-  FAKE_REVIEWS
-  MULTIPLE_ACCOUNTS
-  PROMOTIONAL_CONTENT
-  SPAM_DETECTED
-  SUSPICIOUS_BEHAVIOR
-}
-
 enum BaseDimension {
   COUNT
   MASS
@@ -13153,7 +13143,11 @@ input UpdateUserAppealInput {
 }
 
 type UpdateUserAppealPayload {
-  userModeration: UserModeration
+  """
+  The appellant's own view of their record, after the appeal is written.
+  Present on both branches; it is what a non-admin caller reads.
+  """
+  myModeration: MyModerationStatus
 }
 
 """
@@ -13496,46 +13490,6 @@ PROFILE_CHANGED.
 type UserEventParents {
   homeId: ID
   shoppingListId: ID
-}
-
-type UserModeration {
-  abuseScore: Float!
-  appealNotes: String
-  appealStatus: AppealStatus
-  appealedAt: DateTime
-  automatedFlags: [AutomatedFlag!]!
-  banReason: String
-  bannedAt: DateTime
-  createdAt: DateTime!
-  createdBy: User
-  createdById: ID
-  deletedBy: User
-  deletedById: ID
-  id: ID!
-  isBanned: Boolean!
-  isSuspended: Boolean!
-  lastModifiedBy: User
-  lastModifiedById: ID
-  lastViolationAt: DateTime
-  moderatorNotes: String
-  restrictedUntil: DateTime
-  restrictionReason: String
-  restrictions: [ModerationRestriction!]!
-  reviewStartedAt: DateTime
-  riskScore: Float!
-  spamScore: Float!
-  status: ModerationStatus!
-  suspendedAt: DateTime
-  suspendedUntil: DateTime
-  suspensionReason: String
-  trustLevel: TrustLevel!
-  underReview: Boolean!
-  updatedAt: DateTime!
-  user: User!
-  userId: ID!
-  version: Int!
-  violationCount: Int!
-  warningCount: Int!
 }
 
 """Sub-input for notification settings within user settings"""
