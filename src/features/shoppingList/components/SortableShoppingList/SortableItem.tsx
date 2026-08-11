@@ -381,6 +381,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
       ) : null}
       <SwipeableItem
         itemId={itemId}
+        // Gives the swipe actions `shopping-list-item-<id>-edit` / `-delete`
+        // (RightActions appends the suffix). Keyed by id rather than index to
+        // match the row's own `shopping-item-checkbox-<id>`, and because a
+        // reorderable list makes an index-keyed id point at a different row
+        // after a drag.
+        testIDPrefix={`shopping-list-item-${itemId}`}
         onPress={onItemPress ? () => onItemPress(itemId) : undefined}
         // Press-and-hold an unpurchased item to open the purchase-amount sheet
         // (mark purchased with actual qty/price). Falls back to opening details
