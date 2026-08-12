@@ -839,6 +839,12 @@ mutation UpdatePantryItemQuantity($input: UpdatePantryItemQuantityInput!) {
       pantryItem {
         id
         ...useUpdatePantryItemQuantity_pantryItem
+        # The server recomputes this from the new quantity — verified against
+        # the API: consuming half of a 64g item moved it to 32. The fragment
+        # above mirrors the optimistic shape, so it is selected here instead;
+        # without it the cache keeps the pre-adjustment weight and every screen
+        # reading `remainingNetWeight` shows the old figure until a refetch.
+        remainingNetWeight
       }
     }
     ... on Error {
