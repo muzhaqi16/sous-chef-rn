@@ -12,6 +12,7 @@ import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { authService } from '#services/authService';
+import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 
 /**
  * DEV-only: read launch arguments injected by Detox to bypass the login UI
@@ -94,6 +95,11 @@ export function useStartupInit(): void {
 
       // Initialize device ID early — needed for WebSocket subscription self-echo filtering
       initializeDeviceId();
+
+      // Local-first writes land in the cache before the server sees them, so
+      // something has to withdraw them when the server refuses. Registered
+      // before any queue drain can run.
+      registerQueueFailureHandler();
 
       // Credentials are scoped per account; the most-recently-enrolled account
       // is the one the login screen offers, so report on that account.

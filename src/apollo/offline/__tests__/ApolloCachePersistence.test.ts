@@ -137,6 +137,88 @@ describe('ApolloCachePersistence', () => {
     });
   });
 
+  describe('change detection', () => {
+    const settle = () => {
+      jest.advanceTimersByTime(3000);
+      jest.runAllTimers();
+    };
+
+    it('persists a change that only altered an entity’s values', () => {
+      // The defect: `cache.write` for a query result reports only ROOT_QUERY as
+      // dirty, and ROOT_QUERY holds `__ref` pointers — so when a refetch brings
+      // new field values for entities already cached, its identity and the key
+      // count are both unchanged. That read as "nothing changed", the save was
+      // skipped, and the next cold start restored the previous values.
+      const rootQuery = { 'pantryItem({})': { __ref: 'PantryItem:1' } };
+
+      apolloCachePersistence.save({
+        ROOT_QUERY: rootQuery,
+        'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'Old' },
+      });
+      settle();
+      expect(storage.getString(DEFERRED_KEY)).toContain('Old');
+
+      // Same ROOT_QUERY object, same key count, new entity object — exactly
+      // what Apollo produces for a refetch over a cached entity.
+      apolloCachePersistence.save({
+        ROOT_QUERY: rootQuery,
+        'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'New' },
+      });
+      settle();
+
+      const deferred = storage.getString(DEFERRED_KEY)!;
+      expect(deferred).toContain('New');
+      expect(deferred).not.toContain('Old');
+    });
+
+    it('still skips a save when nothing changed at all', () => {
+      // The optimization has to survive the fix: identical extracts must not
+      // re-serialize the whole cache on every debounce tick.
+      const cache = {
+        ROOT_QUERY: { __typename: 'Query' },
+        'PantryItem:1': { __typename: 'PantryItem', id: '1', name: 'Same' },
+      };
+      apolloCachePersistence.save(cache);
+      settle();
+
+      const debugSpy = jest.spyOn(logger, 'debug');
+      apolloCachePersistence.save(cache);
+      settle();
+
+      expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('skipped'));
+      debugSpy.mockRestore();
+    });
+
+    it('persists an entity added without any other change', () => {
+      const rootQuery = { __typename: 'Query' };
+      apolloCachePersistence.save({ ROOT_QUERY: rootQuery });
+      settle();
+
+      apolloCachePersistence.save({
+        ROOT_QUERY: rootQuery,
+        'PantryItem:2': { __typename: 'PantryItem', id: '2' },
+      });
+      settle();
+
+      expect(storage.getString(DEFERRED_KEY)).toContain('PantryItem:2');
+    });
+
+    it('persists an entity removed without any other change', () => {
+      const rootQuery = { __typename: 'Query' };
+      apolloCachePersistence.save({
+        ROOT_QUERY: rootQuery,
+        'PantryItem:3': { __typename: 'PantryItem', id: '3' },
+      });
+      settle();
+      expect(storage.getString(DEFERRED_KEY)).toContain('PantryItem:3');
+
+      apolloCachePersistence.save({ ROOT_QUERY: rootQuery });
+      settle();
+
+      expect(storage.getString(DEFERRED_KEY)).not.toContain('PantryItem:3');
+    });
+  });
+
   describe('flushPending', () => {
     it('writes a pending debounced save immediately', () => {
       apolloCachePersistence.save({

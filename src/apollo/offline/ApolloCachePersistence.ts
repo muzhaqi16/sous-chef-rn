@@ -60,6 +60,37 @@ const CRITICAL_ROOT_KEYS = new Set([
  * apolloCachePersistence.clear();
  * ```
  */
+
+/**
+ * Whether anything in the normalized cache differs from the last persisted
+ * snapshot.
+ *
+ * Compares object identity per top-level key rather than value. `extract()`
+ * hands back the store's own entity objects, so an untouched entity keeps its
+ * reference across extracts and a modified one gets a new one — the scan is
+ * `Object.keys(cache).length` pointer comparisons, cheaper by far than the
+ * `JSON.stringify` of the whole cache it guards.
+ *
+ * It has to be the whole cache, not a set of keys reported by the writers.
+ * `cache.write` for a query result reports only `ROOT_QUERY`, and ROOT_QUERY
+ * holds `__ref` pointers: when a refetch returns new field values for entities
+ * already cached, every ref is the same, ROOT_QUERY keeps its identity, and the
+ * key count is unchanged. Under the old per-key check that read as "nothing
+ * changed", so the edit was never written to disk and the next cold start
+ * restored the previous values.
+ */
+function hasCacheChanged(
+  cache: NormalizedCacheObject,
+  snapshot: NormalizedCacheObject,
+): boolean {
+  const keys = Object.keys(cache);
+  if (keys.length !== Object.keys(snapshot).length) return true;
+  for (const key of keys) {
+    if (cache[key] !== snapshot[key]) return true;
+  }
+  return false;
+}
+
 class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
@@ -70,7 +101,6 @@ class ApolloCachePersistence {
   private pausedExtractor: (() => NormalizedCacheObject) | null = null;
 
   // Dirty-key tracking: skip serialization when nothing actually changed
-  private dirtyKeys = new Set<string>();
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
 
   /**
@@ -308,17 +338,6 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Mark cache keys as potentially dirty.
-   * Used by cache wrapper hooks to flag which entities may have changed,
-   * enabling the persist path to skip serialization when nothing changed.
-   */
-  markDirty(keys: string[]): void {
-    for (const key of keys) {
-      this.dirtyKeys.add(key);
-    }
-  }
-
-  /**
    * Schedule a lazy cache extraction and save (debounced)
    *
    * Unlike save(), this defers cache.extract() until after the debounce period,
@@ -349,32 +368,15 @@ class ApolloCachePersistence {
           const cache = extractor();
           const tExtract = performance.now();
 
-          // Skip serialization if dirty keys haven't actually changed
-          if (this.lastPersistedSnapshot && this.dirtyKeys.size > 0) {
-            let hasChanges = false;
-            for (const key of this.dirtyKeys) {
-              if (cache[key] !== this.lastPersistedSnapshot[key]) {
-                hasChanges = true;
-                break;
-              }
+          // Skip serialization when nothing in the cache actually changed.
+          if (
+            this.lastPersistedSnapshot &&
+            !hasCacheChanged(cache, this.lastPersistedSnapshot)
+          ) {
+            if (__DEV__) {
+              logger.debug('💾 [CachePersist] skipped — cache unchanged');
             }
-            // Also check if keys were added or removed
-            if (!hasChanges) {
-              const cacheKeys = Object.keys(cache).length;
-              const snapshotKeys = Object.keys(
-                this.lastPersistedSnapshot,
-              ).length;
-              hasChanges = cacheKeys !== snapshotKeys;
-            }
-            if (!hasChanges) {
-              this.dirtyKeys.clear();
-              if (__DEV__) {
-                logger.debug(
-                  '💾 [CachePersist] skipped — no changes in dirty keys',
-                );
-              }
-              return;
-            }
+            return;
           }
 
           const { critical, deferred } = this.partitionCache(cache);
@@ -391,7 +393,6 @@ class ApolloCachePersistence {
           // Migration cleanup: remove old single-key format
           storage.remove(CACHE_STORAGE_KEY);
           this.lastPersistedSnapshot = cache;
-          this.dirtyKeys.clear();
 
           if (__DEV__) {
             const extractMs = (tExtract - t0).toFixed(2);
@@ -487,7 +488,6 @@ class ApolloCachePersistence {
       // Migration cleanup: remove old single-key format
       storage.remove(CACHE_STORAGE_KEY);
       this.lastPersistedSnapshot = cache;
-      this.dirtyKeys.clear();
 
       if (__DEV__) {
         logger.debug(`💾 Cache: Persisted cache immediately (${sizeKB} KB)`);
@@ -513,7 +513,6 @@ class ApolloCachePersistence {
       storage.remove(DEFERRED_CACHE_KEY);
       storage.remove(CACHE_VERSION_KEY);
       this.lastPersistedSnapshot = null;
-      this.dirtyKeys.clear();
       if (__DEV__) {
         logger.debug('🧹 Cache: Cleared persisted cache');
       }

@@ -114,6 +114,7 @@
       "Notification": "La notifica"
     },
     "queuedChangeSyncFailed": "Impossibile sincronizzare le modifiche. Trascina per aggiornare.",
+    "queuedChangeRejected": "Una modifica non è stata salvata ed è stata annullata.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
     "invalidQuantity": "Inserisci una quantità valida",
     "itemNotFound": "Articolo non trovato",

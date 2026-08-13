@@ -179,6 +179,12 @@ function setupCachePersistence(client: ApolloClient) {
   // generic method signatures so the wrappers stay assignable back to the
   // (generic) cache methods. `evict` is non-generic, so it stays fully typed
   // via Parameters<>.
+  //
+  // These used to also report the written id as "dirty", which the persistence
+  // layer took as the complete set of things that could have changed. It never
+  // was: a query result reports only `ROOT_QUERY` while normalizing new field
+  // values into any number of entities. Change detection now scans the whole
+  // extracted cache by object identity, so there is nothing to report.
   cache.write = function <
     TData = unknown,
     TVariables extends OperationVariables = OperationVariables,
@@ -186,21 +192,12 @@ function setupCachePersistence(client: ApolloClient) {
     writeOptions: Cache.WriteOptions<TData, TVariables>,
   ): Reference | undefined {
     const result = originalWrite(writeOptions);
-    // Mark the written entity's cache ID as dirty for incremental persistence
-    const dataId = writeOptions.dataId;
-    if (dataId) {
-      apolloCachePersistence.markDirty([dataId]);
-    }
     schedulePersistence();
     return result;
   };
 
   cache.evict = function (...args: Parameters<typeof originalEvict>) {
     const result = originalEvict(...args);
-    const id = args[0]?.id;
-    if (id) {
-      apolloCachePersistence.markDirty([id]);
-    }
     schedulePersistence();
     return result;
   };
@@ -209,10 +206,6 @@ function setupCachePersistence(client: ApolloClient) {
     Entity extends Record<string, unknown> = Record<string, unknown>,
   >(options: Cache.ModifyOptions<Entity>): boolean {
     const result = originalModify(options);
-    const id = options.id;
-    if (id) {
-      apolloCachePersistence.markDirty([id]);
-    }
     schedulePersistence();
     return result;
   };

@@ -963,10 +963,10 @@
       "body": "subscription NotificationEvents {\n  notificationEvents {\n    subtype\n    mutation\n    timestamp\n    affectedCount\n    node {\n      id\n      ...useNotifications_notification\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useNotifications_notification on Notification {\n  id\n  type\n  status\n  priority\n  title\n  message\n  payload\n  category\n  sentAt\n  expiresAt\n  sourceId\n  sourceType\n  actionUrl\n  readAt\n  __typename\n}"
     },
     {
-      "id": "9936b9b31eafdd423beae96b851c17e83ae8dba73290d68f48ab547e74c9e5c7",
+      "id": "2af9d71a7141043e9ff6da1c9d817d780db7101855fdbd932bbd4dcc49f10fac",
       "name": "OpenPantryItemBatch",
       "type": "mutation",
-      "body": "mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {\n  openPantryItemBatch(input: $input) {\n    __typename\n    ... on OpenPantryItemBatchPayload {\n      pantryItem {\n        id\n        ...useOpenPantryItemBatch_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useOpenPantryItemBatch_pantryItem on PantryItem {\n  id\n  version\n  activeBatchCount\n  __typename\n}"
+      "body": "mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {\n  openPantryItemBatch(input: $input) {\n    __typename\n    ... on OpenPantryItemBatchPayload {\n      pantryItem {\n        id\n        ...useOpenPantryItemBatch_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useOpenPantryItemBatch_pantryItem on PantryItem {\n  id\n  version\n  activeBatchCount\n  lastUsedAt\n  __typename\n}"
     },
     {
       "id": "9d005dc6da1ad39d7321553001eacd36fb47f490d0145a50fabbc236a90e6071",

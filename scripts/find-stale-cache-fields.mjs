@@ -27,6 +27,29 @@
  * that is NEW since the baseline, which is the signal worth acting on. A green
  * run means "no new gaps to triage", not "no stale fields exist".
  *
+ * ## Verified against the dev API
+ *
+ * Each of these was settled by reading the entity, running the mutation, and
+ * reading it again. Recorded so the next person triaging a flagged pair does
+ * not repeat the measurement.
+ *
+ * | Operation                   | Server recomputes            | Verdict |
+ * |-----------------------------|------------------------------|---------|
+ * | ToggleShoppingListItemPurchased | purchaseHistory          | was missing — added |
+ * | UpdatePantryItemQuantity    | quantity (rounded to 2dp)    | returned |
+ * | OpenPantryItemBatch         | lastUsedAt, version          | lastUsedAt was missing — added |
+ * | WastePantryItemBatch        | quantity, activeBatchCount   | both returned |
+ * | AdjustPantryItemQuantity    | quantity, remainingNetWeight | both returned |
+ *
+ * Ruled out by the same method, despite being flagged: `remainingNetWeight` and
+ * `activeBatchCount` on OpenPantryItemBatch (opening a batch consumes nothing),
+ * and `totalCost` / `purchase` on AdjustPantryItemQuantity (unchanged across
+ * the adjustment). Flagged pairs are candidates, not defects.
+ *
+ * Also learned, and not something this script can see: the server stores
+ * quantities to two decimal places (1.236 -> 1.24), so the optimistic cache and
+ * the server disagree past that precision regardless of which fields come back.
+ *
  *   node scripts/find-stale-cache-fields.mjs [--all]
  */
 import {

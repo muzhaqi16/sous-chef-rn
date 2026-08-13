@@ -226,6 +226,87 @@ function preservePendingEdges(
 }
 
 /**
+ * Merge a cursorless (first-page) response into a cached connection, treating
+ * the incoming page as authoritative for the window it covers.
+ *
+ * This is the difference between a refresh that works and one that only ever
+ * adds. The append-only branch below keeps every existing edge in place and
+ * appends whatever is new, which is right for `fetchMore` and wrong for a
+ * refetch: an entry deleted on another device stayed on screen because it was
+ * in `existing` and simply absent from `incoming`, and an entry that now sorts
+ * first stayed wherever it used to be, because its position came from the
+ * cached edge rather than the fresh page. Pull-to-refresh appeared to do
+ * nothing.
+ *
+ * How much the page re-states is decided by `hasNextPage`, and only by it:
+ *
+ * - `false` — the response is the entire list, so it replaces the whole
+ *   connection. Anything cached and absent from it is gone.
+ * - `true` — the response is the first page of a longer list, so it replaces
+ *   the first page's worth of edges. Edges past its length were loaded by
+ *   later `fetchMore` calls and survive, minus any id the fresh page now
+ *   carries — an entry that sorted forward into the window must not appear
+ *   twice.
+ *
+ * Position alone cannot make that call. A page can be short because entries
+ * were deleted, in which case the "tail" is the deletions and keeping it puts
+ * them back on screen.
+ *
+ * The resilience guard comes first: a transient or partial response (API
+ * briefly unreachable, an `errorPolicy: 'ignore'` fallback, a 200 that arrives
+ * mid-token-refresh) must not empty a populated list. Only `totalCount === 0`
+ * is treated as the server genuinely saying everything is gone.
+ */
+function mergeAuthoritativeFirstPage(
+  existing: CachedConnection,
+  incoming: CachedConnection,
+  readField: ReadField,
+): CachedConnection {
+  const incomingEdges = incoming.edges || [];
+  const existingEdges = existing.edges || [];
+
+  const authoritativeEmpty = incoming.totalCount === 0;
+  if (
+    incomingEdges.length === 0 &&
+    existingEdges.length > 0 &&
+    !authoritativeEmpty
+  ) {
+    if (__DEV__) {
+      logger.debug(
+        `🛡️ [Cache] preserved ${existingEdges.length} cached edge(s) — ignored empty/partial incoming (totalCount=${incoming.totalCount})`,
+      );
+    }
+    return existing;
+  }
+
+  const incomingIds = new Set<string>();
+  for (const edge of incomingEdges) {
+    const id = readEdgeNodeId(edge, readField);
+    if (id) incomingIds.add(id);
+  }
+
+  const coversWholeList = !incoming.pageInfo?.hasNextPage;
+  const tail = coversWholeList
+    ? []
+    : existingEdges.slice(incomingEdges.length).filter(edge => {
+        const id = readEdgeNodeId(edge, readField);
+        return id != null && !incomingIds.has(id);
+      });
+
+  const merged: CachedConnection = {
+    ...incoming,
+    edges: tail.length > 0 ? [...incomingEdges, ...tail] : incomingEdges,
+    // A surviving tail means the loaded window still extends past this page, so
+    // the cached cursor — not this page's — describes where `fetchMore` resumes.
+    ...(tail.length > 0 && existing.pageInfo
+      ? { pageInfo: existing.pageInfo }
+      : {}),
+  };
+
+  return preservePendingEdges(existing, merged, readField);
+}
+
+/**
  * Connection merge for non-paginated-window lists where fresh server data
  * should win on duplicate node IDs.
  *
@@ -269,12 +350,12 @@ function mergeConnectionByNodeId(keyArgs: string[] = ['filters']) {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
-        // Preserve un-replayed local creates over an authoritative first page.
-        // An offline-created node (favorite, meal template, …) lives in
-        // `existing` until the queue replays it; a refetch that wins the race
-        // would otherwise drop it. Mirrors itemsConnectionFieldPolicy's guard.
-        return preservePendingEdges(existing, incoming, readField);
+      if (!args?.after) {
+        // No cursor means a refresh, not a page: the response re-states the
+        // window it covers, so it replaces those edges rather than merging
+        // into them. Gating this on `!hasNextPage` — as it used to — meant any
+        // list long enough to paginate never saw a removal or a reorder.
+        return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 
       const edgeMap = new Map<string, CachedEdge>();
@@ -384,41 +465,12 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
-      if (!args?.after && !incoming.pageInfo?.hasNextPage) {
-        // Resilience guard: never let an empty/partial incoming page wipe a
-        // populated cached connection. `itemsConnection` is the only cache
-        // field with an active replace rule, so a transient/partial response
-        // (API briefly unreachable, an `errorPolicy: 'ignore'` fallback, or a
-        // 200 that arrives mid-token-refresh carrying no edges) would otherwise
-        // empty the list on a connection blip — while every other cached field
-        // (stats, home, profile, entities) survives untouched. Keep the cached
-        // edges unless the server AUTHORITATIVELY reports an empty list
-        // (`totalCount === 0`), which is a real "everything was removed" state.
-        const incomingHasEdges = (incoming.edges?.length ?? 0) > 0;
-        const existingHasEdges = (existing.edges?.length ?? 0) > 0;
-        const authoritativeEmpty = incoming.totalCount === 0;
-        if (!incomingHasEdges && existingHasEdges && !authoritativeEmpty) {
-          if (__DEV__) {
-            logger.debug(
-              `🛡️ [Cache] itemsConnection: preserved ${
-                existing.edges?.length ?? 0
-              } cached edge(s) — ignored empty/partial incoming (totalCount=${
-                incoming.totalCount
-              })`,
-            );
-          }
-          return existing;
-        }
-
-        // Preserve un-replayed local creates. An offline-created item lives in
-        // `existing` but isn't in this authoritative page until the queue
-        // replays it; a first-page refetch that wins the race against the replay
-        // would otherwise drop it (a visible disappear/reappear). Keep ONLY edges
-        // whose id still has a PENDING mutation queued — a genuinely
-        // server-deleted item has no pending op and is still dropped, so the page
-        // stays authoritative. Falls straight through to `return incoming` once
-        // the queue drains (pendingIds empty).
-        return preservePendingEdges(existing, incoming, readField);
+      if (!args?.after) {
+        // No cursor means a refresh, not a page. See
+        // `mergeAuthoritativeFirstPage` for why this must not also require
+        // `!hasNextPage`, and for the empty-response and pending-create guards
+        // it carries.
+        return mergeAuthoritativeFirstPage(existing, incoming, readField);
       }
 
       // Append-only: keep existing edges in place, add only new incoming edges
@@ -522,6 +574,18 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
  * optimistic updates, and concurrent modifications. Targeted `cache.evict()`
  * + `cache.gc()` at known eviction points (logout, item deletion) keep the
  * cache bounded — no periodic sweep needed.
+ *
+ * **No type declares `keyFields: ['id']`.** That is already Apollo's default,
+ * so writing it out looks harmless — but declaring `keyFields` at all switches
+ * the cache key to its explicit form: `PantryItem:{"id":"abc"}` instead of
+ * `PantryItem:abc`. Twenty-seven types spelled out the default and silently got
+ * the other format, which broke every consumer that reads a key back:
+ * `queueManager.findCachedTypename` looks for a key ending in `:<entityId>`,
+ * found nothing for any of them, and so never evicted a failed mutation's
+ * entity or cleared its persisted optimistic fields.
+ *
+ * Add `keyFields` only for a type that is genuinely keyed on something other
+ * than `id`, and expect the explicit key format when you do.
  */
 
 export function makeCache(): InMemoryCache {
@@ -532,7 +596,6 @@ export function makeCache(): InMemoryCache {
 
     typePolicies: {
       ShoppingListItem: {
-        keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
           unit: {
@@ -545,7 +608,6 @@ export function makeCache(): InMemoryCache {
         },
       },
       ShoppingList: {
-        keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
           itemsConnection: itemsConnectionFieldPolicy(),
@@ -558,7 +620,6 @@ export function makeCache(): InMemoryCache {
         },
       },
       Home: {
-        keyFields: ['id'],
         fields: {
           membersConnection: mergeConnectionByNodeId(),
           invitesConnection: mergeConnectionByNodeId(),
@@ -569,7 +630,6 @@ export function makeCache(): InMemoryCache {
         },
       },
       Pantry: {
-        keyFields: ['id'],
         fields: {
           itemsConnection: itemsConnectionFieldPolicy(['filters', 'orderBy']),
           storageLocationsConnection: mergeConnectionByNodeId(),
@@ -587,7 +647,6 @@ export function makeCache(): InMemoryCache {
         },
       },
       PantryItem: {
-        keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
           unit: {
@@ -595,29 +654,7 @@ export function makeCache(): InMemoryCache {
           },
         },
       },
-      PantryItemBatch: {
-        keyFields: ['id'],
-      },
-      Unit: {
-        keyFields: ['id'],
-      },
-      StorageLocation: { keyFields: ['id'] },
-      Notification: { keyFields: ['id'] },
-      Category: { keyFields: ['id'] },
-      Brand: { keyFields: ['id'] },
-      Membership: { keyFields: ['id'] },
-      HomeInvite: { keyFields: ['id'] },
-      ShoppingListCollaborator: { keyFields: ['id'] },
-      Purchase: { keyFields: ['id'] },
-      Store: { keyFields: ['id'] },
-      SavedRecipe: { keyFields: ['id'] },
-      NotificationPreferences: { keyFields: ['id'] },
-      DietaryProfile: { keyFields: ['id'] },
-      UserProfile: { keyFields: ['id'] },
-      UserSettings: { keyFields: ['id'] },
-      RecipeIngredient: { keyFields: ['id'] },
       Item: {
-        keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
           imageUrl: {
@@ -649,11 +686,9 @@ export function makeCache(): InMemoryCache {
         },
       },
       Recipe: {
-        keyFields: ['id'],
         merge: true, // Enable automatic field-level merging for partial data
       },
       MealPlan: {
-        keyFields: ['id'],
         merge: true,
         fields: {
           mealPlanItems: {
@@ -666,11 +701,9 @@ export function makeCache(): InMemoryCache {
         },
       },
       MealPlanItem: {
-        keyFields: ['id'],
         merge: true,
       },
       User: {
-        keyFields: ['id'],
         fields: {
           profile: {
             // Merge profile fields to prevent data loss when partial updates arrive

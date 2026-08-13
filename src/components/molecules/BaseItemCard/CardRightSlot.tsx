@@ -4,6 +4,13 @@ import { View } from 'react-native';
 // buttons can be rendered inside a BaseItemCard Swipeable, and RN's Pressable
 // doesn't coordinate with RNGH's gesture arena (swipe blocks / tap double-fires
 // the row). See the SwipeableItem convention in CLAUDE.md.
+//
+// The trade-off is that the Unistyles babel plugin binds React Native's
+// components to the C++ ShadowTree, not this one — so a theme-derived style
+// sitting on this Pressable is resolved once and never updated, and a live
+// theme switch leaves these buttons painted in the previous theme while the
+// row around them changes. Every themed value therefore lives on a wrapping
+// `View`, and this component carries only literals.
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -54,29 +61,35 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
 
   if (type === 'dragHandle' && onDrag) {
     return (
-      <Pressable onLongPress={onDrag} style={styles.dragHandle}>
-        <Icon name="reorder-three" size={24} tone="textTertiary" />
-      </Pressable>
+      <View style={styles.dragHandle}>
+        <Pressable onLongPress={onDrag} style={styles.fill}>
+          <Icon name="reorder-three" size={24} tone="textTertiary" />
+        </Pressable>
+      </View>
     );
   }
 
   // counter
   return (
     <View style={styles.counterContainer}>
-      <Pressable
-        onPress={onDecrement}
-        disabled={disabled || quantity === 0}
+      <View
         style={[
           styles.counterButton,
           (disabled || quantity === 0) && styles.counterButtonDisabled,
         ]}
       >
-        <Icon
-          name="remove-outline"
-          size={18}
-          tone={disabled || quantity === 0 ? 'textTertiary' : 'primary'}
-        />
-      </Pressable>
+        <Pressable
+          onPress={onDecrement}
+          disabled={disabled || quantity === 0}
+          style={styles.fill}
+        >
+          <Icon
+            name="remove-outline"
+            size={18}
+            tone={disabled || quantity === 0 ? 'textTertiary' : 'primary'}
+          />
+        </Pressable>
+      </View>
       <View style={styles.counterValue}>
         <Text size="md" weight="semibold">
           {quantity || 0}
@@ -87,17 +100,21 @@ const InteractiveSlot: React.FC<CardRightSlotProps> = ({
           </Text>
         ) : null}
       </View>
-      <Pressable
-        onPress={onIncrement}
-        disabled={disabled}
+      <View
         style={[styles.counterButton, disabled && styles.counterButtonDisabled]}
       >
-        <Icon
-          name="add"
-          size={18}
-          tone={disabled ? 'textTertiary' : 'primary'}
-        />
-      </Pressable>
+        <Pressable
+          onPress={onIncrement}
+          disabled={disabled}
+          style={styles.fill}
+        >
+          <Icon
+            name="add"
+            size={18}
+            tone={disabled ? 'textTertiary' : 'primary'}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 };
@@ -163,5 +180,14 @@ const styles = StyleSheet.create(theme => ({
   dragHandle: {
     padding: theme.spacing.sm,
     marginLeft: theme.spacing.xs,
+  },
+  // Literals only: this is the style that lands on RNGH's Pressable, which the
+  // Unistyles plugin does not bind to the ShadowTree. Anything theme-derived
+  // here would freeze at whatever theme was active when the row mounted.
+  fill: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }));

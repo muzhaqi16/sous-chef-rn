@@ -149,9 +149,6 @@ const styles = StyleSheet.create(theme => ({
     // tab bar instead of sitting narrower.
     marginHorizontal: theme.spacing['3'],
   },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',

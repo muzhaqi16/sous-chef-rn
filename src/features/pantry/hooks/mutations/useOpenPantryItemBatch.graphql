@@ -4,8 +4,15 @@
 # (isOpened/openedAt) before firing; batches otherwise live in the separate
 # Query.pantryItemBatchesConnection, refreshed by its own cache-and-network
 # query on the detail screen.
+#
+# `lastUsedAt` is set server-side by this mutation — verified against the API,
+# null -> a timestamp on open. It is displayed as the "last used" row on the
+# item detail screen AND gates the "correct weight" action there, so without it
+# here, opening a batch left that row absent and that action hidden until an
+# unrelated refetch.
 fragment useOpenPantryItemBatch_pantryItem on PantryItem {
   id
   version
   activeBatchCount
+  lastUsedAt
 }
