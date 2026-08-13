@@ -37,6 +37,7 @@ import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
 import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   type PageName,
   PAGES,
@@ -275,7 +276,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     const netWeights = netWeightEntries
       .filter(entry => entry.value && entry.unitName)
       .map(entry => ({
-        value: parseFloat(entry.value!),
+        value: parseDecimalInput(entry.value!),
         unitName: entry.unitName!,
         // Pass the resolved unit id when the user picked a known unit, so the
         // server links it directly instead of re-resolving by name.
@@ -289,7 +290,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         unitName: entry.unitName || undefined,
         isDefault: index === 0,
         packageSize: entry.packageSize
-          ? parseFloat(entry.packageSize)
+          ? parseDecimalInput(entry.packageSize)
           : undefined,
         contentUnitId: entry.contentUnitId || undefined,
         contentUnitName: entry.contentUnitName || undefined,

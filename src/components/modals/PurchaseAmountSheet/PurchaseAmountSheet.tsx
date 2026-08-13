@@ -11,6 +11,7 @@ import { Header } from '#/components/molecules/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -35,7 +36,7 @@ interface PurchaseAmountSheetProps {
 const parseNumberInput = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
-  const num = parseFloat(trimmed);
+  const num = parseDecimalInput(trimmed);
   return isNaN(num) || num < 0 ? null : num;
 };
 

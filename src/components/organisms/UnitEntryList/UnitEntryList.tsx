@@ -9,6 +9,7 @@ import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Button } from '#/components/base/Button';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface UnitEntry {
   id: string;
@@ -166,22 +167,23 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                   <Icon name="trash-outline" size={20} tone="error" />
                 </AppPressable>
               </View>
-              {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
-                <View style={styles.contentUnitRow}>
-                  <UnitAutocompleteField
-                    variant="inline"
-                    label={t('unitEntryList.contains')}
-                    value={entry.contentUnitName || ''}
-                    onChangeText={(text: string) =>
-                      handleUnitTextChange(index, 'contentUnitName', text)
-                    }
-                    placeholder={t('unitEntryList.containsPlaceholder')}
-                    onUnitSelected={(unitId, unitName) =>
-                      handleContentUnitSelected(index, unitId, unitName)
-                    }
-                  />
-                </View>
-              )}
+              {!!entry.packageSize &&
+                parseDecimalInput(entry.packageSize) > 0 && (
+                  <View style={styles.contentUnitRow}>
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label={t('unitEntryList.contains')}
+                      value={entry.contentUnitName || ''}
+                      onChangeText={(text: string) =>
+                        handleUnitTextChange(index, 'contentUnitName', text)
+                      }
+                      placeholder={t('unitEntryList.containsPlaceholder')}
+                      onUnitSelected={(unitId, unitName) =>
+                        handleContentUnitSelected(index, unitId, unitName)
+                      }
+                    />
+                  </View>
+                )}
             </DropdownStack>
           </View>
         ))}

@@ -12,6 +12,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
@@ -120,7 +121,7 @@ export const CookingPreferencesSheet: React.FC<
 
     // Validate and add budget if provided
     if (budget) {
-      const budgetValue = parseFloat(budget);
+      const budgetValue = parseDecimalInput(budget);
       if (
         isNaN(budgetValue) ||
         budgetValue < DIETARY_LIMITS.budget.min ||

@@ -17,6 +17,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
 import { logger } from '#/utils/environment';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 /**
  * Two-tier offline replay mapping.
@@ -186,7 +187,7 @@ const buildPantryItemQuantitySync: SyncBuilder = (mutation, readers) => {
 
   const quantity =
     typeof input.quantity === 'string'
-      ? parseFloat(input.quantity)
+      ? parseDecimalInput(input.quantity)
       : input.quantity;
 
   const syncInput: SyncPantryItemInput = {

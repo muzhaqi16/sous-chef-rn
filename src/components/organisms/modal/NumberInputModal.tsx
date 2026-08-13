@@ -8,6 +8,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { errorMessageOr } from '#/services/errorService';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface NumberInputModalProps {
   /**
@@ -224,7 +225,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
 
     // Parse input
     const numValue = allowDecimals
-      ? parseFloat(inputValue)
+      ? parseDecimalInput(inputValue)
       : parseInt(inputValue);
 
     // Validate

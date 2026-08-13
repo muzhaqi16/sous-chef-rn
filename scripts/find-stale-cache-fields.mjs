@@ -9,20 +9,67 @@
  * value until something else refetches, which under `cache-and-network` looks
  * like an intermittent "it's empty until I reload".
  *
- * This is the static half: for every mutation, resolve what it selects on each
- * entity type (following fragment spreads), compare against everything the
- * app's QUERIES read on that same type, and report the difference — ranked so
- * the derived-looking fields come first. Candidates still need confirming
- * against the API, because plenty of unselected fields simply never change.
+ * This is the static half: for every mutation, resolve what it selects on the
+ * entity it returns (following fragment spreads, with types resolved from the
+ * schema), compare against everything the app's QUERIES read on that type, and
+ * report the difference — derived-looking names first.
+ *
+ * **This produces candidates, not defects, and cannot be driven to zero.**
+ * Whether a mutation actually recomputes a given field is a property of the
+ * server, and no static analysis can know it: `UpdateRecipeIngredients` returns
+ * a Recipe without `averageRating`, but editing ingredients does not change a
+ * rating, so that pair is noise. The two confirmed cases in this codebase
+ * (`purchaseHistory` on toggle-purchased, `remainingNetWeight` on
+ * update-quantity) were each settled by calling the API and diffing before and
+ * after — that is the only way to be sure.
+ *
+ * `--check` therefore ratchets rather than demanding zero: it fails on a pair
+ * that is NEW since the baseline, which is the signal worth acting on. A green
+ * run means "no new gaps to triage", not "no stale fields exist".
  *
  *   node scripts/find-stale-cache-fields.mjs [--all]
  */
-import { readFileSync, readdirSync, statSync } from 'fs';
+import {
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync,
+  existsSync,
+} from 'fs';
 import { join, extname } from 'path';
-import { parse, visit } from 'graphql';
+import {
+  parse,
+  visit,
+  buildSchema,
+  TypeInfo,
+  visitWithTypeInfo,
+  getNamedType,
+  isObjectType,
+  isInterfaceType,
+} from 'graphql';
 
 const SRC = 'src';
+const SCHEMA = 'src/graphql/generated/schema.graphql';
+const BASELINE = 'scripts/find-stale-cache-fields.baseline.json';
 const SHOW_ALL = process.argv.includes('--all');
+const CHECK = process.argv.includes('--check');
+const UPDATE = process.argv.includes('--update');
+
+// Resolving types from the schema rather than guessing is what lets nested
+// selections count. The previous version passed `null` as the type for any
+// field selected inline on a nested object, so those fields were invisible on
+// both the query and the mutation side — the detector could not see a stale
+// field unless it happened to arrive via a named fragment.
+const schema = existsSync(SCHEMA)
+  ? buildSchema(readFileSync(SCHEMA, 'utf8'))
+  : null;
+if (!schema) {
+  console.error(
+    `✗ No schema at ${SCHEMA}. Run \`npm run codegen\` first — without it this\n` +
+      `  check can only see fragment-carried fields and would under-report.`,
+  );
+  process.exit(2);
+}
 
 /** Fields whose value is derived from other rows, so a write elsewhere moves
  *  them. These are the ones worth looking at first. */
@@ -72,27 +119,55 @@ for (const file of files) {
  * `type -> Set(field)` using the enclosing fragment's type condition as the
  * type name. Inline field selections inherit the nearest known type.
  */
-function collect(node, typeName, into, seen = new Set()) {
-  if (!node.selectionSet) return;
+/**
+ * Records `type -> Set(field)` for every field selected anywhere under `node`,
+ * resolving the parent type from the schema at each level so nested selections
+ * are attributed correctly. Fragment spreads are inlined first so a single
+ * schema-aware walk sees the whole selection.
+ */
+function collect(definition, into) {
+  const inlined = inlineSpreads(definition, new Set());
+  const typeInfo = new TypeInfo(schema);
+  visit(
+    inlined,
+    visitWithTypeInfo(typeInfo, {
+      Field() {
+        const parent = getNamedType(typeInfo.getParentType());
+        const field = typeInfo.getFieldDef();
+        if (!parent || !field) return;
+        if (!isObjectType(parent) && !isInterfaceType(parent)) return;
+        if (!into.has(parent.name)) into.set(parent.name, new Set());
+        into.get(parent.name).add(field.name);
+      },
+    }),
+  );
+}
+
+/** Replaces every FragmentSpread with the fragment's selections, so one
+ *  schema-aware traversal covers the full shape. Guards against cycles. */
+function inlineSpreads(node, seen) {
+  if (!node || typeof node !== 'object') return node;
+  if (Array.isArray(node)) return node.map(n => inlineSpreads(n, seen));
+  if (!node.selectionSet) return node;
+  const selections = [];
   for (const sel of node.selectionSet.selections) {
-    if (sel.kind === 'Field') {
-      if (typeName) {
-        if (!into.has(typeName)) into.set(typeName, new Set());
-        into.get(typeName).add(sel.name.value);
-      }
-      // Nested objects belong to a type we cannot resolve without the schema;
-      // recurse with no type so their fragment spreads are still followed.
-      collect(sel, null, into, seen);
-    } else if (sel.kind === 'InlineFragment') {
-      collect(sel, sel.typeCondition?.name.value ?? typeName, into, seen);
-    } else if (sel.kind === 'FragmentSpread') {
+    if (sel.kind === 'FragmentSpread') {
       const name = sel.name.value;
       if (seen.has(name)) continue;
-      seen.add(name);
       const frag = fragments.get(name);
-      if (frag) collect(frag, frag.typeCondition.name.value, into, seen);
+      if (!frag) continue;
+      const nextSeen = new Set(seen).add(name);
+      selections.push({
+        kind: 'InlineFragment',
+        typeCondition: frag.typeCondition,
+        directives: [],
+        selectionSet: inlineSpreads(frag, nextSeen).selectionSet,
+      });
+    } else {
+      selections.push(inlineSpreads(sel, seen));
     }
   }
+  return { ...node, selectionSet: { ...node.selectionSet, selections } };
 }
 
 // --- what QUERIES read, per type --------------------------------------------
@@ -100,11 +175,54 @@ const readByType = new Map();
 for (const op of operations) {
   if (op.kind !== 'query') continue;
   const found = new Map();
-  collect(op.ast, null, found);
+  collect(op.ast, found);
   for (const [type, fields] of found) {
     if (!readByType.has(type)) readByType.set(type, new Set());
     for (const f of fields) readByType.get(type).add(f);
   }
+}
+
+/**
+ * The entity a mutation actually mutates — the object directly under its
+ * payload — rather than every type reachable in the selection.
+ *
+ * Without this the check blames a mutation for fields of entities that merely
+ * appear nested in its response: a meal-plan mutation returning a nested recipe
+ * was reported as leaving `Recipe.averageRating` stale, which it neither
+ * changes nor is responsible for. That over-approximation is what took the
+ * count to 137 and made the number unusable.
+ */
+function primaryEntityTypes(definition) {
+  const inlined = inlineSpreads(definition, new Set());
+  const typeInfo = new TypeInfo(schema);
+  const types = new Set();
+  // depth 1 = the mutation field, 2 = the entity it returns. `... on Payload`
+  // is an inline fragment and does not count as a field, so the entity sits
+  // directly under the mutation field. Anything deeper is a related entity the
+  // mutation reports but does not own.
+  let depth = 0;
+  visit(
+    inlined,
+    visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter() {
+          depth += 1;
+          if (depth !== 2) return;
+          const named = getNamedType(typeInfo.getType());
+          if (!named) return;
+          if (!isObjectType(named) && !isInterfaceType(named)) return;
+          // Entities only: something Apollo will normalize and therefore can
+          // hold a stale value for.
+          if (!('id' in named.getFields())) return;
+          types.add(named.name);
+        },
+        leave() {
+          depth -= 1;
+        },
+      },
+    }),
+  );
+  return types;
 }
 
 // --- what each MUTATION writes back -----------------------------------------
@@ -112,9 +230,11 @@ const findings = [];
 for (const op of operations) {
   if (op.kind !== 'mutation') continue;
   const written = new Map();
-  collect(op.ast, null, written);
+  collect(op.ast, written);
+  const primary = primaryEntityTypes(op.ast);
 
   for (const [type, fields] of written) {
+    if (!primary.has(type)) continue;
     const read = readByType.get(type);
     if (!read) continue;
     const missing = [...read].filter(f => !fields.has(f));
@@ -147,6 +267,55 @@ findings.sort(
     b.derived.length - a.derived.length,
 );
 
+// A run that examined nothing must not read as clean — the same vacuity trap
+// this whole change exists to close.
+if (!operations.length) {
+  console.error('✗ Parsed 0 operations. Not reporting this as clean.');
+  process.exit(2);
+}
+
+const risky = findings.filter(f => f.mutatesExisting);
+
+if (CHECK || UPDATE) {
+  const key = f => `${f.mutation}::${f.type}`;
+  if (UPDATE) {
+    writeFileSync(
+      BASELINE,
+      `${JSON.stringify(
+        { maxRiskyPairs: risky.length, pairs: risky.map(key).sort() },
+        null,
+        2,
+      )}\n`,
+    );
+    console.log(
+      `Examined ${operations.length} operations. Baseline updated: ${risky.length} risky pairs.`,
+    );
+    process.exit(0);
+  }
+  if (!existsSync(BASELINE)) {
+    console.error(
+      `✗ No baseline at ${BASELINE}. Run with --update to record one.`,
+    );
+    process.exit(2);
+  }
+  const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+  const known = new Set(baseline.pairs);
+  const added = risky.filter(f => !known.has(key(f)));
+  console.log(
+    `Examined ${operations.length} operations · ${risky.length} risky pairs ` +
+      `(baseline ${baseline.maxRiskyPairs})`,
+  );
+  if (added.length) {
+    console.error('\n✗ New mutation/field gaps since the baseline:');
+    for (const f of added) {
+      console.error(`  ${f.mutation} → ${f.type}\n    ${f.derived.join(', ')}`);
+    }
+    process.exit(1);
+  }
+  console.log('✓ No new gaps.');
+  process.exit(0);
+}
+
 if (!findings.length) {
   console.log('No mutations leave a derived field unselected.');
   process.exit(0);
@@ -156,7 +325,6 @@ console.log(
   `${findings.length} mutation/type pair(s) return an entity without a field the app reads elsewhere.\n` +
     `Derived fields are listed first — those are the ones the server is most likely to recompute.\n`,
 );
-const risky = findings.filter(f => f.mutatesExisting);
 console.log(
   `${risky.length} of them mutate an entity that is already cached — only those can show a stale value.\n`,
 );

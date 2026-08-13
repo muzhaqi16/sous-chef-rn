@@ -15,6 +15,7 @@ import {
   COLOR_PRESETS,
 } from './storageLocationFormConfig';
 import { StorageLocationAdvancedSection } from './StorageLocationAdvancedSection';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -123,7 +124,7 @@ export const StorageLocationForm = forwardRef<
       }
 
       const capacityFloat = formData.capacity
-        ? parseFloat(formData.capacity)
+        ? parseDecimalInput(formData.capacity)
         : null;
 
       const finalData = {

@@ -23,6 +23,12 @@ module.exports = {
   // TypeScript-specific overrides with type-checked rules
   overrides: [
     {
+      // The one legitimate parseFloat: this module IS the replacement, and uses
+      // parseFloat as its primitive after normalising the separators itself.
+      files: ['src/utils/parseDecimalInput.ts'],
+      rules: { 'no-restricted-syntax': 'off' },
+    },
+    {
       // Lint GraphQL operation documents against the schema pulled from the live
       // API (codegen writes it to src/graphql/generated/schema.graphql). This
       // surfaces a deprecated field/arg/enum value or a selection that no longer
@@ -745,6 +751,21 @@ module.exports = {
     // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
     'no-restricted-syntax': [
       'error',
+      // `parseFloat` truncates at the first character it cannot read, so on a
+      // keyboard offering `,` it turns 4,99 into 4 and writes that to the
+      // server — no error, no validation message, just a wrong number. This has
+      // now been fixed twice: the first sweep missed a dozen sites because the
+      // search output was truncated and never re-checked. A lint rule does not
+      // truncate.
+      //
+      // `parseDecimalInput` is the replacement. Where a value genuinely comes
+      // from machine data rather than a person, the two agree anyway, so
+      // reaching for the escape hatch should be rare and argued.
+      {
+        selector: "CallExpression[callee.name='parseFloat']",
+        message:
+          'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
+      },
       {
         selector: 'TSImportType',
         message:
