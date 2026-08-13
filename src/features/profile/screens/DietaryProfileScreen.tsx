@@ -31,6 +31,7 @@ import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesS
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
 import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -363,7 +364,7 @@ export const DietaryProfileScreen: React.FC = () => {
             <InfoRow
               label={t('dietary.budgetPerMeal')}
               value={profile.budgetPerMeal}
-              formatter={val => `$${val}`}
+              formatter={val => formatCurrency(Number(val), DEFAULT_CURRENCY)}
               showBorder={false}
             />
           )}

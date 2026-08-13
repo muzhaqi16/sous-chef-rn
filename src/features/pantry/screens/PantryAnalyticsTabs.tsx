@@ -20,6 +20,7 @@ import type { Translate } from '#/i18n/types';
 // level. The wrappers declare no static theme mapping — all theme reads happen
 // at the call site via `uniProps={t => ({ … })}`.
 const TrendLineChart = withUnistyles(BaseTrendLineChart);
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
 const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
@@ -317,7 +318,10 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
+          value={formatCurrency(
+            wasteData?.totalWasteValue ?? 0,
+            DEFAULT_CURRENCY,
+          )}
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />
@@ -527,15 +531,19 @@ export const LedgerTab: React.FC<
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('pantryAnalytics.totalSpent')}
-            value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
+            value={formatCurrency(
+              ledgerData.costAnalytics.totalSpent ?? 0,
+              DEFAULT_CURRENCY,
+            )}
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
           <AnalyticsSummaryCard
             title={t('pantryAnalytics.avgCostPerUnit')}
-            value={`$${(
-              ledgerData.costAnalytics.averageCostPerUnit ?? 0
-            ).toFixed(2)}`}
+            value={formatCurrency(
+              ledgerData.costAnalytics.averageCostPerUnit ?? 0,
+              DEFAULT_CURRENCY,
+            )}
             icon="calculator-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />

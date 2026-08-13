@@ -27,6 +27,7 @@ import {
   PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 type RouteParams = {
   listId: string;
@@ -264,7 +265,7 @@ export const ShoppingListItemDetail: React.FC<
           {estimatedPrice != null && (
             <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
               <Text size="sm" weight="medium">
-                {`$${estimatedPrice.toFixed(2)}`}
+                {formatCurrency(estimatedPrice, DEFAULT_CURRENCY)}
               </Text>
             </DetailRow>
           )}
@@ -275,7 +276,10 @@ export const ShoppingListItemDetail: React.FC<
                   {item.purchaseInfo.purchasedPrice != null
                     ? `${
                         item.purchaseInfo.purchasedQuantity
-                      } @ $${item.purchaseInfo.purchasedPrice.toFixed(2)}`
+                      } @ ${formatCurrency(
+                        item.purchaseInfo.purchasedPrice,
+                        DEFAULT_CURRENCY,
+                      )}`
                     : `${item.purchaseInfo.purchasedQuantity}`}
                 </Text>
               </DetailRow>

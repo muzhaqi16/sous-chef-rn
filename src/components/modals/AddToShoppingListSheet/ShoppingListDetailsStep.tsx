@@ -28,6 +28,7 @@ import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { makeIdNameHandler } from '../makeIdNameHandler';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -267,7 +268,9 @@ export const ShoppingListDetailsStep: React.FC<
           label={t('shoppingListScreens.estimatedPrice')}
           value={estimatedPrice}
           onChangeText={text => updateField('estimatedPrice', text)}
-          placeholder={t('shoppingListScreens.estimatedPricePlaceholder')}
+          placeholder={localizeNumericHint(
+            t('shoppingListScreens.estimatedPricePlaceholder'),
+          )}
           keyboardType="numeric"
           useBottomSheetInput
         />

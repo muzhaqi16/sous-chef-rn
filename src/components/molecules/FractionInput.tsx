@@ -8,6 +8,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { Text } from '#components/atoms/Text';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface FractionInputProps {
   value: string;
@@ -100,7 +101,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       />
       {!hasError && !!value && !!isFocused && (
         <Text size="xs" tone="secondary" style={styles.hintText}>
-          {t('fractionInput.formatsHint')}
+          {localizeNumericHint(t('fractionInput.formatsHint'))}
         </Text>
       )}
     </FormFieldWrapper>

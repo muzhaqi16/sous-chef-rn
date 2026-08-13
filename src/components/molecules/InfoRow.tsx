@@ -93,13 +93,13 @@ export interface InfoRowProps {
  * <InfoRow
  *   label="Budget per Meal"
  *   value={15.50}
- *   formatter={(val) => `$${val.toFixed(2)}`}
+ *   formatter={(val) => formatCurrency(Number(val), DEFAULT_CURRENCY)}
  * />
  * ```
  *
  * @example Currency with unit
  * ```tsx
- * <InfoRow label="Price" value={25} unit="USD" formatter={(v) => `$${v}`} />
+ * <InfoRow label="Price" value={25} formatter={(v) => formatCurrency(Number(v), 'USD')} />
  * ```
  */
 export const InfoRow: React.FC<InfoRowProps> = ({

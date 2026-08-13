@@ -513,10 +513,10 @@
       "body": "query GetItemForEdit($id: ID!) {\n  item(id: $id) {\n    id\n    ...useItemForEdit_item\n    __typename\n  }\n}\n\nfragment useItemForEdit_item on Item {\n  id\n  name\n  description\n  type\n  storageState\n  tags\n  primaryUpc\n  shelfLifeDays\n  shelfLifeOpenedDays\n  netWeight\n  baseDimension\n  imageUrl\n  canEdit\n  canSuggest\n  displayUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  brands {\n    brand {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "832a955179fdcaa4655fdd818a1fb8bff5ef2749696c221c25b5cb9ae8d518aa",
+      "id": "8672a28bf2eefbac4726ee98dd2432d15271031e1e2afad2e513cbf98fd7fbcb",
       "name": "GetItemPurchaseHistory",
       "type": "query",
-      "body": "query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {\n  shoppingListItem(id: $itemId) {\n    id\n    purchasesConnection(first: $first, after: $after) {\n      edges {\n        node {\n          id\n          purchaseDate\n          quantity\n          unitPrice\n          totalPrice\n          currencySymbol\n          unitSymbol\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {\n  shoppingListItem(id: $itemId) {\n    id\n    purchasesConnection(first: $first, after: $after) {\n      edges {\n        node {\n          id\n          purchaseDate\n          quantity\n          unitPrice\n          totalPrice\n          currency {\n            id\n            code\n            __typename\n          }\n          unitSymbol\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "16c84e33356a0f651ec9ea2e696cabd704be092d67553ab1aefb511f6658b631",

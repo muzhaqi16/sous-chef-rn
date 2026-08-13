@@ -15,6 +15,10 @@ import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTran
 import { Text } from '#components/atoms/Text';
 import { CorrectWeightModal_PantryItemFragmentDoc } from './CorrectWeightModal.generated';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface CorrectWeightModalProps {
   visible: boolean;
@@ -59,7 +63,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
     setPrevVisible(visible);
     setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
-      setWeightInput(pantryItem.netWeight?.toString() || '');
+      setWeightInput(formatNumberForInput(pantryItem.netWeight));
       setUnitDisplay(
         pantryItem.netWeightUnit?.symbol ||
           pantryItem.netWeightUnit?.name ||
@@ -169,7 +173,9 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
                 required
                 value={weightInput}
                 onChangeText={setWeightInput}
-                placeholder={t('correctWeight.newNetWeightPlaceholder')}
+                placeholder={localizeNumericHint(
+                  t('correctWeight.newNetWeightPlaceholder'),
+                )}
                 keyboardType="decimal-pad"
                 useBottomSheetInput
               />

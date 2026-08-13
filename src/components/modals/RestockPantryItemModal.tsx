@@ -19,6 +19,10 @@ import {
 } from './PantryActionModal';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface RestockPantryItemModalProps {
   visible: boolean;
@@ -191,7 +195,9 @@ const RestockActionFields: React.FC<{
           label={t('restockItem.quantityToAdd')}
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder={t('restockItem.quantityPlaceholder')}
+          placeholder={localizeNumericHint(
+            t('restockItem.quantityPlaceholder'),
+          )}
           keyboardType="numeric"
           useBottomSheetInput
           required
@@ -223,7 +229,7 @@ const RestockActionFields: React.FC<{
         {shared.commonFractions != null && shared.commonFractions.length > 0 ? (
           <FractionQuickSelect
             fractions={shared.commonFractions}
-            onSelect={value => setQuantityInput(value.toString())}
+            onSelect={value => setQuantityInput(formatNumberForInput(value))}
             selectedValue={addAmount ?? undefined}
             unitSymbol={shared.activeUnitSymbol}
             displayAsFraction
@@ -239,7 +245,7 @@ const RestockActionFields: React.FC<{
               label={t('restockItem.costPerUnit')}
               value={costPerUnitInput}
               onChangeText={setCostPerUnitInput}
-              placeholder="0.00"
+              placeholder={localizeNumericHint('0.00')}
               keyboardType="decimal-pad"
               useBottomSheetInput
             />
@@ -249,7 +255,7 @@ const RestockActionFields: React.FC<{
               label={t('restockItem.totalCost')}
               value={totalCostInput}
               onChangeText={setTotalCostInput}
-              placeholder="0.00"
+              placeholder={localizeNumericHint('0.00')}
               keyboardType="decimal-pad"
               useBottomSheetInput
             />

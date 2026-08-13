@@ -20,6 +20,7 @@ import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '../useRecipeForm';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -65,7 +66,7 @@ export const RecipeIngredientEditor = forwardRef<
         setEditingId(ingredient.id);
         setName(ingredient.name);
         setItemId(ingredient.itemId ?? null);
-        setQuantity(String(ingredient.quantity));
+        setQuantity(formatNumberForInput(ingredient.quantity));
         setUnit(''); // Unit display text not stored - user can re-select
         setUnitId(ingredient.unitId ?? null);
         setPreparation(ingredient.preparation ?? '');

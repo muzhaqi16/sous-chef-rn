@@ -21,6 +21,7 @@ import {
 import type { MealPlanPermissions } from '#utils/permissions/mealPlanPermissions';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanSettingsSheetProps {
@@ -195,14 +196,14 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           {mealPlan.budgetAmount != null ? (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
               {t('mealPlanSettings.budgetSpent', {
-                spent: mealPlan.actualCost.toFixed(2),
-                budget: mealPlan.budgetAmount.toFixed(2),
+                spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
+                budget: formatCurrency(mealPlan.budgetAmount, DEFAULT_CURRENCY),
               })}
             </Text>
           ) : mealPlan.actualCost > 0 ? (
             <Text size="sm" tone="tertiary" style={styles.planDate}>
               {t('mealPlanSettings.spentAmount', {
-                spent: mealPlan.actualCost.toFixed(2),
+                spent: formatCurrency(mealPlan.actualCost, DEFAULT_CURRENCY),
               })}
             </Text>
           ) : null}

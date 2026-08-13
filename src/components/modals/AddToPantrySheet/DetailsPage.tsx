@@ -10,6 +10,7 @@ import { EditableCounter } from '#components/molecules/EditableCounter';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { Text } from '#components/atoms/Text';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 export interface DetailsPageProps {
   quantityInput: string;
@@ -107,7 +108,9 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
             label={t('addToPantry.netWeight')}
             value={pantryNetWeight}
             onChangeText={setPantryNetWeight}
-            placeholder={t('addToPantry.netWeightPlaceholder')}
+            placeholder={localizeNumericHint(
+              t('addToPantry.netWeightPlaceholder'),
+            )}
             keyboardType="decimal-pad"
             useBottomSheetInput
             inputStyle={{ height: 44 }}

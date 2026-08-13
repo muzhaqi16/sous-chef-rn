@@ -28,7 +28,8 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 interface UseUpdatePantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -87,9 +88,11 @@ export function useUpdatePantryItemQuantity({
       return;
     }
 
-    const newQuantity = parseDecimalInput(
-      quantityInput || quantityValue.toString(),
-    );
+    // The field accepts fractions ("1 1/4") as well as decimals, so it needs
+    // the fraction-aware parser — `parseDecimalInput` declines a fraction
+    // outright rather than misreading it.
+    const quantityText = quantityInput || quantityValue.toString();
+    const newQuantity = parseFractionalInput(quantityText) ?? NaN;
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
@@ -119,7 +122,9 @@ export function useUpdatePantryItemQuantity({
       variables: {
         input: {
           pantryItemId: itemId,
-          quantity: quantityInput || quantityValue.toString(),
+          // Separators normalized, fraction preserved: the server parses
+          // this string itself and rejects a comma decimal outright.
+          quantity: normalizeNumericTextForApi(quantityText),
           unitId: unitId,
           version: currentItem.version ?? undefined,
         },

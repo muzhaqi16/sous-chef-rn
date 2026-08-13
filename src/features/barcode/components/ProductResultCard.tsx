@@ -7,6 +7,7 @@ import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 interface Item {
   id: string;
@@ -72,7 +73,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
         )}
         {!!item?.price && (
           <Text size="xl" weight="semibold" tone="success">
-            ${item?.price.toFixed(2)}
+            {formatCurrency(item.price, DEFAULT_CURRENCY)}
           </Text>
         )}
         <Text size="sm" tone="secondary" style={styles.itemBarcode}>

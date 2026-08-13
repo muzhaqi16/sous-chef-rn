@@ -11,6 +11,7 @@ import {
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { Text } from '#components/atoms/Text';
 
 interface BatchListItemProps {
@@ -135,7 +136,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         {batch.costPerUnit != null && batch.costPerUnit > 0 ? (
           <Text size="xs" tone="tertiary" style={styles.metaText}>
             {t('pantryItemDetail.batch.costPerUnit', {
-              cost: batch.costPerUnit.toFixed(2),
+              cost: formatCurrency(batch.costPerUnit, DEFAULT_CURRENCY),
             })}
           </Text>
         ) : null}

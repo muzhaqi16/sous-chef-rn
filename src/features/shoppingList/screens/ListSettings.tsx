@@ -47,6 +47,10 @@ import {
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
+import {
+  formatCurrency,
+  formatNumberForInput,
+} from '#/utils/formatters/number';
 
 /** Module-level helper to sync shopping list form state from loaded data */
 function syncListFormState(
@@ -62,53 +66,12 @@ function syncListFormState(
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
-    setBudgetInput(
-      shoppingList.budgetAmount != null
-        ? String(shoppingList.budgetAmount)
-        : '',
-    );
+    setBudgetInput(formatNumberForInput(shoppingList.budgetAmount));
   } else if (listId) {
     setName('');
     setIsDefault(false);
     setBudgetInput('');
   }
-}
-
-// Constructing an Intl.NumberFormat parses locale data and builds internal
-// lookup tables, so the instance is cached per currency code rather than
-// rebuilt on each call. A `null` entry marks a code Intl rejected, so the
-// unsupported-currency path doesn't re-throw on every render.
-const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
-
-function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
-  const cached = currencyFormatters.get(currency);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.NumberFormat | null = null;
-  try {
-    formatter = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-    });
-  } catch {
-    formatter = null;
-  }
-  currencyFormatters.set(currency, formatter);
-  return formatter;
-}
-
-/**
- * Format a money amount with the list's ISO currency code, degrading to a plain
- * two-decimal number when the currency is absent or not recognized by Intl.
- */
-function formatCurrencyAmount(
-  amount: number | null | undefined,
-  currency: string | null,
-): string {
-  const value = amount ?? 0;
-  if (!currency) return value.toFixed(2);
-  const formatter = getCurrencyFormatter(currency);
-  if (!formatter) return `${currency} ${value.toFixed(2)}`;
-  return formatter.format(value);
 }
 
 export const ListSettings: React.FC<
@@ -1043,11 +1006,11 @@ export const ListSettings: React.FC<
 
             <InfoRow
               label={t('shoppingListScreens.totalSpent')}
-              value={formatCurrencyAmount(totalCost, currency)}
+              value={formatCurrency(totalCost, currency)}
             />
             <InfoRow
               label={t('shoppingListScreens.estimatedTotalLabel')}
-              value={formatCurrencyAmount(estimatedTotal, currency)}
+              value={formatCurrency(estimatedTotal, currency)}
             />
 
             <BaseInput

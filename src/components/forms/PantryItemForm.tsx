@@ -58,6 +58,7 @@ import {
   addItemSchema,
   editItemSchema,
 } from './pantryItemFormConfig';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
   // Item information (add mode)
@@ -216,12 +217,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       const trackingUnitSymbol = item.unit?.symbol || '';
       return {
         itemName: item.itemName || '',
-        quantityInput: item.quantity?.toString() || '1',
+        quantityInput: formatNumberForInput(item.quantity) || '1',
         unit: trackingUnitSymbol, // Tracking unit
-        minQuantity: item.minQuantity?.toString() || '',
-        restockQuantity: item.restockQuantity?.toString() || '',
+        minQuantity: formatNumberForInput(item.minQuantity),
+        restockQuantity: formatNumberForInput(item.restockQuantity),
         brand: item.brand?.name || '',
-        netWeight: item.netWeight?.toString() || '',
+        netWeight: formatNumberForInput(item.netWeight),
         netWeightUnit:
           item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
         netWeightUnitId: item.netWeightUnit?.id || '',
@@ -286,12 +287,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     const trackingUnitSymbol = item.unit?.symbol || '';
     reset({
       itemName: item.itemName || '',
-      quantityInput: item.quantity?.toString() || '1',
+      quantityInput: formatNumberForInput(item.quantity) || '1',
       unit: trackingUnitSymbol,
-      minQuantity: item.minQuantity?.toString() || '',
-      restockQuantity: item.restockQuantity?.toString() || '',
+      minQuantity: formatNumberForInput(item.minQuantity),
+      restockQuantity: formatNumberForInput(item.restockQuantity),
       brand: item.brand?.name || '',
-      netWeight: item.netWeight?.toString() || '',
+      netWeight: formatNumberForInput(item.netWeight),
       netWeightUnit:
         item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
       netWeightUnitId: item.netWeightUnit?.id || '',

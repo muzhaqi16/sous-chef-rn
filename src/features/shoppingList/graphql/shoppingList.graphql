@@ -240,7 +240,12 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
           quantity
           unitPrice
           totalPrice
-          currencySymbol
+          # The ISO code, not just the symbol: Intl needs the code to place the
+          # symbol where the locale places it (`4,50 €`, not `€4.50`).
+          currency {
+            id
+            code
+          }
           unitSymbol
         }
       }

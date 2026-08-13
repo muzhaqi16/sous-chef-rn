@@ -9,6 +9,7 @@ import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Button } from '#/components/base/Button';
 import { Text } from '#components/atoms/Text';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 export interface NetWeightEntry {
   id: string;
@@ -99,7 +100,9 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
                 label={t('netWeightEntry.weightLabel')}
                 value={entry.value || ''}
                 onChangeText={(text: string) => handleValueChange(index, text)}
-                placeholder={t('netWeightEntry.weightPlaceholder')}
+                placeholder={localizeNumericHint(
+                  t('netWeightEntry.weightPlaceholder'),
+                )}
                 keyboardType="decimal-pad"
               />
             </View>

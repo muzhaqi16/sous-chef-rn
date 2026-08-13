@@ -8,6 +8,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface NetWeightSectionProps {
   control: Control<PantryItemFormData>;
@@ -46,7 +47,9 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
                 value={value || ''}
                 onChangeText={onChange}
                 onBlur={onBlur}
-                placeholder={t('itemForm.placeholderNetWeight')}
+                placeholder={localizeNumericHint(
+                  t('itemForm.placeholderNetWeight'),
+                )}
                 keyboardType="decimal-pad"
                 editable={!isWeightLocked}
               />

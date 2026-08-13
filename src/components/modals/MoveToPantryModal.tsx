@@ -22,6 +22,10 @@ import { PantrySelector } from './moveToPantry/PantrySelector';
 import { StorageStateControl } from './moveToPantry/StorageStateControl';
 import { ExpirationDateField } from './moveToPantry/ExpirationDateField';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -104,7 +108,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      setQuantityInput(shoppingListItem.quantity?.toString() || '1');
+      setQuantityInput(formatNumberForInput(shoppingListItem.quantity) || '1');
       setUnitValue(
         shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
       );
@@ -272,7 +276,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   label={t('moveToPantry.purchasePrice')}
                   value={actualPriceInput}
                   onChangeText={setActualPriceInput}
-                  placeholder="0.00"
+                  placeholder={localizeNumericHint('0.00')}
                   keyboardType="decimal-pad"
                 />
               </View>

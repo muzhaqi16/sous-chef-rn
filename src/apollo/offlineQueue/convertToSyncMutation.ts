@@ -17,7 +17,7 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import type { QueuedMutation } from './types';
 import { logger } from '#/utils/environment';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 /**
  * Two-tier offline replay mapping.
@@ -185,9 +185,11 @@ const buildPantryItemQuantitySync: SyncBuilder = (mutation, readers) => {
     );
   }
 
+  // Fraction-aware: the queued mutation carries whatever the person typed into
+  // a quantity field, which may be `1 1/4`.
   const quantity =
     typeof input.quantity === 'string'
-      ? parseDecimalInput(input.quantity)
+      ? parseFractionalInput(input.quantity) ?? NaN
       : input.quantity;
 
   const syncInput: SyncPantryItemInput = {

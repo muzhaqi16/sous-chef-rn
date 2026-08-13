@@ -7,6 +7,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 type FormState = {
   itemName: string;
@@ -102,12 +103,13 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
     const state: FormState = {
       itemName: item.itemName || '',
-      quantityInput: item.quantityInput || item.quantity?.toString() || '1',
+      quantityInput:
+        item.quantityInput || formatNumberForInput(item.quantity) || '1',
       unit: item.unitName || '',
       notes: item.notes || '',
       category: item.category || '',
       selectedUnitId: item.unit?.id || null,
-      estimatedPrice: item.priceEstimate?.estimated?.toString() || '',
+      estimatedPrice: formatNumberForInput(item.priceEstimate?.estimated),
       priority: item.priority ?? 0,
       storeId: item.storeInfo?.preferredStore?.id || null,
       storeName: item.storeInfo?.preferredStore?.name || '',

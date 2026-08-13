@@ -19,6 +19,7 @@ import {
   usePurchaseHistoryContext,
 } from './PurchaseHistoryContext';
 import { Text } from '#components/atoms/Text';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -35,7 +36,7 @@ type PurchaseItem = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  currencySymbol: string;
+  currency: { code: string };
   unitSymbol: string;
   // Not selected by GetItemPurchaseHistory today, but kept optional so the row's
   // "purchased by" line degrades gracefully if the query starts returning it.
@@ -48,10 +49,12 @@ type PurchaseItem = {
   };
 };
 
-// Pure function at module scope
+// `undefined` as the locale makes Intl use the device's own, so the date reads
+// natively for the user. A hardcoded 'en-US' put the month before the day for
+// every locale that writes it the other way round, inside otherwise translated UI.
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -60,16 +63,20 @@ const formatDate = (dateString: string) => {
   });
 };
 
-// Format a money amount with the purchase's own currency symbol. Returns null
-// for missing/zero amounts so the price row is omitted rather than showing a
+// Format a money amount in the purchase's own currency. Returns null for
+// missing/zero amounts so the price row is omitted rather than showing a
 // meaningless "$0.00" — purchases auto-recorded when an item is checked off
 // may carry no price.
+//
+// Formatted from the ISO code rather than by prefixing `currencySymbol`, so the
+// symbol lands where the locale puts it and the decimal separator matches what
+// the app accepts on input.
 const formatPrice = (
   amount: number | null | undefined,
-  symbol: string,
+  currencyCode: string | null | undefined,
 ): string | null => {
   if (amount == null || amount <= 0) return null;
-  return `${symbol}${amount.toFixed(2)}`;
+  return formatCurrency(amount, currencyCode ?? DEFAULT_CURRENCY);
 };
 
 // --- Module-scope FlashList components ---
@@ -82,7 +89,7 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const { totalCount } = usePurchaseHistoryContext();
-  const priceText = formatPrice(purchase.totalPrice, purchase.currencySymbol);
+  const priceText = formatPrice(purchase.totalPrice, purchase.currency.code);
 
   return (
     <View style={[styles.purchaseCard, commonStyles.shadow]}>
@@ -247,11 +254,11 @@ export const PurchaseHistoryScreen: React.FC<
   // Summary stats over purchases that actually carry a price. Auto-recorded
   // purchases with no price are excluded so the average isn't dragged toward 0.
   const pricedPurchases = purchases.filter(p => p.totalPrice > 0);
-  const currencySymbol = pricedPurchases[0]?.currencySymbol ?? '$';
+  const currencyCode = pricedPurchases[0]?.currency.code;
   const spent = pricedPurchases.reduce((sum, p) => sum + p.totalPrice, 0);
-  const totalSpent = formatPrice(spent, currencySymbol);
+  const totalSpent = formatPrice(spent, currencyCode);
   const averageSpent = pricedPurchases.length
-    ? formatPrice(spent / pricedPurchases.length, currencySymbol)
+    ? formatPrice(spent / pricedPurchases.length, currencyCode)
     : null;
 
   return (

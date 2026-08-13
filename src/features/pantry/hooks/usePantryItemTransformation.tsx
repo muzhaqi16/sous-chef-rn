@@ -3,6 +3,10 @@ import { t } from '#/i18n/t';
 import type { Translate } from '#/i18n/types';
 // Plural keys need the options form, which the module-level t does not take.
 import { getI18n } from '#/i18n/config';
+import {
+  DEFAULT_CURRENCY,
+  formatCurrency as formatMoney,
+} from '#/utils/formatters/number';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -253,7 +257,9 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
 export const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return null;
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  // Device locale, not a hardcoded 'en-US': the day/month order and month
+  // names have to match the rest of the UI.
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -295,8 +301,9 @@ export const formatAcquisitionMethod = (
     .join(' ');
 };
 
-// Format currency for display
+// Format a money amount for display, or null when there is no amount worth
+// showing — callers omit the row entirely rather than render a bare zero.
 export const formatCurrency = (amount?: number | null): string | null => {
   if (amount == null || amount <= 0) return null;
-  return `$${amount.toFixed(2)}`;
+  return formatMoney(amount, DEFAULT_CURRENCY);
 };

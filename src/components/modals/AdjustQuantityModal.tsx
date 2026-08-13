@@ -16,6 +16,10 @@ import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTran
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -60,7 +64,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPrevVisible(visible);
     setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
-      setQuantityInput(pantryItem.quantity.toString());
+      setQuantityInput(formatNumberForInput(pantryItem.quantity));
       setReason('');
       setRemainingWeightInput('');
     }
@@ -147,7 +151,9 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 required
                 value={quantityInput}
                 onChangeText={setQuantityInput}
-                placeholder={t('adjustQuantity.quantityPlaceholder')}
+                placeholder={localizeNumericHint(
+                  t('adjustQuantity.quantityPlaceholder'),
+                )}
                 keyboardType="numeric"
                 useBottomSheetInput
               />

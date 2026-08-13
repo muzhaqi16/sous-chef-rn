@@ -15,6 +15,7 @@ import {
   ACQUISITION_METHOD_OPTIONS,
   acquisitionMethodLabelKey,
 } from '#/utils/items/itemEnumLabels';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 export interface StockSettingsPageProps {
   minQuantity: string;
@@ -114,7 +115,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
           label={t('addToPantry.cost')}
           value={costPerUnit}
           onChangeText={setCostPerUnit}
-          placeholder={t('addToPantry.costPlaceholder')}
+          placeholder={localizeNumericHint(t('addToPantry.costPlaceholder'))}
           keyboardType="decimal-pad"
           useBottomSheetInput
         />

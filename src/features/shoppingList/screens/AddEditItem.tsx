@@ -49,6 +49,7 @@ import {
 } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 type RouteParams = {
   listId: string;
@@ -405,7 +406,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}
-        placeholder={t('shoppingListScreens.estimatedPricePlaceholder')}
+        placeholder={localizeNumericHint(
+          t('shoppingListScreens.estimatedPricePlaceholder'),
+        )}
         keyboardType="numeric"
       />
 

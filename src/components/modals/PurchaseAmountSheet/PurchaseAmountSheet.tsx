@@ -12,6 +12,10 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -42,10 +46,11 @@ const parseNumberInput = (input: string): number | null => {
 
 /**
  * Format a price for pre-fill — empty string when unknown so the input renders
- * its placeholder rather than "0".
+ * its placeholder rather than "0", and the device's decimal separator so the
+ * keypad can retype what it shows.
  */
 const formatPrice = (price: number | null): string =>
-  price == null ? '' : String(price);
+  formatNumberForInput(price);
 
 /**
  * PurchaseAmountSheet - Bottom sheet to record the actual purchased amounts.
@@ -169,7 +174,9 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               keyboardType="decimal-pad"
               selectTextOnFocus
               maxLength={10}
-              placeholder={t('purchaseAmountSheet.pricePlaceholder')}
+              placeholder={localizeNumericHint(
+                t('purchaseAmountSheet.pricePlaceholder'),
+              )}
               accessibilityLabel={t('purchaseAmountSheet.price')}
               testID="purchase-price-input"
             />

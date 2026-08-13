@@ -16,6 +16,7 @@ import {
 } from './storageLocationFormConfig';
 import { StorageLocationAdvancedSection } from './StorageLocationAdvancedSection';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -86,8 +87,7 @@ export const StorageLocationForm = forwardRef<
       temperature: initialData?.temperature || StorageState.None,
       color: initialData?.color || (null as string | null),
       isClimateControlled: initialData?.isClimateControlled || false,
-      capacity:
-        initialData?.capacity != null ? String(initialData.capacity) : '',
+      capacity: formatNumberForInput(initialData?.capacity),
       capacityUnit: initialData?.capacityUnit || '',
       isDefault: initialData?.isDefault || false,
     });
@@ -105,8 +105,7 @@ export const StorageLocationForm = forwardRef<
           temperature: initialData.temperature || StorageState.None,
           color: initialData.color || null,
           isClimateControlled: initialData.isClimateControlled || false,
-          capacity:
-            initialData.capacity != null ? String(initialData.capacity) : '',
+          capacity: formatNumberForInput(initialData.capacity),
           capacityUnit: initialData.capacityUnit || '',
           isDefault: initialData.isDefault || false,
         });
