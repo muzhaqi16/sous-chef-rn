@@ -42,6 +42,9 @@ export interface LoadingProps {
 
   /** Additional container styles */
   style?: StyleProp<ViewStyle>;
+
+  /** Test ID for E2E testing */
+  testID?: string;
 }
 
 export const Loading: React.FC<LoadingProps> = ({
@@ -55,6 +58,7 @@ export const Loading: React.FC<LoadingProps> = ({
   onCancel,
   color,
   style,
+  testID,
 }) => {
   const { t } = useTranslation();
   styles.useVariants({ inline: variant === 'inline', overlayOpacity });
@@ -72,7 +76,7 @@ export const Loading: React.FC<LoadingProps> = ({
     );
 
   const renderContent = () => (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style]} testID={testID}>
       {spinner}
       {!!message && (
         <Text

@@ -115,12 +115,18 @@ const mockExpiredItems = [
 
 let mockAllItems: MockPantryItem[] | null = mockLowStockItems;
 let mockLoading = false;
+let mockError: Error | undefined;
+let mockHasResult = true;
 
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
   usePantryManagement: () => ({
     state: {
       items: mockAllItems,
       loading: mockLoading,
+      error: mockError,
+      // A response arrived — separates an empty result from a fetch that
+      // never answered, which must not render the same way.
+      hasResult: mockHasResult,
       hasMore: false,
       isLoadingMore: false,
     },
@@ -187,6 +193,8 @@ describe('FilteredPantryItems', () => {
     jest.clearAllMocks();
     mockAllItems = mockLowStockItems;
     mockLoading = false;
+    mockError = undefined;
+    mockHasResult = true;
   });
 
   describe('lowStock mode', () => {
@@ -225,6 +233,34 @@ describe('FilteredPantryItems', () => {
       mockAllItems = null;
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(screen.getByText('Low Stock Items')).toBeTruthy();
+    });
+
+    describe('a failed fetch is not good news', () => {
+      // The empty copy here congratulates: "All items are above minimum stock
+      // levels". Showing it when the request failed reports something the app
+      // has no evidence for, and gives no way to try again.
+      it('shows a retry, not the all-stocked message, when the fetch failed', () => {
+        mockAllItems = [];
+        mockHasResult = false;
+        mockError = new Error('500');
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+        expect(
+          screen.queryByText('All items are above minimum stock levels'),
+        ).toBeNull();
+        expect(screen.getByTestId('state-error')).toBeTruthy();
+        expect(screen.getByText('Try again')).toBeTruthy();
+      });
+
+      it('still shows the all-stocked message when the fetch succeeded', () => {
+        mockAllItems = [];
+        renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+        expect(
+          screen.getByText('All items are above minimum stock levels'),
+        ).toBeTruthy();
+        expect(screen.queryByTestId('state-error')).toBeNull();
+      });
     });
 
     it('defaults to lowStock mode when no params', () => {

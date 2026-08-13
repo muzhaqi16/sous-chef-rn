@@ -63,6 +63,10 @@ export function useShoppingListsQuery() {
     lists,
     loading,
     error,
+    // `data !== undefined` — a response arrived, empty or not. `previousData`
+    // counts too: a failed refetch over lists we already have is not "we never
+    // got an answer".
+    hasResult: data !== undefined || previousData !== undefined,
     refetch,
     fetchLists, // Call this when selector opens to trigger fresh fetch
   };

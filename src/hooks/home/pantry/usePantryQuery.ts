@@ -205,6 +205,11 @@ export function usePantryQuery(
       loading,
       isRefreshing,
       error,
+      // Whether we have an answer at all. `errorPolicy: 'ignore'` swallows the
+      // error and leaves `data === undefined`, so absence is the only evidence
+      // a failure leaves behind — but a preserved connection from the persisted
+      // cache still counts as an answer, which is why this is not `!!data`.
+      hasResult: data !== undefined || items.pageInfo !== undefined,
       hasMore,
       isLoadingMore,
     },

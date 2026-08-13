@@ -8,7 +8,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useApolloClient, useFragment } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
-import { EmptyState } from '#components/base/EmptyState';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { useMutation } from '@apollo/client/react';
 import {
   DeleteRecipeDocument,
@@ -82,9 +83,16 @@ export const MyRecipes: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
-    state: { recipes: myRecipes },
+    state: { recipes: myRecipes, loading, error, hasResult },
     actions: { refetch },
   } = useRecipeManagement();
+
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    isEmpty: myRecipes.length === 0,
+  });
 
   const apolloClient = useApolloClient();
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
@@ -176,12 +184,19 @@ export const MyRecipes: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {myRecipes.length === 0 ? (
-        <EmptyState
-          icon="create-outline"
-          title={t('recipes.myRecipesEmptyTitle')}
-          description={t('recipes.myRecipesEmptyDescription')}
-          action={{ label: t('recipes.createRecipe'), onPress: toRecipeCreate }}
+      {dataState !== 'ready' ? (
+        <DataStateView
+          state={dataState}
+          onRetry={handleRefresh}
+          empty={{
+            icon: 'create-outline',
+            title: t('recipes.myRecipesEmptyTitle'),
+            description: t('recipes.myRecipesEmptyDescription'),
+            action: {
+              label: t('recipes.createRecipe'),
+              onPress: toRecipeCreate,
+            },
+          }}
         />
       ) : (
         <FlashList

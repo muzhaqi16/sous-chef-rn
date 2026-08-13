@@ -3270,6 +3270,14 @@
     "body": "Kjo veçori kërkon lidhje interneti",
     "noCachedData": "Kjo nuk është ende e disponueshme jashtë linje. Rilidhu për ta ngarkuar."
   },
+  "dataState": {
+    "loading": "Duke u ngarkuar…",
+    "errorTitle": "Nuk u ngarkua dot",
+    "errorBody": "Diçka shkoi keq gjatë ngarkimit. Kontrollo lidhjen dhe provo sërish.",
+    "offlineTitle": "E padisponueshme pa internet",
+    "offlineBody": "Je pa internet dhe kjo nuk është shkarkuar ende. Rilidhu për ta ngarkuar.",
+    "retry": "Provo sërish"
+  },
   "complexity": {
     "title": "Kërkesë shumë e madhe",
     "body": "Kërkesa ishte shumë komplekse. Provo me më pak artikuj ose thjeshtoje kërkesën."

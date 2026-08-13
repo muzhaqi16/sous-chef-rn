@@ -3270,6 +3270,14 @@
     "body": "Questa funzione richiede una connessione a internet",
     "noCachedData": "Questo non è ancora disponibile offline. Riconnettiti per caricarlo."
   },
+  "dataState": {
+    "loading": "Caricamento…",
+    "errorTitle": "Impossibile caricare",
+    "errorBody": "Qualcosa è andato storto durante il caricamento. Controlla la connessione e riprova.",
+    "offlineTitle": "Non disponibile offline",
+    "offlineBody": "Sei offline e questo contenuto non è ancora stato scaricato. Riconnettiti per caricarlo.",
+    "retry": "Riprova"
+  },
   "complexity": {
     "title": "Richiesta troppo grande",
     "body": "La richiesta era troppo complessa. Riprova con meno articoli o semplifica la richiesta."

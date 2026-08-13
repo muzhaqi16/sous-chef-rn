@@ -27,6 +27,11 @@ jest.mock('#features/notifications/hooks/useNotificationHistory', () => ({
     hasMore: false,
     loadingMore: false,
     loading: false,
+    error: undefined,
+    // A response arrived — separates "no notifications" from a feed that
+    // failed to load, which must not render the same way.
+    hasResult: true,
+    refetch: jest.fn(),
   })),
 }));
 

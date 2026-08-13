@@ -49,6 +49,9 @@ const mockMealPlansState = (overrides: Record<string, unknown> = {}) => ({
     loading: false,
     initialLoading: false,
     error: undefined,
+    // A response arrived. Without this the screen cannot tell an empty plan
+    // list from a fetch that never answered, and must assume the latter.
+    hasResult: true,
     totalCount: undefined,
     hasMore: false,
     ...overrides,
@@ -270,6 +273,27 @@ describe('MealPlanMain', () => {
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
     expect(tree.queryByTestId('meal-plan-empty-state')).toBeTruthy();
+  });
+
+  it('offers a retry, not "create a plan", when the plan fetch failed', () => {
+    // The empty state's calls to action are "Create plan" and "Create from
+    // template". After a failed fetch the app does not know whether this
+    // person already has plans, so offering to create one invites a duplicate
+    // of something they already own.
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({ hasResult: false, error: new Error('500') }),
+    );
+
+    const tree = renderWithApollo(<MealPlanMain />);
+    expect(tree.queryByTestId('meal-plan-empty-state')).toBeNull();
+    expect(tree.getByTestId('state-error')).toBeTruthy();
   });
 
   it('keeps the skeleton up while the first plan fetch is in flight', () => {

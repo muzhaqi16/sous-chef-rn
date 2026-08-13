@@ -18,6 +18,8 @@ import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem
 import { Header } from '#components/molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -260,19 +262,28 @@ const FilteredRenderItem = FilteredRenderItemComponent;
 // ── Empty state ──
 
 interface FilteredEmptyProps {
-  loading: boolean;
-  hasItems: boolean;
+  state: DataState;
+  onRetry: () => void;
   icon: string;
   message: string;
 }
 
+/**
+ * The four states, for a list whose contents are filtered client-side.
+ *
+ * The empty message here is congratulatory — "Nothing is expiring", "You're all
+ * stocked up" — so it is the worst possible thing to show when the fetch failed:
+ * the app cheerfully reports good news it has no evidence for. Skeletons were
+ * the other half of the same problem, standing in for both "still loading" and
+ * "gave up", so a failure read as a load that never finished.
+ */
 const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
-  loading,
-  hasItems,
+  state,
+  onRetry,
   icon,
   message,
 }) => {
-  if (loading || !hasItems) {
+  if (state === 'loading') {
     return (
       <View style={styles.skeletonContainer}>
         {[1, 2, 3, 4, 5].map(key => (
@@ -280,6 +291,10 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
         ))}
       </View>
     );
+  }
+
+  if (state === 'error' || state === 'offline') {
+    return <DataStateView state={state} onRetry={onRetry} />;
   }
 
   return (
@@ -324,9 +339,27 @@ export const FilteredPantryItems: React.FC<
   const client = useApolloClient();
 
   const {
-    state: { items: allItems, loading, hasMore, isLoadingMore },
+    state: {
+      items: allItems,
+      loading,
+      error,
+      hasResult,
+      hasMore,
+      isLoadingMore,
+    },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
+
+  // Classified on the fetched set. The client-side filter narrowing to nothing
+  // is the genuine empty case; a fetch that never returned is not.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    // Nullable in practice while the query is in flight, as the filter
+    // below already assumes.
+    isEmpty: !allItems?.length,
+  });
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
     {
@@ -487,8 +520,8 @@ export const FilteredPantryItems: React.FC<
           }
           ListEmptyComponent={
             <FilteredEmpty
-              loading={loading}
-              hasItems={!!allItems}
+              state={dataState}
+              onRetry={handleRefresh}
               icon={config.emptyIcon}
               message={config.emptyMessage}
             />

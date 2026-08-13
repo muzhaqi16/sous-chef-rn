@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleProp, ViewStyle } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from './Button';
 import { IconName, Icon, IconTone } from '#/utils/iconUtils';
@@ -41,6 +42,9 @@ export interface ErrorStateProps {
 
   /** Additional container styles */
   style?: StyleProp<ViewStyle>;
+
+  /** Test ID for E2E testing */
+  testID?: string;
 }
 
 export const ErrorState: React.FC<ErrorStateProps> = ({
@@ -49,13 +53,15 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   message,
   details,
   onRetry,
-  retryLabel = 'Try Again',
+  retryLabel,
   secondaryAction,
   iconSize = 48,
   severity = 'error',
   alignment = 'flex-start',
   style,
+  testID,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ severity });
 
   const severityTone: IconTone =
@@ -78,7 +84,10 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   };
 
   return (
-    <View style={[styles.container, { justifyContent: alignment }, style]}>
+    <View
+      style={[styles.container, { justifyContent: alignment }, style]}
+      testID={testID}
+    >
       {renderIcon()}
       <Text size="xl" weight="semibold" align="center" style={styles.title}>
         {title}
@@ -104,7 +113,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
           size="medium"
           style={styles.actionButton}
         >
-          {retryLabel}
+          {retryLabel ?? t('dataState.retry')}
         </Button>
       )}
       {!!secondaryAction && (

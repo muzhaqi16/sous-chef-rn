@@ -29,6 +29,8 @@ import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 
 const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
   [
@@ -97,13 +99,21 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
     state: {
       templates,
       loading,
-      offline,
+      error,
+      hasResult,
       searchQuery,
       selectedCategory,
       hasMore,
     },
-    actions: { setSearchQuery, setSelectedCategory, loadMore },
+    actions: { setSearchQuery, setSelectedCategory, loadMore, refetch },
   } = useMealTemplates();
+
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    isEmpty: templates.length === 0,
+  });
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
@@ -140,21 +150,20 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
         />
 
         {/* Template list */}
-        {loading && templates.length === 0 ? (
+        {dataState === 'loading' ? (
           <View style={styles.loadingContainer}>
             <PrimaryActivityIndicator size="large" />
           </View>
-        ) : templates.length === 0 ? (
+        ) : dataState === 'error' || dataState === 'offline' ? (
+          // The hook classified this all along; the sheet used to read only
+          // `offline` and drop `error` on the floor, so a genuine failure
+          // rendered as "No templates found" with no way to try again.
+          <DataStateView state={dataState} onRetry={refetch} />
+        ) : dataState === 'empty' ? (
           <View style={styles.emptyContainer}>
-            <Icon
-              name={offline ? 'cloud-offline-outline' : 'document-text-outline'}
-              size={48}
-              tone="textTertiary"
-            />
+            <Icon name="document-text-outline" size={48} tone="textTertiary" />
             <Text size="base" tone="secondary" align="center">
-              {offline
-                ? t('templateBrowser.offline')
-                : t('templateBrowser.noTemplates')}
+              {t('templateBrowser.noTemplates')}
             </Text>
           </View>
         ) : (

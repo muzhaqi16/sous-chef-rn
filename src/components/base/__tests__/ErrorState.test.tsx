@@ -32,8 +32,8 @@ describe('ErrorState', () => {
     const user = userEvent.setup();
     const mockRetry = jest.fn();
     render(<ErrorState title="Error" message="Failed" onRetry={mockRetry} />);
-    expect(screen.getByText('Try Again')).toBeTruthy();
-    await user.press(screen.getByText('Try Again'));
+    expect(screen.getByText('Try again')).toBeTruthy();
+    await user.press(screen.getByText('Try again'));
     expect(mockRetry).toHaveBeenCalledTimes(1);
   });
 
@@ -64,6 +64,6 @@ describe('ErrorState', () => {
 
   it('does not render retry button when onRetry is not provided', () => {
     render(<ErrorState title="Error" message="Failed" />);
-    expect(screen.queryByText('Try Again')).toBeNull();
+    expect(screen.queryByText('Try again')).toBeNull();
   });
 });

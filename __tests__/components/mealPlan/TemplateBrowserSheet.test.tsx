@@ -31,6 +31,9 @@ jest.mock('../../../src/features/mealPlan/hooks/useMealTemplates', () => ({
       templates: [],
       loading: false,
       error: undefined,
+      // A response arrived — separates an empty result from a fetch that
+      // never answered, which must not render the same way.
+      hasResult: true,
       hasMore: false,
       totalCount: 0,
       searchQuery: '',

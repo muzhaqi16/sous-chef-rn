@@ -3270,6 +3270,14 @@
     "body": "This feature requires an internet connection",
     "noCachedData": "This isn't available offline yet. Reconnect to load it."
   },
+  "dataState": {
+    "loading": "Loading…",
+    "errorTitle": "Couldn't load this",
+    "errorBody": "Something went wrong while loading. Check your connection and try again.",
+    "offlineTitle": "Not available offline",
+    "offlineBody": "You're offline and this hasn't been downloaded yet. Reconnect to load it.",
+    "retry": "Try again"
+  },
   "complexity": {
     "title": "Request Too Large",
     "body": "The request was too complex. Please try with fewer items or simplify your request."

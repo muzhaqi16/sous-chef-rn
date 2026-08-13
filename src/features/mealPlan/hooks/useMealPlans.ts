@@ -92,6 +92,9 @@ export function useMealPlans(filters?: MealPlanFilters) {
       // flashing it over already-rendered content.
       initialLoading: loading && !data,
       error: error as Error | undefined,
+      // `data !== undefined` — a response arrived, empty or not. Separates
+      // "you have no plans" from "we never got an answer".
+      hasResult: data !== undefined,
       totalCount: connectionData.totalCount,
       hasMore: connectionData.hasMore,
     },

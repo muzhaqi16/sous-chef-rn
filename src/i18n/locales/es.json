@@ -3270,6 +3270,14 @@
     "body": "Esta función requiere conexión a internet",
     "noCachedData": "Esto aún no está disponible sin conexión. Vuelve a conectarte para cargarlo."
   },
+  "dataState": {
+    "loading": "Cargando…",
+    "errorTitle": "No se pudo cargar",
+    "errorBody": "Algo salió mal al cargar. Comprueba tu conexión e inténtalo de nuevo.",
+    "offlineTitle": "No disponible sin conexión",
+    "offlineBody": "Estás sin conexión y esto aún no se ha descargado. Vuelve a conectarte para cargarlo.",
+    "retry": "Reintentar"
+  },
   "complexity": {
     "title": "Solicitud demasiado grande",
     "body": "La solicitud era demasiado compleja. Inténtalo con menos artículos o simplifícala."

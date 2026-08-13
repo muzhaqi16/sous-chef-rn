@@ -15,6 +15,8 @@ import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
 import { TemplateBrowserSheet } from '#features/mealPlan/components/TemplateBrowserSheet';
@@ -157,6 +159,8 @@ const MealPlanMainInner: React.FC = () => {
       mealPlans,
       loading: plansLoading,
       initialLoading: plansInitialLoading,
+      error: plansError,
+      hasResult: plansHasResult,
     },
   } = useMealPlans();
 
@@ -193,6 +197,13 @@ const MealPlanMainInner: React.FC = () => {
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = () => executeMealPlanRefresh(refetch, setRefreshing);
+
+  const plansState = useDataState({
+    loading: plansInitialLoading,
+    error: plansError,
+    hasResult: plansHasResult,
+    isEmpty: mealPlans.length === 0,
+  });
 
   // Permissions for the active plan
   const permissions = useMealPlanPermissions(activeMealPlan);
@@ -463,7 +474,9 @@ const MealPlanMainInner: React.FC = () => {
     );
   }
 
-  // Show empty state if no plans exist
+  // No plans on screen. Which of the three reasons it is decides what to show:
+  // a failed or never-attempted fetch must not offer to create a plan, because
+  // the person may already have the very plan they would be recreating.
   if (mealPlans.length === 0) {
     return (
       <TabMainScreen testID="meal-plan-screen">
@@ -471,10 +484,14 @@ const MealPlanMainInner: React.FC = () => {
           label={t('mealPlanMain.label')}
           title={t('mealPlanMain.defaultTitle')}
         />
-        <MealPlanEmptyState
-          onCreatePlan={handleCreatePlan}
-          onCreateFromTemplate={handleOpenTemplateBrowser}
-        />
+        {plansState === 'error' || plansState === 'offline' ? (
+          <DataStateView state={plansState} onRetry={handleRefresh} />
+        ) : (
+          <MealPlanEmptyState
+            onCreatePlan={handleCreatePlan}
+            onCreateFromTemplate={handleOpenTemplateBrowser}
+          />
+        )}
 
         {/* Template Browser Sheet */}
         <TemplateBrowserSheet

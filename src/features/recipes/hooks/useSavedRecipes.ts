@@ -25,6 +25,8 @@ interface SavedRecipesState {
   recipes: SavedRecipeNode[];
   loading: boolean;
   error: Error | undefined;
+  /** `data !== undefined` — a response arrived, empty or not. */
+  hasResult: boolean;
   totalCount: number | undefined;
   hasMore: boolean;
 }
@@ -76,6 +78,7 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
       recipes,
       loading,
       error: error as Error | undefined,
+      hasResult: data !== undefined,
       totalCount: connectionData.totalCount,
       hasMore: connectionData.hasMore,
     },
