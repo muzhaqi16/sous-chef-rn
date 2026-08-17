@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { EmptyState } from '#components/base/EmptyState';
 import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
@@ -48,7 +48,7 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="home-outline"
-        title={t('pantryScreen.noHomeSelectedTitle')}
+        title={t('errors.noHomeSelected')}
         description={t('pantryScreen.noHomeSelectedDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
@@ -90,7 +90,7 @@ export function PantryEmptyState({
       <EmptyState
         testID="pantry-empty-state"
         icon="search-outline"
-        title={t('pantryScreen.searchNoResultsTitle', { query: displayQuery })}
+        title={t('empty.noResultsFor', { query: displayQuery })}
         description={t('pantryScreen.searchNoResultsDescription')}
         style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
         action={
@@ -123,7 +123,7 @@ export function PantryEmptyState({
     <EmptyState
       testID="pantry-empty-state"
       icon="basket-outline"
-      title={t('pantryScreen.emptyTitle')}
+      title={t('empty.noPantryItems')}
       description={t('pantryScreen.emptySubtitle')}
       style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       action={

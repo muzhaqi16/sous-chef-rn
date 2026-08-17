@@ -56,7 +56,7 @@ jest.mock('#/utils/errors/pantryItemDuplicate', () => {
   };
 });
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

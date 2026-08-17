@@ -34,7 +34,7 @@ import { UserSubtype } from '#/graphql/generated/schemaTypes';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';

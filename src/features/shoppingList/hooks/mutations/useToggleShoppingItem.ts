@@ -19,7 +19,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
   type UseToggleShoppingItem_ItemFragment,
@@ -31,12 +31,10 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
-import {
-  executeMutation,
-  isSuccessPayload,
-} from '#/utils/compilerSafeWrappers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { PAGINATION } from '#/constants/shoppingList';
+import { errorService } from '#/services/errorService';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -100,12 +98,17 @@ export function useToggleShoppingItem({
       moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
     }
 
-    // 3. Persist optimistic state so it survives app restarts while offline
+    // 3. Persist optimistic state so it survives app restarts while offline.
+    //    The persisted field name must be a field the entity actually has:
+    //    `isPurchased` lives inside `purchaseInfo`, and `cache.modify` silently
+    //    ignores a modifier for a field the entity does not have — so persisting
+    //    it under `isPurchased` restored nothing at all. Restoration
+    //    shallow-merges object values, so a partial `purchaseInfo` is enough.
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
-      'isPurchased',
-      newStatus,
+      'purchaseInfo',
+      { isPurchased: newStatus },
     );
 
     const revert = () => {
@@ -126,61 +129,67 @@ export function useToggleShoppingItem({
       clearPersistence();
     };
 
-    const result = await executeMutation(
-      () =>
-        togglePurchasedMutation({
-          variables: { input: { id: itemId, purchased: newStatus } },
-          // Local-first: if the API is unreachable while "online", queueLink
-          // queues this for replay (toggle is idempotent on a real id) instead
-          // of surfacing a blocking error. Offline already queues via queueLink.
-          context: { localFirst: true },
-          onCompleted: data => {
-            // Drop the offline-survival marker only once the server confirms;
-            // a queued completion resolves with a null payload — keep it so the
-            // optimistic state survives an app-kill before replay.
-            if (
-              isSuccessPayload(
-                data?.toggleShoppingListItemPurchased,
-                'ToggleShoppingListItemPurchasedPayload',
-              )
-            ) {
-              clearPersistence();
-            }
+    let result;
+    const togglePurchasedMutationOptions: Parameters<
+      typeof togglePurchasedMutation
+    >[0] = {
+      variables: { input: { id: itemId, purchased: newStatus } },
+      // Local-first: if the API is unreachable while "online", queueLink
+      // queues this for replay (toggle is idempotent on a real id) instead
+      // of surfacing a blocking error. Offline already queues via queueLink.
+      context: { localFirst: true },
+      onCompleted: data => {
+        // Drop the offline-survival marker only once the server confirms;
+        // a queued completion resolves with a null payload — keep it so the
+        // optimistic state survives an app-kill before replay.
+        if (
+          isSuccessPayload(
+            data?.toggleShoppingListItemPurchased,
+            'ToggleShoppingListItemPurchasedPayload',
+          )
+        ) {
+          clearPersistence();
+        }
 
-            // Depletion recovery: if the source connection (the tab we toggled
-            // FROM) is now empty but totalCount > 0, server has unfetched
-            // items — refetch.
-            const sourceQuery = client.cache.readQuery<
-              GetShoppingListItemsFilteredQuery,
-              GetShoppingListItemsFilteredQueryVariables
-            >({
-              query: GetShoppingListItemsFilteredDocument,
-              variables: {
-                id: listId,
-                first: PAGINATION.ITEMS_PAGE_SIZE,
-                isPurchased: previousIsPurchased,
-              },
-            });
-            const conn = sourceQuery?.shoppingList?.itemsConnection;
-            if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
-              refetch();
-            }
+        // Depletion recovery: if the source connection (the tab we toggled
+        // FROM) is now empty but totalCount > 0, server has unfetched
+        // items — refetch.
+        const sourceQuery = client.cache.readQuery<
+          GetShoppingListItemsFilteredQuery,
+          GetShoppingListItemsFilteredQueryVariables
+        >({
+          query: GetShoppingListItemsFilteredDocument,
+          variables: {
+            id: listId,
+            first: PAGINATION.ITEMS_PAGE_SIZE,
+            isPurchased: previousIsPurchased,
           },
-          onError: error => {
-            // For network errors, the queue handles retry — keep optimistic
-            // UI intact while offline.
-            if (isNetworkError(error)) {
-              logger.debug('Toggle purchase queued for retry (network error)');
-              return;
-            }
+        });
+        const conn = sourceQuery?.shoppingList?.itemsConnection;
+        if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
+          refetch();
+        }
+      },
+      onError: error => {
+        // For network errors, the queue handles retry — keep optimistic
+        // UI intact while offline.
+        if (isNetworkError(error)) {
+          logger.debug('Toggle purchase queued for retry (network error)');
+          return;
+        }
 
-            revert();
-            handleMutationError(error, { operation: 'Toggle Item Purchased' });
-            refetch();
-          },
-        }),
-      'Toggle shopping list item purchased error:',
-    );
+        revert();
+        handleMutationError(error, { operation: 'Toggle Item Purchased' });
+        refetch();
+      },
+    };
+    try {
+      result = await togglePurchasedMutation(togglePurchasedMutationOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Toggle shopping list item purchased error:',
+      });
+    }
     if (!result) return false;
 
     // A resolved error-union member (ValidationError/ConflictError/…) doesn't
@@ -248,8 +257,8 @@ export function useToggleShoppingItem({
     const clearPersistence = optimisticDataPersistence.track(
       'ShoppingListItem',
       itemId,
-      'isPurchased',
-      true,
+      'purchaseInfo',
+      { isPurchased: true },
     );
 
     const revert = () => {
@@ -268,45 +277,51 @@ export function useToggleShoppingItem({
       clearPersistence();
     };
 
-    const result = await executeMutation(
-      () =>
-        updatePurchaseMutation({
-          variables: {
-            input: {
-              id: itemId,
-              version: snapshot.version,
-              purchaseTracking: {
-                isPurchased: true,
-                purchasedQuantity: amounts.purchasedQuantity,
-                ...(amounts.purchasedPrice != null && {
-                  purchasedPrice: amounts.purchasedPrice,
-                }),
-              },
-            },
+    let result;
+    const updatePurchaseMutationOptions: Parameters<
+      typeof updatePurchaseMutation
+    >[0] = {
+      variables: {
+        input: {
+          id: itemId,
+          version: snapshot.version,
+          purchaseTracking: {
+            isPurchased: true,
+            purchasedQuantity: amounts.purchasedQuantity,
+            ...(amounts.purchasedPrice != null && {
+              purchasedPrice: amounts.purchasedPrice,
+            }),
           },
-          context: { localFirst: true },
-          onCompleted: data => {
-            if (
-              isSuccessPayload(
-                data?.updateShoppingListItem,
-                'UpdateShoppingListItemPayload',
-              )
-            ) {
-              clearPersistence();
-            }
-          },
-          onError: error => {
-            if (isNetworkError(error)) {
-              logger.debug('Record purchase queued for retry (network error)');
-              return;
-            }
-            revert();
-            handleMutationError(error, { operation: 'Record Purchase' });
-            refetch();
-          },
-        }),
-      'Record purchase error:',
-    );
+        },
+      },
+      context: { localFirst: true },
+      onCompleted: data => {
+        if (
+          isSuccessPayload(
+            data?.updateShoppingListItem,
+            'UpdateShoppingListItemPayload',
+          )
+        ) {
+          clearPersistence();
+        }
+      },
+      onError: error => {
+        if (isNetworkError(error)) {
+          logger.debug('Record purchase queued for retry (network error)');
+          return;
+        }
+        revert();
+        handleMutationError(error, { operation: 'Record Purchase' });
+        refetch();
+      },
+    };
+    try {
+      result = await updatePurchaseMutation(updatePurchaseMutationOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Record purchase error:',
+      });
+    }
     if (!result) return false;
 
     // Same contract as toggleItem's guard: only handle the resolved

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 interface EditableFieldProps {
@@ -67,9 +67,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       },
       setSaving,
       err => {
-        setError(
-          err instanceof Error ? err.message : t('editableField.saveFailed'),
-        );
+        setError(err instanceof Error ? err.message : t('errors.saveFailed'));
       },
     );
   };

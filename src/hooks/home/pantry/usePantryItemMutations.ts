@@ -36,11 +36,8 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { removeFromPantryItemsCache } from './utils';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import type { PantryItemUpdate } from './types';
+import { errorService } from '#/services/errorService';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
@@ -163,13 +160,15 @@ export function usePantryItemMutations({
     // Evict the item from the cache before firing, and leave it evicted, so the
     // removal persists if the delete is queued offline (the queue replays it,
     // idempotent by this id).
-    executeCacheUpdate(
-      () =>
-        removeFromPantryItemsCache(client.cache, pantryId, itemId, {
-          evictItem: true,
-        }),
-      'Remove Pantry Item (optimistic evict)',
-    );
+    try {
+      removeFromPantryItemsCache(client.cache, pantryId, itemId, {
+        evictItem: true,
+      });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Remove Pantry Item (optimistic evict)',
+      });
+    }
 
     // Register pending delete to handle subscription race condition
     subscriptionService.registerPendingDelete(
@@ -180,17 +179,16 @@ export function usePantryItemMutations({
       'itemsConnection',
     );
 
-    const result = await executeMutation(
-      () =>
-        removeItemMutation({
-          variables: { input: { id: itemId } },
-          context: { localFirst: true },
-        }),
-      error => {
-        subscriptionService.unregisterPendingDelete(itemId);
-        throw error;
-      },
-    );
+    let result;
+    try {
+      result = await removeItemMutation({
+        variables: { input: { id: itemId } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      subscriptionService.unregisterPendingDelete(itemId);
+      throw error;
+    }
     if (result) {
       subscriptionService.unregisterPendingDelete(itemId);
     }

@@ -1,4 +1,4 @@
-import type { useTranslation } from 'react-i18next';
+import type { useTranslation } from '#/i18n';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 
 export type TFn = ReturnType<typeof useTranslation>['t'];

@@ -78,7 +78,7 @@ jest.mock('#/storage/keychain', () => ({
   clearTempRegistrationPassword: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({

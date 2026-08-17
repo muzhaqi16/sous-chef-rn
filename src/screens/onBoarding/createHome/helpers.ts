@@ -1,4 +1,4 @@
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import type { useMutation } from '@apollo/client/react';

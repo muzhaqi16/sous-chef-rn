@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
@@ -25,10 +25,6 @@ import {
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#utils/compilerSafeWrappers';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
@@ -130,22 +126,24 @@ export const MyRecipes: React.FC = () => {
     // Local-first: remove from the list BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
     // surfaces as NotFound, which the queue drops).
-    executeCacheUpdate(
-      () => removeRecipeEdge(id),
-      'Delete Recipe (optimistic)',
-    );
+    try {
+      removeRecipeEdge(id);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Recipe (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        deleteRecipeMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, { operation: 'deleteRecipe' });
-        alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
-      },
-    );
+    let result;
+    try {
+      result = await deleteRecipeMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'deleteRecipe' });
+      alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
+    }
     // A rejection means the recipe still exists server-side — alert (the silent
     // revert would otherwise just snap the recipe back) and refetch to restore
     // the authoritative list. A queued result keeps the removal and replays

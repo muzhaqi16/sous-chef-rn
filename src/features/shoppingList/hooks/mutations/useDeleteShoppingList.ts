@@ -17,11 +17,8 @@ import {
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { getErrorMessage } from '#/services/errorService';
+import { errorService } from '#/services/errorService';
 
 export function useDeleteShoppingList() {
   const client = useApolloClient();
@@ -38,29 +35,38 @@ export function useDeleteShoppingList() {
 
     // Local-first: remove from the cache BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue.
-    executeCacheUpdate(
-      () => removeShoppingListFromCache(client.cache, id),
-      'Delete Shopping List (optimistic)',
-    );
+    try {
+      removeShoppingListFromCache(client.cache, id);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Shopping List (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Delete Shopping List error:',
-    );
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Delete Shopping List error:',
+      });
+    }
 
     // 'queued' (null payload, no error) keeps the removal — the delete replays
     // later. A rejection restores the snapshot; without one (incomplete cache
     // copy) the next overview refetch restores the authoritative state.
     const rejected = classifyCreateResult(result) === 'rejected';
     if (rejected && snapshot) {
-      executeCacheUpdate(
-        () => addOptimisticShoppingList(client.cache, snapshot),
-        'Restore refused Shopping List delete',
-      );
+      try {
+        addOptimisticShoppingList(client.cache, snapshot);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Restore refused Shopping List delete',
+        });
+      }
     }
     return result;
   };

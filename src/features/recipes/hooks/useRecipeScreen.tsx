@@ -1,22 +1,18 @@
 import { useRef, useState } from 'react';
 import { errorService } from '#/services/errorService';
 
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { alertService } from '#/services/alertService';
-import { t as tGlobal } from '#/i18n/t';
+import { t as tGlobal } from '#/i18n';
 import { useDeferredSearch } from '#hooks/performance/useDeferredSearch';
 import { pantryItemSearch } from '#utils/searchUtils';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import { useRecipeDiscovery } from '#features/recipes/hooks/useRecipeDiscovery';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecipeFilters } from '#features/recipes/hooks/useRecipeFilters';
-import {
-  executeMutation,
-  executeSearchQuery,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import {
   SearchRecipesDocument,
   type SearchRecipesQuery,
@@ -69,7 +65,7 @@ function handleSearchError(error: unknown, label: string): void {
     );
   } else {
     alertService.alert(
-      tGlobal('recipes.searchErrorTitle'),
+      tGlobal('errors.searchFailed'),
       tGlobal('recipes.searchErrorMessage'),
     );
   }
@@ -206,27 +202,34 @@ async function fetchRecipeSearchPage(
   const localIntolerances = filters.intolerances
     .map(i => SPOONACULAR_TO_INTOLERANCE_ENUM[i])
     .filter((i): i is Intolerance => Boolean(i));
-  const localPromise: Promise<SearchRecipesQuery | null> = fetchLocal
-    ? executeSearchQuery<SearchRecipesQuery>(
-        () =>
-          client.query<SearchRecipesQuery>({
-            query: SearchRecipesDocument,
-            variables: {
-              query,
-              first: SEARCH_FETCH_SIZE,
-              ...(localAfter && { after: localAfter }),
-              ...(localDiets.length > 0 && { diets: localDiets }),
-              ...(localIntolerances.length > 0 && {
-                intolerances: localIntolerances,
-              }),
-              ...(filters.maxReadyTime && {
-                maxReadyTime: filters.maxReadyTime,
-              }),
-            },
-            fetchPolicy: 'network-only',
+  const searchLocalRecipes = async (): Promise<SearchRecipesQuery | null> => {
+    try {
+      const result = await client.query<SearchRecipesQuery>({
+        query: SearchRecipesDocument,
+        variables: {
+          query,
+          first: SEARCH_FETCH_SIZE,
+          ...(localAfter && { after: localAfter }),
+          ...(localDiets.length > 0 && { diets: localDiets }),
+          ...(localIntolerances.length > 0 && {
+            intolerances: localIntolerances,
           }),
-        () => false,
-      )
+          ...(filters.maxReadyTime && {
+            maxReadyTime: filters.maxReadyTime,
+          }),
+        },
+        fetchPolicy: 'network-only',
+      });
+      return result.data ?? null;
+    } catch {
+      // Null lets the Spoonacular source below still render; the alert fires
+      // only when the combined list would otherwise be empty.
+      return null;
+    }
+  };
+
+  const localPromise: Promise<SearchRecipesQuery | null> = fetchLocal
+    ? searchLocalRecipes()
     : Promise.resolve(null);
 
   // Spoonacular search — served from the 24h cache when available. The cache
@@ -254,30 +257,29 @@ async function fetchRecipeSearchPage(
     : (async () => {
         let results: SpoonacularRecipe[] = [];
         let total: number | null = null;
-        await executeMutation(
-          async () => {
-            const data = await spoonacularService.searchRecipesWithInfo({
-              query,
-              number: SEARCH_FETCH_SIZE,
-              offset: spoonacularOffset,
-              ...(filters.diet.length > 0 && { diet: filters.diet.join(',') }),
-              ...(filters.intolerances.length > 0 && {
-                intolerances: filters.intolerances.join(','),
-              }),
-              ...(filters.mealType && { type: filters.mealType }),
-              ...(filters.maxReadyTime && {
-                maxReadyTime: filters.maxReadyTime,
-              }),
-            });
-            results = data.results || [];
-            total = data.totalResults;
-            cacheStore.setCached(cacheKey, results, undefined, total);
-            return data;
-          },
-          error => {
-            spoonacularError = error;
-          },
-        );
+        const searchParams = {
+          query,
+          number: SEARCH_FETCH_SIZE,
+          offset: spoonacularOffset,
+          ...(filters.diet.length > 0 && { diet: filters.diet.join(',') }),
+          ...(filters.intolerances.length > 0 && {
+            intolerances: filters.intolerances.join(','),
+          }),
+          ...(filters.mealType && { type: filters.mealType }),
+          ...(filters.maxReadyTime && {
+            maxReadyTime: filters.maxReadyTime,
+          }),
+        };
+        try {
+          const data = await spoonacularService.searchRecipesWithInfo(
+            searchParams,
+          );
+          results = data.results || [];
+          total = data.totalResults;
+          cacheStore.setCached(cacheKey, results, undefined, total);
+        } catch (error) {
+          spoonacularError = error;
+        }
         return { results, total };
       })();
 
@@ -491,25 +493,23 @@ async function executeRecipeIngredientSearch(
     return;
   }
 
-  await executeMutation(
-    async () => {
-      // Note: findByIngredients API does NOT support diet/intolerance/mealType filters
-      const results = await spoonacularService.searchRecipesByIngredients({
-        ingredients: ingredientString,
-        number: SEARCH_FETCH_SIZE,
-        ranking: 1,
-        ignorePantry: true,
-      });
-      // The results are valid for this ingredient key regardless of staleness,
-      // so warm the cache unconditionally; only the visible commit is guarded.
-      cacheStore.setCached(cacheKey, results);
-      if (shouldCommit()) {
-        setDisplayResults(toSpoonacularDisplayItems(results));
-      }
-      return results;
-    },
-    error => handleSearchError(error, 'Ingredient search error'),
-  );
+  try {
+    // Note: findByIngredients API does NOT support diet/intolerance/mealType filters
+    const results = await spoonacularService.searchRecipesByIngredients({
+      ingredients: ingredientString,
+      number: SEARCH_FETCH_SIZE,
+      ranking: 1,
+      ignorePantry: true,
+    });
+    // The results are valid for this ingredient key regardless of staleness,
+    // so warm the cache unconditionally; only the visible commit is guarded.
+    cacheStore.setCached(cacheKey, results);
+    if (shouldCommit()) {
+      setDisplayResults(toSpoonacularDisplayItems(results));
+    }
+  } catch (error) {
+    handleSearchError(error, 'Ingredient search error');
+  }
 
   if (shouldCommit()) setLoading(false);
 }

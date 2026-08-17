@@ -14,7 +14,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   MarkAsTemplateDocument,
   CreateFromTemplateDocument,
@@ -26,7 +26,7 @@ import {
 import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useShoppingListTemplate() {
   const { t } = useTranslation();
@@ -67,14 +67,17 @@ export function useShoppingListTemplate() {
         'Mark As Template',
       );
 
-    const result = await executeMutation(
-      () =>
-        markMutation({
-          variables: { input: { id, templateName, saveItems } },
-          context: { localFirst: true },
-        }),
-      'Mark As Template error:',
-    );
+    let result;
+    try {
+      result = await markMutation({
+        variables: { input: { id, templateName, saveItems } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Mark As Template error:',
+      });
+    }
 
     if (!result) {
       revert();
@@ -94,13 +97,17 @@ export function useShoppingListTemplate() {
     templateId: string,
     name?: string,
   ): Promise<string | null> => {
-    const result = await executeMutation(
-      () =>
-        createMutation({
-          variables: { input: { templateId, ...(name && { name }) } },
-        }),
-      'Create From Template error:',
-    );
+    let result;
+    const createMutationOptions = {
+      variables: { input: { templateId, ...(name && { name }) } },
+    };
+    try {
+      result = await createMutation(createMutationOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create From Template error:',
+      });
+    }
 
     if (!result) return null;
     if (

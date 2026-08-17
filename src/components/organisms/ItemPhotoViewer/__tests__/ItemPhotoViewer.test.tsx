@@ -15,7 +15,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 /**
  * A literal photo complete for `ItemPhotoCarousel_itemPhoto`. The viewer takes

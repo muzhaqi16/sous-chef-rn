@@ -21,7 +21,7 @@ jest.mock('#hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#utils/validation/auth', () => ({
   changePasswordSchema: {

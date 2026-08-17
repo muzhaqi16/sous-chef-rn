@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   useApolloClient,
   useLazyQuery,
@@ -18,11 +18,11 @@ import { type ConfirmedIngredientConsumptionInput } from '#/graphql/generated/sc
 import { useSelectedPantryId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { logger } from '#/utils/environment';
+import { errorService } from '#/services/errorService';
 
 type IngredientMatch =
   MatchRecipeIngredientsToPantryQuery['matchRecipeIngredientsToPantry'][number];
@@ -90,13 +90,16 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       return false;
     }
 
-    const result = await executeMutation(
-      () =>
-        loadMatchesQuery({
-          variables: { recipeId, pantryId, servings },
-        }),
-      'Load recipe matches error:',
-    );
+    let result;
+    try {
+      result = await loadMatchesQuery({
+        variables: { recipeId, pantryId, servings },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Load recipe matches error:',
+      });
+    }
     if (!result) return false;
 
     const matches = result.data?.matchRecipeIngredientsToPantry;
@@ -199,16 +202,19 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     // the API is unreachable. The shared id means a re-synced consumption
     // converges on the same cooking log instead of creating a duplicate and
     // re-consuming the pantry.
-    const result = await executeMutation(
-      () =>
-        confirmMutation({
-          variables: {
-            input: { id: generateEntityId(), recipeId, pantryId, consumptions },
-          },
-          context: { localFirst: true },
-        }),
-      'Confirm recipe consumption error:',
-    );
+    let result;
+    try {
+      result = await confirmMutation({
+        variables: {
+          input: { id: generateEntityId(), recipeId, pantryId, consumptions },
+        },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Confirm recipe consumption error:',
+      });
+    }
     if (!result) return;
 
     // A resolved refusal (error union member / transport error) under

@@ -1,6 +1,6 @@
 import { alertService } from '#/services/alertService';
 import { classifyCreateResult } from './classifyCreateResult';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Surface a user-facing alert when a local-first mutation is classified as

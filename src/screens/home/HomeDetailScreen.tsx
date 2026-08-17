@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
@@ -26,7 +26,7 @@ import { useUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/base/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';

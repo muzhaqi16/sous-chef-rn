@@ -84,7 +84,7 @@ jest.mock('#components/molecules/AlertBanner', () => ({
   AlertBanner: () => null,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

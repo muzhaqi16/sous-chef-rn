@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {

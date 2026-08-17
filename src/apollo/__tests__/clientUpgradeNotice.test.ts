@@ -12,7 +12,7 @@ jest.mock('#/services/alertService', () => ({
 jest.mock('#/services/toastService', () => ({
   toastService: { info: mockToast },
 }));
-jest.mock('#/i18n/t', () => ({
+jest.mock('#/i18n', () => ({
   t: jest.fn((key: string) => key),
 }));
 jest.mock('../clientIdentity', () => ({

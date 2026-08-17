@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useSelectableItems } from '#hooks/useSelectableItems';
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
@@ -36,7 +36,7 @@ import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 type PantryItemsConnection = NonNullable<

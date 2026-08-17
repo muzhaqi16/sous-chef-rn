@@ -1,6 +1,5 @@
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import type { AddItemSheetConfig } from '../types';
-import { t } from '#/i18n/t';
 
 /**
  * Configuration for AddToShoppingListSheet.
@@ -13,10 +12,10 @@ import { t } from '#/i18n/t';
  */
 export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
   {
-    title: t('addItemSheet.addToShoppingList'),
+    titleKey: 'addItemSheet.addToShoppingList',
     testIDPrefix: 'add-shopping-item',
     placeholderIcon: 'cart-outline',
-    searchPlaceholder: 'Search or scan item...',
+    searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
     suggestionGroups: [
       {
         key: 'recentlyDeleted',
@@ -43,7 +42,7 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
     quickAdd: {
       fireAndForget: true,
       enableExitAnimations: true,
-      toastMessage: (name: string) => `Added ${name}`,
+      toastMessageKey: 'addItemSheet.added',
     },
     addDetails: {
       enabled: false,
@@ -51,7 +50,6 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
     deferFetch: true,
     barcodeSource: 'shoppingList',
     addManuallyPosition: 'bottom',
-    emptyStateMessage: 'No suggestions yet',
-    emptyStateSubtext:
-      "Add items to your list and they'll appear here for quick re-adding",
+    emptyStateMessageKey: 'addItemSheet.emptyTitle',
+    emptyStateSubtextKey: 'addItemSheet.emptyShoppingListSubtext',
   };

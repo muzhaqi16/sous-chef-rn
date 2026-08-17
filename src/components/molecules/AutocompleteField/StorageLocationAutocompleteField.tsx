@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useStorageLocationAutocomplete } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import { type StorageLocation } from '#/graphql/generated/schemaTypes';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';

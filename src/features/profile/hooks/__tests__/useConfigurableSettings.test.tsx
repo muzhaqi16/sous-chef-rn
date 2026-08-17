@@ -27,7 +27,16 @@ interface ConfigSection {
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
+// The sign-out button goes through authService, not the store's own `logout`
+// action — the store action never deregisters the device for push, hands the
+// offline queue its owner change, or removes the persisted queue/navigation
+// keys, and two sign-out paths clearing different subsets is what left the
+// previous person's data on a shared device.
 const mockLogout = jest.fn();
+jest.mock('#/services/authService', () => ({
+  authService: { logout: (...args: unknown[]) => mockLogout(...args) },
+}));
+
 const mockGetUserNavigationState = jest.fn(
   (): ReturnType<RootState['getUserNavigationState']> => null,
 );
@@ -42,7 +51,6 @@ jest.mock('#store/useAppStore', () => ({
         emailVerified: true,
         onBoarded: true,
       },
-      logout: mockLogout,
       getUserNavigationState: mockGetUserNavigationState,
       language: 'en',
       setLanguage: mockSetLanguage,
@@ -124,7 +132,7 @@ jest.mock('#components/organisms/BiometricSetupModal', () => ({
   BiometricSetupModal: 'BiometricSetupModal',
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -285,7 +293,7 @@ describe('useConfigurableSettings', () => {
     expect(appearanceItem.type).toBe('navigation');
   });
 
-  it('calls logout when logout action is pressed', () => {
+  it('signs out through authService when the logout action is pressed', () => {
     const { profile, settings } = buildMocks();
     const { result } = renderHookWithApollo(
       () => useConfigurableSettings(mockProfile),
@@ -1117,7 +1125,6 @@ describe('useConfigurableSettings', () => {
               emailVerified: true,
               onBoarded: true,
             },
-            logout: mockLogout,
             getUserNavigationState: mockGetUserNavigationState,
             language: 'en',
             setLanguage: mockSetLanguage,
@@ -1146,7 +1153,6 @@ describe('useConfigurableSettings', () => {
               emailVerified: true,
               onBoarded: true,
             },
-            logout: mockLogout,
             getUserNavigationState: mockGetUserNavigationState,
             language: 'en',
             setLanguage: mockSetLanguage,
@@ -1229,10 +1235,11 @@ describe('useConfigurableSettings', () => {
     });
   });
 
-  describe('executeQuery failure in biometric loading', () => {
-    it('handles executeQuery returning null gracefully', async () => {
-      const { executeQuery } = require('#/utils/compilerSafeWrappers');
-      executeQuery.mockResolvedValueOnce(null);
+  describe('biometric loading failure', () => {
+    // Driven through the real dependency rather than by stubbing the wrapper
+    // that catches it, so the hook's own error path is what runs.
+    it('finishes loading and reports biometrics unavailable when the keychain read fails', async () => {
+      mockGetBiometricInfo.mockRejectedValueOnce(new Error('keychain locked'));
 
       const { profile, settings } = buildMocks();
       const { result } = renderHookWithApollo(
@@ -1243,8 +1250,16 @@ describe('useConfigurableSettings', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      // Should still finish loading without error
       expect(result.current.biometricLoading).toBe(false);
+
+      // An unreadable keychain must not present biometrics as set up. The row
+      // is the observable surface: off, and not togglable.
+      const biometricItem = findByKey(
+        result.current.sections.flatMap(section => section.items),
+        'biometricAuthentication',
+      );
+      expect(biometricItem.value).toBe(false);
+      expect(biometricItem.disabled).toBe(true);
     });
   });
 });

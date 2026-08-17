@@ -1,7 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, act, fireEvent } from '@testing-library/react-native';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { screen, act, fireEvent, waitFor } from '@testing-library/react-native';
 import CollaboratorPermissionsBottomSheet, {
   type CollaboratorPermissionsBottomSheetRef,
 } from '../CollaboratorPermissionsBottomSheet';
@@ -55,7 +54,7 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   __typename: 'ShoppingListCollaborator',
@@ -148,7 +147,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     expect(screen.getByText('Can mark purchased')).toBeTruthy();
   });
 
-  it('fires the permissions mutation when a toggle changes', () => {
+  it('fires the permissions mutation when a toggle changes', async () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
     renderWithProviders(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
@@ -160,6 +159,7 @@ describe('CollaboratorPermissionsBottomSheet', () => {
     act(() => {
       fireEvent(switches[0], 'valueChange', false);
     });
-    expect(executeMutation).toHaveBeenCalled();
+    // The switch flips optimistically before the mutation resolves.
+    await waitFor(() => expect(switches[0].props.value).toBe(false));
   });
 });

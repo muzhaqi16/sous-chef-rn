@@ -3,7 +3,7 @@ import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
 import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 
 export interface UseRecipeSuggestionsForItemResult {
   suggestedRecipes: RecipeInformation[];

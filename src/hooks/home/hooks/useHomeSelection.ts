@@ -9,7 +9,7 @@
 
 import { useEffect, useRef } from 'react';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import {
   MarkHomeAsDefaultDocument,
@@ -25,7 +25,6 @@ import {
   useSetIsHomeSelectionReady,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 
 /**
@@ -208,18 +207,17 @@ export function useHomeSelection({
     // This clears old pantry data to avoid showing wrong home's items
     setHomeAndPantry(homeId, localDefaultPantry?.id ?? null);
 
-    const result = await executeMutation(
-      () =>
-        setDefaultHomeMutation({
-          variables: { input: { homeId } },
-        }),
-      () => {
-        // Rollback on error and re-enable queries
-        setHomeAndPantry(previousHomeId, previousPantryId);
-        setIsHomeSelectionReady(true);
-        alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
-      },
-    );
+    let result;
+    try {
+      result = await setDefaultHomeMutation({
+        variables: { input: { homeId } },
+      });
+    } catch {
+      // Rollback on error and re-enable queries
+      setHomeAndPantry(previousHomeId, previousPantryId);
+      setIsHomeSelectionReady(true);
+      alertService.alert(t('labels.error'), t('errors.setDefaultHomeFailed'));
+    }
     if (!result) return false;
 
     if (

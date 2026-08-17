@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { logger } from '#/utils/environment';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, Image, Dimensions } from 'react-native';
 import { alertService } from '#/services/alertService';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
@@ -27,7 +27,7 @@ import ImageEditor from '@react-native-community/image-editor';
 import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 const { width: screenWidth } = Dimensions.get('window');

@@ -1226,7 +1226,7 @@ describe('buildAddItemsReconcileUpdate', () => {
     expect(cache.modify).not.toHaveBeenCalled();
   });
 
-  it('still reconciles when wrapped in executeCacheUpdate', () => {
+  it('still reconciles when the reconcile is wrapped for failure reporting', () => {
     const cache = createMockCache();
     buildAddItemsReconcileUpdate({
       listId: 'sl-closure',

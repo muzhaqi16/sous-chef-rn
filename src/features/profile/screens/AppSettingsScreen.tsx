@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -21,7 +21,7 @@ import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useStore } from '#store';
 import { resetAllFeatureHints } from '#hooks/useFeatureHint';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
-import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Telemetry } from '#services/telemetry';
 import { Text } from '#components/atoms/Text';
 
@@ -133,7 +133,7 @@ export const AppSettingsScreen: React.FC = () => {
                 resetAllFeatureHints();
                 resetUserPreferences();
                 // Only the success path alerts — `resetToDefaults` already
-                // surfaces its own failure with `settings.resetFailed`.
+                // surfaces its own failure with `errors.resetSettingsFailed`.
                 if (success) {
                   alertService.alert(
                     t('settings.resetSuccessTitle'),

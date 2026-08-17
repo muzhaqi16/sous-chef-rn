@@ -1,4 +1,4 @@
-import { t as tGlobal } from '#/i18n/t';
+import { t as tGlobal } from '#/i18n';
 import { transformRecipeForDisplay } from '#/utils/recipeTransform';
 import type {
   SearchRecipesResult,
@@ -76,11 +76,13 @@ export function toLocalDisplayItems(
     const totalTime = node.totalTimeMinutes ?? matchTime;
     const subtitleParts: string[] = [];
     if (totalTime) {
-      subtitleParts.push(`⏱ ${totalTime} ${tGlobal('recipes.minutes')}`);
+      subtitleParts.push(
+        `⏱ ${tGlobal('recipes.minutesValue', { count: totalTime })}`,
+      );
     }
     if (node.servings) {
       subtitleParts.push(
-        `${node.servings} ${tGlobal('recipes.servingsSuffix')}`,
+        tGlobal('recipes.servingsCount', { count: node.servings }),
       );
     }
 

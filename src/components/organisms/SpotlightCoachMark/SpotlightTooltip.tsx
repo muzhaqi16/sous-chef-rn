@@ -3,7 +3,7 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ARROW_SIZE } from './spotlightConstants';
 

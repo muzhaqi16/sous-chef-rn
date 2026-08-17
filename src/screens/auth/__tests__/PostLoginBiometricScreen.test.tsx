@@ -44,7 +44,7 @@ const { authService: mockAuthService } = jest.requireMock(
   '#/services/authService',
 ) as { authService: { storeCredentials: jest.Mock } };
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: async (
     fn: () => Promise<void>,
     setLoading: (v: boolean) => void,

@@ -55,7 +55,7 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#hooks/performance/useScreenTransition');
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -249,7 +249,7 @@ describe('InviteMemberScreen', () => {
     // Press send
     await user.press(screen.getByText(/Send.*Invite/));
 
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     expect(executeWithLoadingState).toHaveBeenCalled();
   });
 
@@ -324,7 +324,7 @@ describe('InviteMemberScreen', () => {
     await user.press(screen.getByText('Add'));
     await user.press(screen.getByText(/Send.*Invite/));
 
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     expect(executeWithLoadingState).toHaveBeenCalled();
   });
 

@@ -6,7 +6,7 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -43,10 +43,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
-import {
-  executeCacheUpdate,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -250,11 +247,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           category: category || null,
           unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
         });
-        executeCacheUpdate(
-          () =>
-            addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
-          'Add Shopping List Item (optimistic)',
-        );
+        try {
+          addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Add Shopping List Item (optimistic)',
+          });
+        }
 
         const result = await addItem({
           variables: {

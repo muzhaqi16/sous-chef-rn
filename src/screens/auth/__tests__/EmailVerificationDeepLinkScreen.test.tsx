@@ -65,7 +65,7 @@ jest.mock('#/hooks/useToast', () => ({
 
 // Environment is auto-mocked via jest.setup.js; logger methods are no-op jest.fn().
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',

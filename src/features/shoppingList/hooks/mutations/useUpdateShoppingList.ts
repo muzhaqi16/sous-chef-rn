@@ -16,13 +16,10 @@ import {
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import {
-  executeCacheUpdate,
-  executeMutation,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import type { ListStatus } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
 
 interface ShoppingListSettingsUpdate {
   name?: string;
@@ -59,38 +56,49 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     // Permanent write BEFORE firing — survives an offline/API-down queue
     // (where no response ever arrives to materialize the change).
     if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          writeList({
-            ...snapshot,
-            ...(updates.name !== undefined && { name: updates.name }),
-            ...(updates.isDefault !== undefined && {
-              isDefault: updates.isDefault,
-            }),
-            ...(updates.status !== undefined && { status: updates.status }),
-            updatedAt: new Date().toISOString(),
-          }),
-        'Update Shopping List (optimistic)',
-      );
+      // Built before the try — conditional spreads inside a try body make the
+      // React Compiler bail out of this hook.
+      const optimisticList = {
+        ...snapshot,
+        ...(updates.name !== undefined && { name: updates.name }),
+        ...(updates.isDefault !== undefined && {
+          isDefault: updates.isDefault,
+        }),
+        ...(updates.status !== undefined && { status: updates.status }),
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        writeList(optimisticList);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Update Shopping List (optimistic)',
+        });
+      }
     }
 
     const revert = () => {
       if (snapshot) {
-        executeCacheUpdate(
-          () => writeList(snapshot),
-          'Revert rejected Shopping List update',
-        );
+        try {
+          writeList(snapshot);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected Shopping List update',
+          });
+        }
       }
     };
 
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: { input: { id, ...updates } },
-          context: { localFirst: true },
-        }),
-      'Update Shopping List error:',
-    );
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { id, ...updates } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Shopping List error:',
+      });
+    }
 
     if (!result) {
       // mutate() itself threw (non-queueable transport failure).

@@ -52,12 +52,6 @@ export interface PreferencesState {
   language?: string;
   setLanguage: (language: string) => void;
 
-  // Notifications
-  emailNotifications: boolean;
-  pushNotifications: boolean;
-  setEmailNotifications: (enabled: boolean) => void;
-  setNotificationsEnabled: (enabled: boolean) => void;
-
   // Remember Me (keep here as it's a preference)
   rememberMe?: boolean;
   setRememberMe: (remember: boolean) => void;
@@ -99,8 +93,6 @@ export interface PreferencesState {
 const initialPreferencesState = {
   theme: PREFERENCE_DEFAULTS.theme,
   language: undefined,
-  emailNotifications: false,
-  pushNotifications: false,
   rememberMe: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
@@ -131,8 +123,6 @@ export const createPreferencesSlice: StateCreator<
     void getI18n().changeLanguage(language);
     set({ language });
   },
-  setEmailNotifications: enabled => set({ emailNotifications: enabled }),
-  setNotificationsEnabled: enabled => set({ pushNotifications: enabled }),
   setRememberMe: remember => set({ rememberMe: remember }),
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),

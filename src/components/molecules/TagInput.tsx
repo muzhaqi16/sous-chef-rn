@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, Keyboard, ScrollView } from 'react-native';
 import {
   Pressable,

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
 import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';

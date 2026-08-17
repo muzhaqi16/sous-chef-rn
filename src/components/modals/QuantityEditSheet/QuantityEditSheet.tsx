@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 // TextInput type comes from RNGH because @gorhom/bottom-sheet's
 // BottomSheetTextInput is typed against RNGH's TextInput (it uses RNGH
 // internally for gesture coordination inside the sheet).

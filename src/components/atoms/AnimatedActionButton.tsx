@@ -1,5 +1,5 @@
 import React, { useLayoutEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleProp, ViewStyle, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAnimatedTheme } from 'react-native-unistyles/reanimated';

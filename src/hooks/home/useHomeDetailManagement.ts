@@ -26,17 +26,13 @@ export type MembershipPermissionKey =
   | 'canViewPantry'
   | 'canInviteOthers'
   | 'canManageHome';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 // Interpolated key — the module-level t takes a fallback, not options.
 import { getI18n } from '#/i18n/config';
 import {
   createRemoveFromParentConnectionUpdater,
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import {
@@ -51,6 +47,7 @@ import {
   useSelectedHomeId,
   useSetSelectedPantryId,
 } from '#store/useAppStore';
+import { errorService } from '#/services/errorService';
 
 export interface RolePickerState {
   visible: boolean;
@@ -138,7 +135,7 @@ export function useHomeDetailManagement(homeId: string) {
         return;
       }
 
-      executeCacheUpdate(() => {
+      try {
         const removeFromMembersCache = createRemoveFromParentConnectionUpdater(
           'Home',
           'membersConnection',
@@ -147,7 +144,11 @@ export function useHomeDetailManagement(homeId: string) {
         removeFromMembersCache(cache, homeId, variables.input.membershipId, {
           evictItem: true,
         });
-      }, 'Cache update failed for removeMember:');
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed for removeMember:',
+        });
+      }
     },
     onError: error => {
       handleMutationError(error, {
@@ -171,7 +172,7 @@ export function useHomeDetailManagement(homeId: string) {
         return;
       }
 
-      executeCacheUpdate(() => {
+      try {
         const removeFromInvitesCache = createRemoveFromParentConnectionUpdater(
           'Home',
           'invitesConnection',
@@ -180,7 +181,11 @@ export function useHomeDetailManagement(homeId: string) {
         removeFromInvitesCache(cache, homeId, variables.input.id, {
           evictItem: true,
         });
-      }, 'Cache update failed for revokeInvite:');
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed for revokeInvite:',
+        });
+      }
     },
     onError: error => {
       handleMutationError(error, {
@@ -202,9 +207,13 @@ export function useHomeDetailManagement(homeId: string) {
       update(cache, { data }) {
         if (data?.leaveHome?.__typename !== 'LeaveHomePayload') return;
 
-        executeCacheUpdate(() => {
+        try {
           safeEvict(cache, 'Home', homeId);
-        }, 'Cache update failed for leaveHome:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for leaveHome:',
+          });
+        }
       },
       onCompleted: data => {
         if (
@@ -295,15 +304,16 @@ export function useHomeDetailManagement(homeId: string) {
     closeRolePicker();
     if (value === currentRole) return;
 
-    const result = await executeMutation(
-      () =>
-        updateMembershipMutation({
-          variables: {
-            input: { id: membershipId, role: value as MembershipRole },
-          },
-        }),
-      error => handleMutationError(error, { operation: 'Update Member Role' }),
-    );
+    let result;
+    try {
+      result = await updateMembershipMutation({
+        variables: {
+          input: { id: membershipId, role: value as MembershipRole },
+        },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Update Member Role' });
+    }
     if (!result) return;
     alertIfRejected(result, t('errors.updateMemberRoleFailed'));
   };
@@ -316,14 +326,14 @@ export function useHomeDetailManagement(homeId: string) {
     permission: MembershipPermissionKey,
     value: boolean,
   ) => {
-    const result = await executeMutation(
-      () =>
-        updateMembershipMutation({
-          variables: { input: { id: membershipId, [permission]: value } },
-        }),
-      error =>
-        handleMutationError(error, { operation: 'Update Member Permission' }),
-    );
+    let result;
+    try {
+      result = await updateMembershipMutation({
+        variables: { input: { id: membershipId, [permission]: value } },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Update Member Permission' });
+    }
     if (!result) return false;
     return !alertIfRejected(result, t('errors.updateMemberRoleFailed'));
   };
@@ -365,11 +375,14 @@ export function useHomeDetailManagement(homeId: string) {
             text: t('labels.leave'),
             style: 'destructive',
             onPress: async () => {
-              const result = await executeMutation(
-                () => leaveHomeMutation({ variables: { input: { homeId } } }),
-                error =>
-                  handleMutationError(error, { operation: 'Leave Home' }),
-              );
+              let result;
+              try {
+                result = await leaveHomeMutation({
+                  variables: { input: { homeId } },
+                });
+              } catch (error) {
+                handleMutationError(error, { operation: 'Leave Home' });
+              }
               if (!result) {
                 resolve(false);
                 return;
@@ -393,10 +406,14 @@ export function useHomeDetailManagement(homeId: string) {
 
     if (enabled) {
       // Dedicated mutation: mints a joinCode + join link server-side.
-      const result = await executeMutation(
-        () => enableJoinLinkMutation({ variables: { input: { id: homeId } } }),
-        error => handleMutationError(error, { operation: 'Enable Join Link' }),
-      );
+      let result;
+      try {
+        result = await enableJoinLinkMutation({
+          variables: { input: { id: homeId } },
+        });
+      } catch (error) {
+        handleMutationError(error, { operation: 'Enable Join Link' });
+      }
       alertIfRejected(result, t('errors.updateHomeFailed'));
       return;
     }
@@ -412,24 +429,28 @@ export function useHomeDetailManagement(homeId: string) {
   // Hand the home off to another member. The server flips the OWNER role; the
   // response carries the refreshed membersConnection so roles update in-place.
   const transferOwnership = async (newOwnerId: string) => {
-    const result = await executeMutation(
-      () =>
-        transferOwnershipMutation({
-          variables: { input: { homeId, newOwnerId } },
-        }),
-      error =>
-        handleMutationError(error, { operation: 'Transfer Home Ownership' }),
-    );
+    let result;
+    try {
+      result = await transferOwnershipMutation({
+        variables: { input: { homeId, newOwnerId } },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Transfer Home Ownership' });
+    }
     if (!result) return false;
     return !alertIfRejected(result, t('errors.updateHomeFailed'));
   };
 
   // Rotate the join code to invalidate a leaked link.
   const rotateJoinCode = async () => {
-    const result = await executeMutation(
-      () => rotateJoinCodeMutation({ variables: { input: { id: homeId } } }),
-      error => handleMutationError(error, { operation: 'Rotate Join Code' }),
-    );
+    let result;
+    try {
+      result = await rotateJoinCodeMutation({
+        variables: { input: { id: homeId } },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Rotate Join Code' });
+    }
     if (!result) return false;
     return !alertIfRejected(result, t('errors.updateHomeFailed'));
   };

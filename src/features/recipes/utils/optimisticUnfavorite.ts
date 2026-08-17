@@ -3,7 +3,6 @@ import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
@@ -100,12 +99,15 @@ export async function performOptimisticUnfavorite({
     }
   };
 
-  const result = await executeMutation(mutate, (error: unknown) => {
+  let result;
+  try {
+    result = await mutate();
+  } catch (error: unknown) {
     revert();
     errorService.reportError(error, { operation });
     reportFailure();
-  });
-  if (!result) return false; // threw -> already reverted in the fallback above
+  }
+  if (!result) return false; // threw -> already reverted above
 
   // A resolved rejection (error union member / transport error) reverts;
   // 'queued' (offline / API down) keeps the optimistic removal — it replays.

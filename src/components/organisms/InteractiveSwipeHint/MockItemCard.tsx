@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not the themed RN re-export): this mock card is mounted
 // inside a ReanimatedSwipeable in the swipe-hint tutorial, and RN's Pressable

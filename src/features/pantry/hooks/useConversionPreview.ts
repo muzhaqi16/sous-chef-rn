@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 interface UseConversionPreviewOptions {
   pantryItemId: string | undefined;
@@ -106,34 +106,39 @@ export function useConversionPreview({
       clearTimeout(debounceTimer.current);
     }
 
-    debounceTimer.current = setTimeout(() => {
-      executeQuery(
-        () =>
-          convertQuantity({
-            variables: {
-              pantryItemId: pantryItemId,
-              quantity: inputQuantity!,
-              fromUnitId: selectedUnitId!,
-              toUnitId: trackingUnitId!,
-            },
-          }),
-        'Error converting preview quantity:',
-      ).then(result => {
-        const converted = result?.data?.convertQuantity;
-        if (converted) {
-          const formattedValue = Number.isInteger(converted.value)
-            ? converted.value.toString()
-            : converted.value.toFixed(2).replace(/\.?0+$/, '');
-          setPreviewText(
-            `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
-          );
-          setConvertedValue(converted.value);
-        } else {
-          setPreviewText(null);
-          setConvertedValue(null);
-        }
-        setPreviewLoading(false);
-      });
+    debounceTimer.current = setTimeout(async () => {
+      let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
+      try {
+        result = await convertQuantity({
+          variables: {
+            pantryItemId: pantryItemId,
+            quantity: inputQuantity!,
+            fromUnitId: selectedUnitId!,
+            toUnitId: trackingUnitId!,
+          },
+        });
+      } catch (error) {
+        // Leaving `result` undefined falls through to the cleared-preview
+        // branch below, which also drops the loading flag.
+        errorService.reportError(error, {
+          operation: 'Error converting preview quantity:',
+        });
+      }
+
+      const converted = result?.data?.convertQuantity;
+      if (converted) {
+        const formattedValue = Number.isInteger(converted.value)
+          ? converted.value.toString()
+          : converted.value.toFixed(2).replace(/\.?0+$/, '');
+        setPreviewText(
+          `${inputQuantity} ${selectedUnitSymbol} \u2248 ${formattedValue} ${trackingUnitSymbol}`,
+        );
+        setConvertedValue(converted.value);
+      } else {
+        setPreviewText(null);
+        setConvertedValue(null);
+      }
+      setPreviewLoading(false);
     }, DEBOUNCE_MS);
 
     return () => {

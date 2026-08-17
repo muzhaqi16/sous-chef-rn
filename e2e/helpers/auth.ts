@@ -73,7 +73,11 @@ export async function loginWithCredentials(email: string, password: string) {
     }
   }
 
-  // Wait for home screen to load (shopping list is the default tab)
+  // Wait for home screen to load. Which tab is the landing tab varies, so
+  // either counts — but neither appearing means login did not complete, and
+  // this MUST throw. Warning and continuing let a failed login return
+  // successfully, so every spec built on this helper went on to assert against
+  // whatever screen happened to be up.
   try {
     await waitForScreen('shopping-list-screen', TIMEOUTS.NETWORK);
     console.log('✅ Reached home screen');
@@ -83,8 +87,9 @@ export async function loginWithCredentials(email: string, password: string) {
       await waitForScreen('pantry-screen', TIMEOUTS.NETWORK);
       console.log('✅ Reached pantry screen');
     } catch {
-      console.warn(
-        '⚠️  Neither shopping list nor pantry screen visible after login',
+      throw new Error(
+        'Login did not reach a home screen: neither shopping-list-screen nor ' +
+          'pantry-screen became visible after authentication.',
       );
     }
   }
@@ -366,9 +371,13 @@ export async function bootstrapAuthenticatedSession() {
       return;
     }
 
-    console.log('⚠️ Token injection did not result in logged-in state, falling back to UI login...');
+    console.log(
+      '⚠️ Token injection did not result in logged-in state, falling back to UI login...',
+    );
   } catch (error) {
-    console.log(`⚠️ Token injection failed: ${error}, falling back to UI login...`);
+    console.log(
+      `⚠️ Token injection failed: ${error}, falling back to UI login...`,
+    );
 
     // Launch without tokens
     await launchAppWithFabricWorkaround({

@@ -1,5 +1,8 @@
 import { StorageState } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n/t';
+// Aliased: despite the `use` prefix this module exports plain functions, not a
+// hook, so there is no component to call `useTranslation` in. Callers that
+// render the result are responsible for re-running these on a language change.
+import { t as tGlobal } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 // Plural keys need the options form, which the module-level t does not take.
 import { getI18n } from '#/i18n/config';
@@ -64,7 +67,7 @@ export const getExpirationStatus = (
   expiresIn: number | null,
 ): ExpirationStatus => {
   if (expiresIn === null) {
-    return { text: t('expiration.noExpiryDate'), type: 'normal' };
+    return { text: tGlobal('expiration.noExpiryDate'), type: 'normal' };
   }
   if (expiresIn < 0) {
     return {
@@ -75,10 +78,10 @@ export const getExpirationStatus = (
     };
   }
   if (expiresIn === 0) {
-    return { text: t('expiration.expiresToday'), type: 'critical' };
+    return { text: tGlobal('expiration.expiresToday'), type: 'critical' };
   }
   if (expiresIn === 1) {
-    return { text: t('expiration.expiresTomorrow'), type: 'warning' };
+    return { text: tGlobal('expiration.expiresTomorrow'), type: 'warning' };
   }
   if (expiresIn <= 3) {
     return {
@@ -224,9 +227,18 @@ export const formatQuantityBreakdown = (
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
   if (total <= 0) return null;
+  // The unit label is server data (`Unit.symbol` / `Unit.name`) and carries no
+  // plural form, so it is passed through untouched. This used to append a
+  // literal "s" for any count but 1 — English pluralisation applied to a label
+  // that is not English, producing "2 lattinas" in Italian and "2 kgs" even in
+  // English. The count/unit order lives in the key so a locale can change it.
   const contentLabel =
-    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
-  return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
+    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name;
+  if (!contentLabel) return null;
+  return tGlobal('itemSubtitle.contentUnitCount', {
+    count: total,
+    unit: contentLabel,
+  });
 };
 
 // Helper function to calculate expiry info for detail views
@@ -239,10 +251,14 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
   );
 
   if (diffDays < 0)
-    return { text: t('expiration.expired'), isExpired: true, isUrgent: true };
+    return {
+      text: tGlobal('expiration.expired'),
+      isExpired: true,
+      isUrgent: true,
+    };
   if (diffDays === 0)
     return {
-      text: t('expiration.expiresTodayShort'),
+      text: tGlobal('expiration.expiresTodayShort'),
       isExpired: false,
       isUrgent: true,
     };

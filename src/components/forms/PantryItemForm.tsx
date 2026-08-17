@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';

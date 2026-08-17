@@ -49,8 +49,9 @@ export interface QuickAddConfig {
   fireAndForget: boolean;
   /** If true, enable exit animations on suggestion items */
   enableExitAnimations: boolean;
-  /** Function to generate toast message */
-  toastMessage: (name: string) => string;
+  /** i18n key for the quick-add toast, interpolating `{{name}}`. Resolved at
+   *  the call site so the toast follows the active language. */
+  toastMessageKey: string;
 }
 
 /**
@@ -67,14 +68,22 @@ export interface AddDetailsConfig {
 export interface AddItemSheetConfig<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 > {
-  /** Sheet title (e.g., "Add to Pantry", "Add to Shopping List") */
-  title: string;
+  /**
+   * i18n key for the sheet title (e.g. `addItemSheet.addToShoppingList`).
+   *
+   * A key, not a resolved string: these configs are module-level constants, so
+   * a `t()` call here would run at import — before the stored language is
+   * applied — freezing the label in the bootstrap language for the whole
+   * session. Every user-facing string on this config is a key for that reason,
+   * resolved by `AddItemSheet` at render.
+   */
+  titleKey: string;
   /** Test ID prefix for testing */
   testIDPrefix: string;
   /** Icon for placeholder images */
   placeholderIcon: 'cube-outline' | 'cart-outline';
-  /** Search bar placeholder text */
-  searchPlaceholder: string;
+  /** i18n key for the search bar placeholder */
+  searchPlaceholderKey: string;
   /** Suggestion groups to display */
   suggestionGroups: SuggestionGroupConfig<T>[];
   /** Quick add behavior configuration */
@@ -87,10 +96,10 @@ export interface AddItemSheetConfig<
   barcodeSource: 'pantry' | 'shoppingList';
   /** Position of "Add manually" option in search results */
   addManuallyPosition: 'top' | 'bottom';
-  /** Empty state message when no suggestions */
-  emptyStateMessage: string;
-  /** Empty state subtext */
-  emptyStateSubtext: string;
+  /** i18n key for the empty state message when no suggestions */
+  emptyStateMessageKey: string;
+  /** i18n key for the empty state subtext */
+  emptyStateSubtextKey: string;
 }
 
 /**

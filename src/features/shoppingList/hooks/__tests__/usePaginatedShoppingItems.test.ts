@@ -27,8 +27,7 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeRefetch: jest.fn((fn: () => unknown) => fn()),
+jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn((fn: () => unknown) => fn()),
 }));
 

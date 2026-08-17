@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, TextInput } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -30,6 +30,28 @@ const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
   missing: { labelKey: 'ingredientMatch.missing', color: 'error' },
 };
 
+/**
+ * The availability badge, owning the `badgeColor` variant and its
+ * `useVariants` call.
+ *
+ * Extracted so the row itself keeps compiling — Unistyles' variant transform
+ * makes the React Compiler bail out of the containing function, and this row
+ * renders once per recipe ingredient.
+ */
+const AvailabilityBadge: React.FC<{
+  badgeColor: BadgeColor;
+  children: React.ReactNode;
+}> = ({ badgeColor, children }) => {
+  styles.useVariants({ badgeColor });
+  return (
+    <View style={styles.badge}>
+      <Text size="xs" weight="semibold" style={styles.badgeText}>
+        {children}
+      </Text>
+    </View>
+  );
+};
+
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   editableMatch,
   index,
@@ -40,7 +62,6 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
   const isOptional = ingredient.isOptional;
-  styles.useVariants({ badgeColor: badge.color });
 
   return (
     <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
@@ -54,11 +75,9 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           >
             {ingredient.name}
           </Text>
-          <View style={styles.badge}>
-            <Text size="xs" weight="semibold" style={styles.badgeText}>
-              {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
-            </Text>
-          </View>
+          <AvailabilityBadge badgeColor={badge.color}>
+            {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
+          </AvailabilityBadge>
         </View>
 
         {!!match.matchedPantryItem && (

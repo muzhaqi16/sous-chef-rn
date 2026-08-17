@@ -7,7 +7,7 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { ScrollView } from 'react-native-gesture-handler';
 import { alertService } from '#/services/alertService';
 import { TabView, type Route } from 'react-native-tab-view';

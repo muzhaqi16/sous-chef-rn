@@ -6,7 +6,7 @@ import {
   blocksCacheMissQueries,
 } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Operations that must always reach the network, even in offline mode.

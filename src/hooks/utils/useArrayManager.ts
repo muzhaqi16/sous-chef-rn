@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 
 /**

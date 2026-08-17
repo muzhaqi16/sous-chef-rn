@@ -68,12 +68,68 @@ describe('DeviceKeyManager', () => {
   // getDeviceEncryptionKey
   // ==========================================================================
   describe('getDeviceEncryptionKey', () => {
-    it('returns a non-empty hex encryption key', async () => {
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
-      expect(key).toBeTruthy();
-      expect(typeof key).toBe('string');
-      // UUID v4 without dashes -> 32 hex chars
-      expect(key).toMatch(/^[0-9a-f]{32}$/);
+    // MMKV reads the key as raw bytes and keeps at most 32 of them (16 under
+    // AES-128), so the ALPHABET is what decides the real entropy, not the
+    // length. 32 chars over a 64-char alphabet = 192 bits. The previous key was
+    // 32 HEX chars under MMKV's AES-128 default, i.e. 16 bytes × 4 bits = 64.
+    it('mints a 32-char key over a 64-character alphabet, opened with AES-256', async () => {
+      const { key, encryptionType } =
+        await DeviceKeyManager.getDeviceEncryptionKey();
+
+      expect(key).toHaveLength(32);
+      expect(key).toMatch(/^[A-Za-z0-9\-_]{32}$/);
+      // Hex would mean 4 bits per character — the shortfall being fixed here.
+      expect(key).not.toMatch(/^[0-9a-f]{32}$/);
+      expect(encryptionType).toBe('AES-256');
+    });
+
+    it('stores the new key behind a version marker', async () => {
+      await DeviceKeyManager.getDeviceEncryptionKey();
+
+      const [, stored] = mockedSetGenericPassword.mock.calls[0];
+      expect(stored).toMatch(/^v2:/);
+    });
+
+    it('mints a different key each time', async () => {
+      const first = await DeviceKeyManager.getDeviceEncryptionKey();
+      DeviceKeyManager.clearCachedKey();
+      const second = await DeviceKeyManager.getDeviceEncryptionKey();
+
+      expect(first.key).not.toBe(second.key);
+    });
+
+    // A legacy key's MMKV file was encrypted under AES-128. MMKV DISCARDS a
+    // file it cannot decrypt, so switching an existing install to AES-256
+    // would silently wipe it — the cipher has to follow the key's format.
+    it('keeps AES-128 for a legacy (unversioned) key so existing data stays readable', async () => {
+      mockedGetGenericPassword.mockResolvedValueOnce({
+        service: 'dev.souschef.app.devicekey',
+        username: 'device_key',
+        password: 'abcdef0123456789abcdef0123456789',
+        storage: 'keychain' as STORAGE_TYPE,
+      });
+
+      const { key, encryptionType } =
+        await DeviceKeyManager.getDeviceEncryptionKey();
+
+      expect(key).toBe('abcdef0123456789abcdef0123456789');
+      expect(encryptionType).toBe('AES-128');
+      expect(mockedSetGenericPassword).not.toHaveBeenCalled();
+    });
+
+    it('reads a versioned key back without its marker, under AES-256', async () => {
+      mockedGetGenericPassword.mockResolvedValueOnce({
+        service: 'dev.souschef.app.devicekey',
+        username: 'device_key',
+        password: 'v2:AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH',
+        storage: 'keychain' as STORAGE_TYPE,
+      });
+
+      const { key, encryptionType } =
+        await DeviceKeyManager.getDeviceEncryptionKey();
+
+      expect(key).toBe('AAAABBBBCCCCDDDDEEEEFFFFGGGGHHHH');
+      expect(encryptionType).toBe('AES-256');
     });
 
     it('returns cached key on subsequent calls', async () => {
@@ -90,14 +146,14 @@ describe('DeviceKeyManager', () => {
         storage: 'keychain' as STORAGE_TYPE,
       });
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
+      const { key } = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBe('existing-key-from-keychain');
       expect(mockedSetGenericPassword).not.toHaveBeenCalled();
     });
 
     it('generates new key when keychain is empty', async () => {
       mockedGetGenericPassword.mockResolvedValue(false);
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
+      const { key } = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBeTruthy();
       expect(key.length).toBe(32);
       // The new key must be persisted to keychain
@@ -125,11 +181,11 @@ describe('DeviceKeyManager', () => {
         storage: 'keychain' as STORAGE_TYPE,
       });
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey({
+      const { key } = await DeviceKeyManager.getDeviceEncryptionKey({
         forceRegenerate: true,
       });
       expect(key).not.toBe('old-key');
-      expect(key).toMatch(/^[0-9a-f]{32}$/);
+      expect(key).toMatch(/^[A-Za-z0-9\-_]{32}$/);
     });
   });
 
@@ -200,7 +256,7 @@ describe('DeviceKeyManager', () => {
           storage: 'keychain' as STORAGE_TYPE,
         });
 
-      const key = await DeviceKeyManager.getDeviceEncryptionKey();
+      const { key } = await DeviceKeyManager.getDeviceEncryptionKey();
       expect(key).toBe('existing-key-from-keychain');
       // A transient read error must NOT trigger key generation — that would
       // overwrite the real key and make the existing MMKV file undecryptable.

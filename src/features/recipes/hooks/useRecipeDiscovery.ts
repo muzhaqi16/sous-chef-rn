@@ -11,8 +11,8 @@ import type {
 } from '#/services/recipeApi/types';
 import { useQuery } from '@apollo/client/react';
 import { GetHomeDocument } from '#operations/home/home.generated';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
-import { t } from '#/i18n/t';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { t } from '#/i18n';
 import {
   useRecipeCacheStore,
   ingredientCacheKey,
@@ -73,12 +73,12 @@ interface UseRecipeDiscoveryResult {
 function transformRandomRecipe(recipe: RecipeInformation): DiscoveryItem {
   const subtitleParts: string[] = [];
   if (recipe.servings) {
-    subtitleParts.push(`${recipe.servings} ${t('recipes.servingsSuffix')}`);
+    subtitleParts.push(t('recipes.servingsCount', { count: recipe.servings }));
   }
   const totalTime =
     recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
   if (totalTime) {
-    subtitleParts.push(`${totalTime} ${t('recipes.minutes')}`);
+    subtitleParts.push(t('recipes.minutesValue', { count: totalTime }));
   }
 
   return {
@@ -104,12 +104,12 @@ function transformPantryResult(
     subtitleParts.push(`❤️ ${recipe.likes}`);
   }
   if (info?.servings) {
-    subtitleParts.push(`${info.servings} ${t('recipes.servingsSuffix')}`);
+    subtitleParts.push(t('recipes.servingsCount', { count: info.servings }));
   }
   const totalTime =
     info?.readyInMinutes || info?.preparationMinutes || info?.cookingMinutes;
   if (totalTime) {
-    subtitleParts.push(`${totalTime} ${t('recipes.minutes')}`);
+    subtitleParts.push(t('recipes.minutesValue', { count: totalTime }));
   }
 
   return {
@@ -117,11 +117,12 @@ function transformPantryResult(
     title: recipe.title,
     subtitle:
       subtitleParts.join(' • ') ||
-      `${totalIngredients} ${t('recipes.ingredientsSuffix')}`,
+      t('recipes.ingredientCount', { count: totalIngredients }),
     badge: {
-      text: `${recipe.usedIngredientCount}/${totalIngredients} ${t(
-        'recipes.match',
-      )}`,
+      text: t('recipes.matchRatio', {
+        used: recipe.usedIngredientCount,
+        total: totalIngredients,
+      }),
       variant: 'primary',
     },
     imageUrl: recipe.image,

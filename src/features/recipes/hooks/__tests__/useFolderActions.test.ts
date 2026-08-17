@@ -36,7 +36,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 jest.mock('#/apollo/links/tokenScheduler');
 
 beforeEach(() => {

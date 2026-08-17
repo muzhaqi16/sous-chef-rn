@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';

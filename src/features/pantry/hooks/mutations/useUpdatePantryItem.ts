@@ -27,7 +27,6 @@ import {
 } from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -173,10 +172,13 @@ export function useUpdatePantryItem({
         fragmentName: 'useUpdatePantryItem_pantryItem',
         data,
       });
-    executeCacheUpdate(
-      () => writeItem(optimisticPantryItem),
-      'Update Pantry Item (optimistic)',
-    );
+    try {
+      writeItem(optimisticPantryItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Update Pantry Item (optimistic)',
+      });
+    }
 
     updateMutation({
       variables: { input: { ...updateInput, id: itemId } },
@@ -190,17 +192,23 @@ export function useUpdatePantryItem({
         // user-facing alert comes from the mutation's onError.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
-          executeCacheUpdate(
-            () => writeItem(currentItem),
-            'Revert rejected Pantry Item update',
-          );
+          try {
+            writeItem(currentItem);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert rejected Pantry Item update',
+            });
+          }
         }
       })
       .catch(error => {
-        executeCacheUpdate(
-          () => writeItem(currentItem),
-          'Revert failed Pantry Item update',
-        );
+        try {
+          writeItem(currentItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert failed Pantry Item update',
+          });
+        }
         errorService.reportError(error, { operation: 'updatePantryItem' });
         // Error already handled by mutation's onError
       });

@@ -10,7 +10,10 @@
 
 import { element, by, waitFor, expect } from 'detox';
 import { PantryScreen } from '../../screens';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
+import {
+  bootstrapAuthenticatedSession,
+  relaunchToHomeTab,
+} from '../../helpers';
 import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry Filtering', () => {
@@ -40,10 +43,23 @@ describe('Pantry Filtering', () => {
     it('should search items by name', async () => {
       const searchInput = element(by.id('pantry-search-input'));
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+
+      // Establish the unfiltered list first, so the disappearance below cannot
+      // be satisfied by a row that was never there.
+      await waitFor(element(by.text('Banana')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // Assert on the rows that must DROP OUT, not on 'Apple': the search field
+      // now carries that exact text, so `by.text('Apple')` matches the field
+      // itself and passes whether or not the list filtered at all.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.text('Cheese')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
     });
 
@@ -64,8 +80,10 @@ describe('Pantry Filtering', () => {
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // The narrowing is asserted via an excluded row — `by.text('Apple')`
+      // would match the search field's own value regardless of the list.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
       // Clear search
@@ -148,7 +166,9 @@ describe('Pantry Filtering', () => {
       await sortButton.tap();
 
       const sortByExpiration = element(by.id('sort-by-expiration'));
-      await waitFor(sortByExpiration).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(sortByExpiration)
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       await sortByExpiration.tap();
 
       await pantryScreen.waitForListToLoad();
@@ -184,8 +204,9 @@ describe('Pantry Filtering', () => {
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // An excluded row, not 'Apple' — the search field carries that text too.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
       // Find and tap reset/clear button

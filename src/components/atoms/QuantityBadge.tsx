@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not the themed RN re-export). This badge is nested inside
 // the row's RNGH Swipeable/Pressable; RNGH's native button captures the tap so

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';

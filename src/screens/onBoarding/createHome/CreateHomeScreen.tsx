@@ -9,7 +9,7 @@ import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { errorMessageOr } from '#/services/errorService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { formatRole } from '#utils/formatters/roleFormatters';
 import { InviteCard_InviteFragmentDoc } from './CreateHomeScreen.generated';
 import type { FragmentType } from '@apollo/client/masking';
@@ -65,11 +65,9 @@ import {
 import { extractNodes } from '#/utils/connectionUtils';
 import { OnboardingErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import {
-  executeWithLoadingState,
-  executeMutation,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
+import { errorService } from '#/services/errorService';
 
 /** Module-level cache update closure for `useAcceptHomeInviteMutation`.
  *  Extracted from the component body to keep the surrounding try/catch outside
@@ -524,12 +522,15 @@ const CreateHomeScreenComponent = () => {
     );
   };
 
-  const handleAcceptInvite = (token: string) => {
+  const handleAcceptInvite = async (token: string) => {
     // Error handled by onError in mutation config
-    executeMutation(
-      () => acceptHomeInvite({ variables: { input: { token } } }),
-      'Failed to accept home invite',
-    );
+    try {
+      await acceptHomeInvite({ variables: { input: { token } } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to accept home invite',
+      });
+    }
   };
 
   const handleDeclineInvite = (token: string, homeNameParam: string) => {
@@ -541,12 +542,15 @@ const CreateHomeScreenComponent = () => {
         {
           text: t('labels.decline'),
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             // Error handled by onError in mutation config
-            executeMutation(
-              () => declineHomeInvite({ variables: { input: { token } } }),
-              'Failed to decline home invite',
-            );
+            try {
+              await declineHomeInvite({ variables: { input: { token } } });
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'Failed to decline home invite',
+              });
+            }
           },
         },
       ],

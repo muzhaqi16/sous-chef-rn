@@ -51,13 +51,13 @@ import {
   addNewItemToShoppingListCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { Telemetry } from '#/services/telemetry';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
+import { errorService } from '#/services/errorService';
 
 /**
  * Cached `itemsConnection` shape as seen inside a `cache.modify` field
@@ -82,7 +82,7 @@ function resortEdges(
   shoppingListId: string,
   targetVariant?: string,
 ): void {
-  executeCacheUpdate(() => {
+  try {
     const t0 = __DEV__ ? performance.now() : 0;
 
     const parentCacheId = cache.identify({
@@ -150,7 +150,11 @@ function resortEdges(
       );
       Telemetry.histogram('resort_edges_duration_ms', duration);
     }
-  }, 'Failed to re-sort edges after subscription update:');
+  } catch (cacheError) {
+    errorService.reportError(cacheError, {
+      operation: 'Failed to re-sort edges after subscription update:',
+    });
+  }
 }
 
 /**

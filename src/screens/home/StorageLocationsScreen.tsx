@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { DetailTemplate } from '#components/templates/DetailTemplate';
 import { useStorageLocationManagement } from '#hooks/storageLocation/useStorageLocationManagement';
 import { StorageLocationCard } from '#components/organisms/storageLocation/StorageLocationCard';
@@ -17,7 +17,7 @@ import type { GetStorageLocationsQuery } from '#operations/storageLocation/stora
 import { useSelectedPantryId } from '#store/useAppStore';
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { EmptyState } from '#components/base/EmptyState';
@@ -248,7 +248,7 @@ export const StorageLocationsScreen: React.FC<
           {!!error && (
             <EmptyState
               icon="alert-circle-outline"
-              title={t('storageLocations.somethingWrong')}
+              title={t('errors.somethingWentWrongTitle')}
               description={error.message}
               action={{
                 label: t('storageLocations.retry'),

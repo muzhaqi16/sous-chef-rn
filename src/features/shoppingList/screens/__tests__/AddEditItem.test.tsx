@@ -82,7 +82,7 @@ jest.mock('#/utils/errorHandlers', () => ({
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -386,7 +386,7 @@ const mockUseShoppingListItemForm = (
 // errorPolicy: 'all' swallows mutation errors so onError otherwise never
 // fires through the natural flow).
 function forceExecuteWithLoadingStateOnError(error: unknown) {
-  const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+  const { executeWithLoadingState } = require('#/utils/finallyHelpers');
   executeWithLoadingState.mockImplementationOnce(
     (
       _fn: () => Promise<void>,

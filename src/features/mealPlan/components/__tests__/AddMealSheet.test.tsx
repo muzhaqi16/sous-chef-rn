@@ -180,7 +180,7 @@ jest.mock('#store/useRecipeCacheStore', () => ({
   textSearchCacheKey: jest.fn((q: string) => `text:${q}`),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const defaultProps = {
   visible: true,

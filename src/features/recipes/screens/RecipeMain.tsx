@@ -32,7 +32,7 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { IngredientSelectorSheet } from './RecipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/hooks/useRecipeScreen';
 import { RecipeFilterSheet } from './RecipeFilterSheet';

@@ -30,11 +30,10 @@ import {
   type RecipePriceBreakdown,
 } from '#/services/recipeApi/types';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
-import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 
 /** Normalize an ingredient name for the fuzzy priceBreakdown join. */
@@ -477,29 +476,34 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
     setPreloading(true);
 
     // Per-ingredient cost comes from the recipe-scoped priceBreakdown (ONE
-    // call), fetched only on deliberate saves. Best-effort — a failure leaves
-    // estimatedCost empty rather than blocking the save.
-    // Best-effort: a failure (network/quota) returns null so the save proceeds
-    // without cost rather than blocking on it.
-    const priceBreakdown = preloadOptions.withCost
-      ? await executeQuery(
-          () => spoonacularService.getRecipePriceBreakdown(Number(externalId)),
-          'preloadRecipe: fetch price breakdown',
-        )
-      : null;
+    // call), fetched only on deliberate saves. Best-effort — a failure
+    // (network/quota) leaves estimatedCost empty rather than blocking the save.
+    let priceBreakdown = null;
+    if (preloadOptions.withCost) {
+      try {
+        priceBreakdown = await spoonacularService.getRecipePriceBreakdown(
+          Number(externalId),
+        );
+      } catch (error) {
+        // Best-effort: leaving it null lets the save proceed without cost.
+        errorService.reportError(error, {
+          operation: 'preloadRecipe: fetch price breakdown',
+        });
+      }
+    }
 
     const input = transformToRecipeInput(spoonacularRecipe, priceBreakdown);
 
-    const result = await executeMutation(
-      () => upsertRecipe({ variables: { input } }),
-      error => {
-        errorService.reportError(error, { operation: 'preloadRecipe' });
-        if (preloadOptions.throwOnError) {
-          setPreloading(false);
-          throw error; // Propagate error for explicit saves
-        }
-      },
-    );
+    let result;
+    try {
+      result = await upsertRecipe({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'preloadRecipe' });
+      if (preloadOptions.throwOnError) {
+        setPreloading(false);
+        throw error; // Propagate error for explicit saves
+      }
+    }
 
     setPreloading(false);
 
@@ -577,35 +581,35 @@ export function useRecipePreload(options: UseRecipePreloadOptions = {}) {
       saveOptions,
     );
 
-    const result = await executeMutation(
-      () =>
-        favoriteRecipe({
-          variables: {
-            input: {
-              id: savedRecipeId,
-              recipeId,
-              folder: saveOptions?.folder,
-              tags: saveOptions?.tags,
-              notes: saveOptions?.notes,
-            },
-          },
-          // Local-first: queue + replay (idempotent via the client-minted id —
-          // a re-favorite resolves to the already-saved row) when the API is
-          // unreachable, instead of failing the save.
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        revert();
-        errorService.reportError(error, {
-          operation: 'saveRecipeToFavorites',
-        });
-        toastService.error(t('recipes.saveRecipeFailed'));
-
-        if (error instanceof Error) {
-          onFavoriteError?.(error);
-        }
+    let result;
+    const favoriteRecipeOptions = {
+      variables: {
+        input: {
+          id: savedRecipeId,
+          recipeId,
+          folder: saveOptions?.folder,
+          tags: saveOptions?.tags,
+          notes: saveOptions?.notes,
+        },
       },
-    );
+      // Local-first: queue + replay (idempotent via the client-minted id —
+      // a re-favorite resolves to the already-saved row) when the API is
+      // unreachable, instead of failing the save.
+      context: { localFirst: true },
+    };
+    try {
+      result = await favoriteRecipe(favoriteRecipeOptions);
+    } catch (error) {
+      revert();
+      errorService.reportError(error, {
+        operation: 'saveRecipeToFavorites',
+      });
+      toastService.error(t('recipes.saveRecipeFailed'));
+
+      if (error instanceof Error) {
+        onFavoriteError?.(error);
+      }
+    }
 
     setSavingToFavorites(false);
 

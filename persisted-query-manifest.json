@@ -1227,12 +1227,6 @@
       "body": "mutation UpdateItem($input: UpdateItemInput!) {\n  updateItem(input: $input) {\n    __typename\n    ... on UpdateItemPayload {\n      item {\n        id\n        ...useItemForEdit_item\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n  }\n}\n\nfragment useItemForEdit_item on Item {\n  id\n  name\n  description\n  type\n  storageState\n  tags\n  primaryUpc\n  shelfLifeDays\n  shelfLifeOpenedDays\n  netWeight\n  baseDimension\n  imageUrl\n  canEdit\n  canSuggest\n  displayUnit {\n    id\n    name\n    symbol\n    __typename\n  }\n  brands {\n    brand {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
-      "id": "71461258b917ccb45540ab10fbd6955c8485471e8ea7b62e0cc0b531dd537d55",
-      "name": "UpdateItemImage",
-      "type": "mutation",
-      "body": "mutation UpdateItemImage($id: ID!, $imageUrl: String!) {\n  updateItem(input: {id: $id, media: {imageUrl: $imageUrl}}) {\n    __typename\n    ... on UpdateItemPayload {\n      item {\n        id\n        imageUrl\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
-    },
-    {
       "id": "3ef89aea0b033f007733a792eb96505b7c9cfa7389dc4a9e375282472727a0ca",
       "name": "UpdateMealPlan",
       "type": "mutation",

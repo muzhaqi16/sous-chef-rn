@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -114,7 +114,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               style={styles.deleteConfirmText}
             >
               {t('folderPicker.deleteConfirmBody', {
-                folder: t('folderPicker.noFolder'),
+                folder: t('labels.noFolder'),
               })}
             </Text>
             <View style={styles.deleteConfirmButtons}>

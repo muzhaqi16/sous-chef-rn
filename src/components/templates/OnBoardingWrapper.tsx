@@ -1,5 +1,5 @@
 import { BackButton } from '#components/atoms/BackButton';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';

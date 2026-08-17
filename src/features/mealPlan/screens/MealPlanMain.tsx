@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { t as tGlobal } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
+import { t as tGlobal } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';

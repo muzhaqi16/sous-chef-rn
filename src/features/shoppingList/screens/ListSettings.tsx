@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { StyleSheet } from 'react-native-unistyles';
@@ -32,10 +32,7 @@ import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   isShoppingListOwner,
@@ -160,7 +157,7 @@ export const ListSettings: React.FC<
 
   const { leaveList, leaving } = useLeaveShoppingList(listId || '');
   const { updateShoppingList } = useUpdateShoppingList(
-    t('shoppingListScreens.failedToSave'),
+    t('errors.saveSettingsFailed'),
   );
   const { completeList, reactivateList, completing, reactivating } =
     useCompleteShoppingList();
@@ -173,7 +170,7 @@ export const ListSettings: React.FC<
   const { setBudget, setPriceTracking } = useShoppingListBudget();
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
-    t('shoppingListScreens.failedToCreate'),
+    t('errors.createListFailed'),
   );
 
   // Lifecycle status is read straight off the list (server-truth), not derived
@@ -277,7 +274,7 @@ export const ListSettings: React.FC<
 
   const handleSave = () => {
     if (!name.trim()) {
-      toastService.error(t('shoppingListScreens.listNameEmpty'));
+      toastService.error(t('errors.listNameEmpty'));
       return;
     }
 
@@ -343,8 +340,8 @@ export const ListSettings: React.FC<
       () => {
         toastService.error(
           listId
-            ? t('shoppingListScreens.failedToSave')
-            : t('shoppingListScreens.failedToCreate'),
+            ? t('errors.saveSettingsFailed')
+            : t('errors.createListFailed'),
         );
       },
     );
@@ -360,26 +357,23 @@ export const ListSettings: React.FC<
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             // Register parent deletion to prevent subscription race conditions
             // 10s auto-cleanup timeout in service handles unregistration
             subscriptionService.registerParentDeletion(listId);
 
-            executeMutation(
-              async () => {
-                await deleteShoppingList(listId!);
+            try {
+              await deleteShoppingList(listId!);
 
-                // Clear selection — useShoppingListSelection auto-selects the next list
-                setSelectedShoppingListId(null);
-                // Use goBack() to pop ListSettings off the stack, unmounting its
-                // query watcher so late subscription updates can't trigger a refetch
-                goBack();
-              },
-              () => {
-                // Deletion failed — list wasn't actually deleted, so unregister immediately
-                subscriptionService.unregisterParentDeletion(listId);
-              },
-            );
+              // Clear selection — useShoppingListSelection auto-selects the next list
+              setSelectedShoppingListId(null);
+              // Use goBack() to pop ListSettings off the stack, unmounting its
+              // query watcher so late subscription updates can't trigger a refetch
+              goBack();
+            } catch {
+              // Deletion failed — list wasn't actually deleted, so unregister immediately
+              subscriptionService.unregisterParentDeletion(listId);
+            }
           },
         },
       ],
@@ -397,22 +391,24 @@ export const ListSettings: React.FC<
     }
   };
 
-  const archiveList = () => {
+  const archiveList = async () => {
     if (!listId) return;
-    executeMutation(
-      () => updateShoppingList(listId, { status: ListStatus.Archived }),
-      () => toastService.error(t('shoppingListScreens.failedToArchive')),
-    );
+    try {
+      await updateShoppingList(listId, { status: ListStatus.Archived });
+    } catch {
+      toastService.error(t('shoppingListScreens.failedToArchive'));
+    }
   };
 
-  const handleArchiveToggle = () => {
+  const handleArchiveToggle = async () => {
     if (!listId) return;
     if (isArchived) {
       // Restoring is non-destructive — flip straight back to active.
-      executeMutation(
-        () => updateShoppingList(listId, { status: ListStatus.Active }),
-        () => toastService.error(t('shoppingListScreens.failedToArchive')),
-      );
+      try {
+        await updateShoppingList(listId, { status: ListStatus.Active });
+      } catch {
+        toastService.error(t('shoppingListScreens.failedToArchive'));
+      }
       return;
     }
     // Archiving hides the list from the active view — confirm first.

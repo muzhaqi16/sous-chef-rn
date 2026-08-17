@@ -3,17 +3,15 @@ import { View } from 'react-native';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  executeWithLoadingState,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { alertService } from '#/services/alertService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { getFormAnimationPreset } from '#/constants/animations';

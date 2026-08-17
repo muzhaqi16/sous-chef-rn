@@ -18,9 +18,8 @@ import {
   RemoveItemsFromShoppingListDocument,
   type RemoveItemsFromShoppingListMutationVariables,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
@@ -72,26 +71,25 @@ async function executeClearItems(
   //    deletes only those and never items another member added/purchased in the
   //    meantime. Removing an already-removed id is a server-side no-op, so the
   //    replay is idempotent.
-  const result = await executeMutation(
-    () =>
-      clearMutation({
-        variables: { input: { shoppingListId: listId, ids: itemIds } },
-        update: () => {}, // Cache already cleared optimistically
-        context: { localFirst: true },
-      }),
-    async error => {
-      console.warn(
-        `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
-        error,
-      );
-      // Items were evicted from cache — refetch to restore authoritative state
-      await refetch();
-      isClearingRef.current = false;
-    },
-  );
+  let result;
+  try {
+    result = await clearMutation({
+      variables: { input: { shoppingListId: listId, ids: itemIds } },
+      update: () => {}, // Cache already cleared optimistically
+      context: { localFirst: true },
+    });
+  } catch (error) {
+    console.warn(
+      `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
+      error,
+    );
+    // Items were evicted from cache — refetch to restore authoritative state
+    await refetch();
+    isClearingRef.current = false;
+  }
 
   isClearingRef.current = false;
-  if (result === false) return;
+  if (!result) return;
 
   // 'queued' (null payload, no error) keeps the cleared cache — the clear
   // replays later. A rejection means the server refused it: the evicted items

@@ -8,11 +8,11 @@
  */
 
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { upsertMyRecipesEdge } from '#features/recipes/screens/RecipeForm/recipeCacheWriters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useForkRecipe() {
   const { t } = useTranslation();
@@ -26,10 +26,14 @@ export function useForkRecipe() {
 
   // Returns the forked recipe's id (for navigation) or null on failure.
   const forkRecipe = async (recipeId: string): Promise<string | null> => {
-    const result = await executeMutation(
-      () => forkMutation({ variables: { input: { id: recipeId } } }),
-      'Fork Recipe error:',
-    );
+    let result;
+    try {
+      result = await forkMutation({ variables: { input: { id: recipeId } } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Fork Recipe error:',
+      });
+    }
     if (!result) return null;
     if (alertIfRejected(result, t('recipes.forkFailed'))) {
       return null;

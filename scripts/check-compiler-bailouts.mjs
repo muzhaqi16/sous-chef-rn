@@ -54,11 +54,32 @@ const failures = [];
 let compiled = 0;
 let succeeded = 0;
 
+/**
+ * Name the function a bailout happened in, from the compiler's `fnLoc`.
+ *
+ * This is what makes the baseline actionable: a bailout in a one-line leaf
+ * extracted on purpose to hold a `useVariants` call costs nothing, while the
+ * same bailout in the composite that renders a list means that whole subtree
+ * stopped being memoized. Without the name the two are indistinguishable.
+ */
+function functionNameAt(lines, line) {
+  const DECL =
+    /(?:export\s+)?(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function)/;
+  for (let i = line - 1; i >= 0 && i > line - 12; i--) {
+    const m = DECL.exec(lines[i] ?? '');
+    if (m) return m[1] ?? m[2];
+  }
+  return '<anonymous>';
+}
+
 for (const file of files) {
   let sawEvent = false;
   const reasons = [];
+  const bailedFns = [];
+  const source = readFileSync(file, 'utf8');
+  const lines = source.split('\n');
   try {
-    await babel.transformAsync(readFileSync(file, 'utf8'), {
+    await babel.transformAsync(source, {
       filename: file,
       cwd: process.cwd(),
       configFile: './babel.config.js',
@@ -77,6 +98,10 @@ for (const file of files) {
                       event.detail?.description ??
                       'unknown',
                   );
+                  const line = event.fnLoc?.start?.line;
+                  bailedFns.push(
+                    line ? functionNameAt(lines, line) : '<unknown>',
+                  );
                 }
               },
             },
@@ -91,7 +116,13 @@ for (const file of files) {
     process.exit(2);
   }
   if (sawEvent) compiled++;
-  if (reasons.length) failures.push({ file, reasons: [...new Set(reasons)] });
+  if (reasons.length) {
+    failures.push({
+      file,
+      reasons: [...new Set(reasons)],
+      fns: [...new Set(bailedFns)],
+    });
+  }
 }
 
 // A run that compiled nothing must not look like a clean run. This is the same
@@ -111,8 +142,11 @@ console.log(
 );
 
 if (LIST || UPDATE) {
-  for (const f of failures)
-    console.log(`  ${f.file}\n    ${f.reasons.join('; ')}`);
+  for (const f of failures) {
+    console.log(
+      `  ${f.file}\n    in: ${f.fns.join(', ')}\n    ${f.reasons.join('; ')}`,
+    );
+  }
 }
 
 if (UPDATE) {
@@ -136,6 +170,41 @@ if (!existsSync(BASELINE)) {
 }
 
 const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+
+/**
+ * Files where the variant call was deliberately extracted into a leaf, so only
+ * the leaf bails and the composite around it stays memoized.
+ *
+ * The file COUNT cannot protect this. Moving the call back into the composite
+ * leaves the count at 63 and the check green, silently undoing the isolation —
+ * so the baseline records WHICH function bails, not just that one does.
+ */
+const isolated = baseline.isolatedLeaves ?? {};
+const regressed = Object.entries(isolated).filter(([file, expected]) => {
+  const found = failures.find(f => f.file === file);
+  if (!found) return false; // the file stopped bailing entirely — fine
+  return expected.some(name => !found.fns.includes(name));
+});
+
+if (regressed.length > 0) {
+  console.error(
+    `\n✗ A composite that had its variant call extracted is bailing again:\n`,
+  );
+  for (const [file, expected] of regressed) {
+    const found = failures.find(f => f.file === file);
+    console.error(
+      `  ${file}\n    expected the bailout in: ${expected.join(', ')}` +
+        `\n    now bails in:            ${found.fns.join(', ')}`,
+    );
+  }
+  console.error(
+    `\nThe leaf was extracted so the component around it stays memoized. Put the\n` +
+      `\`styles.useVariants(...)\` call back in the leaf, or update\n` +
+      `\`isolatedLeaves\` in the baseline if the extraction is being abandoned.`,
+  );
+  process.exit(1);
+}
+
 if (count > baseline.maxFilesWithBailouts) {
   const known = new Set(baseline.files);
   console.error(
@@ -143,7 +212,9 @@ if (count > baseline.maxFilesWithBailouts) {
       `New since the baseline:`,
   );
   for (const f of failures.filter(x => !known.has(x.file))) {
-    console.error(`  ${f.file}\n    ${f.reasons.join('; ')}`);
+    console.error(
+      `  ${f.file}\n    in: ${f.fns.join(', ')}\n    ${f.reasons.join('; ')}`,
+    );
   }
   console.error(
     `\nThe compiler skipped these, so they are not memoized — and the project's\n` +

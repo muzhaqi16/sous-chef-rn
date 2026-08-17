@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

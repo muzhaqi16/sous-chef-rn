@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
@@ -24,7 +24,6 @@ import {
   getNotFoundMessage,
 } from '#/utils/errors/notFound';
 import { Telemetry } from '#services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   _UsePantryItemActionsTrackingUnitFragmentDoc,
@@ -244,49 +243,48 @@ export function usePantryItemActions({
       ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
-    const consumeResult = await executeMutation(
-      () =>
-        createPantryItemUsage({
-          variables: {
-            input: {
-              pantryItemId: itemId,
-              quantityUsed,
-              purpose,
-              notes: consumeNotes,
-              usageUnitId,
-              // idempotencyKey dedups the usage ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
+    let consumeResult;
+    try {
+      consumeResult = await createPantryItemUsage({
+        variables: {
+          input: {
+            pantryItemId: itemId,
+            quantityUsed,
+            purpose,
+            notes: consumeNotes,
+            usageUnitId,
+            // idempotencyKey dedups the usage ledger row on replay.
+            idempotencyKey: generateEntityId(),
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        revertOptimistic?.();
-        if (!isNetworkError(error)) {
-          if (isVersionConflictError(error)) {
-            alertService.alert(
-              entityUpdatedTitle(t),
-              getVersionConflictMessage(),
-            );
-            return;
-          }
-          if (isInvalidUnitError(error)) {
-            alertService.alert(
-              t('errors.invalidUnitTitle'),
-              getInvalidUnitMessage(error),
-            );
-            return;
-          }
-          const errorMessage =
-            (error instanceof Error && error.message) ||
-            'Failed to record item usage. Please try again.';
-          errorService.reportError(error, { operation: 'consumePantryItem' });
-          alertService.alert(t('labels.error'), errorMessage);
+        },
+        // Local-first: queue offline; replays as the canonical mutation,
+        // deduped by its idempotencyKey.
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      revertOptimistic?.();
+      if (!isNetworkError(error)) {
+        if (isVersionConflictError(error)) {
+          alertService.alert(
+            entityUpdatedTitle(t),
+            getVersionConflictMessage(),
+          );
+          return;
         }
-      },
-    );
+        if (isInvalidUnitError(error)) {
+          alertService.alert(
+            t('errors.invalidUnitTitle'),
+            getInvalidUnitMessage(error),
+          );
+          return;
+        }
+        const errorMessage =
+          (error instanceof Error && error.message) ||
+          'Failed to record item usage. Please try again.';
+        errorService.reportError(error, { operation: 'consumePantryItem' });
+        alertService.alert(t('labels.error'), errorMessage);
+      }
+    }
     if (!consumeResult) return;
 
     // Check payload-level errors (API returns success: false for validation failures)
@@ -295,6 +293,20 @@ export function usePantryItemActions({
       consumePayload &&
       handlePayloadError(consumePayload, revertOptimistic)
     ) {
+      return;
+    }
+
+    // `errorPolicy: 'all'` resolves a transport failure with `error` set and no
+    // payload — it does not reject, so the catch above never sees it. Without
+    // this the modal closed as if the usage had been recorded.
+    if (!consumePayload) {
+      revertOptimistic?.();
+      if (!isNetworkError(consumeResult.error)) {
+        errorService.reportError(consumeResult.error, {
+          operation: 'consumePantryItem',
+        });
+        alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+      }
       return;
     }
 
@@ -325,54 +337,53 @@ export function usePantryItemActions({
       ? () => revertQuantity(itemId, originalQty)
       : undefined;
 
-    const wasteResult = await executeMutation(
-      () =>
-        createPantryItemUsage({
-          variables: {
-            input: {
-              pantryItemId: itemId,
-              quantityUsed: wasteAmount,
-              purpose: UsagePurpose.Waste,
-              notes: wasteNotes,
-              usageUnitId: wasteUnitId,
-              wasteReason,
-              isComposted,
-              isRecycled,
-              // idempotencyKey dedups the usage ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
+    let wasteResult;
+    try {
+      wasteResult = await createPantryItemUsage({
+        variables: {
+          input: {
+            pantryItemId: itemId,
+            quantityUsed: wasteAmount,
+            purpose: UsagePurpose.Waste,
+            notes: wasteNotes,
+            usageUnitId: wasteUnitId,
+            wasteReason,
+            isComposted,
+            isRecycled,
+            // idempotencyKey dedups the usage ledger row on replay.
+            idempotencyKey: generateEntityId(),
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        revertOptimistic?.();
-        if (!isNetworkError(error)) {
-          if (isVersionConflictError(error)) {
-            alertService.alert(
-              entityUpdatedTitle(t),
-              getVersionConflictMessage(),
-            );
-            return;
-          }
-          if (isInvalidUnitError(error)) {
-            alertService.alert(
-              t('errors.invalidUnitTitle'),
-              getInvalidUnitMessage(error),
-            );
-            return;
-          }
-          const errorMessage =
-            (error instanceof Error && error.message) ||
-            'Failed to record item waste. Please try again.';
-          errorService.reportError(error, {
-            operation: 'recordPantryItemWaste',
-          });
-          alertService.alert(t('labels.error'), errorMessage);
+        },
+        // Local-first: queue offline; replays as the canonical mutation,
+        // deduped by its idempotencyKey.
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      revertOptimistic?.();
+      if (!isNetworkError(error)) {
+        if (isVersionConflictError(error)) {
+          alertService.alert(
+            entityUpdatedTitle(t),
+            getVersionConflictMessage(),
+          );
+          return;
         }
-      },
-    );
+        if (isInvalidUnitError(error)) {
+          alertService.alert(
+            t('errors.invalidUnitTitle'),
+            getInvalidUnitMessage(error),
+          );
+          return;
+        }
+        const errorMessage =
+          (error instanceof Error && error.message) ||
+          'Failed to record item waste. Please try again.';
+        errorService.reportError(error, {
+          operation: 'recordPantryItemWaste',
+        });
+        alertService.alert(t('labels.error'), errorMessage);
+      }
+    }
     if (!wasteResult) return;
 
     // Check payload-level errors
@@ -438,51 +449,50 @@ export function usePantryItemActions({
       }
     };
 
-    const restockResult = await executeMutation(
-      () =>
-        restockPantryItem({
-          variables: {
-            input: {
-              id: itemId,
-              quantity,
-              unitId,
-              notes: restockNotes,
-              costPerUnit,
-              totalCost,
-              expiresAt: expiresAtValue,
-              // idempotencyKey dedups the restock ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
+    let restockResult;
+    try {
+      restockResult = await restockPantryItem({
+        variables: {
+          input: {
+            id: itemId,
+            quantity,
+            unitId,
+            notes: restockNotes,
+            costPerUnit,
+            totalCost,
+            expiresAt: expiresAtValue,
+            // idempotencyKey dedups the restock ledger row on replay.
+            idempotencyKey: generateEntityId(),
           },
-          // Local-first: queue offline; replays as the canonical mutation,
-          // deduped by its idempotencyKey.
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        revertOptimistic();
-        if (!isNetworkError(error)) {
-          if (isVersionConflictError(error)) {
-            alertService.alert(
-              entityUpdatedTitle(t),
-              getVersionConflictMessage(),
-            );
-            return;
-          }
-          if (isInvalidUnitError(error)) {
-            alertService.alert(
-              t('errors.invalidUnitTitle'),
-              getInvalidUnitMessage(error),
-            );
-            return;
-          }
-          const errorMessage =
-            (error instanceof Error && error.message) ||
-            'Failed to restock item. Please try again.';
-          errorService.reportError(error, { operation: 'restockPantryItem' });
-          alertService.alert(t('labels.error'), errorMessage);
+        },
+        // Local-first: queue offline; replays as the canonical mutation,
+        // deduped by its idempotencyKey.
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      revertOptimistic();
+      if (!isNetworkError(error)) {
+        if (isVersionConflictError(error)) {
+          alertService.alert(
+            entityUpdatedTitle(t),
+            getVersionConflictMessage(),
+          );
+          return;
         }
-      },
-    );
+        if (isInvalidUnitError(error)) {
+          alertService.alert(
+            t('errors.invalidUnitTitle'),
+            getInvalidUnitMessage(error),
+          );
+          return;
+        }
+        const errorMessage =
+          (error instanceof Error && error.message) ||
+          'Failed to restock item. Please try again.';
+        errorService.reportError(error, { operation: 'restockPantryItem' });
+        alertService.alert(t('labels.error'), errorMessage);
+      }
+    }
     if (!restockResult) return;
 
     // Check payload-level errors
@@ -540,12 +550,14 @@ export function usePantryItemActions({
 
   // Handler to delete item (for swipe action)
   const handleDeleteItem = async (itemId: string) => {
-    const deleteResult = await executeMutation(async () => {
+    try {
       await removeItem(itemId);
       Telemetry.trackEvent('delete_pantry_item_success', { item_id: itemId });
-      return true;
-    }, 'Error deleting pantry item:');
-    if (!deleteResult) return;
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Error deleting pantry item:',
+      });
+    }
   };
 
   // Derive modal states from the single activeModal for backward compatibility

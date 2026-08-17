@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Modal, TextInput } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { errorMessageOr } from '#/services/errorService';
 import { OnPrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -242,12 +242,12 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
         if (success) {
           onCancel(); // Close modal on success
         } else {
-          setError(t('numberInputModal.saveFailed'));
+          setError(t('errors.saveFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, t('numberInputModal.genericError')));
+        setError(errorMessageOr(err, t('errors.generic')));
       },
     );
   };

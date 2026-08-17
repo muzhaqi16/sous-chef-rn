@@ -3,7 +3,7 @@ import {
   type MembershipRole,
   type MembershipStatus,
 } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Loose `Membership` shape used by home-membership UI helpers.

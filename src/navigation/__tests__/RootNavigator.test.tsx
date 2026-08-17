@@ -39,12 +39,28 @@ jest.mock('#services/NavigationService', () => ({
 }));
 
 // Mock @react-navigation/native-stack
+// The root stack is built at import time, so its config is captured here rather
+// than read from `mock.calls` — `clearAllMocks` in beforeEach would have
+// discarded the call by the time any test runs.
+interface RootScreenConfig {
+  screen: unknown;
+  options?: Record<string, unknown>;
+}
+interface RootStackConfig {
+  screens?: Record<string, RootScreenConfig>;
+  groups?: Record<string, { screens?: Record<string, RootScreenConfig> }>;
+}
+let mockRootStackConfig: RootStackConfig | undefined;
+
 jest.mock('@react-navigation/native-stack', () => ({
-  createNativeStackNavigator: jest.fn(() => ({
-    Navigator: ({ children }: ChildrenProps) => children,
-    Screen: ({ children }: ChildrenProps) => children,
-    Group: ({ children }: ChildrenProps) => children,
-  })),
+  createNativeStackNavigator: jest.fn((config: RootStackConfig) => {
+    mockRootStackConfig = config;
+    return {
+      Navigator: ({ children }: ChildrenProps) => children,
+      Screen: ({ children }: ChildrenProps) => children,
+      Group: ({ children }: ChildrenProps) => children,
+    };
+  }),
   createNativeStackScreen: jest.fn(<T,>(config: T): T => config),
 }));
 
@@ -218,6 +234,14 @@ jest.mock('#features/registry', () => ({
 
 import { Navigation } from '../RootNavigator';
 
+/** Every root screen, flattened across the conditional groups. */
+const rootScreens = (): Record<string, RootScreenConfig> => ({
+  ...mockRootStackConfig?.screens,
+  ...Object.values(mockRootStackConfig?.groups ?? {}).reduce<
+    Record<string, RootScreenConfig>
+  >((all, group) => ({ ...all, ...group.screens }), {}),
+});
+
 describe('Navigation (RootNavigator)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -228,6 +252,22 @@ describe('Navigation (RootNavigator)', () => {
     mockPostLoginCredentials = null;
     mockVerificationSkipped = false;
     mockSetNavigationState.mockClear();
+  });
+
+  // The tab subtree must survive a detail screen being pushed over it, or
+  // popping back re-runs every layout effect under HomeTabs in one commit.
+  // Pairs with the same option on the HomeTabs navigator itself; every other
+  // root screen keeps the default `'pause'`.
+  it('keeps the Home screen mounted while a detail screen is pushed over it', () => {
+    expect(rootScreens().Home?.options?.inactiveBehavior).toBe('none');
+  });
+
+  it('leaves every other root screen on the default pausing behaviour', () => {
+    const optedOut = Object.entries(rootScreens())
+      .filter(([, config]) => config.options?.inactiveBehavior === 'none')
+      .map(([name]) => name);
+
+    expect(optedOut).toEqual(['Home']);
   });
 
   it('shows SplashScreen when not hydrated', () => {

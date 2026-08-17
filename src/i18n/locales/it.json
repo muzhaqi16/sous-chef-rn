@@ -139,10 +139,21 @@
     "entityInvite": "Invito",
     "notFoundTitle": "Non trovato",
     "validUnits": "Unità valide: {{units}}",
-    "handlerFailed": "Qualcosa è andato storto. Riprova.",
     "unexpected": "Si è verificato un errore imprevisto",
     "addLowStockFailed": "Impossibile aggiungere gli articoli con poche scorte",
-    "saveLoginFailed": "Impossibile salvare le informazioni di accesso"
+    "saveLoginFailed": "Impossibile salvare le informazioni di accesso",
+    "searchFailed": "Errore di ricerca",
+    "createListFailed": "Impossibile creare la lista",
+    "listNameEmpty": "Il nome della lista non può essere vuoto",
+    "saveSettingsFailed": "Impossibile salvare le impostazioni",
+    "noHomeSelected": "Nessuna casa selezionata",
+    "permissionTitle": "Errore di permesso",
+    "resetSettingsFailed": "Impossibile ripristinare le impostazioni. Riprova.",
+    "uploadFailedTitle": "Caricamento non riuscito",
+    "saveFailed": "Salvataggio non riuscito",
+    "generic": "Si è verificato un errore",
+    "noActiveMealPlan": "Nessun piano pasti attivo. Creane uno prima.",
+    "somethingWentWrongTitle": "Qualcosa è andato storto"
   },
   "success": {
     "itemAdded": "Articolo aggiunto",
@@ -185,17 +196,17 @@
     "fetchingData": "Recupero dati..."
   },
   "confirmations": {
-    "deleteItem": "Sei sicuro di voler eliminare questo articolo?",
-    "removeItem": "Sei sicuro di voler rimuovere questo articolo?",
-    "removeMember": "Sei sicuro di voler rimuovere questo membro?",
-    "revokeInvite": "Sei sicuro di voler revocare questo invito?",
-    "declineInvitation": "Sei sicuro di voler rifiutare l'invito a {{entityName}}?",
+    "deleteItem": "Vuoi davvero eliminare questo articolo?",
+    "removeItem": "Vuoi davvero rimuovere questo articolo?",
+    "removeMember": "Vuoi davvero rimuovere questo membro?",
+    "revokeInvite": "Vuoi davvero revocare questo invito?",
+    "declineInvitation": "Vuoi davvero rifiutare l'invito a {{entityName}}?",
     "declineInvitationTitle": "Rifiuta invito",
-    "declineHomeInvitation": "Sei sicuro di voler rifiutare l'invito a unirti a {{homeName}}?",
-    "deleteHome": "Sei sicuro di voler eliminare questa casa?",
-    "deleteAccount": "Sei sicuro di voler eliminare il tuo account? Questa azione non può essere annullata.",
-    "logout": "Sei sicuro di voler uscire?",
-    "discardChanges": "Sei sicuro di voler annullare le modifiche?"
+    "declineHomeInvitation": "Vuoi davvero rifiutare l'invito a unirti a {{homeName}}?",
+    "deleteHome": "Vuoi davvero eliminare questa casa?",
+    "deleteAccount": "Vuoi davvero eliminare il tuo account? Questa azione non può essere annullata.",
+    "logout": "Vuoi davvero uscire?",
+    "discardChanges": "Vuoi davvero annullare le modifiche?"
   },
   "labels": {
     "storeSelectHint": "Scegli un negozio dall'elenco per salvarlo.",
@@ -260,7 +271,8 @@
     "rename": "Rinomina",
     "tapToViewDetails": "Tocca per vedere i dettagli",
     "loading": "Caricamento",
-    "leave": "Abbandona"
+    "leave": "Abbandona",
+    "noFolder": "Senza cartella"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -300,7 +312,8 @@
     "noMembers": "Ancora nessun membro",
     "noPantryItems": "La tua dispensa è vuota",
     "noShoppingListItems": "La tua lista della spesa è vuota",
-    "noInvitations": "Nessun invito in sospeso"
+    "noInvitations": "Nessun invito in sospeso",
+    "noResultsFor": "Nessun risultato per \"{{query}}\""
   },
   "auth": {
     "loginTitle": "Accedi a Sous Chef",
@@ -481,11 +494,7 @@
     "loadingRecipe": "Caricamento ricetta...",
     "recipeNotFoundDb": "Ricetta non trovata nel database",
     "recipeNotFound": "Ricetta non trovata",
-    "servingsSuffix": "porzioni",
-    "match": "corrispondenze",
     "suggested": "Consigliato",
-    "ingredientsSuffix": "ingredienti",
-    "minutes": "min",
     "percentHealthy": "% sana",
     "cookedCount": "Cucinata {{count}}x",
     "markCooked": "Segna come cucinata",
@@ -563,7 +572,7 @@
     "writeReview": "Scrivi una recensione",
     "noReviews": "Ancora nessuna recensione. Sii il primo a recensire questa ricetta!",
     "deleteReviewTitle": "Elimina recensione",
-    "deleteReviewConfirm": "Sei sicuro di voler eliminare la tua recensione?",
+    "deleteReviewConfirm": "Vuoi davvero eliminare la tua recensione?",
     "editReview": "Modifica recensione",
     "commentOptional": "Commento (facoltativo)",
     "reviewPlaceholder": "Condividi i tuoi pensieri su questa ricetta...",
@@ -573,7 +582,6 @@
     "apiLimitMessage": "Quota API di Spoonacular superata. Riprova più tardi.",
     "rateLimitTitle": "Limite di frequenza",
     "rateLimitMessage": "Troppe richieste. Riprova tra un momento.",
-    "searchErrorTitle": "Errore di ricerca",
     "searchErrorMessage": "Impossibile cercare le ricette. Riprova.",
     "markCookedFailed": "Impossibile segnare la ricetta come cucinata",
     "cookExternalError": "Impossibile segnare ricette esterne come cucinate. Salva prima la ricetta.",
@@ -586,7 +594,6 @@
     "folderDeleted": "Eliminato \"{{folderName}}\"",
     "deleteFolderFailed": "Impossibile eliminare la cartella.",
     "editRecipe": "Modifica ricetta",
-    "validationError": "Errore di validazione",
     "updateRecipeFailed": "Impossibile aggiornare la ricetta.",
     "createRecipeFailed": "Impossibile creare la ricetta.",
     "unexpectedError": "Si è verificato un errore imprevisto.",
@@ -624,7 +631,6 @@
     "reviewUpdated": "Recensione aggiornata",
     "reviewDeleted": "Recensione eliminata",
     "loadingShoppingLists": "Caricamento liste della spesa...",
-    "createListFailed": "Impossibile creare la lista",
     "couldNotAddIngredients": "Impossibile aggiungere gli ingredienti: {{error}}",
     "addIngredientToListFailed": "Impossibile aggiungere l'ingrediente alla lista della spesa.",
     "addIngredientsToListFailed": "Impossibile aggiungere gli ingredienti alla lista della spesa.",
@@ -634,8 +640,6 @@
     "addedItemsToList": "Aggiunti {{count}} articoli a \"{{listName}}\"",
     "addedItemsToListUpdated": "Aggiunti {{count}} articoli a \"{{listName}}\", aggiornati {{updated}}",
     "noIngredientsToAdd": "Nessun ingrediente disponibile da aggiungere.",
-    "listNameEmpty": "Il nome della lista non può essere vuoto",
-    "createShoppingListFailed": "Impossibile creare la lista della spesa",
     "cannotAddExternalIngredients": "Non è ancora possibile aggiungere ingredienti da ricette esterne. Salva prima la ricetta.",
     "ingredientsCount": "Ingredienti ({{count}})",
     "unnamedIngredient": "Ingrediente senza nome",
@@ -700,7 +704,14 @@
     "helpful": "Utile",
     "helpfulWithCount": "Utile ({{count}})",
     "reviewCount_one": "{{count}} recensione",
-    "reviewCount_other": "{{count}} recensioni"
+    "reviewCount_other": "{{count}} recensioni",
+    "servingsCount_one": "{{count}} porzione",
+    "servingsCount_other": "{{count}} porzioni",
+    "minutesValue": "{{count}} min",
+    "ingredientCount_one": "{{count}} ingrediente",
+    "ingredientCount_other": "{{count}} ingredienti",
+    "ingredientRatio": "{{used}}/{{total}} ingredienti",
+    "matchRatio": "{{used}}/{{total}} corrispondenze"
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -816,7 +827,6 @@
   "shoppingListScreens": {
     "emptyTitle": "La tua lista è vuota",
     "emptyDescription": "Aggiungi articoli per iniziare la tua lista della spesa",
-    "searchNoResultsTitle": "Nessun risultato per \"{{query}}\"",
     "searchAddPrompt": "Vuoi aggiungerlo alla tua lista?",
     "purchasedEmptyTitle": "Ancora nessun articolo acquistato",
     "purchasedEmptyDescription": "Spunta gli articoli mentre fai la spesa per vederli qui",
@@ -849,14 +859,11 @@
     "leaveList": "Abbandona lista",
     "leaving": "Uscita in corso...",
     "leaveListTitle": "Abbandona lista",
-    "leaveListMessage": "Sei sicuro di voler abbandonare \"{{name}}\"? Perderai accesso a tutti gli articoli condivisi.",
+    "leaveListMessage": "Vuoi davvero abbandonare \"{{name}}\"? Perderai accesso a tutti gli articoli condivisi.",
     "leaveDescription": "Abbandonando questa lista perderai accesso agli articoli condivisi.",
     "cantLeaveHomeLinkedMessage": "Questa lista è collegata alla casa \"{{name}}\". Per abbandonarla, devi prima abbandonare la casa.",
     "deleteListConfirmTitle": "Elimina lista",
-    "deleteListConfirmMessage": "Sei sicuro di voler eliminare questa lista? Questa azione non può essere annullata.",
-    "listNameEmpty": "Il nome della lista non può essere vuoto",
-    "failedToSave": "Impossibile salvare le impostazioni",
-    "failedToCreate": "Impossibile creare la lista",
+    "deleteListConfirmMessage": "Vuoi davvero eliminare questa lista? Questa azione non può essere annullata.",
     "failedToLeave": "Impossibile abbandonare la lista",
     "listStatusSection": "Stato della lista",
     "statusLabel": "Stato",
@@ -962,7 +969,6 @@
     "errorNetwork": "Errore di rete. Controlla la connessione internet e riprova.",
     "errorInvalidInput": "Dati non validi. Controlla i dettagli dell'articolo.",
     "errorSessionExpired": "Sessione scaduta. Accedi di nuovo.",
-    "errorGeneric": "Qualcosa è andato storto. Riprova.",
     "actionUpdate": "aggiornare",
     "actionAdd": "aggiungere",
     "itemUpdated": "Articolo aggiornato",
@@ -982,12 +988,10 @@
     "pleaseEnterEmail": "Inserisci un indirizzo email",
     "removeMemberTitle": "Rimuovi membro",
     "removeMemberA11y": "Rimuovi membro",
-    "removeMemberMessage": "Sei sicuro di voler rimuovere questo membro?",
+    "removeMemberMessage": "Vuoi davvero rimuovere questo membro?",
     "cannotLeaveTitle": "Non puoi abbandonare",
     "cannotLeaveOwnerMessage": "I proprietari non possono abbandonare la lista. Trasferisci la proprietà a un altro membro o elimina la lista.",
     "failedToUpdateShareSettings": "Impossibile aggiornare le impostazioni di condivisione",
-    "failedToSendInvitation": "Impossibile inviare l'invito",
-    "failedToRemoveMember": "Impossibile rimuovere il membro",
     "sharingOfflineMessage": "Condivisione non disponibile offline",
     "sharingOfflineDescription": "Connettiti a internet per invitare membri o gestire la condivisione.",
     "invitedOn": "Invitato il {{date}}",
@@ -1073,10 +1077,8 @@
     "deletePantry": "Elimina dispensa",
     "deleteWarning": "Eliminare questa dispensa rimuoverà permanentemente tutti gli articoli al suo interno. Questa azione non può essere annullata.",
     "deleteConfirmTitle": "Elimina dispensa",
-    "deleteConfirmMessage": "Sei sicuro di voler eliminare questa dispensa? Questa azione non può essere annullata e rimuoverà tutti gli articoli.",
+    "deleteConfirmMessage": "Vuoi davvero eliminare questa dispensa? Questa azione non può essere annullata e rimuoverà tutti gli articoli.",
     "nameEmptyError": "Il nome della dispensa non può essere vuoto",
-    "noHomeError": "Nessuna casa selezionata",
-    "saveFailed": "Impossibile salvare le impostazioni",
     "createFailed": "Impossibile creare la dispensa",
     "loadErrorTitle": "Errore caricamento dispensa",
     "loadErrorMessage": "Impossibile caricare i dati. Riprova.",
@@ -1126,7 +1128,6 @@
   "storageLocations": {
     "title": "Posizioni di archiviazione",
     "loading": "Caricamento posizioni...",
-    "somethingWrong": "Qualcosa è andato storto",
     "retry": "Riprova",
     "listView": "Vista elenco",
     "treeView": "Vista ad albero",
@@ -1143,7 +1144,7 @@
     "subLocationPlural": "{{count}} sotto-posizioni",
     "gotIt": "Capito",
     "deleteTitle": "Elimina posizione",
-    "deleteConfirm": "Sei sicuro di voler eliminare \"{{name}}\"? Non può essere annullato.",
+    "deleteConfirm": "Vuoi davvero eliminare \"{{name}}\"? Non può essere annullato.",
     "ok": "OK",
     "offlineTitle": "Non ancora caricate",
     "offlineDescription": "Le tue posizioni di conservazione non sono state caricate su questo dispositivo. Riconnettiti per vederle."
@@ -1219,8 +1220,7 @@
     "reasonTaste": "Gusto",
     "reasonUnknownLoss": "Perdita sconosciuta",
     "offlineTitle": "Nessun dato offline",
-    "offlineDescription": "Questi grafici non sono ancora stati caricati per questo periodo. Riconnettiti per vederli.",
-    "noDataAvailable": "Nessun dato disponibile"
+    "offlineDescription": "Questi grafici non sono ancora stati caricati per questo periodo. Riconnettiti per vederli."
   },
   "performance": {
     "title": "Dashboard prestazioni",
@@ -1269,7 +1269,7 @@
     "noDataYet": "Nessun dato di performance ancora raccolto.",
     "noDataSubtitle": "Naviga nell'app per iniziare a raccogliere metriche.",
     "clearData": "Cancella dati prestazioni",
-    "clearDataConfirm": "Sei sicuro di voler cancellare tutte le metriche di prestazione?",
+    "clearDataConfirm": "Vuoi davvero cancellare tutte le metriche di prestazione?",
     "clear": "Cancella"
   },
   "account": {
@@ -1302,7 +1302,7 @@
     "deleteFailedAlert": "Impossibile eliminare l'account: {{error}}",
     "deleteTypeConfirmError": "Scrivi DELETE per confermare",
     "deleteFinalConfirmTitle": "Conferma finale",
-    "deleteFinalConfirmMessage": "Sei assolutamente sicuro? Questa azione non può essere annullata e tutti i tuoi dati verranno eliminati definitivamente.",
+    "deleteFinalConfirmMessage": "Vuoi davvero procedere? Questa azione non può essere annullata e tutti i tuoi dati verranno eliminati definitivamente.",
     "deleteForeverButton": "Elimina per sempre"
   },
   "notifications": {
@@ -1329,7 +1329,7 @@
     "sharedListUpdatesDesc": "Ricevi avvisi sui cambiamenti nelle liste condivise",
     "social": "Collaborazione e casa",
     "collaborationInvites": "Inviti alla collaborazione",
-    "collaborationInvitesDesc": "Ricevi avvisi quando sei invitato a collaborare alle liste",
+    "collaborationInvitesDesc": "Ricevi avvisi quando ricevi un invito a collaborare alle liste",
     "homeInvitations": "Inviti casa",
     "homeInvitationsDesc": "Ricevi avvisi su inviti a unirti alle case",
     "recipesMealPlanning": "Ricette e piano dei pasti",
@@ -1368,12 +1368,10 @@
     "permissionRequiredTitle": "Permesso notifiche richiesto",
     "permissionRequiredMessage": "Per ricevere notifiche push devi attivare i permessi nelle impostazioni del dispositivo.\n\nVuoi aprire le impostazioni adesso?",
     "openSettings": "Apri impostazioni",
-    "permissionErrorTitle": "Errore di permesso",
     "permissionErrorMessage": "Impossibile richiedere il permesso di notifica. Riprova o controlla le impostazioni del dispositivo.",
     "updateFailed": "Impossibile aggiornare le impostazioni. Riprova.",
     "resetSuccess": "Le impostazioni sono state ripristinate.",
-    "resetFailed": "Impossibile ripristinare le impostazioni. Riprova.",
-    "resetConfirm": "Sei sicuro di voler ripristinare tutte le impostazioni di notifica ai valori predefiniti?",
+    "resetConfirm": "Vuoi davvero ripristinare tutte le impostazioni di notifica ai valori predefiniti?",
     "resetToDefaultsDesc": "Ripristina tutte le impostazioni di notifica ai valori predefiniti",
     "testSection": "Prova",
     "sendTestNotification": "Invia notifica di prova",
@@ -1410,7 +1408,8 @@
     "actionRequiredBody": "Questa notifica richiede un'azione: {{action}}",
     "goToNotifications": "Vai alle notifiche",
     "urgentUnread_one": "{{count}} notifica urgente",
-    "urgentUnread_other": "{{count}} notifiche urgenti"
+    "urgentUnread_other": "{{count}} notifiche urgenti",
+    "channelGeneral": "Generale"
   },
   "settings": {
     "appSettings": "Impostazioni app",
@@ -1442,10 +1441,9 @@
     "resetSection": "Ripristina",
     "resetToDefaults": "Ripristina ai valori predefiniti",
     "resetToDefaultsDesc": "Ripristina tutte le impostazioni ai valori predefiniti",
-    "resetConfirm": "Sei sicuro di voler ripristinare tutte le impostazioni ai valori predefiniti? Verranno reimpostati anche tutti i tutorial.",
+    "resetConfirm": "Vuoi davvero ripristinare tutte le impostazioni ai valori predefiniti? Verranno reimpostati anche tutti i tutorial.",
     "resetSuccess": "Le impostazioni e i tutorial sono stati ripristinati.",
     "resetSuccessTitle": "Fatto",
-    "resetFailed": "Impossibile ripristinare le impostazioni. Riprova.",
     "loadingSettings": "Caricamento impostazioni...",
     "updateFailed": "Impossibile aggiornare l'impostazione. Riprova."
   },
@@ -1453,7 +1451,7 @@
     "title": "Profilo alimentare",
     "restrictions": "Restrizioni alimentari",
     "removeRestrictionTitle": "Rimuovi restrizione",
-    "removeRestrictionConfirm": "Sei sicuro di voler rimuovere questa restrizione alimentare?",
+    "removeRestrictionConfirm": "Vuoi davvero rimuovere questa restrizione alimentare?",
     "removeRestrictionFailed": "Impossibile rimuovere la restrizione",
     "foodPreferences": "Preferenze alimentari",
     "favoriteIngredients": "Ingredienti preferiti",
@@ -1487,7 +1485,7 @@
     "noProfileSubtitle": "Crea il tuo profilo alimentare per ricevere consigli sulle ricette personalizzati"
   },
   "onBoarding": {
-    "welcomeTitle": "Benvenuto! Configuriamo la tua casa",
+    "welcomeTitle": "Ti diamo il benvenuto! Configuriamo la tua casa",
     "almostThere": "Ci siamo quasi!",
     "allSet": "Tutto pronto!",
     "createHomeSubtitle": "Crea la tua casa e dispensa per iniziare",
@@ -1539,7 +1537,6 @@
     "legalNotice": "Continuando accetti i nostri",
     "uploadAndContinue": "Carica e continua",
     "updateProfilePhotoFailed": "Impossibile aggiornare la foto del profilo. Riprova.",
-    "uploadFailedTitle": "Caricamento non riuscito",
     "invalidImageTitle": "Immagine non valida",
     "cameraPermissionTitle": "Autorizzazione fotocamera",
     "cameraPermissionTakePhotoMessage": "L'accesso alla fotocamera è necessario per scattare una foto. Abilitalo nelle impostazioni.",
@@ -1655,12 +1652,11 @@
     "shoppingListAccepted": "Invito alla lista della spesa accettato!",
     "homeAccepted": "Invito alla casa accettato!",
     "unknownType": "Tipo di invito sconosciuto",
-    "declineConfirm": "Sei sicuro di voler rifiutare questo invito?",
-    "declineFailedShort": "Impossibile rifiutare l'invito",
+    "declineConfirm": "Vuoi davvero rifiutare questo invito?",
     "loadingMessage": "Caricamento",
     "notFound": "Invito non trovato o scaduto",
     "loadingDetails": "Caricamento dettagli dell'invito...",
-    "invitedHeading": "Sei stato invitato!",
+    "invitedHeading": "Hai ricevuto un invito!",
     "someone": "Qualcuno",
     "homeInviteText": "{{inviter}} ti ha invitato a unirti",
     "listInviteText": "{{inviter}} ti ha invitato a collaborare a",
@@ -1814,8 +1810,6 @@
     "required": "Questo campo è obbligatorio",
     "minError": "Il valore deve essere almeno {{value}}",
     "maxError": "Il valore deve essere al massimo {{value}}",
-    "saveFailed": "Salvataggio non riuscito",
-    "genericError": "Si è verificato un errore",
     "minRange": "(min: {{value}})",
     "maxRange": "(max: {{value}})",
     "enterPlaceholder": "Inserisci {{title}}"
@@ -1888,7 +1882,7 @@
   },
   "mealPlanSettings": {
     "deleteTitle": "Elimina piano pasti",
-    "deleteConfirm": "Sei sicuro di voler eliminare «{{name}}»? Questa azione non può essere annullata.",
+    "deleteConfirm": "Vuoi davvero eliminare «{{name}}»? Questa azione non può essere annullata.",
     "planSettings": "Impostazioni piano",
     "done": "Fatto",
     "sharedWith": "Condiviso con {{name}}",
@@ -1916,7 +1910,6 @@
   "addToMealPlan": {
     "title": "Aggiungi al piano pasti",
     "add": "Aggiungi",
-    "noActivePlan": "Nessun piano pasti attivo. Creane uno prima.",
     "mealPlanLabel": "Piano pasti",
     "dateLabel": "Data",
     "mealTypeLabel": "Tipo di pasto",
@@ -2031,7 +2024,6 @@
     "yourRating": "La tua valutazione",
     "ratingFormat": "{{rating}}/5",
     "folder": "Cartella",
-    "noFolder": "Senza cartella",
     "enterFolderName": "Inserisci il nome della cartella...",
     "create": "Crea",
     "createNewFolder": "Crea nuova cartella",
@@ -2196,7 +2188,7 @@
     "requiredAsterisk": " *",
     "defaultLabel": "Predefinita",
     "quantity": "Quantità",
-    "quantityPlaceholder": "es., 1, 1 1/4",
+    "quantityPlaceholder": "es. 1, 1 1/4",
     "unit": "Unità",
     "unitPlaceholder": "pcs, kg",
     "storageType": "Tipo di conservazione",
@@ -2288,9 +2280,9 @@
     "lowStockSettings": "Impostazioni scorte basse",
     "lowStockHint": "Ricevi una notifica quando questo articolo sta per finire.",
     "alertWhenBelow": "Avvisa quando sotto",
-    "alertPlaceholder": "es., 2",
+    "alertPlaceholder": "es. 2",
     "restockTo": "Rifornisci fino a",
-    "restockPlaceholder": "es., 6",
+    "restockPlaceholder": "es. 6",
     "emptyHint": "Lascia vuoto per disattivare gli avvisi di scorte basse per questo articolo.",
     "quantity": "Quantità",
     "quantityPlaceholder": "1",
@@ -2305,9 +2297,9 @@
     "addPackageDetails": "Aggiungi dettagli confezione",
     "packageHint": "Definisci il contenuto di una confezione (es., 12 lattine da 335ml ciascuna).",
     "qtyPerPackage": "Qtà per confezione",
-    "qtyPerPackagePlaceholder": "es., 12",
+    "qtyPerPackagePlaceholder": "es. 12",
     "contentUnit": "Unità contenuto",
-    "contentUnitPlaceholder": "es., lattina, bottiglia",
+    "contentUnitPlaceholder": "es. lattina, bottiglia",
     "weightPerUnit": "Peso per unità",
     "weightPerUnitPlaceholder": "es., 335",
     "contentWeightUnit": "Unità di peso",
@@ -2320,8 +2312,6 @@
     "expirationPlaceholder": "Seleziona data",
     "storage": "Conservazione",
     "restockFailed": "Impossibile rifornire l'articolo.",
-    "addFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
-    "addFailed": "Impossibile aggiungere l'articolo",
     "itemAdded": "Articolo aggiunto alla dispensa",
     "pageMain": "Principale",
     "pageDetails": "Dettagli",
@@ -2338,7 +2328,7 @@
     "notes": "Note",
     "notesPlaceholder": "es., Conservare in luogo fresco e asciutto",
     "category": "Categoria",
-    "categoryPlaceholder": "es., Latticini, Frutta",
+    "categoryPlaceholder": "es. latticini, frutta",
     "condition": "Condizione",
     "conditionGood": "Buona",
     "conditionFair": "Discreta",
@@ -2348,7 +2338,7 @@
     "store": "Negozio",
     "storePlaceholder": "es., Costco, Esselunga",
     "cost": "Costo per unità",
-    "costPlaceholder": "es., 4,99",
+    "costPlaceholder": "es. 4,99",
     "acquisitionMethod": "Come acquisito",
     "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
@@ -2376,11 +2366,15 @@
     "noListTitle": "Nessuna lista selezionata",
     "noListBody": "Seleziona o crea prima una lista della spesa.",
     "createList": "Crea lista",
+    "searchPlaceholder": "Cerca o scansiona un articolo...",
+    "added": "{{name}} aggiunto",
+    "emptyTitle": "Ancora nessun suggerimento",
+    "emptyPantrySubtext": "Aggiungi articoli alla tua dispensa per ricevere suggerimenti personalizzati",
+    "emptyShoppingListSubtext": "Aggiungi articoli alla tua lista e appariranno qui per riaggiungerli rapidamente",
     "addToPantry": "Aggiungi alla dispensa",
     "addToShoppingList": "Aggiungi alla lista della spesa"
   },
   "dietaryProfile": {
-    "errorTitle": "Errore",
     "dietTitle": "Dieta",
     "dietEmpty": "Nessuna dieta ancora selezionata",
     "dietSheetTitle": "Seleziona una dieta",
@@ -2435,7 +2429,6 @@
     }
   },
   "addToShoppingListSheet": {
-    "addFailedRetry": "Impossibile aggiungere l'articolo. Riprova.",
     "tutorialTapPlus": "Tocca + accanto a un articolo per aggiungerlo",
     "tutorialTapAddManually": "Tocca \"Aggiungi manualmente\" per aggiungere un articolo",
     "tutorialPullDown": "Trascina verso il basso per chiudere"
@@ -2443,9 +2436,7 @@
   "numberInputSheet": {
     "required": "Questo campo è obbligatorio",
     "minError": "Il valore deve essere almeno {{min}}",
-    "maxError": "Il valore deve essere al massimo {{max}}",
-    "saveFailed": "Impossibile salvare",
-    "genericError": "Si è verificato un errore"
+    "maxError": "Il valore deve essere al massimo {{max}}"
   },
   "textEditBottomSheet": {
     "cancel": "Annulla",
@@ -2478,7 +2469,6 @@
   "saveRecipe": {
     "title": "Salva ricetta",
     "folder": "Cartella",
-    "noFolder": "Nessuna cartella",
     "enterFolderName": "Inserisci nome cartella...",
     "create": "Crea",
     "createNewFolder": "Crea nuova cartella",
@@ -2525,9 +2515,7 @@
     "cameraPermissionBlockedMessage": "L'accesso alla fotocamera è bloccato. Vai su Impostazioni > App > Sous Chef > Autorizzazioni per abilitare l'accesso alla fotocamera.",
     "cameraPermissionTitle": "Autorizzazione fotocamera",
     "cameraPermissionMessage": "È necessaria l'autorizzazione della fotocamera per scattare foto. Abilitala nelle impostazioni del dispositivo.",
-    "permissionErrorTitle": "Errore di autorizzazione",
     "permissionErrorMessage": "Impossibile richiedere l'autorizzazione della fotocamera. Riprova o controlla le impostazioni del dispositivo.",
-    "uploadFailedTitle": "Caricamento non riuscito",
     "updatePhotoFailed": "Impossibile aggiornare la foto del profilo",
     "cropPhoto": "Ritaglia foto",
     "cropping": "Ritaglio in corso...",
@@ -2537,8 +2525,8 @@
     "cropImageFailed": "Impossibile ritagliare l'immagine. Riprova."
   },
   "personalInformation": {
-    "screenTitle": "Informazioni Personali",
-    "sectionPersonalInformation": "Informazioni Personali",
+    "screenTitle": "Informazioni personali",
+    "sectionPersonalInformation": "Informazioni personali",
     "sectionPrivacySettings": "Impostazioni Privacy",
     "email": "Email",
     "firstName": "Nome",
@@ -2575,21 +2563,18 @@
     "expiredCount": "{{count}} scaduti",
     "lowStockCount": "{{count}} scorta bassa",
     "analyticsAccessibility": "Visualizza analisi",
-    "emptyTitle": "La tua dispensa è vuota",
     "emptySubtitle": "Inizia a tenere traccia del cibo per ridurre gli sprechi",
-    "emptyAction": "Aggiungi Articoli",
+    "emptyAction": "Aggiungi articoli",
     "noHomeTitle": "Nessuna casa ancora",
     "noHomeDescription": "Crea o unisciti a una casa per iniziare a tracciare il cibo",
     "noHomeAction": "Inizia",
-    "noHomeSelectedTitle": "Nessuna casa selezionata",
     "noHomeSelectedDescription": "Seleziona una casa per vedere la tua dispensa",
     "noHomeSelectedAction": "Vai alle Mie Case",
     "noPantriesTitle": "Crea una dispensa",
     "noPantriesDescription": "Configura una dispensa per iniziare a tracciare il cibo",
     "noPantriesAction": "Crea Dispensa",
-    "searchNoResultsTitle": "Nessun risultato per \"{{query}}\"",
     "searchNoResultsDescription": "Vuoi aggiungerlo alla dispensa?",
-    "searchNoResultsAction": "Aggiungi Articolo",
+    "searchNoResultsAction": "Aggiungi articolo",
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
     "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",
     "tabEmptyFallbackName": "questa posizione",
@@ -2603,14 +2588,14 @@
   },
   "homeManagement": {
     "title": "Le Mie Case",
-    "modeCreate": "Crea Casa",
+    "modeCreate": "Crea casa",
     "modeJoin": "Unisciti con Codice",
     "joinCodePlaceholder": "Inserisci codice di accesso",
     "joinCodeMemberCount_one": "{{count}} membro",
     "joinCodeMemberCount_other": "{{count}} membri",
     "join": "Unisciti",
     "cancel": "Annulla",
-    "inviteModalTitle": "Invita Membro nella Casa",
+    "inviteModalTitle": "Invita membro nella casa",
     "errorHomeNotFound": "Casa non trovata",
     "errorNotMember": "Non sei un membro di questa casa",
     "errorNoInvitePermission": "Non hai il permesso di invitare membri in questa casa",
@@ -2669,10 +2654,10 @@
     "storageLocationsSubtitle": "Gestisci dove vengono conservati gli articoli",
     "sectionDangerZone": "Zona Pericolosa",
     "leaveHomeDescription": "Lasciare questa casa rimuoverà il tuo accesso a tutte le dispense, liste della spesa, piani pasti e modelli condivisi.",
-    "leaveHomeButton": "Lascia la Casa",
+    "leaveHomeButton": "Lascia la casa",
     "ownerCannotLeaveTitle": "Impossibile Lasciare",
     "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa.",
-    "selectRoleLabel": "Seleziona Ruolo"
+    "selectRoleLabel": "Seleziona ruolo"
   },
   "joinHome": {
     "homeFallback": "Casa",
@@ -2685,7 +2670,7 @@
     "notFoundTitle": "Casa non trovata",
     "notFoundDescription": "Non abbiamo trovato una casa per quel codice. Potrebbe non essere valido o il codice potrebbe essere stato disattivato.",
     "tryDifferentCode": "Prova un altro codice",
-    "invitedToJoin": "Sei stato invitato a unirti a",
+    "invitedToJoin": "Hai ricevuto un invito a unirti a",
     "joinButton": "Unisciti alla Casa",
     "enterDifferentCode": "Inserisci un altro codice",
     "joinFailed": "Impossibile unirsi alla casa. Il codice potrebbe non essere valido o scaduto.",
@@ -2742,7 +2727,7 @@
     "deleteModeTitle": "{{count}} selezionati",
     "emptyMessage": "Nessuna lista della spesa disponibile",
     "personalLists": "Liste Personali",
-    "unknownHome": "Casa Sconosciuta",
+    "unknownHome": "Casa sconosciuta",
     "createNewList": "Crea",
     "shareCurrentList": "Condividi",
     "listSettings": "Impostazioni",
@@ -2753,8 +2738,8 @@
     "itemsRemaining": "{{remaining}} di {{total}}",
     "deleteAlertTitle_one": "Elimina {{count}} Lista",
     "deleteAlertTitle_other": "Elimina {{count}} Liste",
-    "deleteAlertMessage_one": "Sei sicuro di voler eliminare questa lista? Questa azione non può essere annullata.",
-    "deleteAlertMessage_other": "Sei sicuro di voler eliminare queste liste? Questa azione non può essere annullata.",
+    "deleteAlertMessage_one": "Vuoi davvero eliminare questa lista? Questa azione non può essere annullata.",
+    "deleteAlertMessage_other": "Vuoi davvero eliminare queste liste? Questa azione non può essere annullata.",
     "deleteAction": "Elimina",
     "deleteFailed": "Eliminazione delle liste non riuscita",
     "deletedToast_one": "{{count}} lista eliminata",
@@ -2762,17 +2747,17 @@
   },
   "shoppingListScreen": {
     "label": "Lista della spesa",
-    "title": "Lista della Spesa",
+    "title": "Lista della spesa",
     "searchPlaceholder": "Cerca nella lista della spesa...",
     "tabShopping": "Da comprare",
     "tabPurchased": "Acquistati",
     "switchListAccessibility": "Cambia lista della spesa",
     "noListsTitle": "Nessuna lista della spesa",
     "noListsDescription": "Crea una lista della spesa per iniziare",
-    "noListsAction": "Crea Lista",
+    "noListsAction": "Crea lista",
     "emptyTitle": "Nessun articolo in questa lista",
     "emptyDescription": "Aggiungi alcuni articoli per iniziare",
-    "emptyAction": "Aggiungi Articolo",
+    "emptyAction": "Aggiungi articolo",
     "noAddPermission": "Non hai il permesso di aggiungere articoli a questa lista"
   },
   "notFound": {
@@ -2781,8 +2766,7 @@
   },
   "searchResults": {
     "title": "Risultati della ricerca",
-    "searching": "Ricerca dell'articolo...",
-    "errorTitle": "Errore di ricerca"
+    "searching": "Ricerca dell'articolo..."
   },
   "suggestItemEdit": {
     "sentTitle": "Suggerimento inviato",
@@ -2794,7 +2778,6 @@
     "rateLimitedTitle": "Aspetta un momento",
     "notFoundTitle": "Articolo non trovato",
     "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
-    "rejectedTitle": "Impossibile inviare",
     "loadFailedTitle": "Impossibile caricare questo articolo",
     "loadFailedBody": "Non siamo riusciti a caricare i dettagli attuali dell'articolo, che ci servono per capire cosa hai modificato. Controlla la connessione e riprova.",
     "readOnlyTitle": "Questo articolo non può essere modificato",
@@ -2805,11 +2788,12 @@
     "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
     "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
-    "failedTitle": "Impossibile inviare",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
     "photoNotice": "Le foto vengono aggiunte subito. Le altre modifiche vengono prima esaminate da un amministratore.",
     "suggestAction": "Suggerisci modifica",
-    "editAction": "Modifica"
+    "editAction": "Modifica",
+    "rejectedTitle": "Impossibile inviare",
+    "failedTitle": "Impossibile inviare"
   },
   "reportItem": {
     "footer": "Dettagli sbagliati in uno di questi?",
@@ -2821,13 +2805,13 @@
     "submit": "Invia segnalazione",
     "sentTitle": "Segnalazione inviata",
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
-    "failedTitle": "Impossibile inviare",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
     "alreadyReportedTitle": "Già segnalato",
     "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
     "rateLimitedTitle": "Aspetta un momento",
     "notFoundTitle": "Articolo non trovato",
     "notFoundBody": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
+    "failedTitle": "Impossibile inviare",
     "rejectedTitle": "Impossibile inviare"
   },
   "addItemForm": {
@@ -2993,7 +2977,6 @@
     "offlineTitle": "Nessuna connessione a Internet",
     "offlineBody": "Il caricamento delle immagini richiede una connessione a Internet. Riprova quando sei online.",
     "offlineError": "Sei offline. Il caricamento delle immagini richiede una connessione a Internet.",
-    "failedTitle": "Caricamento non riuscito",
     "failedBody": "Qualcosa è andato storto durante il caricamento dell'immagine. Riprova.",
     "invalidTypeBody": "Seleziona un file immagine JPEG, PNG o WebP.",
     "profileTooLargeBody": "L'immagine è troppo grande. Le immagini del profilo devono essere inferiori a {{size}} MB.",
@@ -3013,10 +2996,10 @@
     "templateDuplicated": "Modello duplicato!"
   },
   "accountEvents": {
-    "removedFromHome": "Sei stato rimosso da una casa",
-    "addedToHome": "Sei stato aggiunto a una nuova casa",
-    "removedFromShoppingList": "Sei stato rimosso da una lista della spesa",
-    "addedToShoppingList": "Sei stato aggiunto a una lista della spesa",
+    "removedFromHome": "Non fai più parte di una casa",
+    "addedToHome": "Ora fai parte di una nuova casa",
+    "removedFromShoppingList": "Non fai più parte di una lista della spesa",
+    "addedToShoppingList": "Ora fai parte di una lista della spesa",
     "accountBanned": "Il tuo account è stato bannato{{reason}}",
     "accountSuspended": "Il tuo account è stato sospeso{{reason}}",
     "reasonSuffix": ": {{reason}}",
@@ -3093,7 +3076,7 @@
     "placeholderUnit": "pz, dozzina",
     "placeholderAlertBelow": "es. 2",
     "placeholderRestockTo": "es. 6",
-    "placeholderNetWeight": "es. 14,5",
+    "placeholderNetWeight": "es., 14.5",
     "placeholderNetWeightUnit": "oz, g, ml",
     "noPantrySelected": "Nessuna dispensa selezionata. Seleziona prima una dispensa.",
     "addFailed": "Impossibile aggiungere l'articolo. Riprova.",
@@ -3115,11 +3098,12 @@
     "addTitle": "Aggiungi articolo alla dispensa",
     "editTitle": "Modifica articolo della dispensa",
     "quantityUnit": "Quantità e unità",
-    "quantityStock": "Quantità e scorte"
+    "quantityStock": "Quantità e scorte",
+    "quantityRequired": "Quantità *",
+    "quantityCurrent": "Quantità attuale"
   },
   "folderPicker": {
     "selectFolder": "Seleziona cartella",
-    "noFolder": "Senza cartella",
     "createNew": "Crea nuova cartella",
     "loading": "Caricamento cartelle...",
     "longPressHint": "Tieni premuta una cartella per modificarla o eliminarla",
@@ -3246,16 +3230,16 @@
   },
   "shoppingListTabs": {
     "clearPurchasedTitle": "Cancella tutti gli articoli acquistati",
-    "clearPurchasedBody_one": "Sei sicuro di voler rimuovere {{count}} articolo acquistato da questa lista?",
-    "clearPurchasedBody_other": "Sei sicuro di voler rimuovere tutti i {{count}} articoli acquistati da questa lista?",
+    "clearPurchasedBody_one": "Vuoi davvero rimuovere {{count}} articolo acquistato da questa lista?",
+    "clearPurchasedBody_other": "Vuoi davvero rimuovere tutti i {{count}} articoli acquistati da questa lista?",
     "clearAll": "Cancella tutto",
     "moveAllTitle": "Sposta tutto nella dispensa",
     "moveAllBody_one": "Spostare {{count}} articolo acquistato nella tua dispensa?",
     "moveAllBody_other": "Spostare tutti i {{count}} articoli acquistati nella tua dispensa?",
     "moveAll": "Sposta tutto",
     "clearShoppingTitle": "Cancella tutti gli articoli della spesa",
-    "clearShoppingBody_one": "Sei sicuro di voler rimuovere {{count}} articolo dalla tua lista della spesa?",
-    "clearShoppingBody_other": "Sei sicuro di voler rimuovere tutti i {{count}} articoli dalla tua lista della spesa?"
+    "clearShoppingBody_one": "Vuoi davvero rimuovere {{count}} articolo dalla tua lista della spesa?",
+    "clearShoppingBody_other": "Vuoi davvero rimuovere tutti i {{count}} articoli dalla tua lista della spesa?"
   },
   "home": {
     "joinSuccessTitle": "Fatto",
@@ -3264,7 +3248,7 @@
     "invalidHomeId": "ID casa non valido",
     "notFound": "Casa non trovata",
     "leaveTitle": "Lascia la casa",
-    "leaveBody": "Sei sicuro di voler lasciare \"{{name}}\"? Perderai l'accesso a questa casa e alle sue dispense e liste della spesa."
+    "leaveBody": "Vuoi davvero lasciare \"{{name}}\"? Perderai l'accesso a questa casa e alle sue dispense e liste della spesa."
   },
   "offline": {
     "title": "Offline",
@@ -3312,7 +3296,8 @@
     "barcodeValue": "Codice a barre: {{barcode}}",
     "formatValue": "Formato: {{format}}",
     "sku": "SKU",
-    "upc": "UPC/Codice a barre"
+    "upc": "UPC/Codice a barre",
+    "added": "Aggiunto"
   },
   "tabBar": {
     "actionButton": "Pulsante azione",
@@ -3496,9 +3481,6 @@
     "freezer": "Congelatore",
     "pantry": "Dispensa"
   },
-  "editableField": {
-    "saveFailed": "Salvataggio non riuscito"
-  },
   "expiration": {
     "noExpiryDate": "Nessuna data di scadenza",
     "expiredDaysAgo_one": "Scaduto {{count}} giorno fa",
@@ -3550,7 +3532,9 @@
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% rimanente)",
     "weight": "{{weight}} {{unit}}",
-    "weightRemaining": "{{weight}} {{unit}} rimanenti"
+    "weightRemaining": "{{weight}} {{unit}} rimanenti",
+    "contentUnitCount_one": "{{count}} {{unit}}",
+    "contentUnitCount_other": "{{count}} {{unit}}"
   },
   "fractionInput": {
     "formatsHint": "Formati: 1/4, 1 1/4, 0.75 o 2"
@@ -3625,23 +3609,18 @@
     "itemsMax": "Puoi selezionare fino a {{count}} articoli"
   },
   "toasts": {
-    "noHomeSelected": "Nessuna casa selezionata",
     "noLowStockItems": "Nessun articolo in esaurimento",
     "mealUpdateFailed": "Impossibile aggiornare il pasto",
     "mealCompletedDeducted": "Pasto completato! Articoli scalati dalla dispensa.",
     "mealCompleted": "Pasto completato!",
-    "noActiveMealPlan": "Nessun piano pasti attivo. Creane uno prima.",
     "addedToMealPlan": "Aggiunto al piano pasti",
     "mealPlanDuplicated": "Piano pasti duplicato!",
     "itemToggleFailed": "Impossibile aggiornare l'articolo",
-    "itemDeleteFailed": "Impossibile eliminare l'articolo",
-    "itemAddFailed": "Impossibile aggiungere l'articolo",
     "selectShoppingListFirst": "Seleziona prima una lista della spesa",
     "signInToVerifyEmail": "Accedi per completare la verifica della tua email.",
     "signInToAcceptInvite": "Accedi per accettare questo invito.",
-    "somethingWentWrongRetry": "Qualcosa è andato storto. Riprova.",
     "folderProtected": "\"{{folder}}\" non può essere rinominata o eliminata",
-    "welcomeToEntity": "Benvenuto in {{name}}!",
+    "welcomeToEntity": "Ti diamo il benvenuto in {{name}}!",
     "canCollaborateOn": "Ora puoi collaborare su {{name}}",
     "addedItems_one": "{{count}} articolo aggiunto alla lista della spesa",
     "addedItems_other": "{{count}} articoli aggiunti alla lista della spesa",

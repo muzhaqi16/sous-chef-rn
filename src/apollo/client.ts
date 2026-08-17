@@ -45,35 +45,20 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // Restore persisted cache: load both critical and deferred partitions and
-  // merge into a single cache.restore() call. cache.restore() is destructive
-  // (it wipes the EntityStore via init()), so calling it twice would discard
-  // whichever partition was restored first. Merging first avoids that.
-  // Both reads are synchronous MMKV operations (~5-20ms total during native splash).
+  // Restore the persisted cache. One synchronous MMKV read + parse during the
+  // native splash (~5-20ms); `load()` migrates an install still holding data
+  // under the retired split-blob keys.
   const restoreT0 = performance.now();
-  const criticalCache = apolloCachePersistence.loadCritical();
-  const deferredCache = apolloCachePersistence.loadDeferred();
+  const persistedCache = apolloCachePersistence.load();
 
-  if (criticalCache || deferredCache) {
-    const merged = { ...(criticalCache || {}), ...(deferredCache || {}) };
+  if (persistedCache) {
     logger.info(
       `📦 Apollo: Restoring ${
-        Object.keys(merged).length
+        Object.keys(persistedCache).length
       } entities from storage`,
     );
-    cache.restore(merged);
+    cache.restore(persistedCache);
     emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0);
-  } else {
-    // Migration fallback: read old single-key format
-    const persistedCache = apolloCachePersistence.load();
-    if (persistedCache) {
-      logger.info('📦 Apollo: Restoring cache from legacy storage');
-      cache.restore(persistedCache);
-      emitHistogram(
-        'app_apollo_legacy_restore_ms',
-        performance.now() - restoreT0,
-      );
-    }
   }
 
   // Create link chain

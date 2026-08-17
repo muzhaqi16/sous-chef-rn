@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateShoppingListItemsFromRecipeDocument,
@@ -22,14 +22,15 @@ import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters'
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { toastService } from '#/services/toastService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
-import {
-  executeCacheUpdate,
-  executeMutation,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { logger } from '#/utils/environment';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
+import { errorService } from '#/services/errorService';
+import type {
+  AddItemsToShoppingListInput,
+  CreateShoppingListItemFromRecipeIngredientInput,
+} from '#/graphql/generated/schemaTypes';
 
 interface UseRecipeShoppingListOptions {
   recipeId: string | undefined;
@@ -39,6 +40,112 @@ interface UseRecipeShoppingListOptions {
 }
 
 type PendingAction = { type: 'all' };
+
+/**
+ * Fires the right add-ingredient mutation and reports whether the item landed.
+ *
+ * Module-level rather than inline in the hook because its body is full of
+ * `||` / `?.` / ternaries, and the React Compiler bails out of the whole hook
+ * when a value block appears inside a try/catch. The caller invokes it from
+ * inside its try, so the catch still covers it.
+ * See scripts/probe-compiler-try-forms.mjs.
+ */
+async function addIngredientToList(
+  ingredient: DisplayIngredient,
+  shoppingListId: string,
+  deps: {
+    isBackendRecipe: boolean;
+    // Typed with the generated input shapes so the mutate functions from
+    // `useMutation()` are assignable as-is.
+    addRecipeIngredientMutation(options: {
+      variables: { input: CreateShoppingListItemFromRecipeIngredientInput };
+      context: { localFirst: boolean };
+    }): Promise<{ data?: unknown; error?: unknown }>;
+    addItemsToShoppingListMutation(options: {
+      variables: { input: AddItemsToShoppingListInput };
+      context: { localFirst: boolean };
+    }): Promise<{ data?: unknown; error?: unknown }>;
+    onRejected: () => void;
+  },
+): Promise<boolean> {
+  const {
+    isBackendRecipe,
+    addRecipeIngredientMutation,
+    addItemsToShoppingListMutation,
+    onRejected,
+  } = deps;
+
+  if (isBackendRecipe) {
+    // Generate the new item's id so a create that gets queued (offline /
+    // API down) replays idempotently, keyed by this id.
+    const result = await addRecipeIngredientMutation({
+      variables: {
+        input: {
+          id: generateEntityId(),
+          recipeIngredientId: String(ingredient.id),
+          shoppingListId,
+        },
+      },
+      context: { localFirst: true },
+    });
+
+    // This mutation has no onError, so a resolved error-union payload or a
+    // transport error would otherwise fall through to the success toast.
+    // Classify and report once on rejection; 'created'/'queued' confirm.
+    if (classifyCreateResult(result) === 'rejected') {
+      onRejected();
+      return false;
+    }
+    return true;
+  }
+
+  if ('amount' in ingredient) {
+    // Single ingredient goes through the same batch mutation as a
+    // one-element `items` array — there is no separate single-add op.
+    const result = await addItemsToShoppingListMutation({
+      variables: {
+        input: {
+          shoppingListId,
+          items: [
+            {
+              id: generateEntityId(),
+              item: {
+                itemName: stripPriceFromName(
+                  ingredient.name ||
+                    ingredient.original ||
+                    'Unknown ingredient',
+                ),
+              },
+              quantity: ingredient.amount || 0,
+              unit: {
+                unitName:
+                  ingredient.measures?.us?.unitShort ||
+                  ingredient.measures?.metric?.unitShort ||
+                  undefined,
+              },
+              storePrefs: ingredient.aisle
+                ? { aisle: ingredient.aisle }
+                : undefined,
+            },
+          ],
+        },
+      },
+      context: { localFirst: true },
+    });
+
+    // A resolved error-union payload or a transport error must not fall
+    // through to the success toast. Classify: 'created'/'queued' confirm;
+    // 'rejected' reports and returns. The mutation's onError already
+    // toasts on a transport error, so toast here only for the resolved
+    // error-union case — exactly one toast either way.
+    if (classifyCreateResult(result) === 'rejected') {
+      if (!result.error) onRejected();
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export function useRecipeShoppingList({
   recipeId,
@@ -108,7 +215,7 @@ export function useRecipeShoppingList({
       }
     },
     onError: () => {
-      toastService.error(t('recipes.createListFailed'));
+      toastService.error(t('errors.createListFailed'));
     },
   });
 
@@ -122,12 +229,16 @@ export function useRecipeShoppingList({
           !variables
         )
           return;
-        executeCacheUpdate(() => {
+        try {
           const shoppingListId = variables.input.shoppingListId;
           payload.addedItems.forEach(item => {
             addNewItemToShoppingListCache(cache, shoppingListId, item);
           });
-        }, 'Cache update failed for addRecipeToShoppingList:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for addRecipeToShoppingList:',
+          });
+        }
       },
       onError: err => {
         logger.error('Add recipe to shopping list error:', err);
@@ -151,7 +262,7 @@ export function useRecipeShoppingList({
           !variables
         )
           return;
-        executeCacheUpdate(() => {
+        try {
           const shoppingListId = variables.input.shoppingListId;
           if (!response.wasUpdated) {
             addNewItemToShoppingListCache(
@@ -160,7 +271,11 @@ export function useRecipeShoppingList({
               response.shoppingListItem,
             );
           }
-        }, 'Cache update failed for addRecipeIngredient:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for addRecipeIngredient:',
+          });
+        }
       },
     },
   );
@@ -175,15 +290,21 @@ export function useRecipeShoppingList({
           !variables
         )
           return;
-        executeCacheUpdate(() => {
-          const { results } = payload;
-          const shoppingListId = variables.input.shoppingListId;
-          results.forEach(result => {
-            if (result.success && result.item) {
-              addNewItemToShoppingListCache(cache, shoppingListId, result.item);
-            }
+        const shoppingListId = variables.input.shoppingListId;
+        // Filtered before the try — a `&&` inside a try body makes the React
+        // Compiler bail out of this hook.
+        const addedItems = payload.results.flatMap(result =>
+          result.success && result.item ? [result.item] : [],
+        );
+        try {
+          addedItems.forEach(item =>
+            addNewItemToShoppingListCache(cache, shoppingListId, item),
+          );
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for addItemsToShoppingList:',
           });
-        }, 'Cache update failed for addItemsToShoppingList:');
+        }
       },
       onError: err => {
         logger.error('Batch add items to shopping list error:', err);
@@ -197,93 +318,31 @@ export function useRecipeShoppingList({
   );
 
   // Add a single ingredient to the user's default/selected list (no picker).
-  const handleAddSingleIngredient = (ingredient: DisplayIngredient) => {
+  const handleAddSingleIngredient = async (ingredient: DisplayIngredient) => {
     const targetList = getTargetShoppingList();
     if (!targetList) {
       toastService.error(t('recipes.createListFirst'));
       return;
     }
 
-    executeMutation(
-      async () => {
-        if (isBackendRecipe) {
-          // Generate the new item's id so a create that gets queued (offline /
-          // API down) replays idempotently, keyed by this id.
-          const result = await addRecipeIngredientMutation({
-            variables: {
-              input: {
-                id: generateEntityId(),
-                recipeIngredientId: String(ingredient.id),
-                shoppingListId: targetList.id,
-              },
-            },
-            context: { localFirst: true },
-          });
+    try {
+      const added = await addIngredientToList(ingredient, targetList.id, {
+        isBackendRecipe,
+        addRecipeIngredientMutation,
+        addItemsToShoppingListMutation,
+        onRejected: () =>
+          toastService.error(t('recipes.addIngredientToListFailed')),
+      });
+      if (!added) return;
 
-          // This mutation has no onError, so a resolved error-union payload or a
-          // transport error would otherwise fall through to the success toast.
-          // Classify and report once on rejection; 'created'/'queued' confirm.
-          if (classifyCreateResult(result) === 'rejected') {
-            toastService.error(t('recipes.addIngredientToListFailed'));
-            return;
-          }
-        } else if ('amount' in ingredient) {
-          // Single ingredient goes through the same batch mutation as a
-          // one-element `items` array — there is no separate single-add op.
-          const result = await addItemsToShoppingListMutation({
-            variables: {
-              input: {
-                shoppingListId: targetList.id,
-                items: [
-                  {
-                    id: generateEntityId(),
-                    item: {
-                      itemName: stripPriceFromName(
-                        ingredient.name ||
-                          ingredient.original ||
-                          'Unknown ingredient',
-                      ),
-                    },
-                    quantity: ingredient.amount || 0,
-                    unit: {
-                      unitName:
-                        ingredient.measures?.us?.unitShort ||
-                        ingredient.measures?.metric?.unitShort ||
-                        undefined,
-                    },
-                    storePrefs: ingredient.aisle
-                      ? { aisle: ingredient.aisle }
-                      : undefined,
-                  },
-                ],
-              },
-            },
-            context: { localFirst: true },
-          });
-
-          // A resolved error-union payload or a transport error must not fall
-          // through to the success toast. Classify: 'created'/'queued' confirm;
-          // 'rejected' reports and returns. The mutation's onError already
-          // toasts on a transport error, so toast here only for the resolved
-          // error-union case — exactly one toast either way.
-          if (classifyCreateResult(result) === 'rejected') {
-            if (!result.error) {
-              toastService.error(t('recipes.addIngredientToListFailed'));
-            }
-            return;
-          }
-        }
-
-        setAddedIngredients(prev => new Set(prev).add(ingredient.id));
-        toastService.success(
-          t('recipes.addedToList', { listName: targetList.name }),
-        );
-      },
-      err => {
-        logger.error('Failed to add ingredient:', err);
-        toastService.error(t('recipes.addIngredientToListFailed'));
-      },
-    );
+      setAddedIngredients(prev => new Set(prev).add(ingredient.id));
+      toastService.success(
+        t('recipes.addedToList', { listName: targetList.name }),
+      );
+    } catch (err) {
+      logger.error('Failed to add ingredient:', err);
+      toastService.error(t('recipes.addIngredientToListFailed'));
+    }
   };
 
   // Adds all ingredients to the picked list. Called after the list picker
@@ -441,7 +500,7 @@ export function useRecipeShoppingList({
   // Create a new shopping list and route the pending action into it.
   const handleCreateListAndAddIngredients = (name: string) => {
     if (!name.trim()) {
-      toastService.error(t('recipes.listNameEmpty'));
+      toastService.error(t('errors.listNameEmpty'));
       return;
     }
 
@@ -462,7 +521,7 @@ export function useRecipeShoppingList({
 
         const createPayload = result.data?.createShoppingList;
         if (createPayload?.__typename !== 'CreateShoppingListPayload') {
-          toastService.error(t('recipes.createShoppingListFailed'));
+          toastService.error(t('errors.createShoppingListFailed'));
           return;
         }
         const newList = createPayload.shoppingList;
@@ -478,7 +537,7 @@ export function useRecipeShoppingList({
       setCreatingList,
       err => {
         logger.error('Failed to create list and add ingredients:', err);
-        toastService.error(t('recipes.createShoppingListFailed'));
+        toastService.error(t('errors.createShoppingListFailed'));
       },
     );
   };

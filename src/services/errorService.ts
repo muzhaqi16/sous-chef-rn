@@ -34,7 +34,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { Telemetry } from '#/services/telemetry';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Result type for error operations
@@ -433,7 +433,7 @@ export class ErrorService {
         success: false,
         error: {
           code: 'ERROR_HANDLER_FAILED',
-          message: t('errors.handlerFailed'),
+          message: t('errors.somethingWentWrong'),
           category: 'Unknown',
           shouldRetry: false,
           isAuthError: false,

@@ -16,12 +16,9 @@ import {
   UpdateCollaboratorPermissionsDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import {
-  executeMutation,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -94,6 +91,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
   CollaboratorPermissionsBottomSheetProps
 >(({ shoppingListId, onSuccess }, ref) => {
+  // `useTranslation` and not the module-level `t`: every label in this sheet is
+  // read during render, so the module-level helper leaves them showing the old
+  // language until something else happens to re-render the sheet.
+  const { t } = useTranslation();
   const [collaborator, setCollaborator] =
     useState<ShoppingListCollaboratorFragment | null>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
@@ -186,7 +187,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   // Each permission toggle fires immediately (overriding the role's default)
   // and reverts the switch if the server refuses it.
-  const handleTogglePermission = (
+  const handleTogglePermission = async (
     key: keyof CollabPermissions,
     value: boolean,
   ) => {
@@ -196,19 +197,20 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     setPermissions(next);
     const collaboratorId = collaborator.collaboratorId;
 
-    executeMutation(
-      async () => {
-        const result = await updatePermissions({
-          variables: {
-            input: { shoppingListId, collaboratorId, permissions: next },
-          },
-        });
-        if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
-          setPermissions(previous);
-        }
-      },
-      () => setPermissions(previous),
-    );
+    let result;
+    try {
+      result = await updatePermissions({
+        variables: {
+          input: { shoppingListId, collaboratorId, permissions: next },
+        },
+      });
+    } catch {
+      setPermissions(previous);
+      return;
+    }
+    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+      setPermissions(previous);
+    }
   };
 
   // Available roles (excluding OWNER - that's only for list owners)

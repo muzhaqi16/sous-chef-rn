@@ -13,13 +13,10 @@ import {
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
-import {
-  executeMutation,
-  executeCacheUpdate,
-} from '#/utils/compilerSafeWrappers';
 import { useCreateStorageLocation } from './useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 /**
  * Toast the message from a resolved errors-as-data member. A non-success union
@@ -153,31 +150,33 @@ export function useStorageLocationManagement(
         return;
       }
 
-      executeCacheUpdate(
-        () => {
-          // Remove from PantryMain's filter tabs before evicting the entity
-          if (pantryId) {
-            const removeFromPantryLocations =
-              createRemoveFromParentConnectionUpdater(
-                'Pantry',
-                'storageLocationsConnection',
-                'StorageLocation',
-              );
-            removeFromPantryLocations(cache, pantryId, variables.input.id);
-          }
-
-          const removeFromStorageLocationsCache =
-            createRemoveFromQueryConnectionUpdater(
-              'storageLocations',
+      try {
+        // Remove from PantryMain's filter tabs before evicting the entity
+        if (pantryId) {
+          const removeFromPantryLocations =
+            createRemoveFromParentConnectionUpdater(
+              'Pantry',
+              'storageLocationsConnection',
               'StorageLocation',
             );
-          removeFromStorageLocationsCache(cache, variables.input.id, {
-            evictItem: true,
-          });
-        },
-        'Cache update failed for deleteStorageLocation:',
-        refetch,
-      );
+          removeFromPantryLocations(cache, pantryId, variables.input.id);
+        }
+
+        const removeFromStorageLocationsCache =
+          createRemoveFromQueryConnectionUpdater(
+            'storageLocations',
+            'StorageLocation',
+          );
+        removeFromStorageLocationsCache(cache, variables.input.id, {
+          evictItem: true,
+        });
+      } catch (cacheError) {
+        // Refetching resyncs the list rather than leaving it half-updated.
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed for deleteStorageLocation:',
+        });
+        refetch?.();
+      }
     },
     // Errors surfaced via toast in deleteLocation below — no onError.
   });
@@ -192,10 +191,12 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
-    const result = await executeMutation(
-      () => updateMutation({ variables: { input: { ...input, id } } }),
-      () => toastService.error(t('errors.somethingWentWrong')),
-    );
+    let result;
+    try {
+      result = await updateMutation({ variables: { input: { ...input, id } } });
+    } catch {
+      toastService.error(t('errors.somethingWentWrong'));
+    }
     if (!result) return false;
     const payload = result.data?.updateStorageLocation;
     if (payload?.__typename === 'UpdateStorageLocationPayload') {
@@ -206,10 +207,12 @@ export function useStorageLocationManagement(
   };
 
   const deleteLocation = async (id: string) => {
-    const result = await executeMutation(
-      () => deleteMutation({ variables: { input: { id } } }),
-      () => toastService.error(t('errors.somethingWentWrong')),
-    );
+    let result;
+    try {
+      result = await deleteMutation({ variables: { input: { id } } });
+    } catch {
+      toastService.error(t('errors.somethingWentWrong'));
+    }
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
     if (payload?.__typename === 'DeleteStorageLocationPayload') {
@@ -221,10 +224,12 @@ export function useStorageLocationManagement(
   };
 
   const setDefaultLocation = async (id: string) => {
-    const result = await executeMutation(
-      () => setDefaultMutation({ variables: { input: { id } } }),
-      () => toastService.error(t('errors.somethingWentWrong')),
-    );
+    let result;
+    try {
+      result = await setDefaultMutation({ variables: { input: { id } } });
+    } catch {
+      toastService.error(t('errors.somethingWentWrong'));
+    }
     if (!result) return false;
     const payload = result.data?.markStorageLocationAsDefault;
     if (payload?.__typename === 'MarkStorageLocationAsDefaultPayload') {

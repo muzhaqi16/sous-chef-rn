@@ -65,7 +65,7 @@ jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => parseFloat(input) || 0),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Form sub-sections — exercised via their own focused tests.
 jest.mock('#components/molecules/FormInput', () => ({

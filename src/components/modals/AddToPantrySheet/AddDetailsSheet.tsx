@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
 import PagerView from 'react-native-pager-view';

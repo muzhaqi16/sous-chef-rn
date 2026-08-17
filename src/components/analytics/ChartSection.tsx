@@ -49,7 +49,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         <View style={styles.stateContainer}>
           <Icon name="bar-chart-outline" size={40} tone="textSecondary" />
           <Text size="sm" align="center" tone="secondary">
-            {emptyMessage ?? t('pantryAnalytics.noDataAvailable')}
+            {emptyMessage ?? t('labels.noDataAvailable')}
           </Text>
         </View>
       );

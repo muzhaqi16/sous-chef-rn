@@ -64,5 +64,20 @@
     "src/features/profile/screens/PerformanceDashboard.tsx",
     "src/features/recipes/components/IngredientMatchRow.tsx",
     "src/features/shoppingList/components/CollaboratorMemberCard.tsx"
-  ]
+  ],
+  "isolatedLeaves": {
+    "src/components/molecules/ListItem.tsx": [
+      "ListItemTitle",
+      "ListItemSubtitle",
+      "ListItemSubtitleSlot"
+    ],
+    "src/components/molecules/BaseItemCard/BaseItemCard.tsx": ["CardSurface"],
+    "src/features/recipes/components/IngredientMatchRow.tsx": [
+      "AvailabilityBadge"
+    ],
+    "src/components/organisms/home/HomeInviteCard.tsx": [
+      "InviteSurface",
+      "InviteStatusBadge"
+    ]
+  }
 }

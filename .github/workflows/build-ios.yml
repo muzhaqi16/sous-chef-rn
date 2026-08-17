@@ -125,6 +125,15 @@ jobs:
           PROVISIONING_PROFILE_SPECIFIER="souschef-appstore-dist" \
           archive
 
+      # A third-party credential inside the shipped bundle is readable by anyone
+      # who obtains the app; rotating it does not change that. Runs against the
+      # ARTIFACT with the same .env the build used, and fails if it finds no
+      # bundle at all — a moved output must not read as clean.
+      - name: Check no third-party credential is in the bundle
+        run: |
+          node scripts/check-bundled-secrets.mjs \
+            "$RUNNER_TEMP/SousChefRN.xcarchive/Products/Applications/SousChefRN.app/main.jsbundle"
+
       - name: export ipa
         run: |
           EXPORT_OPTS_PATH=$RUNNER_TEMP/ExportOptions.plist

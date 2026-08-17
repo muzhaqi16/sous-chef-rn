@@ -217,14 +217,24 @@ describe('formatQuantityBreakdown', () => {
     });
     expect(result).toBeNull();
   });
-  it('formats total content units', () => {
+  it('renders the unit label the server gave, without pluralising it', () => {
+    // This used to append a literal "s" for any count but 1. That is English
+    // pluralisation applied to a label that is not English — "2 lattinas" in
+    // Italian — and it was wrong even in English the moment the unit was a
+    // symbol: "15 kgs".
+    //
+    // `Unit.symbol` is non-null in the schema and is preferred here, so the
+    // symbol is what renders in practice, and symbols are not pluralised
+    // ("15 kg"). Pluralising the `name` fallback correctly would need a plural
+    // form per unit per language, which the API does not expose — see the note
+    // in `formatQuantityBreakdown`.
     const result = formatQuantityBreakdown({
       fullPackages: 1,
       looseContentUnits: 3,
       contentUnit: { name: 'can', symbol: 'can' },
       totalContentUnits: 15,
     });
-    expect(result).toBe('15 cans');
+    expect(result).toBe('15 can');
   });
   it('handles singular unit', () => {
     const result = formatQuantityBreakdown({

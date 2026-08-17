@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkRecipeAsCookedDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeIngredientMatching } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { toastService } from '#/services/toastService';
-import {
-  executeMutation,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { logger } from '#/utils/environment';
@@ -52,18 +49,17 @@ export function useRecipeCookingActions({
    */
   const fireMarkCooked = async (vars: FireMarkCookedVars) => {
     const id = generateEntityId();
-    const result = await executeMutation(
-      () =>
-        markRecipeAsCookedMutation({
-          variables: { input: { ...vars, id } },
-          context: { localFirst: true },
-        }),
-      error => {
-        // Report only — a throw classifies as 'rejected' below and every
-        // caller toasts on that outcome; toasting here too would double up.
-        errorService.reportError(error, { operation: 'markRecipeAsCooked' });
-      },
-    );
+    let result;
+    try {
+      result = await markRecipeAsCookedMutation({
+        variables: { input: { ...vars, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      // Report only — a throw classifies as 'rejected' below and every
+      // caller toasts on that outcome; toasting here too would double up.
+      errorService.reportError(error, { operation: 'markRecipeAsCooked' });
+    }
 
     // Replay diagnostics: `converged: true` means this client-minted cooking-log
     // id already existed (an idempotent replay), not a fresh cook.

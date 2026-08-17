@@ -1,21 +1,82 @@
 import { useMutation } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import {
   safeEvictMany,
   type ConnectionData,
 } from '#/apollo/utils/cacheUpdaters';
 import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+
+/**
+ * Cache side of a batch move-to-pantry: drop the moved rows from the purchased
+ * connection variant, decrement the list counters, and evict the entities.
+ *
+ * Module-level rather than inlined into the mutation's `update` because its body
+ * contains `?.` / `||` / `!` value blocks, and the React Compiler bails out of
+ * the entire hook when one appears inside a try/catch — leaving the caller's try
+ * body a single plain call. See scripts/probe-compiler-try-forms.mjs.
+ */
+function applyBatchMoveCacheUpdate(
+  cache: ApolloCache,
+  currentListId: string,
+  movedItems: { shoppingListItemId: string }[],
+): void {
+  const movedCount = movedItems.length;
+  if (movedCount === 0) return;
+
+  const movedIds = new Set(movedItems.map(item => item.shoppingListItemId));
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: currentListId,
+  });
+  if (!parentCacheId) return;
+
+  // Single cache.modify: remove from purchased variant only + update counters
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      itemsConnection(
+        existing: ConnectionData | undefined,
+        { readField, storeFieldName },
+      ) {
+        if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
+          return existing;
+
+        return {
+          ...existing,
+          edges: existing.edges.filter(
+            edge => !movedIds.has(readField<string>('id', edge?.node)!),
+          ),
+          totalCount: Math.max(0, (existing.totalCount || 0) - movedCount),
+        };
+      },
+      totalItems(existing: number = 0) {
+        return Math.max(0, existing - movedCount);
+      },
+      completedItems(existing: number = 0) {
+        return Math.max(0, existing - movedCount);
+      },
+    },
+  });
+
+  // Evict all moved items from cache
+  safeEvictMany(
+    cache,
+    movedItems.map(item => ({
+      typename: 'ShoppingListItem',
+      id: item.shoppingListItemId,
+    })),
+  );
+}
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -44,60 +105,13 @@ export function useBatchMoveToPantry({
           return;
         const { movedItems } = payload;
 
-        executeCacheUpdate(() => {
-          const movedCount = movedItems.length;
-          if (movedCount === 0) return;
-
-          const movedIds = new Set(
-            movedItems.map(item => item.shoppingListItemId),
-          );
-
-          const parentCacheId = cache.identify({
-            __typename: 'ShoppingList',
-            id: currentListId,
+        try {
+          applyBatchMoveCacheUpdate(cache, currentListId, movedItems);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for batch move to pantry:',
           });
-          if (!parentCacheId) return;
-
-          // Single cache.modify: remove from purchased variant only + update counters
-          cache.modify({
-            id: parentCacheId,
-            fields: {
-              itemsConnection(
-                existing: ConnectionData | undefined,
-                { readField, storeFieldName },
-              ) {
-                if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
-                  return existing;
-
-                return {
-                  ...existing,
-                  edges: existing.edges.filter(
-                    edge => !movedIds.has(readField<string>('id', edge?.node)!),
-                  ),
-                  totalCount: Math.max(
-                    0,
-                    (existing.totalCount || 0) - movedCount,
-                  ),
-                };
-              },
-              totalItems(existing: number = 0) {
-                return Math.max(0, existing - movedCount);
-              },
-              completedItems(existing: number = 0) {
-                return Math.max(0, existing - movedCount);
-              },
-            },
-          });
-
-          // Evict all moved items from cache
-          safeEvictMany(
-            cache,
-            movedItems.map(item => ({
-              typename: 'ShoppingListItem',
-              id: item.shoppingListItemId,
-            })),
-          );
-        }, 'Cache update failed for batch move to pantry:');
+        }
       },
       onError: error => {
         handleMutationError(error, { operation: 'Batch Move to Pantry' });
@@ -118,13 +132,16 @@ export function useBatchMoveToPantry({
       return;
     }
 
-    const result = await executeMutation(
-      () =>
-        movePurchasedMutation({
-          variables: { input: { shoppingListId: currentListId } },
-        }),
-      'Batch move to pantry error:',
-    );
+    let result;
+    try {
+      result = await movePurchasedMutation({
+        variables: { input: { shoppingListId: currentListId } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Batch move to pantry error:',
+      });
+    }
     if (!result) return;
 
     const payload = result.data?.movePurchasedItemsToPantry;

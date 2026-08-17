@@ -19,13 +19,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Each entry MUST name a real directory under e2e/tests/. A leg
+        # pointing at a path that does not exist runs zero specs; `shoppingList`
+        # (the directory is `shopping-list`) and `onboarding` (no such
+        # directory) were doing exactly that. `recipe` is gone with the specs
+        # that only drove testIDs the app does not render.
         suite:
           - auth
-          - shoppingList
+          - shopping-list
           - pantry
-          - recipe
           - profile
-          - onboarding
 
     steps:
       - name: Checkout code
@@ -73,13 +76,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Each entry MUST name a real directory under e2e/tests/. A leg
+        # pointing at a path that does not exist runs zero specs; `shoppingList`
+        # (the directory is `shopping-list`) and `onboarding` (no such
+        # directory) were doing exactly that. `recipe` is gone with the specs
+        # that only drove testIDs the app does not render.
         suite:
           - auth
-          - shoppingList
+          - shopping-list
           - pantry
-          - recipe
           - profile
-          - onboarding
 
     steps:
       - name: Checkout code

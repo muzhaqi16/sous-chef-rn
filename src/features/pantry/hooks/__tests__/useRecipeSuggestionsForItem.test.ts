@@ -40,7 +40,7 @@ jest.mock('#/services/errorService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (
       fn: () => Promise<void>,

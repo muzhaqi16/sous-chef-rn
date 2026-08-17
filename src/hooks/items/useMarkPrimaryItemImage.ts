@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkPrimaryItemImageDocument } from './useMarkPrimaryItemImage.generated';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertMutationFailure } from './alertMutationFailure';
+import { errorService } from '#/services/errorService';
 
 /**
  * Promotes one of an item's photos to its hero.
@@ -22,13 +22,19 @@ export function useMarkPrimaryItemImage() {
 
   /** Returns whether the photo is now the hero. Alerts on every failure. */
   const markPrimary = async (imageId: string): Promise<boolean> => {
-    const result = await executeMutation(
-      () => markPrimaryItemImage({ variables: { input: { imageId } } }),
-      'Error marking primary item image:',
-    );
+    let result;
+    try {
+      result = await markPrimaryItemImage({
+        variables: { input: { imageId } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Error marking primary item image:',
+      });
+    }
 
     // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
-    if (result === false) {
+    if (!result) {
       alertMutationFailure(t, { keyPrefix: 'itemPhotos.setPrimary' });
       return false;
     }

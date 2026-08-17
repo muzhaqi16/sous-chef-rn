@@ -8,8 +8,8 @@ import {
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
-// Prevent transitive import: compilerSafeWrappers → errorService → telemetry → Environment.getConfig()
-jest.mock('#/utils/compilerSafeWrappers');
+// Prevent transitive import: errorService → telemetry → Environment.getConfig()
+jest.mock('#/utils/finallyHelpers');
 
 // Mock keychain module
 const mockLoadCredentials = jest.fn();

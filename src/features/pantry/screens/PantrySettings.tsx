@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#/utils/iconUtils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { StyleSheet } from 'react-native-unistyles';
@@ -31,10 +31,9 @@ import { errorService } from '#/services/errorService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
-  executeCacheUpdate,
   executeWithLoadingState,
   executeAsyncWithCleanup,
-} from '#/utils/compilerSafeWrappers';
+} from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -253,7 +252,7 @@ export const PantrySettings: React.FC<
     }
 
     if (!selectedHomeId) {
-      alertService.alert(t('labels.error'), t('pantrySettings.noHomeError'));
+      alertService.alert(t('labels.error'), t('errors.noHomeSelected'));
       return;
     }
 
@@ -275,14 +274,18 @@ export const PantrySettings: React.FC<
             tags: ['user-created'],
           };
           const optimisticPantry = buildOptimisticPantry(id, input);
-          executeCacheUpdate(() => {
+          try {
             writeOptimisticPantry(apolloClient.cache, optimisticPantry);
             addPantryToHomeCache(
               apolloClient.cache,
               selectedHomeId,
               optimisticPantry,
             );
-          }, 'Create Pantry (optimistic)');
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Create Pantry (optimistic)',
+            });
+          }
 
           const result = await createPantry({
             variables: { input },
@@ -290,11 +293,13 @@ export const PantrySettings: React.FC<
           });
           const outcome = classifyCreateResult(result);
           if (outcome === 'rejected') {
-            executeCacheUpdate(
-              () =>
-                removeOptimisticPantry(apolloClient.cache, selectedHomeId, id),
-              'Revert rejected Pantry create',
-            );
+            try {
+              removeOptimisticPantry(apolloClient.cache, selectedHomeId, id);
+            } catch (cacheError) {
+              errorService.reportError(cacheError, {
+                operation: 'Revert rejected Pantry create',
+              });
+            }
             // The mutation's onError already alerts on a transport error
             // (`result.error`); alert here only for a resolved error-union
             // payload so exactly one alert fires.
@@ -328,7 +333,7 @@ export const PantrySettings: React.FC<
         alertService.alert(
           t('labels.error'),
           pantryId
-            ? t('pantrySettings.saveFailed')
+            ? t('errors.saveSettingsFailed')
             : t('pantrySettings.createFailed'),
         );
       },

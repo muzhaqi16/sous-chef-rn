@@ -1,4 +1,4 @@
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 // Interpolated keys — the module-level t takes a fallback, not options.
 import { getI18n } from '#/i18n/config';
 import { alertService } from '#/services/alertService';

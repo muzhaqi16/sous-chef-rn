@@ -100,17 +100,17 @@ describe('comma-typed decimal price', () => {
       .withTimeout(TIMEOUTS.DEFAULT);
     await element(by.id('edit-item-submit-button')).tap();
 
-    // KNOWN GAP — this spec is not yet trustworthy end to end.
+    // Assert on the price field, not on `edit-item-modal`.
     //
-    // `edit-item-modal` is passed to the modal wrapper as a prop but does not
-    // reach a matchable element, so asserting `.not.toBeVisible()` on it passed
-    // VACUOUSLY while the editor was still open and nothing had been saved.
-    // Waiting for the price field to disappear is the honest check.
+    // `edit-item-modal` lands on FormModal's full-screen container view, and
+    // Detox counts an obscured element as not visible — so `.not.toBeVisible()`
+    // on it was satisfied while the editor was still open and nothing had been
+    // saved. The price field was just typed into, so it is proven matchable and
+    // its disappearance means the editor actually closed.
     //
-    // With this in place the run fails at the submit: the field shows `4,99`
-    // (confirmed on screen, so the comma is accepted) but the editor never
-    // closes, i.e. `edit-item-submit-button` is not reaching the header's ✓.
-    // Verify that testID actually lands on the button before trusting a pass.
+    // KNOWN GAP — with this check in place the run fails at the submit: the
+    // field shows `4,99` (confirmed on screen, so the comma is accepted) but
+    // the editor does not close. Diagnose the submit before trusting a pass.
     await waitFor(element(by.id('edit-item-price-input')))
       .not.toBeVisible()
       .withTimeout(TIMEOUTS.NETWORK);

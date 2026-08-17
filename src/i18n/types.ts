@@ -1,29 +1,26 @@
-import type { TFunction } from 'i18next';
+import type { TranslateFn } from './index';
 
 /**
- * The canonical type for a translate function — the `t` returned by
- * `useTranslation()` from `react-i18next`, bound to the app's single
- * `'translation'` namespace (see `src/i18n/config.ts`).
+ * The canonical type for a translate function — what both `useTranslation()`
+ * and the module-scope `t` return (see `src/i18n/index.ts`).
  *
  * Use this anywhere a `t` is passed across a function boundary (schema
  * builders, option-list factories, formatters) instead of hand-writing a
- * signature.
+ * signature. Several hand-rolled spellings of it made a single concept
+ * unreviewable, and the loosest of them — `(key: string, options?:
+ * Record<string, unknown>) => string` — hid a real bug: `Record<string,
+ * unknown>` accepts `count: number | null | undefined`, and i18next picks the
+ * plural form from `count`, so a null silently selected the wrong one.
  *
- * **Why not `(key: string, options?: Record<string, unknown>) => string`?**
- * That shape is looser, and having several hand-rolled spellings of it made a
- * single concept unreviewable. Two concrete wins:
+ * **What this does NOT do: validate keys.** Key existence is enforced by
+ * `__tests__/i18n/keysExist.test.ts` rather than by types.
  *
- * - **`Record<string, unknown>` is not `TOptions`.** It permits arbitrary
- *   option keys while rejecting nothing, so misspelled options pass silently.
- * - **It drops i18next's return-type narrowing** for `defaultValue` and
- *   `returnObjects`; a fixed `=> string` claims a guarantee the real function
- *   does not always make.
- *
- * **What this does NOT do: validate keys.** Without an i18next
- * `CustomTypeOptions` augmentation, `ParseKeys` resolves to plain `string`, so
- * `t('typo.notAKey')` compiles clean here and renders the raw dot-path at
- * runtime. That augmentation was measured and rejected — it caught zero real
- * bugs while costing ~5.4x type instantiations and roughly doubling check time.
- * Key existence is enforced instead by `__tests__/i18n/keysExist.test.ts`.
+ * An i18next `CustomTypeOptions` augmentation would give compile-time key
+ * checking, and was measured and rejected: zero real bugs caught, ~5.4x type
+ * instantiations, roughly double the check time. **That verdict is disputed** —
+ * `memory/i18n-typed-keys-spike.md` records a separate spike concluding typed
+ * keys were viable at zero tsc cost using `ParseKeys`. The two were measuring
+ * different things and neither is currently reproducible; re-measure before
+ * citing either.
  */
-export type Translate = TFunction<'translation'>;
+export type Translate = TranslateFn;

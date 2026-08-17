@@ -23,7 +23,7 @@ jest.mock('#/utils/errors/versionConflict', () => ({
   getVersionConflictMessage: jest.fn(() => 'Item was updated by someone else'),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 beforeEach(() => {
   jest.clearAllMocks();

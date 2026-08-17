@@ -1,6 +1,6 @@
 import React from 'react';
 import { logger } from '#/utils/environment';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, Image, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';

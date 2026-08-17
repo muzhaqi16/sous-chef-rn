@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { readExpiryReminderFields } from '#utils/notifications/notificationHelpers';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
 import {
@@ -97,15 +97,20 @@ export const NotificationActionHandler: React.FC<
     )?.pantryItemId;
     if (!pantryItemId) return null;
 
-    const result = await executeQuery(
-      () =>
-        client.query({
-          query: GetExpirationNotificationsForPantryItemDocument,
-          variables: { pantryItemId },
-          fetchPolicy: 'network-only',
-        }),
-      'resolveExpirationNotificationLink',
-    );
+    let result;
+    try {
+      result = await client.query({
+        query: GetExpirationNotificationsForPantryItemDocument,
+        variables: { pantryItemId },
+        fetchPolicy: 'network-only',
+      });
+    } catch (error) {
+      // Leaving `result` undefined resolves to no link, which is the correct
+      // outcome when the lookup cannot be made.
+      errorService.reportError(error, {
+        operation: 'resolveExpirationNotificationLink',
+      });
+    }
 
     const edges = result?.data?.me?.expirationNotificationsConnection.edges;
     const match = edges?.find(

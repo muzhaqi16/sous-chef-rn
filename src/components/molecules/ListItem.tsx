@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, TextStyle } from 'react-native';
 import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -53,9 +53,6 @@ const ListItemComponent: React.FC<ListItemProps> = ({
   const { t } = useTranslation();
   const overrideIconColor = themeColors?.textSecondary;
 
-  // Select variants based on purchased state
-  styles.useVariants({ purchased: isPurchased });
-
   // When children are provided, render them directly as content
   if (children) {
     return (
@@ -85,24 +82,21 @@ const ListItemComponent: React.FC<ListItemProps> = ({
         </View>
       )}
       <View style={styles.content}>
-        <Text
-          style={styles.title}
+        <ListItemTitle
+          purchased={isPurchased}
           numberOfLines={titleNumberOfLines}
-          ellipsizeMode="tail"
         >
           {title}
-        </Text>
+        </ListItemTitle>
         {!!subtitle &&
           (typeof subtitle === 'string' ? (
-            <Text
-              style={styles.subtitle}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-            >
+            <ListItemSubtitle purchased={isPurchased}>
               {subtitle}
-            </Text>
+            </ListItemSubtitle>
           ) : (
-            <View style={styles.subtitleContainer}>{subtitle}</View>
+            <ListItemSubtitleSlot purchased={isPurchased}>
+              {subtitle}
+            </ListItemSubtitleSlot>
           ))}
       </View>
       {!!badge && <Badge variant={badge.variant}>{badge.text}</Badge>}
@@ -153,6 +147,55 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 
 // React Compiler memoizes JSX at the parent call site, so React.memo is
 // redundant on non-FlashList components. Per CLAUDE.md / project memory.
+/**
+ * The three `purchased`-variant surfaces, each owning its own `useVariants`
+ * call.
+ *
+ * Unistyles' variant transform makes the React Compiler bail out of whatever
+ * function contains the call ("Could not find binding for declaration"), and a
+ * bailout is silent — the function simply stops being memoized. `ListItem`
+ * renders every row of the shopping list, so it is the one that must stay
+ * compiled; these leaves are cheap enough that their own bailout costs nothing.
+ * See `node scripts/check-compiler-bailouts.mjs --list`, which names the
+ * bailing function precisely so this distinction is visible.
+ */
+const ListItemTitle: React.FC<{
+  purchased: boolean;
+  numberOfLines: number;
+  children: React.ReactNode;
+}> = ({ purchased, numberOfLines, children }) => {
+  styles.useVariants({ purchased });
+  return (
+    <Text
+      style={styles.title}
+      numberOfLines={numberOfLines}
+      ellipsizeMode="tail"
+    >
+      {children}
+    </Text>
+  );
+};
+
+const ListItemSubtitle: React.FC<{
+  purchased: boolean;
+  children: React.ReactNode;
+}> = ({ purchased, children }) => {
+  styles.useVariants({ purchased });
+  return (
+    <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">
+      {children}
+    </Text>
+  );
+};
+
+const ListItemSubtitleSlot: React.FC<{
+  purchased: boolean;
+  children: React.ReactNode;
+}> = ({ purchased, children }) => {
+  styles.useVariants({ purchased });
+  return <View style={styles.subtitleContainer}>{children}</View>;
+};
+
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({

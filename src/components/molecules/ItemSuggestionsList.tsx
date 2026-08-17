@@ -5,7 +5,7 @@ import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 
 interface ItemSuggestionsListProps {

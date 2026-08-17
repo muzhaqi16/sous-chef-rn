@@ -7,6 +7,7 @@
 
 import { BaseScreen } from './BaseScreen';
 import { element, by, waitFor, expect } from 'detox';
+import { expectDisappearsAfter } from '../helpers/assertions';
 
 export class ShoppingListScreen extends BaseScreen {
   protected screenID = 'shopping-list-screen';
@@ -126,14 +127,17 @@ export class ShoppingListScreen extends BaseScreen {
     await element(by.id('add-shopping-item-add-manually-button')).tap();
 
     // Wait for add item screen to appear
-    await waitFor(element(by.id('add-shopping-item-modal'))).toBeVisible().withTimeout(5000);
+    await waitFor(element(by.id('add-shopping-item-modal')))
+      .toBeVisible()
+      .withTimeout(5000);
 
     // Fill in item details - use replaceText to avoid Android stylus popup
     const nameInput = element(by.id('add-shopping-item-name-input'));
     await nameInput.replaceText(name);
 
     if (quantity !== undefined) {
-      const quantityStr = typeof quantity === 'number' ? quantity.toString() : quantity;
+      const quantityStr =
+        typeof quantity === 'number' ? quantity.toString() : quantity;
       const quantityInput = element(by.id('add-shopping-item-quantity-input'));
 
       // Use replaceText instead of clearAndType for better reliability
@@ -172,11 +176,14 @@ export class ShoppingListScreen extends BaseScreen {
       await element(by.text('OK')).tap();
       throw new Error(
         `Failed to add shopping list item: Invalid quantity "${quantity}". ` +
-        `Expected formats: "1", "1.5", "1/4", or "1 1/4"`
+          `Expected formats: "1", "1.5", "1/4", or "1 1/4"`,
       );
     } catch (error) {
       // If it's our thrown error, re-throw it
-      if (error instanceof Error && error.message.includes('Failed to add shopping list item')) {
+      if (
+        error instanceof Error &&
+        error.message.includes('Failed to add shopping list item')
+      ) {
         throw error;
       }
       // Otherwise, error modal didn't appear (good!), continue
@@ -228,15 +235,19 @@ export class ShoppingListScreen extends BaseScreen {
     await this.getItemByIndex(index).tap();
 
     // Wait for edit modal
-    await waitFor(element(by.id('edit-item-modal'))).toBeVisible().withTimeout(3000);
+    await waitFor(element(by.id('edit-item-modal')))
+      .toBeVisible()
+      .withTimeout(3000);
 
     await this.clearAndType('edit-item-name-input', newName);
-    await this.tapByID('edit-item-submit-button');
 
-    // Wait for modal to close
-    await waitFor(element(by.id('edit-item-modal')))
-      .not.toBeVisible()
-      .withTimeout(3000);
+    // The editor is gone when its name field is gone. That field was just typed
+    // into, so it is proven matchable — a disappearance check against it cannot
+    // pass because the matcher found nothing, which is how `edit-item-modal`
+    // reported a still-open editor as closed.
+    await expectDisappearsAfter('edit-item-name-input', () =>
+      this.tapByID('edit-item-submit-button'),
+    );
   }
 
   /**

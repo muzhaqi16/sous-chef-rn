@@ -13,11 +13,11 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { UpdateRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { RecipeStatus } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function usePublishRecipe() {
   const { t } = useTranslation();
@@ -59,19 +59,20 @@ export function usePublishRecipe() {
       }
     };
 
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: {
-            input: {
-              id: recipeId,
-              status: published ? RecipeStatus.Published : RecipeStatus.Draft,
-            },
-          },
-          context: { localFirst: true },
-        }),
-      'Publish Recipe error:',
-    );
+    // Resolved before the try — a ternary inside a try body makes the React
+    // Compiler bail out of this hook.
+    const status = published ? RecipeStatus.Published : RecipeStatus.Draft;
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { id: recipeId, status } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Publish Recipe error:',
+      });
+    }
     if (!result) {
       revert(); // threw before resolving
       return false;

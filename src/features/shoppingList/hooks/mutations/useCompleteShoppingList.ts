@@ -12,7 +12,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
@@ -24,7 +24,7 @@ import {
 import { ListStatus } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
@@ -69,20 +69,24 @@ export function useCompleteShoppingList() {
       'Complete Shopping List',
     );
 
-    const result = await executeMutation(
-      () =>
-        completeMutation({
-          variables: {
-            input: {
-              id,
-              completedShopDate: now,
-              ...(totalCost !== undefined && { totalCost }),
-            },
-          },
-          context: { localFirst: true },
-        }),
-      'Complete Shopping List error:',
-    );
+    let result;
+    const completeMutationOptions = {
+      variables: {
+        input: {
+          id,
+          completedShopDate: now,
+          ...(totalCost !== undefined && { totalCost }),
+        },
+      },
+      context: { localFirst: true },
+    };
+    try {
+      result = await completeMutation(completeMutationOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Complete Shopping List error:',
+      });
+    }
 
     if (!result) {
       // mutate() threw (non-queueable transport failure) — the visible revert is
@@ -109,14 +113,17 @@ export function useCompleteShoppingList() {
       'Reactivate Shopping List',
     );
 
-    const result = await executeMutation(
-      () =>
-        reactivateMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Reactivate Shopping List error:',
-    );
+    let result;
+    try {
+      result = await reactivateMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Reactivate Shopping List error:',
+      });
+    }
 
     if (!result) {
       revert();

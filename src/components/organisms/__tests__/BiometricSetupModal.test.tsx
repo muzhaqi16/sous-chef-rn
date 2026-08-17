@@ -58,7 +58,7 @@ const mockGetBiometricInfo = mockAuthService.getBiometricInfo;
 const mockStoreCredentials = mockAuthService.storeCredentials;
 const mockCheckStoredCredentials = mockAuthService.checkStoredCredentials;
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: async <T,>(
     fn: () => Promise<T>,
     onError?: string | ((error: unknown) => void | Promise<void>),

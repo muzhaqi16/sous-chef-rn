@@ -20,9 +20,8 @@ import {
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import type { ShoppingListItemUpdate } from './types';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
@@ -101,19 +100,21 @@ export function useUpdateShoppingItem({
       client.cache.modify({ id: cacheId, fields: revertFields });
     };
 
-    const result = await executeMutation(
-      () =>
-        updateItemMutation({
-          variables: {
-            input: { ...updates, id: itemId, version: snapshot.version },
-          },
-          // Local-first: queue on an API-down-while-online failure (idempotent
-          // field update by real id → replays via SyncShoppingListItem).
-          context: { localFirst: true },
-        }),
-      // Fallback for a non-Apollo throw; Apollo errors resolve and are classified below.
-      () => revertSnapshot(),
-    );
+    let result;
+    try {
+      result = await updateItemMutation({
+        variables: {
+          input: { ...updates, id: itemId, version: snapshot.version },
+        },
+        // Local-first: queue on an API-down-while-online failure (idempotent
+        // field update by real id → replays via SyncShoppingListItem).
+        context: { localFirst: true },
+      });
+    } catch {
+      // Fallback for a non-Apollo throw; Apollo errors resolve and are
+      // classified below.
+      revertSnapshot();
+    }
     if (!result) return false;
 
     // Classify the resolved result and revert on a real rejection. 'queued'

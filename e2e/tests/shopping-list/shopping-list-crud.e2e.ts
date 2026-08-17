@@ -9,10 +9,14 @@
 
 import { element, by, waitFor, expect } from 'detox';
 import { ShoppingListScreen } from '../../screens';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
+import {
+  bootstrapAuthenticatedSession,
+  relaunchToHomeTab,
+} from '../../helpers';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
 import { tapByID } from '../../helpers/actions';
+import { expectDisappearsAfter } from '../../helpers/assertions';
 
 describe('Shopping List CRUD', () => {
   const shoppingListScreen = new ShoppingListScreen();
@@ -79,14 +83,22 @@ describe('Shopping List CRUD', () => {
       // Try to submit without name
       await tapByID('add-item-submit-button');
 
-      // Dismiss any error alert
+      // Whatever shape the complaint takes, the invariant is that the item was
+      // NOT created: the form is still up. Without this, a submit that silently
+      // saved an unnamed item passed the validation test.
+      await waitFor(element(by.id('add-item-modal')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+
+      // Dismiss the error alert if this build surfaces one.
       try {
         await waitFor(element(by.text('Error')))
           .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+          .withTimeout(TIMEOUTS.QUICK);
         await element(by.text('OK')).tap();
       } catch {
-        // Validation may prevent submission without showing alert
+        // Some builds block submission without an alert; the modal check above
+        // is the assertion either way.
       }
 
       // Close modal
@@ -122,13 +134,12 @@ describe('Shopping List CRUD', () => {
       await nameInput.clearText();
       await nameInput.typeText(originalName + ' Edited');
 
-      // Save
-      await tapByID('edit-item-submit-button');
-
-      // Wait for modal to close
-      await waitFor(element(by.id('edit-item-modal')))
-        .not.toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+      // Save. The editor is gone when its name field is gone — that field was
+      // just typed into, so it is proven matchable, and the check cannot pass
+      // because the matcher found nothing.
+      await expectDisappearsAfter('edit-item-name-input', () =>
+        tapByID('edit-item-submit-button'),
+      );
 
       // Verify change
       await waitFor(element(by.text(originalName + ' Edited')))
@@ -153,7 +164,9 @@ describe('Shopping List CRUD', () => {
 
       // Increment quantity
       const incrementButton = element(by.id('quantity-increment'));
-      await waitFor(incrementButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(incrementButton)
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       await incrementButton.tap();
 
       await tapByID('quantity-confirm');

@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Button } from '#/components/base/Button';
-import { t as tGlobal } from '#/i18n/t';
+import { t as tGlobal } from '#/i18n';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -18,7 +18,6 @@ import {
 } from '#operations/auth/auth.generated';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
@@ -82,76 +81,78 @@ async function performVerificationImpl({
     setErrorMessage('');
   }
 
-  await executeMutation(
-    async () => {
-      logger.info('Attempting email verification', { userId });
+  // Held in a local runner so the try below contains a single plain call — the
+  // React Compiler bails out when a `?.`/`??`/ternary sits inside a try body.
+  // The catch still covers the whole body.
+  const runVerification = async () => {
+    logger.info('Attempting email verification', { userId });
 
-      const result = await verifyEmail({
-        variables: { input: { code: token } },
-      });
+    const result = await verifyEmail({
+      variables: { input: { code: token } },
+    });
 
-      const payload = result.data?.verifyEmail;
-      const topLevelError = getTopLevelGraphQLError(result.error);
+    const payload = result.data?.verifyEmail;
+    const topLevelError = getTopLevelGraphQLError(result.error);
 
-      // A link opened twice — from the mail app and then from the browser, or
-      // simply tapped again — is a verified address, not a failure. The API
-      // reports it on whichever channel the refusal came from.
-      const alreadyVerified =
-        (payload &&
-          'code' in payload &&
-          payload.code === ErrorCode.EmailAlreadyVerified) ||
-        topLevelError?.code === TopLevelErrorCode.EmailAlreadyVerified;
+    // A link opened twice — from the mail app and then from the browser, or
+    // simply tapped again — is a verified address, not a failure. The API
+    // reports it on whichever channel the refusal came from.
+    const alreadyVerified =
+      (payload &&
+        'code' in payload &&
+        payload.code === ErrorCode.EmailAlreadyVerified) ||
+      topLevelError?.code === TopLevelErrorCode.EmailAlreadyVerified;
 
-      if (payload?.__typename === 'VerifyEmailPayload' || alreadyVerified) {
-        logger.info('Email verification successful', { alreadyVerified });
+    if (payload?.__typename === 'VerifyEmailPayload' || alreadyVerified) {
+      logger.info('Email verification successful', { alreadyVerified });
 
-        // A patch, not a spread of the whole user: the store's updateUser
-        // assigns the given fields onto the existing user, and re-assigning
-        // every field would republish an identical object on each call.
-        updateUser({ emailVerified: true });
+      // A patch, not a spread of the whole user: the store's updateUser
+      // assigns the given fields onto the existing user, and re-assigning
+      // every field would republish an identical object on each call.
+      updateUser({ emailVerified: true });
 
-        setVerificationResult('success');
-
-        toast({
-          message: tGlobal('auth.emailVerifiedToast'),
-          type: 'success',
-        });
-      } else {
-        // A throttled request says how long to wait; the server's raw
-        // "Maximum 10 requests per 3600 seconds" text is not a user message.
-        if (isRateLimitError(result.error)) {
-          throw new Error(getRateLimitMessage(result.error));
-        }
-        // Auth failures now arrive as top-level GraphQL errors, not an
-        // AuthError union variant.
-        if (topLevelError) {
-          throw new Error(
-            errorService.getUserFriendlyMessage(
-              topLevelError.code,
-              topLevelError.message,
-            ),
-          );
-        }
-        const message =
-          payload && 'message' in payload ? payload.message : null;
-        throw new Error(message ?? tGlobal('errors.verificationFailed'));
-      }
-      return result;
-    },
-    (error: unknown) => {
-      const err = error as Error;
-      logger.error('Email verification failed', { error });
-
-      const errorMsg = err.message || tGlobal('auth.verificationFailedExpired');
-      setErrorMessage(errorMsg);
-      setVerificationResult('error');
+      setVerificationResult('success');
 
       toast({
-        message: errorMsg,
-        type: 'error',
+        message: tGlobal('auth.emailVerifiedToast'),
+        type: 'success',
       });
-    },
-  );
+    } else {
+      // A throttled request says how long to wait; the server's raw
+      // "Maximum 10 requests per 3600 seconds" text is not a user message.
+      if (isRateLimitError(result.error)) {
+        throw new Error(getRateLimitMessage(result.error));
+      }
+      // Auth failures now arrive as top-level GraphQL errors, not an
+      // AuthError union variant.
+      if (topLevelError) {
+        throw new Error(
+          errorService.getUserFriendlyMessage(
+            topLevelError.code,
+            topLevelError.message,
+          ),
+        );
+      }
+      const message = payload && 'message' in payload ? payload.message : null;
+      throw new Error(message ?? tGlobal('errors.verificationFailed'));
+    }
+  };
+
+  try {
+    await runVerification();
+  } catch (error: unknown) {
+    const err = error as Error;
+    logger.error('Email verification failed', { error });
+
+    const errorMsg = err.message || tGlobal('auth.verificationFailedExpired');
+    setErrorMessage(errorMsg);
+    setVerificationResult('error');
+
+    toast({
+      message: errorMsg,
+      type: 'error',
+    });
+  }
 
   setBusy(false);
 }

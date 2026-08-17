@@ -9,31 +9,31 @@ import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
-const CRITICAL_CACHE_KEY = 'apollo-cache-v1-critical';
-const DEFERRED_CACHE_KEY = 'apollo-cache-v1-deferred';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
 const CURRENT_CACHE_VERSION = getVersion(); // Purge stale cache on every app version bump
 
 /**
- * Typenames restored synchronously at startup (~30 entities, ~5KB).
- * Everything else is deferred to requestIdleCallback.
+ * Written by a previous scheme that split the cache into a small "critical"
+ * blob (ROOT_QUERY + User/Home/settings) restored at startup and a "deferred"
+ * blob restored from `requestIdleCallback`.
+ *
+ * The deferral never ran: the client read both blobs eagerly and merged them,
+ * so the split only added a second MMKV read and a second `JSON.parse` to every
+ * cold start. It could not have run as designed either — `ROOT_QUERY` sat in
+ * the critical blob while the entities its `__ref`s point at sat in the
+ * deferred one, so a critical-only restore leaves every list query's cache read
+ * incomplete and Apollo returns no data for it. Restoring the "fast" half
+ * would have painted nothing and refetched everything, which is the opposite of
+ * why the cache is persisted.
+ *
+ * The names remain so `load()` can migrate an install that still has data under
+ * them, and so `clear()` removes them at session end rather than stranding the
+ * previous person's entities on disk.
  */
-const CRITICAL_TYPENAMES = new Set([
-  'User',
-  'Home',
-  'NotificationPreferences',
-  'UserProfile',
-  'UserSettings',
-  'DietaryProfile',
-]);
-
-/** Special Apollo root keys that must always be in the critical partition */
-const CRITICAL_ROOT_KEYS = new Set([
-  'ROOT_QUERY',
-  'ROOT_MUTATION',
-  'ROOT_SUBSCRIPTION',
-  '__META',
-]);
+const LEGACY_SPLIT_KEYS = [
+  'apollo-cache-v1-critical',
+  'apollo-cache-v1-deferred',
+];
 
 /**
  * Custom Apollo cache persistence using MMKV
@@ -94,7 +94,6 @@ function hasCacheChanged(
 class ApolloCachePersistence {
   private saveTimeout: ReturnType<typeof setTimeout> | null = null;
   private idleCallbackId: number | null = null;
-  private restoreIdleCallbackId: number | null = null;
   private readonly debounceMs = 3000; // Wait 3s before saving to reduce writes during burst operations
   private paused = false;
   private pendingWhilePaused = false;
@@ -125,6 +124,8 @@ class ApolloCachePersistence {
       // Load cache data
       const cacheString = storage.getString(CACHE_STORAGE_KEY);
       if (!cacheString) {
+        const migrated = this.loadLegacySplitCache();
+        if (migrated) return migrated;
         if (__DEV__) {
           logger.debug('📦 Cache: No persisted cache found');
         }
@@ -147,150 +148,30 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Load only critical entities (ROOT_QUERY, User, Home, settings) from storage.
-   * Returns null if no split-key cache exists (triggers migration fallback).
-   */
-  loadCritical(): NormalizedCacheObject | null {
-    if (!isStorageReady()) return null;
-    try {
-      const storedVersion = storage.getString(CACHE_VERSION_KEY);
-      if (storedVersion !== CURRENT_CACHE_VERSION) {
-        return null; // Caller falls back to load() for migration
-      }
-
-      const cacheString = storage.getString(CRITICAL_CACHE_KEY);
-      if (!cacheString) return null;
-
-      const cache = JSON.parse(cacheString) as NormalizedCacheObject;
-
-      if (__DEV__) {
-        logger.debug(
-          `📦 Cache: Loaded ${
-            Object.keys(cache).length
-          } critical entities from storage`,
-        );
-      }
-      return cache;
-    } catch (error) {
-      logger.error('📦 Cache: Failed to load critical cache:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Restore bulk persisted entities (PantryItem, ShoppingListItem, Recipe, …)
-   * when the JS thread is idle. Call from the app entry (`App.tsx` useEffect)
-   * after first paint. If the idle callback hasn't fired when a screen mounts,
-   * the cache miss falls back to network — the first page renders fast.
+   * Read a cache left behind by the split-blob scheme, for an install that
+   * upgraded before ever saving under the single key.
    *
-   * Tracked via `restoreIdleCallbackId` so `cancel()` (called on logout) can
-   * abort a pending restore and avoid writing stale entities into a cleared
-   * cache.
+   * Without this the first launch after the upgrade starts from an empty
+   * cache — one extra fetch online, and a blank app for a person who is
+   * offline at that moment. The next save writes the single key and removes
+   * these, so this path runs at most once per install.
    */
-  restoreDeferred(cache: ApolloCache, onComplete?: () => void): void {
-    // Cancel any prior in-flight restore so two calls don't race.
-    if (this.restoreIdleCallbackId != null) {
-      cancelIdleCallback(this.restoreIdleCallbackId);
-      this.restoreIdleCallbackId = null;
+  private loadLegacySplitCache(): NormalizedCacheObject | null {
+    const merged: NormalizedCacheObject = {};
+    let found = false;
+    for (const key of LEGACY_SPLIT_KEYS) {
+      const stored = storage.getString(key);
+      if (!stored) continue;
+      Object.assign(merged, JSON.parse(stored) as NormalizedCacheObject);
+      found = true;
     }
-
-    this.restoreIdleCallbackId = requestIdleCallback(() => {
-      // `cancel()` / `clear()` set the id to null. Bail out before touching
-      // the cache so a logout fired between scheduling and firing doesn't
-      // resurrect stale entities into a cleared cache.
-      // Intentionally do NOT call onComplete here — the cancel was deliberate.
-      if (this.restoreIdleCallbackId == null) return;
-      this.restoreIdleCallbackId = null;
-      const t0 = performance.now();
-      try {
-        const deferred = this.loadDeferred();
-        if (!deferred) return;
-        // cache.restore() is destructive (wipes the EntityStore via init()).
-        // Merge deferred entities with existing cache to avoid losing data.
-        const existing = (cache as InMemoryCache).extract();
-        (cache as InMemoryCache).restore({ ...existing, ...deferred });
-        Telemetry.histogram(
-          'app_apollo_deferred_restore_ms',
-          performance.now() - t0,
-        );
-        logger.info('📦 Apollo: Deferred cache restore complete');
-      } catch (error) {
-        // A corrupt deferred blob shouldn't crash the JS thread — drop it and
-        // let the next save overwrite. Network refetch covers the data.
-        logger.error('📦 Apollo: Deferred cache restore failed:', error);
-        storage.remove(DEFERRED_CACHE_KEY);
-      } finally {
-        onComplete?.();
-      }
-    });
-  }
-
-  /**
-   * Load deferred (bulk) entities from storage.
-   * Called from requestIdleCallback after critical restore.
-   */
-  loadDeferred(): NormalizedCacheObject | null {
-    if (!isStorageReady()) return null;
-    try {
-      // Mirror loadCritical()'s version guard: if a stale deferred blob
-      // survived a partial clear (e.g. crash mid-clear), don't resurrect
-      // entities from an incompatible schema.
-      const storedVersion = storage.getString(CACHE_VERSION_KEY);
-      if (storedVersion !== CURRENT_CACHE_VERSION) return null;
-
-      const cacheString = storage.getString(DEFERRED_CACHE_KEY);
-      if (!cacheString) return null;
-
-      const t0 = performance.now();
-      const cache = JSON.parse(cacheString) as NormalizedCacheObject;
-      const elapsed = performance.now() - t0;
-
-      if (__DEV__) {
-        logger.debug(
-          `📦 Cache: Deferred restore ${
-            Object.keys(cache).length
-          } entities in ${elapsed.toFixed(1)}ms`,
-        );
-      }
-      return cache;
-    } catch (error) {
-      logger.error('📦 Cache: Failed to load deferred cache:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Partition a normalized cache into critical and deferred buckets.
-   * Single-pass classification by cache key / __typename.
-   */
-  partitionCache(cache: NormalizedCacheObject): {
-    critical: NormalizedCacheObject;
-    deferred: NormalizedCacheObject;
-  } {
-    const critical: NormalizedCacheObject = {};
-    const deferred: NormalizedCacheObject = {};
-
-    for (const key in cache) {
-      if (this.isCriticalKey(key)) {
-        critical[key] = cache[key];
-      } else {
-        deferred[key] = cache[key];
-      }
-    }
-    return { critical, deferred };
-  }
-
-  /**
-   * Determine if a cache key belongs to the critical partition.
-   * Checks root keys first, then extracts typename from the "Type:id" format.
-   */
-  private isCriticalKey(key: string): boolean {
-    if (CRITICAL_ROOT_KEYS.has(key)) return true;
-    // Apollo cache keys follow the pattern "TypeName:id"
-    const colonIndex = key.indexOf(':');
-    if (colonIndex === -1) return false;
-    const typename = key.substring(0, colonIndex);
-    return CRITICAL_TYPENAMES.has(typename);
+    if (!found) return null;
+    logger.info(
+      `📦 Cache: Migrated ${
+        Object.keys(merged).length
+      } entities from the split-blob format`,
+    );
+    return merged;
   }
 
   /**
@@ -379,19 +260,13 @@ class ApolloCachePersistence {
             return;
           }
 
-          const { critical, deferred } = this.partitionCache(cache);
-          const criticalString = JSON.stringify(critical);
-          const deferredString = JSON.stringify(deferred);
+          const cacheString = JSON.stringify(cache);
           const tStringify = performance.now();
-          const sizeKB = Math.round(
-            (criticalString.length + deferredString.length) / 1024,
-          );
+          const sizeKB = Math.round(cacheString.length / 1024);
 
-          storage.set(CRITICAL_CACHE_KEY, criticalString);
-          storage.set(DEFERRED_CACHE_KEY, deferredString);
+          storage.set(CACHE_STORAGE_KEY, cacheString);
           storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
-          // Migration cleanup: remove old single-key format
-          storage.remove(CACHE_STORAGE_KEY);
+          this.removeLegacySplitCache();
           this.lastPersistedSnapshot = cache;
 
           if (__DEV__) {
@@ -399,9 +274,9 @@ class ApolloCachePersistence {
             const stringifyMs = (tStringify - tExtract).toFixed(2);
             const totalMs = (tStringify - t0).toFixed(2);
             logger.debug(
-              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB critical=${
-                Object.keys(critical).length
-              } deferred=${Object.keys(deferred).length}`,
+              `💾 [CachePersist] extract=${extractMs}ms stringify=${stringifyMs}ms total=${totalMs}ms size=${sizeKB}KB entities=${
+                Object.keys(cache).length
+              }`,
             );
             Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
             Telemetry.histogram(
@@ -421,9 +296,8 @@ class ApolloCachePersistence {
   }
 
   /**
-   * Cancel any pending debounced save or in-flight deferred restore.
-   * Call during logout to prevent writing stale cache data, or to abort a
-   * deferred restore before it writes stale entities into a cleared cache.
+   * Cancel any pending debounced save. Call during logout to prevent writing
+   * stale cache data back into storage after it has been wiped.
    */
   cancel(): void {
     if (this.saveTimeout) {
@@ -433,10 +307,6 @@ class ApolloCachePersistence {
     if (this.idleCallbackId != null) {
       cancelIdleCallback(this.idleCallbackId);
       this.idleCallbackId = null;
-    }
-    if (this.restoreIdleCallbackId != null) {
-      cancelIdleCallback(this.restoreIdleCallbackId);
-      this.restoreIdleCallbackId = null;
     }
   }
 
@@ -475,18 +345,12 @@ class ApolloCachePersistence {
     }
 
     try {
-      const { critical, deferred } = this.partitionCache(cache);
-      const criticalString = JSON.stringify(critical);
-      const deferredString = JSON.stringify(deferred);
-      const sizeKB = Math.round(
-        (criticalString.length + deferredString.length) / 1024,
-      );
+      const cacheString = JSON.stringify(cache);
+      const sizeKB = Math.round(cacheString.length / 1024);
 
-      storage.set(CRITICAL_CACHE_KEY, criticalString);
-      storage.set(DEFERRED_CACHE_KEY, deferredString);
+      storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
-      // Migration cleanup: remove old single-key format
-      storage.remove(CACHE_STORAGE_KEY);
+      this.removeLegacySplitCache();
       this.lastPersistedSnapshot = cache;
 
       if (__DEV__) {
@@ -504,14 +368,13 @@ class ApolloCachePersistence {
   clear(): void {
     if (!isStorageReady()) return;
     try {
-      // Cancel all pending saves and deferred restores so nothing writes
-      // stale data back into storage or the cache after we wipe it.
+      // Cancel any pending save so nothing writes stale data back into
+      // storage after we wipe it.
       this.cancel();
 
       storage.remove(CACHE_STORAGE_KEY);
-      storage.remove(CRITICAL_CACHE_KEY);
-      storage.remove(DEFERRED_CACHE_KEY);
       storage.remove(CACHE_VERSION_KEY);
+      this.removeLegacySplitCache();
       this.lastPersistedSnapshot = null;
       if (__DEV__) {
         logger.debug('🧹 Cache: Cleared persisted cache');
@@ -534,45 +397,33 @@ class ApolloCachePersistence {
     try {
       const version = storage.getString(CACHE_VERSION_KEY);
 
-      // Try new split-key format first
-      const criticalString = storage.getString(CRITICAL_CACHE_KEY);
-      const deferredString = storage.getString(DEFERRED_CACHE_KEY);
-
-      if (criticalString || deferredString) {
-        const critical = criticalString
-          ? (JSON.parse(criticalString) as NormalizedCacheObject)
-          : {};
-        const deferred = deferredString
-          ? (JSON.parse(deferredString) as NormalizedCacheObject)
-          : {};
-        const totalSize =
-          (criticalString?.length ?? 0) + (deferredString?.length ?? 0);
+      const cacheString = storage.getString(CACHE_STORAGE_KEY);
+      if (cacheString) {
+        const cache = JSON.parse(cacheString) as NormalizedCacheObject;
         return {
           exists: true,
           version: version || null,
-          sizeKB: Math.round(totalSize / 1024),
-          entityCount:
-            Object.keys(critical).length + Object.keys(deferred).length,
+          sizeKB: Math.round(cacheString.length / 1024),
+          entityCount: Object.keys(cache).length,
         };
       }
 
-      // Fallback to old single-key format
-      const cacheString = storage.getString(CACHE_STORAGE_KEY);
-      if (!cacheString) {
+      // An install that has not saved since upgrading off the split format.
+      const legacy = this.legacySplitCacheStats();
+      if (legacy.bytes > 0) {
         return {
-          exists: false,
-          version: null,
-          sizeKB: null,
-          entityCount: null,
+          exists: true,
+          version: version || null,
+          sizeKB: Math.round(legacy.bytes / 1024),
+          entityCount: legacy.entityCount,
         };
       }
 
-      const cache = JSON.parse(cacheString) as NormalizedCacheObject;
       return {
-        exists: true,
-        version: version || null,
-        sizeKB: Math.round(cacheString.length / 1024),
-        entityCount: Object.keys(cache).length,
+        exists: false,
+        version: null,
+        sizeKB: null,
+        entityCount: null,
       };
     } catch (error) {
       logger.error('📊 Cache: Failed to get stats:', error);
@@ -585,24 +436,41 @@ class ApolloCachePersistence {
     }
   }
 
-  /**
-   * Check if cache is valid and can be restored
-   * PERFORMANCE: Single-pass validation - already optimized (reads both in one go)
-   */
+  /** Whether a cache exists that this app version can restore. */
   isValid(): boolean {
     try {
       const storedVersion = storage.getString(CACHE_VERSION_KEY);
       if (storedVersion !== CURRENT_CACHE_VERSION) return false;
 
-      // Check new split-key format first, then old single-key
-      const hasCritical = storage.getString(CRITICAL_CACHE_KEY) != null;
-      if (hasCritical) return true;
-
-      const hasLegacy = storage.getString(CACHE_STORAGE_KEY) != null;
-      return hasLegacy;
+      if (storage.getString(CACHE_STORAGE_KEY) != null) return true;
+      return LEGACY_SPLIT_KEYS.some(key => storage.getString(key) != null);
     } catch {
       return false;
     }
+  }
+
+  /** Size and entity count still held under the split-format keys. */
+  private legacySplitCacheStats(): { bytes: number; entityCount: number } {
+    let bytes = 0;
+    let entityCount = 0;
+    for (const key of LEGACY_SPLIT_KEYS) {
+      const stored = storage.getString(key);
+      if (!stored) continue;
+      bytes += stored.length;
+      entityCount += Object.keys(
+        JSON.parse(stored) as NormalizedCacheObject,
+      ).length;
+    }
+    return { bytes, entityCount };
+  }
+
+  /**
+   * Drop the split-format blobs. Called after every save (so the migration
+   * runs at most once) and on clear (so a session end does not strand the
+   * previous person's entities under a key nothing reads any more).
+   */
+  private removeLegacySplitCache(): void {
+    for (const key of LEGACY_SPLIT_KEYS) storage.remove(key);
   }
 }
 

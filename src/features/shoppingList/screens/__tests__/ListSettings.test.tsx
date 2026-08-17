@@ -100,7 +100,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     unregisterParentDeletion: jest.fn(),
   },
 }));
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 jest.mock('#utils/ownershipHelpers', () => ({
   isShoppingListOwner: jest.fn(() => true),
   getShoppingListRole: jest.fn(() => 'OWNER'),

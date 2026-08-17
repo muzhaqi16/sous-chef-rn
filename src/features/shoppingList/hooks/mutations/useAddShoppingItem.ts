@@ -16,10 +16,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
-import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
@@ -30,6 +26,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { errorService } from '#/services/errorService';
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
@@ -124,19 +121,25 @@ export function useAddShoppingItem({
     // Write the item into the cache (full entity + connection edge + recomputed
     // list stats) before firing, so it shows immediately and stays if the create
     // is queued offline.
-    executeCacheUpdate(
-      () => addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
-      'Add Shopping List Item (optimistic)',
-    );
+    try {
+      addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        addItemMutation({
-          variables: { input: { shoppingListId: listId, items: [itemInput] } },
-          context: { localFirst: true },
-        }),
-      'Add Shopping List Item error:',
-    );
+    let result;
+    try {
+      result = await addItemMutation({
+        variables: { input: { shoppingListId: listId, items: [itemInput] } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Add Shopping List Item error:',
+      });
+    }
     if (!result) return undefined;
 
     // A non-success payload (e.g. ValidationError / ConflictError) resolves under

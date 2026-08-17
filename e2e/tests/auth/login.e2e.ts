@@ -100,16 +100,18 @@ describe('Login', () => {
 
       await device.takeScreenshot('post-biometric-dismiss');
 
-      // Wait for tab-bar which is present on all main screens.
-      // Use toExist() because FeatureHintOverlay (absoluteFillObject + zIndex:9999)
-      // may cover the screen and block toBeVisible checks.
+      // The one assertion that login actually worked. The screenshot is for
+      // diagnosis; the rethrow is what makes the test able to fail. Swallowing
+      // this meant a login that never completed still passed.
+      // toExist() rather than toBeVisible() because FeatureHintOverlay
+      // (absoluteFillObject + zIndex 9999) can cover the screen.
       try {
         await waitFor(element(by.id('tab-bar')))
           .toExist()
           .withTimeout(20000);
-      } catch {
-        // Take debug screenshot if no main screen appears
+      } catch (error) {
         await device.takeScreenshot('debug-no-main-screen');
+        throw error;
       }
 
       // Dismiss feature hint overlay if it appears (has 2s delay after pantry loads)
@@ -143,13 +145,17 @@ describe('Login', () => {
         // Overlay may not reappear
       }
 
-      // Use toExist for initial check since overlay may block visibility
+      // The one assertion that the session survived the reload — a dropped
+      // session lands back on the landing/login screen with no tab bar, and
+      // swallowing this made that outcome indistinguishable from success.
+      // toExist because the overlay may block visibility.
       try {
         await waitFor(element(by.id('tab-bar')))
           .toExist()
           .withTimeout(15000);
-      } catch {
+      } catch (error) {
         await device.takeScreenshot('debug-no-tabbar-after-reload');
+        throw error;
       }
     });
   });
@@ -175,7 +181,9 @@ describe('Login', () => {
       // Dismiss keyboard using tapReturnKey (more reliable than tapping labels)
       try {
         await element(by.id('login-password-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
     });
 
     it('should show error for empty email', async () => {
@@ -185,7 +193,9 @@ describe('Login', () => {
       // This avoids UIInputSetContainerView blocking submit button taps.
       try {
         await element(by.id('login-password-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
 
       await element(by.id('login-submit-button')).tap();
       await device.takeScreenshot('error-empty-email');
@@ -198,7 +208,9 @@ describe('Login', () => {
       // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-email-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
 
       await element(by.id('login-submit-button')).tap();
       await device.takeScreenshot('error-empty-password');
@@ -212,7 +224,9 @@ describe('Login', () => {
       // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-password-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
 
       await element(by.id('login-submit-button')).tap();
       await device.takeScreenshot('error-invalid-email');
@@ -226,7 +240,9 @@ describe('Login', () => {
       // Dismiss keyboard before tapping submit
       try {
         await element(by.id('login-password-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
 
       await element(by.id('login-submit-button')).tap();
       await waitForNetworkIdle(undefined, TIMEOUTS.NETWORK);
@@ -251,21 +267,12 @@ describe('Login', () => {
 
       await device.takeScreenshot('edge-special-chars');
 
-      // Should stay on login screen (wrong password) or possibly log in
-      try {
-        await loginScreen.waitForScreen(5000);
-      } catch {
-        // If login succeeded, check tab-bar exists (overlay may block visibility)
-        try {
-          await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-            .toBeVisible()
-            .withTimeout(3000);
-          await element(by.id('feature-hint-overlay-dismiss')).tap();
-        } catch {}
-        await waitFor(element(by.id('tab-bar')))
-          .toExist()
-          .withTimeout(TIMEOUTS.DEFAULT);
-      }
+      // This password is not TEST_USER's, so the outcome is not ambiguous: the
+      // server must reject it and the app must stay on the login screen with
+      // the special characters intact. Accepting "still here OR logged in"
+      // meant the test passed either way and proved nothing.
+      await loginScreen.waitForScreen(TIMEOUTS.DEFAULT);
+      await loginScreen.expectErrorMessage();
     });
 
     it('should handle rapid submit button taps', async () => {
@@ -278,7 +285,9 @@ describe('Login', () => {
       // Dismiss keyboard before tapping submit (UIInputSetContainerView blocks taps)
       try {
         await element(by.id('login-password-input')).tapReturnKey();
-      } catch {}
+      } catch {
+        // Keyboard already dismissed — nothing to send a return key to.
+      }
 
       // Rapid taps — first tap may log in and remove the button
       const submitButton = element(by.id('login-submit-button'));
@@ -295,21 +304,20 @@ describe('Login', () => {
 
       await device.takeScreenshot('edge-rapid-taps');
 
-      // Verify we either logged in or are still on login screen (no crash)
+      // The credentials are valid, so extra taps must not prevent the login
+      // from completing — one session, no wedged state. "Logged in OR still on
+      // login" accepted the exact failure the test is named for.
       try {
-        await loginScreen.waitForScreen(2000);
+        await waitFor(element(by.id('feature-hint-overlay-dismiss')))
+          .toBeVisible()
+          .withTimeout(3000);
+        await element(by.id('feature-hint-overlay-dismiss')).tap();
       } catch {
-        // Dismiss overlay before checking tab-bar
-        try {
-          await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-            .toBeVisible()
-            .withTimeout(3000);
-          await element(by.id('feature-hint-overlay-dismiss')).tap();
-        } catch {}
-        await waitFor(element(by.id('tab-bar')))
-          .toExist()
-          .withTimeout(10000);
+        // Hint may not appear (already dismissed, or not on pantry).
       }
+      await waitFor(element(by.id('tab-bar')))
+        .toExist()
+        .withTimeout(TIMEOUTS.NETWORK);
     });
 
     it('should clear error when user starts typing', async () => {
@@ -321,7 +329,9 @@ describe('Login', () => {
       // Dismiss keyboard so errors are visible
       try {
         await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {}
+      } catch {
+        // No autofill bar to dismiss.
+      }
 
       await device.takeScreenshot('edge-clear-error-before-type');
 
@@ -330,7 +340,9 @@ describe('Login', () => {
       // Dismiss keyboard again to see if errors cleared
       try {
         await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {}
+      } catch {
+        // No autofill bar to dismiss.
+      }
 
       await device.takeScreenshot('edge-clear-error-after-type');
 
@@ -349,7 +361,9 @@ describe('Login', () => {
       // Dismiss any iOS autofill suggestions by tapping the title area
       try {
         await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {}
+      } catch {
+        // No autofill bar to dismiss.
+      }
 
       await loginScreen.tapForgotPassword();
 
@@ -366,7 +380,9 @@ describe('Login', () => {
       // Dismiss any iOS autofill suggestions by tapping the title area
       try {
         await element(by.text('Sign in to Sous Chef')).tap();
-      } catch {}
+      } catch {
+        // No autofill bar to dismiss.
+      }
 
       // Tap the sign up link
       await loginScreen.tapSignUp();

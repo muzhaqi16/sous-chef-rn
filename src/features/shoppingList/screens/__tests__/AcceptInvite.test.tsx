@@ -54,7 +54,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/molecules/Header', () => ({
   Header: () => null,
@@ -289,7 +289,7 @@ describe('AcceptInvite', () => {
     jest.clearAllMocks();
     const nav = jest.requireMock('@react-navigation/native');
     nav.useRoute.mockReturnValue({ params: { token: TOKEN } });
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     executeWithLoadingState.mockImplementation(
       makeExecuteWithLoadingStateImpl(),
     );
@@ -576,7 +576,7 @@ describe('AcceptInvite', () => {
 
   it('shows error alert when accept fails', async () => {
     const user = userEvent.setup();
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     executeWithLoadingState.mockImplementationOnce(
       (
         _fn: () => Promise<void>,
@@ -783,7 +783,7 @@ describe('AcceptInvite', () => {
 
   it('shows error alert when decline fails', async () => {
     const user = userEvent.setup();
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     executeWithLoadingState.mockImplementation(
       async (
         _fn: () => Promise<void>,

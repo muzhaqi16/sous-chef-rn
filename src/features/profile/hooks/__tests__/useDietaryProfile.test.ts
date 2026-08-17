@@ -46,7 +46,7 @@ jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
   ),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/errorHandlers', () => ({
   handleMutationError: jest.fn(),

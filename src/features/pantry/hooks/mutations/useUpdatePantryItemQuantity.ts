@@ -25,7 +25,6 @@ import {
 } from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
@@ -113,10 +112,13 @@ export function useUpdatePantryItemQuantity({
         fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
         data,
       });
-    executeCacheUpdate(
-      () => writeItem(optimisticPantryItem),
-      'Update Pantry Item Quantity (optimistic)',
-    );
+    try {
+      writeItem(optimisticPantryItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Update Pantry Item Quantity (optimistic)',
+      });
+    }
 
     updateQuantityMutation({
       variables: {
@@ -138,17 +140,23 @@ export function useUpdatePantryItemQuantity({
         // the user-facing alert comes from the mutation's onError.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
-          executeCacheUpdate(
-            () => writeItem(currentItem),
-            'Revert rejected Pantry Item quantity update',
-          );
+          try {
+            writeItem(currentItem);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert rejected Pantry Item quantity update',
+            });
+          }
         }
       })
       .catch(error => {
-        executeCacheUpdate(
-          () => writeItem(currentItem),
-          'Revert failed Pantry Item quantity update',
-        );
+        try {
+          writeItem(currentItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert failed Pantry Item quantity update',
+          });
+        }
         errorService.reportError(error, {
           operation: 'updatePantryItemQuantity',
         });

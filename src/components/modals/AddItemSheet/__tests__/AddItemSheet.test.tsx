@@ -136,10 +136,10 @@ jest.mock('#utils/iconUtils', () => {
 const createConfig = (
   overrides: Partial<AddItemSheetConfig> = {},
 ): AddItemSheetConfig => ({
-  title: 'Add to Pantry',
+  titleKey: 'addItemSheet.addToPantry',
   testIDPrefix: 'add-pantry',
   placeholderIcon: 'cube-outline',
-  searchPlaceholder: 'Search pantry items...',
+  searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [
     {
       key: 'low_stock',
@@ -159,14 +159,14 @@ const createConfig = (
   quickAdd: {
     fireAndForget: false,
     enableExitAnimations: true,
-    toastMessage: (name: string) => `Added ${name}`,
+    toastMessageKey: 'addItemSheet.added',
   },
   addDetails: { enabled: true },
   deferFetch: true,
   barcodeSource: 'pantry',
   addManuallyPosition: 'bottom',
-  emptyStateMessage: 'No suggestions yet',
-  emptyStateSubtext: 'Add items to your pantry to get started',
+  emptyStateMessageKey: 'addItemSheet.emptyTitle',
+  emptyStateSubtextKey: 'addItemSheet.emptyPantrySubtext',
   ...overrides,
 });
 
@@ -218,7 +218,9 @@ describe('AddItemSheet', () => {
     render(<AddItemSheet {...defaultProps} />);
     expect(screen.getByText('No suggestions yet')).toBeTruthy();
     expect(
-      screen.getByText('Add items to your pantry to get started'),
+      screen.getByText(
+        'Add items to your pantry to get personalized suggestions',
+      ),
     ).toBeTruthy();
   });
 

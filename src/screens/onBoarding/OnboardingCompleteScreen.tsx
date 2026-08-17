@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
@@ -8,7 +8,6 @@ import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
@@ -33,14 +32,14 @@ export const OnboardingCompleteScreen = () => {
     setIsCompleting(true);
     setError(null);
 
-    const result = await executeMutation(
-      () => completeOnboardingMutation(),
-      error => {
-        handleMutationError(error, { operation: 'Complete Onboarding' });
-        setError(t('onBoarding.completeOnboardingError'));
-        setIsCompleting(false);
-      },
-    );
+    let result;
+    try {
+      result = await completeOnboardingMutation();
+    } catch (error) {
+      handleMutationError(error, { operation: 'Complete Onboarding' });
+      setError(t('onBoarding.completeOnboardingError'));
+      setIsCompleting(false);
+    }
     if (!result) return; // transport error — already surfaced above
 
     // A resolved error member doesn't throw under errorPolicy:'all' — inspect

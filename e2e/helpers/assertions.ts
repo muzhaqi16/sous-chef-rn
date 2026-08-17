@@ -1,50 +1,30 @@
 /**
  * Custom assertion helpers for E2E tests
  *
- * Provides additional matchers and assertion utilities
+ * Every helper here must assert what its name says. Several previous ones did
+ * not and were removed rather than kept as scaffolding:
+ *
+ * - `expectVisibleAndEnabled` only checked visibility; Detox has no
+ *   `toBeEnabled()`, so the "enabled" half was never asserted.
+ * - `expectVisibleButDisabled` had a body IDENTICAL to the one above — it
+ *   passed on an enabled element, asserting the opposite of its name.
+ * - `expectElementContainsText` ignored its `substring` argument entirely and
+ *   only checked visibility.
+ * - `expectListItemCount` probed a `<list>-item-<n>` testID pattern the app
+ *   does not render, and never checked for extra items.
+ * - `expectTabSelected` / `expectLoading*` targeted `tab-<name>` and
+ *   `loading-indicator`, neither of which exists in `src/`.
+ *
+ * A helper that quietly asserts less than it claims is worse than no helper,
+ * because its name is what a reader trusts.
  */
 import { element, by, waitFor, expect } from 'detox';
-
-/**
- * Assert element is visible and enabled
- * Note: Detox doesn't have toBeEnabled(), we check visibility as proxy
- */
-export async function expectVisibleAndEnabled(testID: string) {
-  const el = element(by.id(testID));
-  await expect(el).toBeVisible();
-  // Detox doesn't have toBeEnabled - visibility implies enabled for tappable elements
-}
-
-/**
- * Assert element is visible but disabled
- * Note: Detox doesn't have toBeEnabled(), we check for disabled trait
- */
-export async function expectVisibleButDisabled(testID: string) {
-  const el = element(by.id(testID));
-  await expect(el).toBeVisible();
-  // For disabled state checking, use traits or specific testID patterns
-  // e.g., element should have `accessibilityState={{ disabled: true }}`
-}
 
 /**
  * Assert element has specific text
  */
 export async function expectElementText(testID: string, text: string) {
   await expect(element(by.id(testID))).toHaveText(text);
-}
-
-/**
- * Assert element contains text
- * Note: Detox doesn't have toContainText - use text matcher or label check
- */
-export async function expectElementContainsText(
-  testID: string,
-  _substring: string,
-) {
-  const el = element(by.id(testID));
-  await expect(el).toBeVisible();
-  // Detox doesn't support partial text matching directly
-  // For substring matching, consider using by.text() with regex or exact match
 }
 
 /**
@@ -75,17 +55,6 @@ export async function expectScreenLoaded(screenTestID: string) {
 }
 
 /**
- * Assert list has specific number of items
- */
-export async function expectListItemCount(listTestID: string, count: number) {
-  // This is a workaround - Detox doesn't have direct count assertion
-  // We check for each item's existence up to count
-  for (let i = 0; i < count; i++) {
-    await expect(element(by.id(`${listTestID}-item-${i}`))).toExist();
-  }
-}
-
-/**
  * Assert element does not exist
  */
 export async function expectNotToExist(testID: string) {
@@ -98,6 +67,30 @@ export async function expectNotToExist(testID: string) {
 export async function expectExistsButNotVisible(testID: string) {
   await expect(element(by.id(testID))).toExist();
   await expect(element(by.id(testID))).not.toBeVisible();
+}
+
+/**
+ * Assert that `action` makes an element go away.
+ *
+ * Detox satisfies `.not.toBeVisible()` for an element that does not exist, so a
+ * bare disappearance check against a testID the app never renders passes
+ * whether or not the thing under test happened — that is how a still-open
+ * editor was reported as closed. Asserting the element is present BEFORE the
+ * action turns a matcher that matches nothing into a loud failure instead of a
+ * silent pass.
+ */
+export async function expectDisappearsAfter(
+  testID: string,
+  action: () => Promise<void>,
+  { presentTimeout = 5000, goneTimeout = 15000 } = {},
+) {
+  await waitFor(element(by.id(testID)))
+    .toBeVisible()
+    .withTimeout(presentTimeout);
+  await action();
+  await waitFor(element(by.id(testID)))
+    .not.toBeVisible()
+    .withTimeout(goneTimeout);
 }
 
 /**
@@ -115,13 +108,6 @@ export async function expectUnchecked(testID: string) {
 }
 
 /**
- * Assert field has specific value
- */
-export async function expectFieldValue(testID: string, value: string) {
-  await expect(element(by.id(testID))).toHaveText(value);
-}
-
-/**
  * Assert field is empty
  */
 export async function expectFieldEmpty(testID: string) {
@@ -136,31 +122,10 @@ export async function expectErrorMessage(message: string) {
 }
 
 /**
- * Assert loading indicator is visible
- */
-export async function expectLoadingVisible() {
-  await expect(element(by.id('loading-indicator'))).toBeVisible();
-}
-
-/**
- * Assert loading indicator is not visible
- */
-export async function expectLoadingNotVisible() {
-  await expect(element(by.id('loading-indicator'))).not.toBeVisible();
-}
-
-/**
  * Assert multiple elements are visible
  */
 export async function expectAllVisible(...testIDs: string[]) {
   for (const testID of testIDs) {
     await expect(element(by.id(testID))).toBeVisible();
   }
-}
-
-/**
- * Assert tab is selected
- */
-export async function expectTabSelected(tabName: string) {
-  await expect(element(by.id(`tab-${tabName}`))).toHaveValue('1'); // 1 = selected
 }

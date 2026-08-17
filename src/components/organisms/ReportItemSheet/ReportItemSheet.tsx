@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';

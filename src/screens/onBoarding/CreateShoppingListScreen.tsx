@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
@@ -18,7 +18,7 @@ import { createShoppingListSchema } from '#utils/validation/onboarding';
 import { logValidationErrors } from '#utils/validation/common';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService, errorMessageOr } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';

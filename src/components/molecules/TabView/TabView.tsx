@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, useWindowDimensions } from 'react-native';
 import {
   TabView as RNTabView,

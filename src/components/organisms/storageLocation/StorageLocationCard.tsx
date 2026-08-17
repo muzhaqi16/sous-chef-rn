@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -112,7 +112,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 <Text style={[commonStyles.caption, styles.subtitle]}>
                   {!location.parentLocation && <Text>{typeLabel} • </Text>}
                   {t('storageLocationCard.itemCount', {
-                    count: location.currentItemCount,
+                    // i18next selects the plural form from `count`, and a
+                    // non-number silently lands on the wrong one. The prop is
+                    // declared `number | null | undefined` even though the
+                    // schema has `currentItemCount: Int!`.
+                    count: location.currentItemCount ?? 0,
                   })}
                   {hasCapacity ? (
                     <Text>

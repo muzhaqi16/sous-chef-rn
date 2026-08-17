@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
@@ -23,7 +23,7 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
   executeWithLoadingState,
   executeRefreshWithFinally,
-} from '#/utils/compilerSafeWrappers';
+} from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 interface SettingDef {
@@ -313,7 +313,7 @@ export const NotificationSettingsScreen: React.FC = () => {
             operation: 'requestNotificationPermission',
           });
           alertService.alert(
-            t('notifications.permissionErrorTitle'),
+            t('errors.permissionTitle'),
             t('notifications.permissionErrorMessage'),
           );
         },
@@ -357,7 +357,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                 } else {
                   alertService.alert(
                     t('labels.error'),
-                    t('notifications.resetFailed'),
+                    t('errors.resetSettingsFailed'),
                   );
                 }
               },

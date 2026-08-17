@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 // The module-level `t` takes a fallback string, not options, so an interpolated
 // key has to go through the i18next instance directly — same split as
 // src/utils/errorHandlers.ts.
 import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -172,29 +168,26 @@ export function usePantryItemDetailActions({
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: () => {
-            executeMutation(
-              async () => {
-                await deleteItem({ variables: { input: { id: itemId } } });
-                goBack();
-              },
-              error => {
-                errorService.reportError(error, {
-                  operation: 'PantryItemDetail.deleteItem',
-                });
-                alertService.alert(
-                  t('labels.error'),
-                  t('errors.deleteItemFailed'),
-                );
-              },
-            );
+          onPress: async () => {
+            try {
+              await deleteItem({ variables: { input: { id: itemId } } });
+              goBack();
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'PantryItemDetail.deleteItem',
+              });
+              alertService.alert(
+                t('labels.error'),
+                t('errors.deleteItemFailed'),
+              );
+            }
           },
         },
       ],
     );
   };
 
-  const handleAddToShoppingList = () => {
+  const handleAddToShoppingList = async () => {
     if (!selectedShoppingListId) {
       onAddToShoppingListNeedsList();
       return;
@@ -217,74 +210,71 @@ export function usePantryItemDetailActions({
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create that
     // replays later.
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          createOptimisticShoppingListItem(id, {
-            itemName,
-            quantity,
-            itemId: catalogItemId || undefined,
-            unitId: item?.unit?.id,
-            unitName: item?.unit?.name,
-          }),
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
+    // Built before the try: the `||`/`?.` below are value blocks, and the React
+    // Compiler bails out of a hook when one appears inside a try body.
+    const optimisticListItem = createOptimisticShoppingListItem(id, {
+      itemName,
+      quantity,
+      itemId: catalogItemId || undefined,
+      unitId: item?.unit?.id,
+      unitName: item?.unit?.name,
+    });
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        optimisticListItem,
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
-    executeMutation(
-      async () => {
-        const result = await addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [
-                {
-                  id,
-                  item: catalogItemId
-                    ? { itemId: catalogItemId }
-                    : { itemName },
-                  quantity,
-                  unit: unitInput,
-                },
-              ],
+    // Built before the try — the ternary is a value block, and the React
+    // Compiler bails out of this hook when one sits inside a try body.
+    const addItemsOptions: Parameters<typeof addToShoppingList>[0] = {
+      variables: {
+        input: {
+          shoppingListId: selectedShoppingListId,
+          items: [
+            {
+              id,
+              item: catalogItemId ? { itemId: catalogItemId } : { itemName },
+              quantity,
+              unit: unitInput,
             },
-          },
-          context: { localFirst: true },
-        });
-        // Queued (offline / API down) counts as success — it replays. Only a
-        // real rejection is an error; don't show the success check on a refused
-        // create (and discard the item we wrote). errorPolicy:'all' resolves
-        // rejections, so the reconciler classifies the result rather than relying
-        // on a throw.
-        if (
-          reconcileShoppingCreate(
-            client.cache,
-            selectedShoppingListId,
-            id,
-            result,
-          ) === 'reverted'
-        ) {
-          setAddToListStatus('error');
-        } else {
-          setAddToListStatus('success');
-        }
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
+          ],
+        },
       },
-      error => {
-        errorService.reportError(error, {
-          operation: 'PantryItemDetail.addToShoppingList',
-        });
-        setAddToListStatus('error');
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
-      },
+      context: { localFirst: true },
+    };
+
+    let result;
+    try {
+      result = await addToShoppingList(addItemsOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'PantryItemDetail.addToShoppingList',
+      });
+    }
+
+    // Queued (offline / API down) counts as success — it replays. Only a real
+    // rejection is an error; don't show the success check on a refused create
+    // (and discard the item we wrote). errorPolicy:'all' resolves rejections,
+    // so the reconciler classifies the result rather than relying on a throw.
+    const reverted =
+      !result ||
+      reconcileShoppingCreate(
+        client.cache,
+        selectedShoppingListId,
+        id,
+        result,
+      ) === 'reverted';
+    setAddToListStatus(reverted ? 'error' : 'success');
+    statusTimeoutRef.current = setTimeout(
+      () => setAddToListStatus('idle'),
+      3000,
     );
   };
 

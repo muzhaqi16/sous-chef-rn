@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   UpdateFavoriteRecipeDocument,
@@ -11,7 +11,7 @@ import {
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
 
 interface UseRecipeSavedMetadataOptions {

@@ -10,7 +10,10 @@
 
 import { element, by, waitFor, expect } from 'detox';
 import { PantryScreen } from '../../screens';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
+import {
+  bootstrapAuthenticatedSession,
+  relaunchToHomeTab,
+} from '../../helpers';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
 
@@ -35,8 +38,13 @@ describe('Pantry CRUD', () => {
         const item = element(by.text(itemName));
         // Swipe left to reveal delete button
         await item.swipe('left', 'fast', 0.7);
-        // Tap delete button (trash icon)
-        const deleteButton = element(by.id('swipe-action-delete')).atIndex(0);
+        // Tap delete button (trash icon). RightActions composes
+        // `${testIDPrefix}-delete`; a pantry row's prefix is
+        // `pantry-item-<entity id>`, unknown here, and only the swiped row has
+        // its actions mounted.
+        const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(
+          0,
+        );
         await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.QUICK);
         await deleteButton.tap();
         // Wait for item to be removed
@@ -44,7 +52,8 @@ describe('Pantry CRUD', () => {
           .not.toBeVisible()
           .withTimeout(TIMEOUTS.DEFAULT);
       } catch {
-        // Item might already be deleted or not found
+        // Best-effort teardown only. A cleanup miss must not fail the test that
+        // just passed — the assertions live in the `it` blocks.
       }
     }
   });
@@ -95,7 +104,9 @@ describe('Pantry CRUD', () => {
         .withTimeout(TIMEOUTS.DEFAULT);
 
       // Tap add manually to go to details sheet
-      const addManuallyButton = element(by.id('add-pantry-add-manually-button'));
+      const addManuallyButton = element(
+        by.id('add-pantry-add-manually-button'),
+      );
       await addManuallyButton.tap();
 
       await waitFor(element(by.id('add-pantry-item-details-modal')))
@@ -106,16 +117,23 @@ describe('Pantry CRUD', () => {
       const submitButton = element(by.id('add-pantry-item-submit-button'));
       await submitButton.tap();
 
-      // Dismiss the error alert if it appeared
+      // Whatever shape the complaint takes, the invariant is that the item was
+      // NOT created: the details modal is still up. Logging "validation
+      // handled" in the catch made every outcome — including a silent save —
+      // report success.
+      await waitFor(element(by.id('add-pantry-item-details-modal')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+
+      // Dismiss the error alert if this build surfaces one.
       try {
         await waitFor(element(by.text('Error')))
           .toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+          .withTimeout(TIMEOUTS.QUICK);
         await element(by.text('OK')).tap();
-        console.log('✓ Empty name validation shows error alert');
       } catch {
-        // Error might show differently - modal should still be open
-        console.log('✓ Validation handled (error alert or prevented submission)');
+        // Some builds block submission without an alert; the modal check above
+        // is the assertion either way.
       }
 
       // Close the modal
@@ -123,69 +141,14 @@ describe('Pantry CRUD', () => {
     });
   });
 
-  describe('Edit Item', () => {
-    it('should edit item name', async () => {
-      // First add an item
-      const originalName = generateItemName('ToEdit');
-      itemsToCleanup.push(originalName);
-      itemsToCleanup.push(originalName + ' Edited'); // In case rename succeeds
-      await pantryScreen.addItem(originalName);
-      await waitFor(element(by.text(originalName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-
-      // Find and tap the item to edit
-      const item = element(by.text(originalName));
-      await item.tap();
-
-      // Try to find edit button or navigate to edit mode
-      try {
-        const editButton = element(by.id('edit-item-button'));
-        await waitFor(editButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-        await editButton.tap();
-
-        // Change the name
-        const nameInput = element(by.id('edit-pantry-item-name-input'));
-        await nameInput.clearText();
-        await nameInput.typeText(originalName + ' Edited');
-
-        // Save
-        const saveButton = element(by.id('save-item-button'));
-        await saveButton.tap();
-
-        // Verify change
-        await pantryScreen.waitForListToLoad();
-        await pantryScreen.expectTextVisible(originalName + ' Edited');
-      } catch {
-        console.log('Edit flow might be different - navigating back');
-        await pantryScreen.goBack();
-      }
-    });
-
-    it('should edit item quantity', async () => {
-      const itemName = generateItemName('QtyEdit');
-      itemsToCleanup.push(itemName);
-      await pantryScreen.addItem(itemName, '1', 'lb');
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-
-      // Navigate to item detail
-      const item = element(by.text(itemName));
-      await item.tap();
-
-      // Look for inline quantity controls or edit screen
-      try {
-        const incrementButton = element(by.id('quantity-increment'));
-        await waitFor(incrementButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-        await incrementButton.tap();
-        await pantryScreen.goBack();
-      } catch {
-        console.log('Inline quantity edit not available');
-        await pantryScreen.goBack();
-      }
-    });
-  });
+  // The 'Edit Item' describe block was removed here. Its two tests
+  // ('should edit item name', 'should edit item quantity') drove
+  // `edit-item-button`, `edit-pantry-item-name-input`, `save-item-button` and
+  // `quantity-increment` — none of which exist in `src/`. Both wrapped their
+  // entire flow, assertion included, in a try/catch that logged and navigated
+  // back, so they passed while exercising nothing. Repointing them means
+  // deciding what the pantry edit flow should assert, which is new coverage,
+  // not repair. Re-add them against real testIDs when that is written.
 
   describe('Delete Item', () => {
     it('should delete item via swipe', async () => {
@@ -200,26 +163,20 @@ describe('Pantry CRUD', () => {
       const item = element(by.text(itemName));
       await item.swipe('left', 'fast', 0.7);
 
-      // Tap the delete action button
-      try {
-        const deleteButton = element(by.id('swipe-action-delete')).atIndex(0);
-        await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-        await deleteButton.tap();
-      } catch {
-        // Try alternative approach
-        console.log('Delete action button not found via testID');
-      }
+      // Tap the delete action button. `swipe-action-delete` does not exist —
+      // RightActions composes `${testIDPrefix}-delete`, and a pantry row's
+      // prefix is `pantry-item-<entity id>`, which this spec cannot know. Only
+      // the swiped row has its actions mounted, so the suffix match is
+      // unambiguous. Failing to find it is a failure, not a log line.
+      const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
+      await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await deleteButton.tap();
 
-      // Verify item is gone
-      try {
-        await waitFor(element(by.text(itemName)))
-          .not.toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
-        console.log('✓ Item deleted successfully');
-      } catch {
-        console.log('⚠️ Item might still be visible - adding to cleanup');
-        itemsToCleanup.push(itemName);
-      }
+      // Verify item is gone. Catching this and pushing to cleanup meant a
+      // delete that silently did nothing still passed the delete test.
+      await waitFor(element(by.text(itemName)))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
     it('should cancel delete', async () => {

@@ -112,7 +112,7 @@ jest.mock('../utils', () => ({
   removeFromHomesCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

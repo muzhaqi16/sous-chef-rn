@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -299,13 +299,13 @@ export function AddItemSheet<
           >
             {/* Header */}
             <Text size="xl" weight="bold" style={styles.title}>
-              {config.title}
+              {t(config.titleKey)}
             </Text>
 
             {/* Search Input */}
             <BottomSheetSearchBar
               ref={searchBarRef}
-              placeholder={config.searchPlaceholder}
+              placeholder={t(config.searchPlaceholderKey)}
               onChangeText={handleSearchChange}
               onClear={() => setSearchQuery('')}
               initialValue={initialSearchQuery}
@@ -370,10 +370,10 @@ export function AddItemSheet<
                       tone="secondary"
                       style={styles.emptyText}
                     >
-                      {config.emptyStateMessage}
+                      {t(config.emptyStateMessageKey)}
                     </Text>
                     <Text size="sm" tone="tertiary" align="center">
-                      {config.emptyStateSubtext}
+                      {t(config.emptyStateSubtextKey)}
                     </Text>
                   </View>
                 ) : (

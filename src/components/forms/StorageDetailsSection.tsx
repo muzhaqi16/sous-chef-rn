@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {

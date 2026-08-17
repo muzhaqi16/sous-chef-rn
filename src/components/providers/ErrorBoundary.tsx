@@ -9,7 +9,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Telemetry } from '#/services/telemetry';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
-import { t } from '#/i18n/t';
+// Aliased, not `useTranslation`: this is the app's last-resort UI, rendered
+// precisely when something upstream has already thrown. It deliberately takes
+// no hook subscriptions it doesn't need, so it can still paint when app
+// context is broken. Every call below passes an English default, so it renders
+// readable text even if i18n never initialised. Language reactivity on a
+// terminal error screen is worth nothing against that.
+import { t as tGlobal } from '#/i18n';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -46,7 +52,7 @@ const DefaultErrorFallback: React.FC<{
           tone="error"
           style={styles.title}
         >
-          {t('errors.boundary.title', 'Something went wrong')}
+          {tGlobal('errors.boundary.title', 'Something went wrong')}
         </Text>
         <Text
           size="md"
@@ -57,17 +63,20 @@ const DefaultErrorFallback: React.FC<{
         >
           {__DEV__
             ? error.message
-            : t('errors.boundary.message', 'An unexpected error occurred')}
+            : tGlobal(
+                'errors.boundary.message',
+                'An unexpected error occurred',
+              )}
         </Text>
         {!!context && !!__DEV__ && (
           <Text size="xs" align="center" tone="tertiary" style={styles.context}>
-            {t('errors.boundary.contextPrefix', 'Context: ')}
+            {tGlobal('errors.boundary.contextPrefix', 'Context: ')}
             {context}
           </Text>
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
           <Text size="md" weight="semibold" style={styles.retryButtonText}>
-            {t('errors.boundary.retry', 'Try Again')}
+            {tGlobal('errors.boundary.retry', 'Try Again')}
           </Text>
         </AppPressable>
       </View>

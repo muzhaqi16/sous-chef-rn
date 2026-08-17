@@ -5,7 +5,7 @@ import {
   isQueryComplexityError,
 } from '#/utils/errors/queryComplexity';
 import { validatePagination } from '#/constants/pagination';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { alertService, type AlertButton } from '#/services/alertService';
 
 /**

@@ -151,6 +151,26 @@ jobs:
       - name: Check for stale cache fields
         run: node scripts/find-stale-cache-fields.mjs --check
 
+  # The bundled-secret scanner runs in the BUILD workflows, against a real
+  # artifact. This exercises the scanner itself on every PR so it cannot rot
+  # into a no-op unnoticed — it plants a known value and asserts a find.
+  bundled-secret-scanner:
+    name: Bundled Secret Scanner (self-test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Self-test the bundled secret scanner
+        run: node scripts/check-bundled-secrets.mjs --self-test
+
   # Unit tests
   unit-tests:
     name: Unit Tests

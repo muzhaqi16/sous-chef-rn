@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
 import {
   NotificationEventsDocument,

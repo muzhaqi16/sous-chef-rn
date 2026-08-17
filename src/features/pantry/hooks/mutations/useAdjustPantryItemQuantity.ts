@@ -30,10 +30,10 @@ import {
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { t } from '#/i18n';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { errorService } from '#/services/errorService';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -92,10 +92,13 @@ export function useAdjustPantryItemQuantity({
         quantity: newQuantity,
         ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
       });
-      executeCacheUpdate(
-        () => writeItem(optimistic),
-        'Adjust Pantry Item Quantity (optimistic)',
-      );
+      try {
+        writeItem(optimistic);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Adjust Pantry Item Quantity (optimistic)',
+        });
+      }
       optimisticDataPersistence.save(
         'PantryItem',
         pantryItemId,
@@ -126,10 +129,13 @@ export function useAdjustPantryItemQuantity({
       // error already alerted via onError; a non-success union payload
       // (Validation/Forbidden/NotFound/Conflict) has no error, so alert here.
       if (currentItem) {
-        executeCacheUpdate(
-          () => writeItem(currentItem),
-          'Revert rejected pantry quantity adjust',
-        );
+        try {
+          writeItem(currentItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected pantry quantity adjust',
+          });
+        }
       }
       optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
       alertRejectedMutation(result, t('errors.adjustQuantityFailed'));

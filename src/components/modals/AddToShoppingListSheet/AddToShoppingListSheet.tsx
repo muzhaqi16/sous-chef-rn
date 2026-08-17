@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -25,7 +25,6 @@ import {
   buildAddItemsReconcileUpdate,
   revertOptimisticShoppingListItem,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import {
@@ -38,6 +37,7 @@ import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { shoppingListSheetConfig } from '../AddItemSheet/configs/shoppingListConfig';
 import { ShoppingListDetailsStep } from './ShoppingListDetailsStep';
+import { errorService } from '#/services/errorService';
 
 interface AddToShoppingListSheetProps {
   visible: boolean;
@@ -164,7 +164,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
     // 1. Show toast immediately (don't wait for mutation)
     toastService.success(
-      shoppingListSheetConfig.quickAdd.toastMessage(item.name),
+      t(shoppingListSheetConfig.quickAdd.toastMessageKey, { name: item.name }),
     );
 
     // 2. Generate the item's id and write it into the cache before firing, so it
@@ -176,15 +176,17 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       itemId: item.id,
       unitId: item.defaultUnit?.id,
     });
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          shoppingListId,
-          optimisticItem,
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        shoppingListId,
+        optimisticItem,
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
     // 3. Fire mutation without await.
     addItemMutation({
@@ -215,7 +217,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           reconcileShoppingCreate(client.cache, shoppingListId, id, result) ===
           'reverted'
         ) {
-          toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+          toastService.error(t('errors.addItemFailedRetry'));
           return;
         }
         onItemAdded?.();
@@ -223,7 +225,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       })
       .catch(() => {
         revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
-        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+        toastService.error(t('errors.addItemFailedRetry'));
       });
   };
 
@@ -247,7 +249,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
 
     // 2. Show toast immediately (don't wait for mutation)
     toastService.success(
-      shoppingListSheetConfig.quickAdd.toastMessage(shoppingItem.name),
+      t(shoppingListSheetConfig.quickAdd.toastMessageKey, {
+        name: shoppingItem.name,
+      }),
     );
 
     // 3. Generate the item's id and write it into the cache before firing, so it
@@ -259,15 +263,17 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       itemId: shoppingItem.itemId,
       unitId,
     });
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          shoppingListId,
-          optimisticItem,
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        shoppingListId,
+        optimisticItem,
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
     // 4. Fire mutation without await.
     addItemMutation({
@@ -295,7 +301,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
           'reverted'
         ) {
           state.completeExitAnimation(shoppingItem.itemId);
-          toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+          toastService.error(t('errors.addItemFailedRetry'));
           return;
         }
         onItemAdded?.();
@@ -305,7 +311,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         // On error: remove from exiting, show error toast
         revertOptimisticShoppingListItem(client.cache, shoppingListId, id);
         state.completeExitAnimation(shoppingItem.itemId);
-        toastService.error(t('addToShoppingListSheet.addFailedRetry'));
+        toastService.error(t('errors.addItemFailedRetry'));
       });
   };
 

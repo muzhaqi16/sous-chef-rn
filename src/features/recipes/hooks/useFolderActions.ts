@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import {
   DeleteRecipeFolderDocument,
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { toastService } from '#/services/toastService';
 
 /**
@@ -39,32 +38,31 @@ export function useFolderActions() {
 
     setLoading(true);
 
-    const result = await executeMutation(
-      () =>
-        deleteRecipeFolderMutation({
-          variables: { input: { folder: oldName, moveTo: newName } },
-          update(cache) {
-            const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+    let result;
+    try {
+      result = await deleteRecipeFolderMutation({
+        variables: { input: { folder: oldName, moveTo: newName } },
+        update(cache) {
+          const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+            query: SavedRecipeFoldersDocument,
+          });
+          if (existing?.savedRecipeFolders) {
+            cache.writeQuery<SavedRecipeFoldersQuery>({
               query: SavedRecipeFoldersDocument,
+              data: {
+                __typename: 'Query',
+                savedRecipeFolders: existing.savedRecipeFolders.map(f =>
+                  f === oldName ? newName : f,
+                ),
+              },
             });
-            if (existing?.savedRecipeFolders) {
-              cache.writeQuery<SavedRecipeFoldersQuery>({
-                query: SavedRecipeFoldersDocument,
-                data: {
-                  __typename: 'Query',
-                  savedRecipeFolders: existing.savedRecipeFolders.map(f =>
-                    f === oldName ? newName : f,
-                  ),
-                },
-              });
-            }
-          },
-        }),
-      error => {
-        errorService.reportError(error, { operation: 'renameFolder' });
-        toastService.error(t('recipes.renameFolderFailedRetry'));
-      },
-    );
+          }
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'renameFolder' });
+      toastService.error(t('recipes.renameFolderFailedRetry'));
+    }
 
     setLoading(false);
 
@@ -89,32 +87,31 @@ export function useFolderActions() {
 
     setLoading(true);
 
-    const result = await executeMutation(
-      () =>
-        deleteRecipeFolderMutation({
-          variables: { input: { folder: folderName } },
-          update(cache) {
-            const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+    let result;
+    try {
+      result = await deleteRecipeFolderMutation({
+        variables: { input: { folder: folderName } },
+        update(cache) {
+          const existing = cache.readQuery<SavedRecipeFoldersQuery>({
+            query: SavedRecipeFoldersDocument,
+          });
+          if (existing?.savedRecipeFolders) {
+            cache.writeQuery<SavedRecipeFoldersQuery>({
               query: SavedRecipeFoldersDocument,
+              data: {
+                __typename: 'Query',
+                savedRecipeFolders: existing.savedRecipeFolders.filter(
+                  f => f !== folderName,
+                ),
+              },
             });
-            if (existing?.savedRecipeFolders) {
-              cache.writeQuery<SavedRecipeFoldersQuery>({
-                query: SavedRecipeFoldersDocument,
-                data: {
-                  __typename: 'Query',
-                  savedRecipeFolders: existing.savedRecipeFolders.filter(
-                    f => f !== folderName,
-                  ),
-                },
-              });
-            }
-          },
-        }),
-      error => {
-        errorService.reportError(error, { operation: 'deleteFolder' });
-        toastService.error(t('recipes.deleteFolderFailedRetry'));
-      },
-    );
+          }
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'deleteFolder' });
+      toastService.error(t('recipes.deleteFolderFailedRetry'));
+    }
 
     setLoading(false);
 

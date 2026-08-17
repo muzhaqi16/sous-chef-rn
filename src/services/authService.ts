@@ -21,7 +21,7 @@ import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 import { logger } from '#/utils/environment';
 import { isDeadCredentialCode } from '#/utils/authErrorCodes';
-import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
@@ -66,7 +66,7 @@ import {
   clearTempRegistrationPassword,
 } from '#/storage/keychain';
 import { storage } from '#/storage/mmkv';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import {
   collectDeviceInformation,
   validateDeviceInformation,
@@ -495,9 +495,10 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
     // `clearAuth` and deliberately not `endSession`, unlike the link-layer
     // sites that see these same codes. This runs while a sign-in, register or
     // verification request is in flight, and a full auth reset would also drop
-    // `pendingEmail` / `pendingPassword` and the selected-entity ids, breaking
-    // verification resume. There is also no established session's cache to
-    // clear here — this is a refused attempt to start one, not a revoked one.
+    // the selected-entity ids (breaking verification resume) and the
+    // session-scoped state a sign-out clears. There is also no established
+    // session's cache to clear here — this is a refused attempt to start one,
+    // not a revoked one.
     if (
       isAuthError &&
       (code === ErrorCode.AuthTokenExpired ||
@@ -506,7 +507,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
       useStore.getState().clearAuth();
     }
   } catch {
-    toastService.error(t('toasts.somethingWentWrongRetry'));
+    toastService.error(t('errors.somethingWentWrong'));
   }
   useStore.getState().setAuthIsLoading(false);
 }
@@ -825,7 +826,6 @@ async function logout(): Promise<void> {
     pushTokenRefreshUnsubscribe?.();
     pushTokenRefreshUnsubscribe = null;
     registeredDeviceId = null;
-    store.resetNotifications();
 
     await LogoutCleanup.performLogoutCleanup();
 
@@ -833,7 +833,13 @@ async function logout(): Promise<void> {
       queueManager.onLogout(currentUserId);
     }
 
-    store.clearAuth();
+    // `resetStore` rather than `clearAuth`: clearAuth only nulls the user and
+    // tokens, leaving the selected home/pantry/list ids, the notification
+    // inbox, the scanner's recent list and the item-suggestion LRU persisted
+    // for whoever signs in next. The auth branch of resetStore clears all of
+    // it, plus the on-disk copy. Apollo is already cleared by
+    // performLogoutCleanup above, so this pass skips it.
+    await store.resetStore({ auth: true, ui: true, clearApolloCache: false });
     LogoutCleanup.completeLogout();
     store.setNavigationState('auth');
 

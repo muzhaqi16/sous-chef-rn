@@ -1,5 +1,5 @@
 import { Dimensions } from 'react-native';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 

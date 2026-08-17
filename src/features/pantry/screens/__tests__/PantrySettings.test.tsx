@@ -46,7 +46,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     unregisterParentDeletion: jest.fn(),
   },
 }));
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
 
 jest.mock('#/services/alertService', () => ({

@@ -5,7 +5,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { logger } from '#/utils/environment';
 import { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 interface DeepLinkTokenPayload {
   exp: number;

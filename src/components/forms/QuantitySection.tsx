@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -49,7 +49,11 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           name="quantityInput"
           render={({ field: { onChange, value } }) => (
             <FractionInput
-              label={mode === 'add' ? 'Quantity *' : 'Current Quantity'}
+              label={
+                mode === 'add'
+                  ? t('itemForm.quantityRequired')
+                  : t('itemForm.quantityCurrent')
+              }
               value={value ?? ''}
               onChangeText={onChange}
               placeholder={t('itemForm.placeholderQuantity')}

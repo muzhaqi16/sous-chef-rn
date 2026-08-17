@@ -11,18 +11,16 @@
  * action is queued and replayed on reconnect (idempotent server-side) instead
  * of being lost. Rollback on server error (not network).
  *
- * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
 
 import { useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   MarkExpirationActionDocument,
   MarkExpirationNotificationAsReadDocument,
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { errorService } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { toastService } from '#/services/toastService';
@@ -36,7 +34,7 @@ export function useExpirationNotificationSync() {
     MarkExpirationNotificationAsReadDocument,
   );
 
-  const syncMarkAction = (
+  const syncMarkAction = async (
     notificationId: string,
     expirationNotificationId: string,
     action: ExpirationAction,
@@ -48,43 +46,39 @@ export function useExpirationNotificationSync() {
 
     toastService.success(t(`expirationAction.toast.${action}`));
 
-    executeMutation(
-      () =>
-        markActionMutation({
-          variables: {
-            input: { notificationId: expirationNotificationId, action },
-          },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncMarkExpirationAction',
-          notificationId: expirationNotificationId,
-          action,
-        });
-        // Rollback on server error
-        if (!isNetworkError(error)) {
-          useStore.getState().setExpirationAction(notificationId, '');
-          useStore.getState().markAsUnread(notificationId);
-        }
-      },
-    );
+    try {
+      await markActionMutation({
+        variables: {
+          input: { notificationId: expirationNotificationId, action },
+        },
+        context: { localFirst: true },
+      });
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncMarkExpirationAction',
+        notificationId: expirationNotificationId,
+        action,
+      });
+      // Rollback on server error
+      if (!isNetworkError(error)) {
+        useStore.getState().setExpirationAction(notificationId, '');
+        useStore.getState().markAsUnread(notificationId);
+      }
+    }
   };
 
-  const syncMarkRead = (expirationNotificationId: string) => {
-    executeMutation(
-      () =>
-        markReadMutation({
-          variables: { input: { notificationId: expirationNotificationId } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncMarkExpirationRead',
-          notificationId: expirationNotificationId,
-        });
-      },
-    );
+  const syncMarkRead = async (expirationNotificationId: string) => {
+    try {
+      await markReadMutation({
+        variables: { input: { notificationId: expirationNotificationId } },
+        context: { localFirst: true },
+      });
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncMarkExpirationRead',
+        notificationId: expirationNotificationId,
+      });
+    }
   };
 
   return { syncMarkAction, syncMarkRead };

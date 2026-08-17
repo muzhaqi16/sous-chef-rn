@@ -3,7 +3,7 @@ import {
   NotificationPriority,
 } from '#store/slices/notificationSlice';
 import { safeParseDate } from '#utils/dateUtils';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 export interface NotificationGroups {
   urgent: NotificationItem[];

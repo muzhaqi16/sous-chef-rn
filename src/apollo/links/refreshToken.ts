@@ -6,7 +6,7 @@ import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import {

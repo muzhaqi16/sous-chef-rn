@@ -14,7 +14,7 @@ import {
 import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
 import { useNotificationSync } from '../useNotificationSync';
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },

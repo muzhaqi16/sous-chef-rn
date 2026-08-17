@@ -21,7 +21,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';

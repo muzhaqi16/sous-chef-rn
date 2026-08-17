@@ -64,7 +64,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   setCachedFields: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/errors/versionConflict', () => ({
   handleVersionConflict: jest.fn(() => false),

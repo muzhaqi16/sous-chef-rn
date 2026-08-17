@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
   ConsumptionUnitsForItemDocument,

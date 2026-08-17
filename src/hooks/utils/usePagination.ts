@@ -2,13 +2,12 @@ import { useRef, useEffect, useState } from 'react';
 import type { OperationVariables } from '@apollo/client';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { PaginationState } from '#hooks/types';
 
 /**
  * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables })`.
- * The result is only inspected for `=== false` (failure) by the caller, so the
- * resolved value is left as `unknown`.
+ * The resolved value is never read — only whether the call settled — so it is
+ * left as `unknown`.
  */
 export type FetchMoreFn = (options: {
   variables?: OperationVariables;
@@ -136,20 +135,20 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     setIsFetchingMore(true);
     setLoadMoreError(false);
 
-    const result = await executeMutation(
-      () =>
-        fetchMore({
-          variables: {
-            ...fetchMoreVariablesRef.current,
-            [cursorVariableName]: endCursor,
-          },
-        }),
-      error =>
-        errorService.reportError(error, { operation: 'Pagination.loadMore' }),
-    );
+    let result;
+    try {
+      result = await fetchMore({
+        variables: {
+          ...fetchMoreVariablesRef.current,
+          [cursorVariableName]: endCursor,
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'Pagination.loadMore' });
+    }
 
     setIsFetchingMore(false);
-    if (result === false) {
+    if (!result) {
       setLoadMoreError(true);
     }
   };

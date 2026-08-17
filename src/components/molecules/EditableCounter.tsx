@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, type GestureResponderEvent } from 'react-native';
 import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';

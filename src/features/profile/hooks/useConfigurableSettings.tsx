@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { logger } from '#/utils/environment';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
-  useAppStore,
   useUser,
   useNavigationUtils,
   usePreferences,
 } from '#store/useAppStore';
+import { authService } from '#/services/authService';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
@@ -32,7 +32,7 @@ import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
 import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
-import { executeMutation, executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
 // Map PROFILE_SETTINGS_CONFIG section titles (the config's canonical English
@@ -79,7 +79,6 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   const { t } = useTranslation();
   const client = useApolloClient();
   const user = useUser();
-  const logout = useAppStore(state => state.logout);
   const { getUserNavigationState } = useNavigationUtils();
   const { language, setLanguage } = usePreferences();
   const { checkStoredCredentials, getBiometricInfo, removeCredentials } =
@@ -114,17 +113,29 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     const loadBiometricInfo = async () => {
       setBiometricLoading(true);
 
-      const result = await executeQuery(
-        () =>
-          Promise.all([
-            getBiometricInfo(),
-            checkStoredCredentials(user?.email),
-          ]),
-        'Error loading biometric info',
-      );
+      // The try body stays plain statements — a `&&`/`?.`/ternary inside a try
+      // makes the React Compiler bail out of this whole hook. See
+      // scripts/probe-compiler-try-forms.mjs.
+      const email = user?.email;
+      let loaded:
+        | [Awaited<ReturnType<typeof getBiometricInfo>>, boolean]
+        | undefined;
+      try {
+        loaded = await Promise.all([
+          getBiometricInfo(),
+          checkStoredCredentials(email),
+        ]);
+      } catch (error) {
+        // Leaving `loaded` undefined keeps the biometric flags at their
+        // defaults — an unreadable keychain must not present biometrics as
+        // available.
+        errorService.reportError(error, {
+          operation: 'Error loading biometric info',
+        });
+      }
 
-      if (result) {
-        const [biometricInfo, hasCredentials] = result;
+      if (loaded) {
+        const [biometricInfo, hasCredentials] = loaded;
         setBiometricAvailable(biometricInfo.isAvailable);
         setBiometricType(biometricInfo.biometryType);
         setBiometricEnabled(hasCredentials && biometricInfo.isAvailable);
@@ -166,19 +177,18 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
       'Update Profile',
     );
 
-    const result = await executeMutation(
-      () =>
-        updateProfileMutation({
-          variables: { input },
-          context: { localFirst: true },
-        }),
+    let result;
+    try {
+      result = await updateProfileMutation({
+        variables: { input },
+        context: { localFirst: true },
+      });
+    } catch (error) {
       // Throw path (rare under errorPolicy:'all'): revert + surface. The common
       // resolved-error path is handled by alertIfRejected below.
-      error => {
-        revert();
-        handleMutationError(error, { operation: 'Update Profile' });
-      },
-    );
+      revert();
+      handleMutationError(error, { operation: 'Update Profile' });
+    }
 
     // Rejection (resolved non-success payload) → surface + restore the snapshot.
     // Queued (null payload, no error) keeps the write; the replay is idempotent.
@@ -194,14 +204,15 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     // keyed by userId). The individual preference setters drive the local UI.
     // A resolved error member (online) is surfaced; the offline-queued null
     // result is not (alertIfRejected returns false for it).
-    const result = await executeMutation(
-      () =>
-        updateSettingsMutation({
-          variables: { input },
-          context: { localFirst: true },
-        }),
-      error => handleMutationError(error, { operation: 'Update Preferences' }),
-    );
+    let result;
+    try {
+      result = await updateSettingsMutation({
+        variables: { input },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Update Preferences' });
+    }
     alertIfRejected(result, t('errors.somethingWentWrong'));
   };
 
@@ -399,13 +410,17 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
                       text: t('biometrics.disable'),
                       style: 'destructive',
                       onPress: async () => {
-                        const result = await executeMutation(async () => {
-                          if (user?.email) {
-                            await removeCredentials(user.email);
+                        const email = user?.email;
+                        try {
+                          if (email) {
+                            await removeCredentials(email);
                             setBiometricEnabled(false);
                           }
-                        }, 'Failed to disable biometric authentication');
-                        if (result === false) {
+                        } catch (error) {
+                          errorService.reportError(error, {
+                            operation:
+                              'Failed to disable biometric authentication',
+                          });
                           alertService.alert(
                             t('labels.error'),
                             t('biometrics.disableFailed'),
@@ -446,7 +461,13 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
         return {
           ...baseItem,
           onPress: () => {
-            logout();
+            // `authService.logout` and not the store's own `logout` action:
+            // the store action resets state but never deregisters the device
+            // for push, hands the offline queue its owner change, or removes
+            // the persisted queue/navigation keys. Two sign-out paths that
+            // each clear a different subset is how the shared-device residue
+            // got there; this is the only one.
+            void authService.logout();
             logger.debug('User logged out');
           },
         };

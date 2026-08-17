@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

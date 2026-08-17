@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import {
   CreateItemSuggestionDocument,
@@ -7,7 +7,6 @@ import {
 } from './useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/useImageUpload';
 import { alertService } from '#/services/alertService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   alertMutationFailure,
   type AlertCaseKeySuffixes,
@@ -17,6 +16,7 @@ import {
   type EditableItemSnapshot,
 } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#/components/organisms/AddItemForm/AddItemForm';
+import { errorService } from '#/services/errorService';
 
 export type ItemEditResult =
   | { status: 'suggested' }
@@ -112,21 +112,24 @@ export function useSuggestItemEdit() {
     // inferring from visibility. canEdit wins when both are true (an admin on a
     // public item) — a direct write needs no review.
     if (original.canEdit) {
-      const result = await executeMutation(
-        () =>
-          updateItem({
-            variables: {
-              input: {
-                id: original.id,
-                ...changes,
-              },
+      let result;
+      try {
+        result = await updateItem({
+          variables: {
+            input: {
+              id: original.id,
+              ...changes,
             },
-          }),
-        'Error updating item:',
-      );
+          },
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Error updating item:',
+        });
+      }
 
       // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
-      if (result === false) {
+      if (!result) {
         alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
         return FAILED;
       }
@@ -170,15 +173,18 @@ export function useSuggestItemEdit() {
       return { status: 'readOnly' };
     }
 
-    const result = await executeMutation(
-      () =>
-        suggestEdit({
-          variables: { input: { itemId: original.id, note, changes } },
-        }),
-      'Error suggesting item edit:',
-    );
+    let result;
+    try {
+      result = await suggestEdit({
+        variables: { input: { itemId: original.id, note, changes } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Error suggesting item edit:',
+      });
+    }
 
-    if (result === false) {
+    if (!result) {
       alertMutationFailure(t, { keyPrefix: 'suggestItemEdit' });
       return FAILED;
     }
@@ -231,11 +237,15 @@ async function uploadImages(
   itemId: string,
 ): Promise<number> {
   if (images.length === 0) return 0;
-  const result = await executeMutation(
-    () => upload(images, itemId),
-    'Error uploading item images:',
-  );
-  return result === false ? 0 : result.length;
+  let result;
+  try {
+    result = await upload(images, itemId);
+  } catch (error) {
+    errorService.reportError(error, {
+      operation: 'Error uploading item images:',
+    });
+  }
+  return !result ? 0 : result.length;
 }
 
 /** 'updated' | 'forbidden' | null (any other failure). */

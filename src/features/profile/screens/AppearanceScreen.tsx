@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';

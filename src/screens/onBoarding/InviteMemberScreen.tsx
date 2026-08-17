@@ -8,7 +8,7 @@ import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { Button } from '#components/base/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useMutation } from '@apollo/client/react';
 import { InviteToHomeDocument } from '#operations/home/home.generated';
@@ -21,7 +21,7 @@ import { useAppStore, useSelectedHomeId } from '#store/useAppStore';
 import { useOnboardingNavigation } from '#hooks/navigation/useOnboardingNavigation';
 import { useUser } from '#store/useAppStore';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 type InviteEntry = {

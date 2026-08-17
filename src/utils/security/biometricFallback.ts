@@ -10,7 +10,7 @@ import {
   type SetOptions,
 } from 'react-native-keychain';
 import { Platform } from 'react-native';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /** Read a human-readable message off an unknown thrown value. */
 const errorMessage = (error: unknown): string | undefined =>

@@ -1,7 +1,10 @@
 import { createMMKV, type MMKV } from 'react-native-mmkv';
 import { StateStorage } from 'zustand/middleware';
 import { logger } from '#/utils/environment';
-import { DeviceKeyManager } from '#/utils/security/deviceKey';
+import {
+  DeviceKeyManager,
+  type DeviceEncryptionKey,
+} from '#/utils/security/deviceKey';
 
 export const STORAGE_KEY = 'sous-chef-storage';
 
@@ -37,7 +40,7 @@ let usingRecoveryInstance = false;
  * internally) up to KEY_FETCH_CYCLES times before giving up, so a brief
  * early-boot keychain outage doesn't quarantine the session.
  */
-const getEncryptionKeyWithRetry = async (): Promise<string> => {
+const getEncryptionKeyWithRetry = async (): Promise<DeviceEncryptionKey> => {
   let lastError: unknown;
   for (let cycle = 1; cycle <= KEY_FETCH_CYCLES; cycle++) {
     try {
@@ -77,8 +80,16 @@ export const initializeSecureStorage = async (): Promise<MMKV> => {
   initPromise = (async () => {
     let instance: MMKV;
     try {
-      const encryptionKey = await getEncryptionKeyWithRetry();
-      instance = createMMKV({ id: STORAGE_KEY, encryptionKey });
+      // The cipher travels with the key: a key minted before the app chose one
+      // encrypted its file under MMKV's AES-128 default, and MMKV DISCARDS a
+      // file it cannot decrypt — so opening a legacy file under AES-256 would
+      // wipe it. Fresh installs get AES-256. See DeviceKeyManager.
+      const { key, encryptionType } = await getEncryptionKeyWithRetry();
+      instance = createMMKV({
+        id: STORAGE_KEY,
+        encryptionKey: key,
+        encryptionType,
+      });
     } catch (error) {
       logger.error(
         'Device key unavailable; quarantining session in recovery storage:',

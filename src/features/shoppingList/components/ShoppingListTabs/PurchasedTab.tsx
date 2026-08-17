@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
@@ -71,7 +71,7 @@ const PurchasedTabComponent: React.FC = () => {
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={t('shoppingListScreens.searchNoResultsTitle', {
+      title={t('empty.noResultsFor', {
         query: displayQuery,
       })}
       description={t('shoppingListScreens.purchasedSearchNoMatch')}

@@ -15,7 +15,7 @@
 />
 */
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
 
 export const EmailInput: React.FC<

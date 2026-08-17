@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   PrimaryActivityIndicator,
   ThemedRefreshControl,
@@ -33,7 +33,7 @@ import {
 import { commonStyles } from '#/styles/commonStyles';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 
 export const HomeManagement: React.FC = () => {

@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
@@ -140,28 +139,28 @@ export const CreateMealPlanScreen: React.FC = () => {
         ? parsedBudget
         : undefined;
 
-    const result = await executeMutation(
-      () =>
-        createMealPlan({
-          name: name.trim(),
-          description: descriptionValue,
-          planType,
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          servings: servingsValue,
-          budgetAmount: budgetValue,
-          dietaryProfileId:
-            trackNutrition && dietaryProfile ? dietaryProfile.id : undefined,
-          homeId,
-        }),
-      error => {
-        const errorMessage =
-          error instanceof Error ? error.message : t('mealPlan.failedToCreate');
-        alertService.alert(t('labels.error'), errorMessage);
-      },
-    );
+    let result;
+    const createMealPlanOptions = {
+      name: name.trim(),
+      description: descriptionValue,
+      planType,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      servings: servingsValue,
+      budgetAmount: budgetValue,
+      dietaryProfileId:
+        trackNutrition && dietaryProfile ? dietaryProfile.id : undefined,
+      homeId,
+    };
+    try {
+      result = await createMealPlan(createMealPlanOptions);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : t('mealPlan.failedToCreate');
+      alertService.alert(t('labels.error'), errorMessage);
+    }
     // `false` means the mutation threw — the onError above already alerted.
-    if (result === false) return;
+    if (!result) return;
 
     if (result?.__typename === 'CreateMealPlanPayload') {
       goBack();

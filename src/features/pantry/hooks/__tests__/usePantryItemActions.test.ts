@@ -25,7 +25,7 @@ jest.mock('#services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -306,18 +306,16 @@ describe('usePantryItemActions', () => {
       expect(m.fired).toEqual([]);
     });
 
+    // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
+    // than rejecting, so this drives the outcome the app actually gets.
     it('reverts quantity and shows error on failure', async () => {
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-      executeMutation.mockImplementationOnce(
-        async (_fn: () => Promise<unknown>, onError: (e: unknown) => void) => {
-          onError(new Error('Failed'));
-          return false;
-        },
-      );
+      const failing = recordMock(CreatePantryItemUsageDocument, {
+        error: new Error('network down'),
+      });
 
       const { result } = renderHookWithApollo(
         () => usePantryItemActions(createOptions()),
-        { cache: seedPantryItems() },
+        { cache: seedPantryItems(), operationMocks: [failing.mock] },
       );
 
       act(() => {

@@ -27,9 +27,6 @@ jest.mock('../cache', () => ({
 }));
 
 const mockLoad = jest.fn((): Record<string, unknown> | null => null);
-const mockLoadCritical = jest.fn((): Record<string, unknown> | null => null);
-const mockLoadDeferred = jest.fn((): Record<string, unknown> | null => null);
-const mockRestoreDeferred = jest.fn();
 const mockScheduleExtractAndSave = jest.fn();
 const mockCancel = jest.fn();
 const mockClear = jest.fn();
@@ -38,9 +35,6 @@ const mockMarkDirty = jest.fn();
 jest.mock('../offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: {
     load: mockLoad,
-    loadCritical: mockLoadCritical,
-    loadDeferred: mockLoadDeferred,
-    restoreDeferred: mockRestoreDeferred,
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
     clear: mockClear,
@@ -69,77 +63,28 @@ describe('Apollo client', () => {
     expect(client.cache).toBeDefined();
   });
 
-  describe('lazy cache hydration', () => {
-    it('merges critical and deferred partitions into a single cache.restore() call', () => {
-      const criticalData = {
+  describe('cache hydration', () => {
+    it('restores the persisted cache in a single cache.restore() call', () => {
+      // One read, one parse, one restore. `cache.restore()` is destructive
+      // (it wipes the EntityStore via init()), so a second call would discard
+      // whatever the first restored.
+      const persisted = {
         ROOT_QUERY: { __typename: 'Query' },
         'User:1': { id: '1' },
-      };
-      const deferredData = {
         'PantryItem:1': { id: '1' },
-        'Recipe:2': { id: '2' },
       };
-      mockLoadCritical.mockReturnValueOnce(criticalData);
-      mockLoadDeferred.mockReturnValueOnce(deferredData);
+      mockLoad.mockReturnValueOnce(persisted);
 
       jest.isolateModules(() => {
         require('../client');
       });
 
-      expect(mockLoadCritical).toHaveBeenCalled();
-      expect(mockLoadDeferred).toHaveBeenCalled();
-      expect(mockRestore).toHaveBeenCalledWith({
-        ...criticalData,
-        ...deferredData,
-      });
-      expect(mockLoad).not.toHaveBeenCalled();
+      expect(mockLoad).toHaveBeenCalledTimes(1);
+      expect(mockRestore).toHaveBeenCalledTimes(1);
+      expect(mockRestore).toHaveBeenCalledWith(persisted);
     });
 
-    it('restores only critical when deferred returns null', () => {
-      const criticalData = { ROOT_QUERY: { __typename: 'Query' } };
-      mockLoadCritical.mockReturnValueOnce(criticalData);
-      mockLoadDeferred.mockReturnValueOnce(null);
-
-      jest.isolateModules(() => {
-        require('../client');
-      });
-
-      expect(mockRestore).toHaveBeenCalledWith(criticalData);
-      expect(mockLoad).not.toHaveBeenCalled();
-    });
-
-    it('restores only deferred when critical returns null', () => {
-      const deferredData = { 'PantryItem:1': { id: '1' } };
-      mockLoadCritical.mockReturnValueOnce(null);
-      mockLoadDeferred.mockReturnValueOnce(deferredData);
-
-      jest.isolateModules(() => {
-        require('../client');
-      });
-
-      expect(mockRestore).toHaveBeenCalledWith(deferredData);
-      expect(mockLoad).not.toHaveBeenCalled();
-    });
-
-    it('falls back to load() when both loadCritical and loadDeferred return null (migration)', () => {
-      mockLoadCritical.mockReturnValueOnce(null);
-      mockLoadDeferred.mockReturnValueOnce(null);
-      const legacyData = { ROOT_QUERY: {}, 'PantryItem:1': { id: '1' } };
-      mockLoad.mockReturnValueOnce(legacyData);
-
-      jest.isolateModules(() => {
-        require('../client');
-      });
-
-      expect(mockLoadCritical).toHaveBeenCalled();
-      expect(mockLoadDeferred).toHaveBeenCalled();
-      expect(mockLoad).toHaveBeenCalled();
-      expect(mockRestore).toHaveBeenCalledWith(legacyData);
-    });
-
-    it('does not restore when all load methods return null', () => {
-      mockLoadCritical.mockReturnValueOnce(null);
-      mockLoadDeferred.mockReturnValueOnce(null);
+    it('does not restore when there is no persisted cache', () => {
       mockLoad.mockReturnValueOnce(null);
 
       jest.isolateModules(() => {

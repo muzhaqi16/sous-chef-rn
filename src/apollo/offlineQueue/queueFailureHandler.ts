@@ -3,7 +3,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { logger } from '#/utils/environment';
 import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
 

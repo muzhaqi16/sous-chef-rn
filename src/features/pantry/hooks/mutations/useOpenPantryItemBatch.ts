@@ -16,9 +16,9 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { t } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { errorService } from '#/services/errorService';
 
 interface UseOpenPantryItemBatchOptions {
   onSuccess?: () => void;
@@ -73,10 +73,13 @@ export function useOpenPantryItemBatch({
       'isOpened',
       true,
     );
-    executeCacheUpdate(
-      () => writeOpened(true, now),
-      'Open Pantry Item Batch (optimistic)',
-    );
+    try {
+      writeOpened(true, now);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Open Pantry Item Batch (optimistic)',
+      });
+    }
 
     const result = await openMutation({
       variables: { input: { batchId, idempotencyKey: generateEntityId() } },
@@ -86,11 +89,17 @@ export function useOpenPantryItemBatch({
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      executeCacheUpdate(
-        () =>
-          writeOpened(snapshot?.isOpened ?? false, snapshot?.openedAt ?? null),
-        'Revert rejected batch open',
-      );
+      // Resolved before the try — a `??` inside a try body makes the React
+      // Compiler bail out of this hook.
+      const revertedIsOpened = snapshot?.isOpened ?? false;
+      const revertedOpenedAt = snapshot?.openedAt ?? null;
+      try {
+        writeOpened(revertedIsOpened, revertedOpenedAt);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected batch open',
+        });
+      }
       clearPersistence();
       // onError covers transport errors; a non-success union payload has none.
       alertRejectedMutation(result, t('errors.openBatchFailed'));

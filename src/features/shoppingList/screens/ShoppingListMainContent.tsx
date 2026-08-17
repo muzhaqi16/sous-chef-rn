@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -50,7 +50,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { DataStateView } from '#components/base/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 

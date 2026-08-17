@@ -6,13 +6,9 @@ import React, {
   useImperativeHandle,
 } from 'react';
 import { View, RefreshControl } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
-import {
-  FlashList,
-  type FlashListRef,
-  type ListRenderItemInfo,
-} from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -24,7 +20,6 @@ import {
   PREFERENCE_DEFAULTS,
 } from '#store/slices/preferenceTypes';
 import { SearchBar } from '#components/molecules/SearchBar';
-import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { PantryHeader } from './PantryHeader';
 import { PantrySortModal } from './PantrySortModal';
 import {
@@ -51,8 +46,6 @@ import {
   STICKY_HEADER_SENTINEL,
   STICKY_HEADER_INDICES,
   STICKY_HEADER_CONFIG,
-  isStickyHeaderSentinel,
-  type StickyHeaderSentinel,
 } from '#utils/flashListDefaults';
 
 // Extracted modules
@@ -63,7 +56,14 @@ import {
   INITIAL_RENDER_WINDOW,
   RENDER_WINDOW_STEP,
 } from './pantryDisplay/constants';
-import { renderItem, type PantryListNode } from './pantryDisplay/renderItem';
+import {
+  renderPantryListItem,
+  getPantryListItemType,
+  pantryListKeyExtractor,
+  type PantryListItem,
+  type PantryListNode,
+} from './pantryDisplay/renderItem';
+import { PantryStickyTabsProvider } from './pantryDisplay/PantryStickyTabs';
 import { PantryEmptyState } from './PantryEmptyState';
 import type {
   PantryContentProps,
@@ -76,7 +76,7 @@ let hasEverShownContent = false;
 
 // The list is a heterogeneous array: a single sticky sentinel at index 0 (the
 // filter tabs, pinned natively via `stickyHeaderIndices`) followed by item rows.
-type PantryListItem = StickyHeaderSentinel | PantryListNode;
+// `PantryListItem` is declared alongside the renderer in `pantryDisplay/renderItem`.
 
 // --- Main component ---
 
@@ -388,7 +388,11 @@ export const PantryContent = React.forwardRef<
     })();
 
     // Re-render rows (and the active-tab highlight) when sort/filter changes.
-    const extraData = `${sortOption}-${sortDirection}-${locationFilter}`;
+    // `locationFilter` is deliberately absent: no item cell renders anything
+    // derived from it (the leaf renderer reads only `item`, and PantryItemCard
+    // owns its own `useFragment` subscription), and including it made every
+    // mounted cell re-render on a tab change.
+    const extraData = `${sortOption}-${sortDirection}`;
 
     const listContentStyle = isEmpty
       ? styles.listContentEmpty
@@ -397,193 +401,174 @@ export const PantryContent = React.forwardRef<
           paddingBottom: getTabBarBottomPadding(safeBottom),
         };
 
-    const getListItemType = (item: PantryListItem) =>
-      isStickyHeaderSentinel(item) ? 'stickyHeader' : 'item';
-
-    const listKeyExtractor = (item: PantryListItem) =>
-      isStickyHeaderSentinel(item) ? '__stickyHeader__' : item.id;
-
-    // Inline renderItem (compiler-memoized) so the sticky tabs can read the
-    // current filter/handlers; item rows delegate to the shared leaf renderer.
-    const renderListItem = (info: ListRenderItemInfo<PantryListItem>) => {
-      const { item, target } = info;
-      if (isStickyHeaderSentinel(item)) {
-        return (
-          <View
-            style={[
-              styles.stickySection,
-              target === 'StickyHeader' && styles.stickyHeaderActive,
-            ]}
-          >
-            <FilterTabs<LocationFilter>
-              tabs={tabsWithAddButton}
-              activeTabId={locationFilter}
-              onTabChange={handleLocationFilterChange}
-              counts={locationCounts}
-              testIDPrefix="pantry-location-tab"
-            />
-          </View>
-        );
-      }
-      return renderItem({ ...info, item });
+    // The sticky tabs read this from context rather than from `renderItem`'s
+    // closure — see `PantryStickyTabs` for why that matters to every other cell.
+    const stickyTabs = {
+      tabs: tabsWithAddButton,
+      activeTabId: locationFilter,
+      onTabChange: handleLocationFilterChange,
+      counts: locationCounts,
     };
 
     return (
       <PantryActionsProvider actions={itemActions}>
-        <View style={styles.container}>
-          <FlashList<PantryListItem>
-            ref={flashListRef}
-            CellRendererComponent={AnimatedCellRenderer}
-            testID="pantry-list"
-            data={listData}
-            renderItem={renderListItem}
-            keyExtractor={listKeyExtractor}
-            getItemType={getListItemType}
-            stickyHeaderIndices={STICKY_HEADER_INDICES}
-            stickyHeaderConfig={STICKY_HEADER_CONFIG}
-            drawDistance={DRAW_DISTANCE}
-            maxItemsInRecyclePool={15}
-            extraData={extraData}
-            contentContainerStyle={listContentStyle}
-            showsVerticalScrollIndicator={false}
-            onScroll={scrollHandler}
-            onScrollBeginDrag={onScrollBeginDrag}
-            onScrollEndDrag={onScrollEndDrag}
-            onMomentumScrollEnd={onMomentumScrollEnd}
-            scrollEventThrottle={16}
-            refreshControl={
-              onRefresh ? (
-                <RefreshControl
-                  testID="pantry-refresh-control"
-                  refreshing={refreshing}
-                  onRefresh={onRefresh}
-                />
-              ) : undefined
-            }
-            ListHeaderComponent={
-              <>
-                <View style={styles.header}>
-                  <PantryHeader
-                    userName={userName}
-                    householdName={householdName}
-                    avatarUrl={avatarUrl}
-                    notificationCount={notificationCount}
-                    onAvatarPress={onAvatarPress}
-                    onHomePress={onHomePress}
-                    onNotificationPress={onNotificationPress}
-                    onHomeBadgeLayout={onHomeBadgeLayout}
+        <PantryStickyTabsProvider value={stickyTabs}>
+          <View style={styles.container}>
+            <FlashList<PantryListItem>
+              ref={flashListRef}
+              CellRendererComponent={AnimatedCellRenderer}
+              testID="pantry-list"
+              data={listData}
+              renderItem={renderPantryListItem}
+              keyExtractor={pantryListKeyExtractor}
+              getItemType={getPantryListItemType}
+              stickyHeaderIndices={STICKY_HEADER_INDICES}
+              stickyHeaderConfig={STICKY_HEADER_CONFIG}
+              drawDistance={DRAW_DISTANCE}
+              maxItemsInRecyclePool={15}
+              extraData={extraData}
+              contentContainerStyle={listContentStyle}
+              showsVerticalScrollIndicator={false}
+              onScroll={scrollHandler}
+              onScrollBeginDrag={onScrollBeginDrag}
+              onScrollEndDrag={onScrollEndDrag}
+              onMomentumScrollEnd={onMomentumScrollEnd}
+              scrollEventThrottle={16}
+              refreshControl={
+                onRefresh ? (
+                  <RefreshControl
+                    testID="pantry-refresh-control"
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
                   />
-                </View>
-                <View style={styles.searchContainer}>
-                  <SearchBar
-                    value={searchQuery}
-                    onChangeText={onSearchChange}
-                    placeholder={t('pantryScreen.searchPlaceholder')}
-                    showSearchIcon={true}
-                    testID="pantry-search-input"
-                    innerRightIcon={
-                      <View
-                        ref={settingsIconRef}
-                        collapsable={false}
-                        onLayout={() => {
-                          if (onSettingsIconLayout) {
-                            requestAnimationFrame(() => {
-                              settingsIconRef.current?.measure(
-                                (_x, _y, w, h, pageX, pageY) => {
-                                  if (w > 0 && h > 0) {
-                                    onSettingsIconLayout({
-                                      x: pageX,
-                                      y: pageY,
-                                      width: w,
-                                      height: h,
-                                    });
-                                  }
-                                },
-                              );
-                            });
-                          }
-                        }}
-                      >
-                        <Pressable
-                          onPress={onSettingsPress}
-                          hitSlop={8}
-                          accessibilityRole="button"
-                          accessibilityLabel={t(
-                            'pantryScreen.settingsAccessibility',
-                          )}
-                        >
-                          <Icon
-                            name="settings-outline"
-                            size={18}
-                            tone="textTertiary"
-                          />
-                        </Pressable>
-                      </View>
-                    }
-                  />
-                </View>
-                {!!stats && (
-                  <View style={styles.statsContainer}>
-                    <PantryAlertBar
-                      stats={stats}
-                      onAnalyticsPress={onAnalyticsPress}
-                      onLowStockNavigate={onLowStockNavigate}
-                      onExpiringNavigate={onExpiringNavigate}
-                      onExpiredNavigate={onExpiredNavigate}
-                      sortLabel={`${t('pantryScreen.sort')} ${
-                        sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
-                      }`}
-                      onSortPress={openSortModal}
+                ) : undefined
+              }
+              ListHeaderComponent={
+                <>
+                  <View style={styles.header}>
+                    <PantryHeader
+                      userName={userName}
+                      householdName={householdName}
+                      avatarUrl={avatarUrl}
+                      notificationCount={notificationCount}
+                      onAvatarPress={onAvatarPress}
+                      onHomePress={onHomePress}
+                      onNotificationPress={onNotificationPress}
+                      onHomeBadgeLayout={onHomeBadgeLayout}
                     />
                   </View>
-                )}
-              </>
-            }
-            ListFooterComponent={
-              isEmpty ? (
-                <PantryEmptyState
-                  showSkeletons={showSkeletons}
-                  searchQuery={searchQuery}
-                  itemCount={items.length}
-                  locationFilter={locationFilter}
-                  tabs={resolvedTabs}
-                  onAddItem={onAddItem}
-                  noHomeSelected={noHomeSelected}
-                  noHomes={noHomes}
-                  noPantries={noPantries}
-                  onSelectHome={onSelectHome}
-                  onCreatePantry={onCreatePantry}
-                  overallItemCount={locationCounts.all ?? 0}
-                />
-              ) : (
-                <PaginationFooter
-                  hasMore={hasMore}
-                  isFetchingMore={isLoadingMore}
-                  itemCount={bodyItems.length}
-                  SkeletonComponent={PantryItemSkeleton}
-                  skeletonCount={3}
-                />
-              )
-            }
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={
-              FLASHLIST_DEFAULTS.analyticsHeavyFullScreen.onEndReachedThreshold
-            }
-            onLoad={perfCallbacks.onLoad}
-            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-            maintainVisibleContentPosition={MVCP_DISABLED}
-          />
-
-          {!!sortModalVisible && (
-            <PantrySortModal
-              visible={sortModalVisible}
-              sortOption={sortOption}
-              sortDirection={sortDirection}
-              onSelect={handleSortSelect}
-              onClose={closeSortModal}
+                  <View style={styles.searchContainer}>
+                    <SearchBar
+                      value={searchQuery}
+                      onChangeText={onSearchChange}
+                      placeholder={t('pantryScreen.searchPlaceholder')}
+                      showSearchIcon={true}
+                      testID="pantry-search-input"
+                      innerRightIcon={
+                        <View
+                          ref={settingsIconRef}
+                          collapsable={false}
+                          onLayout={() => {
+                            if (onSettingsIconLayout) {
+                              requestAnimationFrame(() => {
+                                settingsIconRef.current?.measure(
+                                  (_x, _y, w, h, pageX, pageY) => {
+                                    if (w > 0 && h > 0) {
+                                      onSettingsIconLayout({
+                                        x: pageX,
+                                        y: pageY,
+                                        width: w,
+                                        height: h,
+                                      });
+                                    }
+                                  },
+                                );
+                              });
+                            }
+                          }}
+                        >
+                          <Pressable
+                            onPress={onSettingsPress}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={t(
+                              'pantryScreen.settingsAccessibility',
+                            )}
+                          >
+                            <Icon
+                              name="settings-outline"
+                              size={18}
+                              tone="textTertiary"
+                            />
+                          </Pressable>
+                        </View>
+                      }
+                    />
+                  </View>
+                  {!!stats && (
+                    <View style={styles.statsContainer}>
+                      <PantryAlertBar
+                        stats={stats}
+                        onAnalyticsPress={onAnalyticsPress}
+                        onLowStockNavigate={onLowStockNavigate}
+                        onExpiringNavigate={onExpiringNavigate}
+                        onExpiredNavigate={onExpiredNavigate}
+                        sortLabel={`${t('pantryScreen.sort')} ${
+                          sortDirection === PantrySortDirection.ASC ? '↑' : '↓'
+                        }`}
+                        onSortPress={openSortModal}
+                      />
+                    </View>
+                  )}
+                </>
+              }
+              ListFooterComponent={
+                isEmpty ? (
+                  <PantryEmptyState
+                    showSkeletons={showSkeletons}
+                    searchQuery={searchQuery}
+                    itemCount={items.length}
+                    locationFilter={locationFilter}
+                    tabs={resolvedTabs}
+                    onAddItem={onAddItem}
+                    noHomeSelected={noHomeSelected}
+                    noHomes={noHomes}
+                    noPantries={noPantries}
+                    onSelectHome={onSelectHome}
+                    onCreatePantry={onCreatePantry}
+                    overallItemCount={locationCounts.all ?? 0}
+                  />
+                ) : (
+                  <PaginationFooter
+                    hasMore={hasMore}
+                    isFetchingMore={isLoadingMore}
+                    itemCount={bodyItems.length}
+                    SkeletonComponent={PantryItemSkeleton}
+                    skeletonCount={3}
+                  />
+                )
+              }
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={
+                FLASHLIST_DEFAULTS.analyticsHeavyFullScreen
+                  .onEndReachedThreshold
+              }
+              onLoad={perfCallbacks.onLoad}
+              onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+              maintainVisibleContentPosition={MVCP_DISABLED}
             />
-          )}
-        </View>
+
+            {!!sortModalVisible && (
+              <PantrySortModal
+                visible={sortModalVisible}
+                sortOption={sortOption}
+                sortDirection={sortDirection}
+                onSelect={handleSortSelect}
+                onClose={closeSortModal}
+              />
+            )}
+          </View>
+        </PantryStickyTabsProvider>
       </PantryActionsProvider>
     );
   },

@@ -109,7 +109,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/components/base/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',

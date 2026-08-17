@@ -139,10 +139,21 @@
     "entityInvite": "Invite",
     "notFoundTitle": "Not Found",
     "validUnits": "Valid units: {{units}}",
-    "handlerFailed": "Something went wrong. Please try again.",
     "unexpected": "An unexpected error occurred",
     "addLowStockFailed": "Failed to add low stock items",
-    "saveLoginFailed": "Failed to save login information"
+    "saveLoginFailed": "Failed to save login information",
+    "searchFailed": "Search Error",
+    "createListFailed": "Failed to create list",
+    "listNameEmpty": "List name cannot be empty",
+    "saveSettingsFailed": "Failed to save settings",
+    "noHomeSelected": "No home selected",
+    "permissionTitle": "Permission Error",
+    "resetSettingsFailed": "Failed to reset settings. Please try again.",
+    "uploadFailedTitle": "Upload Failed",
+    "saveFailed": "Failed to save",
+    "generic": "An error occurred",
+    "noActiveMealPlan": "No active meal plan. Create one first.",
+    "somethingWentWrongTitle": "Something went wrong"
   },
   "success": {
     "itemAdded": "Item added successfully",
@@ -260,7 +271,8 @@
     "rename": "Rename",
     "tapToViewDetails": "Tap to view details",
     "loading": "Loading",
-    "leave": "Leave"
+    "leave": "Leave",
+    "noFolder": "No Folder"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -300,7 +312,8 @@
     "noMembers": "No members yet",
     "noPantryItems": "Your pantry is empty",
     "noShoppingListItems": "Your shopping list is empty",
-    "noInvitations": "No pending invitations"
+    "noInvitations": "No pending invitations",
+    "noResultsFor": "No results for \"{{query}}\""
   },
   "auth": {
     "loginTitle": "Sign in to Sous Chef",
@@ -481,11 +494,7 @@
     "loadingRecipe": "Loading recipe...",
     "recipeNotFoundDb": "Recipe not found in database",
     "recipeNotFound": "Recipe not found",
-    "servingsSuffix": "servings",
-    "match": "match",
     "suggested": "Suggested",
-    "ingredientsSuffix": "ingredients",
-    "minutes": "min",
     "percentHealthy": "% healthy",
     "cookedCount": "Cooked {{count}}x",
     "markCooked": "Mark cooked",
@@ -573,7 +582,6 @@
     "apiLimitMessage": "Spoonacular API quota exceeded. Please try again later.",
     "rateLimitTitle": "Rate Limit",
     "rateLimitMessage": "Too many requests. Please try again in a moment.",
-    "searchErrorTitle": "Search Error",
     "searchErrorMessage": "Failed to search recipes. Please try again.",
     "markCookedFailed": "Failed to mark recipe as cooked",
     "cookExternalError": "Cannot mark external recipes as cooked. Please save the recipe first.",
@@ -586,7 +594,6 @@
     "folderDeleted": "Deleted \"{{folderName}}\"",
     "deleteFolderFailed": "Failed to delete folder.",
     "editRecipe": "Edit Recipe",
-    "validationError": "Validation Error",
     "updateRecipeFailed": "Failed to update recipe.",
     "createRecipeFailed": "Failed to create recipe.",
     "unexpectedError": "An unexpected error occurred.",
@@ -624,7 +631,6 @@
     "reviewUpdated": "Review updated",
     "reviewDeleted": "Review deleted",
     "loadingShoppingLists": "Loading shopping lists...",
-    "createListFailed": "Failed to create list",
     "couldNotAddIngredients": "Could not add ingredients: {{error}}",
     "addIngredientToListFailed": "Failed to add ingredient to shopping list.",
     "addIngredientsToListFailed": "Failed to add ingredients to shopping list.",
@@ -634,8 +640,6 @@
     "addedItemsToList": "Added {{count}} items to \"{{listName}}\"",
     "addedItemsToListUpdated": "Added {{count}} items to \"{{listName}}\", updated {{updated}}",
     "noIngredientsToAdd": "No ingredients available to add.",
-    "listNameEmpty": "List name cannot be empty",
-    "createShoppingListFailed": "Failed to create shopping list",
     "cannotAddExternalIngredients": "Cannot add ingredients from external recipes yet. Please save the recipe first.",
     "ingredientsCount": "Ingredients ({{count}})",
     "unnamedIngredient": "Unnamed ingredient",
@@ -700,7 +704,14 @@
     "helpful": "Helpful",
     "helpfulWithCount": "Helpful ({{count}})",
     "reviewCount_one": "{{count}} review",
-    "reviewCount_other": "{{count}} reviews"
+    "reviewCount_other": "{{count}} reviews",
+    "servingsCount_one": "{{count}} serving",
+    "servingsCount_other": "{{count}} servings",
+    "minutesValue": "{{count}} min",
+    "ingredientCount_one": "{{count}} ingredient",
+    "ingredientCount_other": "{{count}} ingredients",
+    "ingredientRatio": "{{used}}/{{total}} ingredients",
+    "matchRatio": "{{used}}/{{total}} match"
   },
   "recipeFilters": {
     "title": "Filters",
@@ -816,7 +827,6 @@
   "shoppingListScreens": {
     "emptyTitle": "Your list is empty",
     "emptyDescription": "Add items to start your shopping list",
-    "searchNoResultsTitle": "No results for \"{{query}}\"",
     "searchAddPrompt": "Would you like to add it to your list?",
     "purchasedEmptyTitle": "No purchased items yet",
     "purchasedEmptyDescription": "Check off items as you shop to see them here",
@@ -854,9 +864,6 @@
     "cantLeaveHomeLinkedMessage": "This list is linked to the home \"{{name}}\". To leave this list, you must leave the home first.",
     "deleteListConfirmTitle": "Delete List",
     "deleteListConfirmMessage": "Are you sure you want to delete this list? This action cannot be undone.",
-    "listNameEmpty": "List name cannot be empty",
-    "failedToSave": "Failed to save settings",
-    "failedToCreate": "Failed to create list",
     "failedToLeave": "Failed to leave list",
     "listStatusSection": "List Status",
     "statusLabel": "Status",
@@ -962,7 +969,6 @@
     "errorNetwork": "Network error. Check your internet connection and try again.",
     "errorInvalidInput": "Invalid input. Please check your item details.",
     "errorSessionExpired": "Session expired. Please log in again.",
-    "errorGeneric": "Something went wrong. Please try again.",
     "actionUpdate": "update",
     "actionAdd": "add",
     "itemUpdated": "Item Updated",
@@ -986,8 +992,6 @@
     "cannotLeaveTitle": "Cannot Leave",
     "cannotLeaveOwnerMessage": "Owners cannot leave the list. Please transfer ownership to another member or delete the list.",
     "failedToUpdateShareSettings": "Failed to update share settings",
-    "failedToSendInvitation": "Failed to send invitation",
-    "failedToRemoveMember": "Failed to remove member",
     "sharingOfflineMessage": "Sharing not available offline",
     "sharingOfflineDescription": "Connect to the internet to invite members or manage list sharing.",
     "invitedOn": "Invited {{date}}",
@@ -1075,8 +1079,6 @@
     "deleteConfirmTitle": "Delete Pantry",
     "deleteConfirmMessage": "Are you sure you want to delete this pantry? This action cannot be undone and will remove all items in this pantry.",
     "nameEmptyError": "Pantry name cannot be empty",
-    "noHomeError": "No home selected",
-    "saveFailed": "Failed to save settings",
     "createFailed": "Failed to create pantry",
     "loadErrorTitle": "Error Loading Pantry",
     "loadErrorMessage": "Failed to load pantry data. Please try again.",
@@ -1126,7 +1128,6 @@
   "storageLocations": {
     "title": "Storage Locations",
     "loading": "Loading storage locations...",
-    "somethingWrong": "Something went wrong",
     "retry": "Retry",
     "listView": "List View",
     "treeView": "Tree View",
@@ -1219,8 +1220,7 @@
     "reasonTaste": "Taste",
     "reasonUnknownLoss": "Unknown Loss",
     "offlineTitle": "No data offline",
-    "offlineDescription": "These charts haven't been loaded for this period yet. Reconnect to see them.",
-    "noDataAvailable": "No data available"
+    "offlineDescription": "These charts haven't been loaded for this period yet. Reconnect to see them."
   },
   "performance": {
     "title": "Performance Dashboard",
@@ -1368,11 +1368,9 @@
     "permissionRequiredTitle": "Notification Permission Required",
     "permissionRequiredMessage": "To receive push notifications, you need to enable notification permissions in your device settings.\n\nWould you like to open settings now?",
     "openSettings": "Open Settings",
-    "permissionErrorTitle": "Permission Error",
     "permissionErrorMessage": "Failed to request notification permission. Please try again or check your device settings.",
     "updateFailed": "Failed to update settings. Please try again.",
     "resetSuccess": "Settings have been reset to defaults.",
-    "resetFailed": "Failed to reset settings. Please try again.",
     "resetConfirm": "Are you sure you want to reset all notification settings to their default values?",
     "resetToDefaultsDesc": "Reset all notification settings to their default values",
     "testSection": "Test",
@@ -1410,7 +1408,8 @@
     "actionRequiredBody": "This notification requires action: {{action}}",
     "goToNotifications": "Go to Notifications",
     "urgentUnread_one": "{{count}} urgent notification",
-    "urgentUnread_other": "{{count}} urgent notifications"
+    "urgentUnread_other": "{{count}} urgent notifications",
+    "channelGeneral": "General"
   },
   "settings": {
     "appSettings": "App Settings",
@@ -1445,7 +1444,6 @@
     "resetConfirm": "Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.",
     "resetSuccess": "Settings and tutorials have been reset to defaults.",
     "resetSuccessTitle": "Success",
-    "resetFailed": "Failed to reset settings. Please try again.",
     "loadingSettings": "Loading settings...",
     "updateFailed": "Failed to update setting. Please try again."
   },
@@ -1539,7 +1537,6 @@
     "legalNotice": "By continuing you agree to our",
     "uploadAndContinue": "Upload & Continue",
     "updateProfilePhotoFailed": "Failed to update profile photo. Please try again.",
-    "uploadFailedTitle": "Upload Failed",
     "invalidImageTitle": "Invalid Image",
     "cameraPermissionTitle": "Camera Permission",
     "cameraPermissionTakePhotoMessage": "Camera access is required to take a photo. Please enable it in settings.",
@@ -1656,7 +1653,6 @@
     "homeAccepted": "Home invitation accepted!",
     "unknownType": "Unknown invitation type",
     "declineConfirm": "Are you sure you want to decline this invitation?",
-    "declineFailedShort": "Failed to decline invitation",
     "loadingMessage": "Loading",
     "notFound": "Invitation not found or expired",
     "loadingDetails": "Loading invitation details...",
@@ -1814,8 +1810,6 @@
     "required": "This field is required",
     "minError": "Value must be at least {{value}}",
     "maxError": "Value must be at most {{value}}",
-    "saveFailed": "Failed to save",
-    "genericError": "An error occurred",
     "minRange": "(min: {{value}})",
     "maxRange": "(max: {{value}})",
     "enterPlaceholder": "Enter {{title}}"
@@ -1916,7 +1910,6 @@
   "addToMealPlan": {
     "title": "Add to Meal Plan",
     "add": "Add",
-    "noActivePlan": "No active meal plan. Create one first.",
     "mealPlanLabel": "Meal Plan",
     "dateLabel": "Date",
     "mealTypeLabel": "Meal Type",
@@ -2031,7 +2024,6 @@
     "yourRating": "Your Rating",
     "ratingFormat": "{{rating}}/5",
     "folder": "Folder",
-    "noFolder": "No Folder",
     "enterFolderName": "Enter folder name...",
     "create": "Create",
     "createNewFolder": "Create New Folder",
@@ -2320,8 +2312,6 @@
     "expirationPlaceholder": "Select date",
     "storage": "Storage",
     "restockFailed": "Failed to restock item.",
-    "addFailedRetry": "Failed to add item. Please try again.",
-    "addFailed": "Failed to add item",
     "itemAdded": "Item added to pantry",
     "pageMain": "Main",
     "pageDetails": "Details",
@@ -2376,11 +2366,15 @@
     "noListTitle": "No List Selected",
     "noListBody": "Please select or create a shopping list first.",
     "createList": "Create List",
+    "searchPlaceholder": "Search or scan item...",
+    "added": "Added {{name}}",
+    "emptyTitle": "No suggestions yet",
+    "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
+    "emptyShoppingListSubtext": "Add items to your list and they'll appear here for quick re-adding",
     "addToPantry": "Add to Pantry",
     "addToShoppingList": "Add to Shopping List"
   },
   "dietaryProfile": {
-    "errorTitle": "Error",
     "dietTitle": "Diet",
     "dietEmpty": "No diet selected yet",
     "dietSheetTitle": "Select Diet",
@@ -2435,7 +2429,6 @@
     }
   },
   "addToShoppingListSheet": {
-    "addFailedRetry": "Failed to add item. Please try again.",
     "tutorialTapPlus": "Tap + next to an item to add it",
     "tutorialTapAddManually": "Tap \"Add Manually\" to add an item",
     "tutorialPullDown": "Pull down to close"
@@ -2443,9 +2436,7 @@
   "numberInputSheet": {
     "required": "This field is required",
     "minError": "Value must be at least {{min}}",
-    "maxError": "Value must be at most {{max}}",
-    "saveFailed": "Failed to save",
-    "genericError": "An error occurred"
+    "maxError": "Value must be at most {{max}}"
   },
   "textEditBottomSheet": {
     "cancel": "Cancel",
@@ -2478,7 +2469,6 @@
   "saveRecipe": {
     "title": "Save Recipe",
     "folder": "Folder",
-    "noFolder": "No Folder",
     "enterFolderName": "Enter folder name...",
     "create": "Create",
     "createNewFolder": "Create New Folder",
@@ -2525,9 +2515,7 @@
     "cameraPermissionBlockedMessage": "Camera access is blocked. Please go to Settings > Apps > Sous Chef > Permissions to enable camera access.",
     "cameraPermissionTitle": "Camera Permission",
     "cameraPermissionMessage": "Camera permission is required to take photos. Please enable it in your device settings.",
-    "permissionErrorTitle": "Permission Error",
     "permissionErrorMessage": "Failed to request camera permission. Please try again or check your device settings.",
-    "uploadFailedTitle": "Upload Failed",
     "updatePhotoFailed": "Failed to update profile photo",
     "cropPhoto": "Crop Photo",
     "cropping": "Cropping...",
@@ -2575,19 +2563,16 @@
     "expiredCount": "{{count}} expired",
     "lowStockCount": "{{count}} low stock",
     "analyticsAccessibility": "View analytics",
-    "emptyTitle": "Your pantry is empty",
     "emptySubtitle": "Start tracking your food to reduce waste",
     "emptyAction": "Add Items",
     "noHomeTitle": "No home yet",
     "noHomeDescription": "Create or join a home to start tracking food",
     "noHomeAction": "Get Started",
-    "noHomeSelectedTitle": "No home selected",
     "noHomeSelectedDescription": "Select a home to view your pantry",
     "noHomeSelectedAction": "Go to My Homes",
     "noPantriesTitle": "Create a pantry",
     "noPantriesDescription": "Set up a pantry to start tracking your food",
     "noPantriesAction": "Create Pantry",
-    "searchNoResultsTitle": "No results for \"{{query}}\"",
     "searchNoResultsDescription": "Would you like to add it to your pantry?",
     "searchNoResultsAction": "Add Item",
     "tabEmptyTitle": "No items in {{tabName}}",
@@ -2781,8 +2766,7 @@
   },
   "searchResults": {
     "title": "Search Results",
-    "searching": "Searching for item...",
-    "errorTitle": "Search Error"
+    "searching": "Searching for item..."
   },
   "suggestItemEdit": {
     "sentTitle": "Suggestion sent",
@@ -2794,7 +2778,6 @@
     "rateLimitedTitle": "Slow down a moment",
     "notFoundTitle": "Item not found",
     "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
-    "rejectedTitle": "Couldn't send that",
     "loadFailedTitle": "Couldn't load this item",
     "loadFailedBody": "We couldn't load the item's current details, and we need them to work out what you changed. Check your connection and try again.",
     "readOnlyTitle": "This item can't be edited",
@@ -2805,11 +2788,12 @@
     "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
     "updatedTitle": "Item updated",
     "updatedBody": "Your changes are live.",
-    "failedTitle": "Couldn't send that",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
     "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
     "suggestAction": "Suggest Edit",
-    "editAction": "Edit"
+    "editAction": "Edit",
+    "rejectedTitle": "Couldn't send that",
+    "failedTitle": "Couldn't send that"
   },
   "reportItem": {
     "footer": "Wrong details on one of these?",
@@ -2821,13 +2805,13 @@
     "submit": "Send report",
     "sentTitle": "Report sent",
     "sentBody": "Thanks — an admin will take a look at this item.",
-    "failedTitle": "Couldn't send that",
     "failedBody": "Something went wrong sending your report. Please try again.",
     "alreadyReportedTitle": "Already reported",
     "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
     "rateLimitedTitle": "Slow down a moment",
     "notFoundTitle": "Item not found",
     "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "failedTitle": "Couldn't send that",
     "rejectedTitle": "Couldn't send that"
   },
   "addItemForm": {
@@ -2993,7 +2977,6 @@
     "offlineTitle": "No Internet Connection",
     "offlineBody": "Image upload requires an internet connection. Please try again when you're online.",
     "offlineError": "You're offline. Image upload requires an internet connection.",
-    "failedTitle": "Upload Failed",
     "failedBody": "Something went wrong uploading your image. Please try again.",
     "invalidTypeBody": "Please select a JPEG, PNG, or WebP image file.",
     "profileTooLargeBody": "The image is too large. Profile images must be under {{size}}MB.",
@@ -3115,11 +3098,12 @@
     "addTitle": "Add Pantry Item",
     "editTitle": "Edit Pantry Item",
     "quantityUnit": "Quantity & Unit",
-    "quantityStock": "Quantity & Stock"
+    "quantityStock": "Quantity & Stock",
+    "quantityRequired": "Quantity *",
+    "quantityCurrent": "Current Quantity"
   },
   "folderPicker": {
     "selectFolder": "Select Folder",
-    "noFolder": "No Folder",
     "createNew": "Create New Folder",
     "loading": "Loading folders...",
     "longPressHint": "Long press a folder to edit or delete",
@@ -3312,7 +3296,8 @@
     "barcodeValue": "Barcode: {{barcode}}",
     "formatValue": "Format: {{format}}",
     "sku": "SKU",
-    "upc": "UPC/Barcode"
+    "upc": "UPC/Barcode",
+    "added": "Added"
   },
   "tabBar": {
     "actionButton": "Action button",
@@ -3496,9 +3481,6 @@
     "freezer": "Freezer",
     "pantry": "Pantry"
   },
-  "editableField": {
-    "saveFailed": "Failed to save"
-  },
   "expiration": {
     "noExpiryDate": "No expiry date",
     "expiredDaysAgo_one": "Expired {{count}} day ago",
@@ -3550,7 +3532,9 @@
   "itemSubtitle": {
     "percentRemaining": "({{percent}}% remaining)",
     "weight": "{{weight}} {{unit}}",
-    "weightRemaining": "{{weight}} {{unit}} remaining"
+    "weightRemaining": "{{weight}} {{unit}} remaining",
+    "contentUnitCount_one": "{{count}} {{unit}}",
+    "contentUnitCount_other": "{{count}} {{unit}}"
   },
   "fractionInput": {
     "formatsHint": "Formats: 1/4, 1 1/4, 0.75, or 2"
@@ -3625,21 +3609,16 @@
     "itemsMax": "You can select up to {{count}} items"
   },
   "toasts": {
-    "noHomeSelected": "No home selected",
     "noLowStockItems": "No low stock items found",
     "mealUpdateFailed": "Failed to update meal",
     "mealCompletedDeducted": "Meal completed! Pantry items deducted.",
     "mealCompleted": "Meal completed!",
-    "noActiveMealPlan": "No active meal plan. Create one first.",
     "addedToMealPlan": "Added to meal plan",
     "mealPlanDuplicated": "Meal plan duplicated!",
     "itemToggleFailed": "Failed to toggle item",
-    "itemDeleteFailed": "Failed to delete item",
-    "itemAddFailed": "Failed to add item",
     "selectShoppingListFirst": "Please select a shopping list first",
     "signInToVerifyEmail": "Sign in to finish verifying your email.",
     "signInToAcceptInvite": "Sign in to accept this invitation.",
-    "somethingWentWrongRetry": "Something went wrong. Please try again.",
     "folderProtected": "\"{{folder}}\" cannot be renamed or deleted",
     "welcomeToEntity": "Welcome to {{name}}!",
     "canCollaborateOn": "You can now collaborate on {{name}}",

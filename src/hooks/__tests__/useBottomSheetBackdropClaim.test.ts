@@ -7,7 +7,10 @@ import { useBottomSheetBackdropClaim } from '../useBottomSheetBackdropClaim';
 // drives — this test is about WHEN the slot is claimed/released, not about
 // the provider's internal SharedValue bookkeeping (covered by
 // OverlayBackdropProvider.test.tsx).
-const mockClaim = jest.fn(() => 'claim-id');
+// Each claim gets a distinct id so an assertion can name WHICH slot was
+// released — a release aimed at a superseded claim is otherwise invisible.
+let claimCount = 0;
+const mockClaim = jest.fn(() => `claim-${++claimCount}`);
 const mockRelease = jest.fn();
 
 jest.mock('#components/providers/OverlayBackdropProvider', () => ({
@@ -28,7 +31,8 @@ let reactToClose:
   | undefined;
 
 beforeEach(() => {
-  mockClaim.mockClear().mockReturnValue('claim-id');
+  claimCount = 0;
+  mockClaim.mockClear();
   mockRelease.mockClear();
   reactToClose = undefined;
   (useAnimatedReaction as jest.Mock).mockImplementation((_prepare, react) => {
@@ -36,8 +40,21 @@ beforeEach(() => {
   });
 });
 
+/**
+ * Drive the release reaction with an explicit input pair.
+ *
+ * The reaction releases only on the open → closed TRANSITION — `closed` true
+ * with `previous` false. Reanimated also invokes it with `previous === null`
+ * (first run) and can re-invoke it while already closed (`previous === true`),
+ * and the sheet reopening arrives as `closed === false`. Driving only the
+ * transition would leave the `previous === false` guard and its absence
+ * indistinguishable, so every input the signature admits is driven below.
+ */
+const driveReaction = (closed: boolean, previous: boolean | null) =>
+  reactToClose?.(closed, previous);
+
 /** Simulate `animatedIndex` settling at the closed anchor (open → closed). */
-const driveClose = () => reactToClose?.(true, false);
+const driveClose = () => driveReaction(true, false);
 
 describe('useBottomSheetBackdropClaim', () => {
   const makeRef = () => ({ current: { dismiss: jest.fn() } });
@@ -85,7 +102,7 @@ describe('useBottomSheetBackdropClaim', () => {
     result.current.onAnimate(-1, 0); // claim
     result.current.onChange(-1); // settled closed → release
 
-    expect(mockRelease).toHaveBeenCalledWith('claim-id');
+    expect(mockRelease).toHaveBeenCalledWith('claim-1');
   });
 
   it('also releases via the animatedIndex backstop (interrupted closes)', () => {
@@ -94,7 +111,38 @@ describe('useBottomSheetBackdropClaim', () => {
     result.current.onAnimate(-1, 0); // claim
     driveClose(); // SV reaches -1 without an onChange(-1) callback
 
-    expect(mockRelease).toHaveBeenCalledWith('claim-id');
+    expect(mockRelease).toHaveBeenCalledWith('claim-1');
+  });
+
+  it.each([
+    ['the reaction runs for the first time', true, null],
+    ['the sheet is re-evaluated while already closed', true, true],
+    ['the sheet is open', false, true],
+  ] as const)('holds the claim when %s', (_case, closed, previous) => {
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+
+    result.current.onAnimate(-1, 0); // claim
+    driveReaction(closed, previous);
+
+    expect(mockRelease).not.toHaveBeenCalled();
+  });
+
+  it('does not release the re-opened slot when the reaction re-fires while closed', () => {
+    // The stale-release race the `previous === false` guard exists for: the
+    // sheet closes and releases, then reopens onto a FRESH slot. A reaction
+    // re-firing while `animatedIndex` is still parked at the closed anchor
+    // must not tear down the new claim, or the reopened sheet loses its dim.
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+
+    result.current.onAnimate(-1, 0); // claim-1
+    driveClose(); // release claim-1
+    expect(mockRelease).toHaveBeenCalledWith('claim-1');
+
+    result.current.onAnimate(-1, 0); // re-open → claim-2
+    mockRelease.mockClear();
+    driveReaction(true, true); // stale re-fire against the live claim
+
+    expect(mockRelease).not.toHaveBeenCalled();
   });
 
   it('treats a snap 0 -> 1 (keyboardAware expand) as a no-op (already claimed)', () => {
@@ -127,7 +175,7 @@ describe('useBottomSheetBackdropClaim', () => {
     result.current.onAnimate(-1, 0);
     unmount();
 
-    expect(mockRelease).toHaveBeenCalledWith('claim-id');
+    expect(mockRelease).toHaveBeenCalledWith('claim-1');
   });
 
   it('exposes animatedIndex, onChange and onAnimate', () => {

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
@@ -163,7 +163,7 @@ export const SearchResultsScreen: React.FC<
     if (searchError && !searchResults.length) {
       return (
         <ErrorState
-          title={t('searchResults.errorTitle')}
+          title={t('errors.searchFailed')}
           message={searchError}
           onRetry={handleRetry}
         />

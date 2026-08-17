@@ -231,7 +231,12 @@ const insertNotifications = (
   recomputeCounts(state);
 };
 
-const initialNotificationState: Omit<
+/**
+ * The slice with nothing in it. Exported because a session end has to clear
+ * every field here, and `resetManager` listing them by hand is how the inbox
+ * came to survive a sign-out.
+ */
+export const initialNotificationState: Omit<
   NotificationState,
   | 'addNotification'
   | 'addMultipleNotifications'

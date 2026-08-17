@@ -1,4 +1,5 @@
 import { Cuisine } from '#/graphql/generated/schemaTypes';
+import type { TranslateFn } from '#/i18n';
 
 export interface PopularCuisine {
   /** i18n key path — resolved by the consumer, which has the hook. */
@@ -28,10 +29,8 @@ export const POPULAR_CUISINES: PopularCuisine[] = [
  * fallback is the title-cased enum name, so an unmapped cuisine still reads
  * as words rather than LATIN_AMERICAN.
  */
-export const getCuisineLabel = (
-  value: Cuisine,
-  t: (key: string, fallback?: string) => string,
-): string => t(cuisineLabelKey(value), formatCuisineLabel(value));
+export const getCuisineLabel = (value: Cuisine, t: TranslateFn): string =>
+  t(cuisineLabelKey(value), formatCuisineLabel(value));
 
 // Helper function to get all cuisine options (popular + remaining)
 export const getAllCuisineOptions = () => {

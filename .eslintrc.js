@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
-  plugins: ['no-barrel-files', 'react-compiler', 'import'],
+  plugins: ['no-barrel-files', 'import'],
   ignorePatterns: [
     'e2e/**/*',
     'src/graphql/generated/**/*',
@@ -53,7 +53,6 @@ module.exports = {
         // The base config's JS/TS rules don't understand the GraphQL AST; turn
         // off the ones that traverse it so they don't error on .graphql files.
         'no-barrel-files/no-barrel-files': 'off',
-        'react-compiler/react-compiler': 'off',
         'react-hooks/rules-of-hooks': 'off',
         'react-hooks/todo': 'off',
         'no-restricted-syntax': 'off',
@@ -196,6 +195,28 @@ module.exports = {
       excludedFiles: ['**/__tests__/**', '**/__mocks__/**', '**/*.test.tsx'],
       plugins: ['i18next'],
       rules: {
+        // The module-level `t` does not subscribe to language changes. In a
+        // file that renders, a bare `t(...)` therefore reads as the hook's `t`
+        // but silently isn't, and the labels keep the old language until
+        // something unrelated re-renders the component —
+        // `CollaboratorPermissionsBottomSheet` had eight such labels.
+        //
+        // Importing it aliased (the established `tGlobal` convention) is still
+        // allowed: aliasing is the deliberate choice, and it keeps a bare `t`
+        // in JSX unambiguously the hook's.
+        // A selector rather than `no-restricted-imports`, because that rule's
+        // `importNames` matches the IMPORTED name and so cannot tell
+        // `import { t }` from `import { t as tGlobal }` — it would flag the
+        // deliberate form this rule exists to steer people toward.
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              "ImportDeclaration[source.value='#/i18n'] > ImportSpecifier[imported.name='t'][local.name='t']",
+            message:
+              "Use `const { t } = useTranslation()` in a file that renders — the module-level `t` does not subscribe to language changes. If this file genuinely needs the module-level helper (a class component, or module-scope code), import it aliased: `import { t as tGlobal } from '#/i18n/t'`, so a bare `t(...)` in JSX is unambiguously the hook's.",
+          },
+        ],
         'i18next/no-literal-string': [
           'error',
           {
@@ -254,6 +275,11 @@ module.exports = {
               exclude: [
                 'i18n(ext)?',
                 't',
+                // The module-level helper's alias. `no-restricted-syntax`
+                // above requires that name in a rendering file, so without it
+                // here the plugin stops recognising translation calls in
+                // exactly the files that had to rename.
+                'tGlobal',
                 'require',
                 'addEventListener',
                 'removeEventListener',
@@ -327,7 +353,12 @@ module.exports = {
                 name: 'react',
                 importNames: ['useMemo', 'useCallback'],
                 message:
-                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+                  'Default to NOT memoizing — the React Compiler does it for you. ' +
+                  'Reach for useMemo/useCallback only where you need referential ' +
+                  'stability the compiler cannot give you: a value in a dependency ' +
+                  'array, a prop read by something the compiler did not compile, or a ' +
+                  'file it bails out of (see scripts/check-compiler-bailouts.mjs). ' +
+                  'When one of those applies, add an eslint-disable-next-line with the reason.',
               },
             ],
             patterns: [
@@ -450,15 +481,16 @@ module.exports = {
     // Prevent barrel file imports for better tree shaking
     'no-barrel-files/no-barrel-files': 'error',
 
-    // Detect React Compiler bail-outs at lint time
-    'react-compiler/react-compiler': 'warn',
-
-    // Surface silent compiler bailouts (try/finally, unsupported syntax).
-    // The react-compiler rule has a known bug where it silently stops reporting
-    // ALL diagnostics when it encounters unsupported syntax, producing zero
-    // warnings instead of flagging the bailout. This rule catches those cases.
-    // See: https://github.com/facebook/react/issues/35644
-    // Fix bailouts using helpers from src/utils/compilerSafeWrappers.ts
+    // Surface what the compiler-aware rules CAN see. `eslint-plugin-react-compiler`
+    // was removed here: eslint-plugin-react-hooks@7 absorbed its rules (`todo`,
+    // `syntax`, `unsupported-syntax`, `purity`, `immutability`, …) and the old
+    // plugin reported zero diagnostics across this repo.
+    //
+    // Verified 2026-08: NO lint rule detects the two bailout shapes that actually
+    // occur here (a `finally`, and a value block inside a `try` body) — checked
+    // `react-hooks/todo`, `/syntax` and `/unsupported-syntax` against a fixture of
+    // each, all zero. `node scripts/check-compiler-bailouts.mjs` is the only
+    // detector, because it compiles the file instead of reading it.
     'react-hooks/todo': 'warn',
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
@@ -683,15 +715,23 @@ module.exports = {
     ],
 
     'react-hooks/rules-of-hooks': 'error',
-    // Disabled — React Compiler memoizes render-scope functions automatically,
-    // so they're stable across renders when their closure deps don't change.
-    // The exhaustive-deps rule is a static analyzer that doesn't know about
-    // the Compiler and produces false positives ("function changes every render")
-    // for Compiler-stable closures. Per React's official guidance, when using
-    // `babel-plugin-react-compiler`, only `rules-of-hooks` is required — the
-    // others "don't apply" because the Compiler handles them.
-    // https://react.dev/learn/react-compiler#installing-eslint-plugin-react-hooks
-    'react-hooks/exhaustive-deps': 'off',
+    // 'warn', matching eslint-plugin-react-hooks' own `recommended` preset on
+    // the installed version.
+    //
+    // Verified 2026-08 against eslint-plugin-react-hooks@7.1.1:
+    //   node -e "console.log(require('eslint-plugin-react-hooks')
+    //     .configs.recommended.rules['react-hooks/exhaustive-deps'])"  // -> warn
+    //
+    // This was previously 'off', citing React's compiler page as saying the
+    // rule "doesn't apply" under babel-plugin-react-compiler. That page says no
+    // such thing, and the plugin ships exhaustive-deps enabled in the very
+    // preset it recommends for compiler users. A missing dependency is still a
+    // stale-closure bug — the compiler memoizes values, it does not re-run an
+    // effect you forgot to depend on.
+    //
+    // Kept at 'warn' rather than 'error' so it doesn't arrive already failing;
+    // the existing hits are tracked for separate triage.
+    'react-hooks/exhaustive-deps': 'warn',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }],

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,

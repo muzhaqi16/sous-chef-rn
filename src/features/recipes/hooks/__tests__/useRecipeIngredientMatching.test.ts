@@ -67,7 +67,7 @@ jest.mock('#/services/telemetry', () => ({
   Telemetry: { trackEvent: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Deterministic client-minted cooking-log id so we can assert the consumption
 // mutation sends it.

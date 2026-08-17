@@ -3,7 +3,7 @@ import { MealType } from '#/graphql/generated/schemaTypes';
 import { useMealPlans } from './useMealPlans';
 import { useMealPlanItemActions } from './useMealPlanItemActions';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 interface UseAddRecipeToMealPlanOptions {
   planId?: string | null;
@@ -46,7 +46,7 @@ export function useAddRecipeToMealPlan(
     date: Date;
   }) => {
     if (!activePlanId) {
-      toastService.error(t('toasts.noActiveMealPlan'));
+      toastService.error(t('errors.noActiveMealPlan'));
       return false;
     }
     const result = await createItem({

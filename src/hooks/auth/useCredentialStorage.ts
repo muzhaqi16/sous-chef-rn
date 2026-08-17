@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { errorService } from '#/services/errorService';
 import {
   loadCredentials,
   saveCredentials,
@@ -8,7 +7,7 @@ import {
   getStoredAccounts,
   getBiometricCapability,
 } from '#/storage/keychain';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 
 export interface Credentials {
@@ -85,12 +84,18 @@ export const useCredentialStorage = () => {
   ): Promise<Credentials | null> => {
     setIsLoadingCredentials(true);
 
-    const credentials = email
-      ? await executeQuery(
-          async () => loadCredentials(email),
-          'Error loading credentials',
-        )
-      : null;
+    let credentials = null;
+    if (email) {
+      try {
+        credentials = await loadCredentials(email);
+      } catch (error) {
+        // Leaving it null reports "no stored credentials", which is the safe
+        // reading of a keychain we could not open.
+        errorService.reportError(error, {
+          operation: 'Error loading credentials',
+        });
+      }
+    }
 
     setIsLoadingCredentials(false);
 

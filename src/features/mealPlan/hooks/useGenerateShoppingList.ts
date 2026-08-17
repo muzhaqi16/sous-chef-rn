@@ -4,14 +4,14 @@ import { type GenerateShoppingListFromMealPlanInput } from '#/graphql/generated/
 import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   createAddToQueryConnectionUpdater,
   createAddToParentArrayUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
+import { errorService } from '#/services/errorService';
 
 const addToShoppingLists = createAddToQueryConnectionUpdater(
   'shoppingLists',
@@ -56,18 +56,21 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       return null;
     }
     if (!mealPlanId) return null;
-    const result = await executeMutation(
-      () =>
-        generateMutation({
-          variables: {
-            input: {
-              mealPlanId,
-              ...input,
-            },
+    let result;
+    try {
+      result = await generateMutation({
+        variables: {
+          input: {
+            mealPlanId,
+            ...input,
           },
-        }),
-      'Generate shopping list error:',
-    );
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Generate shopping list error:',
+      });
+    }
     if (!result) return null;
     const data = result.data?.generateShoppingListFromMealPlan;
     if (data?.__typename === 'GenerateShoppingListFromMealPlanPayload') {

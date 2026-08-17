@@ -49,11 +49,7 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeMutation: jest.fn(async (fn: () => Promise<unknown>) => {
-    await fn();
-    return true;
-  }),
+jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (fn: () => Promise<void>, setLoading: (value: boolean) => void) => {
       setLoading(true);
@@ -79,8 +75,6 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       }
     },
   ),
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeRefetch: jest.fn(async (fn: () => Promise<unknown>) => fn()),
 }));
 
 jest.mock('#hooks/haptic/useHaptic', () => ({
@@ -103,11 +97,6 @@ jest.mock('../mutations/useClearShoppingListItems', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  const { executeMutation } = require('#/utils/compilerSafeWrappers');
-  executeMutation.mockImplementation(async (fn: () => Promise<unknown>) => {
-    await fn();
-    return true;
-  });
 });
 
 afterAll(() => {
@@ -638,23 +627,11 @@ describe('useShoppingListActions', () => {
     it('handles error in addItem and resets searchQuery', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      // Make executeMutation call the error handler
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(new Error('Network error'));
-          return false;
-        },
-      );
-
       const mockSetSearchQuery = jest.fn();
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
           ...defaultProps,
+          addItem: jest.fn().mockRejectedValue(new Error('Network error')),
           setSearchQuery: mockSetSearchQuery,
         }),
       );
@@ -715,20 +692,11 @@ describe('useShoppingListActions', () => {
     it('handles toggle error with haptic feedback and toast', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(new Error('Toggle failed'));
-          return false;
-        },
-      );
-
       const { result } = renderHookWithApollo(() =>
-        useShoppingListActions(defaultProps),
+        useShoppingListActions({
+          ...defaultProps,
+          toggleItem: jest.fn().mockRejectedValue(new Error('Toggle failed')),
+        }),
       );
 
       await act(async () => {
@@ -748,20 +716,11 @@ describe('useShoppingListActions', () => {
     it('handles delete error with haptic feedback and toast', async () => {
       const { toastService } = require('#/services/toastService');
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(new Error('Delete failed'));
-          return false;
-        },
-      );
-
       const { result } = renderHookWithApollo(() =>
-        useShoppingListActions(defaultProps),
+        useShoppingListActions({
+          ...defaultProps,
+          removeItem: jest.fn().mockRejectedValue(new Error('Delete failed')),
+        }),
       );
 
       await act(async () => {
@@ -777,20 +736,11 @@ describe('useShoppingListActions', () => {
 
     it('tracks error as string when error is not Error instance', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError('string error');
-          return false;
-        },
-      );
-
       const { result } = renderHookWithApollo(() =>
-        useShoppingListActions(defaultProps),
+        useShoppingListActions({
+          ...defaultProps,
+          removeItem: jest.fn().mockRejectedValue('string error'),
+        }),
       );
 
       await act(async () => {
@@ -807,20 +757,11 @@ describe('useShoppingListActions', () => {
   describe('handleTogglePurchase - error as string', () => {
     it('tracks error as string when error is not Error instance', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError('string toggle error');
-          return false;
-        },
-      );
-
       const { result } = renderHookWithApollo(() =>
-        useShoppingListActions(defaultProps),
+        useShoppingListActions({
+          ...defaultProps,
+          toggleItem: jest.fn().mockRejectedValue('string toggle error'),
+        }),
       );
 
       await act(async () => {
@@ -837,17 +778,7 @@ describe('useShoppingListActions', () => {
   describe('handleClearAllPurchased - error path', () => {
     it('handles clearItems error for purchased items', async () => {
       const { toastService } = require('#/services/toastService');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(new Error('Clear failed'));
-          return false;
-        },
-      );
+      mockClearItems.mockRejectedValueOnce(new Error('Clear failed'));
 
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
@@ -869,17 +800,7 @@ describe('useShoppingListActions', () => {
   describe('handleClearAllShopping - error path', () => {
     it('handles clearItems error for unpurchased items', async () => {
       const { toastService } = require('#/services/toastService');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(new Error('Clear failed'));
-          return false;
-        },
-      );
+      mockClearItems.mockRejectedValueOnce(new Error('Clear failed'));
 
       const { result } = renderHookWithApollo(() =>
         useShoppingListActions({
@@ -905,26 +826,13 @@ describe('useShoppingListActions', () => {
       const {
         handleVersionConflict,
       } = require('#/utils/errors/versionConflict');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
       const cache = seedShoppingListItem({ quantity: 2, version: 1 });
 
-      // Make the inner executeMutation call the error handler
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError({
-            graphQLErrors: [{ extensions: { code: 'VERSION_CONFLICT' } }],
-          });
-          return false;
-        },
-      );
       handleVersionConflict.mockReturnValueOnce(true);
 
+      // The mutation rejects, so the hook's own catch classifies it.
       const m = recordMock(UpdateShoppingListItemQuantityDocument, {
-        data: buildUpdateMockResponse(3, 2),
+        error: new Error('version conflict'),
       });
 
       const { result } = renderHookWithApollo(
@@ -973,21 +881,12 @@ describe('useShoppingListActions', () => {
   describe('handleAddItemFromSearch - error is Error instance', () => {
     it('tracks Error instance with trackError', async () => {
       const { Telemetry } = require('#/services/telemetry');
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-
       const error = new Error('Add failed');
-      executeMutation.mockImplementationOnce(
-        async (
-          _fn: () => Promise<unknown>,
-          onError: (error: unknown) => void,
-        ) => {
-          onError(error);
-          return false;
-        },
-      );
-
       const { result } = renderHookWithApollo(() =>
-        useShoppingListActions(defaultProps),
+        useShoppingListActions({
+          ...defaultProps,
+          addItem: jest.fn().mockRejectedValue(error),
+        }),
       );
 
       await act(async () => {

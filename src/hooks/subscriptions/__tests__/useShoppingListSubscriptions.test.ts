@@ -56,7 +56,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   gcResetResultCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const mockUseAppStore = require('#store/useAppStore').useAppStore;
 

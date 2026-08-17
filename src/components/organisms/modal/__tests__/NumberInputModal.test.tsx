@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { NumberInputModal } from '../NumberInputModal';
 
 jest.mock('#/styles/commonStyles', () => ({
@@ -17,7 +22,7 @@ jest.mock('#/styles/commonStyles', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 describe('NumberInputModal', () => {
   const defaultProps = {

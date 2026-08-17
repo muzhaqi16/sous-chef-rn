@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { IconButton } from './IconButton';
 

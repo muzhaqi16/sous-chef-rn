@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import {
@@ -39,7 +39,7 @@ import {
   textSearchCacheKey,
 } from '#store/useRecipeCacheStore';
 import { toastService } from '#/services/toastService';
-import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import type { SearchRecipesResult } from '#/services/recipeApi/types';
 
 interface AddMealSheetProps {

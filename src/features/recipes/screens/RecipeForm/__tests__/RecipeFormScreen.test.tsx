@@ -17,7 +17,7 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('../components/RecipeBasicFields', () => ({
   RecipeBasicFields: () => null,

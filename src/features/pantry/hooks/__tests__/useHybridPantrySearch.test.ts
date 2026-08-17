@@ -17,21 +17,6 @@ jest.mock('#hooks/utils/useDebouncedValue', () => ({
   useDebouncedValue: (value: unknown) => value,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeSearchQuery: async (
-    queryFn: () => Promise<{ data?: unknown }>,
-    cancelled: () => boolean,
-  ) => {
-    try {
-      const result = await queryFn();
-      if (cancelled()) return null;
-      return result.data ?? null;
-    } catch {
-      return null;
-    }
-  },
-}));
-
 jest.mock('#/utils/hybridSort', () => ({
   shouldUseServerSort: (
     totalCount: number,
@@ -195,7 +180,7 @@ describe('useHybridPantrySearch', () => {
         result.current.setSearchQuery('Milk');
       });
 
-      // Wait for the effect → executeSearchQuery → recordMock to fire
+      // Wait for the effect → client.query → recordMock to fire
       await act(async () => {
         await new Promise(r => setTimeout(r, 50));
       });

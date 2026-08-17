@@ -1,9 +1,14 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { TextInputModal } from '../TextInputModal';
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 describe('TextInputModal', () => {
   const defaultProps = {

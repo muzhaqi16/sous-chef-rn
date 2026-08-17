@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';

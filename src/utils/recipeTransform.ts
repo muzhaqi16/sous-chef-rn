@@ -2,7 +2,7 @@ import type {
   SearchRecipesResult,
   RecipeSearchResult,
 } from '#/services/recipeApi/types';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 export type DietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
 
@@ -46,9 +46,10 @@ export function transformRecipeForDisplay(
       ingredientRecipe.missedIngredientCount;
 
     subtitleParts.push(
-      `${ingredientRecipe.usedIngredientCount}/${totalIngredients} ${t(
-        'recipes.ingredientsSuffix',
-      )}`,
+      t('recipes.ingredientRatio', {
+        used: ingredientRecipe.usedIngredientCount,
+        total: totalIngredients,
+      }),
     );
 
     // Badge for ingredient search
@@ -64,13 +65,13 @@ export function transformRecipeForDisplay(
 
     if (textRecipe.readyInMinutes) {
       subtitleParts.push(
-        `⏱ ${textRecipe.readyInMinutes} ${t('recipes.minutes')}`,
+        `⏱ ${t('recipes.minutesValue', { count: textRecipe.readyInMinutes })}`,
       );
     }
 
     if (textRecipe.servings) {
       subtitleParts.push(
-        `${textRecipe.servings} ${t('recipes.servingsSuffix')}`,
+        t('recipes.servingsCount', { count: textRecipe.servings }),
       );
     }
 

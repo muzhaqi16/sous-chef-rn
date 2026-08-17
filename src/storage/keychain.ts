@@ -12,7 +12,7 @@ import {
 } from 'react-native-keychain';
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
 const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';

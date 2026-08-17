@@ -110,7 +110,7 @@ function toNestedInput(
  * has none. Classification itself lives in `updateEntityFieldsLocalFirst`.
  */
 function reportRefusal(
-  result: { data?: unknown; error?: unknown } | false | null,
+  result: { data?: unknown; error?: unknown } | undefined | null,
 ): void {
   if (!result || result.error) return;
 

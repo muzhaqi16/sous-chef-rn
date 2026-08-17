@@ -4,7 +4,7 @@ import { Text } from '#components/atoms/Text';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -16,10 +16,8 @@ import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
-import {
-  executeWithLoadingState,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -96,7 +94,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         unwrapPayload(
           data?.inviteToShoppingList,
           'InviteToShoppingListPayload',
-          t('shoppingListScreens.failedToSendInvitation'),
+          t('errors.sendInviteFailed'),
         );
         setEmail('');
         // No refetch needed: the update() callback above already inserts the
@@ -106,9 +104,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
       error => {
         alertService.alert(
           t('labels.error'),
-          error instanceof Error
-            ? error.message
-            : t('shoppingListScreens.failedToSendInvitation'),
+          error instanceof Error ? error.message : t('errors.sendInviteFailed'),
         );
       },
     );

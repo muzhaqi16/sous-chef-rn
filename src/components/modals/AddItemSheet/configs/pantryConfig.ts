@@ -1,6 +1,5 @@
 import type { PantryItemSuggestion } from '#features/pantry/hooks/usePantryItemSuggestions';
 import type { AddItemSheetConfig } from '../types';
-import { t } from '#/i18n/t';
 
 /**
  * Configuration for AddToPantrySheet.
@@ -12,10 +11,10 @@ import { t } from '#/i18n/t';
  * - Deferred fetch for smooth sheet animation
  */
 export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
-  title: t('addItemSheet.addToPantry'),
+  titleKey: 'addItemSheet.addToPantry',
   testIDPrefix: 'add-pantry-item',
   placeholderIcon: 'cube-outline',
-  searchPlaceholder: 'Search or scan item...',
+  searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [
     {
       key: 'lowStock',
@@ -54,7 +53,7 @@ export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   quickAdd: {
     fireAndForget: true,
     enableExitAnimations: true,
-    toastMessage: (name: string) => `Added ${name}`,
+    toastMessageKey: 'addItemSheet.added',
   },
   addDetails: {
     enabled: true,
@@ -62,6 +61,6 @@ export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   deferFetch: true,
   barcodeSource: 'pantry',
   addManuallyPosition: 'top',
-  emptyStateMessage: 'No suggestions yet',
-  emptyStateSubtext: 'Add items to your pantry to get personalized suggestions',
+  emptyStateMessageKey: 'addItemSheet.emptyTitle',
+  emptyStateSubtextKey: 'addItemSheet.emptyPantrySubtext',
 };

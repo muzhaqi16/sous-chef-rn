@@ -6,7 +6,7 @@ import React, {
   ComponentRef,
 } from 'react';
 import { View, Modal } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';

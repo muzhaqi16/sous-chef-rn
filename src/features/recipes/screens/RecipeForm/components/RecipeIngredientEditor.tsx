@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import {

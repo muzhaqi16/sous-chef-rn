@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -297,7 +297,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               tone={!selectedFolder ? 'accent' : 'primary'}
               style={styles.folderName}
             >
-              {t('folderPicker.noFolder')}
+              {t('labels.noFolder')}
             </Text>
             {!selectedFolder && (
               <Icon name="checkmark" size={20} tone="primary" />

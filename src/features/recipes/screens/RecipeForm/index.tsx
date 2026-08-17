@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormModal } from '#components/organisms/FormModal';
@@ -32,10 +32,6 @@ import {
 import { RecipeTagsSection } from './components/RecipeTagsSection';
 import type { IngredientFormState, StepFormState } from './useRecipeForm';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   upsertMyRecipesEdge,
@@ -43,6 +39,7 @@ import {
   revertOptimisticRecipe,
   type RecipeCreatedBy,
 } from './recipeCacheWriters';
+import { errorService } from '#/services/errorService';
 
 export const RecipeFormScreen: React.FC<
   StaticScreenProps<{ recipeId?: string } | undefined>
@@ -101,108 +98,117 @@ export const RecipeFormScreen: React.FC<
     useMutation(UpdateRecipeIngredientsDocument);
   const loading = creating || updating || updatingIngredients;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const error = form.validate();
     if (error) {
-      alertService.alert(t('recipes.validationError'), error);
+      alertService.alert(t('labels.validationError'), error);
       return;
     }
 
-    executeMutation(
-      async () => {
-        if (isEditMode && recipeId) {
-          const input = form.buildUpdateInput();
-          // Local-first: both edits queue together offline and replay in FIFO
-          // order against the same recipe id (the queue serializes same-entity
-          // ops). The local display catches up when the replay syncs.
-          const [updateResult, ingredientsResult] = await Promise.all([
-            updateRecipeMutation({
-              variables: { input: { ...input, id: recipeId } },
-              context: { localFirst: true },
-            }),
-            updateRecipeIngredientsMutation({
-              variables: {
-                input: {
-                  recipeId,
-                  ingredients: form.buildIngredientsInput(),
-                },
-              },
-              context: { localFirst: true },
-            }),
-          ]);
-          // 'queued' (null payload, no error) counts as success — the edit
-          // replays on reconnect.
-          const recipeSuccess =
-            classifyCreateResult(updateResult) !== 'rejected';
-          const ingredientsSuccess =
-            classifyCreateResult(ingredientsResult) !== 'rejected';
-          if (recipeSuccess && ingredientsSuccess) {
-            goBack();
-          } else {
-            const updatePayload = updateResult.data?.updateRecipe;
-            const ingredientsPayload =
-              ingredientsResult.data?.updateRecipeIngredients;
-            const updateMsg =
-              updatePayload && 'message' in updatePayload
-                ? updatePayload.message
-                : null;
-            const ingredientsMsg =
-              ingredientsPayload && 'message' in ingredientsPayload
-                ? ingredientsPayload.message
-                : null;
-            alertService.alert(
-              t('labels.error'),
-              updateMsg ?? ingredientsMsg ?? t('recipes.updateRecipeFailed'),
-            );
-          }
-        } else {
-          const input = form.buildCreateInput();
-          // Local-first: mint the permanent cuid (the row's real PK) and put
-          // the recipe into My Recipes before firing, so creating works fully
-          // offline — the queued create replays keyed by this same id.
-          const id = generateEntityId();
-          const createdBy: RecipeCreatedBy = user
-            ? { __typename: 'User', id: user.id, email: user.email }
-            : null;
-          // Writes the MyRecipes edge + the full detail entity, so creating a
-          // recipe works fully offline (the detail screen is complete-gated).
-          executeCacheUpdate(
-            () =>
-              writeOptimisticRecipe(apolloClient.cache, id, input, createdBy),
-            'Create Recipe (optimistic)',
-          );
-          const result = await createRecipeMutation({
-            variables: { input: { ...input, id } },
+    // The save body is held in a local runner so the try below contains a
+    // single plain call: the React Compiler bails out of this component when a
+    // `?.`/`??`/ternary appears inside a try body, and this flow is full of
+    // them. The catch still covers the whole body.
+    const runSave = async () => {
+      if (isEditMode && recipeId) {
+        const input = form.buildUpdateInput();
+        // Local-first: both edits queue together offline and replay in FIFO
+        // order against the same recipe id (the queue serializes same-entity
+        // ops). The local display catches up when the replay syncs.
+        const [updateResult, ingredientsResult] = await Promise.all([
+          updateRecipeMutation({
+            variables: { input: { ...input, id: recipeId } },
             context: { localFirst: true },
-          });
-          const outcome = classifyCreateResult(result);
-          if (outcome !== 'rejected') {
-            // Online success or queued offline — the recipe is in My Recipes
-            // either way.
-            goBack();
-          } else {
-            executeCacheUpdate(
-              () => revertOptimisticRecipe(apolloClient.cache, id),
-              'Revert rejected Recipe create',
-            );
-            const createPayload = result.data?.createRecipe;
-            const message =
-              createPayload && 'message' in createPayload
-                ? createPayload.message
-                : null;
-            alertService.alert(
-              t('labels.error'),
-              message ?? t('recipes.createRecipeFailed'),
-            );
-          }
+          }),
+          updateRecipeIngredientsMutation({
+            variables: {
+              input: {
+                recipeId,
+                ingredients: form.buildIngredientsInput(),
+              },
+            },
+            context: { localFirst: true },
+          }),
+        ]);
+        // 'queued' (null payload, no error) counts as success — the edit
+        // replays on reconnect.
+        const recipeSuccess = classifyCreateResult(updateResult) !== 'rejected';
+        const ingredientsSuccess =
+          classifyCreateResult(ingredientsResult) !== 'rejected';
+        if (recipeSuccess && ingredientsSuccess) {
+          goBack();
+        } else {
+          const updatePayload = updateResult.data?.updateRecipe;
+          const ingredientsPayload =
+            ingredientsResult.data?.updateRecipeIngredients;
+          const updateMsg =
+            updatePayload && 'message' in updatePayload
+              ? updatePayload.message
+              : null;
+          const ingredientsMsg =
+            ingredientsPayload && 'message' in ingredientsPayload
+              ? ingredientsPayload.message
+              : null;
+          alertService.alert(
+            t('labels.error'),
+            updateMsg ?? ingredientsMsg ?? t('recipes.updateRecipeFailed'),
+          );
         }
-      },
-      (err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : t('recipes.unexpectedError');
-        alertService.alert(t('labels.error'), message);
-      },
-    );
+      } else {
+        const input = form.buildCreateInput();
+        // Local-first: mint the permanent cuid (the row's real PK) and put
+        // the recipe into My Recipes before firing, so creating works fully
+        // offline — the queued create replays keyed by this same id.
+        const id = generateEntityId();
+        const createdBy: RecipeCreatedBy = user
+          ? { __typename: 'User', id: user.id, email: user.email }
+          : null;
+        // Writes the MyRecipes edge + the full detail entity, so creating a
+        // recipe works fully offline (the detail screen is complete-gated).
+        try {
+          writeOptimisticRecipe(apolloClient.cache, id, input, createdBy);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Create Recipe (optimistic)',
+          });
+        }
+        const result = await createRecipeMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        });
+        const outcome = classifyCreateResult(result);
+        if (outcome !== 'rejected') {
+          // Online success or queued offline — the recipe is in My Recipes
+          // either way.
+          goBack();
+        } else {
+          try {
+            revertOptimisticRecipe(apolloClient.cache, id);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert rejected Recipe create',
+            });
+          }
+          const createPayload = result.data?.createRecipe;
+          const message =
+            createPayload && 'message' in createPayload
+              ? createPayload.message
+              : null;
+          alertService.alert(
+            t('labels.error'),
+            message ?? t('recipes.createRecipeFailed'),
+          );
+        }
+      }
+    };
+
+    try {
+      await runSave();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : t('recipes.unexpectedError');
+      alertService.alert(t('labels.error'), message);
+    }
   };
 
   // Ingredient handlers

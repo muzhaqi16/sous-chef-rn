@@ -2,9 +2,9 @@ import { useMutation } from '@apollo/client/react';
 import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation, unwrapPayload } from '#/utils/compilerSafeWrappers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 
 interface UseAddLowStockToShoppingListOptions {
@@ -25,29 +25,40 @@ export function useAddLowStockToShoppingList({
 
   const addLowStockToShoppingList = async () => {
     if (!homeId) {
-      toastService.error(t('toasts.noHomeSelected'));
+      toastService.error(t('errors.noHomeSelected'));
       return;
     }
 
-    const result = await executeMutation(
-      async () => {
-        const { data } = await addLowStockMutation({
-          variables: { input: { homeId } },
-        });
-        return unwrapPayload(
-          data?.addLowStockItemsToShoppingList,
+    // The `?.` unwrap sits outside the try — a value block inside a try body
+    // makes the React Compiler bail out of this hook.
+    let response;
+    let result;
+    try {
+      response = await addLowStockMutation({
+        variables: { input: { homeId } },
+      });
+    } catch (error: unknown) {
+      toastService.error(
+        error instanceof Error ? error.message : t('errors.addLowStockFailed'),
+      );
+    }
+
+    const payload = response?.data?.addLowStockItemsToShoppingList;
+    if (response) {
+      try {
+        result = unwrapPayload(
+          payload,
           'AddLowStockItemsToShoppingListPayload',
           t('errors.addLowStockFailed'),
         );
-      },
-      (error: unknown) => {
+      } catch (error: unknown) {
         toastService.error(
           error instanceof Error
             ? error.message
             : t('errors.addLowStockFailed'),
         );
-      },
-    );
+      }
+    }
     if (!result) return;
 
     // The payload's shared summary carries the authoritative counters — the

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable (not AppPressable/RN) for the cart button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
@@ -31,10 +31,6 @@ import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
-import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
@@ -55,6 +51,7 @@ import {
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
+import { errorService } from '#/services/errorService';
 
 // ── Types ──
 
@@ -420,46 +417,47 @@ export const FilteredPantryItems: React.FC<
 
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create.
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          createOptimisticShoppingListItem(id, {
-            itemName: display.itemName,
-            unitId: display.unitId,
-          }),
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
-
-    const result = await executeMutation(
-      () =>
-        addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [{ id, item: { itemId } }],
-            },
-          },
-          context: { localFirst: true },
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        createOptimisticShoppingListItem(id, {
+          itemName: display.itemName,
+          unitId: display.unitId,
         }),
-      () => {
-        revertOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          id,
-        );
-        alertService.alert(
-          t('labels.error'),
-          t('filteredPantry.addToShoppingFailed'),
-        );
-      },
-    );
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
+
+    let result;
+    try {
+      result = await addToShoppingList({
+        variables: {
+          input: {
+            shoppingListId: selectedShoppingListId,
+            items: [{ id, item: { itemId } }],
+          },
+        },
+        context: { localFirst: true },
+      });
+    } catch {
+      revertOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        id,
+      );
+      alertService.alert(
+        t('labels.error'),
+        t('filteredPantry.addToShoppingFailed'),
+      );
+    }
     // A queued create (offline / API down) replays later — treat as success.
     // Only a real rejection surfaces an error; errorPolicy:'all' resolves
-    // rejections, so executeMutation's onError never fires for them — the
-    // reconciler classifies the result instead and discards the item we wrote.
+    // rejections, so the catch above never fires for them — the reconciler
+    // classifies the result instead and discards the item we wrote.
     if (
       result &&
       reconcileShoppingCreate(

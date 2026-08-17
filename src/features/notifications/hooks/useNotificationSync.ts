@@ -16,7 +16,6 @@
  * - Network errors keep the optimistic UI (the change is queued and replays).
  * - Server errors roll back the optimistic local state to prevent permanent desync.
  *
- * Uses executeMutation from compilerSafeWrappers to avoid try-catch in the hook body.
  */
 
 import { useMutation } from '@apollo/client/react';
@@ -36,7 +35,6 @@ import {
   clearUnreadNotificationCount,
 } from '#features/notifications/utils/notificationBadgeCacheUpdaters';
 import { useStore } from '#store';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { errorService } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 
@@ -50,7 +48,7 @@ export function useNotificationSync() {
   );
   const [sendTestMutation] = useMutation(SendTestNotificationDocument);
 
-  const syncMarkAsRead = (id: string) => {
+  const syncMarkAsRead = async (id: string) => {
     // Skip if already read
     const notification = useStore
       .getState()
@@ -60,43 +58,45 @@ export function useNotificationSync() {
     // Optimistic local update
     useStore.getState().markAsRead(id);
 
-    executeMutation(
-      () =>
-        markReadMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-          // The guard above proves this notification was unread, so a
-          // confirmed mark-read shifts the cached badge aggregate down by one
-          // in the SAME cache transaction as the `Notification.status` write —
-          // the re-broadcast that reaches the badge seed effects then carries
-          // a count consistent with the new status instead of the stale
-          // fetch-time value.
-          update: (cache, { data }) => {
-            if (
-              data?.markNotificationAsRead?.__typename ===
-              'MarkNotificationAsReadPayload'
-            ) {
-              adjustUnreadNotificationCount(
-                cache,
-                useStore.getState().user?.id,
-                -1,
-              );
-            }
-          },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncMarkAsRead',
-          notificationId: id,
-        });
-        if (!isNetworkError(error)) {
-          useStore.getState().markAsUnread(id);
+    // Options built outside the try: the `?.` in `update` is a value block, and
+    // the React Compiler bails out of this hook when one sits inside a try body.
+    const markReadOptions: Parameters<typeof markReadMutation>[0] = {
+      variables: { input: { id } },
+      context: { localFirst: true },
+      // The guard above proves this notification was unread, so a
+      // confirmed mark-read shifts the cached badge aggregate down by one
+      // in the SAME cache transaction as the `Notification.status` write —
+      // the re-broadcast that reaches the badge seed effects then carries
+      // a count consistent with the new status instead of the stale
+      // fetch-time value.
+      update: (cache, { data }) => {
+        if (
+          data?.markNotificationAsRead?.__typename ===
+          'MarkNotificationAsReadPayload'
+        ) {
+          adjustUnreadNotificationCount(
+            cache,
+            useStore.getState().user?.id,
+            -1,
+          );
         }
       },
-    );
+    };
+
+    try {
+      await markReadMutation(markReadOptions);
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncMarkAsRead',
+        notificationId: id,
+      });
+      if (!isNetworkError(error)) {
+        useStore.getState().markAsUnread(id);
+      }
+    }
   };
 
-  const syncMarkUnread = (id: string) => {
+  const syncMarkUnread = async (id: string) => {
     // Skip if missing or already unread — symmetric with syncMarkAsRead, and
     // it makes the +1 badge adjustment below sound (the mutation only fires
     // for a notification known to be read right now).
@@ -105,34 +105,30 @@ export function useNotificationSync() {
       .notifications.find(n => n.id === id);
     if (!notification || !notification.isRead) return;
 
-    executeMutation(
-      () =>
-        markUnreadMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-          update: (cache, { data }) => {
-            if (
-              data?.markNotificationUnread?.__typename ===
-              'MarkNotificationUnreadPayload'
-            ) {
-              adjustUnreadNotificationCount(
-                cache,
-                useStore.getState().user?.id,
-                1,
-              );
-            }
-          },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncMarkUnread',
-          notificationId: id,
-        });
+    const markUnreadOptions: Parameters<typeof markUnreadMutation>[0] = {
+      variables: { input: { id } },
+      context: { localFirst: true },
+      update: (cache, { data }) => {
+        if (
+          data?.markNotificationUnread?.__typename ===
+          'MarkNotificationUnreadPayload'
+        ) {
+          adjustUnreadNotificationCount(cache, useStore.getState().user?.id, 1);
+        }
       },
-    );
+    };
+
+    try {
+      await markUnreadMutation(markUnreadOptions);
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncMarkUnread',
+        notificationId: id,
+      });
+    }
   };
 
-  const syncDelete = (id: string) => {
+  const syncDelete = async (id: string) => {
     // Snapshot before removal for potential rollback
     const snapshot = useStore.getState().notifications.find(n => n.id === id);
     // Deleting an unread notification shrinks the unread total; a read one
@@ -142,38 +138,37 @@ export function useNotificationSync() {
     // Optimistic local removal
     useStore.getState().removeNotification(id);
 
-    executeMutation(
-      () =>
-        deleteMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-          update: (cache, { data }) => {
-            if (
-              wasUnread &&
-              data?.deleteNotification?.__typename ===
-                'DeleteNotificationPayload'
-            ) {
-              adjustUnreadNotificationCount(
-                cache,
-                useStore.getState().user?.id,
-                -1,
-              );
-            }
-          },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncDeleteNotification',
-          notificationId: id,
-        });
-        if (!isNetworkError(error) && snapshot) {
-          useStore.getState().addNotification(snapshot);
+    const deleteOptions: Parameters<typeof deleteMutation>[0] = {
+      variables: { input: { id } },
+      context: { localFirst: true },
+      update: (cache, { data }) => {
+        if (
+          wasUnread &&
+          data?.deleteNotification?.__typename === 'DeleteNotificationPayload'
+        ) {
+          adjustUnreadNotificationCount(
+            cache,
+            useStore.getState().user?.id,
+            -1,
+          );
         }
       },
-    );
+    };
+
+    try {
+      await deleteMutation(deleteOptions);
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncDeleteNotification',
+        notificationId: id,
+      });
+      if (!isNetworkError(error) && snapshot) {
+        useStore.getState().addNotification(snapshot);
+      }
+    }
   };
 
-  const syncMarkAllAsRead = () => {
+  const syncMarkAllAsRead = async () => {
     const hasUnread = useStore.getState().notifications.some(n => !n.isRead);
 
     if (!hasUnread) return;
@@ -182,57 +177,55 @@ export function useNotificationSync() {
     useStore.getState().markAllAsRead();
 
     // Single bulk mutation instead of N individual calls
-    executeMutation(
-      () =>
-        markAllReadMutation({
-          context: { localFirst: true },
-          update: (cache, { data }) => {
-            if (
-              data?.markAllNotificationsAsRead?.__typename ===
-              'MarkAllNotificationsAsReadPayload'
-            ) {
-              clearUnreadNotificationCount(cache, useStore.getState().user?.id);
-            }
-          },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncMarkAllAsRead',
-        });
-        // On server error, recalculate counts — cache-and-network will self-correct
-        if (!isNetworkError(error)) {
-          useStore.getState().updateUnreadCount();
+    const markAllReadOptions: Parameters<typeof markAllReadMutation>[0] = {
+      context: { localFirst: true },
+      update: (cache, { data }) => {
+        if (
+          data?.markAllNotificationsAsRead?.__typename ===
+          'MarkAllNotificationsAsReadPayload'
+        ) {
+          clearUnreadNotificationCount(cache, useStore.getState().user?.id);
         }
       },
-    );
+    };
+
+    try {
+      await markAllReadMutation(markAllReadOptions);
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncMarkAllAsRead',
+      });
+      // On server error, recalculate counts — cache-and-network will self-correct
+      if (!isNetworkError(error)) {
+        useStore.getState().updateUnreadCount();
+      }
+    }
   };
 
   // Delete only the already-read notifications ("Clear read"), leaving unread
   // ones in place. Optimistically removes them locally, rolls back on a server
   // (non-network) error. Because every removed notification is read, the
   // cached unread badge aggregate is untouched — no `update` callback needed.
-  const syncClearRead = () => {
+  const syncClearRead = async () => {
     const readOnes = useStore.getState().notifications.filter(n => n.isRead);
     if (readOnes.length === 0) return;
     const ids = readOnes.map(n => n.id);
 
     ids.forEach(id => useStore.getState().removeNotification(id));
 
-    executeMutation(
-      () =>
-        deleteMultipleMutation({
-          variables: { input: { ids } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncClearReadNotifications',
-        });
-        if (!isNetworkError(error)) {
-          readOnes.forEach(n => useStore.getState().addNotification(n));
-        }
-      },
-    );
+    try {
+      await deleteMultipleMutation({
+        variables: { input: { ids } },
+        context: { localFirst: true },
+      });
+    } catch (error: unknown) {
+      errorService.reportError(error, {
+        operation: 'syncClearReadNotifications',
+      });
+      if (!isNetworkError(error)) {
+        readOnes.forEach(n => useStore.getState().addNotification(n));
+      }
+    }
   };
 
   // Fire a self-addressed test notification. The created notification arrives
@@ -241,14 +234,14 @@ export function useNotificationSync() {
   const syncSendTest = async (
     type: NotificationType = NotificationType.ExpiryReminder,
   ): Promise<boolean> => {
-    const result = await executeMutation(
-      () => sendTestMutation({ variables: { input: { type } } }),
-      (error: unknown) => {
-        errorService.reportError(error, {
-          operation: 'syncSendTestNotification',
-        });
-      },
-    );
+    let result;
+    try {
+      result = await sendTestMutation({ variables: { input: { type } } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'syncSendTestNotification',
+      });
+    }
     return (
       !!result &&
       result.data?.sendTestNotification?.__typename ===

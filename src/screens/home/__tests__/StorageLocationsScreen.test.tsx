@@ -44,7 +44,7 @@ jest.mock('#hooks/storageLocation/useStorageLocationManagement', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/DetailTemplate', () => ({
   DetailTemplate: ({ title, sections }: DetailTemplateProps) => {

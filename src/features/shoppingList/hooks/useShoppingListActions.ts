@@ -10,13 +10,12 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 interface UseShoppingListActionsOptions {
   currentListId: string | undefined;
@@ -32,12 +31,12 @@ interface UseShoppingListActionsOptions {
 // --- Module-level helpers (outside hook body for React Compiler) ---
 
 async function executeQuantityUpdate(
-  updateFn: () => Promise<void>,
+  updateFn: () => Promise<{ error?: unknown } | undefined>,
   revertCache: () => void,
   clearPersistence: () => void,
   refetchItems: () => Promise<unknown>,
 ): Promise<void> {
-  const result = await executeMutation(updateFn, error => {
+  const fail = (error: unknown) => {
     revertCache();
     clearPersistence();
 
@@ -45,8 +44,21 @@ async function executeQuantityUpdate(
       operation: 'Update Quantity',
       checks: [versionConflictCheck({ onRefresh: () => refetchItems() })],
     });
-  });
-  if (result === false) return;
+  };
+
+  let result;
+  try {
+    result = await updateFn();
+  } catch (error) {
+    fail(error);
+    return;
+  }
+
+  // `errorPolicy: 'all'` RESOLVES a failed mutation with `error` set instead of
+  // rejecting, so the catch above only sees a link-level throw. Both outcomes
+  // must revert the optimistic quantity — without this a refused update stayed
+  // on screen with no message and no version-conflict refresh.
+  if (result?.error) fail(result.error);
 }
 
 async function executeTogglePurchase(
@@ -54,22 +66,18 @@ async function executeTogglePurchase(
   toggleItem: (itemId: string) => Promise<unknown>,
   itemId: string,
 ): Promise<void> {
-  const result = await executeMutation(
-    async () => {
-      haptic.selection();
-      await toggleItem(itemId);
-      Telemetry.trackEvent('toggle_item_purchase_success');
-    },
-    error => {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Failed to toggle item purchase',
-        { component: 'ShoppingListMain', operation: 'togglePurchase' },
-      );
-      haptic.error();
-      toastService.error(t('toasts.itemToggleFailed'));
-    },
-  );
-  if (result === false) return;
+  try {
+    haptic.selection();
+    await toggleItem(itemId);
+    Telemetry.trackEvent('toggle_item_purchase_success');
+  } catch (error) {
+    Telemetry.trackError(
+      error instanceof Error ? error : 'Failed to toggle item purchase',
+      { component: 'ShoppingListMain', operation: 'togglePurchase' },
+    );
+    haptic.error();
+    toastService.error(t('toasts.itemToggleFailed'));
+  }
 }
 
 async function executeDeleteItem(
@@ -77,22 +85,18 @@ async function executeDeleteItem(
   removeItem: (itemId: string) => Promise<unknown>,
   itemId: string,
 ): Promise<void> {
-  const result = await executeMutation(
-    async () => {
-      haptic.warning();
-      await removeItem(itemId);
-      Telemetry.trackEvent('delete_item_success');
-    },
-    error => {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Failed to delete item',
-        { component: 'ShoppingListMain', operation: 'deleteItem' },
-      );
-      haptic.error();
-      toastService.error(t('toasts.itemDeleteFailed'));
-    },
-  );
-  if (result === false) return;
+  try {
+    haptic.warning();
+    await removeItem(itemId);
+    Telemetry.trackEvent('delete_item_success');
+  } catch (error) {
+    Telemetry.trackError(
+      error instanceof Error ? error : 'Failed to delete item',
+      { component: 'ShoppingListMain', operation: 'deleteItem' },
+    );
+    haptic.error();
+    toastService.error(t('errors.deleteItemFailed'));
+  }
 }
 
 async function executeClearItems(
@@ -100,21 +104,17 @@ async function executeClearItems(
   clearItems: (purchased: boolean) => Promise<void>,
   purchased: boolean,
 ): Promise<void> {
-  const result = await executeMutation(
-    async () => {
-      haptic.warning();
-      await clearItems(purchased);
-    },
-    () => {
-      haptic.error();
-      toastService.error(
-        purchased
-          ? 'Failed to clear purchased items'
-          : 'Failed to clear shopping items',
-      );
-    },
-  );
-  if (result === false) return;
+  try {
+    haptic.warning();
+    await clearItems(purchased);
+  } catch {
+    haptic.error();
+    toastService.error(
+      purchased
+        ? 'Failed to clear purchased items'
+        : 'Failed to clear shopping items',
+    );
+  }
 }
 
 async function executeAddItemFromSearch(
@@ -124,34 +124,30 @@ async function executeAddItemFromSearch(
   setSearchQuery: (query: string) => void,
 ): Promise<void> {
   const trimmed = itemName.trim();
-  const result = await executeMutation(
-    async () => {
-      const addResult = await addItem({
-        itemName: trimmed,
-        quantity: 1,
-      });
+  try {
+    const addResult = await addItem({
+      itemName: trimmed,
+      quantity: 1,
+    });
 
-      if (addResult) {
-        Telemetry.trackEvent('add_item_success', { source: 'search' });
-        haptic.success();
-      } else {
-        Telemetry.trackEvent('add_item_failed', { source: 'search' });
-        haptic.error();
-        toastService.error(t('toasts.itemAddFailed'));
-        setSearchQuery(trimmed);
-      }
-    },
-    error => {
-      Telemetry.trackError(
-        error instanceof Error ? error : 'Failed to add item from search',
-        { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
-      );
+    if (addResult) {
+      Telemetry.trackEvent('add_item_success', { source: 'search' });
+      haptic.success();
+    } else {
+      Telemetry.trackEvent('add_item_failed', { source: 'search' });
       haptic.error();
-      toastService.error(t('toasts.itemAddFailed'));
+      toastService.error(t('errors.addItemFailed'));
       setSearchQuery(trimmed);
-    },
-  );
-  if (result === false) return;
+    }
+  } catch (error) {
+    Telemetry.trackError(
+      error instanceof Error ? error : 'Failed to add item from search',
+      { component: 'ShoppingListMain', operation: 'addItemFromSearch' },
+    );
+    haptic.error();
+    toastService.error(t('errors.addItemFailed'));
+    setSearchQuery(trimmed);
+  }
 }
 
 /**
@@ -225,7 +221,7 @@ export function useShoppingListActions({
 
     await executeQuantityUpdate(
       async () => {
-        await updateQuantity({
+        return await updateQuantity({
           variables: {
             input: {
               itemId,
@@ -301,7 +297,7 @@ export function useShoppingListActions({
 
     await executeQuantityUpdate(
       async () => {
-        await updateQuantity({
+        return await updateQuantity({
           variables: {
             input: {
               itemId,

@@ -93,6 +93,23 @@ mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
   }
 }
 
+# Checks a reset link's token WITHOUT consuming it, so the app can decide
+# whether the link is genuine before taking any session-affecting action.
+# Opening a link must never end a session on its own — see
+# `openspec/.../credential-protection`.
+mutation ValidatePasswordResetToken($input: ValidatePasswordResetTokenInput!) {
+  validatePasswordResetToken(input: $input) {
+    __typename
+    ... on ValidatePasswordResetTokenPayload {
+      status
+    }
+    ... on Error {
+      code
+      message
+    }
+  }
+}
+
 mutation ResetPassword($input: ResetPasswordInput!) {
   resetPassword(input: $input) {
     __typename
