@@ -254,6 +254,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             variant: 'primary',
             disabled: !hasChanges || loading,
             loading: loading,
+            testID: 'quantity-edit-save',
           },
         ]}
       />
@@ -276,6 +277,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
             <AppPressable
+              testID="quantity-edit-decrement"
               style={styles.counterButton}
               onPress={handleDecrement}
               disabled={decrementDisabled}
@@ -289,6 +291,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Quantity Display - Tappable for direct input */}
             <AppPressable
+              testID="quantity-edit-value"
               style={styles.quantityDisplay}
               onPress={handleQuantityPress}
             >
@@ -312,6 +315,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Increment Button */}
             <AppPressable
+              testID="quantity-edit-increment"
               style={styles.incrementButton}
               onPress={handleIncrement}
             >

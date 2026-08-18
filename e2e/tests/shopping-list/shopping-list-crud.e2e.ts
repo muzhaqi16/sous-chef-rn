@@ -120,7 +120,7 @@ describe('Shopping List CRUD', () => {
       await item.tap();
 
       // Look for edit button
-      const editButton = element(by.id('edit-item-button'));
+      const editButton = element(by.id('shopping-list-item-edit'));
       await waitFor(editButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await editButton.tap();
 
@@ -154,24 +154,26 @@ describe('Shopping List CRUD', () => {
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      const item = element(by.text(itemName));
-      await item.tap();
+      // The quantity badge on the row opens the edit sheet — there is no
+      // `quantity-button`, and tapping the row itself opens the detail screen.
+      // `QuantityBadge` had no testID at all until it was given one keyed by
+      // item id, so this flow was previously unreachable.
+      await element(by.id(/^shopping-list-item-.+-quantity$/))
+        .atIndex(0)
+        .tap();
 
-      // Look for quantity controls
-      const quantityButton = element(by.id('quantity-button'));
-      await waitFor(quantityButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await quantityButton.tap();
-
-      // Increment quantity
-      const incrementButton = element(by.id('quantity-increment'));
-      await waitFor(incrementButton)
+      await waitFor(element(by.id('quantity-edit-increment')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
-      await incrementButton.tap();
+      await element(by.id('quantity-edit-increment')).tap();
 
-      await tapByID('quantity-confirm');
+      // Saving is only enabled once something changed, so a save that lands is
+      // itself evidence the increment registered.
+      await element(by.id('quantity-edit-save')).tap();
 
-      await shoppingListScreen.goBack();
+      await waitFor(element(by.id('quantity-edit-increment')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       await shoppingListScreen.waitForScreen();
     });
   });
@@ -188,7 +190,10 @@ describe('Shopping List CRUD', () => {
       const item = element(by.text(itemName));
       await item.swipe('left', 'fast', 0.7);
 
-      const deleteButton = element(by.id('swipe-delete-button'));
+      // `RightActions` builds `${testIDPrefix}-delete`, and
+      // `ShoppingListMainContent` passes `testIDPrefix="shopping-list-item"`.
+      // `swipe-delete-button` never existed.
+      const deleteButton = element(by.id('shopping-list-item-delete')).atIndex(0);
       await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await deleteButton.tap();
 

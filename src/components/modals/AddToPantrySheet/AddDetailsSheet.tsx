@@ -34,16 +34,28 @@ interface AddDetailsSheetProps {
 // Page Indicator Components
 function PageIndicatorItem({
   label,
+  index,
   isActive,
   onPress,
 }: {
   label: string;
+  index: number;
   isActive: boolean;
   onPress: () => void;
 }) {
   indicatorStyles.useVariants({ active: isActive });
   return (
-    <AppPressable onPress={onPress} style={indicatorStyles.item}>
+    <AppPressable
+      onPress={onPress}
+      // Indexed, not label-derived: the labels are translated, so a
+      // label-based matcher would pass in English and fail everywhere else.
+      // Without this the later pages of this sheet were unreachable from a
+      // test — the quantity field lives on the Stock page and is inside a
+      // PagerView, so it is UNMOUNTED until the page is selected, which Detox
+      // reports as "No elements found" rather than a visibility timeout.
+      testID={`add-pantry-item-page-${index}`}
+      style={indicatorStyles.item}
+    >
       <View style={indicatorStyles.dot} />
       <Text style={indicatorStyles.label}>{label}</Text>
     </AppPressable>
@@ -61,6 +73,7 @@ const PageIndicator: React.FC<{
         <PageIndicatorItem
           key={label}
           label={label}
+          index={index}
           isActive={currentPage === index}
           onPress={() => onPagePress(index)}
         />

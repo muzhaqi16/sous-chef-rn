@@ -13,15 +13,146 @@ export class PantryScreen extends BaseScreen {
 
   // Element IDs
   private readonly addButton = 'tab-bar-add-button';
-  private readonly scanBarcodeButton = 'pantry-scan-barcode-button';
   private readonly listContainer = 'pantry-list';
   private readonly searchInput = 'pantry-search-input';
-  private readonly filterButton = 'pantry-filter-button';
   private readonly sortButton = 'pantry-sort-button';
   private readonly emptyState = 'pantry-empty-state';
   private readonly loadingIndicator = 'pantry-loading';
   private readonly refreshControl = 'pantry-refresh-control';
-  private readonly lowStockButton = 'pantry-low-stock-button';
+
+  /**
+   * Page index of the add-details sheet's "Details" tab.
+   *
+   * Quantity and unit live here (`DetailsPage.tsx`), NOT on "Stock" — the tab
+   * labels do not map to where the fields are, and `StockSettingsPage` holds
+   * low-stock thresholds instead.
+   */
+  private static readonly FORM_PAGE_DETAILS = 1;
+
+  /**
+   * Open the add-details sheet, through the picker sheet that precedes it.
+   *
+   * Both taps are retried: landing either while the sheet above it is still
+   * animating gets it swallowed, which made this flow pass on one run and fail
+   * on the next.
+   */
+  async openAddDetailsForm() {
+    await this.tapAddButton();
+
+    try {
+      await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    } catch {
+      await this.tapAddButton();
+      await waitFor(element(by.id('add-pantry-item-add-manually-button')))
+        .toBeVisible()
+        .withTimeout(3000);
+    }
+
+    await element(by.id('add-pantry-item-add-manually-button')).tap();
+    try {
+      await waitFor(element(by.id('add-pantry-item-name-input')))
+        .toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      await element(by.id('add-pantry-item-add-manually-button')).tap();
+      await waitFor(element(by.id('add-pantry-item-name-input')))
+        .toBeVisible()
+        .withTimeout(5000);
+    }
+  }
+
+  /**
+   * Close the item-name autocomplete dropdown if it is still open.
+   *
+   * Tapping the sheet's own container is the reliable dismissal: it is always
+   * present, and a tap near its top-left lands on chrome rather than on a
+   * field. Best-effort — when no dropdown is open the tap is harmless.
+   */
+  async dismissNameAutocomplete() {
+    try {
+      await element(by.id('add-pantry-item-details-modal')).tap({ x: 10, y: 10 });
+    } catch {
+      // Nothing open, or the container moved — the caller's own waits will
+      // report anything that actually matters.
+    }
+  }
+
+  /**
+   * Back out of the add flow entirely.
+   *
+   * Cancel on the details sheet does not return to the pantry — it returns to
+   * the picker sheet ("Add to Pantry") that opened it, and THAT still covers
+   * the list. Both have to go, or the next test starts with a sheet up: the
+   * exact state leak that made one failure report as nine.
+   */
+  async cancelAddDetailsForm() {
+    await element(by.id('add-pantry-item-cancel-button')).tap();
+
+    // Cancel usually drops back to the picker sheet, but not always — whether
+    // it also closes depends on how the two sheets' dismiss animations
+    // overlap. So dismiss it only if it is actually there, and let the
+    // `waitForScreen` below be the assertion either way.
+    try {
+      await waitFor(element(by.id('add-pantry-item-modal')))
+        .toBeVisible()
+        .withTimeout(2000);
+      await element(by.id('add-pantry-item-modal')).swipe('down', 'fast', 0.9);
+    } catch {
+      // Already gone.
+    }
+
+    await this.waitForScreen();
+  }
+
+  /**
+   * Swipe a row open and delete it.
+   *
+   * `RightActions` composes `${testIDPrefix}-delete`, and a pantry row's prefix
+   * is `pantry-item-<entity id>` — unknown here, hence the regex. Only the
+   * swiped row has its actions mounted, so `atIndex(0)` is unambiguous.
+   */
+  async deleteItemByName(name: string) {
+    await this.expectItemInPantry(name);
+    await element(by.text(name)).swipe('left', 'fast', 0.7);
+
+    const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
+    await waitFor(deleteButton).toBeVisible().withTimeout(5000);
+    await deleteButton.tap();
+
+    await waitFor(element(by.text(name)))
+      .not.toBeVisible()
+      .withTimeout(10000);
+  }
+
+  /**
+   * Move the paged item form to a given page via its PageIndicator.
+   *
+   * Targeted by index rather than label: the labels are translated, so a
+   * label-based matcher would pass in English and fail in every other locale.
+   */
+  async goToFormPage(index: number) {
+    await element(by.id(`add-pantry-item-page-${index}`)).tap();
+  }
+
+  /**
+   * Assert a row is in the pantry list, scrolling to reach it.
+   *
+   * A bare `toBeVisible()` on the row text only passes while the row happens to
+   * be on screen. A freshly added item lands wherever the current sort puts it,
+   * and with a seeded pantry that is usually below the fold — so the assertion
+   * failed for a row that had been added perfectly well (the header count went
+   * up each time). `whileElement(...).scroll()` searches the list instead of
+   * assuming the row is already in view.
+   */
+  async expectItemInPantry(name: string, timeout = 5000) {
+    await waitFor(element(by.text(name)))
+      .toBeVisible()
+      .whileElement(by.id(this.listContainer))
+      .scroll(400, 'down', NaN, 0.85);
+    await waitFor(element(by.text(name))).toBeVisible().withTimeout(timeout);
+  }
 
   /**
    * Get item element by name (text-based lookup - reliable across data changes)
@@ -89,17 +220,6 @@ export class PantryScreen extends BaseScreen {
   }
 
   /**
-   * Tap scan barcode button
-   */
-  async tapScanBarcodeButton() {
-    await this.tapByID(this.scanBarcodeButton);
-    // Wait for camera/scanner screen
-    await waitFor(element(by.id('barcode-scanner-screen')))
-      .toBeVisible()
-      .withTimeout(3000);
-  }
-
-  /**
    * Add new item to pantry
    * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
    */
@@ -109,28 +229,7 @@ export class PantryScreen extends BaseScreen {
     unit?: string,
     expirationDate?: string,
   ) {
-    // Tap add button and wait for modal - retry once if needed
-    await this.tapAddButton();
-
-    // Wait for "Add Manually" button to appear (indicates modal is open)
-    try {
-      await waitFor(element(by.id('add-pantry-add-manually-button')))
-        .toBeVisible()
-        .withTimeout(3000);
-    } catch {
-      // Modal didn't open - retry the tap
-      console.log('Modal did not open, retrying add button tap...');
-      await this.tapAddButton();
-      await waitFor(element(by.id('add-pantry-add-manually-button')))
-        .toBeVisible()
-        .withTimeout(3000);
-    }
-    await element(by.id('add-pantry-add-manually-button')).tap();
-
-    // Wait for details modal to appear
-    await waitFor(element(by.id('add-pantry-item-details-modal')))
-      .toBeVisible()
-      .withTimeout(5000);
+    await this.openAddDetailsForm();
 
     // Fill in item details
     // Use replaceText for item name to avoid Android stylus popup
@@ -144,6 +243,31 @@ export class PantryScreen extends BaseScreen {
 
     // Press enter to confirm and close the autocomplete
     await element(by.id('add-pantry-item-name-input')).tapReturnKey();
+
+    // …and make sure it really closed. The item-name field is an autocomplete;
+    // its dropdown overlays the rest of the sheet, so while it is open the page
+    // indicator and the Cancel button are covered. That surfaces as
+    // "View is not hittable at its visible point" on Cancel, and as a page tap
+    // that silently does nothing — after which a field on the target page is
+    // reported MISSING because the page never changed.
+    await this.dismissNameAutocomplete();
+
+    if (quantity !== undefined || unit) {
+      // The sheet is PAGED — Main / Details / Storage / Stock — inside a
+      // PagerView, so a field on another page is UNMOUNTED, not merely
+      // off-screen. That is why Detox reported "No elements found" rather than
+      // a visibility timeout, and why the tests, which treated this as one long
+      // scrolling form, could never have passed.
+      await this.goToFormPage(PantryScreen.FORM_PAGE_DETAILS);
+
+      // Wait for the page to finish mounting. `PagerView` animates the change,
+      // and the fields on the incoming page do not exist until it settles — so
+      // looking one up immediately reports "No elements found" even though the
+      // tap worked and the page is on its way in.
+      await waitFor(element(by.id('add-pantry-item-quantity-input')))
+        .toBeVisible()
+        .withTimeout(5000);
+    }
 
     if (quantity !== undefined) {
       // Type the quantity (supports fractions like "1 1/4" or "0.25")
@@ -207,7 +331,8 @@ export class PantryScreen extends BaseScreen {
 
     // Wait for details modal to disappear first (navigation started)
     // Increased timeout to 15s to account for GraphQL mutation + Apollo cache updates
-    await waitFor(element(by.id('add-pantry-item-details-modal')))
+    // See the note above: wait on the name input, which only the form has.
+    await waitFor(element(by.id('add-pantry-item-name-input')))
       .not.toBeVisible()
       .withTimeout(15000);
 
@@ -265,16 +390,6 @@ export class PantryScreen extends BaseScreen {
   async swipeToDeleteItem(index: number) {
     await this.getItemByIndex(index).swipe('left', 'fast');
     await this.getItemDeleteButtonByIndex(index).tap();
-  }
-
-  /**
-   * Navigate to low stock items view
-   */
-  async navigateToLowStockItems() {
-    await this.tapByID(this.lowStockButton);
-    await waitFor(element(by.id('low-stock-items-screen')))
-      .toBeVisible()
-      .withTimeout(3000);
   }
 
   /**

@@ -1,11 +1,25 @@
 /**
- * Pantry CRUD E2E Tests
+ * Pantry CRUD — add, delete, and the input edge cases that have regressed.
  *
- * Tests for pantry item management including:
- * - Adding items (minimal and full details)
- * - Editing items
- * - Deleting items
- * - Quantity adjustments
+ * Rewritten against the sheet the app actually renders. The previous version
+ * modelled a UI that does not exist, which is why every test in it failed:
+ *
+ *   - "Add Manually" opens `AddDetailsSheet`, a **PagerView** with four pages
+ *     (Main / Details / Storage / Stock). The old tests treated it as one long
+ *     scrolling form, so a field on another page reported "No elements found"
+ *     — it is UNMOUNTED, not off-screen.
+ *   - Quantity and unit live on **Details (page 1)**, not "Stock". The tab
+ *     labels do not map to where the fields are; Stock holds low-stock
+ *     thresholds.
+ *   - The sheet is dismissed with its own Cancel button, not `header-back-button`
+ *     — that belongs to `Header`, which these sheets never render.
+ *   - Swipe actions had no testID at all until `BaseItemCard` began forwarding
+ *     `testIDPrefix`, so the delete button was unreachable.
+ *
+ * Assertions go through `expectItemInPantry`, which SCROLLS the list. A bare
+ * `toBeVisible()` on the row only passes while it happens to be on screen, and
+ * a new item lands wherever the current sort puts it — the old tests failed for
+ * rows that had been added perfectly well.
  */
 
 import { element, by, waitFor, expect } from 'detox';
@@ -16,6 +30,10 @@ import {
 } from '../../helpers';
 import { generateItemName } from '../../helpers/data';
 import { TIMEOUTS } from '../../helpers/waitFor';
+
+const NAME_INPUT = 'add-pantry-item-name-input';
+const SUBMIT_BUTTON = 'add-pantry-item-submit-button';
+const CANCEL_BUTTON = 'add-pantry-item-cancel-button';
 
 describe('Pantry CRUD', () => {
   const pantryScreen = new PantryScreen();
@@ -32,198 +50,124 @@ describe('Pantry CRUD', () => {
   });
 
   afterEach(async () => {
-    // Clean up items created during the test
     for (const itemName of itemsToCleanup) {
       try {
-        const item = element(by.text(itemName));
-        // Swipe left to reveal delete button
-        await item.swipe('left', 'fast', 0.7);
-        // Tap delete button (trash icon). RightActions composes
-        // `${testIDPrefix}-delete`; a pantry row's prefix is
-        // `pantry-item-<entity id>`, unknown here, and only the swiped row has
-        // its actions mounted.
-        const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(
-          0,
-        );
-        await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.QUICK);
-        await deleteButton.tap();
-        // Wait for item to be removed
-        await waitFor(element(by.text(itemName)))
-          .not.toBeVisible()
-          .withTimeout(TIMEOUTS.DEFAULT);
+        await pantryScreen.deleteItemByName(itemName);
       } catch {
-        // Best-effort teardown only. A cleanup miss must not fail the test that
-        // just passed — the assertions live in the `it` blocks.
+        // Best-effort teardown. A cleanup miss must not fail the test that just
+        // passed — the assertions live in the `it` blocks.
       }
     }
   });
 
   describe('Add Item', () => {
-    it('should add item with minimal info (name only)', async () => {
+    it('adds an item with a name only', async () => {
       const itemName = generateItemName('Minimal');
       itemsToCleanup.push(itemName);
 
       await pantryScreen.addItem(itemName);
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+
+      await pantryScreen.expectItemInPantry(itemName);
     });
 
-    it('should add item with quantity and unit', async () => {
+    it('adds an item with a quantity and unit', async () => {
       const itemName = generateItemName('WithQty');
       itemsToCleanup.push(itemName);
 
+      // Quantity and unit are on page 1; `addItem` navigates there.
       await pantryScreen.addItem(itemName, '2', 'lb');
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+
+      await pantryScreen.expectItemInPantry(itemName);
     });
 
-    it('should add item via quick add (autocomplete)', async () => {
-      // Quick add test: verify the add modal opens with action buttons
-      await pantryScreen.tapAddButton();
+    it('refuses to submit without a name', async () => {
+      await pantryScreen.openAddDetailsForm();
 
-      // Wait for the "Add Manually" button (proves modal is open)
-      await waitFor(element(by.id('add-pantry-add-manually-button')))
+      // Submit with the name field untouched.
+      await element(by.id(SUBMIT_BUTTON)).tap();
+
+      // The sheet staying open IS the validation result. Asserting on an error
+      // dialog would be brittle: the copy is translated, and it is a native
+      // alert on one platform and in-app on the other.
+      await waitFor(element(by.id(NAME_INPUT)))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      console.log('✓ Add modal opened with action buttons');
-
-      // Close the modal by pressing back
-      await pantryScreen.goBack();
-      await pantryScreen.waitForScreen();
+      // No teardown needed — `relaunchToHomeTab` reloads before each test, so a
+      // sheet left open here cannot reach the next one.
     });
 
-    it('should validate empty item name', async () => {
-      await pantryScreen.tapAddButton();
+    it('closes the details sheet on cancel', async () => {
+      await pantryScreen.openAddDetailsForm();
+      await element(by.id(CANCEL_BUTTON)).tap();
 
-      // Wait for the "Add Manually" button (proves modal is open)
-      await waitFor(element(by.id('add-pantry-add-manually-button')))
-        .toBeVisible()
+      // The details sheet is gone. Deliberately NOT asserting that the pantry
+      // list is back: cancel drops to the picker sheet that opened this one,
+      // and how far the stack unwinds depends on how the two dismiss
+      // animations overlap. The sheet closing is the behaviour under test;
+      // unwinding the rest is the harness's problem, and the per-test reload
+      // already handles it.
+      await waitFor(element(by.id(NAME_INPUT)))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
-
-      // Tap add manually to go to details sheet
-      const addManuallyButton = element(
-        by.id('add-pantry-add-manually-button'),
-      );
-      await addManuallyButton.tap();
-
-      await waitFor(element(by.id('add-pantry-item-details-modal')))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-
-      // Try to submit without entering name (default quantity is 1, so only name is missing)
-      const submitButton = element(by.id('add-pantry-item-submit-button'));
-      await submitButton.tap();
-
-      // Whatever shape the complaint takes, the invariant is that the item was
-      // NOT created: the details modal is still up. Logging "validation
-      // handled" in the catch made every outcome — including a silent save —
-      // report success.
-      await waitFor(element(by.id('add-pantry-item-details-modal')))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-
-      // Dismiss the error alert if this build surfaces one.
-      try {
-        await waitFor(element(by.text('Error')))
-          .toBeVisible()
-          .withTimeout(TIMEOUTS.QUICK);
-        await element(by.text('OK')).tap();
-      } catch {
-        // Some builds block submission without an alert; the modal check above
-        // is the assertion either way.
-      }
-
-      // Close the modal
-      await pantryScreen.goBack();
     });
   });
 
-  // The 'Edit Item' describe block was removed here. Its two tests
-  // ('should edit item name', 'should edit item quantity') drove
-  // `edit-item-button`, `edit-pantry-item-name-input`, `save-item-button` and
-  // `quantity-increment` — none of which exist in `src/`. Both wrapped their
-  // entire flow, assertion included, in a try/catch that logged and navigated
-  // back, so they passed while exercising nothing. Repointing them means
-  // deciding what the pantry edit flow should assert, which is new coverage,
-  // not repair. Re-add them against real testIDs when that is written.
-
   describe('Delete Item', () => {
-    it('should delete item via swipe', async () => {
+    it('deletes an item via swipe', async () => {
       const itemName = generateItemName('ToDelete');
-      // Don't add to cleanup - we're deleting it in this test
       await pantryScreen.addItem(itemName);
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+      await pantryScreen.expectItemInPantry(itemName);
 
-      // Swipe left to reveal delete button
-      const item = element(by.text(itemName));
-      await item.swipe('left', 'fast', 0.7);
+      await pantryScreen.deleteItemByName(itemName);
 
-      // Tap the delete action button. `swipe-action-delete` does not exist —
-      // RightActions composes `${testIDPrefix}-delete`, and a pantry row's
-      // prefix is `pantry-item-<entity id>`, which this spec cannot know. Only
-      // the swiped row has its actions mounted, so the suffix match is
-      // unambiguous. Failing to find it is a failure, not a log line.
-      const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
-      await waitFor(deleteButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await deleteButton.tap();
-
-      // Verify item is gone. Catching this and pushing to cleanup meant a
-      // delete that silently did nothing still passed the delete test.
       await waitFor(element(by.text(itemName)))
         .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
     });
 
-    it('should cancel delete', async () => {
-      const itemName = generateItemName('CancelDel');
+    it('keeps the item when the swipe is not followed through', async () => {
+      const itemName = generateItemName('KeepMe');
       itemsToCleanup.push(itemName);
       await pantryScreen.addItem(itemName);
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+      await pantryScreen.expectItemInPantry(itemName);
 
-      // Swipe left to reveal delete actions (but don't tap delete)
-      const item = element(by.text(itemName));
-      await item.swipe('left', 'fast', 0.3);
+      // A short swipe reveals the actions without committing to one.
+      await element(by.text(itemName)).swipe('left', 'fast', 0.3);
 
-      // Item should still exist - swipe reveal doesn't delete
       await expect(element(by.text(itemName))).toExist();
-      console.log('✓ Item still exists after swipe reveal');
     });
   });
 
-  describe('Edge Cases', () => {
-    it('should handle long item names', async () => {
-      const longName = 'LongItemNameTest';
-      itemsToCleanup.push(longName);
-      await pantryScreen.addItem(longName);
-      await waitFor(element(by.text(longName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-      console.log('✓ Long item name handled');
-    });
-
-    it('should handle fractional quantities', async () => {
-      const itemName = generateItemName('Frac');
+  describe('Quantity input edge cases', () => {
+    // These are the inputs that have actually regressed: `parseFloat('4,99')`
+    // is 4, and a fraction typed into a number field used to be dropped. The
+    // parser has unit tests; this pins the wiring through the real form.
+    it('accepts a fractional quantity', async () => {
+      const itemName = generateItemName('Fraction');
       itemsToCleanup.push(itemName);
-      await pantryScreen.addItem(itemName, '1/2', 'cup');
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+
+      await pantryScreen.addItem(itemName, '1 1/4', 'cup');
+
+      await pantryScreen.expectItemInPantry(itemName);
     });
 
-    it('should handle decimal quantities', async () => {
+    it('accepts a decimal quantity', async () => {
       const itemName = generateItemName('Decimal');
       itemsToCleanup.push(itemName);
-      await pantryScreen.addItem(itemName, '2.5', 'kg');
-      await waitFor(element(by.text(itemName)))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
+
+      await pantryScreen.addItem(itemName, '0.25', 'kg');
+
+      await pantryScreen.expectItemInPantry(itemName);
+    });
+
+    it('accepts a long item name', async () => {
+      const longName = generateItemName('A'.repeat(40));
+      itemsToCleanup.push(longName);
+
+      await pantryScreen.addItem(longName);
+
+      await pantryScreen.expectItemInPantry(longName);
     });
   });
 });

@@ -1,16 +1,36 @@
+/**
+ * Failures must report fast enough to act on.
+ *
+ * The previous defaults made a failure take minutes: `retryTimes: 1` ran every
+ * failing test a second time, and `testTimeout: 180000` meant a genuinely stuck
+ * test burned three minutes per attempt — six with the retry. A directory of
+ * nine failing tests took five minutes to say anything, which is long enough
+ * that you stop watching, and long enough that the natural response is to run
+ * fewer tests rather than fix them.
+ *
+ * Those numbers were for slow physical devices and for absorbing device
+ * flakiness in CI. Both are real, so they are still available — but behind
+ * `E2E_SLOW=1` rather than paid for on every local run. The slowest passing
+ * test in the suite is ~10s, so 60s is still four times the headroom it needs.
+ */
+const SLOW = process.env.E2E_SLOW === '1';
+
 /** @type {Detox.DetoxConfig} */
 module.exports = {
   testRunner: {
     args: {
       $0: 'jest',
       config: 'e2e/config/jest.config.js',
+      // `bail` belongs in jest.config.js, NOT here: detox serialises a numeric
+      // arg as `--bail 1`, and jest then reads the `1` as a test PATH PATTERN.
+      // `detox test … smoke.e2e.ts` silently became
+      // `Ran all test suites matching /1|e2e\/tests\/smoke.e2e.ts/` and ran
+      // unrelated suites.
     },
     jest: {
       setupTimeout: 120000,
-      // Increase timeout for slower physical devices
-      testTimeout: 180000, // 3 minutes per test
-      // Retry failed tests once automatically
-      retryTimes: 1,
+      testTimeout: SLOW ? 180000 : 60000,
+      retryTimes: SLOW ? 1 : 0,
     },
   },
   apps: {

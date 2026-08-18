@@ -100,34 +100,43 @@ export async function bootstrapFreshAuthenticatedSession() {
   await pantryScreen.waitForScreen();
 }
 
+/**
+ * Return the app to the pantry tab, whatever state the previous test left.
+ *
+ * The name always promised a relaunch; it used to only tap the tab, which a
+ * modal sheet blocks. One test that failed with the "Add Item Details" sheet
+ * open therefore poisoned every test after it: each `beforeEach` timed out on
+ * `pantry-screen`, and nine failures reported one bug.
+ *
+ * The old fallback used `device.pressBack()` — Android-only, and it throws on
+ * iOS — then swallowed that and logged "continuing...", so the suite carried on
+ * from a state it had failed to establish.
+ *
+ * Now: tap the tab; if that does not land, reload React Native (which closes
+ * every modal on both platforms) and try once more; if THAT does not land,
+ * throw. A test that cannot reach its starting state has to say so — silently
+ * continuing is what turned one failure into nine.
+ */
 export async function relaunchToHomeTab() {
-  // Dismiss any overlays first
-  await dismissBiometricPromptIfPresent();
-
-  // Wait for app to be ready
-  await delay(500);
-
-  // Try to navigate to pantry tab (home) to ensure consistent starting state
-  try {
+  const goToPantryTab = async () => {
     await waitFor(element(by.id('tab-pantry')))
       .toBeVisible()
       .withTimeout(3000);
     await element(by.id('tab-pantry')).tap();
     await pantryScreen.waitForScreen(5000);
-  } catch {
-    // Tab might already be visible, or we need to go back first
-    try {
-      // Press back to dismiss any modal/screen
-      await device.pressBack();
-      await delay(500);
-      await waitFor(element(by.id('tab-pantry')))
-        .toBeVisible()
-        .withTimeout(3000);
-      await element(by.id('tab-pantry')).tap();
-    } catch {
-      console.log('Could not navigate to pantry tab, continuing...');
-    }
-  }
+  };
 
+  // Reload unconditionally rather than probing first. Probing does not work:
+  // a bottom sheet left open by a failing test does NOT hide `pantry-screen`
+  // behind it, so the "am I already home?" check passes, the sheet stays up,
+  // and the next test fails on the tab-bar add button it covers. Detecting
+  // "some modal is open" would mean enumerating every sheet in the app and
+  // keeping that list current — a reload is one call and cannot miss one.
+  //
+  // ~2s per test, which is cheaper than a false failure: the previous version
+  // turned one real bug into nine reports.
+  await device.reloadReactNative();
+  await dismissBiometricPromptIfPresent();
   await delay(500);
+  await goToPantryTab();
 }

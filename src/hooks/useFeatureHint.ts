@@ -160,10 +160,31 @@ export const useFeatureHint = ({
 /**
  * Check if a specific feature hint has been shown
  */
+/**
+ * Under Detox, every hint reports as already shown.
+ *
+ * The tutorial overlay dims the screen and swallows taps, and it appears on a
+ * 2s delay after the pantry mounts — i.e. after any post-login dismissal helper
+ * has finished. The result is `View is not hittable at its visible point` on
+ * every tab, minutes into a run, for a reason that has nothing to do with what
+ * is being tested. Set by `injectDetoxLaunchArgs`, the same place LogBox is
+ * silenced for the same reason.
+ *
+ * Deliberately not persisted: it suppresses display for this process only, so
+ * the stored per-user state is untouched and a test that wants to assert the
+ * tutorial can still reset and drive it.
+ */
+let suppressedForE2E = false;
+
+export const suppressFeatureHintsForE2E = (): void => {
+  suppressedForE2E = true;
+};
+
 export const hasFeatureHintBeenShown = (
   featureId: string,
   userId?: string,
 ): boolean => {
+  if (suppressedForE2E) return true;
   return storage.getBoolean(buildStorageKey(userId, featureId)) ?? false;
 };
 

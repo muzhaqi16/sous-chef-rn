@@ -5,6 +5,7 @@ import { LaunchArguments } from 'react-native-launch-arguments';
 import { logger } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
+import { suppressFeatureHintsForE2E } from '#/hooks/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
@@ -37,6 +38,9 @@ function injectDetoxLaunchArgs(
     // breaks screenshot/visibility checks — silence it for E2E runs only.
     if (args.detoxServer) {
       LogBox.ignoreAllLogs();
+      // The feature-hint tutorial dims the screen and swallows taps, on a 2s
+      // delay that lands after any post-login dismissal helper has run.
+      suppressFeatureHintsForE2E();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
       const user =

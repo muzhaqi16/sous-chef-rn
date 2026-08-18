@@ -282,6 +282,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     return (
       <View style={styles.rightElementContainer}>
         <QuantityBadge
+          // Keyed by item id so a test can open the quantity sheet for a
+          // specific row. The badge had no testID, so the shopping list's
+          // quantity flow was unreachable — its spec looked for a
+          // `quantity-button` the app has never rendered.
+          testID={`shopping-list-item-${itemId}-quantity`}
           quantity={quantity}
           quantityInput={quantityInput}
           unit={unitDisplay}

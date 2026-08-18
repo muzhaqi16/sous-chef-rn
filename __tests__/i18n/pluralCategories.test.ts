@@ -134,3 +134,48 @@ describe('plural categories', () => {
     expect(italian).not.toBe(english);
   });
 });
+
+/**
+ * The module must load on an engine without `Intl.PluralRules`.
+ *
+ * This is not hypothetical. `completePluralCategories` shipped with an
+ * unguarded `new Intl.PluralRules(...)` and, because it runs at module load,
+ * red-screened the app before React started:
+ *
+ *   [runtime not ready]: TypeError: undefined cannot be used as a constructor
+ *     _loop
+ *     completePluralCategories
+ *
+ * Every unit test passed — Node has full Intl — and typecheck and lint had
+ * nothing to say. Only the simulator showed it. Hence this test: it removes
+ * `Intl.PluralRules` and re-imports the module, which is the one thing Jest
+ * can do that reproduces the device.
+ */
+describe('i18n config on an engine without Intl.PluralRules', () => {
+  const original = Intl.PluralRules;
+
+  afterEach(() => {
+    Object.defineProperty(Intl, 'PluralRules', {
+      value: original,
+      configurable: true,
+      writable: true,
+    });
+    jest.resetModules();
+  });
+
+  it('loads without throwing, and translates', () => {
+    // @ts-expect-error — deleting a standard global is the point of the test.
+    delete Intl.PluralRules;
+    expect(Intl.PluralRules).toBeUndefined();
+
+    jest.resetModules();
+    // `require`, not dynamic `import()` — this Jest config runs without
+    // --experimental-vm-modules, so `import()` rejects rather than loading.
+    const config = jest.requireActual<typeof import('#/i18n/config')>(
+      '#/i18n/config',
+    );
+
+    // Reaching here at all is the assertion: the import used to throw.
+    expect(typeof config.getI18n().t('labels.error')).toBe('string');
+  });
+});

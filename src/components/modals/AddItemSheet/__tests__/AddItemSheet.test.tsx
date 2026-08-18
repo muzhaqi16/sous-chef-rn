@@ -6,6 +6,7 @@ import { screen, userEvent } from '@testing-library/react-native';
 // the tree needs an Apollo context even though this suite mocks the data hooks.
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
+import { pantrySheetConfig } from '../configs/pantryConfig';
 import { renderHook } from '@testing-library/react-native';
 import type {
   AddItemSheetConfig,
@@ -133,11 +134,16 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
+// The prefix must be one a production config actually uses. It was
+// `'add-pantry'`, which no config has — so every testID this suite asserted was
+// one the app never renders, and the e2e page objects were written against
+// those fictional IDs and timed out on device. Imported rather than retyped so
+// the two cannot drift again.
 const createConfig = (
   overrides: Partial<AddItemSheetConfig> = {},
 ): AddItemSheetConfig => ({
   titleKey: 'addItemSheet.addToPantry',
-  testIDPrefix: 'add-pantry',
+  testIDPrefix: pantrySheetConfig.testIDPrefix,
   placeholderIcon: 'cube-outline',
   searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [
@@ -343,7 +349,11 @@ describe('AddItemSheet', () => {
 
     // Pressing Add Manually preps the consumer and morphs this same sheet to
     // the details step (no second modal).
-    await user.press(screen.getByTestId('add-pantry-add-manually-button'));
+    await user.press(
+      screen.getByTestId(
+        `${pantrySheetConfig.testIDPrefix}-add-manually-button`,
+      ),
+    );
 
     expect(defaultProps.onAddManually).toHaveBeenCalled();
     expect(screen.getByTestId('details-step')).toBeTruthy();

@@ -81,11 +81,20 @@ export const PantrySortModal: React.FC<PantrySortModalProps> = ({
     >
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         {/* Absorb taps on the card so they don't bubble to the backdrop and close it */}
-        <View style={styles.sortModal} onStartShouldSetResponder={() => true}>
+        <View
+          style={styles.sortModal}
+          onStartShouldSetResponder={() => true}
+          testID="pantry-sort-modal"
+        >
           <Text style={styles.sortModalTitle}>{t('pantrySort.title')}</Text>
           {SORT_OPTIONS.map(option => (
             <AppPressable
               key={option.key}
+              // Derived from the option key so a new sort option is reachable
+              // from a test the moment it is added. The e2e suite previously
+              // looked for `sort-by-name`, which never existed — this modal had
+              // no testIDs at all, so those tests could not have passed.
+              testID={`pantry-sort-option-${option.key}`}
               style={[
                 styles.sortOption,
                 sortOption === option.key && styles.sortOptionActive,

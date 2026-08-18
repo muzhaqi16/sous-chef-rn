@@ -10,7 +10,7 @@
  * - Detailed logging for debugging
  */
 
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, system } from 'detox';
 import {
   waitForScreen,
   waitForModalReady,
@@ -102,6 +102,8 @@ export async function loginWithCredentials(email: string, password: string) {
  * ⭐ ENHANCED: Dismiss biometric prompt if it appears after login or during onboarding
  * NO synchronization disabling - uses proper waitFor conditions
  */
+let systemPasswordAlertHandled = false;
+
 export async function dismissBiometricPromptIfPresent() {
   console.log('🔍 Checking for post-login prompts...');
 
@@ -120,20 +122,34 @@ export async function dismissBiometricPromptIfPresent() {
     3000,
   );
 
-  // Try to dismiss post-login biometric modal (only on real devices)
-  // Use 3s timeout to allow for animation/network delay on real devices
-  await waitIfPresent(
-    element(by.id('post-login-biometric-prompt')),
-    async () => {
-      console.log('📱 Dismissing post-login biometric prompt...');
-      await tapFirstAvailable([
-        element(by.id('biometric-prompt-decline')),
-        element(by.label('Not now')),
-      ]);
-      console.log('✅ Biometric prompt dismissed');
-    },
-    3000,
-  );
+  // iOS's own "Save Password?" alert after a UI login. It is a SYSTEM alert,
+  // not part of the app's view tree, so `by.id` and `by.text` cannot see it —
+  // the previous id-based probe waited 3s and moved on while the alert went
+  // on blocking every subsequent tap. Detox's
+  // system matcher is the only thing that reaches it.
+  //
+  // Wrapped because it appears only on some simulators and only on the first
+  // login of a fresh install.
+  // It is presented asynchronously after the login response lands, so tapping
+  // immediately races it: the tap finds nothing, the catch swallows that, and
+  // the alert then blocks every subsequent tap with
+  // "View is not hittable at its visible point".
+  // Once per process: iOS offers to save the password on the first UI login of
+  // a fresh install and never again, but this helper runs in every `beforeEach`
+  // — so an unconditional 4s wait would add 4s per test for an alert that
+  // cannot reappear.
+  if (!systemPasswordAlertHandled) {
+    try {
+      await waitFor(system.element(by.system.label('Not Now')))
+        .toExist()
+        .withTimeout(4000);
+      await system.element(by.system.label('Not Now')).tap();
+      console.log('✅ Dismissed the system "Save Password?" alert');
+    } catch {
+      // Not shown on this run — nothing to dismiss.
+    }
+    systemPasswordAlertHandled = true;
+  }
 
   // Try to dismiss onboarding biometric setup screen (only on real devices)
   await waitIfPresent(
@@ -158,45 +174,6 @@ export async function dismissBiometricPromptIfPresent() {
   );
 
   console.log('✅ All post-login flows handled');
-}
-
-/**
- * ⭐ ENHANCED: Logout from the app
- */
-export async function logout() {
-  console.log('🚪 Logging out...');
-
-  // Navigate to profile
-  await tapByID('tab-profile');
-  await waitForScreen('profile-screen', TIMEOUTS.DEFAULT);
-
-  // Scroll to find logout button (it's directly on the profile screen)
-  const profileScroll = element(by.id('profile-scroll-view'));
-  await waitFor(profileScroll).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await profileScroll.scrollTo('bottom');
-  await delay(300); // Wait for scroll animation
-
-  // Tap logout
-  await tapByID('profile-logout-button');
-
-  // Confirm logout if confirmation dialog appears
-  await waitIfPresent(
-    element(by.id('confirm-logout-button')),
-    async () => {
-      console.log('Confirming logout...');
-      await tapByID('confirm-logout-button');
-    },
-    2000,
-  );
-
-  // Wait for login screen or landing screen
-  try {
-    await waitForScreen('login-screen', TIMEOUTS.NETWORK);
-  } catch {
-    await waitForScreen('landing-auth-screen', TIMEOUTS.NETWORK);
-  }
-
-  console.log('✅ Logged out successfully');
 }
 
 /**
@@ -302,22 +279,6 @@ export async function ensureLoggedIn() {
     await loginAsTestUser();
   } else {
     console.log('✅ Already logged in');
-  }
-}
-
-/**
- * ⭐ ENHANCED: Ensure logged out state (logout if currently logged in)
- */
-export async function ensureLoggedOut() {
-  console.log('🔍 Checking logout state...');
-
-  const loggedIn = await isLoggedIn();
-
-  if (loggedIn) {
-    console.log('Currently logged in, logging out now...');
-    await logout();
-  } else {
-    console.log('✅ Already logged out');
   }
 }
 

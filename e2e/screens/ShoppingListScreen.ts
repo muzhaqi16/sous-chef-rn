@@ -124,12 +124,24 @@ export class ShoppingListScreen extends BaseScreen {
         .toBeVisible()
         .withTimeout(3000);
     }
+    // Retry the tap, and wait on the NAME INPUT rather than
+    // `add-shopping-item-modal`. That id belongs to the picker sheet
+    // (`AddItemSheet` renders `${config.testIDPrefix}-modal`), which this tap
+    // navigates AWAY from — so waiting for it after the tap can only time out.
+    // Landing the tap mid-animation also gets it swallowed, which made the
+    // flow pass on one run and fail on the next.
     await element(by.id('add-shopping-item-add-manually-button')).tap();
-
-    // Wait for add item screen to appear
-    await waitFor(element(by.id('add-shopping-item-modal')))
-      .toBeVisible()
-      .withTimeout(5000);
+    try {
+      await waitFor(element(by.id('add-shopping-item-name-input')))
+        .toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      console.log('Details step did not open, retrying "Add Manually" tap...');
+      await element(by.id('add-shopping-item-add-manually-button')).tap();
+      await waitFor(element(by.id('add-shopping-item-name-input')))
+        .toBeVisible()
+        .withTimeout(5000);
+    }
 
     // Fill in item details - use replaceText to avoid Android stylus popup
     const nameInput = element(by.id('add-shopping-item-name-input'));

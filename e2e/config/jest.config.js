@@ -4,8 +4,12 @@ module.exports = {
   testMatch: ['<rootDir>/e2e/tests/**/*.e2e.{js,ts}'],
   testSequencer: '<rootDir>/e2e/config/testSequencer.js',
 
-  // ⭐ OPTIMIZED TIMEOUTS FOR ANDROID DEVICE
-  testTimeout: 300000, // 5 minutes per test (device is slower than emulator)
+  // This is the timeout that actually applies — it overrides the one in
+  // .detoxrc.js. Five minutes per test meant a single stuck test took five
+  // minutes to report, which is long enough that people stop watching. Slow
+  // physical devices still get it via E2E_SLOW=1; the slowest passing test in
+  // the suite is ~10s.
+  testTimeout: process.env.E2E_SLOW === '1' ? 300000 : 60000,
 
   // Run tests serially (important for app reuse)
   maxWorkers: 1,
@@ -24,9 +28,10 @@ module.exports = {
   // Verbose output for debugging
   verbose: true,
 
-  // ⭐ BAIL EARLY ON FAILURE (for local development)
-  // Set to false in CI for full test run
-  bail: process.env.CI ? false : 1,
+  // Stop at the first failing suite locally: the first failure is the one to
+  // debug, and the ones after it are usually the same cause again or fallout
+  // from the state the first left behind. Nightlies want the whole picture.
+  bail: process.env.CI || process.env.E2E_SLOW === '1' ? false : 1,
 
   // Clear mocks between tests for isolation
   clearMocks: true,

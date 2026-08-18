@@ -12,6 +12,7 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
 interface QuantityBadgeProps {
+  testID?: string;
   quantity: number;
   quantityInput?: string | null;
   unit?: string | null;
@@ -42,6 +43,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   disabled = false,
   isPurchased = false,
   themeColors,
+  testID,
 }) => {
   const { t } = useTranslation();
   // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
@@ -73,6 +75,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"

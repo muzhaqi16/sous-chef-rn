@@ -128,6 +128,11 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
       <View style={styles.swipeableWrapper}>
         <SwipeableItem
           itemId={itemId}
+          // Without this, `RightActions` renders its buttons with
+          // `testID={undefined}` — every swipe action in the app was
+          // unreachable from a test. The row's own testID is the natural
+          // prefix, so a pantry row gives `pantry-item-<id>-delete` / `-edit`.
+          testIDPrefix={testID}
           onPress={onPress}
           onEdit={onEdit}
           onDelete={onDelete}

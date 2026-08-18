@@ -53,8 +53,8 @@ type ResourceNode = { [key: string]: string | ResourceNode };
  */
 function completePluralCategories(resources: Record<string, ResourceNode>) {
   for (const [locale, tree] of Object.entries(resources)) {
-    const needed = new Intl.PluralRules(locale).resolvedOptions()
-      .pluralCategories;
+    const needed = neededPluralCategories(locale);
+    if (needed.length === 0) continue;
 
     const fill = (node: ResourceNode) => {
       for (const [key, value] of Object.entries(node)) {
@@ -74,6 +74,34 @@ function completePluralCategories(resources: Record<string, ResourceNode>) {
     fill(tree);
   }
   return resources;
+}
+
+/**
+ * The CLDR plural categories a locale needs, or none if the engine cannot say.
+ *
+ * Hermes does not ship `Intl.PluralRules` on every platform and build, and this
+ * runs at module load — an unguarded `new Intl.PluralRules(...)` there is not a
+ * degraded translation, it is a red screen before React starts
+ * (`[runtime not ready]: TypeError: undefined cannot be used as a
+ * constructor`). Caught on the simulator; every Jest test passed, because Node
+ * has full Intl.
+ *
+ * Returning none is the correct answer rather than a shrug: i18next guards the
+ * very same call (`PluralResolver.getRule`) and falls back to a rule whose
+ * `pluralCategories` are `['one', 'other']`, so without `Intl.PluralRules`
+ * nothing beyond those two can ever be selected and there is no gap to fill.
+ * The app and the library degrade together.
+ *
+ * Matches the existing Intl handling in `src/utils/formatters/number.ts`.
+ */
+function neededPluralCategories(locale: string): readonly string[] {
+  let rules: Intl.PluralRules;
+  try {
+    rules = new Intl.PluralRules(locale);
+  } catch {
+    return [];
+  }
+  return rules.resolvedOptions().pluralCategories;
 }
 
 const resources = completePluralCategories({

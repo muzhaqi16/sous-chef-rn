@@ -67,6 +67,10 @@ jobs:
         run: detox test e2e/tests/${{ matrix.suite }} --configuration ios.sim.debug --record-logs all --record-videos failing
         env:
           NODE_ENV: test
+          # Long per-test timeouts, one retry, and no bail — a nightly wants the
+          # full picture and can absorb device flakiness. Local runs default to
+          # the opposite so a failure reports in seconds. See .detoxrc.js.
+          E2E_SLOW: '1'
 
   # Run all test suites on Android
   full-suite-android:
@@ -146,7 +150,7 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           disable-animations: true
-          script: detox test e2e/tests/${{ matrix.suite }} --configuration android.emu.debug --record-logs all
+          script: E2E_SLOW=1 detox test e2e/tests/${{ matrix.suite }} --configuration android.emu.debug --record-logs all
 
   # Report results
   report-results:

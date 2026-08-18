@@ -4,6 +4,7 @@ import { useShowTutorials } from '#hooks/settings/useSettings';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
+import { hasFeatureHintBeenShown } from '#/hooks/useFeatureHint';
 
 // Same prefix used by useFeatureHint — keeps storage compatible with
 // resetAllFeatureHints() and hasFeatureHintBeenShown(). Per-account scoping
@@ -89,8 +90,11 @@ export const useTutorialSequence = ({
   const activeStepIndex =
     generation >= 0
       ? steps.findIndex(step => {
-          const key = buildStorageKey(userId, step.featureId);
-          const shown = storage.getBoolean(key) ?? false;
+          // Through `hasFeatureHintBeenShown` rather than reading MMKV
+          // directly, so the Detox suppression applies here too. Reading the
+          // key straight from storage is what made this sequence keep showing
+          // under E2E after the shared helper was already suppressed.
+          const shown = hasFeatureHintBeenShown(step.featureId, userId);
           const rect = targetRects[step.rectKey];
           return !shown && rect != null;
         })
