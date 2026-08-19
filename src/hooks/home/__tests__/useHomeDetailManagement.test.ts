@@ -286,7 +286,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        input: { id: 'home-1', name: 'New Name' },
+        input: { id: 'home-1', name: 'New Name', version: 1 },
       });
     });
   });
@@ -506,7 +506,7 @@ describe('useHomeDetailManagement', () => {
       });
 
       expect(update.fired).toContainEqual({
-        input: { id: 'home-1', allowJoinCode: false },
+        input: { id: 'home-1', allowJoinCode: false, version: 1 },
       });
     });
   });

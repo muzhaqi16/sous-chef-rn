@@ -54,3 +54,40 @@ fragment useShoppingListSubscriptions_collaborator on ShoppingListCollaborator {
     }
   }
 }
+
+# ============================================
+# EVENT READ-BACK QUERIES
+# ============================================
+#
+# `MyShoppingListsEvents` carries only the envelope plus the changed entity's
+# id — a subscription document is validated against depth 5, which no fragment
+# spread fits under. These queries are how the handler gets the values, over
+# HTTP where the budget is generous, and only for events that need them.
+
+query ShoppingListItemForEvent($id: ID!) {
+  shoppingListItem(id: $id) {
+    id
+    ...useShoppingListSubscriptions_item
+  }
+}
+
+query ShoppingListSummaryForEvent($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    name
+    isCompleted
+    totalItems
+    completedItems
+    remainingItems
+    completionRate
+  }
+}
+
+# Existence probe. `MyShoppingListsEvents` is user-scoped, so a LIST_UPDATED
+# arrives for every list the user can reach, not just the open one. A non-null
+# read means the cache is holding that list and its summary is worth
+# refreshing; a null one means nothing on this device is showing it, and the
+# next `cache-and-network` read will fetch it fresh anyway.
+fragment useShoppingListSubscriptions_listRef on ShoppingList {
+  id
+}

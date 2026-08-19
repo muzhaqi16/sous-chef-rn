@@ -25,7 +25,7 @@ import {
 import { typeIntoField, tapByID } from './actions';
 import { TEST_USER } from '../fixtures/testData';
 import { launchAppWithFabricWorkaround } from '../init';
-import { getAuthTokens } from './tokenProvider';
+import { ApiUnreachableError, getAuthTokens } from './tokenProvider';
 
 /**
  * ⭐ ENHANCED: Login with test user credentials
@@ -102,6 +102,12 @@ export async function loginWithCredentials(email: string, password: string) {
  * ⭐ ENHANCED: Dismiss biometric prompt if it appears after login or during onboarding
  * NO synchronization disabling - uses proper waitFor conditions
  */
+/**
+ * How long to give iOS's "Save Password?" alert. It only appears on the first
+ * UI login of a fresh install, so on most runs this is simply waited out once.
+ */
+const SYSTEM_ALERT_TIMEOUT_MS = 3000;
+
 let systemPasswordAlertHandled = false;
 
 export async function dismissBiometricPromptIfPresent() {
@@ -139,14 +145,28 @@ export async function dismissBiometricPromptIfPresent() {
   // — so an unconditional 4s wait would add 4s per test for an alert that
   // cannot reappear.
   if (!systemPasswordAlertHandled) {
-    try {
-      await waitFor(system.element(by.system.label('Not Now')))
-        .toExist()
-        .withTimeout(4000);
-      await system.element(by.system.label('Not Now')).tap();
+    // Polled rather than awaited through `waitFor`: Detox's `waitFor` is typed
+    // for a NativeElement, and a system element is a separate type it does not
+    // accept. The alert is also presented asynchronously after the login
+    // response lands, so a single immediate tap races it — the tap finds
+    // nothing, and the alert then blocks every subsequent one with
+    // "View is not hittable at its visible point".
+    // Raced against a timer, because `system.element(...).tap()` BLOCKS when
+    // no system alert is present — it does not throw, and Detox's `waitFor` is
+    // typed for a NativeElement so it cannot bound this. An unbounded attempt
+    // runs out jest's 120s HOOK timeout, and every test in the file then
+    // reports as "Exceeded timeout of 120000 ms for a hook" pointing at
+    // `beforeAll`, with the app sitting there perfectly healthy.
+    const dismissed = await Promise.race([
+      system
+        .element(by.system.label('Not Now'))
+        .tap()
+        .then(() => true)
+        .catch(() => false),
+      delay(SYSTEM_ALERT_TIMEOUT_MS).then(() => false),
+    ]);
+    if (dismissed) {
       console.log('✅ Dismissed the system "Save Password?" alert');
-    } catch {
-      // Not shown on this run — nothing to dismiss.
     }
     systemPasswordAlertHandled = true;
   }
@@ -301,13 +321,46 @@ export async function resetAppState() {
   console.log('✅ App state reset');
 }
 
+export interface BootstrapOptions {
+  /**
+   * Seed the pantry sort so list order is known before the first frame.
+   *
+   * The alternative is driving the sort modal, which costs two open/select
+   * round-trips per test AND has to wait for the control to exist at all — it
+   * renders under `{!!stats && …}`, so it does not appear until the stats query
+   * resolves. Seeding a value the test already knows removes both the taps and
+   * the wait.
+   *
+   * Note `recent` sorts newest-first under `asc`: its comparator is inverted
+   * relative to the other options (`b - a`), which `usePantrySorting.test.ts`
+   * asserts. The app's own default is `recent` + `desc` — oldest first.
+   */
+  pantrySort?: {
+    option: 'name' | 'expiry' | 'quantity' | 'recent';
+    direction: 'asc' | 'desc';
+  };
+}
+
 /**
  * ⭐ ENHANCED: Bootstrap authenticated session for tests
  * Uses token injection via launchArgs for speed (~1s vs ~5-8s UI login).
  * Falls back to UI login if token injection fails.
  */
-export async function bootstrapAuthenticatedSession() {
+export async function bootstrapAuthenticatedSession(
+  options: BootstrapOptions = {},
+) {
   console.log('🚀 Bootstrapping authenticated session...');
+
+  // Seeded on BOTH launch paths below. `reloadReactNative` (what
+  // `relaunchToHomeTab` uses between tests) keeps the original launch args, and
+  // the preference is persisted anyway, so seeding once here holds for the whole
+  // file.
+  const preferenceArgs = options.pantrySort
+    ? {
+        detoxPantrySortOption: options.pantrySort.option,
+        detoxPantrySortDirection: options.pantrySort.direction,
+      }
+    : {};
 
   // Try token injection first (fast path)
   try {
@@ -321,6 +374,7 @@ export async function bootstrapAuthenticatedSession() {
         detoxUserToken: tokens.accessToken,
         detoxRefreshToken: tokens.refreshToken,
         detoxUser: JSON.stringify(tokens.user),
+        ...preferenceArgs,
       },
     });
 
@@ -336,6 +390,13 @@ export async function bootstrapAuthenticatedSession() {
       '⚠️ Token injection did not result in logged-in state, falling back to UI login...',
     );
   } catch (error) {
+    // The one failure the fallback cannot rescue: UI login posts to the same
+    // endpoint. Surface it as itself instead of spending ~50s to report a
+    // missing `login-screen`.
+    if (error instanceof ApiUnreachableError) {
+      throw error;
+    }
+
     console.log(
       `⚠️ Token injection failed: ${error}, falling back to UI login...`,
     );
@@ -344,6 +405,7 @@ export async function bootstrapAuthenticatedSession() {
     await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES', camera: 'YES' },
+      launchArgs: preferenceArgs,
     });
   }
 

@@ -292,3 +292,13 @@ mutation CreateTemplateFromMealPlan($input: CreateTemplateFromMealPlanInput!) {
     }
   }
 }
+
+# Event read-back — see `MealPlanForEvent`. A template created by another
+# member arrives as an id; the browser sheet's list needs `MealTemplateDisplay`
+# to be complete before the template can join it.
+query MealTemplateForEvent($id: ID!) {
+  mealTemplate(id: $id) {
+    id
+    ...MealTemplateDisplay
+  }
+}

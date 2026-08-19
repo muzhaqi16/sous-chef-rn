@@ -1,19 +1,13 @@
 /**
- * The `MealPlanEvents` MealPlan branch must stay a superset of
- * `MealPlanDisplay`.
+ * The plan read-back must stay a superset of `MealPlanDisplay`.
  *
- * The branch spells its fields out instead of spreading the fragment, because
- * `MealPlan.servings` / `actualCost` are non-null where the item types hold
- * them nullable, and GraphQL rejects one response key resolving to both. The
- * aliases (`planServings`, `planCost`) are the sanctioned fix — Apollo
- * normalizes by field name, so they still write the real fields.
+ * `MealPlanEvents` carries only the changed plan's id — a subscription document
+ * is capped at depth 5, which no fragment spread fits under — so the handler
+ * reads the plan through `MealPlanForEvent` before joining it to the overview
+ * connection. If that query stopped covering `MealPlanDisplay`, the overview's
+ * read would go incomplete and blank the list.
  *
- * The cost of spelling it out is drift: a field added to `MealPlanDisplay`
- * would not reach the pushed payload, the handler's read-back would miss, and
- * every remotely-created plan would silently cost a refetch instead of
- * applying. Worse, a future edit that skips the read-back would write a partial
- * plan into the overview connection and blank the list. This pins the two
- * together by field name, ignoring aliases — which is exactly what the cache
+ * Paths are compared by field NAME, ignoring aliases — which is what the cache
  * keys on.
  */
 import type {
@@ -22,7 +16,10 @@ import type {
   SelectionSetNode,
   FragmentDefinitionNode,
 } from 'graphql';
-import { MealPlanEventsDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  MealPlanEventsDocument,
+  MealPlanForEventDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
 import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 
 /**
@@ -86,16 +83,34 @@ function collectFragments(
   return fragments;
 }
 
-/** The `... on MealPlan` branch of the subscription's `node` union. */
-function mealPlanBranch(document: DocumentNode): SelectionSetNode {
+/** The `mealPlan` field's selection set on the read-back query. */
+function readBackSelection(document: DocumentNode): SelectionSetNode {
   // Stale or failed codegen leaves the export undefined while `tsc` still sees
   // the symbol. Say so, rather than dying on `.definitions` of undefined.
   if (!document) {
     throw new Error(
-      'MealPlanEventsDocument is undefined — run `npm run codegen` (the generated document is stale)',
+      'MealPlanForEventDocument is undefined — run `npm run codegen` (the generated document is stale)',
     );
   }
 
+  const operation = document.definitions.find(
+    def => def.kind === 'OperationDefinition',
+  );
+  if (operation?.kind !== 'OperationDefinition') {
+    throw new Error('MealPlanForEvent operation not found');
+  }
+
+  const planField = operation.selectionSet.selections.find(
+    (s): s is FieldNode => s.kind === 'Field' && s.name.value === 'mealPlan',
+  );
+  if (!planField?.selectionSet) {
+    throw new Error('mealPlan field not found on MealPlanForEvent');
+  }
+  return planField.selectionSet;
+}
+
+/** The `... on MealPlan` branch of the subscription's `node` union. */
+function subscriptionPlanBranch(document: DocumentNode): SelectionSetNode {
   const operation = document.definitions.find(
     def => def.kind === 'OperationDefinition',
   );
@@ -124,19 +139,19 @@ function mealPlanBranch(document: DocumentNode): SelectionSetNode {
 }
 
 describe('MealPlanEvents completeness', () => {
-  it('pushes every field MealPlanDisplay reads', () => {
+  it('reads back every field MealPlanDisplay needs', () => {
     // Built here, not at module scope: the generated documents import each
     // other, so a module-level array can capture a binding before it resolves.
     const fragments = collectFragments([
       MealPlanDisplayFragmentDoc,
-      MealPlanEventsDocument,
+      MealPlanForEventDocument,
     ]);
     const fragment = fragments.get('MealPlanDisplay');
     if (!fragment) throw new Error('MealPlanDisplay fragment not found');
 
     const required = fieldPaths(fragment.selectionSet, fragments);
-    const pushed = new Set(
-      fieldPaths(mealPlanBranch(MealPlanEventsDocument), fragments),
+    const fetched = new Set(
+      fieldPaths(readBackSelection(MealPlanForEventDocument), fragments),
     );
 
     // Sanity: the walk found a real fragment, not an empty one. Guards against
@@ -144,7 +159,17 @@ describe('MealPlanEvents completeness', () => {
     expect(required.length).toBeGreaterThan(10);
     expect(required).toContain('home.myMembership.role');
 
-    const missing = required.filter(path => !pushed.has(path));
+    const missing = required.filter(path => !fetched.has(path));
     expect(missing).toEqual([]);
+  });
+
+  it('keeps the subscription branch to identity only', () => {
+    // Anything more re-fattens the document past the depth-5 subscription
+    // bound; `__tests__/graphql/subscriptionLimits.test.ts` enforces the bound
+    // itself, this pins the shape that keeps it there.
+    const fragments = collectFragments([MealPlanEventsDocument]);
+    expect(
+      fieldPaths(subscriptionPlanBranch(MealPlanEventsDocument), fragments),
+    ).toEqual(['id']);
   });
 });

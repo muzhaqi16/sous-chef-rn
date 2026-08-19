@@ -314,8 +314,13 @@ export type AdjustPantryItemQuantityInput = {
   reason: Scalars['String']['input'];
   /** Explicit remaining net weight override for full recount scenarios (dual-tracked items only) */
   remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  /** Optimistic concurrency control — must match current version */
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type AdjustPantryItemQuantityPayload = {
@@ -513,6 +518,21 @@ export type BatchAddShoppingListItemInput = {
    * Distinct from clientId below, which is only a response-matching token.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Optional client-minted CUID2 that makes this add idempotent.
+   *
+   * An add that resolves to an existing row applies a quantity increment, which
+   * is atomic but not idempotent: the row carries nothing distinguishing a
+   * replay from a genuine second addition. The key is claimed in the same
+   * transaction as the increment, so a replay is refused with IDEMPOTENT_REPLAY
+   * instead of merging twice.
+   *
+   * Precedence: this key when sent, otherwise the id field above. Sending
+   * neither leaves the add non-idempotent. Send an explicit key when one batch
+   * adds the same item more than once, where row identity cannot tell the
+   * entries apart.
+   */
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -5839,7 +5859,13 @@ export type MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPan
 
 export type MarkPantryItemExpiredInput = {
   id: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type MarkPantryItemExpiredPayload = {
@@ -10585,7 +10611,13 @@ export type OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoun
 export type OpenPantryItemInput = {
   id: Scalars['ID']['input'];
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type OpenPantryItemPayload = {
@@ -15146,6 +15178,13 @@ export type SyncSettingsInput = {
 export type SyncShoppingListItemFieldsInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-minted CUID2 making a sync that MERGES into an existing row
+   * idempotent. Defaults to the enclosing clientId, which already identifies the
+   * queued operation — supply this only to key the merge on something other than
+   * the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
+   */
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
   item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
@@ -15157,7 +15196,7 @@ export type SyncShoppingListItemFieldsInput = {
   /**
    * Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
    * Unitless by default; specify a unit via the unit field when needed (shopping
-   * items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
+   * items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
    */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   recipeContext?: InputMaybe<RecipeContextInput>;
@@ -15846,7 +15885,13 @@ export type UpdateHomeInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateHomeJoinCodeInput = {
@@ -16144,14 +16189,26 @@ export type UpdatePantryItemInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   thresholds?: InputMaybe<InventoryThresholdsInput>;
   unit?: InputMaybe<UnitSpecInput>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
   wasteReason?: InputMaybe<WasteReason>;
 };
 
 export type UpdatePantryItemLocationInput = {
   id: Scalars['ID']['input'];
   storageLocationId: Scalars['String']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdatePantryItemLocationPayload = {
@@ -16391,7 +16448,13 @@ export type UpdateShoppingListInput = {
    */
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateShoppingListItemInput = {
@@ -16407,7 +16470,13 @@ export type UpdateShoppingListItemInput = {
   sortOrder?: InputMaybe<Scalars['String']['input']>;
   storePrefs?: InputMaybe<StorePreferencesInput>;
   unit?: InputMaybe<UnitSpecInput>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateShoppingListItemPayload = {

@@ -5,48 +5,33 @@
  * and applies plan / plan-item / template changes made by other members —
  * previously invisible to this client until a refetch happened to land.
  *
- * Scope note: the stream is home-scoped, and so is the sharing. A personal
- * plan (`homeId: null`) can only be changed by this device, so there is
- * nothing to push and nothing missed.
+ * A personal plan (`homeId: null`) can only be changed by this device, so it
+ * emits no events and needs none.
  *
- * Every subtype applies the pushed payload rather than refetching for it.
- * Apollo normalizes each event's node on arrival, so the handler's only job is
- * connection and array membership, which a normalized write cannot infer:
- *
- * The one exception is a meal plan's server-computed nutrition totals, which no
- * pushed node carries. Those go through `refreshPlanAggregates`, which is
- * debounced and waits out any in-flight delete — see its own note.
- *
- * - **Plans and plan items** join or leave their collection using the entity
- *   read back from the cache. Reading back rather than trusting the payload is
- *   what keeps a drifted selection from writing a partial entity into a
- *   collection — an incomplete read blanks the whole list, so the handler
- *   falls back to a refetch in that case instead.
- * - **Updates** need nothing at all: normalization already applied them.
- * - **Deletes** need no data beyond the id, and they clear the persisted
- *   selection when it names the deleted plan — the live counterpart to
- *   `useActiveMealPlan`'s read-failure fallback.
+ * The event carries the envelope plus the changed entity's id — subscriptions
+ * are validated against depth 5, which no fragment spread fits under. Deletes
+ * work from the id alone; creates read the entity back first; plan-item changes
+ * ride the debounced `refreshPlanAggregates` read.
  */
 
 import { useSubscription } from '@apollo/client/react';
 import {
   MealPlanEventsDocument,
+  MealPlanForEventDocument,
   GetMealPlanDocument,
-  GetMealPlansDocument,
   type MealPlanEventsSubscription,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
-  MealPlanItemActions_OptimisticFullItemFragmentDoc,
-  type MealPlanItemActions_OptimisticFullItemFragment,
-} from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
+  GetMealTemplateDocument,
+  MealTemplateForEventDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
-  MealPlanDisplayFragmentDoc,
-  type MealPlanDisplayFragment,
   MealTemplateDisplayFragmentDoc,
   type MealTemplateDisplayFragment,
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -74,8 +59,8 @@ type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
  * (`MealPlan.home`, `MealPlanItem.recipe`) with inline snapshots, silently
  * un-normalizing them — the card would stop tracking the Recipe entity, and a
  * later query selecting a field outside the snapshot would read incomplete.
- * Apollo normalized the pushed entity when the event arrived, so the ref is all
- * these need; the `readFragment` calls below are completeness probes only.
+ * The read-back query has already written the entity, so the ref is all these
+ * need; the `readFragment` call below is a completeness probe only.
  */
 type EntityRef = { __typename: string; id: string };
 
@@ -97,11 +82,6 @@ const addToMealTemplates = createAddToQueryConnectionUpdater<EntityRef>(
 const removeFromMealTemplates = createRemoveFromQueryConnectionUpdater(
   'mealTemplates',
   'MealTemplate',
-);
-
-const addToMealPlanItems = createAddToParentArrayUpdater<EntityRef>(
-  'MealPlan',
-  'mealPlanItems',
 );
 
 const removeFromMealPlanItems = createRemoveFromParentArrayUpdater(
@@ -127,7 +107,7 @@ const isDelete = (mutation: MutationType) =>
 const isAdd = (mutation: MutationType) =>
   mutation === MutationType.Created || mutation === MutationType.ItemAdded;
 
-function handlePlanChanged(
+async function handlePlanChanged(
   payload: MealPlanEventsPayload,
   client: SubscriptionApolloClient,
 ) {
@@ -149,45 +129,28 @@ function handlePlanChanged(
     return;
   }
 
-  // Apollo normalized the pushed plan on arrival — aliases and all, since it
-  // keys by field name — so an update needs nothing further. A create still
-  // has to join the overview connection, which requires the canonical
-  // list-card shape.
-  if (!isAdd(payload.mutation)) return;
-
-  const plan = client.cache.readFragment<MealPlanDisplayFragment>({
-    fragment: MealPlanDisplayFragmentDoc,
-    fragmentName: 'MealPlanDisplay',
-    from: { __typename: 'MealPlan', id: planId },
-  });
-
-  if (plan) {
-    // Pass the id, never the read-back object. The updaters call
-    // `toReference(item, true)`, which merges what it is given over the stored
-    // entity — handing back the denormalized read would overwrite `home` /
-    // `user` / `createdBy` refs with inline snapshots and un-normalize them.
-    // The read above is the completeness probe; the entity itself is already
-    // in the store, normalized by Apollo when the event arrived.
-    addToMealPlans(
-      client.cache,
-      { __typename: 'MealPlan', id: planId },
-      {
-        position: 'start',
-      },
-    );
+  // The event carries no values, so an update needs the plan re-read.
+  if (!isAdd(payload.mutation)) {
+    refreshPlanAggregates(client);
     return;
   }
 
-  // The push didn't satisfy `MealPlanDisplay` — the subscription's selection
-  // has drifted from the fragment. Adding a partial plan would make the
-  // overview's read incomplete and blank the list, so pay for a refetch
-  // instead. Only active queries refetch; nothing happens with no list mounted.
-  if (__DEV__) {
-    logger.warn(
-      `[Subscription] MealPlanEvents payload incomplete for MealPlanDisplay (${planId}) — refetching`,
-    );
-  }
-  void client.refetchQueries({ include: [GetMealPlansDocument] });
+  // A create joins the overview connection, which needs the canonical list-card
+  // shape — adding a plan the overview can't read completely blanks the list.
+  const data = await fetchEventEntity(
+    client,
+    MealPlanForEventDocument,
+    { id: planId },
+    'MealPlan',
+  );
+  if (!data?.mealPlan) return;
+
+  // The id, not the read-back object — see the EntityRef note above.
+  addToMealPlans(
+    client.cache,
+    { __typename: 'MealPlan', id: planId },
+    { position: 'start' },
+  );
 }
 
 /** Debounce window for the aggregates refetch. */
@@ -278,46 +241,13 @@ function handlePlanItemChanged(
     return;
   }
 
-  // Apollo has already normalized the pushed entity by the time this runs, so
-  // an update needs nothing further — only membership of the parent array does.
-  // An update still moves the totals, though.
-  if (!isAdd(payload.mutation)) {
-    refreshPlanAggregates(client);
-    return;
-  }
-
-  const item =
-    client.cache.readFragment<MealPlanItemActions_OptimisticFullItemFragment>({
-      fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-      fragmentName: 'MealPlanItemActions_optimisticFullItem',
-      from: { __typename: 'MealPlanItem', id: itemId },
-    });
-
-  if (!item) {
-    // The push didn't carry every field the screens require. Adding it anyway
-    // would make MealPlanMain's fragment read incomplete and blank the screen,
-    // so re-read the plan rather than dropping the meal silently.
-    if (__DEV__) {
-      logger.warn(
-        `[Subscription] MealPlanEvents payload incomplete for MealPlanItem (${itemId}) — refetching`,
-      );
-    }
-    refreshPlanAggregates(client);
-    return;
-  }
-
-  // The id, not the read-back object — see handlePlanChanged. Handing the
-  // denormalized read to the updater would inline `recipe` over its Recipe ref.
-  addToMealPlanItems(
-    client.cache,
-    planId,
-    { __typename: 'MealPlanItem', id: itemId },
-    { position: 'end' },
-  );
+  // Add and update both ride the plan read: it returns `mealPlanItems` and the
+  // totals in one response, and applying a 7-day template pushes ~21 events
+  // that a per-item read would turn into 21 requests.
   refreshPlanAggregates(client);
 }
 
-function handleTemplateChanged(
+async function handleTemplateChanged(
   payload: MealPlanEventsPayload,
   client: SubscriptionApolloClient,
 ) {
@@ -332,29 +262,29 @@ function handleTemplateChanged(
     return;
   }
 
-  // Same shape as the plan path: normalization covers an update, a create still
-  // has to join the list connection. Leaving that to the next cache-and-network
-  // read isn't enough — the template browser is a sheet whose query mounts once
-  // with the screen, so reopening it doesn't refetch, and the list would stay
-  // live for deletes while going stale for additions.
-  if (!isAdd(payload.mutation)) return;
+  // No always-mounted template query, so this reaches the browser sheet only
+  // while it is open — the only time an update is visible.
+  if (!isAdd(payload.mutation)) {
+    void client.refetchQueries({ include: [GetMealTemplateDocument] });
+    return;
+  }
+
+  // A create has to join the list connection: the browser sheet's query mounts
+  // once with the screen, so reopening it doesn't refetch.
+  const data = await fetchEventEntity(
+    client,
+    MealTemplateForEventDocument,
+    { id: templateId },
+    'MealTemplate',
+  );
+  if (!data?.mealTemplate) return;
 
   const template = client.cache.readFragment<MealTemplateDisplayFragment>({
     fragment: MealTemplateDisplayFragmentDoc,
     fragmentName: 'MealTemplateDisplay',
     from: { __typename: 'MealTemplate', id: templateId },
   });
-  if (!template) {
-    // Incomplete read — adding a partial template would blank the list, so let
-    // a later read heal it instead. No refetch: unlike the plan overview,
-    // there is no always-mounted template query for one to reach.
-    if (__DEV__) {
-      logger.warn(
-        `[Subscription] MealPlanEvents payload incomplete for MealTemplateDisplay (${templateId})`,
-      );
-    }
-    return;
-  }
+  if (!template) return;
 
   // The id, not the read-back object — see handlePlanChanged.
   //
@@ -416,6 +346,7 @@ function handleTemplateItemChanged(
 export function useMealPlanSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
+  const rejected = useSubscriptionRejected('MealPlanEvents');
 
   const eventHandlers = subscriptionService.register<MealPlanEventsPayload>({
     subscriptionName: 'MealPlanEvents',
@@ -442,7 +373,7 @@ export function useMealPlanSubscriptions(userId?: string) {
 
       switch (payload.subtype) {
         case MealPlanSubtype.MealPlanChanged:
-          handlePlanChanged(payload, client);
+          void handlePlanChanged(payload, client);
           break;
 
         case MealPlanSubtype.MealPlanItemChanged:
@@ -450,7 +381,7 @@ export function useMealPlanSubscriptions(userId?: string) {
           break;
 
         case MealPlanSubtype.MealTemplateChanged:
-          handleTemplateChanged(payload, client);
+          void handleTemplateChanged(payload, client);
           break;
 
         case MealPlanSubtype.MealTemplateItemChanged:
@@ -462,7 +393,7 @@ export function useMealPlanSubscriptions(userId?: string) {
 
   useSubscription(MealPlanEventsDocument, {
     variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady,
+    skip: !selectedHomeId || !isHomeSelectionReady || rejected,
     ...eventHandlers,
   });
 }

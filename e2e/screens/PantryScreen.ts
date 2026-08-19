@@ -147,6 +147,23 @@ export class PantryScreen extends BaseScreen {
    * assuming the row is already in view.
    */
   async expectItemInPantry(name: string, timeout = 5000) {
+    // Try the top first. With the sort seeded newest-first, a just-added row is
+    // row 0 — and the filter tabs are STICKY, so as soon as the list is scrolled
+    // even slightly they pin to the top and overlay that row, clipping it below
+    // Detox's 75% visibility threshold. The failure reads as "not visible" for a
+    // row that is on screen the whole time, and scrolling DOWN to look for it
+    // makes it worse, not better. Scrolling to the top unpins the header.
+    try {
+      await element(by.id(this.listContainer)).scrollTo('top');
+      await waitFor(element(by.text(name)))
+        .toBeVisible()
+        .withTimeout(timeout);
+      return;
+    } catch {
+      // Not at the top — fall through to searching downwards, which is what a
+      // row under any other sort order needs.
+    }
+
     await waitFor(element(by.text(name)))
       .toBeVisible()
       .whileElement(by.id(this.listContainer))
@@ -405,13 +422,6 @@ export class PantryScreen extends BaseScreen {
    */
   async clearSearch() {
     await this.getElementById(this.searchInput).clearText();
-  }
-
-  /**
-   * Open filter menu
-   */
-  async openFilter() {
-    await this.tapByID(this.filterButton);
   }
 
   /**

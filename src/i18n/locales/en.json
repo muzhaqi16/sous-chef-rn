@@ -2082,7 +2082,11 @@
   },
   "pantryHeader": {
     "greeting": "Hello, {{name}}!",
-    "notificationsLabel": "Notifications"
+    "notificationsLabel": "Notifications",
+    "homePromptSelect": "Tap to select a home",
+    "homeNoneYet": "No homes yet",
+    "homeFallback": "Your Home",
+    "greetingNoName": "Hello!"
   },
   "ingredientMatching": {
     "reviewIngredients": "Review Ingredients",

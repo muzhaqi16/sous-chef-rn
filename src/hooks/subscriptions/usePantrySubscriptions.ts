@@ -4,7 +4,12 @@
  * Centralizes all pantry-related subscriptions using the unified
  * SubscriptionService. Handles real-time updates for:
  * - Pantry events (item changes, pantry updates, usage, alerts) via pantryEvents
- * - Expiration notifications (created + action-taken) via the split events
+ * - Expiration notifications (created + action-taken), folded into the same stream
+ *
+ * The event carries the envelope plus the changed entity's id — subscriptions
+ * are validated against depth 5, which no fragment spread fits under. Values
+ * come from `PantryItemForEvent` and friends, fired only where needed: never
+ * for a self-echo, a delete, or a row this device isn't holding.
  */
 
 import { useSubscription } from '@apollo/client/react';
@@ -18,12 +23,17 @@ import {
   type PantryEventsSubscription,
 } from '#features/pantry/graphql/pantry.generated';
 import {
+  ExpirationNotificationForEventDocument,
+  PantryItemForEventDocument,
+  PantrySummaryForEventDocument,
   UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
   type UsePantrySubscriptions_ExpirationNotificationFragment,
   UsePantrySubscriptions_PantryItemFragmentDoc,
   type UsePantrySubscriptions_PantryItemFragment,
 } from '#hooks/subscriptions/usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -37,12 +47,13 @@ import { logger } from '#/utils/environment';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 
-const addToPantryItemsConnection =
-  createAddToParentConnectionUpdater<UsePantrySubscriptions_PantryItemFragment>(
-    'Pantry',
-    'itemsConnection',
-    'PantryItem',
-  );
+// Takes a reference, never the read-back entity: `toReference(item, true)`
+// merges what it is handed over the stored record, so a denormalized read would
+// inline `item` / `unit` / `storageLocation` over their refs.
+const addToPantryItemsConnection = createAddToParentConnectionUpdater<{
+  __typename: 'PantryItem';
+  id: string;
+}>('Pantry', 'itemsConnection', 'PantryItem');
 
 const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
   'Pantry',
@@ -50,62 +61,104 @@ const removeFromPantryItemsConnection = createRemoveFromParentConnectionUpdater(
   'PantryItem',
 );
 
-function handleItemChanged(
+const isAdd = (mutation: MutationType) =>
+  mutation === MutationType.Created || mutation === MutationType.ItemAdded;
+
+const isDelete = (mutation: MutationType) =>
+  mutation === MutationType.Deleted || mutation === MutationType.ItemRemoved;
+
+/** A complete read means some mounted list holds this row, so an update to it
+ *  is worth a round trip. */
+function isItemCached(
+  client: SubscriptionApolloClient,
+  itemId: string,
+): boolean {
+  const cached =
+    client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
+      fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
+      fragmentName: 'usePantrySubscriptions_pantryItem',
+      from: { __typename: 'PantryItem', id: itemId },
+    });
+  return cached !== null;
+}
+
+/**
+ * Coalesced pantry summary read-back.
+ *
+ * The server can emit PANTRY_UPDATED per item change, since the stats are
+ * derived — one read per event would be a request per remote add. The values
+ * are aggregates, so the last read wins and the intermediate ones are waste.
+ */
+const SUMMARY_REFRESH_DELAY_MS = 400;
+let summaryRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function refreshPantrySummary(
+  client: SubscriptionApolloClient,
+  pantryId: string,
+) {
+  if (summaryRefreshTimer) clearTimeout(summaryRefreshTimer);
+  summaryRefreshTimer = setTimeout(() => {
+    summaryRefreshTimer = null;
+    void fetchEventEntity(
+      client,
+      PantrySummaryForEventDocument,
+      { id: pantryId },
+      'Pantry',
+    );
+  }, SUMMARY_REFRESH_DELAY_MS);
+}
+
+async function handleItemChanged(
   payload: PantryEventsPayload,
   client: SubscriptionApolloClient,
   selectedPantryId: string,
 ) {
   if (payload.node.__typename !== 'PantryItem') return;
 
-  const itemRef = payload.node;
+  const itemId = payload.node.id;
   const mutation = payload.mutation;
 
-  const item =
-    client.cache.readFragment<UsePantrySubscriptions_PantryItemFragment>({
-      fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
-      fragmentName: 'usePantrySubscriptions_pantryItem',
-      from: { __typename: 'PantryItem', id: itemRef.id },
-    });
-  if (!item) return;
-
-  if (subscriptionService.isPendingDelete(item.id)) {
+  if (subscriptionService.isPendingDelete(itemId)) {
     if (__DEV__) {
       logger.debug(
         '⏭️ [Subscription] Skipping pantry echo for pending-delete',
-        item.id,
+        itemId,
       );
     }
     return;
   }
 
-  if (mutation === MutationType.ItemAdded) {
-    addToPantryItemsConnection(client.cache, selectedPantryId, item);
-  } else if (
-    mutation === MutationType.Deleted ||
-    mutation === MutationType.ItemRemoved
-  ) {
-    removeFromPantryItemsConnection(client.cache, selectedPantryId, item.id, {
+  // A delete needs no values — the id is the whole event.
+  if (isDelete(mutation)) {
+    removeFromPantryItemsConnection(client.cache, selectedPantryId, itemId, {
       evictItem: true,
     });
-  } else if (
-    mutation === MutationType.Updated ||
-    mutation === MutationType.ItemUpdated
-  ) {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: item.id,
-    });
-    if (cacheId) {
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
-        fragmentName: 'usePantrySubscriptions_pantryItem',
-        data: item,
-      });
-    } else {
-      addToPantryItemsConnection(client.cache, selectedPantryId, item);
-    }
+    return;
   }
+
+  const add = isAdd(mutation);
+  if (!add && !isItemCached(client, itemId)) return;
+
+  const data = await fetchEventEntity(
+    client,
+    PantryItemForEventDocument,
+    { id: itemId },
+    'PantryItem',
+  );
+  // Offline, or deleted between the event and this read.
+  if (!data?.pantryItem) return;
+
+  // Re-checked after the await: a local delete can start mid-read, and
+  // re-adding the row the user just removed is worse than a missed update.
+  if (subscriptionService.isPendingDelete(itemId)) return;
+
+  if (add) {
+    addToPantryItemsConnection(client.cache, selectedPantryId, {
+      __typename: 'PantryItem',
+      id: itemId,
+    });
+  }
+  // An update needs nothing further — the read-back normalized the new values.
 }
 
 /**
@@ -124,21 +177,26 @@ export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
   const linkExpirationData = useAppStore(state => state.linkExpirationData);
+  const rejected = useSubscriptionRejected('PantryEvents');
 
-  const expirationOnData = (
-    notificationRef: { id: string } | undefined,
+  const expirationOnData = async (
+    notificationId: string,
     client: SubscriptionApolloClient,
   ) => {
-    if (!notificationRef) return;
+    const data = await fetchEventEntity(
+      client,
+      ExpirationNotificationForEventDocument,
+      { id: notificationId },
+      'ExpirationNotification',
+    );
+    if (!data?.expirationNotification) return;
+
     const notification =
       client.cache.readFragment<UsePantrySubscriptions_ExpirationNotificationFragment>(
         {
           fragment: UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
           fragmentName: 'usePantrySubscriptions_expirationNotification',
-          from: {
-            __typename: 'ExpirationNotification',
-            id: notificationRef.id,
-          },
+          from: { __typename: 'ExpirationNotification', id: notificationId },
         },
       );
     if (!notification?.genericNotificationId) return;
@@ -177,7 +235,7 @@ export function usePantrySubscriptions(userId?: string) {
         payload.subtype === PantrySubtype.ExpirationActionTaken
       ) {
         if (payload.node.__typename === 'ExpirationNotification') {
-          expirationOnData(payload.node, client);
+          void expirationOnData(payload.node.id, client);
         }
         return;
       }
@@ -191,14 +249,34 @@ export function usePantrySubscriptions(userId?: string) {
 
       switch (payload.subtype) {
         case PantrySubtype.ItemChanged:
-          handleItemChanged(payload, client, selectedPantryId);
+          void handleItemChanged(payload, client, selectedPantryId);
           break;
 
-        case PantrySubtype.PantryUpdated:
-        case PantrySubtype.UsageChanged:
+        // An alert is a change to the item's `isLowStock` / `expiresAt` /
+        // batch counts, which the event doesn't carry.
         case PantrySubtype.LowStockAlert:
         case PantrySubtype.ExpirationAlert:
         case PantrySubtype.WasteAlert:
+          if (
+            payload.node.__typename === 'PantryItem' &&
+            isItemCached(client, payload.node.id)
+          ) {
+            void fetchEventEntity(
+              client,
+              PantryItemForEventDocument,
+              { id: payload.node.id },
+              'PantryItem',
+            );
+          }
+          break;
+
+        // `Pantry.stats` has a `mergeObjects` field policy, so this narrow
+        // read-back merges over the wider `stats` `GetPantry` selects.
+        case PantrySubtype.PantryUpdated:
+          refreshPantrySummary(client, payload.pantryId);
+          break;
+
+        case PantrySubtype.UsageChanged:
           if (__DEV__) {
             logger.debug(
               `📡 [Subscription] Pantry event: ${payload.subtype}`,
@@ -212,7 +290,7 @@ export function usePantrySubscriptions(userId?: string) {
 
   useSubscription(PantryEventsDocument, {
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady,
+    skip: !selectedPantryId || !isHomeSelectionReady || rejected,
     ...eventHandlers,
   });
 }

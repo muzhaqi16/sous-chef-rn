@@ -2082,7 +2082,11 @@
   },
   "pantryHeader": {
     "greeting": "¡Hola, {{name}}!",
-    "notificationsLabel": "Notificaciones"
+    "notificationsLabel": "Notificaciones",
+    "homePromptSelect": "Toca para elegir un hogar",
+    "homeNoneYet": "Aún no hay hogares",
+    "homeFallback": "Tu hogar",
+    "greetingNoName": "¡Hola!"
   },
   "ingredientMatching": {
     "reviewIngredients": "Revisar ingredientes",

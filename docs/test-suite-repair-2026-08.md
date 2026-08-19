@@ -469,3 +469,86 @@ leaf so the composite around it stays memoized.
 The file count could not protect that. Moving the call back into the composite
 leaves the count at 63 and the check green, silently undoing the extraction — so
 the baseline records which function bails, not just that one does.
+
+## 12. The e2e bootstrap reported everything as a `beforeAll` timeout
+
+Every test in `pantry-crud` and `shopping-list-crud` failed as:
+
+```
+Exceeded timeout of 120000 ms for a hook.
+```
+
+That message names jest's timer and nothing else. Behind it were **two
+independent defects**, and the first one masked the second.
+
+### 12.1 An unbounded `system.element(...).tap()`
+
+`dismissBiometricPromptIfPresent` taps iOS's "Save Password?" alert. It was
+written as a retry loop:
+
+```ts
+for (let attempt = 0; attempt < 8; attempt++) {
+  try { await system.element(by.system.label('Not Now')).tap(); break; }
+  catch { await delay(500); }
+}
+```
+
+The assumption is that the tap *throws* when the alert isn't there. It does
+not — it **blocks**. On the overwhelmingly common path (no alert, because the
+install isn't fresh) the first iteration never returns, and the hook runs out
+its 120s.
+
+This shape got there while fixing a typecheck error: Detox's `waitFor` is typed
+for a `NativeElement`, and a system element is a separate type it rejects, so
+the bounded wait was replaced with a bare tap. The type error was real; the
+replacement dropped the bound. It is now raced against a timer, which is the
+only bound available given the typing:
+
+```ts
+const dismissed = await Promise.race([
+  system.element(by.system.label('Not Now')).tap().then(() => true).catch(() => false),
+  delay(SYSTEM_ALERT_TIMEOUT_MS).then(() => false),
+]);
+```
+
+**The tell that this was self-inflicted:** `pantry-crud` had passed 9/9 an hour
+earlier with byte-identical spec code. When the spec didn't change and the
+result did, the harness changed.
+
+### 12.2 A fallback that could not rescue what it caught
+
+With the hang bounded, the run failed in 52s with:
+
+```
+⚠️ Token injection failed: TypeError: fetch failed, falling back to UI login...
+...
+Test Failed: Timed out while waiting for expectation: TOBEVISIBLE WITH MATCHER(id == "login-screen") TIMEOUT(5s)
+```
+
+The reported failure is a missing login screen. The actual failure is that
+**nothing was listening on `localhost:4000`**. `bootstrapAuthenticatedSession`
+caught the token-fetch failure and fell back to UI login — but UI login posts to
+that same endpoint, so the fallback could never work. It spent 50 seconds
+converting an accurate error into an inaccurate one pointing at the app.
+
+A connection-level failure is now its own error type, and is rethrown rather
+than fallen back from:
+
+```
+ApiUnreachableError: The API at http://localhost:4000/graphql is not reachable (TypeError: fetch failed).
+  Start it before running e2e, and re-check with:
+    curl -sS -X POST http://localhost:4000/graphql -H 'content-type: application/json' -d '{"query":"{ __typename }"}'
+  Not falling back to UI login — it posts to this same endpoint, so it would fail too,
+  as a misleading "login-screen not visible" timeout.
+```
+
+Anything else still falls back — a changed mutation shape is exactly the case
+the fallback exists for. **120s → 2s, and the message names the cause.**
+
+### 12.3 Why the simulator screenshot looked healthy
+
+Mid-diagnosis, a screenshot of the running app showed a fully populated pantry:
+47 items, correct greeting, no error state. That is not evidence the API was up
+— it is the persisted MMKV Apollo cache doing exactly what it is designed to do
+(§ *Cache Persistence* in `CLAUDE.md`). **A healthy-looking screen is not a
+reachable backend**, and on an offline-first app it cannot be used as one.

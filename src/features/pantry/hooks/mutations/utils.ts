@@ -51,16 +51,22 @@ export function buildOptimisticUnit(
 }
 
 /**
- * Build dirty input for update mutation (only changed fields)
+ * Build dirty input for update mutation (only changed fields).
+ *
+ * `version` is excluded: it is not a field the form can dirty. The caller adds
+ * it from the entity it is updating — the server requires it for the
+ * optimistic-concurrency check.
  */
+type DirtyUpdateInput = Omit<UpdatePantryItemInput, 'id' | 'version'>;
+
 export function buildDirtyUpdateInput(
   data: FormDataInput,
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
   brandId: string | null,
   unitSymbol?: string | null,
-): Omit<UpdatePantryItemInput, 'id'> {
-  const input: Omit<UpdatePantryItemInput, 'id'> = {};
+): DirtyUpdateInput {
+  const input: DirtyUpdateInput = {};
 
   if (dirtyFields.itemName) {
     input.itemName = data.itemName;

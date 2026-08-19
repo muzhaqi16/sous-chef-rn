@@ -88,10 +88,17 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       }
     };
 
+    // The server requires the version: an update sent without one reports
+    // success while overwriting a concurrent edit. The snapshot is the row this
+    // write is based on, so its version is the one to check against.
+    if (!snapshot) {
+      throw new GraphQLNetworkError(fallbackErrorMessage);
+    }
+
     let result;
     try {
       result = await mutate({
-        variables: { input: { id, ...updates } },
+        variables: { input: { id, ...updates, version: snapshot.version } },
         context: { localFirst: true },
       });
     } catch (error) {

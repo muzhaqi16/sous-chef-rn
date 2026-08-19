@@ -196,6 +196,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const unitData = buildUnitInput();
 
         if (isEdit) {
+          // The server requires the version for the optimistic-concurrency
+          // check, and it is only known once the item has loaded.
+          const itemVersion = itemVersionRef.current;
+          if (itemVersion == null) return;
+
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
           const result = await updateItem({
@@ -204,7 +209,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                 ...input,
                 id: itemId,
                 // Include version for strict version checking (optimistic concurrency control)
-                version: itemVersionRef.current,
+                version: itemVersion,
               },
             },
           });

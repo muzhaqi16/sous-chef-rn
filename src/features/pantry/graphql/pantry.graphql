@@ -1120,6 +1120,17 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
 # SUBSCRIPTIONS
 # ============================================
 
+# Thin event: the envelope plus the identity of what changed. Subscription
+# documents are validated against depth 5 / cost 500 — a fraction of the HTTP
+# query budget — because the server re-executes the document on every published
+# event for the life of the connection, so a fat selection is a standing cost
+# rather than a one-time one. An inline fragment counts as a depth level here
+# (graphql-armor counts unflattened), so `node { ... on X { id } }` is already
+# depth 4 and one nested object inside a branch is the whole budget.
+#
+# The handler reads the entity back through a normal query
+# (`PantryItemForEvent` and friends), which gets the generous HTTP limits.
+# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
 subscription PantryEvents($pantryId: ID!) {
   pantryEvents(pantryId: $pantryId) {
     actorUserId
@@ -1127,48 +1138,19 @@ subscription PantryEvents($pantryId: ID!) {
     subtype
     pantryId
     timestamp
-    parents {
-      homeId
-    }
     node {
+      __typename
       ... on PantryItem {
         id
-        ...usePantrySubscriptions_pantryItem
       }
       ... on Pantry {
         id
-        name
-        description
-        isDefault
-        version
-        stats {
-          totalItems
-          expiringCount
-          expiredCount
-          lowStockCount
-        }
       }
       ... on PantryItemUsage {
         id
-        quantityUsed
-        purpose
-        # Aliased to avoid a same-response-shape clash with
-        # ExpirationNotification.pantryItem (PantryItem vs PantryItem!) now that
-        # both union members live under this one `node` selection. Not read by
-        # the client (UsageChanged only logs).
-        usagePantryItem: pantryItem {
-          id
-          quantity
-          isLowStock
-        }
       }
-      # Expiration notifications now arrive on pantryEvents via the
-      # EXPIRATION_NOTIFICATION_CREATED / EXPIRATION_ACTION_TAKEN subtypes
-      # (folded in from the former expirationNotificationCreated /
-      # expirationNotificationActionTaken subscriptions).
       ... on ExpirationNotification {
         id
-        ...usePantrySubscriptions_expirationNotification
       }
     }
   }

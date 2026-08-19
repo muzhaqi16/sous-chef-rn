@@ -487,6 +487,18 @@ mutation LeaveHome($input: LeaveHomeInput!) {
 # `subtype`, replacing the former membershipChanged + homeInviteChanged
 # subscriptions. Keeps the per-user concurrent-subscription count low (the
 # server caps it cluster-wide).
+#
+# Thin event: the envelope plus the identity of what changed. Subscription
+# documents are validated against depth 5 / cost 500 rather than the HTTP
+# limits, because the server re-executes the document on every published event
+# for the life of the connection. An inline fragment counts as a depth level
+# (graphql-armor counts unflattened), so `node { ... on X { id } }` is already
+# depth 4 and a fragment spread inside a branch cannot fit.
+#
+# A membership or invite change is a connection change, which no single entity
+# read can express — so the handler removes by id where the id is enough and
+# otherwise refetches `GetHome` / `GetMyPendingInvites` over HTTP.
+# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
 subscription HomeEvents($homeId: ID!) {
   homeEvents(homeId: $homeId) {
     subtype
@@ -498,44 +510,12 @@ subscription HomeEvents($homeId: ID!) {
     updatedFields
     timestamp
     node {
+      __typename
       ... on Membership {
         id
-        homeId
-        userId
-        role
-        # Aliased to avoid a same-response-shape clash with HomeInvite.status
-        # (MembershipStatus! vs InviteStatus!) under this one `node` selection.
-        # Apollo normalizes by the real field name, so Membership.status is
-        # still written to cache correctly; the client only auto-normalizes here.
-        membershipStatus: status
-        displayName
-        canViewPantry
-        canEditPantry
-        canAddItems
-        canRemoveItems
-        canInviteOthers
-        canManageHome
-        lastActiveAt
-        joinedAt
-        home {
-          id
-          name
-          type
-        }
-        user {
-          id
-          email
-          profile {
-            id
-            displayName
-            avatar
-          }
-        }
       }
       ... on HomeInvite {
         id
-        ...InviteCard_invite
-        ...HomeInviteCard_invite
       }
     }
   }

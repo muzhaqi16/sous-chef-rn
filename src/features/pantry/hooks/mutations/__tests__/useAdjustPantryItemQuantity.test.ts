@@ -94,7 +94,12 @@ describe('useAdjustPantryItemQuantity', () => {
   it('returns true and calls onSuccess on successful adjustment', async () => {
     const onSuccess = jest.fn();
     const variables = {
-      input: { id: 'item-1', newQuantity: 5, reason: 'Physical count' },
+      input: {
+        id: 'item-1',
+        newQuantity: 5,
+        reason: 'Physical count',
+        version: 1,
+      },
     };
     const { result } = renderHook(
       () => useAdjustPantryItemQuantity({ onSuccess }),
@@ -111,6 +116,7 @@ describe('useAdjustPantryItemQuantity', () => {
         'item-1',
         5,
         'Physical count',
+        1,
       );
     });
 
@@ -166,9 +172,9 @@ describe('useAdjustPantryItemQuantity', () => {
     expect(success).toBe(true);
   });
 
-  it('omits version and remainingNetWeight when undefined', async () => {
+  it('omits remainingNetWeight when undefined', async () => {
     const variables = {
-      input: { id: 'item-1', newQuantity: 1, reason: 'Adjusted' },
+      input: { id: 'item-1', newQuantity: 1, reason: 'Adjusted', version: 2 },
     };
     const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
       wrapper: createApolloTestWrapper({
@@ -178,7 +184,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     let success: boolean | undefined;
     await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 1, 'Adjusted');
+      success = await result.current.adjustQuantity('item-1', 1, 'Adjusted', 2);
     });
 
     expect(success).toBe(true);
@@ -194,7 +200,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     let success: boolean | undefined;
     await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count');
+      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
     });
 
     expect(success).toBe(false);
@@ -219,7 +225,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     let success: boolean | undefined;
     await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count');
+      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
     });
 
     expect(success).toBe(false);
@@ -237,7 +243,7 @@ describe('useAdjustPantryItemQuantity', () => {
 
     let success: boolean | undefined;
     await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count');
+      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
     });
 
     expect(success).toBe(false);

@@ -60,7 +60,7 @@ export function useAdjustPantryItemQuantity({
     pantryItemId: string,
     newQuantity: number,
     reason: string,
-    version?: number,
+    version: number,
     remainingNetWeight?: number,
   ): Promise<boolean> => {
     const cacheId = client.cache.identify({
@@ -107,7 +107,8 @@ export function useAdjustPantryItemQuantity({
       );
     }
 
-    // idempotencyKey dedups the ADJUSTMENT ledger entry on replay.
+    // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
+    // the optimistic-concurrency check the server now requires.
     const result = await adjustMutation({
       variables: {
         input: {
@@ -115,7 +116,7 @@ export function useAdjustPantryItemQuantity({
           newQuantity,
           reason,
           idempotencyKey: generateEntityId(),
-          ...(version != null ? { version } : {}),
+          version,
           ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
         },
       },

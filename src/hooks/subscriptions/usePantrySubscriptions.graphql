@@ -91,3 +91,47 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     }
   }
 }
+
+# ============================================
+# EVENT READ-BACK QUERIES
+# ============================================
+#
+# `PantryEvents` carries only the envelope plus the changed entity's id — a
+# subscription document is validated against depth 5, which no fragment spread
+# fits under. These queries are how the handler gets the values: ordinary HTTP
+# queries, with the ordinary HTTP budget, fired only for the events that need
+# one (never for a self-echo, never for a delete).
+
+query PantryItemForEvent($id: ID!) {
+  pantryItem(id: $id) {
+    id
+    ...usePantrySubscriptions_pantryItem
+  }
+}
+
+query ExpirationNotificationForEvent($id: ID!) {
+  expirationNotification(id: $id) {
+    id
+    ...usePantrySubscriptions_expirationNotification
+  }
+}
+
+# Header + stats only. `Pantry.stats` has a `mergeObjects` field policy, so
+# writing this narrow shape over a cached `stats` that also holds
+# `storageStateCounts` / `storageLocationCounts` (selected by `GetPantry`)
+# merges rather than truncates.
+query PantrySummaryForEvent($id: ID!) {
+  pantry(id: $id) {
+    id
+    name
+    description
+    isDefault
+    version
+    stats {
+      totalItems
+      expiringCount
+      expiredCount
+      lowStockCount
+    }
+  }
+}

@@ -16,10 +16,14 @@
  *   - Swipe actions had no testID at all until `BaseItemCard` began forwarding
  *     `testIDPrefix`, so the delete button was unreachable.
  *
- * Assertions go through `expectItemInPantry`, which SCROLLS the list. A bare
- * `toBeVisible()` on the row only passes while it happens to be on screen, and
- * a new item lands wherever the current sort puts it — the old tests failed for
- * rows that had been added perfectly well.
+ * Assertions go through `expectItemInPantry`, which scrolls if it has to. A
+ * bare `toBeVisible()` on the row only passes while it happens to be on screen,
+ * and a new item lands wherever the current sort puts it — the old tests failed
+ * for rows that had been added perfectly well.
+ *
+ * The sort is seeded newest-first at launch (see `beforeAll`) so that "wherever
+ * the sort puts it" is the top of the list, which turns that scroll into a
+ * no-op without spending any taps or waits on the sort modal.
  */
 
 import { element, by, waitFor, expect } from 'detox';
@@ -40,7 +44,14 @@ describe('Pantry CRUD', () => {
   let itemsToCleanup: string[] = [];
 
   beforeAll(async () => {
-    await bootstrapAuthenticatedSession();
+    // Newest-first, seeded at launch rather than driven through the sort modal.
+    // `recent` + `asc` IS newest-first — its comparator is inverted relative to
+    // the other options, which `usePantrySorting.test.ts` asserts. The app's own
+    // default is `recent` + `desc`, i.e. OLDEST first, which is why a freshly
+    // added row used to land at the far end of a 48-item list.
+    await bootstrapAuthenticatedSession({
+      pantrySort: { option: 'recent', direction: 'asc' },
+    });
   });
 
   beforeEach(async () => {

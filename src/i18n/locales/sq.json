@@ -2082,7 +2082,11 @@
   },
   "pantryHeader": {
     "greeting": "Përshëndetje, {{name}}!",
-    "notificationsLabel": "Njoftimet"
+    "notificationsLabel": "Njoftimet",
+    "homePromptSelect": "Prek për të zgjedhur një shtëpi",
+    "homeNoneYet": "Ende asnjë shtëpi",
+    "homeFallback": "Shtëpia jote",
+    "greetingNoName": "Përshëndetje!"
   },
   "ingredientMatching": {
     "reviewIngredients": "Shqyrto përbërësit",

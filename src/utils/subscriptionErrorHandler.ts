@@ -1,5 +1,6 @@
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
+import { getTopLevelGraphQLError } from './errors/graphqlErrors';
 
 // Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
@@ -31,6 +32,50 @@ export const isExpectedNetworkTransitionError = (message?: string): boolean => {
     m.includes('connection') ||
     m.includes('websocket')
   );
+};
+
+/**
+ * Codes that mean "this document will never be accepted".
+ *
+ * Narrow on purpose — a permanent rejection disables a stream for the session.
+ * The two adjacent-looking subscription codes are excluded deliberately:
+ * `SUBSCRIPTION_LIMIT_EXCEEDED` is a capacity condition that frees up, and
+ * `SUBSCRIPTION_ERROR` is documented retryable.
+ */
+const PERMANENT_REJECTION_CODES = new Set([
+  'BAD_USER_INPUT',
+  'GRAPHQL_VALIDATION_FAILED',
+  'GRAPHQL_PARSE_FAILED',
+  'VALIDATION_FAILED',
+  'BAD_REQUEST',
+]);
+
+/**
+ * The rejection graphql-armor produces: "Syntax Error: Query depth limit of 5
+ * exceeded, found 8." — worded as a syntax error, but the document parsed fine
+ * and `found N` is its computed depth. Matched on the message as well as the
+ * code, since the code an armor rejection maps to varies.
+ */
+const ARMOR_REJECTION =
+  /(depth|cost) limit of \d+ exceeded|query validation error/i;
+
+/**
+ * True when the server refused the DOCUMENT, not the request. Subscriptions are
+ * validated against depth 5 / cost 500, and a document over that is refused
+ * identically every time — "fix the document", never "retry".
+ */
+export const isPermanentSubscriptionRejection = (
+  error: SubscriptionError,
+): boolean => {
+  const message = error?.message ?? '';
+  if (ARMOR_REJECTION.test(message)) return true;
+
+  const top = getTopLevelGraphQLError(error);
+  if (top) {
+    if (ARMOR_REJECTION.test(top.message)) return true;
+    return PERMANENT_REJECTION_CODES.has(top.code);
+  }
+  return false;
 };
 
 export const handleSubscriptionError = (

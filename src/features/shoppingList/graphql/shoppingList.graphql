@@ -1276,6 +1276,19 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
 # subscription). The per-list shoppingListEvents(listId) variant is
 # intentionally NOT used — one stream covers every list the user can access,
 # and useShoppingListSubscriptions filters by the active list where needed.
+#
+# Thin event: the envelope plus the identity of what changed. Subscription
+# documents are validated against depth 5 / cost 500 rather than the HTTP
+# limits, because the server re-executes the document on every published event
+# for the life of the connection. An inline fragment counts as a depth level
+# (graphql-armor counts unflattened), so `node { ... on X { id } }` is already
+# depth 4 and a fragment spread inside a branch cannot fit.
+#
+# `updatedFields` drives the skip (an event that changed nothing on screen costs
+# nothing) and `clearedItemIds` still carries a batch clear on its own. When the
+# handler does need values it reads them back through `ShoppingListItemForEvent`
+# / `ShoppingListSummaryForEvent`, which get the generous HTTP limits.
+# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
 subscription MyShoppingListsEvents {
   myShoppingListsEvents {
     subtype
@@ -1286,28 +1299,15 @@ subscription MyShoppingListsEvents {
     updatedFields
     clearedItemIds
     node {
+      __typename
       ... on ShoppingListItem {
         id
-        sortOrder
-        purchaseInfo {
-          isPurchased
-        }
-        ...useShoppingListSubscriptions_item
       }
       ... on ShoppingList {
         id
-        name
-        isCompleted
-        totalItems
-        completedItems
-        remainingItems
-        completionRate
       }
       ... on ShoppingListCollaborator {
         id
-        canEdit
-        lastViewedAt
-        ...useShoppingListSubscriptions_collaborator
       }
     }
   }

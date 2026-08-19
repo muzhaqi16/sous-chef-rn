@@ -5,6 +5,10 @@ import { LaunchArguments } from 'react-native-launch-arguments';
 import { logger } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
+import {
+  PantrySortDirection,
+  PantrySortOption,
+} from '#store/slices/preferenceTypes';
 import { suppressFeatureHintsForE2E } from '#/hooks/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
@@ -33,6 +37,8 @@ function injectDetoxLaunchArgs(
       detoxRefreshToken?: string;
       detoxUser?: string | Record<string, unknown>;
       detoxDisableBackgroundServices?: string;
+      detoxPantrySortOption?: string;
+      detoxPantrySortDirection?: string;
     }>();
     // Under Detox the LogBox dev-warning toast overlays the floating tab bar and
     // breaks screenshot/visibility checks — silence it for E2E runs only.
@@ -54,6 +60,21 @@ function injectDetoxLaunchArgs(
       // this the injected session renders the auth group anyway.
       store.setNavigationState('main_app');
       logger.debug('[Detox] Auth injected via launchArgs');
+    }
+    // Seed the pantry sort so a test does not have to drive the sort modal to
+    // reach a known order. That control renders under `{!!stats && …}`, so it
+    // only exists once the stats query resolves — driving it means waiting on
+    // the network for a value the test already knows. Seeding it here means the
+    // list is in the requested order from the first frame.
+    if (args.detoxPantrySortOption) {
+      const store = useStore.getState();
+      store.setPantrySortOption(args.detoxPantrySortOption as PantrySortOption);
+      if (args.detoxPantrySortDirection) {
+        store.setPantrySortDirection(
+          args.detoxPantrySortDirection as PantrySortDirection,
+        );
+      }
+      logger.debug('[Detox] Pantry sort injected via launchArgs');
     }
     if (args.detoxDisableBackgroundServices) {
       detoxBackgroundServicesDisabledRef.current = true;

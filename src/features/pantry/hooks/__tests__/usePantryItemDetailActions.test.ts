@@ -435,22 +435,6 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
-    it('defaults version to 0 when item has no version', () => {
-      const { result } = setup({
-        item: { ...baseItem, version: null },
-      });
-
-      act(() => result.current.handleCorrectWeight(100, 'r'));
-
-      expect(mockCorrectWeight).toHaveBeenCalledWith(
-        'item-1',
-        100,
-        'r',
-        0,
-        undefined,
-      );
-    });
-
     it('does nothing when item is null', () => {
       const { result } = setup({ item: null });
 

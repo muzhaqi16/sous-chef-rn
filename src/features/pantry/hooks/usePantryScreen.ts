@@ -254,14 +254,22 @@ export function usePantryScreen() {
   // false (the switch is instant).
   const itemsFetching = serverMode && loading;
 
+  // `undefined` rather than a fallback word. The greeting used to fall back to
+  // the literal 'there' and interpolate it into "Hello, {{name}}!", which is
+  // untranslated English AND unworkable in the other locales — Spanish would
+  // read "¡Hola, hola!". The header now picks a whole no-name greeting instead,
+  // which is the same rule as the plural keys: give each case its own sentence
+  // rather than interpolating a word into one.
   const userName =
-    authUser?.name || authUser?.firstName || authUser?.lastName || 'there';
+    authUser?.name || authUser?.firstName || authUser?.lastName || undefined;
 
+  // These were hardcoded English reaching JSX through a variable — invisible to
+  // `i18next/no-literal-string`, which only sees literals in JSX.
   const householdName = noHomeSelected
-    ? 'Tap to select a home'
+    ? t('pantryHeader.homePromptSelect')
     : noHomes
-    ? 'No homes yet'
-    : currentHome?.name || 'Your Home';
+    ? t('pantryHeader.homeNoneYet')
+    : currentHome?.name || t('pantryHeader.homeFallback');
 
   // -------------------------------------------------------------------------
   // 7. Sort change handler

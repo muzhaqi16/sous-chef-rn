@@ -18,6 +18,7 @@ import {
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { toastService } from '#/services/toastService';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
@@ -45,14 +46,28 @@ export function useShoppingListBudget() {
 
   const runUpdate = async (
     id: string,
-    input: Omit<UpdateShoppingListInput, 'id'>,
+    input: Omit<UpdateShoppingListInput, 'id' | 'version'>,
     revert: () => void,
     failureMessage: string,
   ): Promise<boolean> => {
+    // The server requires the version: an update sent without one reports
+    // success while overwriting a concurrent edit.
+    const current =
+      client.cache.readFragment<UseShoppingListBudget_ListFragment>({
+        id: client.cache.identify({ __typename: 'ShoppingList', id }),
+        fragment: UseShoppingListBudget_ListFragmentDoc,
+        fragmentName: 'useShoppingListBudget_list',
+      });
+    if (!current) {
+      revert();
+      toastService.error(failureMessage);
+      return false;
+    }
+
     let result;
     try {
       result = await mutate({
-        variables: { input: { id, ...input } },
+        variables: { input: { id, ...input, version: current.version } },
         context: { localFirst: true },
       });
     } catch (error) {

@@ -2082,7 +2082,11 @@
   },
   "pantryHeader": {
     "greeting": "Ciao, {{name}}!",
-    "notificationsLabel": "Notifiche"
+    "notificationsLabel": "Notifiche",
+    "homePromptSelect": "Tocca per scegliere una casa",
+    "homeNoneYet": "Nessuna casa ancora",
+    "homeFallback": "La tua casa",
+    "greetingNoName": "Ciao!"
   },
   "ingredientMatching": {
     "reviewIngredients": "Rivedi ingredienti",

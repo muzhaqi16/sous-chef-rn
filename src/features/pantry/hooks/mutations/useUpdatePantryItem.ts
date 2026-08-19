@@ -181,7 +181,9 @@ export function useUpdatePantryItem({
     }
 
     updateMutation({
-      variables: { input: { ...updateInput, id: itemId } },
+      variables: {
+        input: { ...updateInput, id: itemId, version: currentItem.version },
+      },
       // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
       context: { localFirst: true },
     })

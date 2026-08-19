@@ -611,8 +611,13 @@ input AdjustPantryItemQuantityInput {
   Explicit remaining net weight override for full recount scenarios (dual-tracked items only)
   """
   remainingNetWeight: Float
-  """Optimistic concurrency control — must match current version"""
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type AdjustPantryItemQuantityPayload {
@@ -5877,7 +5882,13 @@ union MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsD
 
 input MarkPantryItemExpiredInput {
   id: ID!
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type MarkPantryItemExpiredPayload {
@@ -7958,7 +7969,13 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 input OpenPantryItemInput {
   id: ID!
   idempotencyKey: ID
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type OpenPantryItemPayload {
@@ -11602,6 +11619,13 @@ input SyncShoppingListItemFieldsInput {
   brand: BrandReferenceInput
   category: String
   """
+  Optional client-minted CUID2 making a sync that MERGES into an existing row
+  idempotent. Defaults to the enclosing clientId, which already identifies the
+  queued operation — supply this only to key the merge on something other than
+  the row id. See CreateShoppingListItemInput.idempotencyKey.
+  """
+  idempotencyKey: ID
+  """
   Item reference: exactly one of a catalog item id or a free-text name (@oneOf).
   """
   item: ItemRefInput!
@@ -12338,7 +12362,13 @@ input UpdateHomeInput {
   name: String
   tags: [String!]
   timezone: String
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 input UpdateHomeJoinCodeInput {
@@ -12629,14 +12659,26 @@ input UpdatePantryItemInput {
   tags: [String!]
   thresholds: InventoryThresholdsInput
   unit: UnitSpecInput
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
   wasteReason: WasteReason
 }
 
 input UpdatePantryItemLocationInput {
   id: ID!
   storageLocationId: String!
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type UpdatePantryItemLocationPayload {
@@ -12865,7 +12907,13 @@ input UpdateShoppingListInput {
   """
   status: ListStatus
   tags: [String!]
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 input UpdateShoppingListItemInput {
@@ -12881,7 +12929,13 @@ input UpdateShoppingListItemInput {
   sortOrder: String
   storePrefs: StorePreferencesInput
   unit: UnitSpecInput
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type UpdateShoppingListItemPayload {

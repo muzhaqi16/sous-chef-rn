@@ -270,9 +270,11 @@ export function useHomeDetailManagement(homeId: string) {
 
   // Handler functions
   const saveName = async (name: string) => {
+    // The server requires the version for the optimistic-concurrency check.
+    if (!home) return;
     await updateHomeMutation({
       variables: {
-        input: { id: homeId, name },
+        input: { id: homeId, name, version: home.version },
       },
     });
   };
@@ -420,8 +422,11 @@ export function useHomeDetailManagement(homeId: string) {
     // No disableHomeJoinLink mutation — clear the flag via updateHome. Same
     // rejection surface as the enable branch: a resolved error member never
     // fires onError under errorPolicy:'all', so classify the result here.
+    if (!home) return;
     const result = await updateHomeMutation({
-      variables: { input: { id: homeId, allowJoinCode: false } },
+      variables: {
+        input: { id: homeId, allowJoinCode: false, version: home.version },
+      },
     });
     alertIfRejected(result, t('errors.updateHomeFailed'));
   };

@@ -25,7 +25,9 @@ import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/use
 type PantryItemForActions =
   | {
       id: string;
-      version?: number | null;
+      // `PantryItem.version` is `Int!`, and the server now requires it on every
+      // update — a mutation sent without one overwrites concurrent edits.
+      version: number;
       quantity?: number | null;
       unit?: {
         id: string;
@@ -325,7 +327,7 @@ export function usePantryItemDetailActions({
       item.id,
       newQuantity,
       reason,
-      item.version ?? undefined,
+      item.version,
       remainingNetWeight,
     );
   };
@@ -336,13 +338,7 @@ export function usePantryItemDetailActions({
     netWeightUnitId?: string,
   ) => {
     if (!item) return;
-    correctWeight(
-      item.id,
-      netWeight,
-      reason,
-      item.version ?? 0,
-      netWeightUnitId,
-    );
+    correctWeight(item.id, netWeight, reason, item.version, netWeightUnitId);
   };
 
   return {

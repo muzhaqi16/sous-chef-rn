@@ -50,7 +50,12 @@ import {
   isTimerCircularStructureError,
 } from '#/utils/errorSerialization';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
-import { isExpectedNetworkTransitionError } from '#/utils/subscriptionErrorHandler';
+import {
+  isExpectedNetworkTransitionError,
+  isPermanentSubscriptionRejection,
+} from '#/utils/subscriptionErrorHandler';
+import { markSubscriptionRejected } from './rejectedSubscriptions';
+import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 
 /**
@@ -391,6 +396,32 @@ export class SubscriptionService {
   ): SubscriptionHandlers['onError'] {
     return (error: ErrorLike) => {
       const errorMessage = error?.message?.toLowerCase() || '';
+
+      // A document the server will never accept — over the depth or cost bound.
+      // Not connection churn: the socket's other subscriptions keep delivering.
+      // Close the gate so `skip` stops the resubscribe, and report once.
+      if (isPermanentSubscriptionRejection(error)) {
+        const firstTime = markSubscriptionRejected(config.subscriptionName);
+        if (firstTime) {
+          this.log(
+            config,
+            LogLevel.ERROR,
+            'Subscription rejected by server validation — not retrying',
+            serializeError(error),
+          );
+          errorService.reportError(
+            new Error(
+              `Subscription ${config.subscriptionName} rejected by server validation`,
+            ),
+            {
+              operation: 'subscriptionPermanentRejection',
+              subscription: config.subscriptionName,
+              error: serializeError(error),
+            },
+          );
+        }
+        return;
+      }
 
       // Socket-closed / network-transition errors are expected during network
       // churn and auto-recover — debug level: one WS drop interrupts EVERY

@@ -292,11 +292,19 @@ export function useHomeMutations({
     }
 
     if (Object.keys(updates).length > 0) {
+      // The server requires the version: an update sent without one reports
+      // success while overwriting a concurrent edit.
+      const current = apolloClient.cache.readFragment({
+        id: apolloClient.cache.identify({ __typename: 'Home', id: homeId }),
+        fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+      });
+      if (!current) return false;
+
       let result;
       try {
         result = await updateHomeMutation({
           variables: {
-            input: { ...updates, id: homeId },
+            input: { ...updates, id: homeId, version: current.version },
           },
         });
       } catch (error) {
