@@ -400,6 +400,8 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
         estimatedTotal
         totalItems
         completedItems
+        remainingItems
+        completionRate
         createdAt
         updatedAt
         ownerships {
