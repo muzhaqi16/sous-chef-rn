@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -12,10 +13,7 @@ const ThemedSheetTextInput = withUnistyles(BottomSheetTextInput, theme => ({
 import { Icon } from '#/utils/iconUtils';
 import { errorMessageOr } from '#/services/errorService';
 import { commonStyles } from '#/styles/commonStyles';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { Text } from '#components/atoms/Text';
@@ -145,6 +143,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
   showAddButton = true,
   containerStyle,
 }) => {
+  const { t } = useTranslation();
   const [isAddingModal, setIsAddingModal] = useState(false);
   const [newItem, setNewItem] = useState('');
   const [error, setError] = useState('');
@@ -215,13 +214,12 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
     );
   };
 
-  const handleRemove = (item: string) => {
-    executeMutation(
-      () => onRemove(item),
-      err => {
-        errorService.reportError(err, { operation: 'removeStringArrayItem' });
-      },
-    );
+  const handleRemove = async (item: string) => {
+    try {
+      await onRemove(item);
+    } catch (err) {
+      errorService.reportError(err, { operation: 'removeStringArrayItem' });
+    }
   };
 
   return (
@@ -263,7 +261,7 @@ export const StringArrayManager: React.FC<StringArrayManagerProps> = ({
             title={addButtonLabel}
             onCancel={handleCancel}
             onConfirm={handleAdd}
-            confirmLabel="Add"
+            confirmLabel={t('labels.add')}
             confirmDisabled={loading}
           />
 

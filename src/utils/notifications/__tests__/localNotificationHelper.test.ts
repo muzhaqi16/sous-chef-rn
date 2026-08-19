@@ -119,10 +119,48 @@ describe('localNotificationHelper', () => {
       expect(mockCreateChannel).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'default',
-          name: 'Default Channel',
+          name: 'General',
         }),
       );
 
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
+    });
+
+    /**
+     * The channel name is the one piece of copy here the user reads outside a
+     * notification — Android lists it under Settings › Apps › Notifications. A
+     * plain "already created" boolean would pin it to whichever language was
+     * active at the first notification of the session.
+     */
+    it('re-creates the channel under a new language so its name follows the UI', async () => {
+      const originalPlatform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
+      const { getI18n } = require('#/i18n/config');
+      const i18n = getI18n();
+
+      await showLocalNotification({ id: 'lang-1', title: 'T', body: 'B' });
+      expect(mockCreateChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'default', name: 'General' }),
+      );
+
+      // Same language again — the native call is still cached away.
+      mockCreateChannel.mockClear();
+      await showLocalNotification({ id: 'lang-2', title: 'T', body: 'B' });
+      expect(mockCreateChannel).not.toHaveBeenCalled();
+
+      await i18n.changeLanguage('sq');
+      await showLocalNotification({ id: 'lang-3', title: 'T', body: 'B' });
+      expect(mockCreateChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'default', name: 'Të përgjithshme' }),
+      );
+
+      await i18n.changeLanguage('en');
       Object.defineProperty(Platform, 'OS', {
         value: originalPlatform,
         writable: true,
@@ -292,6 +330,36 @@ describe('localNotificationHelper', () => {
       expect(mockOnForegroundEvent).toHaveBeenCalled();
       expect(mockOnBackgroundEvent).toHaveBeenCalled();
       expect(typeof unsubscribe).toBe('function');
+    });
+
+    /**
+     * Without this the new name reaches Android settings only when a
+     * notification next happens to be shown, so a user who switches language and
+     * then opens notification settings reads the previous one.
+     */
+    it('refreshes the channel name as soon as the language changes', async () => {
+      const originalPlatform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'android',
+        writable: true,
+      });
+      const { getI18n } = require('#/i18n/config');
+      const i18n = getI18n();
+
+      setupNotificationHandlers();
+      mockCreateChannel.mockClear();
+
+      await i18n.changeLanguage('it');
+
+      expect(mockCreateChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'default', name: 'Generale' }),
+      );
+
+      await i18n.changeLanguage('en');
+      Object.defineProperty(Platform, 'OS', {
+        value: originalPlatform,
+        writable: true,
+      });
     });
 
     it('routes a foreground PRESS to the tapped notification data', () => {

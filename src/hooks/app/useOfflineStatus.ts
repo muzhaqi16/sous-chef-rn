@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import type { Ionicons } from '@react-native-vector-icons/ionicons';
 import { useAppStore } from '#store/useAppStore';
 import { usePendingMutationCount } from '#/hooks/offline/usePendingMutationCount';

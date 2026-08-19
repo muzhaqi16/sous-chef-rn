@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -26,6 +27,7 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
   batches,
   unitSymbol,
 }) => {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const [showAll, setShowAll] = useState(false);
 
@@ -71,7 +73,9 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
         onPress={() => setExpanded(!expanded)}
       >
         <Text size="base" weight="semibold">
-          Batches ({activeBatchCount} active)
+          {t('pantryItemDetail.batch.sectionHeader', {
+            count: activeBatchCount,
+          })}
         </Text>
         <Icon
           name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -106,7 +110,9 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
               style={styles.showAllButton}
             >
               <Text size="sm" weight="medium" tone="accent">
-                {showAll ? 'Hide inactive batches' : 'Show all batches'}
+                {showAll
+                  ? t('batchSection.hideInactive')
+                  : t('batchSection.showAll')}
               </Text>
             </AppPressable>
           )}

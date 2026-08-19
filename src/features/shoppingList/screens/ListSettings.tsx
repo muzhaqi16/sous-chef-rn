@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BaseSwitch } from '#components/base/BaseSwitch';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { StyleSheet } from 'react-native-unistyles';
@@ -32,10 +32,7 @@ import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
   isShoppingListOwner,
@@ -47,6 +44,10 @@ import {
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
+import {
+  formatCurrency,
+  formatNumberForInput,
+} from '#/utils/formatters/number';
 
 /** Module-level helper to sync shopping list form state from loaded data */
 function syncListFormState(
@@ -62,53 +63,12 @@ function syncListFormState(
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
-    setBudgetInput(
-      shoppingList.budgetAmount != null
-        ? String(shoppingList.budgetAmount)
-        : '',
-    );
+    setBudgetInput(formatNumberForInput(shoppingList.budgetAmount));
   } else if (listId) {
     setName('');
     setIsDefault(false);
     setBudgetInput('');
   }
-}
-
-// Constructing an Intl.NumberFormat parses locale data and builds internal
-// lookup tables, so the instance is cached per currency code rather than
-// rebuilt on each call. A `null` entry marks a code Intl rejected, so the
-// unsupported-currency path doesn't re-throw on every render.
-const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
-
-function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
-  const cached = currencyFormatters.get(currency);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.NumberFormat | null = null;
-  try {
-    formatter = new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-    });
-  } catch {
-    formatter = null;
-  }
-  currencyFormatters.set(currency, formatter);
-  return formatter;
-}
-
-/**
- * Format a money amount with the list's ISO currency code, degrading to a plain
- * two-decimal number when the currency is absent or not recognized by Intl.
- */
-function formatCurrencyAmount(
-  amount: number | null | undefined,
-  currency: string | null,
-): string {
-  const value = amount ?? 0;
-  if (!currency) return value.toFixed(2);
-  const formatter = getCurrencyFormatter(currency);
-  if (!formatter) return `${currency} ${value.toFixed(2)}`;
-  return formatter.format(value);
 }
 
 export const ListSettings: React.FC<
@@ -197,7 +157,7 @@ export const ListSettings: React.FC<
 
   const { leaveList, leaving } = useLeaveShoppingList(listId || '');
   const { updateShoppingList } = useUpdateShoppingList(
-    t('shoppingListScreens.failedToSave'),
+    t('errors.saveSettingsFailed'),
   );
   const { completeList, reactivateList, completing, reactivating } =
     useCompleteShoppingList();
@@ -210,7 +170,7 @@ export const ListSettings: React.FC<
   const { setBudget, setPriceTracking } = useShoppingListBudget();
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
-    t('shoppingListScreens.failedToCreate'),
+    t('errors.createListFailed'),
   );
 
   // Lifecycle status is read straight off the list (server-truth), not derived
@@ -314,7 +274,7 @@ export const ListSettings: React.FC<
 
   const handleSave = () => {
     if (!name.trim()) {
-      toastService.error(t('shoppingListScreens.listNameEmpty'));
+      toastService.error(t('errors.listNameEmpty'));
       return;
     }
 
@@ -380,8 +340,8 @@ export const ListSettings: React.FC<
       () => {
         toastService.error(
           listId
-            ? t('shoppingListScreens.failedToSave')
-            : t('shoppingListScreens.failedToCreate'),
+            ? t('errors.saveSettingsFailed')
+            : t('errors.createListFailed'),
         );
       },
     );
@@ -397,26 +357,23 @@ export const ListSettings: React.FC<
         {
           text: t('labels.delete'),
           style: 'destructive',
-          onPress: () => {
+          onPress: async () => {
             // Register parent deletion to prevent subscription race conditions
             // 10s auto-cleanup timeout in service handles unregistration
             subscriptionService.registerParentDeletion(listId);
 
-            executeMutation(
-              async () => {
-                await deleteShoppingList(listId!);
+            try {
+              await deleteShoppingList(listId!);
 
-                // Clear selection — useShoppingListSelection auto-selects the next list
-                setSelectedShoppingListId(null);
-                // Use goBack() to pop ListSettings off the stack, unmounting its
-                // query watcher so late subscription updates can't trigger a refetch
-                goBack();
-              },
-              () => {
-                // Deletion failed — list wasn't actually deleted, so unregister immediately
-                subscriptionService.unregisterParentDeletion(listId);
-              },
-            );
+              // Clear selection — useShoppingListSelection auto-selects the next list
+              setSelectedShoppingListId(null);
+              // Use goBack() to pop ListSettings off the stack, unmounting its
+              // query watcher so late subscription updates can't trigger a refetch
+              goBack();
+            } catch {
+              // Deletion failed — list wasn't actually deleted, so unregister immediately
+              subscriptionService.unregisterParentDeletion(listId);
+            }
           },
         },
       ],
@@ -434,22 +391,24 @@ export const ListSettings: React.FC<
     }
   };
 
-  const archiveList = () => {
+  const archiveList = async () => {
     if (!listId) return;
-    executeMutation(
-      () => updateShoppingList(listId, { status: ListStatus.Archived }),
-      () => toastService.error(t('shoppingListScreens.failedToArchive')),
-    );
+    try {
+      await updateShoppingList(listId, { status: ListStatus.Archived });
+    } catch {
+      toastService.error(t('shoppingListScreens.failedToArchive'));
+    }
   };
 
-  const handleArchiveToggle = () => {
+  const handleArchiveToggle = async () => {
     if (!listId) return;
     if (isArchived) {
       // Restoring is non-destructive — flip straight back to active.
-      executeMutation(
-        () => updateShoppingList(listId, { status: ListStatus.Active }),
-        () => toastService.error(t('shoppingListScreens.failedToArchive')),
-      );
+      try {
+        await updateShoppingList(listId, { status: ListStatus.Active });
+      } catch {
+        toastService.error(t('shoppingListScreens.failedToArchive'));
+      }
       return;
     }
     // Archiving hides the list from the active view — confirm first.
@@ -1043,11 +1002,11 @@ export const ListSettings: React.FC<
 
             <InfoRow
               label={t('shoppingListScreens.totalSpent')}
-              value={formatCurrencyAmount(totalCost, currency)}
+              value={formatCurrency(totalCost, currency)}
             />
             <InfoRow
               label={t('shoppingListScreens.estimatedTotalLabel')}
-              value={formatCurrencyAmount(estimatedTotal, currency)}
+              value={formatCurrency(estimatedTotal, currency)}
             />
 
             <BaseInput

@@ -14,7 +14,7 @@ import {
 import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
 import { storage } from '#/storage/mmkv';
 
 export interface AppSettings {
@@ -29,6 +29,7 @@ export interface AppSettings {
 }
 
 export const useAppSettings = () => {
+  const { t } = useTranslation();
   const user = useUser();
   const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(GetUserSettingsDocument, {
@@ -124,12 +125,12 @@ export const useAppSettings = () => {
     // contract. Two branches because they fail differently:
     //  - `false` means the call THREW. `executeMutation` reported it (log +
     //    telemetry) but shows the user nothing, and `alertIfRejected`
-    //    deliberately no-ops on a falsy result — so without this the setting
+    //    deliberately no-ops on a missing result — so without this the setting
     //    reverts with no explanation.
     //  - anything else is a resolved rejection (union error member, or an
     //    `errorPolicy: 'all'` transport error), which `alertIfRejected` owns.
     if (!persisted) {
-      if (result === false) {
+      if (!result) {
         alertService.alert(t('labels.error'), failureMessage);
       } else {
         alertIfRejected(result, failureMessage);
@@ -155,7 +156,10 @@ export const useAppSettings = () => {
       preferredUnitSystem: UnitSystem.Metric,
     };
 
-    return updateMultipleSettings(defaultSettings, t('settings.resetFailed'));
+    return updateMultipleSettings(
+      defaultSettings,
+      t('errors.resetSettingsFailed'),
+    );
   };
 
   // PERFORMANCE: Sync settings to MMKV so startup-path hooks can read them

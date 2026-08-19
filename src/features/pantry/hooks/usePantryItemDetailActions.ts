@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+// The module-level `t` takes a fallback string, not options, so an interpolated
+// key has to go through the i18next instance directly — same split as
+// src/utils/errorHandlers.ts.
+import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -25,7 +25,9 @@ import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/use
 type PantryItemForActions =
   | {
       id: string;
-      version?: number | null;
+      // `PantryItem.version` is `Int!`, and the server now requires it on every
+      // update — a mutation sent without one overwrites concurrent edits.
+      version: number;
       quantity?: number | null;
       unit?: {
         id: string;
@@ -161,36 +163,33 @@ export function usePantryItemDetailActions({
 
   const handleDelete = () => {
     alertService.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
+      t('pantryItemDetail.deleteTitle'),
+      t('pantryItemDetail.deleteBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('labels.delete'),
           style: 'destructive',
-          onPress: () => {
-            executeMutation(
-              async () => {
-                await deleteItem({ variables: { input: { id: itemId } } });
-                goBack();
-              },
-              error => {
-                errorService.reportError(error, {
-                  operation: 'PantryItemDetail.deleteItem',
-                });
-                alertService.alert(
-                  t('labels.error'),
-                  t('errors.deleteItemFailed'),
-                );
-              },
-            );
+          onPress: async () => {
+            try {
+              await deleteItem({ variables: { input: { id: itemId } } });
+              goBack();
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'PantryItemDetail.deleteItem',
+              });
+              alertService.alert(
+                t('labels.error'),
+                t('errors.deleteItemFailed'),
+              );
+            }
           },
         },
       ],
     );
   };
 
-  const handleAddToShoppingList = () => {
+  const handleAddToShoppingList = async () => {
     if (!selectedShoppingListId) {
       onAddToShoppingListNeedsList();
       return;
@@ -213,74 +212,71 @@ export function usePantryItemDetailActions({
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create that
     // replays later.
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          createOptimisticShoppingListItem(id, {
-            itemName,
-            quantity,
-            itemId: catalogItemId || undefined,
-            unitId: item?.unit?.id,
-            unitName: item?.unit?.name,
-          }),
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
+    // Built before the try: the `||`/`?.` below are value blocks, and the React
+    // Compiler bails out of a hook when one appears inside a try body.
+    const optimisticListItem = createOptimisticShoppingListItem(id, {
+      itemName,
+      quantity,
+      itemId: catalogItemId || undefined,
+      unitId: item?.unit?.id,
+      unitName: item?.unit?.name,
+    });
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        optimisticListItem,
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
-    executeMutation(
-      async () => {
-        const result = await addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [
-                {
-                  id,
-                  item: catalogItemId
-                    ? { itemId: catalogItemId }
-                    : { itemName },
-                  quantity,
-                  unit: unitInput,
-                },
-              ],
+    // Built before the try — the ternary is a value block, and the React
+    // Compiler bails out of this hook when one sits inside a try body.
+    const addItemsOptions: Parameters<typeof addToShoppingList>[0] = {
+      variables: {
+        input: {
+          shoppingListId: selectedShoppingListId,
+          items: [
+            {
+              id,
+              item: catalogItemId ? { itemId: catalogItemId } : { itemName },
+              quantity,
+              unit: unitInput,
             },
-          },
-          context: { localFirst: true },
-        });
-        // Queued (offline / API down) counts as success — it replays. Only a
-        // real rejection is an error; don't show the success check on a refused
-        // create (and discard the item we wrote). errorPolicy:'all' resolves
-        // rejections, so the reconciler classifies the result rather than relying
-        // on a throw.
-        if (
-          reconcileShoppingCreate(
-            client.cache,
-            selectedShoppingListId,
-            id,
-            result,
-          ) === 'reverted'
-        ) {
-          setAddToListStatus('error');
-        } else {
-          setAddToListStatus('success');
-        }
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
+          ],
+        },
       },
-      error => {
-        errorService.reportError(error, {
-          operation: 'PantryItemDetail.addToShoppingList',
-        });
-        setAddToListStatus('error');
-        statusTimeoutRef.current = setTimeout(
-          () => setAddToListStatus('idle'),
-          3000,
-        );
-      },
+      context: { localFirst: true },
+    };
+
+    let result;
+    try {
+      result = await addToShoppingList(addItemsOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'PantryItemDetail.addToShoppingList',
+      });
+    }
+
+    // Queued (offline / API down) counts as success — it replays. Only a real
+    // rejection is an error; don't show the success check on a refused create
+    // (and discard the item we wrote). errorPolicy:'all' resolves rejections,
+    // so the reconciler classifies the result rather than relying on a throw.
+    const reverted =
+      !result ||
+      reconcileShoppingCreate(
+        client.cache,
+        selectedShoppingListId,
+        id,
+        result,
+      ) === 'reverted';
+    setAddToListStatus(reverted ? 'error' : 'success');
+    statusTimeoutRef.current = setTimeout(
+      () => setAddToListStatus('idle'),
+      3000,
     );
   };
 
@@ -291,12 +287,12 @@ export function usePantryItemDetailActions({
 
     if (hasBatches) {
       alertService.alert(
-        'Discard Expired Batches',
-        'This will mark all expired batches as wasted.',
+        t('pantryItemDetail.discardBatchesTitle'),
+        t('pantryItemDetail.discardBatchesBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('labels.discard'),
             style: 'destructive',
             onPress: () => convertExpiredBatches(item.id),
           },
@@ -304,14 +300,15 @@ export function usePantryItemDetailActions({
       );
     } else {
       alertService.alert(
-        'Discard Expired Item',
-        `This will mark the remaining ${item.quantity} ${
-          item.unit?.name || ''
-        } as wasted due to expiration.`,
+        t('pantryItemDetail.discardItemTitle'),
+        getI18n().t('pantryItemDetail.discardItemBody', {
+          quantity: item.quantity,
+          unit: item.unit?.name || '',
+        }),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('labels.cancel'), style: 'cancel' },
           {
-            text: 'Discard',
+            text: t('labels.discard'),
             style: 'destructive',
             onPress: () => convertExpiredToWaste(item.id),
           },
@@ -330,7 +327,7 @@ export function usePantryItemDetailActions({
       item.id,
       newQuantity,
       reason,
-      item.version ?? undefined,
+      item.version,
       remainingNetWeight,
     );
   };
@@ -341,13 +338,7 @@ export function usePantryItemDetailActions({
     netWeightUnitId?: string,
   ) => {
     if (!item) return;
-    correctWeight(
-      item.id,
-      netWeight,
-      reason,
-      item.version ?? 0,
-      netWeightUnitId,
-    );
+    correctWeight(item.id, netWeight, reason, item.version, netWeightUnitId);
   };
 
   return {

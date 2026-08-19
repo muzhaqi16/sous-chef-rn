@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation } from '@apollo/client/react';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 
 /**

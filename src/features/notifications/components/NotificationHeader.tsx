@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -16,6 +17,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   onClearAll,
   hasNotifications,
 }) => {
+  const { t } = useTranslation();
   if (!hasNotifications) return null;
 
   return (
@@ -23,13 +25,13 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
       <AppPressable style={styles.button} onPress={onMarkAllRead}>
         <Icon name="checkmark-done" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
-          Mark all read
+          {t('notifications.markAllRead')}
         </Text>
       </AppPressable>
       <AppPressable style={styles.button} onPress={onClearAll}>
         <Icon name="list-outline" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
-          Clear all
+          {t('notifications.clearAll')}
         </Text>
       </AppPressable>
     </View>

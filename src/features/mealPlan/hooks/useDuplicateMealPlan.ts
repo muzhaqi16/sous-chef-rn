@@ -4,10 +4,10 @@ import { type DuplicateMealPlanInput } from '#/graphql/generated/schemaTypes';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 const addToMealPlans = createAddToQueryConnectionUpdater<{ id: string }>(
   'mealPlans',
@@ -37,14 +37,18 @@ export function useDuplicateMealPlan() {
       toastService.error(t('errors.notAvailableOffline'));
       return null;
     }
-    const result = await executeMutation(
-      () => duplicateMutation({ variables: { input } }),
-      'Duplicate meal plan error:',
-    );
+    let result;
+    try {
+      result = await duplicateMutation({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Duplicate meal plan error:',
+      });
+    }
     if (!result) return null;
     const data = result.data?.duplicateMealPlan;
     if (data?.__typename === 'DuplicateMealPlanPayload') {
-      toastService.success('Meal plan duplicated!');
+      toastService.success(t('toasts.mealPlanDuplicated'));
       Telemetry.trackEvent('meal_plan_duplicated', {
         meal_plan_id: input.mealPlanId,
       });

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,6 +37,7 @@ import { CollapsibleSection } from '#/components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
 import { logValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   type PageName,
   PAGES,
@@ -275,7 +276,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     const netWeights = netWeightEntries
       .filter(entry => entry.value && entry.unitName)
       .map(entry => ({
-        value: parseFloat(entry.value!),
+        value: parseDecimalInput(entry.value!),
         unitName: entry.unitName!,
         // Pass the resolved unit id when the user picked a known unit, so the
         // server links it directly instead of re-resolving by name.
@@ -289,7 +290,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
         unitName: entry.unitName || undefined,
         isDefault: index === 0,
         packageSize: entry.packageSize
-          ? parseFloat(entry.packageSize)
+          ? parseDecimalInput(entry.packageSize)
           : undefined,
         contentUnitId: entry.contentUnitId || undefined,
         contentUnitName: entry.contentUnitName || undefined,
@@ -400,6 +401,12 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 errorService.reportError(error, { operation: 'selectImage' });
               }}
               disabled={loading}
+              /* Every mode but `edit` writes through as the item's owner, so
+                 the photos land APPROVED and `makePrimary` is honoured. On the
+                 suggestion path they land PENDING and the server ignores it —
+                 offering the star there would promise a hero that review may
+                 never grant. */
+              allowPrimarySelection={!requiresEditNote(mode)}
             />
             {!!editing && (
               <Text size="sm" tone="secondary" style={styles.notice}>

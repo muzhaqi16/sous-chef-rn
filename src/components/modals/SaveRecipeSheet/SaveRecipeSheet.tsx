@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -188,7 +188,7 @@ export const SaveRecipeSheet: React.FC<SaveRecipeSheetProps> = ({
                     isSelected && styles.folderOptionTextSelected,
                   ]}
                 >
-                  {isNoFolder ? t('saveRecipe.noFolder') : folder}
+                  {isNoFolder ? t('labels.noFolder') : folder}
                 </Text>
                 {!!isSelected && (
                   <Icon name="checkmark" size={18} tone="primary" />

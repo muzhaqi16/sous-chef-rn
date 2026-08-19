@@ -62,6 +62,11 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
   }
   item {
     id
+    # Gates the photo viewer's "set as main photo" action. Viewer-scoped, but it
+    # costs this query nothing: the cache-policy warning in the schema applies to
+    # the root `item(id:)` read, and a shopping list item's response is already
+    # PRIVATE/no-store for its ownership data.
+    canEdit
     imageUrl
     images { url kind }
     photos {

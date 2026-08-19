@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -16,10 +16,8 @@ import { useJoinLinkAuthGate } from '#hooks/deepLink/useJoinLinkAuthGate';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
-import {
-  executeWithLoadingState,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { Text } from '#components/atoms/Text';
 
 export const JoinByShareCodeScreen: React.FC<

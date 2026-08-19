@@ -76,7 +76,7 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('@react-native-clipboard/clipboard', () => ({
   setString: jest.fn(),

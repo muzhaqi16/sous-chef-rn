@@ -88,10 +88,28 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
     // setURLBlacklist may not be supported on all platforms
   }
 
-  // Keep synchronization DISABLED. Even with JS background services disabled
-  // (via detoxDisableBackgroundServices), Fabric's native UIManager keeps the
-  // main run loop and dispatch queue busy, preventing Detox from ever reaching
-  // idle. With sync off, waitFor() polls for elements which works reliably.
+  // Synchronization stays DISABLED — but not for the reason this comment used
+  // to give, which was that Fabric's UIManager keeps the run loop busy so Detox
+  // "never reaches idle". Measured 2026-08-19 by flipping
+  // `detoxEnableSynchronization` to 1 and running `pantry-crud`:
+  //
+  //   sync off:  9/9,  330s,  1 busy-wait message
+  //   sync on:   8/9,  480s,  1 busy-wait message
+  //
+  // It reaches idle fine. The real trade is ~45% wall-clock for a suite that
+  // already runs 5-6 minutes per file, plus one test that then fails because
+  // Detox waits out the validation alert and the form is behind it — arguably a
+  // MORE accurate observation, and one that needs the test reworked rather than
+  // the flag flipped back.
+  //
+  // The cost of leaving it off is that nothing waits for idle on our behalf, so
+  // settling has to be explicit: `relaunchToHomeTab` waits before
+  // `reloadReactNative` (a reload landing mid-mounting-transaction segfaults the
+  // app), and the screen objects wait on the element they actually need rather
+  // than assuming a tap has landed.
+  //
+  // Worth revisiting deliberately, with the one test reworked, rather than
+  // treating the flag as settled.
   // Element interactions (tap, typeText, etc.) still work without sync.
 }
 

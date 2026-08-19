@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -18,15 +18,17 @@ import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_VALUES,
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { useAddShoppingItem } from '#features/shoppingList/hooks/mutations/useAddShoppingItem';
 import { alertService } from '#/services/alertService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { makeIdNameHandler } from '../makeIdNameHandler';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -108,7 +110,7 @@ export const ShoppingListDetailsStep: React.FC<
   );
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
 
-  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
+  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   const handleSave = () => {
     if (!itemName.trim()) {
@@ -136,7 +138,9 @@ export const ShoppingListDetailsStep: React.FC<
     }
 
     const unitData = buildUnitInput();
-    const netWeightValue = netWeight.trim() ? parseFloat(netWeight) : undefined;
+    const netWeightValue = netWeight.trim()
+      ? parseDecimalInput(netWeight)
+      : undefined;
     executeWithLoadingState(
       async () => {
         await addItem({
@@ -184,6 +188,10 @@ export const ShoppingListDetailsStep: React.FC<
       />
 
       <BottomSheetScrollView
+        // Named so a test can scroll a field into view. The unit picker sits in
+        // the second `FieldRow`, below the fold once the keyboard is up, and
+        // Detox refuses to type into a view that is not hittable.
+        testID="add-shopping-item-scroll"
         style={styles.body}
         contentContainerStyle={[
           styles.content,
@@ -264,7 +272,9 @@ export const ShoppingListDetailsStep: React.FC<
           label={t('shoppingListScreens.estimatedPrice')}
           value={estimatedPrice}
           onChangeText={text => updateField('estimatedPrice', text)}
-          placeholder={t('shoppingListScreens.estimatedPricePlaceholder')}
+          placeholder={localizeNumericHint(
+            t('shoppingListScreens.estimatedPricePlaceholder'),
+          )}
           keyboardType="numeric"
           useBottomSheetInput
         />
@@ -272,8 +282,8 @@ export const ShoppingListDetailsStep: React.FC<
         <SegmentedControl
           label={t('shoppingListScreens.priority')}
           options={PRIORITY_OPTIONS}
-          value={PRIORITY_KEYS[priority] ?? 'low'}
-          onChange={key => setPriority(PRIORITY_VALUES[key] ?? 0)}
+          value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
+          onChange={option => setPriority(PRIORITY_VALUES[option] ?? 0)}
           formatLabel={formatPriorityLabel}
         />
 

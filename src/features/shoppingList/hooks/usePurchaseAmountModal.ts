@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useFragment } from '@apollo/client/react';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Transformed item for PurchaseAmountSheet

@@ -1,6 +1,6 @@
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { storage, isStorageReady } from '#/storage/mmkv';
 import { logger } from '#/utils/environment';
 import { CLIENT_VERSION } from './clientIdentity';

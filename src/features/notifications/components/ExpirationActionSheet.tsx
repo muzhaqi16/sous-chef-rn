@@ -10,6 +10,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -36,50 +37,52 @@ interface ExpirationActionSheetProps {
 // Module-level constant — React Compiler auto-memoizes
 const EXPIRATION_ACTIONS: {
   action: ExpirationAction;
-  label: string;
+  /** i18n key path — this table is module-level, no hook. */
+  labelKey: string;
   icon: React.ComponentProps<typeof Ionicons>['name'];
   destructive?: boolean;
 }[] = [
   {
     action: ExpirationAction.Cooked,
-    label: 'Cooked',
+    labelKey: 'expirationAction.cooked',
     icon: 'restaurant',
   },
   {
     action: ExpirationAction.Consumed,
-    label: 'Consumed',
+    labelKey: 'expirationAction.consumed',
     icon: 'checkmark-circle',
   },
   {
     action: ExpirationAction.Shared,
-    label: 'Shared with someone',
+    labelKey: 'expirationAction.shared',
     icon: 'share-social',
   },
   {
     action: ExpirationAction.Extended,
-    label: 'Extended shelf life',
+    labelKey: 'expirationAction.extended',
     icon: 'calendar',
   },
   {
     action: ExpirationAction.Waste,
-    label: 'Wasted / Discarded',
+    labelKey: 'expirationAction.wasted',
     icon: 'trash',
     destructive: true,
   },
   {
     action: ExpirationAction.NoAction,
-    label: 'No action taken',
+    labelKey: 'expirationAction.noAction',
     icon: 'close-circle',
   },
 ];
 
 const getExpirySubtitle = (
   daysUntilExpiry: number | null | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): string => {
-  if (daysUntilExpiry == null) return 'Expiring soon';
-  if (daysUntilExpiry <= 0) return 'Already expired';
-  if (daysUntilExpiry === 1) return 'Expires tomorrow';
-  return `Expires in ${daysUntilExpiry} days`;
+  if (daysUntilExpiry == null) return t('expirationAction.expiringSoon');
+  if (daysUntilExpiry <= 0) return t('expirationAction.alreadyExpired');
+  if (daysUntilExpiry === 1) return t('expiration.expiresTomorrow');
+  return t('expiration.expiresInDays', { count: daysUntilExpiry });
 };
 
 function OptionRow({
@@ -91,6 +94,7 @@ function OptionRow({
   isLast: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   styles.useVariants({
     notLast: !isLast,
     destructive: option.destructive ?? false,
@@ -100,7 +104,7 @@ function OptionRow({
       style={styles.optionButton}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={option.label}
+      accessibilityLabel={t(option.labelKey)}
     >
       <Icon
         name={option.icon as string}
@@ -108,7 +112,7 @@ function OptionRow({
         tone={option.destructive ? 'error' : 'primary'}
       />
       <Text size="md" weight="medium" style={styles.optionLabel}>
-        {option.label}
+        {t(option.labelKey)}
       </Text>
     </AppPressable>
   );
@@ -120,6 +124,7 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
   onActionSelected,
   onDismiss,
 }) => {
+  const { t } = useTranslation();
   // State-driven presentation via visible prop (no manual ref access during render)
   const { ref, modalProps, insets } = useStandardBottomSheet({
     visible,
@@ -127,9 +132,10 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
     snapPoints: ['50%'],
   });
 
-  const itemName = notification?.pantryItemName || 'this item';
+  const itemName =
+    notification?.pantryItemName || t('expirationAction.thisItem');
   const subtitle = notification
-    ? getExpirySubtitle(notification.daysUntilExpiry)
+    ? getExpirySubtitle(notification.daysUntilExpiry, t)
     : '';
 
   return (
@@ -147,7 +153,9 @@ export const ExpirationActionSheet: React.FC<ExpirationActionSheetProps> = ({
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Title style={styles.title}>{`What happened with ${itemName}?`}</Title>
+        <Title style={styles.title}>
+          {t('expirationAction.title', { itemName })}
+        </Title>
         <Text size="sm" tone="secondary" style={styles.subtitle}>
           {subtitle}
         </Text>

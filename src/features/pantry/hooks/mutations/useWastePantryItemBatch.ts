@@ -21,9 +21,9 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { t } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { errorService } from '#/services/errorService';
 
 interface UseWastePantryItemBatchOptions {
   onSuccess?: () => void;
@@ -79,10 +79,13 @@ export function useWastePantryItemBatch({
       'status',
       BatchStatus.Wasted,
     );
-    executeCacheUpdate(
-      () => writeStatus(BatchStatus.Wasted),
-      'Waste Pantry Item Batch (optimistic)',
-    );
+    try {
+      writeStatus(BatchStatus.Wasted);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Waste Pantry Item Batch (optimistic)',
+      });
+    }
 
     const result = await wasteMutation({
       variables: {
@@ -101,10 +104,16 @@ export function useWastePantryItemBatch({
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      executeCacheUpdate(
-        () => writeStatus(snapshot?.status ?? BatchStatus.Active),
-        'Revert rejected batch waste',
-      );
+      // Resolved before the try — a `??` inside a try body makes the React
+      // Compiler bail out of this hook.
+      const revertedStatus = snapshot?.status ?? BatchStatus.Active;
+      try {
+        writeStatus(revertedStatus);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected batch waste',
+        });
+      }
       clearPersistence();
       // onError covers transport errors; a non-success union payload has none.
       alertRejectedMutation(result, t('errors.wasteBatchFailed'));

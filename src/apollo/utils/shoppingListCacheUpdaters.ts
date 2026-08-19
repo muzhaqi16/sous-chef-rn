@@ -19,7 +19,7 @@ import {
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { createOptimisticEntity } from './createOptimisticResponse';
 import { classifyCreateResult } from './classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import {
   type AddToConnectionOptions,
   type ConnectionData,
@@ -469,7 +469,7 @@ interface BuildAddItemsReconcileUpdateOptions {
   /** Target list id; when omitted, read from `variables.input.shoppingListId`. */
   listId?: string | null;
   /**
-   * When set, wrap the reconcile in `executeCacheUpdate` with this failure
+   * When set, run the reconcile inside a try/catch reporting this failure
    * message and optional refetch fallback. Omit to apply the reconcile directly.
    */
   wrap?: { message: string; refetch?: () => void };
@@ -508,7 +508,12 @@ export function buildAddItemsReconcileUpdate({
     const run = () =>
       reconcileShoppingItemCreateUpdate(cache, targetListId, item, clientId);
     if (wrap) {
-      executeCacheUpdate(run, wrap.message, wrap.refetch);
+      try {
+        run();
+      } catch (cacheError) {
+        errorService.reportError(cacheError, { operation: wrap.message });
+        wrap.refetch?.();
+      }
     } else {
       run();
     }
@@ -667,10 +672,13 @@ export function reconcileShoppingCreate(
     payload?.__typename === 'AddItemsToShoppingListPayload' &&
     payload.results?.[0]?.success === false;
   if (outcome === 'rejected' || itemFailed) {
-    executeCacheUpdate(
-      () => revertOptimisticShoppingListItem(cache, listId, optimisticId),
-      'Revert rejected Shopping List Item',
-    );
+    try {
+      revertOptimisticShoppingListItem(cache, listId, optimisticId);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Revert rejected Shopping List Item',
+      });
+    }
     return 'reverted';
   }
   return 'kept';
@@ -1097,10 +1105,13 @@ export function reconcileShoppingListCreate(
 ): 'kept' | 'reverted' {
   const outcome = classifyCreateResult(result);
   if (outcome === 'rejected') {
-    executeCacheUpdate(
-      () => revertOptimisticShoppingList(cache, optimisticId),
-      'Revert rejected Shopping List',
-    );
+    try {
+      revertOptimisticShoppingList(cache, optimisticId);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Revert rejected Shopping List',
+      });
+    }
     return 'reverted';
   }
   return 'kept';

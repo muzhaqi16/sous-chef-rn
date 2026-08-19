@@ -27,10 +27,10 @@ import {
   type AcceptInvite_HomeInviteFragment,
 } from './AcceptInvite.generated';
 import { errorService, getErrorMessage } from '#/services/errorService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { Text } from '#components/atoms/Text';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 
 type InvitationType = 'shopping_list' | 'home' | 'unknown';
 
@@ -199,7 +199,7 @@ export const AcceptInvite: React.FC = () => {
               () => {
                 alertService.alert(
                   t('labels.error'),
-                  t('invitationAcceptance.declineFailedShort'),
+                  t('errors.declineInviteFailed'),
                 );
               },
             );

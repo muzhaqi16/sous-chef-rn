@@ -12,10 +12,10 @@ import {
   versionConflictCheck,
   invalidUnitCheck,
 } from '#/utils/errorHandlers';
-import { isSuccessPayload } from '#/utils/compilerSafeWrappers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 interface UseCorrectPantryItemWeightOptions {
   onSuccess?: () => void;

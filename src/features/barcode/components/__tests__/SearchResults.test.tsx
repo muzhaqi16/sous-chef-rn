@@ -78,8 +78,8 @@ jest.mock('#store/useAppStore', () => ({
 
 // Use the real wrappers so pressing the add button actually runs the async
 // handler (the auto-mock would no-op the callbacks and never fire the mutation).
-jest.mock('#/utils/compilerSafeWrappers', () =>
-  jest.requireActual('#/utils/compilerSafeWrappers'),
+jest.mock('#/utils/finallyHelpers', () =>
+  jest.requireActual('#/utils/finallyHelpers'),
 );
 
 jest.mock('../ProductResultCard', () => ({

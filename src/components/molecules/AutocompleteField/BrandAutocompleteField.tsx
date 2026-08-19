@@ -1,3 +1,4 @@
+import { useTranslation } from '#/i18n';
 import React from 'react';
 import {
   useBrandAutocomplete,
@@ -31,6 +32,7 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
   suggestedBrands = [],
   onBrandSelected,
 }) => {
+  const { t } = useTranslation();
   const brand = useBrandAutocomplete({ suggestedBrands });
 
   return (
@@ -65,10 +67,12 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
       autoCapitalize="words"
       inlineMinSearchLength={1}
       maxResults={6}
-      modalTitle="Select a brand"
-      modalSearchPlaceholder="Type to search brands..."
+      modalTitle={t('autocomplete.selectBrand')}
+      modalSearchPlaceholder={t('autocomplete.brandSearch')}
       modalEmptyText={
-        suggestedBrands.length > 0 ? 'No matching brands' : 'No brands found'
+        suggestedBrands.length > 0
+          ? t('autocomplete.noMatchingBrands')
+          : t('autocomplete.noBrands')
       }
       modalEmptySubtext={
         brand.shouldSearch

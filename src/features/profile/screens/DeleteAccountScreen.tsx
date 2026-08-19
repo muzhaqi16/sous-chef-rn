@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
@@ -18,7 +18,6 @@ import {
 } from '#operations/auth/user.generated';
 import { authService } from '#/services/authService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 
@@ -34,13 +33,13 @@ async function performDeleteAccount(
   rejectionMessage: string,
 ): Promise<void> {
   setIsDeleting(true);
-  const result = await executeMutation(
-    () => deleteAccountMutation(),
-    error => {
-      handleMutationError(error, { operation: 'Delete Account' });
-      setIsDeleting(false);
-    },
-  );
+  let result;
+  try {
+    result = await deleteAccountMutation();
+  } catch (error) {
+    handleMutationError(error, { operation: 'Delete Account' });
+    setIsDeleting(false);
+  }
   if (!result) return; // transport error — already surfaced by the handler above
 
   // A ForbiddenError/ValidationError member resolves WITHOUT throwing under

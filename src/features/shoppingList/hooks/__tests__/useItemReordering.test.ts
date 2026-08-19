@@ -24,7 +24,7 @@ jest.mock('#/utils/errorHandlers', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   SubscriptionService: {

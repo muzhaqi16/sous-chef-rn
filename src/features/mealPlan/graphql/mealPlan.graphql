@@ -35,6 +35,18 @@ query GetMealPlan($id: ID!) {
   }
 }
 
+# Event read-back. `MealPlanEvents` carries only the envelope plus the changed
+# entity's id — a subscription document is validated against depth 5, which no
+# fragment spread fits under. A plan that has just joined the overview needs the
+# canonical list-card shape, and this is where it comes from: an ordinary HTTP
+# query with the ordinary HTTP budget.
+query MealPlanForEvent($id: ID!) {
+  mealPlan(id: $id) {
+    id
+    ...MealPlanDisplay
+  }
+}
+
 # ============================================
 # MUTATIONS
 # ============================================
@@ -260,83 +272,45 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
 # with, so it emits no events and needs none — the only device that can change
 # it is this one.
 #
-# The MealPlan branch spells its fields out with `planServings` / `planCost`
-# aliases rather than spreading `MealPlanDisplay`. `MealPlan.servings` is `Int!`
-# and `MealPlan.actualCost` is `Float!`, while the item types hold both as
-# nullable, and GraphQL's SameResponseShape rule rejects one response key
-# resolving to both — correctly, because they are different things: a plan's
-# servings is the plan-wide default, an item's is that meal's override. Merging
-# them onto one key would be a modelling error, not a convenience.
+# Thin event: the envelope plus the identity of what changed, nothing more.
+# Subscription documents are validated against depth 5 / cost 500 rather than
+# the HTTP limits, because the server re-executes the document on every
+# published event for the life of the connection. An inline fragment counts as
+# a depth level (graphql-armor counts unflattened), so `node { ... on X { id } }`
+# is already depth 4 — a fragment spread inside a branch cannot fit.
 #
-# Aliases are cache-transparent: Apollo normalizes by field name, so
-# `planServings: servings` writes `MealPlan.servings`. The handler then reads
-# the entity back through `MealPlanDisplay` — the canonical shape — and adds it
-# to the overview only if that read is COMPLETE. If this selection ever drifts
-# from the fragment, the read misses and the handler refetches instead of
-# writing a partial plan into the connection, which would blank the list.
-#
-# Item branches keep their shared spreads: `MealPlanItemActions_optimisticFullItem`
-# is the same union of cell fragments the local-first create writes, so both
-# writers stay complete for what MealPlanMain reads.
+# `updatedFields` is what lets the handler skip work rather than pay for it: an
+# event whose changed fields are all off-screen needs no read at all. When one
+# is needed, `MealPlanForEvent` / `GetMealPlan` / `GetMealTemplate` fetch the
+# entity over HTTP, where the budget is generous.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription MealPlanEvents($homeId: ID!) {
   mealPlanEvents(homeId: $homeId) {
     subtype
     mutation
+    homeId
     mealPlanId
     templateId
+    updatedFields
+    # The device that made the change — the server echoes back the
+    # `x-device-id` the mutation carried. Suppressing on this rather than on
+    # `actorUserId` is what lets the same user's second device keep updating.
+    originatorClientId
     actorUserId
     timestamp
     node {
       __typename
       ... on MealPlan {
         id
-        name
-        description
-        planType
-        startDate
-        endDate
-        planServings: servings
-        totalCalories
-        totalProtein
-        totalCarbs
-        totalFat
-        planCost: actualCost
-        budgetAmount
-        homeId
-        home {
-          id
-          name
-          myMembership {
-            id
-            role
-          }
-        }
-        user {
-          id
-        }
-        createdBy {
-          id
-          profile {
-            id
-            displayName
-            avatar
-          }
-        }
-        version
-        createdAt
-        updatedAt
       }
       ... on MealPlanItem {
         id
-        ...MealPlanItemActions_optimisticFullItem
       }
       ... on MealTemplate {
         id
-        ...MealTemplateDisplay
       }
       ... on MealTemplateItem {
         id
-        ...MealTemplateItemFragment
       }
     }
   }

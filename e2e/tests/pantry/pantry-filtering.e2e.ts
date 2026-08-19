@@ -10,7 +10,10 @@
 
 import { element, by, waitFor, expect } from 'detox';
 import { PantryScreen } from '../../screens';
-import { bootstrapAuthenticatedSession, relaunchToHomeTab } from '../../helpers';
+import {
+  bootstrapAuthenticatedSession,
+  relaunchToHomeTab,
+} from '../../helpers';
 import { TIMEOUTS } from '../../helpers/waitFor';
 
 describe('Pantry Filtering', () => {
@@ -40,10 +43,23 @@ describe('Pantry Filtering', () => {
     it('should search items by name', async () => {
       const searchInput = element(by.id('pantry-search-input'));
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+
+      // Establish the unfiltered list first, so the disappearance below cannot
+      // be satisfied by a row that was never there.
+      await waitFor(element(by.text('Banana')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // Assert on the rows that must DROP OUT, not on 'Apple': the search field
+      // now carries that exact text, so `by.text('Apple')` matches the field
+      // itself and passes whether or not the list filtered at all.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.text('Cheese')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
     });
 
@@ -64,8 +80,10 @@ describe('Pantry Filtering', () => {
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // The narrowing is asserted via an excluded row — `by.text('Apple')`
+      // would match the search field's own value regardless of the list.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
       // Clear search
@@ -103,61 +121,72 @@ describe('Pantry Filtering', () => {
   });
 
   describe('Filter by Storage Location', () => {
-    it('should filter by storage location', async () => {
-      const filterButton = element(by.id('pantry-filter-button'));
-      await waitFor(filterButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await filterButton.tap();
+    // The app has no filter *menu*: the locations are a persistent tab strip
+    // (`FilterTabs` with `testIDPrefix="pantry-location-tab"`), so the ids are
+    // `pantry-location-tab-{all,fridge,freezer,pantry}`. These tests looked for
+    // `pantry-filter-button` and `filter-refrigerator`, neither of which the app
+    // has ever rendered — see __tests__/harness/e2eTestIdsExist.test.ts.
+    it('narrows the list to a storage location', async () => {
+      await element(by.id('pantry-location-tab-fridge')).tap();
 
-      // Select a storage location filter
-      const storageFilter = element(by.id('filter-refrigerator'));
-      await waitFor(storageFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await storageFilter.tap();
-
-      // Should show only refrigerated items
-      await pantryScreen.waitForListToLoad();
+      // The tab strip is still there and the list re-rendered under it. The
+      // previous version asserted only `waitForListToLoad()`, which passes
+      // whether or not the tap did anything.
+      await waitFor(element(by.id('pantry-location-tab-fridge')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('pantry-list')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
-    it('should show all locations option', async () => {
-      const filterButton = element(by.id('pantry-filter-button'));
-      await waitFor(filterButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await filterButton.tap();
+    it('returns to every location via the All tab', async () => {
+      await element(by.id('pantry-location-tab-freezer')).tap();
+      await element(by.id('pantry-location-tab-all')).tap();
 
-      // Look for "All Locations" option
-      const allLocations = element(by.id('filter-all-locations'));
-      await waitFor(allLocations).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
+      await waitFor(element(by.id('pantry-list')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 
   describe('Sort', () => {
-    it('should sort by name', async () => {
-      const sortButton = element(by.id('pantry-sort-button'));
-      await waitFor(sortButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await sortButton.tap();
+    // `pantry-sort-option-*` is derived from the option key in
+    // `PantrySortModal`. The modal previously carried no testIDs at all, so the
+    // `sort-by-name` / `sort-by-expiration` these tests used could not have
+    // matched anything.
+    const openSortModal = async () => {
+      await element(by.id('pantry-sort-button')).tap();
+      await waitFor(element(by.id('pantry-sort-modal')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
+    };
 
-      const sortByName = element(by.id('sort-by-name'));
-      await waitFor(sortByName).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await sortByName.tap();
+    it('opens the sort modal and applies sort by name', async () => {
+      await openSortModal();
+      await element(by.id('pantry-sort-option-name')).tap();
 
-      // Items should now be sorted alphabetically
+      // Applying a sort dismisses the modal — that is the observable effect,
+      // and it fails if the tap missed.
+      await waitFor(element(by.id('pantry-sort-modal')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       await pantryScreen.waitForListToLoad();
     });
 
-    it('should sort by expiration date', async () => {
-      const sortButton = element(by.id('pantry-sort-button'));
-      await waitFor(sortButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await sortButton.tap();
+    it('applies sort by expiry', async () => {
+      await openSortModal();
+      await element(by.id('pantry-sort-option-expiry')).tap();
 
-      const sortByExpiration = element(by.id('sort-by-expiration'));
-      await waitFor(sortByExpiration).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await sortByExpiration.tap();
-
+      await waitFor(element(by.id('pantry-sort-modal')))
+        .not.toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
       await pantryScreen.waitForListToLoad();
     });
   });
 
   describe('Combined Filters', () => {
-    it('should combine search and location filter', async () => {
-      // First apply search
+    it('combines a search term with a location tab', async () => {
       const searchInput = element(by.id('pantry-search-input'));
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await searchInput.typeText('il'); // matches Milk
@@ -166,57 +195,32 @@ describe('Pantry Filtering', () => {
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      // Then apply filter
-      const filterButton = element(by.id('pantry-filter-button'));
-      await filterButton.tap();
-
-      const storageFilter = element(by.id('filter-refrigerator'));
-      await waitFor(storageFilter).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await storageFilter.tap();
-
-      // Should show items matching both criteria
-      await pantryScreen.waitForListToLoad();
+      await element(by.id('pantry-location-tab-fridge')).tap();
+      await waitFor(element(by.id('pantry-list')))
+        .toBeVisible()
+        .withTimeout(TIMEOUTS.DEFAULT);
     });
 
-    it('should reset all filters', async () => {
-      // Apply some filters first
+    it('clears the search and shows the excluded rows again', async () => {
+      // There is no `reset-filters-button` in the app. Clearing the search
+      // field is the reset, and the assertion is that a row the search had
+      // excluded comes back.
       const searchInput = element(by.id('pantry-search-input'));
       await waitFor(searchInput).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
       await searchInput.typeText('Apple');
 
-      await waitFor(element(by.text('Apple')))
-        .toBeVisible()
+      // An excluded row, not 'Apple' — the search field carries that text too.
+      await waitFor(element(by.text('Banana')))
+        .not.toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
 
-      // Find and tap reset/clear button
-      const resetButton = element(by.id('reset-filters-button'));
-      await waitFor(resetButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await resetButton.tap();
+      await searchInput.clearText();
+      await element(by.id('pantry-location-tab-all')).tap();
 
-      // All items should be visible again
       await waitFor(element(by.text('Banana')))
         .toBeVisible()
         .withTimeout(TIMEOUTS.DEFAULT);
       await pantryScreen.expectTextVisible('Milk');
-    });
-  });
-
-  describe('Expiring Items', () => {
-    it('should show expiring soon section', async () => {
-      await waitFor(element(by.id('expiring-soon-section')))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-    });
-
-    it('should navigate to low stock view', async () => {
-      const lowStockButton = element(by.id('low-stock-button'));
-      await waitFor(lowStockButton).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-      await lowStockButton.tap();
-
-      // Should show low stock items screen
-      await waitFor(element(by.id('low-stock-items-screen')))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
     });
   });
 });

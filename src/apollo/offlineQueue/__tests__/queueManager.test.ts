@@ -14,6 +14,7 @@ import {
   classifyError as classifyErrorFn,
   calculateRetryDelay as calculateRetryDelayFn,
 } from '../queueErrorPolicy';
+import { makeCache } from '#/apollo/cache';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -113,6 +114,32 @@ function makeMutation(overrides: Partial<QueuedMutation> = {}): QueuedMutation {
     ...overrides,
   };
 }
+
+const realCache = makeCache();
+
+/**
+ * A normalized-cache fixture keyed exactly as the real cache keys entities.
+ *
+ * These were hand-written `Type:id` strings, which matched what
+ * `findCachedTypename` looks for and so passed — while the app, whose type
+ * policies spelled out `keyFields: ['id']`, actually wrote
+ * `Type:{"id":"..."}`. The fixture and the lookup agreed with each other and
+ * both disagreed with production, so the tests could not see that the cleanup
+ * they cover never ran. Building keys through the real cache is what makes the
+ * next such divergence fail here.
+ */
+const normalizedFixture = (
+  entities: Array<{ __typename: string; id: string } & Record<string, unknown>>,
+): Record<string, unknown> =>
+  Object.fromEntries(
+    entities.map(entity => {
+      const key = realCache.identify(entity as StoreObject);
+      if (!key) {
+        throw new Error(`Cache does not normalize ${entity.__typename}`);
+      }
+      return [key, entity];
+    }),
+  );
 
 describe('QueueManager', () => {
   let manager: QueueManager;
@@ -654,9 +681,9 @@ describe('QueueManager', () => {
         client.mutate.mockResolvedValue({
           data: { syncPantryItem: { item: {}, converged: false } },
         });
-        client.cache.extract.mockReturnValue({
-          'PantryItem:cuid-item-1': { __typename: 'PantryItem' },
-        });
+        client.cache.extract.mockReturnValue(
+          normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
+        );
 
         jest.useRealTimers();
         await processMutation(mutation);
@@ -682,10 +709,12 @@ describe('QueueManager', () => {
         client.mutate.mockResolvedValue({
           data: { addItemsToShoppingList: { results: [] } },
         });
-        client.cache.extract.mockReturnValue({
-          'ShoppingListItem:cuid-a': { __typename: 'ShoppingListItem' },
-          'ShoppingListItem:cuid-b': { __typename: 'ShoppingListItem' },
-        });
+        client.cache.extract.mockReturnValue(
+          normalizedFixture([
+            { __typename: 'ShoppingListItem', id: 'cuid-a' },
+            { __typename: 'ShoppingListItem', id: 'cuid-b' },
+          ]),
+        );
 
         jest.useRealTimers();
         await processMutation(mutation);
@@ -718,9 +747,11 @@ describe('QueueManager', () => {
             },
           },
         });
-        client.cache.extract.mockReturnValue({
-          'ShoppingList:cuid-list-1': { __typename: 'ShoppingList' },
-        });
+        client.cache.extract.mockReturnValue(
+          normalizedFixture([
+            { __typename: 'ShoppingList', id: 'cuid-list-1' },
+          ]),
+        );
 
         jest.useRealTimers();
         const result = await processMutation(mutation);
@@ -887,13 +918,12 @@ describe('QueueManager', () => {
     });
 
     it('derives the typename from the cached entity, regardless of operation name', () => {
-      client.cache.extract.mockReturnValue({
-        'ShoppingList:list-1': { __typename: 'ShoppingList', id: 'list-1' },
-        'ShoppingListItem:item-1': {
-          __typename: 'ShoppingListItem',
-          id: 'item-1',
-        },
-      });
+      client.cache.extract.mockReturnValue(
+        normalizedFixture([
+          { __typename: 'ShoppingList', id: 'list-1' },
+          { __typename: 'ShoppingListItem', id: 'item-1' },
+        ]),
+      );
 
       // Container-level op resolves to the container entity
       expect(
@@ -1745,12 +1775,14 @@ describe('QueueManager', () => {
       // The failure handler derives the entity typename from the normalized
       // cache — seed the entities these tests fail mutations against.
       const { client } = require('../../client');
-      client.cache.extract.mockReturnValue({
-        'PantryItem:item-1': {},
-        'PantryItem:item-x': {},
-        'ShoppingListItem:sli-99': {},
-        'ShoppingList:list-10': {},
-      });
+      client.cache.extract.mockReturnValue(
+        normalizedFixture([
+          { __typename: 'PantryItem', id: 'item-1' },
+          { __typename: 'PantryItem', id: 'item-x' },
+          { __typename: 'ShoppingListItem', id: 'sli-99' },
+          { __typename: 'ShoppingList', id: 'list-10' },
+        ]),
+      );
     });
 
     it('stores the failure handler via setFailureHandler', () => {

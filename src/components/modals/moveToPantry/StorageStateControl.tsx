@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 

@@ -23,7 +23,6 @@ import { useApolloClient } from '@apollo/client/react';
 import type { ApolloClient } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 import { errorService } from '#/services/errorService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   handleVersionConflictAlert,
   handleMutationErrorAlert,
@@ -33,7 +32,7 @@ import {
   findConflictDataMember,
   findFirstErrorMember,
 } from '#/utils/errors/versionConflict';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Surface a resolved errors-as-data member from a mutation `data` payload.
@@ -172,14 +171,14 @@ function createAddOperationImpl<TInput, TResult>(
       ? { input: transformInput(input) }
       : { input };
 
-    const result = await executeMutation(
-      () => mutation({ variables }),
-      error => {
-        errorService.reportError(error, { operation: operationName });
-        onError?.(error);
-        handleMutationErrorAlert(error, { operation: operationName });
-      },
-    );
+    let result;
+    try {
+      result = await mutation({ variables });
+    } catch (error) {
+      errorService.reportError(error, { operation: operationName });
+      onError?.(error);
+      handleMutationErrorAlert(error, { operation: operationName });
+    }
 
     if (!result) return false;
 
@@ -270,29 +269,30 @@ function createUpdateOperationImpl<TInput, TResult>(
       };
     }
 
-    const result = await executeMutation(
-      () =>
-        mutation({
-          variables: {
-            input: { id: itemId, ...transformedInput },
-          },
-        }),
-      error => {
-        // Handle version conflicts. No itemName: the alert resolves the
-        // localized errors.entityItem default for the generic CRUD path.
-        if (
-          handleVersionConflictAlert(error, {
-            onRefresh: onVersionConflict,
-          })
-        ) {
-          return;
-        }
+    let result;
+    try {
+      result = await mutation({
+        variables: {
+          input: { id: itemId, ...transformedInput },
+        },
+      });
+    } catch (error) {
+      // Handle version conflicts. No itemName: the alert resolves the
+      // localized errors.entityItem default for the generic CRUD path.
+      if (
+        handleVersionConflictAlert(error, {
+          onRefresh: onVersionConflict,
+        })
+      ) {
+        // A version conflict is surfaced by the alert above and handled by its
+        // refresh callback; report it as a failed update, not as a success.
+        return false;
+      }
 
-        errorService.reportError(error, { operation: operationName });
-        onError?.(error);
-        handleMutationErrorAlert(error, { operation: operationName });
-      },
-    );
+      errorService.reportError(error, { operation: operationName });
+      onError?.(error);
+      handleMutationErrorAlert(error, { operation: operationName });
+    }
 
     if (!result) return false;
 
@@ -333,14 +333,14 @@ async function executeRemoveImpl<TResult>(
   onSuccess?: (data: TResult) => void,
   onError?: (error: unknown) => void,
 ): Promise<TResult | false> {
-  const result = await executeMutation(
-    () => mutation({ variables: { input: { id: itemId } } }),
-    error => {
-      errorService.reportError(error, { operation: operationName });
-      onError?.(error);
-      handleMutationErrorAlert(error, { operation: operationName });
-    },
-  );
+  let result;
+  try {
+    result = await mutation({ variables: { input: { id: itemId } } });
+  } catch (error) {
+    errorService.reportError(error, { operation: operationName });
+    onError?.(error);
+    handleMutationErrorAlert(error, { operation: operationName });
+  }
 
   if (!result) return false;
 
@@ -459,14 +459,14 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
       }
     }
 
-    const result = await executeMutation(
-      () => operation(...args),
-      error => {
-        errorService.reportError(error, { operation: operationName });
-        onError?.(error);
-        handleMutationErrorAlert(error, { operation: operationName });
-      },
-    );
+    let result;
+    try {
+      result = await operation(...args);
+    } catch (error) {
+      errorService.reportError(error, { operation: operationName });
+      onError?.(error);
+      handleMutationErrorAlert(error, { operation: operationName });
+    }
 
     if (!result) return false;
 

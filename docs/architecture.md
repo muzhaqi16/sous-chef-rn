@@ -87,17 +87,17 @@ A feature is a module with a small public surface. Reaching past it is blocked
 by ESLint (`no-restricted-imports` + `import/no-restricted-paths`) for **new**
 imports:
 
-| Subfolder | Public? | Notes |
-| --- | --- | --- |
-| `screens/` | ✅ | Imported by navigation stacks |
-| `manifest.ts` | ✅ | Wired into `FEATURE_REGISTRY` |
-| `hooks/` (top-level files only) | ✅ | Cross-feature consumers may import these |
-| `<feature>Fragments.generated.ts` | ✅ | Type imports only, when composing your own fragments |
-| `components/` | ⚠️ | Shared UI belongs in `src/components/`; feature-private cards stay here |
-| `context/` | 🔒 | Internal |
-| `graphql/` | 🔒 | Compose your own operations instead |
-| `hooks/mutations/`, deeper hooks | 🔒 | Internal lifecycle primitives |
-| `utils/` | 🔒 | Internal |
+| Subfolder                         | Public? | Notes                                                                   |
+| --------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `screens/`                        | ✅      | Imported by navigation stacks                                           |
+| `manifest.ts`                     | ✅      | Wired into `FEATURE_REGISTRY`                                           |
+| `hooks/` (top-level files only)   | ✅      | Cross-feature consumers may import these                                |
+| `<feature>Fragments.generated.ts` | ✅      | Type imports only, when composing your own fragments                    |
+| `components/`                     | ⚠️      | Shared UI belongs in `src/components/`; feature-private cards stay here |
+| `context/`                        | 🔒      | Internal                                                                |
+| `graphql/`                        | 🔒      | Compose your own operations instead                                     |
+| `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                           |
+| `utils/`                          | 🔒      | Internal                                                                |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`.
 Shared hooks live in `src/hooks/`. If two features need the same thing, it moves
@@ -109,11 +109,11 @@ up — it doesn't get imported sideways.
 
 **The rule: if the server owns it, Apollo owns it. Otherwise Zustand owns it.**
 
-| | Apollo Client | Zustand (`useAppStore`) |
-| --- | --- | --- |
-| Owns | Pantry items, lists, recipes, meal plans, homes, users | Selected home/pantry/list, preferences, auth session, network status, UI flags |
-| Persisted to | MMKV via `cache.extract()` / `cache.restore()` | MMKV via `zustandStorage` (tokens go to Keychain) |
-| Read with | `useQuery` / `useFragment` / `cache.readFragment` | Named hooks from `#store/useAppStore` |
+|              | Apollo Client                                          | Zustand (`useAppStore`)                                                        |
+| ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| Owns         | Pantry items, lists, recipes, meal plans, homes, users | Selected home/pantry/list, preferences, auth session, network status, UI flags |
+| Persisted to | MMKV via `cache.extract()` / `cache.restore()`         | MMKV via `zustandStorage` (tokens go to Keychain)                              |
+| Read with    | `useQuery` / `useFragment` / `cache.readFragment`      | Named hooks from `#store/useAppStore`                                          |
 
 ### Reading from the store
 
@@ -121,11 +121,7 @@ The store exposes **named hooks** — use them. They wrap a pre-built selector s
 components only re-render when that slice changes:
 
 ```ts
-import {
-  useUser,
-  useSelectedHomeId,
-  useIsOnline,
-} from '#store/useAppStore';
+import { useUser, useSelectedHomeId, useIsOnline } from '#store/useAppStore';
 
 const user = useUser();
 const homeId = useSelectedHomeId();
@@ -199,11 +195,11 @@ decision trees, subscription handling, test patterns — is in
 
 Set in `src/apollo/client.ts`:
 
-| | Default | Why |
-| --- | --- | --- |
-| `watchQuery.fetchPolicy` | `cache-and-network` | Paint from the persisted cache immediately, refresh in the background |
-| `query.fetchPolicy` | `network-only` | One-shot reads should be fresh |
-| `errorPolicy` (all) | `all` | Partial data + errors both reach the hook, instead of errors swallowing data |
+|                          | Default             | Why                                                                          |
+| ------------------------ | ------------------- | ---------------------------------------------------------------------------- |
+| `watchQuery.fetchPolicy` | `cache-and-network` | Paint from the persisted cache immediately, refresh in the background        |
+| `query.fetchPolicy`      | `network-only`      | One-shot reads should be fresh                                               |
+| `errorPolicy` (all)      | `all`               | Partial data + errors both reach the hook, instead of errors swallowing data |
 
 ### Links
 
@@ -234,17 +230,17 @@ const { hasMore, loadMore, isLoadingMore } = usePagination({
   ListFooterComponent={
     <PaginationFooter
       hasMore={hasMore}
-      isFetchingMore={isLoadingMore}   // only shows the indicator mid-fetch
+      isFetchingMore={isLoadingMore} // only shows the indicator mid-fetch
       itemCount={items.length}
       SkeletonComponent={PantryItemSkeleton}
       skeletonCount={3}
     />
   }
-/>
+/>;
 ```
 
 Always pass `isFetchingMore` — without it the footer falls back to `hasMore`
-and shows persistent skeleton rows at the bottom of a list that merely *has*
+and shows persistent skeleton rows at the bottom of a list that merely _has_
 another page, which reads as flicker.
 
 New paginated connections use `itemsConnectionFieldPolicy()` or
@@ -282,7 +278,7 @@ mutation's selection, and the queue's replay fragment.
 home; handlers write entities through with `cache.writeFragment`.
 
 The user-visible surface is the offline banner (offline / server unreachable /
-*N* pending / back online) and an explicit Offline Mode toggle in settings.
+_N_ pending / back online) and an explicit Offline Mode toggle in settings.
 
 Deep dive: **[`local-first-architecture.md`](local-first-architecture.md)**.
 
@@ -324,7 +320,7 @@ Two structural decisions worth knowing:
   already does reference equality on `item`.
 - **No `try`/`catch` or `try`/`finally` inside hook or component bodies.** The
   compiler bails out on the entire hook, silently losing all auto-memoization.
-  Use the shared helpers in `src/utils/compilerSafeWrappers.ts`.
+  Use the shared helpers in `src/utils/finallyHelpers.ts`.
 - **Never read or write `ref.current` during render.** Use the adjusting-state-
   during-render pattern instead.
 

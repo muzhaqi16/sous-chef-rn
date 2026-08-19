@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { GraphQLError } from 'graphql';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
@@ -22,13 +22,85 @@ import { useResendBackoff } from '#hooks/auth/useResendBackoff';
 import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { getEmailVerificationValidationSchema } from '#/utils/validation/auth';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
 type CodeVerificationValues = {
   code: string;
 };
+
+/**
+ * Deps the response interpreters need from the screen.
+ *
+ * These interpreters are module-level rather than inline because their bodies
+ * are full of `?.` / `&&` / ternaries, and the React Compiler bails out of the
+ * whole component when a value block appears inside a try/catch. Calling them
+ * from inside the try keeps the catch covering them exactly as before, while
+ * leaving the try body plain statements.
+ * See scripts/probe-compiler-try-forms.mjs.
+ */
+interface VerificationResponseDeps {
+  updateUser: (patch: { emailVerified: boolean }) => void;
+  toast: (options: { message: string; type: 'error' }) => void;
+  t: (key: string) => string;
+}
+
+function interpretVerifyEmailResponse(
+  response: { data?: unknown; error?: unknown },
+  { updateUser, toast, t }: VerificationResponseDeps,
+): void {
+  const payload = (response.data as { verifyEmail?: unknown } | undefined)
+    ?.verifyEmail as { __typename?: string; message?: string } | undefined;
+  if (payload?.__typename === 'VerifyEmailPayload') {
+    updateUser({ emailVerified: true });
+    return;
+  }
+  // Auth failures now arrive as top-level GraphQL errors, not an
+  // AuthError union variant.
+  const topLevelError = getTopLevelGraphQLError(response.error);
+  if (topLevelError) {
+    toast({
+      message: errorService.getUserFriendlyMessage(
+        topLevelError.code,
+        topLevelError.message,
+      ),
+      type: 'error',
+    });
+  } else if (payload) {
+    const message =
+      'message' in payload && payload.message
+        ? payload.message
+        : t('errors.verificationFailed');
+    toast({ message, type: 'error' });
+  }
+}
+
+function interpretResendResponse(
+  response: { error?: unknown },
+  { updateUser, toast, t }: VerificationResponseDeps,
+): void {
+  // errorPolicy: 'all' returns GraphQL errors on `error.errors`.
+  const error = response.error;
+  if (!error || !(typeof error === 'object' && 'errors' in error)) {
+    logger.debug('Verification email resent');
+    return;
+  }
+
+  const graphQLErrors = (error as { errors: ReadonlyArray<GraphQLError> })
+    .errors;
+  const alreadyVerified = graphQLErrors.some(
+    err => err.extensions?.code === TopLevelErrorCode.EmailAlreadyVerified,
+  );
+  if (alreadyVerified) {
+    updateUser({ emailVerified: true });
+    return;
+  }
+
+  errorService.reportError(error, {
+    operation: 'CodeVerification.resendEmail.graphqlError',
+  });
+  toast({ message: t('auth.resendVerificationFailed'), type: 'error' });
+}
 
 export function CodeVerificationScreen(): React.JSX.Element | null {
   const { t } = useTranslation();
@@ -68,47 +140,21 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     }
   }, [user?.emailVerified]);
 
-  const onVerifyCode = (data: CodeVerificationValues) => {
-    executeMutation(
-      async () => {
-        const response = await verifyEmail({
-          variables: { input: { code: data.code } },
-        });
-
-        const payload = response.data?.verifyEmail;
-        if (payload?.__typename === 'VerifyEmailPayload') {
-          updateUser({ emailVerified: true });
-          return;
-        }
-        // Auth failures now arrive as top-level GraphQL errors, not an
-        // AuthError union variant.
-        const topLevelError = getTopLevelGraphQLError(response.error);
-        if (topLevelError) {
-          toast({
-            message: errorService.getUserFriendlyMessage(
-              topLevelError.code,
-              topLevelError.message,
-            ),
-            type: 'error',
-          });
-        } else if (payload) {
-          const message =
-            'message' in payload
-              ? payload.message
-              : t('errors.verificationFailed');
-          toast({ message, type: 'error' });
-        }
-      },
-      error => {
-        errorService.reportError(error, {
-          operation: 'CodeVerification.verifyEmail',
-        });
-        toast({
-          message: t('errors.somethingWentWrong'),
-          type: 'error',
-        });
-      },
-    );
+  const onVerifyCode = async (data: CodeVerificationValues) => {
+    try {
+      const response = await verifyEmail({
+        variables: { input: { code: data.code } },
+      });
+      interpretVerifyEmailResponse(response, { updateUser, toast, t });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'CodeVerification.verifyEmail',
+      });
+      toast({
+        message: t('errors.somethingWentWrong'),
+        type: 'error',
+      });
+    }
   };
 
   // The only way off this screen without a working code. `verification` is a
@@ -147,7 +193,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     );
   };
 
-  const onResend = () => {
+  const onResend = async () => {
     // Prevent resend during countdown. Captured up front because the narrowing
     // on `user.email` doesn't survive into the async mutation callback.
     const email = user?.email;
@@ -159,48 +205,20 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
     // for a tight retry loop.
     registerAttempt();
 
-    executeMutation(
-      async () => {
-        const response = await resendVerificationEmail({
-          variables: { input: { email } },
-        });
-
-        // Check for errors in response (errorPolicy: 'all' returns errors in error.errors)
-        if (response.error && 'errors' in response.error) {
-          const graphQLErrors = response.error
-            .errors as ReadonlyArray<GraphQLError>;
-          const alreadyVerified = graphQLErrors.some(
-            err =>
-              err.extensions?.code === TopLevelErrorCode.EmailAlreadyVerified,
-          );
-
-          if (alreadyVerified) {
-            updateUser({ emailVerified: true });
-            return;
-          }
-
-          errorService.reportError(response.error, {
-            operation: 'CodeVerification.resendEmail.graphqlError',
-          });
-          toast({
-            message: t('auth.resendVerificationFailed'),
-            type: 'error',
-          });
-          return;
-        }
-
-        logger.debug('Verification email resent');
-      },
-      error => {
-        errorService.reportError(error, {
-          operation: 'CodeVerification.resendEmail',
-        });
-        toast({
-          message: t('errors.somethingWentWrong'),
-          type: 'error',
-        });
-      },
-    );
+    try {
+      const response = await resendVerificationEmail({
+        variables: { input: { email } },
+      });
+      interpretResendResponse(response, { updateUser, toast, t });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'CodeVerification.resendEmail',
+      });
+      toast({
+        message: t('errors.somethingWentWrong'),
+        type: 'error',
+      });
+    }
   };
 
   // Don't render if no user or already verified

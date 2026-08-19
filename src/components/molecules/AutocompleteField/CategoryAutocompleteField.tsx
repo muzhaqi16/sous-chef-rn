@@ -1,3 +1,4 @@
+import { useTranslation } from '#/i18n';
 import React from 'react';
 import {
   CategorySuggestion,
@@ -34,6 +35,7 @@ export const CategoryAutocompleteField: React.FC<
   onCategorySelected,
   categoryType = CategoryType.General,
 }) => {
+  const { t } = useTranslation();
   const category = useCategoryAutocomplete({ categoryType });
 
   return (
@@ -63,9 +65,9 @@ export const CategoryAutocompleteField: React.FC<
       }}
       inlineMinSearchLength={2}
       maxResults={5}
-      modalTitle="Select a category"
-      modalSearchPlaceholder="Type to search categories..."
-      modalEmptyText="No categories found"
+      modalTitle={t('autocomplete.selectCategory')}
+      modalSearchPlaceholder={t('autocomplete.categorySearch')}
+      modalEmptyText={t('autocomplete.noCategories')}
       modalEmptySubtext={`Continue typing to use "${category.searchTerm}" as a custom category`}
       onSearchChange={category.handleSearchTermChange}
     />

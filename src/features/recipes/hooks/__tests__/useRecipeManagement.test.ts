@@ -16,7 +16,7 @@ jest.mock('#hooks/auth/useIsLoggedOut', () => ({
   useIsLoggedOut: () => false,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn((fn: () => unknown) => fn()),
 }));
 

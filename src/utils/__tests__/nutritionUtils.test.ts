@@ -124,7 +124,7 @@ describe('generateHighlights', () => {
   it('detects High Protein (>= 10g)', () => {
     const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
-      label: 'High Protein',
+      labelKey: 'nutritionHighlights.highProtein',
       type: 'positive',
     });
   });
@@ -132,48 +132,63 @@ describe('generateHighlights', () => {
   it('detects Good Fiber (>= 3g)', () => {
     const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
-      label: 'Good Fiber',
+      labelKey: 'nutritionHighlights.goodFiber',
       type: 'positive',
     });
   });
 
   it('detects Low Sugar (<= 5g)', () => {
     const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({ label: 'Low Sugar', type: 'positive' });
+    expect(highlights).toContainEqual({
+      labelKey: 'nutritionHighlights.lowSugar',
+      type: 'positive',
+    });
   });
 
   it('detects High Sodium (>= 600mg) as caution', () => {
     const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
-      label: 'High Sodium',
+      labelKey: 'nutritionHighlights.highSodium',
       type: 'caution',
     });
   });
 
   it('detects Vitamin C (>= 9mg)', () => {
     const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({ label: 'Vitamin C', type: 'positive' });
+    expect(highlights).toContainEqual({
+      labelKey: 'nutritionHighlights.vitaminC',
+      type: 'positive',
+    });
   });
 
   it('detects Iron (>= 1.8mg)', () => {
     const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({ label: 'Iron', type: 'positive' });
+    expect(highlights).toContainEqual({
+      labelKey: 'nutritionHighlights.iron',
+      type: 'positive',
+    });
   });
 
   it('detects Calcium (>= 130mg)', () => {
     const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({ label: 'Calcium', type: 'positive' });
+    expect(highlights).toContainEqual({
+      labelKey: 'nutritionHighlights.calcium',
+      type: 'positive',
+    });
   });
 
   it('detects Potassium (>= 470mg)', () => {
     const highlights = generateHighlights(mockNutritions);
-    expect(highlights).toContainEqual({ label: 'Potassium', type: 'positive' });
+    expect(highlights).toContainEqual({
+      labelKey: 'nutritionHighlights.potassium',
+      type: 'positive',
+    });
   });
 
   it('does not detect Low Fat when fat is > 3g', () => {
     const highlights = generateHighlights(mockNutritions);
     expect(highlights).not.toContainEqual(
-      expect.objectContaining({ label: 'Low Fat' }),
+      expect.objectContaining({ labelKey: 'nutritionHighlights.lowFat' }),
     );
   });
 });

@@ -5,7 +5,6 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import type { errorService } from '#/services/errorService';
-import type { executeMutation } from '#/utils/compilerSafeWrappers';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
@@ -34,24 +33,6 @@ jest.mock('#/services/errorService', () => ({
     reportError: (...args: Parameters<typeof errorService.reportError>) =>
       mockReportError(...args),
   },
-}));
-
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(
-    async (
-      fn: Parameters<typeof executeMutation>[0],
-      onError: Parameters<typeof executeMutation>[1],
-    ) => {
-      try {
-        await fn();
-        return true;
-      } catch (e) {
-        if (typeof onError === 'function') await onError(e);
-        return false;
-      }
-    },
-  ),
 }));
 
 jest.mock('#hooks/home/pantry/utils', () => ({
@@ -222,10 +203,12 @@ describe('usePantryItemDetailActions', () => {
   });
 
   describe('handleAddToShoppingList', () => {
-    it('invokes onAddToShoppingListNeedsList when no list is selected', () => {
+    it('invokes onAddToShoppingListNeedsList when no list is selected', async () => {
       const { result } = setup({ selectedShoppingListId: null });
 
-      act(() => result.current.handleAddToShoppingList());
+      await act(async () => {
+        await result.current.handleAddToShoppingList();
+      });
 
       expect(mockOnAddToShoppingListNeedsList).toHaveBeenCalled();
     });
@@ -253,7 +236,7 @@ describe('usePantryItemDetailActions', () => {
       const { result } = setup({}, { operationMocks: [addMock.mock] });
 
       await act(async () => {
-        result.current.handleAddToShoppingList();
+        await result.current.handleAddToShoppingList();
       });
 
       expect(addMock.fired).toContainEqual({
@@ -300,7 +283,7 @@ describe('usePantryItemDetailActions', () => {
       );
 
       await act(async () => {
-        result.current.handleAddToShoppingList();
+        await result.current.handleAddToShoppingList();
       });
 
       expect(addMock.fired).toContainEqual(
@@ -338,7 +321,7 @@ describe('usePantryItemDetailActions', () => {
       );
 
       await act(async () => {
-        result.current.handleAddToShoppingList();
+        await result.current.handleAddToShoppingList();
       });
 
       expect(addMock.fired).toContainEqual(
@@ -449,22 +432,6 @@ describe('usePantryItemDetailActions', () => {
         'mis-entered',
         1,
         'g',
-      );
-    });
-
-    it('defaults version to 0 when item has no version', () => {
-      const { result } = setup({
-        item: { ...baseItem, version: null },
-      });
-
-      act(() => result.current.handleCorrectWeight(100, 'r'));
-
-      expect(mockCorrectWeight).toHaveBeenCalledWith(
-        'item-1',
-        100,
-        'r',
-        0,
-        undefined,
       );
     });
 

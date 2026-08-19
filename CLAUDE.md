@@ -27,9 +27,9 @@
   — including function-style `style={({pressed}) => [styles.X, ...]}` callbacks
   with `StyleSheet.create` proxies — and theme switches work natively without
   any wrapper.
-- **Do not wrap `Pressable` with `withUnistyles(...)`.** Wrapping silently
-  drops `StyleSheet.create` proxy values inside function-style `style`
-  callbacks (unistyles#1109).
+- **Do not wrap `Pressable` with `withUnistyles(...)`.** Wrapping silently drops a
+  function-style `style={({ pressed }) => [...]}` callback — see the Unistyles
+  Convention section below for the mechanism and how to re-check it.
 - **For gesture composition, import `Pressable` directly from
   `react-native-gesture-handler`.** Required when the pressable lives inside
   a `Swipeable`, is part of a `GestureDetector` / `Gesture.X` chain, or
@@ -57,15 +57,30 @@ happen inside that factory.
   re-render only when its declared dependencies change, instead of re-rendering
   the parent on every theme tick.
 - **Do not wrap `Pressable` / `TouchableX` with `withUnistyles`.** The wrapper
-  silently drops `StyleSheet.create` proxy values inside function-style
-  `style={({ pressed }) => [...]}` callbacks — layout, padding, and color rules
-  declared in the referenced styles disappear at render time
-  ([unistyles#1109](https://github.com/jpudysz/react-native-unistyles/issues/1109)).
+  silently discards a function-style `style={({ pressed }) => [...]}` callback, so
+  layout, padding and colour rules disappear at render time.
+
+  > **Verified 2026-08 against the installed `react-native-unistyles@3.3.0`.** > `src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style with
+  > `Object.assign({}, uni__getStyles())`, and for a function-valued `style` prop
+  > `uni__getStyles()` returns the function itself. `Object.assign({}, fn)` copies a
+  > function's own enumerable properties — an arrow function has none — so the child
+  > receives `{}`. Re-check in one line:
+  >
+  > ```
+  > node -e "console.log(Object.assign({}, ({pressed}) => [{padding:12}]))"   // -> {}
+  > ```
+  >
+  > This rule previously cited unistyles#1109. The issue link was replaced with the
+  > mechanism because a closed issue says nothing about what the installed code does —
+  > and this behaviour **is** still in 3.3.0's source. Re-run the check above before
+  > relaxing the rule on a future upgrade.
+
   RN's `Pressable` is auto-bound to the ShadowTree by the babel plugin, so use
   it directly (via the re-export in `themedComponents.tsx`). For RNGH
   gesture composition (Swipeable underlays, `GestureDetector` chains), import
   `Pressable` from `react-native-gesture-handler` at the call site — also
   without a `withUnistyles` wrapper.
+
 - **Shared themed wrappers live in `src/components/atoms/themedComponents.tsx`.**
   Use `ThemedBottomSheetTextInput`, `ThemedActivityIndicator`, and
   `OnPrimaryActivityIndicator` from there instead of recreating per-file
@@ -106,7 +121,25 @@ happen inside that factory.
   detail screen being pushed over the tabs (that only pauses from the second
   push down — native-stack treats the screen directly under the focused one
   as active — but `Home > Profile > HomeManagement > HomeDetail` reaches it).
-  The cost is higher idle memory/CPU for the tabs. Every other navigator
+  **The cost is not just idle memory.** `'none'` keeps the blurred subtree
+  _mounted and subscribed_, so it keeps doing work:
+
+  - every Apollo `useQuery` in the hidden tabs stays watching the cache and
+    **re-renders on any write that touches its fields** — a pantry mutation
+    re-renders the hidden shopping-list and meal-plan trees too;
+  - subscriptions, `AppState`/`NetInfo` listeners and polling intervals in those
+    trees keep firing;
+  - Reanimated/gesture handlers stay attached, and their layout effects keep
+    running on every commit.
+
+  So the trade is _one_ multi-second freeze on resume against continuous
+  background render work for the lifetime of the session. That is the right
+  trade for 4 FlashLists, and the wrong one almost everywhere else — which is
+  why every other navigator stays on `'pause'`, and why adding a fifth tab or a
+  heavy subscription to a tab should prompt re-measuring rather than assuming.
+
+  Asserted by `HomeTabs.test.tsx` and `RootNavigator.test.tsx` (the latter
+  checks `Home` is the ONLY root screen that opts out). Every other navigator
   stays on the default `'pause'`. (Unistyles ShadowTree updates on paused
   screens are unrelated and already fixed as of `react-native-unistyles@3.3.0`.)
 
@@ -115,25 +148,87 @@ The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 
 ### React Compiler Conventions
 
-- **Do not use `useMemo` or `useCallback`.**  The `babel-plugin-react-compiler` plugin automatically
-  memoizes values and callbacks. Manual `useMemo`/`useCallback` is redundant and should not be added.
-- **Never write try-catch or try-finally inside hook/component bodies.** The React Compiler
-  bails out entirely on hooks containing try-catch **or try-finally**, preventing
-  auto-memoization of all derived values. The `react-compiler/react-compiler` ESLint rule
-  has a [known bug](https://github.com/facebook/react/issues/35644) where it **silently
-  stops reporting all diagnostics** when encountering unsupported syntax like `finally` —
-  producing zero warnings instead of flagging the bailout. The `react-hooks/todo` rule
-  catches these silent bailouts. Use the shared helpers from `src/utils/compilerSafeWrappers.ts`
-  instead.
+> **Rules here carry their evidence.** Each one that constrains how you write code
+> states what was checked, against which installed version, and the command that
+> re-derives it. That is deliberate: three rules in this file were once justified by
+> claims that had stopped being true (a `try/catch` compiler bailout that does not
+> occur, an `exhaustive-deps` exemption the cited page never granted, an upstream
+> issue standing in for behaviour nobody re-checked), and nothing made them
+> identifiable as expired short of re-running a full review. **If you change a rule
+> here, record the check beside it. If a rule has no check, treat its justification
+> as unverified.**
+
+- **Default to NOT writing `useMemo` / `useCallback`.** `babel-plugin-react-compiler`
+  memoizes values and callbacks for you, so manual memoization is redundant in the
+  ordinary case. This is a default, not an absolute — reach for it where you need
+  referential stability the compiler cannot give you:
+
+  - a value that goes into a **dependency array** (the compiler memoizes values; it does
+    not re-run an effect you forgot to depend on),
+  - a prop read by something the compiler did not compile — e.g. a third-party component
+    doing its own `===` check,
+  - anything in a file the compiler **bails out of**. 63 files currently do; check
+    `scripts/check-compiler-bailouts.baseline.json` before assuming coverage.
+
+  The lint rule stays an **error** so the exception has to be written down rather than
+  waved through: add `// eslint-disable-next-line no-restricted-imports` with the reason.
+  (An error with a documented escape hatch, not a warning — the repo already carries
+  warnings nobody reads, and "this component isn't compiled" is exactly the kind of
+  reasoning that should survive in the diff.)
+
+- **Inside hook/component bodies, two `try` shapes make the React Compiler bail out on
+  the whole function** (so none of its derived values are memoized):
+
+  1. **A finalizer** — any `finally`, with or without a `catch`. Also a catch-less `try`.
+  2. **A "value block" inside the `try` body** — `?.`, `??`, `&&`, `||`, or a ternary.
+
+  A `try/catch` whose body is **plain statements only** compiles fine. So keep the
+  conditional part out of the `try`:
+
+  ```ts
+  // BAILS — `?? null` is a value block inside the try
+  let data = null;
+  try { data = (await client.query(…)).data ?? null; } catch {}
+
+  // COMPILES — try body is a plain assignment; the value block moved out
+  let result;
+  try { result = await client.query(…); } catch {}
+  const data = result?.data ?? null;
+  ```
+
+  > **Verified 2026-08 against `babel-plugin-react-compiler@1.0.0`.** Re-derive with
+  > `node scripts/probe-compiler-try-forms.mjs`, which compiles one fixture per shape and
+  > prints the compiler's own diagnostic (`"Handle TryStatement with a finalizer
+('finally') clause"`, `"Support value blocks (conditional, logical, optional chaining,
+etc) within a try/catch statement"`, `"Unexpected terminal in optional"`).
+  >
+  > This rule previously read "never write try-catch **or** try-finally". That was
+  > over-broad — a plain `try/catch` compiles — but it was not wrong by accident: most
+  > real `try` bodies contain a `?.` or `??`, which is why the blanket ban looked correct.
+  > `node scripts/check-compiler-bailouts.mjs` is what actually enforces this; it catches
+  > a mis-shaped `try` that no linter sees.
+
+  The `react-compiler/react-compiler` ESLint rule has a
+  [known bug](https://github.com/facebook/react/issues/35644) where it **silently stops
+  reporting all diagnostics** on unsupported syntax like `finally` — zero warnings rather
+  than a flagged bailout. `react-hooks/todo` catches these, and
+  `node scripts/check-compiler-bailouts.mjs` is the backstop that actually compiles every
+  file. For the `finally` cases, use the shared helpers in
+  `src/utils/finallyHelpers.ts`.
+
 - **Never read/write `ref.current` during render.** Use the "adjusting state during render"
   pattern (`useState` + conditional `setState`) for comparing previous/current values.
 - **Hook return objects are auto-memoized by the compiler** — but only if the compiler doesn't
-  bail out. Once try-catch is extracted, return objects like `{ actions }` become stable automatically.
-- **`React.memo` is unnecessary** — the compiler caches JSX elements at the parent call site,
-  making `React.memo` redundant. This includes FlashList/FlatList `renderItem` components:
-  FlashList v2's `ViewHolder` already applies `===` reference equality on `item`, and the
-  compiler memoizes inline `renderItem` functions in compiled parents. Do not add `React.memo`
-  or custom comparators to any component.
+  bail out. Once the `finally` is extracted, return objects like `{ actions }` become stable
+  automatically.
+- **`React.memo` is normally unnecessary** — the compiler caches JSX elements at the parent
+  call site. This includes FlashList/FlatList `renderItem` components: FlashList v2's
+  `ViewHolder` already applies `===` reference equality on `item`, and the compiler memoizes
+  inline `renderItem` functions in compiled parents.
+
+  The same caveat as above applies: "the parent memoizes it" holds only for a parent the
+  compiler actually compiled. If a profile points at a component whose parent is in the
+  bailout baseline, `React.memo` there is a legitimate fix — say so in a comment.
 
 ### `scheduleOnRN` Worklet Convention
 
@@ -143,14 +238,16 @@ on Android because the worklet serializer cannot capture closures created at cal
 
 ```ts
 // CORRECT — callback defined in RN scope
-const handlePress = (id: string) => { /* ... */ };
+const handlePress = (id: string) => {
+  /* ... */
+};
 const gesture = Gesture.Tap().onEnd(() => {
   scheduleOnRN(handlePress)(id);
 });
 
 // WRONG — inline function crashes on Android
 const gesture = Gesture.Tap().onEnd(() => {
-  scheduleOnRN(() => handlePress(id))();  // native crash
+  scheduleOnRN(() => handlePress(id))(); // native crash
 });
 ```
 
@@ -161,14 +258,17 @@ booleans). Capture function dependencies via RN-scope closure instead:
 
 ```ts
 // CORRECT — capture onDismiss via closure, pass only primitives
-const handleDismiss = () => { onDismiss(id); };
+const handleDismiss = () => {
+  onDismiss(id);
+};
 scheduleOnRN(handleDismiss);
 
 // WRONG — passing a function reference through the worklet boundary
-scheduleOnRN(dismissEntry, onDismiss, id);  // onDismiss is an object in release
+scheduleOnRN(dismissEntry, onDismiss, id); // onDismiss is an object in release
 ```
 
 Two ESLint `no-restricted-syntax` rules enforce this at lint time:
+
 1. No inline functions as the first argument
 2. No more than 2 arguments (prevents passing function refs as extra args)
 
@@ -189,6 +289,7 @@ state (e.g., "load more" visible when no more items exist) is acceptable — it
 self-corrects when the network response arrives.
 
 **When adding new paginated connections:**
+
 - Use `itemsConnectionFieldPolicy()` or `mergeConnectionByNodeId()` for merge logic
 - Use `extractNodes()` / `normalizeConnection()` helpers which return `[]` for missing edges
 - Use `cache-and-network` → `cache-first` fetch policy so the network fires immediately on restore
@@ -198,16 +299,16 @@ self-corrects when the network response arrives.
 Each feature under `src/features/<name>/` is treated as a self-contained module
 with a small public surface. The convention:
 
-| Subfolder | Public? | Notes |
-|---|---|---|
-| `screens/` | ✅ Public | Imported by navigation stacks |
-| `manifest.ts` | ✅ Public | Wired into `FEATURE_REGISTRY` |
-| `hooks/` (top-level files only) | ✅ Public | Cross-feature consumers may import top-level hooks |
-| `components/` | ⚠️ Mostly internal | Shared UI atoms/molecules belong in `src/components/`; feature-private cards/rows stay here |
-| `context/` | 🔒 Internal | Cross-feature consumers should not reach into another feature's context |
-| `graphql/` | 🔒 Internal | Other features should compose their own queries; only the feature's own hooks read from these documents |
-| `hooks/mutations/`, `hooks/<deeper>/` | 🔒 Internal | Lifecycle / mutation primitives — stay within the feature |
-| `utils/` | 🔒 Internal | Feature-specific helpers — stay within the feature |
+| Subfolder                             | Public?            | Notes                                                                                                   |
+| ------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `screens/`                            | ✅ Public          | Imported by navigation stacks                                                                           |
+| `manifest.ts`                         | ✅ Public          | Wired into `FEATURE_REGISTRY`                                                                           |
+| `hooks/` (top-level files only)       | ✅ Public          | Cross-feature consumers may import top-level hooks                                                      |
+| `components/`                         | ⚠️ Mostly internal | Shared UI atoms/molecules belong in `src/components/`; feature-private cards/rows stay here             |
+| `context/`                            | 🔒 Internal        | Cross-feature consumers should not reach into another feature's context                                 |
+| `graphql/`                            | 🔒 Internal        | Other features should compose their own queries; only the feature's own hooks read from these documents |
+| `hooks/mutations/`, `hooks/<deeper>/` | 🔒 Internal        | Lifecycle / mutation primitives — stay within the feature                                               |
+| `utils/`                              | 🔒 Internal        | Feature-specific helpers — stay within the feature                                                      |
 
 **Cross-feature reach is OK only for:** `screens`, `manifest`, top-level `hooks`,
 and the `<feature>Fragments.generated.ts` types (when composing your own
@@ -237,8 +338,10 @@ import {
 } from '#/test-utils/apolloMockProvider';
 
 const operationMocks: MockedResponse[] = [
-  { request: { query: GetItemDoc, variables: { id: '1' } },
-    result: { data: { item: { __typename: 'Item', id: '1', name: 'A' } } } },
+  {
+    request: { query: GetItemDoc, variables: { id: '1' } },
+    result: { data: { item: { __typename: 'Item', id: '1', name: 'A' } } },
+  },
 ];
 
 const { result } = renderHookWithApollo(() => useItem('1'), { operationMocks });
@@ -254,6 +357,7 @@ jest.mock('@apollo/client/react', () => ({
 ```
 
 The helper supports two modes:
+
 - **`operationMocks: MockedResponse[]`** — explicit per-operation request/response pairs (preferred for assertions on exact data flow)
 - **`mocks` + `resolvers`** — schema-driven auto-mocks via `@graphql-tools/mock` (preferred for setup-heavy tests where exact shapes don't matter)
 
@@ -261,13 +365,28 @@ For mutation tests: assert on the cache after the mutation, not on the mock func
 
 **Apollo test gotchas:**
 
-1. **`errorPolicy: 'all'` defeats `executeMutation`'s catch path.** The shared
-   `apolloMockProvider` wrapper sets `mutate: { errorPolicy: 'all' }`, so Apollo
-   mutations never throw — they resolve with `{ data: undefined, error }`. Hook
-   code wrapped in `executeMutation(fn, onError)` therefore never invokes
-   `onError` on Apollo errors, breaking failure-path tests. Workaround: mock
-   `executeMutation` directly with
-   `mockImplementationOnce((_, onError) => { onError(new Error('fail')); return false; })`.
+1. **A failing mutation RESOLVES; it does not throw.** Both production
+   (`apollo/client.ts`) and the shared `apolloMockProvider` set
+   `mutate: { errorPolicy: 'all' }`, so a GraphQL or network failure arrives as
+   `{ data: undefined, error }`. A `catch` around a mutation therefore only sees
+   a link-level throw (e.g. `authLink` cancelling during logout).
+
+   Drive a failure with an operation mock that carries an `error` and assert the
+   hook's real behaviour:
+
+   ```ts
+   const failing = recordMock(SomeDocument, {
+     error: new Error('network down'),
+   });
+   renderHookWithApollo(() => useThing(), { operationMocks: [failing.mock] });
+   ```
+
+   Do NOT stub a helper to fake the throw — that tests a path the app barely
+   takes. This was previously documented as a workaround around
+   `executeMutation`; removing that wrapper surfaced five hooks that keyed
+   success off "the call returned" and so reported a failed write as a success.
+   **Put the failure handling where the failure arrives: on the resolved
+   result**, not only in the `catch`.
 
 2. **Use `variables: () => true` for complex transformed inputs.** When a
    mutation's `input` is built from a non-trivial transform (Spoonacular →
@@ -318,17 +437,18 @@ For mutation tests: assert on the cache after the mutation, not on the mock func
 
 Pick the cache-update pattern based on what the mutation changes:
 
-| Pattern | Use when | Example |
-|---|---|---|
-| **No `update` callback** (preferred default) | Mutation returns the entity and Apollo auto-normalizes by `__typename + id` | `useAdjustPantryItemQuantity` — the mutation spreads the hook's fragment on the response; Apollo writes through automatically |
-| **`cache.modify` on parent aggregates** | Need to update parent stat fields not in the response | `useRecipeReviews` — patches `Recipe.totalReviews` / `averageRating` / `rating{N}Count` aggregates (`recipeReviewCacheUpdaters`) after create/update/delete review. (`Pantry.stats` is instead kept current via the `Pantry.stats` `mergeObjects` field policy + mutation responses — no manual `cache.modify`.) |
-| **`cache.modify` on entity fields BEFORE firing the mutation** | Optimistic UI without a callback — set fields synchronously, revert from a snapshot on error | `useToggleShoppingItem` — flips `purchaseInfo.isPurchased` + moves the item between purchased/unpurchased connections immediately, reverts in `onError` |
-| **`updateEntityFieldsLocalFirst`** | Settings-shaped mutation: a normalized entity whose GraphQL field names ARE the flat setting names, updated a field or two at a time | `useAppSettings` (`UserSettings`), `useNotificationSettings` (`NotificationPreferences`) — writes the fields, fires with `context: { localFirst: true }`, reverts from the caller's `previous` snapshot only on `'rejected'` |
-| **`cache.modify` on connection edges + parent counts** | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list) | `useToggleShoppingItem`, `useRemoveShoppingItem` — `moveShoppingListItemTo*` helpers |
-| **`writeFragment`** | Subscription handler receives an entity push and writes it through | `usePantrySubscriptions`, `useShoppingListSubscriptions` |
-| **`refetchQueries`** (last resort) | Mutation affects queries whose shape can't be derived from the response | `CreateHomeScreen` (refetches home list after creating home), `useRecipePreload` |
+| Pattern                                                        | Use when                                                                                                                             | Example                                                                                                                                                                                                                                                                                                          |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **No `update` callback** (preferred default)                   | Mutation returns the entity and Apollo auto-normalizes by `__typename + id`                                                          | `useAdjustPantryItemQuantity` — the mutation spreads the hook's fragment on the response; Apollo writes through automatically                                                                                                                                                                                    |
+| **`cache.modify` on parent aggregates**                        | Need to update parent stat fields not in the response                                                                                | `useRecipeReviews` — patches `Recipe.totalReviews` / `averageRating` / `rating{N}Count` aggregates (`recipeReviewCacheUpdaters`) after create/update/delete review. (`Pantry.stats` is instead kept current via the `Pantry.stats` `mergeObjects` field policy + mutation responses — no manual `cache.modify`.) |
+| **`cache.modify` on entity fields BEFORE firing the mutation** | Optimistic UI without a callback — set fields synchronously, revert from a snapshot on error                                         | `useToggleShoppingItem` — flips `purchaseInfo.isPurchased` + moves the item between purchased/unpurchased connections immediately, reverts in `onError`                                                                                                                                                          |
+| **`updateEntityFieldsLocalFirst`**                             | Settings-shaped mutation: a normalized entity whose GraphQL field names ARE the flat setting names, updated a field or two at a time | `useAppSettings` (`UserSettings`), `useNotificationSettings` (`NotificationPreferences`) — writes the fields, fires with `context: { localFirst: true }`, reverts from the caller's `previous` snapshot only on `'rejected'`                                                                                     |
+| **`cache.modify` on connection edges + parent counts**         | Entity moves between filtered connections (purchased ↔ unpurchased, list ↔ list)                                                     | `useToggleShoppingItem`, `useRemoveShoppingItem` — `moveShoppingListItemTo*` helpers                                                                                                                                                                                                                             |
+| **`writeFragment`**                                            | Subscription handler receives an entity push and writes it through                                                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                                                                                                                                                                                                                                                         |
+| **`refetchQueries`** (last resort)                             | Mutation affects queries whose shape can't be derived from the response                                                              | `CreateHomeScreen` (refetches home list after creating home), `useRecipePreload`                                                                                                                                                                                                                                 |
 
 Defaults:
+
 - `optimisticResponse` (callback form returning `Unmasked<TData>`) for mutations that need to materialize the cached entity for the optimistic shape; otherwise prefer the **cache.modify before mutation + revert on error** pattern (no callback needed, no `Unmasked<>` import).
 - `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
 - Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic.
@@ -364,14 +484,14 @@ online user whose term collides with a cached entry never reaches the rest of th
 
 **Current status:**
 
-| Hook                             | `localFirst` | Notes                                       |
-|----------------------------------|:------------:|---------------------------------------------|
-| `useUnitAutocomplete`            | `true`       | `cachedUnits` is the complete common-units set |
-| `useBrandAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 brands; full search online |
+| Hook                             | `localFirst` | Notes                                                     |
+| -------------------------------- | :----------: | --------------------------------------------------------- |
+| `useUnitAutocomplete`            |    `true`    | `cachedUnits` is the complete common-units set            |
+| `useBrandAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 brands; full search online     |
 | `useCategoryAutocomplete`        | `!isOnline`  | Warmed cache is first ~100 categories; full search online |
-| `useStoreAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 stores; full search online |
-| `useItemAutocomplete`            | `!isOnline`  | Seen-items LRU only; full catalog search online |
-| `useStorageLocationAutocomplete` | N/A          | Fully local, doesn't use `useAutocompleteSearch` |
+| `useStoreAutocomplete`           | `!isOnline`  | Warmed cache is first ~100 stores; full search online     |
+| `useItemAutocomplete`            | `!isOnline`  | Seen-items LRU only; full catalog search online           |
+| `useStorageLocationAutocomplete` |     N/A      | Fully local, doesn't use `useAutocompleteSearch`          |
 
 When adding cached data to a new autocomplete hook, pass `localFirst: !isOnline` unless the warmed
 cache is provably complete for the dataset (only then is unconditional `true` correct).
@@ -409,6 +529,7 @@ colocated fragments**, masked at the type level, materialized through
 reads).
 
 **Fragment locations:**
+
 - A component / hook owns its fragment in a sibling `<Name>.graphql` file
   (e.g. `PantryDetailInfo.graphql` next to `PantryDetailInfo.tsx`,
   `useUpdatePantryItem.graphql` next to `useUpdatePantryItem.ts`).
@@ -428,6 +549,7 @@ reads).
   `LoginUser`, `PartialUser`.
 
 **Don't:**
+
 - Don't add a new fragment to `*Fragments.graphql` without 2+ operations and
   1+ hook needing the identical shape, plus the consumer-list header.
 - Don't import the following names from `**/*Fragments.generated` (lint
@@ -450,10 +572,10 @@ reads).
 
 **Two valid `useFragment` consumer patterns — pick by use case:**
 
-| Pattern | Prop type | Cache miss | Use for |
-|---|---|---|---|
-| **A — strict** | `FragmentType<typeof XDoc>` | `return null` on `!complete` | List cells (`MyRecipeCard`, `SavedRecipeCard`, `PantryItemCard`, `HomeMemberCard`) — brief blanking is OK |
-| **B — resilient fallback** | `FragmentType<typeof XDoc> \| XFragment` | Fall back to source prop | Detail panels, sheets (`PantryDetailInfo`, `MealPlanSettingsSheet`) — must render without blanking |
+| Pattern                    | Prop type                                | Cache miss                   | Use for                                                                                                   |
+| -------------------------- | ---------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **A — strict**             | `FragmentType<typeof XDoc>`              | `return null` on `!complete` | List cells (`MyRecipeCard`, `SavedRecipeCard`, `PantryItemCard`, `HomeMemberCard`) — brief blanking is OK |
+| **B — resilient fallback** | `FragmentType<typeof XDoc> \| XFragment` | Fall back to source prop     | Detail panels, sheets (`PantryDetailInfo`, `MealPlanSettingsSheet`) — must render without blanking        |
 
 Pass the masked ref directly as `from`. Apollo's `useFragment` runs
 `cache.identify(from)` internally (which reads only `__typename` + the
@@ -546,6 +668,7 @@ fix the data flow or widen the type contract.
 
 **`useSuspenseQuery` / `useBackgroundQuery` — use selectively, not by default.** For this
 React Native app the practical benefit is small:
+
 - No SSR, so the streaming-SSR benefit Apollo markets doesn't apply.
 - `cache-and-network` + persisted MMKV cache already gives instant paint on cold start,
   which is what Suspense + cache-first would give.
@@ -616,12 +739,134 @@ import { Environment } from '../environment';
 // ❌ Don't do this — partial factories defeat the shared mock and reintroduce
 //    the per-test "missing method" fragility we removed:
 jest.mock('#/utils/environment', () => ({
-  Environment: { isDevelopment: jest.fn() },  // missing all other methods
+  Environment: { isDevelopment: jest.fn() }, // missing all other methods
 }));
 ```
 
 The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert on
 `logger.error` etc. directly without redefining the mock.
+
+### i18n Convention
+
+**Two ways to translate, and they differ only by whether you are in a component.**
+
+```ts
+import { useTranslation } from '#/i18n';   // components and hooks
+const { t } = useTranslation();
+
+import { t } from '#/i18n';                // module scope: services, utilities,
+                                           // mutation onError handlers
+```
+
+The module-scope `t` does **not** subscribe to language changes. A
+`no-restricted-syntax` rule enforces the hook in every `src/**/*.tsx`; a file
+that genuinely needs the module-scope one (a class component like
+`ErrorBoundary`, module-level config) imports it aliased as `tGlobal`, which
+keeps a bare `t(...)` in JSX unambiguously the hook's.
+
+There used to be four idioms, and nine files used two at once depending on
+whether the string had a variable in it. Don't reintroduce a third — in
+particular, `getI18n().t(...)` is no longer needed for interpolation: `t` takes
+i18next's full options (`t('key', { count })`, `t('key', 'English fallback')`).
+
+> The old `src/i18n/t.ts` helper reimplemented key-echo, string fallback and
+> `fallbackLng`, all of which i18next does natively. Verified against the
+> installed `i18next@26`; the probe is recorded in the docblock of
+> `src/i18n/index.ts`. Because it could not pass options, 25 call sites across
+> 15 files routed around it — which is what a helper that duplicates its
+> library costs.
+
+**Error and empty-state copy has one home.** `errors.*`, `empty.*` and
+`labels.*` are canonical. A feature namespace must not redeclare a string one of
+them already has — 33 did, which is why the same English rendered as different
+Albanian depending on the screen. Enforced by
+`__tests__/i18n/canonicalVocabulary.test.ts`, with an exemption list where each
+entry names its exact key set and must still describe a live duplicate.
+
+**Never concatenate a number with a translated noun.**
+
+```ts
+`${count} ${t('recipes.ingredientsSuffix')}`   // ✗ "1 ingredients"
+t('recipes.ingredientCount', { count })        // ✓
+```
+
+Concatenation loses plural agreement, bakes English word order into code, and
+skips locale number formatting. Give each plural form its own whole sentence
+rather than interpolating a word into one. Enforced by
+`__tests__/i18n/numberNounConcatenation.test.ts`, which also bans appending a
+literal `'s'` — that shape produced "2 lattinas" in Italian and "2 kgs" in
+English.
+
+**Plural categories are derived, not hand-written.**
+`completePluralCategories` in `src/i18n/config.ts` fills any CLDR category a
+locale needs but its JSON lacks, from `_other`, before `init`.
+
+> A missing category is not graceful degradation. Verified against `i18next@26`:
+> it does NOT fall back to that locale's `_other` — it falls through to
+> `fallbackLng`, so an Italian user at a count of 1,000,000 reads `"1000000
+> items"` in English. Spanish and Italian need `many`; nothing this app counts
+> reaches it, so the 82 hand-written strings would never have rendered.
+> `__tests__/i18n/pluralCategories.test.ts` asks `Intl.PluralRules` which
+> categories each locale needs rather than hardcoding one/other, so a locale
+> added later is checked for whatever IT needs.
+
+**Never inflect copy for the reader's gender.** The app does not know it, does
+not ask, and in a two-gender language there is no correct form for a non-binary
+person — so a `context` parameter cannot be right, only less often wrong. Use a
+construction with no gendered slot; every locale here has one:
+
+```
+it  "Sei sicuro di voler X?"   ->  "Vuoi davvero X?"
+sq  "Je i sigurt që do ta X?"  ->  "Vërtet dëshiron ta X?"
+es  "¡Bienvenido a X!"         ->  "¡Te damos la bienvenida a X!"
+```
+
+Enforced by `__tests__/i18n/addresseeGender.test.ts`. This is about the
+ADDRESSEE only — an adjective agreeing with a **noun** is correct and lives in
+per-context keys (`labels.default` → `Predeterminado`,
+`storageLocationCard.default` → `Predeterminada`). That is a fact about the
+language, not about the data, so it belongs in the key, never in a runtime
+parameter.
+
+**None of the guards proves completeness.** A string reaching JSX through a
+variable is invisible to all of them — 36% of `<Text>` children arrive that way.
+Typing the sink was measured (it costs ~0 to typecheck) and rejected as too
+invasive; pseudolocalization is the preferred answer when this is picked up.
+See `docs/i18n-architecture.md`.
+
+### Session End Convention
+
+**`authService.logout()` is the only sign-out.** There were two paths clearing
+different subsets, and the profile button used the weaker one — so the previous
+person's notification inbox, scanner history, item-autocomplete LRU and queued
+mutations survived a sign-out on a shared device.
+
+`SESSION_SCOPED_STATE` in `src/store/resetManager.ts` is the single list of what
+a session end removes. `resetStore` applies it in memory and
+`clearAuthFromStorage` deletes the same keys from the persisted blob, so the two
+cannot disagree. It spreads the notification and scanner slices' own
+`initial*State`, so a field added to either is cleared without anyone
+remembering.
+
+`__tests__` equivalent lives at `src/store/__tests__/sessionEndLeavesNoData.test.ts`:
+it plants a marker in **every** key of the real `PERSISTED_KEYS` allowlist and
+requires each survivor to be named in `KEPT_ON_PURPOSE` with a reason. Adding a
+persisted key fails the test until someone classifies it.
+
+### Bundled Credentials Convention
+
+Every credential-shaped var in `generate-env.js`'s `KEYS` must be classified in
+`scripts/check-bundled-secrets.mjs` as `PUBLIC_BY_DESIGN` or
+`ACCEPTED_FINDINGS`, or the build fails.
+
+The test is not "can it be extracted" — everything in a binary can be, and
+obfuscation does not change that. It is **what does this grant a hostile
+holder?** A credential is `PUBLIC_BY_DESIGN` only if it is write-only or
+identity-only, individually revocable, and rate-limited server-side (the
+Sentry-DSN / Datadog-client-token shape). An infrastructure credential — a
+storage backend's basic auth — never qualifies, however narrowly scoped.
+
+Decisions and their reasoning: `docs/bundled-credentials-decision.md`.
 
 ### Verification Commands
 
@@ -632,3 +877,16 @@ npm run typecheck  # Verify TypeScript changes
 npm run lint       # Verify code quality
 npm test           # Run test suite
 ```
+
+Two checks are not part of those and fail independently:
+
+```bash
+node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
+                                           # and no extracted leaf re-absorbed
+node scripts/check-bundled-secrets.mjs --self-test
+```
+
+`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
+bails in the files where a variant call was deliberately extracted into a leaf —
+moving it back into the composite keeps the count unchanged and would otherwise
+pass.

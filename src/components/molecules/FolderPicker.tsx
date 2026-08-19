@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -59,6 +60,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   onDeleteFolder,
   folderActionLoading = false,
 }) => {
+  const { t } = useTranslation();
   // Track what should happen after the folder picker dismisses
   const nextSheetActionRef = useRef<'manage' | null>(null);
 
@@ -160,7 +162,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
     // Show toast for protected folders
     if (isProtectedFolder(folder)) {
-      toastService.info(`"${folder}" cannot be renamed or deleted`);
+      toastService.info(t('toasts.folderProtected', { folder }));
       return;
     }
 
@@ -188,8 +190,8 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     // Check for duplicate
     if (folders.includes(newName)) {
       alertService.alert(
-        'Error',
-        `A folder named "${newName}" already exists.`,
+        t('labels.error'),
+        t('folderPicker.duplicate', { name: newName }),
       );
       return;
     }
@@ -252,7 +254,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
         >
           <View style={styles.header}>
             <Text size="lg" weight="semibold">
-              Select Folder
+              {t('folderPicker.selectFolder')}
             </Text>
             <Pressable
               onPress={handleCancel}
@@ -268,7 +270,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               <Icon name="search" size={18} tone="textSecondary" />
               <ThemedBottomSheetTextInput
                 style={styles.searchInput}
-                placeholder="Search folders..."
+                placeholder={t('folderPicker.searchPlaceholder')}
                 defaultValue={searchQuery}
                 onChangeText={setSearchQuery}
                 autoCapitalize="none"
@@ -295,7 +297,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               tone={!selectedFolder ? 'accent' : 'primary'}
               style={styles.folderName}
             >
-              No Folder
+              {t('labels.noFolder')}
             </Text>
             {!selectedFolder && (
               <Icon name="checkmark" size={20} tone="primary" />
@@ -311,7 +313,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               <View style={styles.newFolderContainer}>
                 <ThemedBottomSheetTextInput
                   style={styles.newFolderInput}
-                  placeholder="Enter folder name..."
+                  placeholder={t('folderPicker.namePlaceholder')}
                   defaultValue={newFolderName}
                   onChangeText={setNewFolderName}
                   autoFocus
@@ -334,7 +336,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
                       !newFolderName.trim() && styles.createButtonTextDisabled,
                     ]}
                   >
-                    Create
+                    {t('labels.create')}
                   </Text>
                 </AppPressable>
               </View>
@@ -345,7 +347,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               >
                 <Icon name="add" size={20} tone="primary" />
                 <Text size="base" weight="medium" tone="accent">
-                  Create New Folder
+                  {t('folderPicker.createNew')}
                 </Text>
               </AppPressable>
             ))}
@@ -354,7 +356,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           {loading ? (
             <View style={styles.loadingContainer}>
               <Text size="base" tone="secondary">
-                Loading folders...
+                {t('folderPicker.loading')}
               </Text>
             </View>
           ) : filteredFolders.length > 0 ? (
@@ -371,7 +373,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
           ) : folders.length > 0 && searchQuery ? (
             <View style={styles.emptyContainer}>
               <Text size="base" tone="secondary" align="center">
-                No folders match "{searchQuery}"
+                {t('folderPicker.noMatches', { query: searchQuery })}
               </Text>
             </View>
           ) : null}
@@ -384,7 +386,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               align="center"
               style={styles.hintText}
             >
-              Long press a folder to edit or delete
+              {t('folderPicker.longPressHint')}
             </Text>
           )}
 

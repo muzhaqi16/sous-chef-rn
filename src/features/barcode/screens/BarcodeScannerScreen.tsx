@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Camera, useCameraDevices } from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';

@@ -13,7 +13,7 @@ jest.mock('#utils/nutritionUtils', () => ({
     servingSize: '100g',
   })),
   generateHighlights: jest.fn(() => [
-    { label: 'High Protein', type: 'positive' },
+    { labelKey: 'nutritionHighlights.highProtein', type: 'positive' },
   ]),
   formatNutritionValue: jest.fn((val: number, unit: string) =>
     unit ? `${val}${unit}` : `${val}`,

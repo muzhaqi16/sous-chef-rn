@@ -2,8 +2,10 @@ import { useMutation } from '@apollo/client/react';
 import { AddLowStockItemsToShoppingListDocument } from '#features/pantry/graphql/pantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation, unwrapPayload } from '#/utils/compilerSafeWrappers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { t } from '#/i18n';
+import { getI18n } from '#/i18n/config';
 
 interface UseAddLowStockToShoppingListOptions {
   homeId: string | undefined;
@@ -23,29 +25,40 @@ export function useAddLowStockToShoppingList({
 
   const addLowStockToShoppingList = async () => {
     if (!homeId) {
-      toastService.error('No home selected');
+      toastService.error(t('errors.noHomeSelected'));
       return;
     }
 
-    const result = await executeMutation(
-      async () => {
-        const { data } = await addLowStockMutation({
-          variables: { input: { homeId } },
-        });
-        return unwrapPayload(
-          data?.addLowStockItemsToShoppingList,
+    // The `?.` unwrap sits outside the try — a value block inside a try body
+    // makes the React Compiler bail out of this hook.
+    let response;
+    let result;
+    try {
+      response = await addLowStockMutation({
+        variables: { input: { homeId } },
+      });
+    } catch (error: unknown) {
+      toastService.error(
+        error instanceof Error ? error.message : t('errors.addLowStockFailed'),
+      );
+    }
+
+    const payload = response?.data?.addLowStockItemsToShoppingList;
+    if (response) {
+      try {
+        result = unwrapPayload(
+          payload,
           'AddLowStockItemsToShoppingListPayload',
-          'Failed to add low stock items',
+          t('errors.addLowStockFailed'),
         );
-      },
-      (error: unknown) => {
+      } catch (error: unknown) {
         toastService.error(
           error instanceof Error
             ? error.message
-            : 'Failed to add low stock items',
+            : t('errors.addLowStockFailed'),
         );
-      },
-    );
+      }
+    }
     if (!result) return;
 
     // The payload's shared summary carries the authoritative counters — the
@@ -54,17 +67,22 @@ export function useAddLowStockToShoppingList({
     const skippedCount = result.summary.skipped;
 
     if (addedCount === 0 && skippedCount === 0) {
-      toastService.info('No low stock items found');
+      toastService.info(t('toasts.noLowStockItems'));
     } else if (addedCount > 0) {
-      const skippedText = skippedCount > 0 ? ` (${skippedCount} skipped)` : '';
+      // Two whole sentences rather than a suffix: a parenthetical appended to
+      // a translated string is not reorderable, and the plural form of the
+      // noun depends on `count` in most languages.
       toastService.success(
-        `Added ${addedCount} item${
-          addedCount !== 1 ? 's' : ''
-        } to shopping list${skippedText}`,
+        skippedCount > 0
+          ? getI18n().t('toasts.addedItemsWithSkipped', {
+              count: addedCount,
+              skipped: skippedCount,
+            })
+          : getI18n().t('toasts.addedItems', { count: addedCount }),
       );
     } else {
       toastService.info(
-        `All ${skippedCount} low stock items were already in your list`,
+        getI18n().t('toasts.allLowStockAlreadyListed', { count: skippedCount }),
       );
     }
 

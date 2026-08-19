@@ -29,7 +29,7 @@ describe('ScreenHeader', () => {
   it('calls onBack when back button is pressed', async () => {
     const user = userEvent.setup();
     render(<ScreenHeader {...defaultProps} />);
-    const backButton = screen.getByLabelText('Go back');
+    const backButton = screen.getByLabelText('Go Back');
     await user.press(backButton);
     expect(defaultProps.onBack).toHaveBeenCalledTimes(1);
   });
@@ -47,7 +47,7 @@ describe('ScreenHeader', () => {
 
   it('disables back button when backButtonDisabled is true', () => {
     render(<ScreenHeader {...defaultProps} backButtonDisabled />);
-    const backButton = screen.getByLabelText('Go back');
+    const backButton = screen.getByLabelText('Go Back');
     expect(backButton.props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );

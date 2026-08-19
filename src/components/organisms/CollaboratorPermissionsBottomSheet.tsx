@@ -16,12 +16,9 @@ import {
   UpdateCollaboratorPermissionsDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { BaseSwitch } from '#components/base/BaseSwitch';
-import {
-  executeMutation,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { t } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
 import { ROLE_PERMISSIONS } from '#/constants/collaboratorRoles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
@@ -94,6 +91,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   CollaboratorPermissionsBottomSheetRef,
   CollaboratorPermissionsBottomSheetProps
 >(({ shoppingListId, onSuccess }, ref) => {
+  // `useTranslation` and not the module-level `t`: every label in this sheet is
+  // read during render, so the module-level helper leaves them showing the old
+  // language until something else happens to re-render the sheet.
+  const { t } = useTranslation();
   const [collaborator, setCollaborator] =
     useState<ShoppingListCollaboratorFragment | null>(null);
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole | null>(
@@ -186,7 +187,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
   // Each permission toggle fires immediately (overriding the role's default)
   // and reverts the switch if the server refuses it.
-  const handleTogglePermission = (
+  const handleTogglePermission = async (
     key: keyof CollabPermissions,
     value: boolean,
   ) => {
@@ -196,19 +197,20 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
     setPermissions(next);
     const collaboratorId = collaborator.collaboratorId;
 
-    executeMutation(
-      async () => {
-        const result = await updatePermissions({
-          variables: {
-            input: { shoppingListId, collaboratorId, permissions: next },
-          },
-        });
-        if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
-          setPermissions(previous);
-        }
-      },
-      () => setPermissions(previous),
-    );
+    let result;
+    try {
+      result = await updatePermissions({
+        variables: {
+          input: { shoppingListId, collaboratorId, permissions: next },
+        },
+      });
+    } catch {
+      setPermissions(previous);
+      return;
+    }
+    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+      setPermissions(previous);
+    }
   };
 
   // Available roles (excluding OWNER - that's only for list owners)
@@ -225,10 +227,10 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
       <BottomSheetHeader
-        title="Edit Permissions"
+        title={t('collaborators.editPermissions')}
         onCancel={() => setIsVisible(false)}
         onConfirm={handleSubmit}
-        confirmLabel="Update"
+        confirmLabel={t('labels.update')}
         confirmDisabled={isSubmitting || !selectedRole}
       />
       <BottomSheetScrollView
@@ -269,14 +271,14 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                     />
                     <View>
                       <Text size="md" weight="semibold">
-                        {roleInfo.label}
+                        {t(roleInfo.labelKey)}
                       </Text>
                       <Text
                         size="sm"
                         tone="secondary"
                         style={styles.roleDescription}
                       >
-                        {roleInfo.description}
+                        {t(roleInfo.descriptionKey)}
                       </Text>
                     </View>
                   </View>
@@ -291,7 +293,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                       weight="semibold"
                       style={styles.permissionsTitle}
                     >
-                      Permissions:
+                      {t('collaboratorRoles.permissionsTitle')}
                     </Text>
                     <View style={styles.permissionsList}>
                       {roleInfo.permissions.map((permission, index) => (
@@ -309,7 +311,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
                               !permission.granted && styles.permissionDenied
                             }
                           >
-                            {permission.label}
+                            {t(permission.labelKey)}
                           </Text>
                         </View>
                       ))}

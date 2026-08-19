@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
 import { LoadingInline } from '#components/base/Loading';
@@ -25,7 +25,6 @@ import { Button } from '#components/base/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { CollaboratorMemberCard } from '#features/shoppingList/components/CollaboratorMemberCard';
@@ -100,36 +99,33 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           // No refetch needed: the update() callback removes the collaborator
           // from the cached connection in place.
           onPress: async () => {
-            const result = await executeMutation(
-              () =>
-                removeMember({
-                  variables: { input: { id: memberId } },
-                  update(cache, { data }) {
-                    // Only evict on success — a resolved error must not remove
-                    // the collaborator from the cache.
-                    if (
-                      data?.removeShoppingListCollaborator?.__typename !==
-                      'RemoveShoppingListCollaboratorPayload'
-                    ) {
-                      return;
-                    }
-                    removeCollaboratorFromShoppingListCache(
-                      cache,
-                      listId,
-                      memberId,
-                      { evictItem: true },
-                    );
-                  },
-                }),
-              error =>
-                handleMutationError(error, {
-                  operation: 'Remove Collaborator',
-                }),
-            );
-            alertIfRejected(
-              result,
-              t('shoppingListScreens.failedToRemoveMember'),
-            );
+            let result;
+            try {
+              result = await removeMember({
+                variables: { input: { id: memberId } },
+                update(cache, { data }) {
+                  // Only evict on success — a resolved error must not remove
+                  // the collaborator from the cache.
+                  if (
+                    data?.removeShoppingListCollaborator?.__typename !==
+                    'RemoveShoppingListCollaboratorPayload'
+                  ) {
+                    return;
+                  }
+                  removeCollaboratorFromShoppingListCache(
+                    cache,
+                    listId,
+                    memberId,
+                    { evictItem: true },
+                  );
+                },
+              });
+            } catch (error) {
+              handleMutationError(error, {
+                operation: 'Remove Collaborator',
+              });
+            }
+            alertIfRejected(result, t('errors.removeMemberFailed'));
           },
         },
       ],

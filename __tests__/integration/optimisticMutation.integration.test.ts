@@ -123,6 +123,16 @@ function buildSettledServerResponse(
           __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: newPurchased,
         },
+        // The server creates a purchase row on each mark-purchased, so the
+        // summary moves with `newPurchased`. The mutation selects it precisely
+        // so this lands in the cache — otherwise ItemDetail keeps showing the
+        // pre-toggle count.
+        purchaseHistory: {
+          __typename: 'PurchaseHistorySummary',
+          previouslyPurchased: newPurchased,
+          purchaseCount: newPurchased ? 1 : 0,
+          lastPurchaseDate: newPurchased ? '2026-01-01T00:00:00.000Z' : null,
+        },
         version: 2,
         updatedAt: '2025-01-02T00:00:00.000Z',
         category: 'Dairy',

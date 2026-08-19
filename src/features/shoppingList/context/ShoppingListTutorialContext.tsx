@@ -68,46 +68,46 @@ export const TUTORIAL_TOTAL_STEPS = 8;
 export const TUTORIAL_STEP_CONFIG: Record<
   string,
   {
-    title: string;
-    subtitle: string;
+    /** i18n key paths — this table is module-level, no hook. */
+    titleKey: string;
+    subtitleKey: string;
     rectKey: TutorialRectKey;
     stepIndex: number;
   }
 > = {
   [ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON]: {
-    title: 'Add an item',
-    subtitle: 'Tap + to add items to your shopping list',
+    titleKey: 'shoppingListTutorial.addButton.title',
+    subtitleKey: 'shoppingListTutorial.addButton.subtitle',
     rectKey: 'addButton',
     stepIndex: 0,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS]: {
-    title: 'Swipe to manage items',
-    subtitle: 'Swipe any item left to edit, or right to delete',
+    titleKey: 'shoppingListTutorial.swipeActions.title',
+    subtitleKey: 'shoppingListTutorial.swipeActions.subtitle',
     rectKey: 'itemCard',
     stepIndex: 3,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]: {
-    title: 'Mark as purchased',
-    subtitle: 'Tap the checkbox to mark this item as purchased',
+    titleKey: 'shoppingListTutorial.checkbox.title',
+    subtitleKey: 'shoppingListTutorial.checkbox.subtitle',
     rectKey: 'checkbox',
     stepIndex: 4,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE]: {
-    title: 'Record the price',
-    subtitle:
-      'Press and hold an item to enter its actual quantity and price before marking it purchased',
+    titleKey: 'shoppingListTutorial.longPress.title',
+    subtitleKey: 'shoppingListTutorial.longPress.subtitle',
     rectKey: 'itemCard',
     stepIndex: 5,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]: {
-    title: 'View purchased items',
-    subtitle: 'Tap to see your purchased items',
+    titleKey: 'shoppingListTutorial.purchasedTab.title',
+    subtitleKey: 'shoppingListTutorial.purchasedTab.subtitle',
     rectKey: 'purchasedTab',
     stepIndex: 6,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY]: {
-    title: 'Move to pantry',
-    subtitle: 'Tap to move this item to your pantry',
+    titleKey: 'shoppingListTutorial.moveToPantry.title',
+    subtitleKey: 'shoppingListTutorial.moveToPantry.subtitle',
     rectKey: 'archiveIcon',
     stepIndex: 7,
   },

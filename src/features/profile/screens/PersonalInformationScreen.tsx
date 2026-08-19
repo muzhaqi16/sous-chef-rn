@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
 import type {
   SettingItem,
@@ -19,10 +19,7 @@ import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { errorService } from '#/services/errorService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
-import {
-  executeMutation,
-  executeRefreshWithFinally,
-} from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
 const SECTION_TITLE_KEYS: Record<string, string> = {
@@ -89,18 +86,17 @@ export const PersonalInformationScreen: React.FC = () => {
       'Update Profile',
     );
 
-    const result = await executeMutation(
-      () =>
-        updateProfileMutation({
-          variables: { input },
-          context: { localFirst: true },
-        }),
-      error => {
-        errorService.reportError(error, {
-          operation: 'PersonalInformation.updateProfile',
-        });
-      },
-    );
+    let result;
+    try {
+      result = await updateProfileMutation({
+        variables: { input },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'PersonalInformation.updateProfile',
+      });
+    }
 
     // Rejection restores the snapshot; a queued (null) result keeps the write.
     if (classifyCreateResult(result) === 'rejected') {

@@ -112,7 +112,7 @@ jest.mock('../utils', () => ({
   removeFromHomesCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -259,10 +259,23 @@ describe('useHomeMutations', () => {
 
   describe('updateHome', () => {
     it('updates home name', async () => {
+      // Seeded because the server requires the version on every update, and the
+      // hook reads it off the cached home.
+      const cache = seedCache([
+        {
+          __typename: 'Home',
+          id: 'home-1',
+          name: 'Old Name',
+          allowJoinCode: false,
+          joinCode: null,
+          version: 3,
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
+      ]);
       const m = updateHomeMock({ id: 'home-1', name: 'Updated Name' });
       const { result } = renderHookWithApollo(
         () => useHomeMutations(createOptions()),
-        { operationMocks: [m.mock] },
+        { operationMocks: [m.mock], cache },
       );
 
       await act(async () => {
@@ -270,7 +283,7 @@ describe('useHomeMutations', () => {
       });
 
       expect(m.fired).toContainEqual({
-        input: { id: 'home-1', name: 'Updated Name' },
+        input: { id: 'home-1', name: 'Updated Name', version: 3 },
       });
     });
 

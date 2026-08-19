@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -7,14 +8,15 @@ import { Text } from '#components/atoms/Text';
 
 interface DateRangeOption {
   value: DateRange;
-  label: string;
+  /** i18n key path — the options array is module-level, so no hook. */
+  labelKey: string;
 }
 
 const DATE_RANGE_OPTIONS: DateRangeOption[] = [
-  { value: DateRange.LastWeek, label: 'Week' },
-  { value: DateRange.LastMonth, label: 'Month' },
-  { value: DateRange.LastQuarter, label: 'Quarter' },
-  { value: DateRange.LastYear, label: 'Year' },
+  { value: DateRange.LastWeek, labelKey: 'dateRange.week' },
+  { value: DateRange.LastMonth, labelKey: 'dateRange.month' },
+  { value: DateRange.LastQuarter, labelKey: 'dateRange.quarter' },
+  { value: DateRange.LastYear, labelKey: 'dateRange.year' },
 ];
 
 interface DateRangeFilterProps {
@@ -31,11 +33,12 @@ function DateRangeChip({
   isSelected: boolean;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   styles.useVariants({ selected: isSelected });
   return (
     <AppPressable onPress={onPress} style={styles.chip}>
       <Text size="sm" weight="medium" style={styles.chipText}>
-        {option.label}
+        {t(option.labelKey)}
       </Text>
     </AppPressable>
   );

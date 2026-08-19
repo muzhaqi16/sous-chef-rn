@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -36,6 +37,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
   loading = false,
 }) => {
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
+  const { t } = useTranslation();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onCancel,
@@ -60,7 +62,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
 
   const handleToggleTag = (tag: string) => {
     const newSelection = selectedTags.includes(tag)
-      ? selectedTags.filter(t => t !== tag)
+      ? selectedTags.filter(existing => existing !== tag)
       : [...selectedTags, tag];
     onSelect(newSelection);
   };
@@ -102,7 +104,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
       >
         <View style={styles.header}>
           <Text size="lg" weight="semibold">
-            Filter by Tags
+            {t('tagPicker.filterByTags')}
           </Text>
         </View>
 
@@ -112,7 +114,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
             <Icon name="search" size={18} tone="textSecondary" />
             <ThemedBottomSheetTextInput
               style={styles.searchInput}
-              placeholder="Search tags..."
+              placeholder={t('tagPicker.searchPlaceholder')}
               defaultValue={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -124,10 +126,10 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         <View style={styles.selectionRow}>
           <Text size="sm" tone="secondary">
             {selectedTags.length === 0
-              ? 'No tags selected'
-              : `${selectedTags.length} tag${
-                  selectedTags.length > 1 ? 's' : ''
-                } selected`}
+              ? t('tagPicker.noneSelected')
+              : t('tagPicker.selectedCount', {
+                  count: selectedTags.length,
+                })}
           </Text>
           {selectedTags.length > 0 && (
             <Pressable
@@ -135,7 +137,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="sm" weight="medium" tone="accent">
-                Clear all
+                {t('tagPicker.clearAll')}
               </Text>
             </Pressable>
           )}
@@ -148,7 +150,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         {loading ? (
           <View style={styles.loadingContainer}>
             <Text size="base" tone="secondary">
-              Loading tags...
+              {t('tagPicker.loading')}
             </Text>
           </View>
         ) : filteredTags.length > 0 ? (
@@ -167,13 +169,13 @@ export const TagPicker: React.FC<TagPickerProps> = ({
         ) : tags.length > 0 && searchQuery ? (
           <View style={styles.emptyContainer}>
             <Text size="base" tone="secondary" align="center">
-              No tags match "{searchQuery}"
+              {t('tagPicker.noMatches', { query: searchQuery })}
             </Text>
           </View>
         ) : (
           <View style={styles.emptyContainer}>
             <Text size="base" tone="secondary" align="center">
-              No tags available
+              {t('tagPicker.noTags')}
             </Text>
           </View>
         )}

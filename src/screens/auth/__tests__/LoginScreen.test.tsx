@@ -37,7 +37,7 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');

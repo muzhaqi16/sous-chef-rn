@@ -16,10 +16,6 @@ import {
 import { handleMutationError } from '#/utils/errorHandlers';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import {
-  executeMutation,
-  executeCacheUpdate,
-} from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   createAddToQueryConnectionUpdater,
@@ -27,7 +23,8 @@ import {
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
   'mealPlans',
@@ -120,10 +117,14 @@ export function useMealTemplateActions() {
       toastService.error(t('errors.notAvailableOffline'));
       return null;
     }
-    const result = await executeMutation(
-      () => createFromTemplateMutation({ variables: { input } }),
-      'Create meal plan from template error:',
-    );
+    let result;
+    try {
+      result = await createFromTemplateMutation({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create meal plan from template error:',
+      });
+    }
     if (!result) return null;
     const data = result.data?.createMealPlanFromTemplate;
     if (data?.__typename === 'CreateMealPlanPayload') {
@@ -142,10 +143,14 @@ export function useMealTemplateActions() {
       toastService.error(t('errors.notAvailableOffline'));
       return null;
     }
-    const result = await executeMutation(
-      () => createTemplateMutation({ variables: { input } }),
-      'Create template from meal plan error:',
-    );
+    let result;
+    try {
+      result = await createTemplateMutation({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create template from meal plan error:',
+      });
+    }
     if (!result) return null;
     const data = result.data?.createTemplateFromMealPlan;
     if (data?.__typename === 'CreateTemplateFromMealPlanPayload') {
@@ -173,25 +178,31 @@ export function useMealTemplateActions() {
     // already-deleted template is idempotent on the API — it resolves to a
     // success payload, so the queue drains the entry without a spurious
     // sync-failed toast. Mirrors deleteMealPlan.
-    executeCacheUpdate(
-      () => removeFromMealTemplates(client.cache, id, { evictItem: true }),
-      'Delete Template (optimistic)',
-    );
+    try {
+      removeFromMealTemplates(client.cache, id, { evictItem: true });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Template (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        deleteTemplateMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Delete meal template error:',
-    );
+    let result;
+    try {
+      result = await deleteTemplateMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Delete meal template error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot && cacheId) {
-        executeCacheUpdate(() => {
+        try {
           client.cache.writeFragment({
             id: cacheId,
             fragment: MealTemplateDisplayFragmentDoc,
@@ -204,7 +215,11 @@ export function useMealTemplateActions() {
               category: snapshot.category,
             }),
           });
-        }, 'Restore refused Template delete');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Restore refused Template delete',
+          });
+        }
       }
       return false;
     }
@@ -219,11 +234,16 @@ export function useMealTemplateActions() {
       toastService.error(t('errors.notAvailableOffline'));
       return null;
     }
-    const result = await executeMutation(
-      () =>
-        duplicateTemplateMutation({ variables: { input: { id, newName } } }),
-      'Duplicate template error:',
-    );
+    let result;
+    try {
+      result = await duplicateTemplateMutation({
+        variables: { input: { id, newName } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Duplicate template error:',
+      });
+    }
     if (!result) return null;
     const data = result.data?.duplicateTemplate;
     if (data?.__typename === 'DuplicateTemplatePayload') {

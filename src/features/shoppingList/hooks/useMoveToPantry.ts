@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import { useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -7,13 +7,10 @@ import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -46,6 +43,90 @@ const MoveToPantryItemPurchaseFragment = gql`
  * Hook for moving shopping list items to pantry
  * Handles mutation, cache updates, and optimistic UI updates
  */
+/**
+ * Cache side of a move-to-pantry: add the returned `PantryItem` to the pantry's
+ * items connection, then either drop the shopping-list row or mark it
+ * unpurchased.
+ *
+ * Module-level rather than inlined into the mutation's `update` because its
+ * body is full of `?.` / `??` / ternaries, and the React Compiler bails out of
+ * the entire hook when a value block appears inside a try/catch. Keeping it
+ * here leaves the caller's try body a single plain call.
+ * See scripts/probe-compiler-try-forms.mjs.
+ */
+function applyMoveToPantryCacheUpdate(
+  cache: ApolloCache,
+  args: {
+    pantryId: string;
+    shoppingListItemId: string;
+    removeFromList: boolean | null | undefined;
+    currentListId: string | undefined;
+    pantryItem: { id: string };
+  },
+): void {
+  const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
+
+  // Add the returned PantryItem to the pantry's items connection. When the item
+  // already existed in the pantry, the server returns that existing entry
+  // restocked (combined quantity, extra batch) rather than a new row — so the
+  // returned id may already be in the connection. The updater's default
+  // checkDuplicates guard skips re-inserting that edge, and Apollo normalizes
+  // the restock-mutated fields (quantity, activeBatchCount, …) onto the existing
+  // entity by id. Keep checkDuplicates on — without it a restock would duplicate
+  // the edge.
+  const addToPantryCache = createAddToParentConnectionUpdater(
+    'Pantry',
+    'itemsConnection',
+    'PantryItem',
+  );
+  addToPantryCache(cache, pantryId, args.pantryItem);
+
+  if (!currentListId) return;
+
+  if (removeFromList) {
+    const itemCacheId = cache.identify({
+      __typename: 'ShoppingListItem',
+      id: shoppingListItemId,
+    });
+    const wasPurchased = itemCacheId
+      ? cache.readFragment<{
+          purchaseInfo?: { isPurchased?: boolean } | null;
+        }>({
+          id: itemCacheId,
+          fragment: MoveToPantryItemPurchaseFragment,
+        })?.purchaseInfo?.isPurchased ?? false
+      : false;
+    removeItemFromShoppingListForMoveToPantry(
+      cache,
+      currentListId,
+      shoppingListItemId,
+      wasPurchased,
+    );
+  } else {
+    // If keeping in list, mark as unpurchased in cache (server does this automatically)
+    const cacheId = cache.identify({
+      __typename: 'ShoppingListItem',
+      id: shoppingListItemId,
+    });
+    if (cacheId) {
+      cache.modify<ShoppingListItemDisplayFragment>({
+        id: cacheId,
+        fields: {
+          purchaseInfo(existing) {
+            return { ...existing, isPurchased: false };
+          },
+          version(existingVersion = 0) {
+            return existingVersion + 1;
+          },
+          updatedAt() {
+            return new Date().toISOString();
+          },
+        },
+      });
+    }
+  }
+}
+
 export function useMoveToPantry({
   currentListId,
   onSuccess,
@@ -68,68 +149,19 @@ export function useMoveToPantry({
         }
         const { pantryId, shoppingListItemId, removeFromList } = input;
 
-        executeCacheUpdate(() => {
-          // Add the returned PantryItem to the pantry's items connection. When
-          // the item already existed in the pantry, the server returns that
-          // existing entry restocked (combined quantity, extra batch) rather
-          // than a new row — so the returned id may already be in the
-          // connection. The updater's default checkDuplicates guard skips
-          // re-inserting that edge, and Apollo normalizes the restock-mutated
-          // fields (quantity, activeBatchCount, …) onto the existing entity by
-          // id. Keep checkDuplicates on — without it a restock would duplicate
-          // the edge.
-          const addToPantryCache = createAddToParentConnectionUpdater(
-            'Pantry',
-            'itemsConnection',
-            'PantryItem',
-          );
-          addToPantryCache(cache, pantryId, payload.pantryItem);
-
-          if (!currentListId) return;
-
-          if (removeFromList) {
-            const itemCacheId = cache.identify({
-              __typename: 'ShoppingListItem',
-              id: shoppingListItemId,
-            });
-            const wasPurchased = itemCacheId
-              ? cache.readFragment<{
-                  purchaseInfo?: { isPurchased?: boolean } | null;
-                }>({
-                  id: itemCacheId,
-                  fragment: MoveToPantryItemPurchaseFragment,
-                })?.purchaseInfo?.isPurchased ?? false
-              : false;
-            removeItemFromShoppingListForMoveToPantry(
-              cache,
-              currentListId,
-              shoppingListItemId,
-              wasPurchased,
-            );
-          } else {
-            // If keeping in list, mark as unpurchased in cache (server does this automatically)
-            const cacheId = cache.identify({
-              __typename: 'ShoppingListItem',
-              id: shoppingListItemId,
-            });
-            if (cacheId) {
-              cache.modify<ShoppingListItemDisplayFragment>({
-                id: cacheId,
-                fields: {
-                  purchaseInfo(existing) {
-                    return { ...existing, isPurchased: false };
-                  },
-                  version(existingVersion = 0) {
-                    return existingVersion + 1;
-                  },
-                  updatedAt() {
-                    return new Date().toISOString();
-                  },
-                },
-              });
-            }
-          }
-        }, 'Cache update failed for moveShoppingItemToPantry:');
+        try {
+          applyMoveToPantryCacheUpdate(cache, {
+            pantryId,
+            shoppingListItemId,
+            removeFromList,
+            currentListId,
+            pantryItem: payload.pantryItem,
+          });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for moveShoppingItemToPantry:',
+          });
+        }
       },
       onCompleted: () => {
         onSuccess?.();
@@ -154,26 +186,44 @@ export function useMoveToPantry({
       return false;
     }
 
-    const result = await executeMutation(
-      () =>
-        moveShoppingItemToPantry({
-          variables: {
-            input: {
-              shoppingListItemId: item.id,
-              pantryId: input.pantryId,
-              actualQuantity: input.actualQuantity,
-              actualUnitId: input.actualUnitId,
-              storageState: input.storageState,
-              expiresAt: input.expiresAt,
-              removeFromList: input.removeFromList,
-              actualPrice: input.actualPrice,
-              notes: input.notes,
-            },
+    let result;
+    try {
+      result = await moveShoppingItemToPantry({
+        variables: {
+          input: {
+            shoppingListItemId: item.id,
+            pantryId: input.pantryId,
+            actualQuantity: input.actualQuantity,
+            actualUnitId: input.actualUnitId,
+            storageState: input.storageState,
+            expiresAt: input.expiresAt,
+            removeFromList: input.removeFromList,
+            actualPrice: input.actualPrice,
+            notes: input.notes,
           },
-        }),
-      'Failed to move item to pantry:',
-    );
-    if (!result) return false;
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to move item to pantry:',
+      });
+    }
+
+    // `errorPolicy: 'all'` resolves a refusal as DATA (a non-success union
+    // member) and a transport failure as `{ data: undefined, error }` — neither
+    // rejects. Keying success off `result` alone reported a failed move as a
+    // success, telemetry included.
+    if (
+      result?.data?.moveShoppingItemToPantry?.__typename !==
+      'MoveShoppingItemToPantryPayload'
+    ) {
+      if (result?.error) {
+        errorService.reportError(result.error, {
+          operation: 'Failed to move item to pantry:',
+        });
+      }
+      return false;
+    }
 
     Telemetry.trackEvent('shopping_item_moved_to_pantry', {
       shopping_list_id: currentListId,

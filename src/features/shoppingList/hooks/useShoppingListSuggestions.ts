@@ -81,17 +81,22 @@ export function useShoppingListSuggestions({
     ...grouped.popular,
   ];
 
-  // Preload suggestion images into disk cache for instant display
+  // Preload suggestion images into disk cache for instant display. Keyed on the
+  // Apollo result, which only changes when the data does — the derived arrays
+  // above are rebuilt on every render.
   useEffect(() => {
-    if (suggestions.length > 0) {
-      const urls = suggestions
-        .map(s => resolveImageUrl(s))
-        .filter((url): url is string => !!url);
-      if (urls.length > 0) {
-        preloadImages(urls);
-      }
+    if (!list) return;
+    const urls = [
+      ...(list.recentlyDeleted ?? []),
+      ...(list.frequentlyAdded ?? []),
+      ...(list.popular ?? []),
+    ]
+      .map(s => resolveImageUrl(s))
+      .filter((url): url is string => !!url);
+    if (urls.length > 0) {
+      preloadImages(urls);
     }
-  }, [suggestions]);
+  }, [list]);
 
   const hasSuggestions =
     grouped.recentlyDeleted.length > 0 ||

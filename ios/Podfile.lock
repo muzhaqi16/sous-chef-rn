@@ -2676,7 +2676,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - VisionCamera (5.1.0):
+  - VisionCamera (5.2.2):
     - hermes-engine
     - NitroImage
     - NitroModules
@@ -3151,7 +3151,7 @@ SPEC CHECKSUMS:
   RNSVG: 04044c3abcf177fd674a1a3d13097efa1adebcbe
   RNWorklets: 9052122d7f98de547d247e775ea2069839236d38
   Unistyles: 5b9f9a08b494a93d552dafcdb079754c7e3d252a
-  VisionCamera: 2d364657571d6b6404830269d05b1de244586a40
+  VisionCamera: a917b12fb1a8af28f8265b20e9676d1cb37a1593
   Yoga: 77dfa8673de2874e1855002ae59c68b8be9b007b
 
 PODFILE CHECKSUM: 37821b63aacf4fae712142bd8dae8b060f207414

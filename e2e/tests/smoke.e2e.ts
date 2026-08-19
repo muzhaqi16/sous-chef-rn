@@ -1,132 +1,81 @@
 /**
- * Smoke Tests
+ * Smoke Tests — the gate that blocks pull requests.
  *
- * Quick verification tests to ensure basic app functionality works.
- * These tests should run fast and catch critical issues.
+ * This suite is the only e2e file `e2e-smoke-tests.yml` runs on a PR, so it is
+ * the last thing standing between a regression and `main`. It therefore asserts
+ * unconditionally.
+ *
+ * The previous version branched on whichever screen happened to appear and
+ * skipped when it guessed wrong. Because those branches gated on mutually
+ * exclusive states (on-landing / on-login / logged-in), at most one could ever
+ * assert; the other two passed by printing "⊘ skipping". A missing tab bar was
+ * indistinguishable from a signed-out launch, so the suite reported success on
+ * an app that could not render its own navigation.
+ *
+ * The fix is to remove the guessing: bootstrap a known authenticated session
+ * before the suite runs, then assert against it. If the session cannot be
+ * established the suite fails, which is the correct outcome — an app that
+ * cannot be signed into has not passed a smoke test.
  */
 import { element, by, waitFor, expect } from 'detox';
-import { launchAppWithFabricWorkaround } from '../init';
-import { LandingAuthScreen, LoginScreen } from '../screens';
+import { bootstrapAuthenticatedSession } from '../helpers';
 import { TIMEOUTS } from '../helpers/waitFor';
 
+/** Tab id → the screen that tab must render. Both sides are real testIDs in
+ *  `src/`; a tab that navigates nowhere fails here rather than being skipped. */
+const TABS: ReadonlyArray<[tab: string, screen: string]> = [
+  ['tab-pantry', 'pantry-screen'],
+  ['tab-shoppinglist', 'shopping-list-screen'],
+  ['tab-recipe', 'recipes-screen'],
+  ['tab-mealplan', 'meal-plan-screen'],
+];
+
 describe('Smoke Tests', () => {
-  const landingScreen = new LandingAuthScreen();
-  const loginScreen = new LoginScreen();
-
   beforeAll(async () => {
-    await launchAppWithFabricWorkaround({
-      newInstance: false,
-      permissions: { notifications: 'YES' },
-    });
+    // Deterministic starting state. Throws if the session cannot be
+    // established, so the suite cannot silently degrade into "assert nothing".
+    await bootstrapAuthenticatedSession();
   });
 
-  it('should launch the app successfully', async () => {
-    // Wait for splash screen to disappear - this verifies app hydrated successfully
-    await waitFor(element(by.id('splash-screen')))
-      .not.toBeVisible()
-      .withTimeout(10000);
+  it('launches into the app', async () => {
+    // Asserts the state that must hold once the splash clears, NOT that the
+    // splash is absent.
+    //
+    // `waitFor(by.id('splash-screen')).not.toBeVisible()` was the whole test,
+    // and it could not fail. `SplashScreen` is a real component
+    // (`src/screens/SplashScreen.tsx`), but `beforeAll` has already launched the
+    // app and waited for it to settle, so the splash is gone before this line
+    // runs — and a `not.toBeVisible()` on something absent passes the instant it
+    // is evaluated. It held for any app state whatsoever, a crash included.
+    //
+    // The splash half is not recoverable here: nothing in this test can observe
+    // the splash to begin with, so there is no "it was there, now it is gone"
+    // to assert. What IS checkable is that the launch arrived somewhere real.
+    await waitFor(element(by.id('tab-bar')))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.LONG);
   });
 
-  it('should show landing screen, login screen, or home', async () => {
-    // At least one of these must be visible after app launch
-    let foundScreen = false;
+  it('renders the tab bar with every tab', async () => {
+    await waitFor(element(by.id('tab-bar')))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.DEFAULT);
 
-    try {
-      await landingScreen.waitForScreen(3000);
-      foundScreen = true;
-      console.log('✓ Landing screen loaded');
-    } catch {
-      // Not on landing screen
+    for (const [tab] of TABS) {
+      await expect(element(by.id(tab))).toExist();
     }
-
-    if (!foundScreen) {
-      try {
-        await loginScreen.waitForScreen(3000);
-        foundScreen = true;
-        console.log('✓ Login screen loaded');
-      } catch {
-        // Not on login screen
-      }
-    }
-
-    if (!foundScreen) {
-      // Must be logged in with tab bar visible
-      await waitFor(element(by.id('tab-bar')))
-        .toBeVisible()
-        .withTimeout(TIMEOUTS.DEFAULT);
-      foundScreen = true;
-      console.log('✓ Tab bar visible - user already logged in');
-    }
-
-    if (!foundScreen) {
-      throw new Error('No screen found after app launch - expected landing, login, or home');
-    }
+    await expect(element(by.id('tab-profile'))).toExist();
   });
 
-  it('should be able to navigate to login from landing', async () => {
-    // Only run if on landing screen
-    let onLanding = false;
-    try {
-      await landingScreen.waitForScreen(1000);
-      onLanding = true;
-    } catch {
-      // Not on landing screen
-    }
-
-    if (onLanding) {
-      await landingScreen.expectLoginButtonVisible();
-      await landingScreen.tapLogin();
-      await loginScreen.waitForScreen(3000);
-      console.log('✓ Successfully navigated to login screen');
-    } else {
-      console.log('⊘ Not on landing screen - skipping navigation test');
-    }
-  });
-
-  it('should have functional login screen elements', async () => {
-    let onLogin = false;
-    try {
-      await loginScreen.waitForScreen(1000);
-      onLogin = true;
-    } catch {
-      // Not on login screen
-    }
-
-    if (onLogin) {
-      await loginScreen.expectVisible('login-email-input');
-      await loginScreen.expectVisible('login-password-input');
-      await loginScreen.expectVisible('login-submit-button');
-      console.log('✓ All login screen elements present');
-    } else {
-      console.log('⊘ Not on login screen - skipping element test');
-    }
-  });
-
-  it('should have bottom navigation if logged in', async () => {
-    let isLoggedIn = false;
-    try {
-      await waitFor(element(by.id('tab-bar')))
-        .toBeVisible()
-        .withTimeout(2000);
-      isLoggedIn = true;
-    } catch {
-      // Not logged in
-    }
-
-    if (isLoggedIn) {
-      await expect(element(by.id('tab-pantry'))).toExist();
-      await expect(element(by.id('tab-shoppinglist'))).toExist();
-      await expect(element(by.id('tab-recipe'))).toExist();
-      await expect(element(by.id('tab-profile'))).toExist();
-      console.log('✓ All navigation tabs present');
-    } else {
-      console.log('⊘ Not logged in - skipping tab bar test');
-    }
-  });
-
-  it('should not crash during basic interactions', async () => {
-    // App is stable if we got this far without crashing
-    await expect(element(by.id('splash-screen'))).not.toBeVisible();
-    console.log('✓ App remained stable through all smoke tests');
+  it.each(TABS)('navigates to %s and renders %s', async (tab, screen) => {
+    // A real interaction, unlike the "should not crash during basic
+    // interactions" test this replaces — that one performed no interaction and
+    // asserted only that the splash screen was gone.
+    await element(by.id(tab)).tap();
+    // LONG, not NETWORK: a cold CI simulator is materially slower than a warm
+    // local one, and a smoke gate that flakes gets ignored.
+    await waitFor(element(by.id(screen)))
+      .toBeVisible()
+      .withTimeout(TIMEOUTS.LONG);
   });
 });

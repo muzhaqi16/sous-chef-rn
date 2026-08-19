@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 
 /**
  * The three contexts a biometric enrollment card can appear in. They differ

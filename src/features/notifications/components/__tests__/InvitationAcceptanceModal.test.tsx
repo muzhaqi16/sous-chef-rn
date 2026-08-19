@@ -37,7 +37,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeAsyncWithCleanup: async (
     fn: () => Promise<void>,
     cleanup: () => void,
@@ -75,7 +75,6 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       if (typeof onErrorOrLog === 'function') onErrorOrLog(e);
     }
   },
-  executeCacheUpdate: (fn: () => void) => fn(),
   executeRefreshWithFinally: async (
     fn: () => Promise<unknown>,
     setRefreshing: (b: boolean) => void,
@@ -85,13 +84,6 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
       await fn();
     } finally {
       setRefreshing(false);
-    }
-  },
-  executeRefetch: async (fn: () => Promise<unknown>) => {
-    try {
-      return await fn();
-    } catch {
-      return undefined;
     }
   },
 }));

@@ -8,9 +8,66 @@ import {
   resetGenericPassword,
 } from 'react-native-keychain';
 import { logger } from '#/utils/environment';
-import { generateId } from '../generateId';
 const DEVICE_KEY_SERVICE = 'dev.souschef.app.devicekey';
 const DEVICE_KEY_USERNAME = 'device_key';
+
+/**
+ * Key format marker. Keys written before this existed are bare strings; see
+ * {@link parseStoredKey} for why they must keep their original cipher.
+ */
+const KEY_V2_PREFIX = 'v2:';
+
+/**
+ * 32 characters, because MMKV reads the key as raw bytes and takes at most 32
+ * of them under AES-256 (16 under AES-128). Anything past that is discarded.
+ */
+const KEY_LENGTH = 32;
+
+/**
+ * 64 characters, so each one carries exactly 6 bits and a random byte maps to
+ * it with `& 63` — uniform, no modulo bias. 32 chars × 6 bits = 192 bits.
+ *
+ * The previous key was a uuid v4 with its hyphens stripped: 32 hex characters.
+ * Hex carries 4 bits per character, and MMKV's default AES-128 keeps only the
+ * first 16 bytes — so that key delivered 16 × 4 = **64 bits** of entropy, not
+ * the 128 its length suggested.
+ */
+const KEY_ALPHABET =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+/** MMKV's cipher choice, carried alongside the key it belongs to. */
+export type StorageEncryptionType = 'AES-128' | 'AES-256';
+
+export interface DeviceEncryptionKey {
+  key: string;
+  encryptionType: StorageEncryptionType;
+}
+
+/**
+ * Decide the cipher from the stored key's format.
+ *
+ * A legacy (unprefixed) key encrypted its MMKV file under AES-128, which is
+ * what react-native-mmkv defaults to when `encryptionType` is omitted. Opening
+ * that file with AES-256 would fail to decrypt, and MMKV DISCARDS a file it
+ * cannot decrypt — so an existing install keeps its original cipher. Only a
+ * freshly generated key gets AES-256.
+ */
+function parseStoredKey(stored: string): DeviceEncryptionKey {
+  return stored.startsWith(KEY_V2_PREFIX)
+    ? { key: stored.slice(KEY_V2_PREFIX.length), encryptionType: 'AES-256' }
+    : { key: stored, encryptionType: 'AES-128' };
+}
+
+/** 32 characters of crypto-random key material — 192 bits of entropy. */
+function generateKeyMaterial(): string {
+  const bytes = new Uint8Array(KEY_LENGTH);
+  crypto.getRandomValues(bytes);
+  let key = '';
+  for (const byte of bytes) {
+    key += KEY_ALPHABET[byte & 63];
+  }
+  return key;
+}
 
 // Keychain access can fail transiently (e.g. right after device restore or
 // during early-boot races). Retry before giving up so a hiccup doesn't take
@@ -32,7 +89,7 @@ interface DeviceKeyOptions {
  * crypto.getRandomValues() (polyfilled by react-native-get-random-values).
  */
 export class DeviceKeyManager {
-  private static cachedKey: string | null = null;
+  private static cachedKey: DeviceEncryptionKey | null = null;
 
   /**
    * Get or generate a device-specific encryption key.
@@ -44,7 +101,7 @@ export class DeviceKeyManager {
    */
   static async getDeviceEncryptionKey(
     options: DeviceKeyOptions = {},
-  ): Promise<string> {
+  ): Promise<DeviceEncryptionKey> {
     const { forceRegenerate = false } = options;
 
     if (DeviceKeyManager.cachedKey && !forceRegenerate) {
@@ -60,8 +117,9 @@ export class DeviceKeyManager {
           // the current MMKV file undecryptable.
           const existingKey = await readKeyFromKeychain();
           if (existingKey) {
-            DeviceKeyManager.cachedKey = existingKey;
-            return existingKey;
+            const parsed = parseStoredKey(existingKey);
+            DeviceKeyManager.cachedKey = parsed;
+            return parsed;
           }
         }
 
@@ -87,20 +145,23 @@ export class DeviceKeyManager {
   }
 
   /**
-   * Generate a new device-specific encryption key using uuid v4
-   * (via generateId(), backed by react-native-get-random-values).
+   * Generate a new device-specific encryption key: 32 crypto-random characters
+   * (192 bits), stored with the `v2:` marker so it is opened under AES-256.
+   *
+   * `crypto.getRandomValues` is polyfilled by react-native-get-random-values,
+   * imported at the top of index.js.
    */
-  private static async generateNewKey(): Promise<string> {
-    const key = generateId().replaceAll('-', '');
+  private static async generateNewKey(): Promise<DeviceEncryptionKey> {
+    const key = generateKeyMaterial();
 
-    const stored = await writeKeyToKeychain(key);
+    const stored = await writeKeyToKeychain(`${KEY_V2_PREFIX}${key}`);
     if (!stored) {
       // Surface the failure so the retry loop in getDeviceEncryptionKey can
       // try again (and ultimately fail closed).
       throw new Error('Failed to persist device key to keychain');
     }
 
-    return key;
+    return { key, encryptionType: 'AES-256' };
   }
 
   /**
@@ -125,7 +186,7 @@ export class DeviceKeyManager {
   /**
    * Regenerate encryption key (use with caution - will invalidate existing encrypted data)
    */
-  static async regenerateKey(): Promise<string> {
+  static async regenerateKey(): Promise<DeviceEncryptionKey> {
     try {
       await resetGenericPassword({ service: DEVICE_KEY_SERVICE });
     } catch (error) {

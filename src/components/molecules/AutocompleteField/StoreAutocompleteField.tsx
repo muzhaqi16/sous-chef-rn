@@ -1,3 +1,4 @@
+import { useTranslation } from '#/i18n';
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -38,6 +39,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   onStoreSelected,
   helperText,
 }) => {
+  const { t } = useTranslation();
   const store = useStoreAutocomplete();
 
   return (
@@ -72,9 +74,9 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         autoCapitalize="words"
         inlineMinSearchLength={2}
         maxResults={6}
-        modalTitle="Select a store"
-        modalSearchPlaceholder="Type to search stores..."
-        modalEmptyText="No stores found"
+        modalTitle={t('autocomplete.selectStore')}
+        modalSearchPlaceholder={t('autocomplete.storeSearch')}
+        modalEmptyText={t('autocomplete.noStores')}
         modalEmptySubtext={
           store.shouldSearch
             ? `Continue typing to add "${store.searchTerm}" as a custom store`

@@ -1,7 +1,7 @@
 import React, { useState, forwardRef, useImperativeHandle } from 'react';
 import { View, TextInput, ActivityIndicator } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -15,6 +15,8 @@ import {
   COLOR_PRESETS,
 } from './storageLocationFormConfig';
 import { StorageLocationAdvancedSection } from './StorageLocationAdvancedSection';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface StorageLocationFormRef {
   submit: () => void;
@@ -85,8 +87,7 @@ export const StorageLocationForm = forwardRef<
       temperature: initialData?.temperature || StorageState.None,
       color: initialData?.color || (null as string | null),
       isClimateControlled: initialData?.isClimateControlled || false,
-      capacity:
-        initialData?.capacity != null ? String(initialData.capacity) : '',
+      capacity: formatNumberForInput(initialData?.capacity),
       capacityUnit: initialData?.capacityUnit || '',
       isDefault: initialData?.isDefault || false,
     });
@@ -104,8 +105,7 @@ export const StorageLocationForm = forwardRef<
           temperature: initialData.temperature || StorageState.None,
           color: initialData.color || null,
           isClimateControlled: initialData.isClimateControlled || false,
-          capacity:
-            initialData.capacity != null ? String(initialData.capacity) : '',
+          capacity: formatNumberForInput(initialData.capacity),
           capacityUnit: initialData.capacityUnit || '',
           isDefault: initialData.isDefault || false,
         });
@@ -123,7 +123,7 @@ export const StorageLocationForm = forwardRef<
       }
 
       const capacityFloat = formData.capacity
-        ? parseFloat(formData.capacity)
+        ? parseDecimalInput(formData.capacity)
         : null;
 
       const finalData = {

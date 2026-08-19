@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
@@ -19,9 +20,10 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   children,
   loading = false,
   error,
-  emptyMessage = 'No data available',
+  emptyMessage,
   isEmpty = false,
 }) => {
+  const { t } = useTranslation();
   const renderContent = () => {
     if (loading) {
       return (
@@ -47,7 +49,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
         <View style={styles.stateContainer}>
           <Icon name="bar-chart-outline" size={40} tone="textSecondary" />
           <Text size="sm" align="center" tone="secondary">
-            {emptyMessage}
+            {emptyMessage ?? t('labels.noDataAvailable')}
           </Text>
         </View>
       );

@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   extends: ['@react-native', 'plugin:react-hooks/recommended-latest'],
-  plugins: ['no-barrel-files', 'react-compiler', 'import'],
+  plugins: ['no-barrel-files', 'import'],
   ignorePatterns: [
     'e2e/**/*',
     'src/graphql/generated/**/*',
@@ -22,6 +22,12 @@ module.exports = {
   },
   // TypeScript-specific overrides with type-checked rules
   overrides: [
+    {
+      // The one legitimate parseFloat: this module IS the replacement, and uses
+      // parseFloat as its primitive after normalising the separators itself.
+      files: ['src/utils/parseDecimalInput.ts'],
+      rules: { 'no-restricted-syntax': 'off' },
+    },
     {
       // Lint GraphQL operation documents against the schema pulled from the live
       // API (codegen writes it to src/graphql/generated/schema.graphql). This
@@ -47,7 +53,6 @@ module.exports = {
         // The base config's JS/TS rules don't understand the GraphQL AST; turn
         // off the ones that traverse it so they don't error on .graphql files.
         'no-barrel-files/no-barrel-files': 'off',
-        'react-compiler/react-compiler': 'off',
         'react-hooks/rules-of-hooks': 'off',
         'react-hooks/todo': 'off',
         'no-restricted-syntax': 'off',
@@ -156,6 +161,167 @@ module.exports = {
       },
     },
     {
+      // Hardcoded user-facing English in JSX text.
+      //
+      // This is the class of i18n miss that a regex scanner structurally
+      // cannot see: JSX splits one sentence into several text nodes around
+      // embedded expressions, so `Maximum {maxTags} tags reached` is three
+      // AST nodes and never matches a "quoted English sentence" pattern. The
+      // rule walks JSXText nodes instead, so a sentence is caught however it
+      // is fragmented. Fix by adding a key to src/i18n/locales/en.json and
+      // calling `t()` — not by suppressing (inline eslint-disable is banned
+      // repo-wide by `eslint-comments/no-use`; carve-outs belong in `words`
+      // below, where they are reviewable in one place).
+      //
+      // Scope: production `.tsx` under `src/` only.
+      // - `.ts` is excluded because this rule runs in `jsx-only` mode and JSX
+      //   cannot exist there (TypeScript requires `.tsx`). Untranslated copy
+      //   in `.ts` — toasts and alerts raised from hooks and services — is
+      //   caught by the user-facing-sink selectors in `no-restricted-syntax`
+      //   instead. The two rules split the surface between them: this one owns
+      //   JSX, those own everything else.
+      // - Tests/mocks are excluded: their strings are fixtures, not shipped
+      //   copy. Generated code is already dropped by the top-level
+      //   ignorePatterns.
+      //
+      // What this does NOT cover: a string that reaches JSX through a
+      // variable, which no static mode sees — a module-level
+      // `const LABELS = { … }` rendered as `{LABELS[key]}` reads as an
+      // identifier at the point of use. Those are found by grepping for
+      // module-level tables of English values, and are also the shape that
+      // freezes the import-time language, so they should be factories taking
+      // `t` or tables of key paths.
+      files: ['src/**/*.tsx'],
+      excludedFiles: ['**/__tests__/**', '**/__mocks__/**', '**/*.test.tsx'],
+      plugins: ['i18next'],
+      rules: {
+        // The module-level `t` does not subscribe to language changes. In a
+        // file that renders, a bare `t(...)` therefore reads as the hook's `t`
+        // but silently isn't, and the labels keep the old language until
+        // something unrelated re-renders the component —
+        // `CollaboratorPermissionsBottomSheet` had eight such labels.
+        //
+        // Importing it aliased (the established `tGlobal` convention) is still
+        // allowed: aliasing is the deliberate choice, and it keeps a bare `t`
+        // in JSX unambiguously the hook's.
+        // A selector rather than `no-restricted-imports`, because that rule's
+        // `importNames` matches the IMPORTED name and so cannot tell
+        // `import { t }` from `import { t as tGlobal }` — it would flag the
+        // deliberate form this rule exists to steer people toward.
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector:
+              "ImportDeclaration[source.value='#/i18n'] > ImportSpecifier[imported.name='t'][local.name='t']",
+            message:
+              "Use `const { t } = useTranslation()` in a file that renders — the module-level `t` does not subscribe to language changes. If this file genuinely needs the module-level helper (a class component, or module-scope code), import it aliased: `import { t as tGlobal } from '#/i18n/t'`, so a bare `t(...)` in JSX is unambiguously the hook's.",
+          },
+        ],
+        'i18next/no-literal-string': [
+          'error',
+          {
+            mode: 'jsx-only',
+            // An INCLUDE list, not an exclude list. Measured: `jsx-only` with
+            // the plugin's default attribute handling reports 1132 findings,
+            // 75% of them from four design-system props (`tone`, `name`,
+            // `testID`, `icon`) whose values are enum-ish identifiers, never
+            // copy. Excluding those would mean maintaining ~50 entries that
+            // grows with every new prop. Naming the handful of props that DO
+            // carry copy is smaller, stable, and precise — it cut the same scan
+            // to 60.
+            //
+            // `unit` is deliberately absent: `unit="g"` / `unit="kcal"` are
+            // measurement symbols, not translatable copy.
+            'jsx-attributes': {
+              include: [
+                'title',
+                'label',
+                'placeholder',
+                'message',
+                'description',
+                'subtitle',
+                'text',
+                'emptyText',
+                'emptyMessage',
+                'emptyTitle',
+                'header',
+                'heading',
+                'caption',
+                'hint',
+                'helperText',
+                'errorText',
+                'confirmText',
+                'cancelText',
+                'confirmLabel',
+                'cancelLabel',
+                'buttonText',
+                'buttonLabel',
+                'actionLabel',
+                'accessibilityLabel',
+                'accessibilityHint',
+                'modalTitle',
+                'modalSearchPlaceholder',
+                'modalEmptyText',
+                'searchPlaceholder',
+              ],
+            },
+            // Swapped wholesale rather than merged (same as `words.exclude`
+            // below), so the plugin's own defaults have to be repeated — drop
+            // `t` and every translated call gets flagged for its key string.
+            // The additions are machine vocabulary that happens to contain
+            // letters: date-fns patterns ('MMM d', 'EEEE') and telemetry event
+            // names.
+            callees: {
+              exclude: [
+                'i18n(ext)?',
+                't',
+                // The module-level helper's alias. `no-restricted-syntax`
+                // above requires that name in a rendering file, so without it
+                // here the plugin stops recognising translation calls in
+                // exactly the files that had to rename.
+                'tGlobal',
+                'require',
+                'addEventListener',
+                'removeEventListener',
+                'postMessage',
+                'getElementById',
+                'dispatch',
+                'commit',
+                'includes',
+                'indexOf',
+                'endsWith',
+                'startsWith',
+                'format',
+                'formatISO',
+                'parse',
+                'trackEvent',
+              ],
+            },
+            words: {
+              // Replaces the plugin's default exclude list (the option is
+              // swapped wholesale, not merged), so both entries below are
+              // load-bearing.
+              exclude: [
+                // Any run with no letter in any script. One rule covers every
+                // non-copy glyph this codebase renders as JSX text: emoji
+                // including the variation selector the plugin's own
+                // `/^\p{Emoji}+$/u` default misses (🍽️ = U+1F37D U+FE0F, and
+                // U+FE0F is Emoji_Component, not Emoji), symbol glyphs used as
+                // controls (✕, •, →), and currency/number/punctuation runs
+                // ($, 1/4, 12.50). A translatable sentence always has letters,
+                // so nothing real hides behind this.
+                /^[^\p{L}]+$/u,
+                // The product name ships untranslated in every locale.
+                'Sous Chef',
+              ],
+            },
+            message:
+              'Hardcoded user-facing string. Add a key to src/i18n/locales/en.json (English only — translators fill es/it/sq) and render it via t(). For counts use i18next interpolation with {{count}} and _one/_other plural keys; give each plural form its own whole sentence rather than interpolating a word into one',
+          },
+        ],
+      },
+    },
+    {
       // Justified exceptions to the BottomSheetModal-import restriction:
       // - useStandardBottomSheet.tsx is the canonical re-export site
       //   (aliases gorhom's component as GorhomBottomSheetModal and wraps
@@ -187,7 +353,12 @@ module.exports = {
                 name: 'react',
                 importNames: ['useMemo', 'useCallback'],
                 message:
-                  'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+                  'Default to NOT memoizing — the React Compiler does it for you. ' +
+                  'Reach for useMemo/useCallback only where you need referential ' +
+                  'stability the compiler cannot give you: a value in a dependency ' +
+                  'array, a prop read by something the compiler did not compile, or a ' +
+                  'file it bails out of (see scripts/check-compiler-bailouts.mjs). ' +
+                  'When one of those applies, add an eslint-disable-next-line with the reason.',
               },
             ],
             patterns: [
@@ -245,6 +416,16 @@ module.exports = {
         'src/components/atoms/themedComponents.tsx',
         'src/components/atoms/Text.tsx',
       ],
+      rules: {
+        'no-restricted-imports': 'off',
+      },
+    },
+    {
+      // The two files that DEFINE the '#/i18n' entry point. They are what
+      // everything else is banned from bypassing, so they are the one place
+      // react-i18next may be imported directly. The exemption lives in config
+      // rather than an inline eslint-disable, matching the override above.
+      files: ['src/i18n/index.ts', 'src/i18n/config.ts'],
       rules: {
         'no-restricted-imports': 'off',
       },
@@ -310,15 +491,16 @@ module.exports = {
     // Prevent barrel file imports for better tree shaking
     'no-barrel-files/no-barrel-files': 'error',
 
-    // Detect React Compiler bail-outs at lint time
-    'react-compiler/react-compiler': 'warn',
-
-    // Surface silent compiler bailouts (try/finally, unsupported syntax).
-    // The react-compiler rule has a known bug where it silently stops reporting
-    // ALL diagnostics when it encounters unsupported syntax, producing zero
-    // warnings instead of flagging the bailout. This rule catches those cases.
-    // See: https://github.com/facebook/react/issues/35644
-    // Fix bailouts using helpers from src/utils/compilerSafeWrappers.ts
+    // Surface what the compiler-aware rules CAN see. `eslint-plugin-react-compiler`
+    // was removed here: eslint-plugin-react-hooks@7 absorbed its rules (`todo`,
+    // `syntax`, `unsupported-syntax`, `purity`, `immutability`, …) and the old
+    // plugin reported zero diagnostics across this repo.
+    //
+    // Verified 2026-08: NO lint rule detects the two bailout shapes that actually
+    // occur here (a `finally`, and a value block inside a `try` body) — checked
+    // `react-hooks/todo`, `/syntax` and `/unsupported-syntax` against a fixture of
+    // each, all zero. `node scripts/check-compiler-bailouts.mjs` is the only
+    // detector, because it compiles the file instead of reading it.
     'react-hooks/todo': 'warn',
 
     // Enforce StyleSheet from react-native-unistyles instead of react-native
@@ -351,6 +533,11 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+          {
+            name: 'react-i18next',
+            message:
+              "Import from '#/i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
           },
           {
             name: '@gorhom/bottom-sheet',
@@ -543,15 +730,23 @@ module.exports = {
     ],
 
     'react-hooks/rules-of-hooks': 'error',
-    // Disabled — React Compiler memoizes render-scope functions automatically,
-    // so they're stable across renders when their closure deps don't change.
-    // The exhaustive-deps rule is a static analyzer that doesn't know about
-    // the Compiler and produces false positives ("function changes every render")
-    // for Compiler-stable closures. Per React's official guidance, when using
-    // `babel-plugin-react-compiler`, only `rules-of-hooks` is required — the
-    // others "don't apply" because the Compiler handles them.
-    // https://react.dev/learn/react-compiler#installing-eslint-plugin-react-hooks
-    'react-hooks/exhaustive-deps': 'off',
+    // 'warn', matching eslint-plugin-react-hooks' own `recommended` preset on
+    // the installed version.
+    //
+    // Verified 2026-08 against eslint-plugin-react-hooks@7.1.1:
+    //   node -e "console.log(require('eslint-plugin-react-hooks')
+    //     .configs.recommended.rules['react-hooks/exhaustive-deps'])"  // -> warn
+    //
+    // This was previously 'off', citing React's compiler page as saying the
+    // rule "doesn't apply" under babel-plugin-react-compiler. That page says no
+    // such thing, and the plugin ships exhaustive-deps enabled in the very
+    // preset it recommends for compiler users. A missing dependency is still a
+    // stale-closure bug — the compiler memoizes values, it does not re-run an
+    // effect you forgot to depend on.
+    //
+    // Kept at 'warn' rather than 'error' so it doesn't arrive already failing;
+    // the existing hits are tracked for separate triage.
+    'react-hooks/exhaustive-deps': 'warn',
 
     // Warn on unused variables (underscore prefix indicates intentionally unused)
     '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }],
@@ -611,10 +806,52 @@ module.exports = {
     // Prevent inline functions passed to scheduleOnRN — causes native crashes on Android
     'no-restricted-syntax': [
       'error',
+      // `parseFloat` truncates at the first character it cannot read, so on a
+      // keyboard offering `,` it turns 4,99 into 4 and writes that to the
+      // server — no error, no validation message, just a wrong number. This has
+      // now been fixed twice: the first sweep missed a dozen sites because the
+      // search output was truncated and never re-checked. A lint rule does not
+      // truncate.
+      //
+      // `parseDecimalInput` is the replacement. Where a value genuinely comes
+      // from machine data rather than a person, the two agree anyway, so
+      // reaching for the escape hatch should be rare and argued.
+      {
+        selector: "CallExpression[callee.name='parseFloat']",
+        message:
+          'Use parseDecimalInput from #/utils/parseDecimalInput instead of parseFloat. parseFloat reads "4,99" as 4 on any device whose keyboard offers a comma, silently saving a wrong number. If this value is machine-generated and never typed, both behave identically — so prefer parseDecimalInput regardless, or add a justified eslint-disable explaining why.',
+      },
       {
         selector: 'TSImportType',
         message:
           'Avoid inline import() types. Import the type at the top of the file instead.',
+      },
+      // --- Untranslated copy reaching a user-facing sink -------------------
+      //
+      // The i18next rule above covers the JSX surface (text + copy-carrying
+      // attributes). It cannot see these, because a toast or alert is an
+      // ordinary function call in a .ts hook or service.
+      //
+      // This is deliberately sink-shaped rather than shape-shaped. Scanning
+      // for "English-looking literals" was tried repeatedly and each new
+      // detector found a fresh batch the previous ones missed — the set of
+      // SHAPES a string can take is open-ended, but the set of SINKS that put
+      // text on screen is small and enumerable. Naming the sink is what makes
+      // the check finite.
+      //
+      // The `{3}` guard skips single letters and symbol arguments (toast
+      // positions, '✕') without needing a word allowlist.
+      {
+        selector:
+          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
+        message:
+          'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n/t works outside components.',
+      },
+      {
+        selector:
+          'CallExpression[callee.object.name=/^(toastService|alertService)$/] > TemplateLiteral',
+        message:
+          'Template literal passed to a user-facing toast/alert. Interpolate through i18next instead — t(key, { name }) — so the sentence stays reorderable, and use _one/_other keys for counts rather than appending an "s".',
       },
       {
         selector:

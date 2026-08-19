@@ -1,14 +1,11 @@
 'use no memo';
 
 import { renderHook, act } from '@testing-library/react-native';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-
-jest.mock('#/utils/compilerSafeWrappers');
 
 describe('usePagination', () => {
   const mockFetchMore = jest.fn().mockResolvedValue({});
@@ -180,7 +177,7 @@ describe('usePagination', () => {
 
   it('isLoadingMore is true during fetchMore and false after', async () => {
     let resolveFetch!: () => void;
-    jest.mocked(executeMutation).mockImplementationOnce(
+    mockFetchMore.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -215,7 +212,7 @@ describe('usePagination', () => {
 
   it('loadMore() does nothing when already fetching more', async () => {
     let resolveFetch!: () => void;
-    jest.mocked(executeMutation).mockImplementationOnce(
+    mockFetchMore.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -241,7 +238,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(executeMutation).toHaveBeenCalledTimes(1);
+    expect(mockFetchMore).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveFetch();
@@ -254,7 +251,7 @@ describe('usePagination', () => {
     // re-render, onEndReached fires again with stale hasMore=true/endCursor.
     // The ref should still be true until the useEffect clears it post-render.
     let resolveFetch!: () => void;
-    jest.mocked(executeMutation).mockImplementationOnce(
+    mockFetchMore.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -277,7 +274,7 @@ describe('usePagination', () => {
     act(() => {
       loadMorePromise = result.current.loadMore();
     });
-    expect(executeMutation).toHaveBeenCalledTimes(1);
+    expect(mockFetchMore).toHaveBeenCalledTimes(1);
 
     // fetchMore resolves — but DON'T let React re-render yet
     await act(async () => {
@@ -294,13 +291,13 @@ describe('usePagination', () => {
     });
 
     // Should still only have been called once
-    expect(executeMutation).toHaveBeenCalledTimes(1);
+    expect(mockFetchMore).toHaveBeenCalledTimes(1);
   });
 
   it('concurrent loadMore calls: ref guard prevents duplicate fetches even before state updates', async () => {
-    // executeMutation returns a slow promise so both calls overlap
+    // fetchMore returns a slow promise so both calls overlap
     let resolveFetch!: () => void;
-    jest.mocked(executeMutation).mockImplementation(
+    mockFetchMore.mockImplementation(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -325,8 +322,8 @@ describe('usePagination', () => {
       promise2 = result.current.loadMore();
     });
 
-    // Only one executeMutation call should have gone through
-    expect(executeMutation).toHaveBeenCalledTimes(1);
+    // Only one fetchMore call should have gone through
+    expect(mockFetchMore).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveFetch();

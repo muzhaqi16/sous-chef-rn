@@ -67,7 +67,7 @@ jest.mock('#hooks/useImageUpload', () => ({
 
 jest.mock('#/storage/mmkv');
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn(
     async <T>(
       fn: () => Promise<T>,

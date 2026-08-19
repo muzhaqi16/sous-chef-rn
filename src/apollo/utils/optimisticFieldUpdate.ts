@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 /**
  * Permanent optimistic field write with a snapshot-based revert, for local-first
@@ -41,16 +41,23 @@ export function optimisticFieldUpdate(
       : (_value, { DELETE }) => DELETE;
   }
 
-  executeCacheUpdate(
-    () => cache.modify({ id: cacheId, fields: applied }),
-    `${label} (optimistic)`,
-  );
+  try {
+    cache.modify({ id: cacheId, fields: applied });
+  } catch (cacheError) {
+    errorService.reportError(cacheError, {
+      operation: `${label} (optimistic)`,
+    });
+  }
 
   return {
-    revert: () =>
-      executeCacheUpdate(
-        () => cache.modify({ id: cacheId, fields: previous }),
-        `Revert ${label}`,
-      ),
+    revert: () => {
+      try {
+        cache.modify({ id: cacheId, fields: previous });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: `Revert ${label}`,
+        });
+      }
+    },
   };
 }

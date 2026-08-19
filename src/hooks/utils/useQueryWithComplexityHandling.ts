@@ -5,6 +5,7 @@ import {
   isQueryComplexityError,
 } from '#/utils/errors/queryComplexity';
 import { validatePagination } from '#/constants/pagination';
+import { t } from '#/i18n';
 import { alertService, type AlertButton } from '#/services/alertService';
 
 /**
@@ -44,12 +45,12 @@ export function useQueryWithComplexityHandling<
       handleQueryComplexityError(error, onRetry);
 
       alertService.alert(
-        'Request Too Large',
-        'The request was too complex. Please try with fewer items or simplify your request.',
+        t('complexity.title'),
+        t('complexity.body'),
         (
           [
-            { text: 'Cancel', style: 'cancel' },
-            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+            { text: t('labels.cancel'), style: 'cancel' },
+            onRetry ? { text: t('labels.retry'), onPress: onRetry } : undefined,
           ] as (AlertButton | undefined)[]
         ).filter((b): b is AlertButton => b != null),
       );
@@ -70,12 +71,12 @@ export function useQueryWithComplexityHandling<
       const error = queryHookResult.error;
       handleQueryComplexityError(error, onRetry);
       alertService.alert(
-        'Request Too Large',
-        'The request was too complex. Please try with fewer items or simplify your request.',
+        t('complexity.title'),
+        t('complexity.body'),
         (
           [
-            { text: 'Cancel', style: 'cancel' },
-            onRetry ? { text: 'Retry', onPress: onRetry } : undefined,
+            { text: t('labels.cancel'), style: 'cancel' },
+            onRetry ? { text: t('labels.retry'), onPress: onRetry } : undefined,
           ] as (AlertButton | undefined)[]
         ).filter((b): b is AlertButton => b != null),
       );

@@ -54,7 +54,7 @@ function seedRecipeCache(
   );
 }
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeWithLoadingState: jest.fn(
     async (
       fn: () => Promise<void>,

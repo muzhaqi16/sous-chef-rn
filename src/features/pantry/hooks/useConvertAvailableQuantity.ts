@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 interface UseConvertAvailableQuantityOptions {
   pantryItemId: string | undefined;
@@ -75,24 +75,29 @@ export function useConvertAvailableQuantity({
     } else {
       // Let the API handle the conversion
       setAvailableLoading(true);
-      queueMicrotask(() => {
-        executeQuery(
-          () =>
-            convertQuantity({
-              variables: {
-                pantryItemId,
-                quantity: fromQuantity,
-                fromUnitId: fromUnitId!,
-                toUnitId: selectedUnitId!,
-              },
-            }),
-          'Error converting available quantity:',
-        ).then(result => {
-          setAvailableInSelectedUnit(
-            result?.data?.convertQuantity?.value ?? null,
-          );
-          setAvailableLoading(false);
-        });
+      queueMicrotask(async () => {
+        let result: Awaited<ReturnType<typeof convertQuantity>> | undefined;
+        try {
+          result = await convertQuantity({
+            variables: {
+              pantryItemId,
+              quantity: fromQuantity,
+              fromUnitId: fromUnitId!,
+              toUnitId: selectedUnitId!,
+            },
+          });
+        } catch (error) {
+          // Leaving `result` undefined clears the converted value below, which
+          // is what a failed conversion should show.
+          errorService.reportError(error, {
+            operation: 'Error converting available quantity:',
+          });
+        }
+
+        setAvailableInSelectedUnit(
+          result?.data?.convertQuantity?.value ?? null,
+        );
+        setAvailableLoading(false);
       });
     }
   }

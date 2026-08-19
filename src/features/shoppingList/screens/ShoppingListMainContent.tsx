@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect } from '@react-navigation/native';
@@ -50,7 +50,9 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 
 /**
  * Inner content component that uses modal context.
@@ -79,6 +81,9 @@ export const ShoppingListMainContent: React.FC<
       rawUnpurchasedItems,
       rawPurchasedItems,
       isLoadingInitial,
+      listsLoading,
+      listsError,
+      listsHasResult,
       searchQuery,
       totalCountUnpurchased,
       totalCountPurchased,
@@ -241,6 +246,16 @@ export const ShoppingListMainContent: React.FC<
     return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
   };
 
+  // Classified on the LIST query, not the items query: with no lists there is
+  // no list to have items for, so the question is only whether the list fetch
+  // succeeded, failed, or was never attempted.
+  const listsState = useDataState({
+    loading: listsLoading,
+    error: listsError,
+    hasResult: listsHasResult,
+    isEmpty: lists.length === 0,
+  });
+
   // Calculate permissions for the current list
   const permissions = (() => {
     if (!currentListDetails) {
@@ -307,6 +322,7 @@ export const ShoppingListMainContent: React.FC<
   const searchBarHeader = (
     <View style={styles.searchBarContainer}>
       <SearchBar
+        testID="shopping-list-search-input"
         value={searchQuery}
         onChangeText={setSearchQuery}
         placeholder={t('shoppingListScreen.searchPlaceholder')}
@@ -403,25 +419,29 @@ export const ShoppingListMainContent: React.FC<
       : t('shoppingListScreen.noAddPermission'),
   );
 
-  // Empty state when no lists exist (gated on loading to prevent flash)
+  // No lists on screen. Only a fetch that actually succeeded and returned
+  // nothing may offer to create one — after a failure we do not know whether
+  // this person already has lists, and "Create a list" would duplicate them.
   if (!isLoadingInitial && lists.length === 0) {
-    const noListsEmptyState = {
-      icon: 'cart-outline',
-      title: t('shoppingListScreen.noListsTitle'),
-      description: t('shoppingListScreen.noListsDescription'),
-      action: {
-        label: t('shoppingListScreen.noListsAction'),
-        onPress: () => toListSettings(),
-      },
-    };
-
     return (
       <TabMainScreen testID="shopping-list-screen">
         <TabScreenHeader
           label={t('shoppingListScreen.label')}
           title={t('shoppingListScreen.title')}
         />
-        <ListTemplate items={[]} emptyState={noListsEmptyState} />
+        <DataStateView
+          state={listsState}
+          onRetry={handleRefresh}
+          empty={{
+            icon: 'cart-outline',
+            title: t('shoppingListScreen.noListsTitle'),
+            description: t('shoppingListScreen.noListsDescription'),
+            action: {
+              label: t('shoppingListScreen.noListsAction'),
+              onPress: () => toListSettings(),
+            },
+          }}
+        />
       </TabMainScreen>
     );
   }
@@ -594,8 +614,8 @@ export const ShoppingListMainContent: React.FC<
         return (
           <SpotlightCoachMark
             targetRect={targetRect}
-            title={stepConfig.title}
-            subtitle={stepConfig.subtitle}
+            title={t(stepConfig.titleKey)}
+            subtitle={t(stepConfig.subtitleKey)}
             stepIndex={stepConfig.stepIndex}
             totalSteps={TUTORIAL_TOTAL_STEPS}
             onDismiss={tutorial.skipAll}

@@ -6,7 +6,7 @@ import type { RestrictionSectionProps } from '#/components/molecules/Restriction
 import type { MultiSelectChipSheetProps } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
   '#/components/molecules/RestrictionSection/RestrictionSection',

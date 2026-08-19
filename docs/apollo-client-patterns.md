@@ -25,12 +25,14 @@ This document defines the standardized patterns for using Apollo Client in this 
 **Use When**: Adding or removing items from a list/array field in the cache
 
 **Benefits**:
+
 - Type-safe with `readField` and `toReference`
 - Works with normalized cache
 - Prevents duplicates
 - Most flexible for complex updates
 
 **Example - Adding to Array**:
+
 ```typescript
 const [addItemMutation] = useAddItemMutation({
   update: (cache, { data }) => {
@@ -43,7 +45,7 @@ const [addItemMutation] = useAddItemMutation({
 
           // Check if item already exists
           const exists = existingItems.some(
-            itemRef => readField('id', itemRef) === data.addItem.id
+            itemRef => readField('id', itemRef) === data.addItem.id,
           );
 
           if (exists) return existingItems;
@@ -58,6 +60,7 @@ const [addItemMutation] = useAddItemMutation({
 ```
 
 **Example - Removing from Array**:
+
 ```typescript
 const [deleteItemMutation] = useDeleteItemMutation({
   update: (cache, { data }, { variables }) => {
@@ -70,7 +73,7 @@ const [deleteItemMutation] = useDeleteItemMutation({
       fields: {
         items(existingItems = [], { readField }) {
           return existingItems.filter(
-            itemRef => readField('id', itemRef) !== itemId
+            itemRef => readField('id', itemRef) !== itemId,
           );
         },
       },
@@ -94,11 +97,13 @@ const [deleteItemMutation] = useDeleteItemMutation({
 **Use When**: Mutation returns a full fragment with `__typename` and `id`
 
 **Benefits**:
+
 - Zero boilerplate code
-- Apollo automatically merges based on __typename + id
+- Apollo automatically merges based on \_\_typename + id
 - Can't make mistakes
 
 **Example**:
+
 ```typescript
 const [updateItemMutation] = useUpdateItemMutation({
   // No update function needed!
@@ -111,6 +116,7 @@ const [updateItemMutation] = useUpdateItemMutation({
 ```
 
 **Requirements**:
+
 - Mutation must return full fragment (not just `id` or `boolean`)
 - Fragment must include `__typename` and `id`
 - Object must already exist in cache
@@ -124,6 +130,7 @@ const [updateItemMutation] = useUpdateItemMutation({
 **Use When**: Replacing an entire query result (e.g., setting default home)
 
 **Example**:
+
 ```typescript
 const [setDefaultMutation] = useSetDefaultMutation({
   update: (cache, { data }) => {
@@ -146,11 +153,13 @@ const [setDefaultMutation] = useSetDefaultMutation({
 **Use When**: Removing an entity from the cache permanently
 
 **Requirements**:
+
 - **ALWAYS** call `cache.gc()` after `cache.evict()`
 - Remove from parent arrays using `cache.modify()` first
 - Then evict the entity itself
 
 **Example**:
+
 ```typescript
 update: (cache, { data }, { variables }) => {
   const itemId = variables.id;
@@ -171,7 +180,7 @@ update: (cache, { data }, { variables }) => {
 
   // Step 3: CRITICAL - Garbage collect orphaned data
   cache.gc();
-}
+};
 ```
 
 ---
@@ -181,6 +190,7 @@ update: (cache, { data }, { variables }) => {
 **Use When**: Updating specific fields on an entity (e.g., toggling booleans, incrementing counters)
 
 **Benefits**:
+
 - Instant UI updates without optimistic response complexity
 - Eliminates "Missing field" warnings from partial fragments
 - Simpler code - no fragment reading or field extraction needed
@@ -188,12 +198,14 @@ update: (cache, { data }, { variables }) => {
 - Avoids cache corruption from `__ref` fields
 
 **When to Use This Instead of Optimistic Response**:
+
 - Simple field updates (boolean toggles, counters, timestamps)
 - When mutation fragment has many fields but you're only updating 1-2
 - When you're getting "Missing field" warnings from partial optimistic responses
 - When automatic normalization isn't sufficient (need immediate feedback)
 
 **Example - Toggle Boolean Field**:
+
 ```typescript
 const [togglePurchasedMutation] = useToggleShoppingListItemPurchasedMutation({
   errorPolicy: 'all',
@@ -247,6 +259,7 @@ const toggleItem = async (itemId: string) => {
 ```
 
 **Example - Increment Counter**:
+
 ```typescript
 const [incrementViewsMutation] = useIncrementViewsMutation({
   errorPolicy: 'all',
@@ -269,6 +282,7 @@ const [incrementViewsMutation] = useIncrementViewsMutation({
 ```
 
 **Why This Pattern Works**:
+
 1. **Instant UI feedback**: cache.modify executes immediately, updating the UI before server responds
 2. **No fragment complexity**: Don't need to read full fragments or extract fields
 3. **No validation warnings**: Apollo doesn't validate field completeness in cache.modify
@@ -288,6 +302,7 @@ await toggleMutation({
 Compared to an `optimisticResponse` callback, the cache.modify form skips reading the fragment, skips constructing the response shape, and avoids "Missing field" warnings from partial responses. Reserve `optimisticResponse` for cases that genuinely need the full mutation result shape (e.g. creating an entity that doesn't exist in cache yet — see "Optimistic Responses" section below).
 
 **When NOT to Use This Pattern**:
+
 - Creating new entities (use optimistic response with `createOptimisticEntity`)
 - Complex updates involving multiple related entities (use optimistic response)
 - When mutation returns incomplete data and you need to preserve existing fields (use optimistic response)
@@ -300,6 +315,7 @@ Compared to an `optimisticResponse` callback, the cache.modify form skips readin
 **Prefer cache updates** (`cache.modify()`, automatic normalization) over `refetchQueries` for offline-critical paths. Cache updates are instant, work offline, and avoid extra network requests.
 
 However, `refetchQueries` is **acceptable** when:
+
 - The query is not on an offline-critical path (e.g., recipe search, analytics)
 - Manual cache updates would be disproportionately complex for the mutation's return shape
 - The mutation affects many queries and cache normalization alone isn't sufficient
@@ -307,6 +323,7 @@ However, `refetchQueries` is **acceptable** when:
 **Where it lives in this codebase**: recipe, meal-plan, profile, home-create, and invitation flows — paths that are not offline-critical and where reproducing the mutation's cache effect would require duplicating server logic (e.g. recomputing aggregate ratings). `grep -rn "refetchQueries" src/` shows the current call sites.
 
 **Don't reach for `refetchQueries` on**:
+
 - Shopping list or pantry paths (offline-first, performance-critical)
 - Frequently-triggered mutations where the extra network round-trip is noticeable
 
@@ -335,6 +352,7 @@ const [updateMutation] = useUpdateMutation({
 ### When to Use
 
 **Provide optimistic responses** for mutations that:
+
 - Create or update user data
 - Are frequently used
 - Need instant UI feedback
@@ -363,7 +381,7 @@ optimisticResponse: variables => {
       __typename: 'Item',
     },
   };
-}
+};
 ```
 
 ### Pattern: Update Existing Entity
@@ -393,7 +411,7 @@ optimisticResponse: variables => {
     __typename: 'Mutation',
     updateItem: enhanceWithVersion(currentItem, variables.input),
   };
-}
+};
 ```
 
 ### Pattern: Toggle/Boolean Update
@@ -404,12 +422,11 @@ optimisticResponse: variables => {
 
   return {
     __typename: 'Mutation',
-    togglePurchased: enhanceWithVersion(
-      currentItem,
-      { isPurchased: variables.purchased },
-    ),
+    togglePurchased: enhanceWithVersion(currentItem, {
+      isPurchased: variables.purchased,
+    }),
   };
-}
+};
 ```
 
 ### Pattern: Delete Entity (No Optimistic Response)
@@ -460,6 +477,7 @@ const [deleteItemMutation] = useDeleteItemMutation({
 ```
 
 **Why this works**:
+
 - Manual cache updates execute immediately (both online and offline)
 - Item disappears from UI instantly via cache.modify()
 - Entity is fully removed via cache.evict() + cache.gc()
@@ -480,14 +498,14 @@ throw.** A hook that reads only `result.data` therefore sees a truthy payload an
 silently treats a server refusal as success.
 
 **Handle them by inspecting `__typename`, never by throwing.** (Apollo treats
-errors-as-data as a *schema* technique with no prescribed client handler; the
+errors-as-data as a _schema_ technique with no prescribed client handler; the
 community consensus — and this codebase — inspect the union.) Two helpers, with a
 combiner so the rejected branch is a single call:
 
-| Helper | File | Role |
-|---|---|---|
-| `classifyCreateResult(result)` | `src/apollo/utils/classifyCreateResult.ts` | `'created' \| 'queued' \| 'rejected'` — inspects `__typename`; `result.error` (transport) ⇒ rejected; offline-queued `null` ⇒ success; a falsy `result` (the call threw) ⇒ rejected |
-| `alertIfRejected(result, message)` | `src/apollo/utils/alertRejectedMutation.ts` | **the combiner** ⭐ — classify + alert in one call; returns `true` if rejected. Alerts **unconditionally**, so it covers BOTH a resolved error member AND a resolved transport error. Use at sites with **no** mutation `onError`. |
+| Helper                                   | File                                        | Role                                                                                                                                                                                                                                       |
+| ---------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `classifyCreateResult(result)`           | `src/apollo/utils/classifyCreateResult.ts`  | `'created' \| 'queued' \| 'rejected'` — inspects `__typename`; `result.error` (transport) ⇒ rejected; offline-queued `null` ⇒ success; a falsy `result` (the call threw) ⇒ rejected                                                        |
+| `alertIfRejected(result, message)`       | `src/apollo/utils/alertRejectedMutation.ts` | **the combiner** ⭐ — classify + alert in one call; returns `true` if rejected. Alerts **unconditionally**, so it covers BOTH a resolved error member AND a resolved transport error. Use at sites with **no** mutation `onError`.         |
 | `alertRejectedMutation(result, message)` | `src/apollo/utils/alertRejectedMutation.ts` | lower-level — alerts only when `!result.error` (the resolved-error-member case). Use **only** alongside a mutation `onError` that handles the transport case, to avoid double-alerting. The pantry/shopping reference hooks use this form. |
 
 > ⚠️ **The transport-error trap.** Under `errorPolicy:'all'`, a network/GraphQL
@@ -528,19 +546,20 @@ if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
 > **Keep the `if (!result) return` guard above `alertIfRejected`.** A falsy result
 > means the call threw and `executeMutation`'s `onError` already told the user, so
 > `alertIfRejected` returns `false` for it — deliberately unlike
-> `classifyCreateResult`, which reports `'rejected'` because the *write* didn't
+> `classifyCreateResult`, which reports `'rejected'` because the _write_ didn't
 > land. The two answer different questions; dropping the guard double-alerts.
 
 **Rules:**
+
 - **Don't throw to handle a data-error.** `unwrapPayload` (throw-based, in
-  `compilerSafeWrappers.ts`) exists for a few callers that deliberately let the
+  `finallyHelpers.ts`) exists for a few callers that deliberately let the
   throw propagate to a screen-level catch — but the default is the data-inspection
   pair above. It reads linearly and handles the offline-queued `null`, which
   `unwrapPayload` would wrongly throw on (`GraphQLNetworkError`).
 - **Guard every `update()` / `onCompleted` side-effect on the success
   `__typename`.** Cache eviction, `logout()`, navigation, marking a user
   onboarded — a resolved `*Error` member reaches these callbacks (it didn't
-  throw), so an unguarded callback fires on a *refusal*. Move success side-effects
+  throw), so an unguarded callback fires on a _refusal_. Move success side-effects
   into the imperative flow (after the `alertIfRejected` check) or guard the
   callback with `if (data?.field?.__typename !== 'XPayload') return;`.
 - **i18n:** the user-facing `message` is a `t('...')` key (the server's
@@ -580,18 +599,18 @@ const [mutation] = useMutation({
 
 The `useErrorService()` hook exposes the following methods:
 
-| Method | Description |
-|--------|-------------|
-| `handleApolloError(error, config)` | Parse Apollo error → flat `{ code, message, category, shouldRetry, isAuthError }` |
-| `parseApolloError(error, config)` | Parse Apollo error → structured `ErrorResult` with `success` flag |
-| `handleMutation(fn, config)` | Wrap an async mutation with try/catch, returns `ErrorResult<T>` |
-| `handleMutationWithVersionConflict(fn, config)` | Like `handleMutation` but adds `isVersionConflict` flag |
-| `getUserFriendlyMessage(errorCode)` | Map error code to user-facing string |
-| `getErrorCategory(errorCode)` | Map error code prefix to category (e.g., `AUTH_` → `"Authentication"`) |
-| `shouldRetry(errorCode)` | Whether the error is retryable (timeouts, rate limits, etc.) |
-| `isAuthError(errorCode)` | Whether the error is auth/authz related |
-| `reportError(error, context)` | Log a non-Apollo error to console + Telemetry |
-| `getErrorMessage(error)` | Extract a user-friendly message from any error |
+| Method                                          | Description                                                                       |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `handleApolloError(error, config)`              | Parse Apollo error → flat `{ code, message, category, shouldRetry, isAuthError }` |
+| `parseApolloError(error, config)`               | Parse Apollo error → structured `ErrorResult` with `success` flag                 |
+| `handleMutation(fn, config)`                    | Wrap an async mutation with try/catch, returns `ErrorResult<T>`                   |
+| `handleMutationWithVersionConflict(fn, config)` | Like `handleMutation` but adds `isVersionConflict` flag                           |
+| `getUserFriendlyMessage(errorCode)`             | Map error code to user-facing string                                              |
+| `getErrorCategory(errorCode)`                   | Map error code prefix to category (e.g., `AUTH_` → `"Authentication"`)            |
+| `shouldRetry(errorCode)`                        | Whether the error is retryable (timeouts, rate limits, etc.)                      |
+| `isAuthError(errorCode)`                        | Whether the error is auth/authz related                                           |
+| `reportError(error, context)`                   | Log a non-Apollo error to console + Telemetry                                     |
+| `getErrorMessage(error)`                        | Extract a user-friendly message from any error                                    |
 
 ### Version Conflict Handling
 
@@ -684,7 +703,11 @@ subscription echo doesn't re-add it via auto-normalization:
 
 ```typescript
 subscriptionService.registerPendingDelete(
-  itemId, parentId, 'PantryItem', 'Pantry', 'itemsConnection',
+  itemId,
+  parentId,
+  'PantryItem',
+  'Pantry',
+  'itemsConnection',
 );
 await deleteItemMutation({ variables: { id: itemId } });
 ```
@@ -728,12 +751,15 @@ the last good array across refetch errors.
 Apollo Client 4.x supports both a string and a function for `nextFetchPolicy`.
 
 **String form** (simple cases):
+
 ```typescript
 nextFetchPolicy: 'cache-first',
 ```
+
 After the first fetch, all re-renders use `cache-first`. On variable changes, Apollo automatically reverts to `initialFetchPolicy` (`cache-and-network`). Suitable for most queries.
 
 **Function form** (fine-grained control):
+
 ```typescript
 nextFetchPolicy(currentFetchPolicy, context) {
   if (context.reason === 'variables-changed') {
@@ -742,7 +768,9 @@ nextFetchPolicy(currentFetchPolicy, context) {
   return 'cache-first'; // cache-first after fetch completes
 },
 ```
+
 The function receives a `context` with:
+
 - `reason: 'after-fetch'` — query just completed a network request
 - `reason: 'variables-changed'` — query variables changed (filter/sort/ID)
 - `initialFetchPolicy` — the original `fetchPolicy` value
@@ -760,9 +788,9 @@ This commonly occurs when the skip condition depends on multiple upstream states
 // ❌ PROBLEM: hasValidId flickers during startup → duplicate requests
 const hasValidId = !!id && isReady && !isLoggedOut;
 const { data } = useQuery(QUERY, {
-  skip: !hasValidId,              // toggles during init
+  skip: !hasValidId, // toggles during init
   fetchPolicy: 'cache-and-network', // re-applied on each skip→unskip
-  nextFetchPolicy: 'cache-first',   // ← ignored when skip resets the policy
+  nextFetchPolicy: 'cache-first', // ← ignored when skip resets the policy
 });
 ```
 
@@ -793,6 +821,7 @@ const { data } = useQuery(QUERY, {
 ```
 
 **How the latch auto-resets:**
+
 - **Entity ID changes** (e.g., user switches pantries): `activatedForId !== entityId` → latch doesn't match → `isLatched = false` → skip depends on `hasValidId` again → fresh fetch when ready
 - **Logout**: explicitly clears the latch
 - **Home deletion**: entity ID becomes `undefined` → `isLatched = false` → query skips
@@ -832,6 +861,7 @@ Use `refetch()` only for user-initiated actions (pull-to-refresh) or when you ne
 When queries with `errorPolicy: 'ignore'` fail, they return `undefined` instead of preserving cached data. This causes **cascade failures** where dependent components lose their data and become unusable.
 
 **Example of the Problem**:
+
 ```typescript
 // Query fails due to network error
 const { data } = useGetHomesQuery({
@@ -880,7 +910,8 @@ export function usePreservedQueryData<T>(
   // sync state with props without an effect. No useRef/useMemo: the React
   // Compiler auto-memoizes, and reading ref.current during render bails out
   // of compilation (see CLAUDE.md "React Compiler Conventions").
-  const [lastSuccessfulValue, setLastSuccessfulValue] = useState<T>(initialValue);
+  const [lastSuccessfulValue, setLastSuccessfulValue] =
+    useState<T>(initialValue);
   const [prevData, setPrevData] = useState<T | undefined>(currentData);
 
   if (currentData !== prevData) {
@@ -893,7 +924,9 @@ export function usePreservedQueryData<T>(
   return currentData !== undefined ? currentData : lastSuccessfulValue;
 }
 
-export function usePreservedArrayData<T>(currentData: T[] | undefined | null): T[] {
+export function usePreservedArrayData<T>(
+  currentData: T[] | undefined | null,
+): T[] {
   return usePreservedQueryData(currentData ?? undefined, [] as T[]);
 }
 ```
@@ -901,6 +934,7 @@ export function usePreservedArrayData<T>(currentData: T[] | undefined | null): T
 ### When to Use
 
 **ALWAYS** use `usePreservedArrayData` for queries that:
+
 - Have `errorPolicy: 'ignore'` (prevents cascade failures)
 - Return array data (homes, items, lists, etc.)
 - Are used by dependent components/hooks
@@ -1001,7 +1035,7 @@ const { data } = useGetUserProfileQuery({
 // Preserve single object
 const profile = usePreservedQueryData(
   data?.userProfile,
-  { name: '', email: '' } // Initial value
+  { name: '', email: '' }, // Initial value
 );
 ```
 
@@ -1043,12 +1077,13 @@ onError: (error: any) => {
     return;
   }
   // ... other error handling
-}
+};
 ```
 
 ### Server Requirements
 
 For the server to support version conflicts, mutations must:
+
 1. Accept `version` as an optional input parameter
 2. Check version matches before updating
 3. Return version conflict error if mismatch
@@ -1139,10 +1174,7 @@ NOTE: These match the global `watchQuery` defaults in `src/apollo/client.ts`, so
 import { useApolloClient } from '@apollo/client';
 
 // Query data preservation (IMPORTANT: Always use for array queries!)
-import {
-  usePreservedArrayData,
-  usePreservedQueryData,
-} from '#/hooks/apollo';
+import { usePreservedArrayData, usePreservedQueryData } from '#/hooks/apollo';
 
 // Optimistic response helpers
 import {
@@ -1222,7 +1254,7 @@ const [addItemMutation] = useAddItemMutation({
         items(existingItems = [], { readField, toReference }) {
           const newItemRef = toReference(data.addItem);
           const exists = existingItems.some(
-            ref => readField('id', ref) === data.addItem.id
+            ref => readField('id', ref) === data.addItem.id,
           );
           if (exists) return existingItems;
           return [...existingItems, newItemRef];
@@ -1301,6 +1333,7 @@ const [deleteItemMutation] = useDeleteItemMutation({
 When a mutation hook needs the current entity (e.g. to compute an optimistic response or detect a state change), the source of truth is the cache. Two patterns:
 
 **Hook-owned fragment + cache.readFragment** (preferred for mutation hooks):
+
 ```typescript
 // Hook declares a colocated `useUpdateX_item.graphql` fragment with the
 // fields it needs, then materializes it from cache by entity id.
@@ -1313,6 +1346,7 @@ if (!item) return false;
 ```
 
 **In-memory array lookup** (acceptable for screens that already have the items in scope):
+
 ```typescript
 // Screen already has the items array from useQuery — find by id directly.
 const item = items.find(i => i.id === itemId);
@@ -1323,16 +1357,17 @@ Use the hook-owned fragment form when the caller is a hook that runs outside the
 
 ### Which cache update approach
 
-| Operation | Cache Update Needed? | Use This |
-|-----------|---------------------|----------|
-| **Create/Add** | YES | `createAddToParentConnectionUpdater()` |
-| **Update** | NO | Apollo auto-normalizes by `__typename` + `id` |
-| **Delete/Remove** | YES | `createRemoveFromParentConnectionUpdater()` |
-| **Toggle field** | Optional | `cache.modify()` for instant UI (Pattern 5) |
+| Operation         | Cache Update Needed? | Use This                                      |
+| ----------------- | -------------------- | --------------------------------------------- |
+| **Create/Add**    | YES                  | `createAddToParentConnectionUpdater()`        |
+| **Update**        | NO                   | Apollo auto-normalizes by `__typename` + `id` |
+| **Delete/Remove** | YES                  | `createRemoveFromParentConnectionUpdater()`   |
+| **Toggle field**  | Optional             | `cache.modify()` for instant UI (Pattern 5)   |
 
 ### When to Use optimisticDataPersistence
 
 **Only use for rapid UI operations** like quantity steppers where:
+
 - User makes multiple rapid changes (increment/decrement)
 - Changes happen faster than network round-trips
 - Field-level persistence is needed for offline support
@@ -1355,7 +1390,7 @@ customOnData: (payload, client) => {
       data: item,
     });
   }
-}
+};
 ```
 
 If you don't use custom `onData` (let Apollo handle it with `CacheStrategy.AUTOMATIC`), this isn't needed.
@@ -1367,6 +1402,7 @@ When items need to move between filtered connections (e.g., `unpurchasedItems` �
 **Why?** Apollo auto-normalizes subscription data, which updates entity fields (like `isPurchased`). However, this normalization happens **before** the `onData` callback runs, so comparing old vs new values will show them as equal (both already updated). Use the mutation type instead.
 
 **Pattern (from `usePantrySubscriptions.ts` and `useShoppingListSubscriptions.ts`):**
+
 ```typescript
 customOnData: (payload, client) => {
   const mutation = payload.mutation;
@@ -1389,11 +1425,13 @@ customOnData: (payload, client) => {
 ```
 
 **Key points:**
+
 - Apollo auto-normalizes **entity field updates** but does NOT move items between filtered connections
 - Use the mutation type (`ITEM_COMPLETED`, `ITEM_UNCOMPLETED`, etc.) to know what action occurred
 - This pattern aligns with how Relay handles connection updates with declarative mutation directives
 
 **Reference implementations:**
+
 - `src/hooks/subscriptions/usePantrySubscriptions.ts` (lines 80-126)
 - `src/hooks/subscriptions/useShoppingListSubscriptions.ts` (lines 80-239)
 
@@ -1409,25 +1447,26 @@ handle plain list fields.
 
 **Connection-shaped fields** (`edges` + `pageInfo`):
 
-| Utility | Use Case |
-|---------|----------|
-| `createAddToParentConnectionUpdater` | Add item to `parent.connectionField` (e.g. `Pantry.itemsConnection`) |
-| `createRemoveFromParentConnectionUpdater` | Remove item from `parent.connectionField` + optional eviction |
-| `createAddToQueryConnectionUpdater` | Add item to a root-level `Query.connectionField` |
-| `createRemoveFromQueryConnectionUpdater` | Remove item from a root-level `Query.connectionField` |
+| Utility                                   | Use Case                                                             |
+| ----------------------------------------- | -------------------------------------------------------------------- |
+| `createAddToParentConnectionUpdater`      | Add item to `parent.connectionField` (e.g. `Pantry.itemsConnection`) |
+| `createRemoveFromParentConnectionUpdater` | Remove item from `parent.connectionField` + optional eviction        |
+| `createAddToQueryConnectionUpdater`       | Add item to a root-level `Query.connectionField`                     |
+| `createRemoveFromQueryConnectionUpdater`  | Remove item from a root-level `Query.connectionField`                |
 
 **Plain array fields** (no edges wrapper):
 
-| Utility | Use Case |
-|---------|----------|
-| `createAddToParentArrayUpdater` | Add item to `parent.arrayField` |
+| Utility                              | Use Case                                                 |
+| ------------------------------------ | -------------------------------------------------------- |
+| `createAddToParentArrayUpdater`      | Add item to `parent.arrayField`                          |
 | `createRemoveFromParentArrayUpdater` | Remove item from `parent.arrayField` + optional eviction |
-| `createAddToQueryFieldUpdater` | Add item to a root-level `Query.arrayField` |
+| `createAddToQueryFieldUpdater`       | Add item to a root-level `Query.arrayField`              |
 
 **Misc helpers in the same file:** `incrementNestedCounter`, `setCachedFields`,
 `createItemEvictor`, `safeEvict`, `safeEvictMany`, `gcResetResultCache`.
 
 **Example Usage:**
+
 ```typescript
 import { createAddToParentConnectionUpdater } from '#/apollo/utils';
 
@@ -1441,36 +1480,40 @@ const addToPantryItemsCache = createAddToParentConnectionUpdater<PantryItem>(
 update: (cache, { data }) => {
   if (!data?.createPantryItem || !pantryId) return;
   addToPantryItemsCache(cache, pantryId, data.createPantryItem);
-}
+};
 ```
 
 ### Optimistic Response Helpers (`src/apollo/utils/createOptimisticResponse.ts`)
 
-| Utility | Use Case |
-|---------|----------|
-| `createOptimisticEntity(typename, tempId, fields)` | Create temp entity for add mutations |
-| `enhanceWithVersion(currentItem, updates)` | Add version/timestamp to update mutations |
+| Utility                                            | Use Case                                  |
+| -------------------------------------------------- | ----------------------------------------- |
+| `createOptimisticEntity(typename, tempId, fields)` | Create temp entity for add mutations      |
+| `enhanceWithVersion(currentItem, updates)`         | Add version/timestamp to update mutations |
 
 ### Error Handler Composables (`src/utils/errorHandlers.ts`)
 
 Higher-order functions for wrapping mutations with consistent error handling. Used by `useCrudOperations.ts` and other management hooks.
 
-| Utility | Use Case |
-|---------|----------|
-| `withVersionConflictHandling(fn, config)` | Wrap mutation with version conflict detection + alert |
-| `withMutationErrorHandling(fn, config)` | Wrap mutation with Apollo error reporting + alert |
-| `withGenericErrorHandling(fn, msg)` | Wrap mutation with simple error alert |
-| `composeErrorHandlers(fn, handlers[])` | Chain multiple error handlers together |
-| `handleVersionConflictAlert(error, config)` | Inline version conflict check for try/catch blocks |
-| `handleMutationErrorAlert(error, config)` | Inline error alert for try/catch blocks |
+| Utility                                     | Use Case                                              |
+| ------------------------------------------- | ----------------------------------------------------- |
+| `withVersionConflictHandling(fn, config)`   | Wrap mutation with version conflict detection + alert |
+| `withMutationErrorHandling(fn, config)`     | Wrap mutation with Apollo error reporting + alert     |
+| `withGenericErrorHandling(fn, msg)`         | Wrap mutation with simple error alert                 |
+| `composeErrorHandlers(fn, handlers[])`      | Chain multiple error handlers together                |
+| `handleVersionConflictAlert(error, config)` | Inline version conflict check for try/catch blocks    |
+| `handleMutationErrorAlert(error, config)`   | Inline error alert for try/catch blocks               |
 
 **Example**:
+
 ```typescript
-import { withVersionConflictHandling, withMutationErrorHandling } from '#/utils/errorHandlers';
+import {
+  withVersionConflictHandling,
+  withMutationErrorHandling,
+} from '#/utils/errorHandlers';
 
 const safeUpdate = withVersionConflictHandling(
   withMutationErrorHandling(updateFn, { operation: 'Update Item' }),
-  { itemName: 'Item', onRefresh: refetch }
+  { itemName: 'Item', onRefresh: refetch },
 );
 ```
 
@@ -1478,11 +1521,11 @@ const safeUpdate = withVersionConflictHandling(
 
 Provides standardized CRUD operation wrappers with built-in validation and error handling.
 
-| Helper | Provides |
-|--------|----------|
-| `createAddOperation` | Input validation, parent ID validation, error alerts |
-| `createUpdateOperation` | Version conflict handling, refetch on conflict |
-| `createRemoveOperation` | Confirmation dialogs, cleanup |
+| Helper                  | Provides                                             |
+| ----------------------- | ---------------------------------------------------- |
+| `createAddOperation`    | Input validation, parent ID validation, error alerts |
+| `createUpdateOperation` | Version conflict handling, refetch on conflict       |
+| `createRemoveOperation` | Confirmation dialogs, cleanup                        |
 
 ---
 
@@ -1513,20 +1556,20 @@ This split is a **custom optimization** — it's not a recognized community patt
 
 ### `apolloCachePersistence` API surface
 
-| Method | Use when |
-|---|---|
-| `loadCritical()` | Synchronously read critical partition at `initializeClient` |
-| `load()` | Migration fallback when split-key format is absent |
-| `restoreDeferred(cache)` | Schedule idle-callback bulk restore after first paint (called from `App.tsx`) |
-| `loadDeferred()` | Internal — read deferred partition (used by `restoreDeferred`) |
-| `save(cache)` / `scheduleExtractAndSave(...)` | Debounced persist after cache writes (wired in `setupCachePersistence`) |
-| `saveImmediate(cache)` | Synchronous flush — use for logout / app termination |
-| `pause()` / `resume()` | Suspend persistence during logout transitions |
-| `markDirty(keys)` | Mark cache keys as changed for incremental persistence |
-| `cancel()` | Abort pending debounced save **and** any in-flight `restoreDeferred` — call on logout |
-| `clear()` | Wipe all persisted cache from MMKV |
-| `getStats()` / `isValid()` | Diagnostics |
-| `partitionCache(cache)` | Internal — split normalized cache into critical/deferred buckets |
+| Method                                        | Use when                                                                              |
+| --------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `loadCritical()`                              | Synchronously read critical partition at `initializeClient`                           |
+| `load()`                                      | Migration fallback when split-key format is absent                                    |
+| `restoreDeferred(cache)`                      | Schedule idle-callback bulk restore after first paint (called from `App.tsx`)         |
+| `loadDeferred()`                              | Internal — read deferred partition (used by `restoreDeferred`)                        |
+| `save(cache)` / `scheduleExtractAndSave(...)` | Debounced persist after cache writes (wired in `setupCachePersistence`)               |
+| `saveImmediate(cache)`                        | Synchronous flush — use for logout / app termination                                  |
+| `pause()` / `resume()`                        | Suspend persistence during logout transitions                                         |
+| `markDirty(keys)`                             | Mark cache keys as changed for incremental persistence                                |
+| `cancel()`                                    | Abort pending debounced save **and** any in-flight `restoreDeferred` — call on logout |
+| `clear()`                                     | Wipe all persisted cache from MMKV                                                    |
+| `getStats()` / `isValid()`                    | Diagnostics                                                                           |
+| `partitionCache(cache)`                       | Internal — split normalized cache into critical/deferred buckets                      |
 
 ### Lifecycle
 
@@ -1544,15 +1587,15 @@ Apollo Client 4 narrows `ApolloClient.cache` to the abstract `ApolloCache<TCache
 
 This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks and APIs:
 
-| Hook / API | Purpose | Status |
-|------------|---------|--------|
-| `useSuspenseQuery` | Suspense-compatible query hook (works with React `<Suspense>`) | Available, **not adopted** (see rationale below) |
-| `useBackgroundQuery` | Trigger queries in parent, read in child via `useReadQuery` | Available, **not adopted** |
-| `useReadQuery` | Read data from a `useBackgroundQuery` queryRef in a child component | Available, **not adopted** (companion to `useBackgroundQuery`) |
-| `useFragment` | Subscribe to a specific fragment in cache without a query | **Adopted.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the full pattern. |
-| `dataState` | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor) |
-| `dataMasking: true` | Strips fragment fields from parent query results so children must use `useFragment` | **Enabled.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the colocated-fragment convention. |
-| `apollo3-cache-persist` | Apollo's recommended cache persistence library | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
+| Hook / API              | Purpose                                                                                                                | Status                                                                                                                                            |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useSuspenseQuery`      | Suspense-compatible query hook (works with React `<Suspense>`)                                                         | Available, **not adopted** (see rationale below)                                                                                                  |
+| `useBackgroundQuery`    | Trigger queries in parent, read in child via `useReadQuery`                                                            | Available, **not adopted**                                                                                                                        |
+| `useReadQuery`          | Read data from a `useBackgroundQuery` queryRef in a child component                                                    | Available, **not adopted** (companion to `useBackgroundQuery`)                                                                                    |
+| `useFragment`           | Subscribe to a specific fragment in cache without a query                                                              | **Adopted.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the full pattern.                                        |
+| `dataState`             | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor)                                                                                        |
+| `dataMasking: true`     | Strips fragment fields from parent query results so children must use `useFragment`                                    | **Enabled.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the colocated-fragment convention.                       |
+| `apollo3-cache-persist` | Apollo's recommended cache persistence library                                                                         | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts
 
@@ -1585,7 +1628,7 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 
 #### `useFragment` — safe for offline-first
 
-Specifics of *how* to use it live in CLAUDE.md. The reason it's safe to adopt
+Specifics of _how_ to use it live in CLAUDE.md. The reason it's safe to adopt
 broadly (unlike `useSuspenseQuery`):
 
 - Reads from cache only, never triggers network requests — no offline conflict.

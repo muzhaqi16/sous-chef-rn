@@ -1,21 +1,11 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
-
-const usagePurposeLabels: Record<string, string> = {
-  [UsagePurpose.General]: 'Consumed',
-  [UsagePurpose.Cooking]: 'Cooking',
-  [UsagePurpose.Snack]: 'Snack',
-  [UsagePurpose.MealPrep]: 'Meal prep',
-  [UsagePurpose.Restock]: 'Restocked',
-  [UsagePurpose.Waste]: 'Wasted',
-  [UsagePurpose.Gift]: 'Gift',
-  [UsagePurpose.Transfer]: 'Transfer',
-};
 
 interface UsageRecord {
   id: string;
@@ -37,11 +27,12 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
   expanded,
   onToggle,
 }) => {
+  const { t } = useTranslation();
   if (usageRecords.length === 0) return null;
 
   return (
     <CollapsibleSection
-      title="Usage History"
+      title={t('pantryItemDetail.usageHistory')}
       count={usageRecords.length}
       expanded={expanded}
       onToggle={onToggle}
@@ -50,9 +41,13 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
         {usageRecords.slice(0, 5).map(({ node: usage }) => {
           const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
           const isRestock = usage.purpose === UsagePurpose.Restock;
-          const purposeLabel = isAdjustment
-            ? 'Inventory adjusted'
-            : usagePurposeLabels[usage.purpose] ?? usage.purpose;
+          // Falls back to the raw value for a purpose the server has but this
+          // client's enum predates; `enumKeyCoverage.test.ts` guards the
+          // members we do know about.
+          const purposeLabel = t(
+            `usagePurpose.${usage.purpose}`,
+            usage.purpose,
+          );
           const quantityPrefix = isAdjustment
             ? usage.quantityUsed >= 0
               ? '+'
@@ -103,7 +98,9 @@ export const PantryUsageHistory: React.FC<PantryUsageHistoryProps> = ({
         })}
         {usageRecords.length > 5 && (
           <Text size="sm" tone="secondary" style={styles.moreEntries}>
-            +{usageRecords.length - 5} more entries
+            {t('pantryItemDetail.moreUsageEntries', {
+              count: usageRecords.length - 5,
+            })}
           </Text>
         )}
       </View>

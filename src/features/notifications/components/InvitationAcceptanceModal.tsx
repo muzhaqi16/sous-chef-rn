@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Modal, ActivityIndicator } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
@@ -8,7 +8,7 @@ import { alertService } from '#/services/alertService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { toastService } from '#/services/toastService';
-import { t as tGlobal } from '#/i18n/t';
+import { t as tGlobal } from '#/i18n';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -27,7 +27,7 @@ import {
 import { extractNodes } from '#/utils/connectionUtils';
 import { useUser } from '#store/useAppStore';
 import type { NotificationPayload } from '#store/slices/notificationSlice';
-import { executeAsyncWithCleanup } from '#/utils/compilerSafeWrappers';
+import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 const ErrorActivityIndicator = withUnistyles(ActivityIndicator, theme => ({

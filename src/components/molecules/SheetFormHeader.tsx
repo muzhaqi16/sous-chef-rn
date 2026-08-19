@@ -7,6 +7,12 @@ import { Text } from '#components/atoms/Text';
 interface SheetFormHeaderProps {
   title: string;
   cancelLabel: string;
+  /**
+   * Defaults to the submit id with `-submit-button` swapped for
+   * `-cancel-button`, so a sheet that already names its submit gets a matching
+   * cancel for free rather than every caller inventing one.
+   */
+  cancelTestID?: string;
   saveLabel: string;
   onCancel: () => void;
   onSave: () => void;
@@ -29,10 +35,28 @@ export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
   onSave,
   saving = false,
   submitTestID,
+  cancelTestID,
 }) => {
+  // Derived here rather than in a default parameter: a ternary in a default
+  // makes the React Compiler bail out of this whole component
+  // ("Expression type `ConditionalExpression` cannot be safely reordered"),
+  // which `scripts/check-compiler-bailouts.mjs` catches.
+  const resolvedCancelTestID =
+    cancelTestID ??
+    (submitTestID
+      ? `${submitTestID.replace(/-submit-button$/, '')}-cancel-button`
+      : undefined);
+
   return (
     <View style={styles.header}>
-      <AppPressable onPress={onCancel} style={styles.cancelButton}>
+      <AppPressable
+        onPress={onCancel}
+        // The only way to dismiss these sheets. Without it a test had to fall
+        // back on `header-back-button`, which belongs to `Header` — a different
+        // component these sheets do not render.
+        testID={resolvedCancelTestID}
+        style={styles.cancelButton}
+      >
         <Text size="md" weight="medium" tone="secondary">
           {cancelLabel}
         </Text>

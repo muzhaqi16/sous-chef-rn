@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Modal, FlatList, ViewStyle } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';

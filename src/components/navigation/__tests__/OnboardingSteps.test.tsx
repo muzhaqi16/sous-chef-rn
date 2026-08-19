@@ -19,9 +19,9 @@ jest.mock('#/utils/iconUtils', () => {
 });
 
 const mockSteps = [
-  { id: 'step-1', title: 'Welcome' },
-  { id: 'step-2', title: 'Preferences' },
-  { id: 'step-3', title: 'Setup' },
+  { id: 'step-1', titleKey: 'onboardingSteps.Welcome.title' },
+  { id: 'step-2', titleKey: 'onboardingSteps.Preferences.title' },
+  { id: 'step-3', titleKey: 'onboardingSteps.Setup.title' },
 ];
 
 describe('OnboardingSteps', () => {
@@ -74,7 +74,7 @@ describe('StepDot', () => {
     index: 0,
     activeIndex: mockActiveIndex,
     stepSize: 12,
-    step: { id: 'step-1', title: 'Welcome' },
+    step: { id: 'step-1', titleKey: 'onboardingSteps.Welcome.title' },
   };
 
   it('renders without crashing', () => {

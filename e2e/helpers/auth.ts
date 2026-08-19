@@ -10,7 +10,7 @@
  * - Detailed logging for debugging
  */
 
-import { element, by, waitFor } from 'detox';
+import { element, by, waitFor, system } from 'detox';
 import {
   waitForScreen,
   waitForModalReady,
@@ -25,7 +25,7 @@ import {
 import { typeIntoField, tapByID } from './actions';
 import { TEST_USER } from '../fixtures/testData';
 import { launchAppWithFabricWorkaround } from '../init';
-import { getAuthTokens } from './tokenProvider';
+import { ApiUnreachableError, getAuthTokens } from './tokenProvider';
 
 /**
  * ⭐ ENHANCED: Login with test user credentials
@@ -73,7 +73,11 @@ export async function loginWithCredentials(email: string, password: string) {
     }
   }
 
-  // Wait for home screen to load (shopping list is the default tab)
+  // Wait for home screen to load. Which tab is the landing tab varies, so
+  // either counts — but neither appearing means login did not complete, and
+  // this MUST throw. Warning and continuing let a failed login return
+  // successfully, so every spec built on this helper went on to assert against
+  // whatever screen happened to be up.
   try {
     await waitForScreen('shopping-list-screen', TIMEOUTS.NETWORK);
     console.log('✅ Reached home screen');
@@ -83,8 +87,9 @@ export async function loginWithCredentials(email: string, password: string) {
       await waitForScreen('pantry-screen', TIMEOUTS.NETWORK);
       console.log('✅ Reached pantry screen');
     } catch {
-      console.warn(
-        '⚠️  Neither shopping list nor pantry screen visible after login',
+      throw new Error(
+        'Login did not reach a home screen: neither shopping-list-screen nor ' +
+          'pantry-screen became visible after authentication.',
       );
     }
   }
@@ -97,6 +102,14 @@ export async function loginWithCredentials(email: string, password: string) {
  * ⭐ ENHANCED: Dismiss biometric prompt if it appears after login or during onboarding
  * NO synchronization disabling - uses proper waitFor conditions
  */
+/**
+ * How long to give iOS's "Save Password?" alert. It only appears on the first
+ * UI login of a fresh install, so on most runs this is simply waited out once.
+ */
+const SYSTEM_ALERT_TIMEOUT_MS = 3000;
+
+let systemPasswordAlertHandled = false;
+
 export async function dismissBiometricPromptIfPresent() {
   console.log('🔍 Checking for post-login prompts...');
 
@@ -115,20 +128,48 @@ export async function dismissBiometricPromptIfPresent() {
     3000,
   );
 
-  // Try to dismiss post-login biometric modal (only on real devices)
-  // Use 3s timeout to allow for animation/network delay on real devices
-  await waitIfPresent(
-    element(by.id('post-login-biometric-prompt')),
-    async () => {
-      console.log('📱 Dismissing post-login biometric prompt...');
-      await tapFirstAvailable([
-        element(by.id('biometric-prompt-decline')),
-        element(by.label('Not now')),
-      ]);
-      console.log('✅ Biometric prompt dismissed');
-    },
-    3000,
-  );
+  // iOS's own "Save Password?" alert after a UI login. It is a SYSTEM alert,
+  // not part of the app's view tree, so `by.id` and `by.text` cannot see it —
+  // the previous id-based probe waited 3s and moved on while the alert went
+  // on blocking every subsequent tap. Detox's
+  // system matcher is the only thing that reaches it.
+  //
+  // Wrapped because it appears only on some simulators and only on the first
+  // login of a fresh install.
+  // It is presented asynchronously after the login response lands, so tapping
+  // immediately races it: the tap finds nothing, the catch swallows that, and
+  // the alert then blocks every subsequent tap with
+  // "View is not hittable at its visible point".
+  // Once per process: iOS offers to save the password on the first UI login of
+  // a fresh install and never again, but this helper runs in every `beforeEach`
+  // — so an unconditional 4s wait would add 4s per test for an alert that
+  // cannot reappear.
+  if (!systemPasswordAlertHandled) {
+    // Polled rather than awaited through `waitFor`: Detox's `waitFor` is typed
+    // for a NativeElement, and a system element is a separate type it does not
+    // accept. The alert is also presented asynchronously after the login
+    // response lands, so a single immediate tap races it — the tap finds
+    // nothing, and the alert then blocks every subsequent one with
+    // "View is not hittable at its visible point".
+    // Raced against a timer, because `system.element(...).tap()` BLOCKS when
+    // no system alert is present — it does not throw, and Detox's `waitFor` is
+    // typed for a NativeElement so it cannot bound this. An unbounded attempt
+    // runs out jest's 120s HOOK timeout, and every test in the file then
+    // reports as "Exceeded timeout of 120000 ms for a hook" pointing at
+    // `beforeAll`, with the app sitting there perfectly healthy.
+    const dismissed = await Promise.race([
+      system
+        .element(by.system.label('Not Now'))
+        .tap()
+        .then(() => true)
+        .catch(() => false),
+      delay(SYSTEM_ALERT_TIMEOUT_MS).then(() => false),
+    ]);
+    if (dismissed) {
+      console.log('✅ Dismissed the system "Save Password?" alert');
+    }
+    systemPasswordAlertHandled = true;
+  }
 
   // Try to dismiss onboarding biometric setup screen (only on real devices)
   await waitIfPresent(
@@ -153,45 +194,6 @@ export async function dismissBiometricPromptIfPresent() {
   );
 
   console.log('✅ All post-login flows handled');
-}
-
-/**
- * ⭐ ENHANCED: Logout from the app
- */
-export async function logout() {
-  console.log('🚪 Logging out...');
-
-  // Navigate to profile
-  await tapByID('tab-profile');
-  await waitForScreen('profile-screen', TIMEOUTS.DEFAULT);
-
-  // Scroll to find logout button (it's directly on the profile screen)
-  const profileScroll = element(by.id('profile-scroll-view'));
-  await waitFor(profileScroll).toBeVisible().withTimeout(TIMEOUTS.DEFAULT);
-  await profileScroll.scrollTo('bottom');
-  await delay(300); // Wait for scroll animation
-
-  // Tap logout
-  await tapByID('profile-logout-button');
-
-  // Confirm logout if confirmation dialog appears
-  await waitIfPresent(
-    element(by.id('confirm-logout-button')),
-    async () => {
-      console.log('Confirming logout...');
-      await tapByID('confirm-logout-button');
-    },
-    2000,
-  );
-
-  // Wait for login screen or landing screen
-  try {
-    await waitForScreen('login-screen', TIMEOUTS.NETWORK);
-  } catch {
-    await waitForScreen('landing-auth-screen', TIMEOUTS.NETWORK);
-  }
-
-  console.log('✅ Logged out successfully');
 }
 
 /**
@@ -301,22 +303,6 @@ export async function ensureLoggedIn() {
 }
 
 /**
- * ⭐ ENHANCED: Ensure logged out state (logout if currently logged in)
- */
-export async function ensureLoggedOut() {
-  console.log('🔍 Checking logout state...');
-
-  const loggedIn = await isLoggedIn();
-
-  if (loggedIn) {
-    console.log('Currently logged in, logging out now...');
-    await logout();
-  } else {
-    console.log('✅ Already logged out');
-  }
-}
-
-/**
  * ⭐ NEW: Reset app state to clean session
  * Use this between test suites for app reuse
  */
@@ -335,13 +321,46 @@ export async function resetAppState() {
   console.log('✅ App state reset');
 }
 
+export interface BootstrapOptions {
+  /**
+   * Seed the pantry sort so list order is known before the first frame.
+   *
+   * The alternative is driving the sort modal, which costs two open/select
+   * round-trips per test AND has to wait for the control to exist at all — it
+   * renders under `{!!stats && …}`, so it does not appear until the stats query
+   * resolves. Seeding a value the test already knows removes both the taps and
+   * the wait.
+   *
+   * Note `recent` sorts newest-first under `asc`: its comparator is inverted
+   * relative to the other options (`b - a`), which `usePantrySorting.test.ts`
+   * asserts. The app's own default is `recent` + `desc` — oldest first.
+   */
+  pantrySort?: {
+    option: 'name' | 'expiry' | 'quantity' | 'recent';
+    direction: 'asc' | 'desc';
+  };
+}
+
 /**
  * ⭐ ENHANCED: Bootstrap authenticated session for tests
  * Uses token injection via launchArgs for speed (~1s vs ~5-8s UI login).
  * Falls back to UI login if token injection fails.
  */
-export async function bootstrapAuthenticatedSession() {
+export async function bootstrapAuthenticatedSession(
+  options: BootstrapOptions = {},
+) {
   console.log('🚀 Bootstrapping authenticated session...');
+
+  // Seeded on BOTH launch paths below. `reloadReactNative` (what
+  // `relaunchToHomeTab` uses between tests) keeps the original launch args, and
+  // the preference is persisted anyway, so seeding once here holds for the whole
+  // file.
+  const preferenceArgs = options.pantrySort
+    ? {
+        detoxPantrySortOption: options.pantrySort.option,
+        detoxPantrySortDirection: options.pantrySort.direction,
+      }
+    : {};
 
   // Try token injection first (fast path)
   try {
@@ -355,6 +374,7 @@ export async function bootstrapAuthenticatedSession() {
         detoxUserToken: tokens.accessToken,
         detoxRefreshToken: tokens.refreshToken,
         detoxUser: JSON.stringify(tokens.user),
+        ...preferenceArgs,
       },
     });
 
@@ -366,14 +386,26 @@ export async function bootstrapAuthenticatedSession() {
       return;
     }
 
-    console.log('⚠️ Token injection did not result in logged-in state, falling back to UI login...');
+    console.log(
+      '⚠️ Token injection did not result in logged-in state, falling back to UI login...',
+    );
   } catch (error) {
-    console.log(`⚠️ Token injection failed: ${error}, falling back to UI login...`);
+    // The one failure the fallback cannot rescue: UI login posts to the same
+    // endpoint. Surface it as itself instead of spending ~50s to report a
+    // missing `login-screen`.
+    if (error instanceof ApiUnreachableError) {
+      throw error;
+    }
+
+    console.log(
+      `⚠️ Token injection failed: ${error}, falling back to UI login...`,
+    );
 
     // Launch without tokens
     await launchAppWithFabricWorkaround({
       newInstance: true,
       permissions: { notifications: 'YES', camera: 'YES' },
+      launchArgs: preferenceArgs,
     });
   }
 

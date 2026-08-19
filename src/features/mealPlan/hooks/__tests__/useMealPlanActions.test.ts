@@ -79,7 +79,13 @@ describe('useMealPlanActions', () => {
           mealPlan: { __typename: 'MealPlan', id: 'plan-1', name: 'Camping' },
         },
       },
-      delay: 20,
+      // Must comfortably exceed testing-library's waitFor poll interval (50ms).
+      // At the previous 20ms the mutation had usually already resolved by the
+      // first poll, so `unconfirmedCreates` was cleared before the in-flight
+      // assertion below ran — the test passed only when a poll happened to
+      // land inside that 20ms window, which is why it failed intermittently
+      // under full-suite load and passed in isolation.
+      delay: 1000,
     });
 
     const { result } = renderHookWithApollo(() => useMealPlanActions(), {

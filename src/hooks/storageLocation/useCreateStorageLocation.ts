@@ -12,11 +12,11 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 /** The StorageLocation node shape returned by (and written for) the create. */
 type StorageLocationNode = Extract<
@@ -113,12 +113,16 @@ function writeOptimisticLocation(
   location: StorageLocationNode,
   pantryId: string | undefined,
 ): void {
-  executeCacheUpdate(() => {
+  try {
     addToStorageLocationsCache(cache, location, { position: 'end' });
     if (pantryId) {
       addToPantryLocations(cache, pantryId, location, { position: 'end' });
     }
-  }, 'Create Storage Location (optimistic)');
+  } catch (cacheError) {
+    errorService.reportError(cacheError, {
+      operation: 'Create Storage Location (optimistic)',
+    });
+  }
 }
 
 function revertOptimisticLocation(
@@ -126,7 +130,7 @@ function revertOptimisticLocation(
   id: string,
   pantryId: string | undefined,
 ): void {
-  executeCacheUpdate(() => {
+  try {
     removeFromStorageLocationsCache(cache, id, { evictItem: false });
     if (pantryId) {
       removeFromPantryLocations(cache, pantryId, id, { evictItem: false });
@@ -136,7 +140,11 @@ function revertOptimisticLocation(
       cache.evict({ id: cacheId });
       cache.gc();
     }
-  }, 'Revert Storage Location create');
+  } catch (cacheError) {
+    errorService.reportError(cacheError, {
+      operation: 'Revert Storage Location create',
+    });
+  }
 }
 
 /**
@@ -171,14 +179,18 @@ export function useCreateStorageLocation(
           return;
         }
         const newLocation = data.createStorageLocation.storageLocation;
-        executeCacheUpdate(() => {
+        try {
           addToStorageLocationsCache(cache, newLocation, { position: 'end' });
           if (pantryId) {
             addToPantryLocations(cache, pantryId, newLocation, {
               position: 'end',
             });
           }
-        }, 'Cache update failed for createStorageLocation:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for createStorageLocation:',
+          });
+        }
       },
     },
   );

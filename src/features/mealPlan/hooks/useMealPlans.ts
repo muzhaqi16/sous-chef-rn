@@ -92,6 +92,12 @@ export function useMealPlans(filters?: MealPlanFilters) {
       // flashing it over already-rendered content.
       initialLoading: loading && !data,
       error: error as Error | undefined,
+      // `data !== undefined` — a response arrived, empty or not. Separates
+      // "you have no plans" from "we never got an answer".
+      hasResult: data !== undefined,
+      // Signed out, so the query above was never sent. Reported so the screen
+      // shows its empty state rather than accusing the network of a failure.
+      skipped: isLoggedOut,
       totalCount: connectionData.totalCount,
       hasMore: connectionData.hasMore,
     },

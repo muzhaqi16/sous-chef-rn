@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View, TextInput } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/base/BaseSwitch';
@@ -8,6 +9,8 @@ import {
   getAvailabilityStatus,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
@@ -20,10 +23,33 @@ interface IngredientMatchRowProps {
 
 type BadgeColor = 'success' | 'warning' | 'error';
 
-const BADGE_CONFIG: Record<string, { label: string; color: BadgeColor }> = {
-  available: { label: 'Available', color: 'success' },
-  partial: { label: 'Partial', color: 'warning' },
-  missing: { label: 'Missing', color: 'error' },
+/** Key paths — module-level table, resolved by the row that renders it. */
+const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
+  available: { labelKey: 'ingredientMatch.available', color: 'success' },
+  partial: { labelKey: 'ingredientMatch.partial', color: 'warning' },
+  missing: { labelKey: 'ingredientMatch.missing', color: 'error' },
+};
+
+/**
+ * The availability badge, owning the `badgeColor` variant and its
+ * `useVariants` call.
+ *
+ * Extracted so the row itself keeps compiling — Unistyles' variant transform
+ * makes the React Compiler bail out of the containing function, and this row
+ * renders once per recipe ingredient.
+ */
+const AvailabilityBadge: React.FC<{
+  badgeColor: BadgeColor;
+  children: React.ReactNode;
+}> = ({ badgeColor, children }) => {
+  styles.useVariants({ badgeColor });
+  return (
+    <View style={styles.badge}>
+      <Text size="xs" weight="semibold" style={styles.badgeText}>
+        {children}
+      </Text>
+    </View>
+  );
 };
 
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
@@ -31,11 +57,11 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   index,
   onUpdate,
 }) => {
+  const { t } = useTranslation();
   const { match, ingredient, adjustedQuantity, isIncluded } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
   const isOptional = ingredient.isOptional;
-  styles.useVariants({ badgeColor: badge.color });
 
   return (
     <View style={[styles.row, !isIncluded && styles.rowExcluded]}>
@@ -49,34 +75,34 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           >
             {ingredient.name}
           </Text>
-          <View style={styles.badge}>
-            <Text size="xs" weight="semibold" style={styles.badgeText}>
-              {isOptional ? 'Optional' : badge.label}
-            </Text>
-          </View>
+          <AvailabilityBadge badgeColor={badge.color}>
+            {isOptional ? t('ingredientMatch.optional') : t(badge.labelKey)}
+          </AvailabilityBadge>
         </View>
 
         {!!match.matchedPantryItem && (
           <Text size="sm" tone="secondary" numberOfLines={1}>
-            Matched: {match.matchedPantryItem.itemName} (
-            {match.matchedPantryItem.quantity}
-            {match.matchedPantryItem.unit?.symbol
-              ? ` ${match.matchedPantryItem.unit.symbol}`
-              : ''}{' '}
-            available)
+            {t('ingredientMatch.matchedPantryItem', {
+              name: match.matchedPantryItem.itemName,
+              amount: `${match.matchedPantryItem.quantity}${
+                match.matchedPantryItem.unit?.symbol
+                  ? ` ${match.matchedPantryItem.unit.symbol}`
+                  : ''
+              }`,
+            })}
           </Text>
         )}
 
         <View style={styles.bottomRow}>
           <View style={styles.quantityRow}>
             <Text size="sm" tone="secondary">
-              Qty:
+              {t('ingredientMatch.qtyLabel')}
             </Text>
             <TextInput
               style={styles.quantityInput}
-              value={String(adjustedQuantity)}
+              value={formatNumberForInput(adjustedQuantity)}
               onChangeText={text => {
-                const num = parseFloat(text);
+                const num = parseDecimalInput(text);
                 if (!isNaN(num) && num >= 0) {
                   onUpdate(index, { adjustedQuantity: num });
                 }

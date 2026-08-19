@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
 import { StyleSheet } from 'react-native-unistyles';
@@ -139,7 +139,9 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
               {format(newStartDate, 'EEE, MMM d')}
             </Text>
             <Text size="sm" tone="secondary" style={styles.dateSubtext}>
-              to {format(newEndDate, 'EEE, MMM d')}
+              {t('duplicatePlan.endDateSubtext', {
+                date: format(newEndDate, 'EEE, MMM d'),
+              })}
             </Text>
           </View>
           <Pressable

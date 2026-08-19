@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseInput } from '#/components/atoms/BaseInput/BaseInput';
@@ -26,6 +27,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
   onCancel,
   isCreating,
 }) => {
+  const { t } = useTranslation();
   if (!isVisible) return null;
 
   return (
@@ -33,18 +35,18 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
       <BaseInput
         value={homeName}
         onChangeText={onHomeNameChange}
-        placeholder="Enter home name"
+        placeholder={t('createHome.namePlaceholder')}
         autoFocus
         autoCapitalize="words"
       />
       <FormCheckbox
-        label="Allow others to join with a code"
+        label={t('createHome.allowJoinCode')}
         checked={allowJoinCode}
         onPress={() => onAllowJoinCodeChange(!allowJoinCode)}
       />
       <View style={styles.formActions}>
         <Button variant="secondary" onPress={onCancel} fullWidth>
-          Cancel
+          {t('labels.cancel')}
         </Button>
         <Button
           loading={isCreating}
@@ -53,7 +55,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
           variant="primary"
           style={styles.button}
         >
-          Create
+          {t('labels.create')}
         </Button>
       </View>
     </View>

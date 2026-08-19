@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -22,7 +22,8 @@ const GREETING_NAME_TOKEN = 'NAME';
 
 interface PantryHeaderProps {
   /** User's display name */
-  userName: string;
+  /** Omitted when the account has no name yet — see `greetingNoName`. */
+  userName?: string;
   /** Current household name */
   householdName: string;
   /** Optional avatar URL */
@@ -65,9 +66,12 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
   const { t } = useTranslation();
   const badgeRef = useRef<View>(null);
 
-  const greetingTemplate = t('pantryHeader.greeting', {
-    name: GREETING_NAME_TOKEN,
-  });
+  // With no name to show, use a whole greeting written for that case rather
+  // than interpolating a filler word into the named one — "Hello, there!"
+  // does not translate ("¡Hola, hola!").
+  const greetingTemplate = userName
+    ? t('pantryHeader.greeting', { name: GREETING_NAME_TOKEN })
+    : t('pantryHeader.greetingNoName');
   const [greetingBefore, greetingAfter] =
     greetingTemplate.split(GREETING_NAME_TOKEN);
 
@@ -86,9 +90,11 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
               {greetingBefore}
             </Text>
           )}
-          <Text weight="bold" size="2xl" tone="accent">
-            {userName}
-          </Text>
+          {!!userName && (
+            <Text weight="bold" size="2xl" tone="accent">
+              {userName}
+            </Text>
+          )}
           {!!greetingAfter && (
             <Text weight="bold" style={styles.greeting}>
               {greetingAfter}

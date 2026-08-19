@@ -206,7 +206,7 @@ export abstract class BaseScreen {
    */
   async goBack() {
     if (device.getPlatform() === 'ios') {
-      await this.tapByID('back-button');
+      await this.tapByID('header-back-button');
     } else {
       await device.pressBack();
     }

@@ -14,7 +14,7 @@ jest.mock('#/services/alertService', () => ({
 // Passthrough auto-mock — real behavior, but overridable per test to force the
 // `false` return that a genuine throw produces. errorPolicy: 'all' means Apollo
 // resolves rather than throws, so it can't be provoked through a mocked link.
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const REASON = 'The photo shows a completely different product.';
 

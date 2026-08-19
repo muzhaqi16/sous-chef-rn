@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import {
@@ -19,6 +19,8 @@ import { generateId } from '#/utils/generateId';
 import { type ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import type { IngredientFormState } from '../useRecipeForm';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -64,7 +66,7 @@ export const RecipeIngredientEditor = forwardRef<
         setEditingId(ingredient.id);
         setName(ingredient.name);
         setItemId(ingredient.itemId ?? null);
-        setQuantity(String(ingredient.quantity));
+        setQuantity(formatNumberForInput(ingredient.quantity));
         setUnit(''); // Unit display text not stored - user can re-select
         setUnitId(ingredient.unitId ?? null);
         setPreparation(ingredient.preparation ?? '');
@@ -112,7 +114,7 @@ export const RecipeIngredientEditor = forwardRef<
     onSave({
       id: editingId ?? `temp-ing-${generateId()}`,
       name: name.trim(),
-      quantity: parseFloat(quantity) || 1,
+      quantity: parseDecimalInput(quantity) || 1,
       itemId,
       unitId,
       preparation: preparation.trim(),

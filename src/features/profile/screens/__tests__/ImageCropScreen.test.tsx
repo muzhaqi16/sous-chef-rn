@@ -49,7 +49,7 @@ jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

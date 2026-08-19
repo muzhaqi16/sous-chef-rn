@@ -14,6 +14,15 @@ interface MealTemplatesState {
   templates: MealTemplateDisplayFragment[];
   loading: boolean;
   error: Error | undefined;
+  /**
+   * `data !== undefined` — a response arrived, empty or not.
+   *
+   * `search` and `category` are live controls, so every combination is its own
+   * cache entry and the first touch of either while offline is a guaranteed
+   * miss. Consumers pass this to `useDataState`, which turns that miss into
+   * "we don't know" rather than "there are none".
+   */
+  hasResult: boolean;
   hasMore: boolean;
   totalCount: number | undefined;
   searchQuery: string;
@@ -60,11 +69,19 @@ export function useMealTemplates(
     fetchMore,
   });
 
+  // `search` and `category` are live controls, so every combination is its own
+  // cache entry — offline, the first search is a guaranteed miss. Without this
+  // the sheet would claim "no templates found", which is a different statement
+  // from "we couldn't check".
+  const templates = connectionData.items as MealTemplateDisplayFragment[];
+
   return {
     state: {
-      templates: connectionData.items as MealTemplateDisplayFragment[],
+      templates,
       loading,
       error: error as Error | undefined,
+      // `data !== undefined` — a response arrived, empty or not.
+      hasResult: data !== undefined,
       hasMore: connectionData.hasMore,
       totalCount: connectionData.totalCount,
       searchQuery,

@@ -1,4 +1,15 @@
 import { StorageState } from '#/graphql/generated/schemaTypes';
+// Aliased: despite the `use` prefix this module exports plain functions, not a
+// hook, so there is no component to call `useTranslation` in. Callers that
+// render the result are responsible for re-running these on a language change.
+import { t as tGlobal } from '#/i18n';
+import type { Translate } from '#/i18n/types';
+// Plural keys need the options form, which the module-level t does not take.
+import { getI18n } from '#/i18n/config';
+import {
+  DEFAULT_CURRENCY,
+  formatCurrency as formatMoney,
+} from '#/utils/formatters/number';
 
 // Location type for filtering
 export type PantryLocation = 'fridge' | 'freezer' | 'pantry';
@@ -15,16 +26,19 @@ export interface ExpirationStatus {
   type: ExpirationStatusType;
 }
 
-// Helper to format storage state for display
-export const formatStorageState = (state?: string | null): string => {
-  if (!state) return '';
-  const mapping: Record<string, string> = {
-    [StorageState.Refrigerated]: 'Fridge',
-    [StorageState.Frozen]: 'Freezer',
-    [StorageState.Ambient]: 'Dry pantry',
-  };
-  return mapping[state] || state;
-};
+/**
+ * The short register used on the item detail screen ("Fridge", not
+ * "Refrigerated"), so it reads as a location rather than a setting. Kept as its
+ * own namespace rather than reusing `storageState.*`, which is the long form
+ * the pickers show.
+ *
+ * `t` is a parameter because resolving at module load would freeze whatever
+ * language happened to load first.
+ */
+export const formatStorageState = (
+  state: string | null | undefined,
+  translate: Translate,
+): string => (state ? translate(`storageStateShort.${state}`, state) : '');
 
 // Helper to calculate days until expiry (negative if expired)
 export const calculateExpiresIn = (
@@ -53,21 +67,32 @@ export const getExpirationStatus = (
   expiresIn: number | null,
 ): ExpirationStatus => {
   if (expiresIn === null) {
-    return { text: 'No expiry date', type: 'normal' };
+    return { text: tGlobal('expiration.noExpiryDate'), type: 'normal' };
   }
   if (expiresIn < 0) {
-    return { text: `Expired ${Math.abs(expiresIn)} days ago`, type: 'expired' };
+    return {
+      text: getI18n().t('expiration.expiredDaysAgo', {
+        count: Math.abs(expiresIn),
+      }),
+      type: 'expired',
+    };
   }
   if (expiresIn === 0) {
-    return { text: 'Expires today!', type: 'critical' };
+    return { text: tGlobal('expiration.expiresToday'), type: 'critical' };
   }
   if (expiresIn === 1) {
-    return { text: 'Expires tomorrow!', type: 'warning' };
+    return { text: tGlobal('expiration.expiresTomorrow'), type: 'warning' };
   }
   if (expiresIn <= 3) {
-    return { text: `Expires in ${expiresIn} days`, type: 'warning' };
+    return {
+      text: getI18n().t('expiration.expiresInDays', { count: expiresIn }),
+      type: 'warning',
+    };
   }
-  return { text: `${expiresIn} days left`, type: 'normal' };
+  return {
+    text: getI18n().t('expiration.daysLeft', { count: expiresIn }),
+    type: 'normal',
+  };
 };
 
 // Default category emojis
@@ -202,9 +227,18 @@ export const formatQuantityBreakdown = (
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
   if (total <= 0) return null;
+  // The unit label is server data (`Unit.symbol` / `Unit.name`) and carries no
+  // plural form, so it is passed through untouched. This used to append a
+  // literal "s" for any count but 1 — English pluralisation applied to a label
+  // that is not English, producing "2 lattinas" in Italian and "2 kgs" even in
+  // English. The count/unit order lives in the key so a locale can change it.
   const contentLabel =
-    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name || 'unit';
-  return `${total} ${contentLabel}${total !== 1 ? 's' : ''}`;
+    breakdown.contentUnit?.symbol || breakdown.contentUnit?.name;
+  if (!contentLabel) return null;
+  return tGlobal('itemSubtitle.contentUnitCount', {
+    count: total,
+    unit: contentLabel,
+  });
 };
 
 // Helper function to calculate expiry info for detail views
@@ -216,13 +250,20 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
     (expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
   );
 
-  if (diffDays < 0) return { text: 'Expired', isExpired: true, isUrgent: true };
+  if (diffDays < 0)
+    return {
+      text: tGlobal('expiration.expired'),
+      isExpired: true,
+      isUrgent: true,
+    };
   if (diffDays === 0)
-    return { text: 'Expires today', isExpired: false, isUrgent: true };
-  if (diffDays === 1)
-    return { text: '1 day to expire', isExpired: false, isUrgent: true };
+    return {
+      text: tGlobal('expiration.expiresTodayShort'),
+      isExpired: false,
+      isUrgent: true,
+    };
   return {
-    text: `${diffDays} days to expire`,
+    text: getI18n().t('expiration.daysToExpire', { count: diffDays }),
     isExpired: false,
     isUrgent: diffDays <= 3,
   };
@@ -232,7 +273,9 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
 export const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return null;
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
+  // Device locale, not a hardcoded 'en-US': the day/month order and month
+  // names have to match the rest of the UI.
+  return date.toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -274,8 +317,9 @@ export const formatAcquisitionMethod = (
     .join(' ');
 };
 
-// Format currency for display
+// Format a money amount for display, or null when there is no amount worth
+// showing — callers omit the row entirely rather than render a bare zero.
 export const formatCurrency = (amount?: number | null): string | null => {
   if (amount == null || amount <= 0) return null;
-  return `$${amount.toFixed(2)}`;
+  return formatMoney(amount, DEFAULT_CURRENCY);
 };

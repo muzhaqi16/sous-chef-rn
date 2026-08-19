@@ -10,66 +10,6 @@ import { delay, TIMEOUTS, waitForScreen } from './waitFor';
 import { tapByID } from './actions';
 
 /**
- * Clear all pantry items
- * Navigates to pantry and clears all items
- */
-export async function clearPantryItems(): Promise<void> {
-  console.log('🗑️ Clearing pantry items...');
-
-  // Navigate to pantry
-  await tapByID('tab-pantry');
-  await waitForScreen('pantry-screen', TIMEOUTS.DEFAULT);
-
-  // Try to find and tap clear all button if available
-  try {
-    await waitFor(element(by.id('pantry-clear-all-button')))
-      .toBeVisible()
-      .withTimeout(2000);
-    await tapByID('pantry-clear-all-button');
-
-    // Confirm clear
-    await waitFor(element(by.id('confirm-clear-button')))
-      .toBeVisible()
-      .withTimeout(2000);
-    await tapByID('confirm-clear-button');
-
-    console.log('✅ Pantry items cleared');
-  } catch {
-    console.log('ℹ️ No clear all button or no items to clear');
-  }
-}
-
-/**
- * Clear all shopping list items
- * Navigates to shopping list and clears all items
- */
-export async function clearShoppingListItems(): Promise<void> {
-  console.log('🗑️ Clearing shopping list items...');
-
-  // Navigate to shopping list
-  await tapByID('tab-shoppinglist');
-  await waitForScreen('shopping-list-screen', TIMEOUTS.DEFAULT);
-
-  // Try to find and tap clear all button if available
-  try {
-    await waitFor(element(by.id('shopping-list-clear-all-button')))
-      .toBeVisible()
-      .withTimeout(2000);
-    await tapByID('shopping-list-clear-all-button');
-
-    // Confirm clear
-    await waitFor(element(by.id('confirm-clear-button')))
-      .toBeVisible()
-      .withTimeout(2000);
-    await tapByID('confirm-clear-button');
-
-    console.log('✅ Shopping list items cleared');
-  } catch {
-    console.log('ℹ️ No clear all button or no items to clear');
-  }
-}
-
-/**
  * Seed pantry with test items
  * @param items - Array of items to add
  */
@@ -212,27 +152,6 @@ export function generateItemName(prefix = 'E2E'): string {
  */
 export function generateTestEmail(): string {
   return `test.user.${Date.now()}@example.com`;
-}
-
-/**
- * Clear app data and reset to initial state
- * Note: This will log the user out
- */
-export async function resetAppData(): Promise<void> {
-  console.log('🔄 Resetting app data...');
-
-  // Clear keychain (auth tokens)
-  await device.clearKeychain();
-
-  // Reload app
-  await device.reloadReactNative();
-
-  // Wait for app to load
-  await waitFor(element(by.id('splash-screen')))
-    .not.toBeVisible()
-    .withTimeout(10000);
-
-  console.log('✅ App data reset');
 }
 
 /**

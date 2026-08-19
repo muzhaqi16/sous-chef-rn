@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { alertService } from '#/services/alertService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { alertMutationFailure } from './alertMutationFailure';
+import { errorService } from '#/services/errorService';
 
 /**
  * Flags a catalog item for admin moderation with a free-text reason.
@@ -21,16 +21,19 @@ export function useReportItem() {
     itemId: string,
     reason: string,
   ): Promise<boolean> => {
-    const result = await executeMutation(
-      () =>
-        markForReview({
-          variables: { input: { itemId, reason: reason.trim() } },
-        }),
-      'Error reporting item:',
-    );
+    let result;
+    try {
+      result = await markForReview({
+        variables: { input: { itemId, reason: reason.trim() } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Error reporting item:',
+      });
+    }
 
     // A throw escaped Apollo's errorPolicy entirely — nothing to interpret.
-    if (result === false) {
+    if (!result) {
       alertMutationFailure(t, { keyPrefix: 'reportItem' });
       return false;
     }

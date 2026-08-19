@@ -14,6 +14,7 @@ import {
   type AnalyticsFilters,
 } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 
 type UsageAnalytics = NonNullable<
   GetPantryUsageAnalyticsQuery['pantry']
@@ -35,12 +36,16 @@ interface UsePantryAnalyticsReturn {
   usageData: UsageAnalytics | null;
   usageLoading: boolean;
   usageError: Error | undefined;
+  /** No network was attempted and nothing was cached for these filters. */
+  usageOffline: boolean;
   wasteData: WasteAnalytics | null;
   wasteLoading: boolean;
   wasteError: Error | undefined;
+  wasteOffline: boolean;
   ledgerData: LedgerAnalytics | null;
   ledgerLoading: boolean;
   ledgerError: Error | undefined;
+  ledgerOffline: boolean;
   loading: boolean;
   dateRange: DateRange;
   setDateRange: (range: DateRange) => void;
@@ -104,20 +109,54 @@ export function usePantryAnalytics({
   useApolloErrorLogger('GetPantryWasteAnalytics', wasteError);
   useApolloErrorLogger('GetPantryLedgerAnalytics', ledgerError);
 
+  /**
+   * `allSettled`, not `all`, so a refresh always resolves: callers clear their
+   * spinner in the caller's own `finally`, and each query reports its own
+   * error/offline state.
+   *
+   * Today `all` would behave the same — `watchQuery.errorPolicy: 'all'`
+   * (src/apollo/client.ts) makes a failing refetch resolve with `{data, error}`
+   * rather than reject. That is the only reason `all` was safe, which is a lot
+   * of load for a default to bear when the offline state now offers a Refresh
+   * button that fires exactly when these fail.
+   */
   const refetch = async () => {
-    await Promise.all([refetchUsage(), refetchWaste(), refetchLedger()]);
+    await Promise.allSettled([refetchUsage(), refetchWaste(), refetchLedger()]);
   };
 
+  const usageAnalytics = usageQueryData?.pantry?.usageAnalytics ?? null;
+  const wasteAnalytics = wasteQueryData?.pantry?.wasteAnalytics ?? null;
+  const ledgerAnalytics = ledgerQueryData?.pantry?.ledgerAnalytics ?? null;
+
+  // Filtered by `dateRange` / `granularity`, so each combination is its own
+  // cache entry — offline, changing a filter is a guaranteed miss even when the
+  // screen was populated a second ago. See `useOfflineAwareError`.
+  const usage = useOfflineAwareError(
+    usageError as Error | undefined,
+    usageAnalytics !== null,
+  );
+  const waste = useOfflineAwareError(
+    wasteError as Error | undefined,
+    wasteAnalytics !== null,
+  );
+  const ledger = useOfflineAwareError(
+    ledgerError as Error | undefined,
+    ledgerAnalytics !== null,
+  );
+
   return {
-    usageData: usageQueryData?.pantry?.usageAnalytics ?? null,
+    usageData: usageAnalytics,
     usageLoading,
-    usageError: usageError as Error | undefined,
-    wasteData: wasteQueryData?.pantry?.wasteAnalytics ?? null,
+    usageError: usage.error,
+    usageOffline: usage.offline,
+    wasteData: wasteAnalytics,
     wasteLoading,
-    wasteError: wasteError as Error | undefined,
-    ledgerData: ledgerQueryData?.pantry?.ledgerAnalytics ?? null,
+    wasteError: waste.error,
+    wasteOffline: waste.offline,
+    ledgerData: ledgerAnalytics,
     ledgerLoading,
-    ledgerError: ledgerError as Error | undefined,
+    ledgerError: ledger.error,
+    ledgerOffline: ledger.offline,
     loading: usageLoading || wasteLoading || ledgerLoading,
     dateRange,
     setDateRange,

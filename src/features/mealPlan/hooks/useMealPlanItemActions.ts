@@ -38,11 +38,9 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 const addToMealPlanItems = createAddToParentArrayUpdater<{ id: string }>(
   'MealPlan',
@@ -163,34 +161,45 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // meal into the cache before firing, so adding works fully offline.
     const id = generateEntityId();
     const optimisticItem = buildOptimisticMealPlanItem(client.cache, id, input);
-    executeCacheUpdate(() => {
+    try {
       writeItem(optimisticItem);
       if (mealPlanId) {
         addToMealPlanItems(client.cache, mealPlanId, optimisticItem, {
           position: 'end',
         });
       }
-    }, 'Add Meal (optimistic)');
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Meal (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        createItemMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Create Meal Plan Item error:',
-    );
+    let result;
+    try {
+      result = await createItemMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create Meal Plan Item error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      executeCacheUpdate(() => {
+      try {
         if (mealPlanId) {
           removeFromMealPlanItems(client.cache, mealPlanId, id, {
             evictItem: true,
           });
         }
-      }, 'Revert rejected Meal Plan Item');
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Meal Plan Item',
+        });
+      }
       const payload = result ? result.data?.createMealPlanItem : null;
       const message = payload && 'message' in payload ? payload.message : null;
       toastService.error(message ?? 'Failed to add meal');
@@ -212,39 +221,50 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // Permanent write BEFORE firing — survives an offline/API-down queue.
     const snapshot = readItemSnapshot(id) as OptimisticMealPlanItem | null;
     if (snapshot) {
-      executeCacheUpdate(
-        () =>
-          writeItem({
-            ...snapshot,
-            ...(input.meal?.customMealName !== undefined && {
-              customMealName: input.meal.customMealName,
-            }),
-            ...(input.servings !== undefined && { servings: input.servings }),
-            ...(input.notes !== undefined && { notes: input.notes }),
-            ...(input.mealType != null && { mealType: input.mealType }),
-            ...(input.date != null && { date: input.date }),
-          }),
-        'Update Meal (optimistic)',
-      );
+      // Built before the try — conditional spreads inside a try body make the
+      // React Compiler bail out of this hook.
+      const optimisticItem = {
+        ...snapshot,
+        ...(input.meal?.customMealName !== undefined && {
+          customMealName: input.meal.customMealName,
+        }),
+        ...(input.servings !== undefined && { servings: input.servings }),
+        ...(input.notes !== undefined && { notes: input.notes }),
+        ...(input.mealType != null && { mealType: input.mealType }),
+        ...(input.date != null && { date: input.date }),
+      };
+      try {
+        writeItem(optimisticItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Update Meal (optimistic)',
+        });
+      }
     }
 
-    const result = await executeMutation(
-      () =>
-        updateItemMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Update Meal Plan Item error:',
-    );
+    let result;
+    try {
+      result = await updateItemMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Meal Plan Item error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {
-        executeCacheUpdate(
-          () => writeItem(snapshot),
-          'Revert rejected Meal update',
-        );
+        try {
+          writeItem(snapshot);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected Meal update',
+          });
+        }
       }
       const payload = result ? result.data?.updateMealPlanItem : null;
       const message = payload && 'message' in payload ? payload.message : null;
@@ -267,7 +287,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // for the permanent write.
     const fullItem = readItemSnapshot(id) as OptimisticMealPlanItem | null;
     if (!fullItem) {
-      toastService.error('Failed to update meal');
+      toastService.error(t('toasts.mealUpdateFailed'));
       return null;
     }
 
@@ -285,17 +305,22 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     );
 
     // Permanent write BEFORE firing — survives an offline/API-down queue.
-    executeCacheUpdate(
-      () =>
-        writeItem({
-          ...fullItem,
-          isCompleted: markingComplete,
-          completedAt,
-          ...(options?.servings != null && { servings: options.servings }),
-          ...(options?.notes != null && { notes: options.notes }),
-        }),
-      'Toggle Meal completed (optimistic)',
-    );
+    // Built before the try: conditional spreads inside a try body make the
+    // React Compiler bail out of this hook.
+    const completedItem = {
+      ...fullItem,
+      isCompleted: markingComplete,
+      completedAt,
+      ...(options?.servings != null && { servings: options.servings }),
+      ...(options?.notes != null && { notes: options.notes }),
+    };
+    try {
+      writeItem(completedItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Toggle Meal completed (optimistic)',
+      });
+    }
 
     // No idempotencyKey needed on this ledger op. The server gates the pantry
     // deduction on the false → true completion transition, read live from the
@@ -304,34 +329,41 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // never double-deducts. Confirmed server-side in sous-chef-api#178. (The
     // only unguarded case is two truly concurrent in-flight completions — not
     // the sequential queue-drain path this queues into.)
-    const result = await executeMutation(
-      () =>
-        updateItemMutation({
-          variables: {
-            input: {
-              id: fullItem.id,
-              isCompleted: markingComplete,
-              completedAt,
-              ...(markingComplete &&
-                deductFromPantry != null && { deductFromPantry }),
-              ...(markingComplete &&
-                options?.servings != null && { servings: options.servings }),
-              ...(markingComplete &&
-                options?.notes != null && { notes: options.notes }),
-            },
-          },
-          context: { localFirst: true },
-        }),
-      'Toggle Meal Plan Item error:',
-    );
+    let result;
+    const updateItemMutationOptions = {
+      variables: {
+        input: {
+          id: fullItem.id,
+          isCompleted: markingComplete,
+          completedAt,
+          ...(markingComplete &&
+            deductFromPantry != null && { deductFromPantry }),
+          ...(markingComplete &&
+            options?.servings != null && { servings: options.servings }),
+          ...(markingComplete &&
+            options?.notes != null && { notes: options.notes }),
+        },
+      },
+      context: { localFirst: true },
+    };
+    try {
+      result = await updateItemMutation(updateItemMutationOptions);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Toggle Meal Plan Item error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      executeCacheUpdate(
-        () => writeItem(fullItem),
-        'Revert rejected Meal toggle',
-      );
+      try {
+        writeItem(fullItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected Meal toggle',
+        });
+      }
       optimisticDataPersistence.clear(
         'MealPlanItem',
         fullItem.id,
@@ -355,9 +387,9 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     if (markingComplete) {
       if (hasRecipe && deductFromPantry) {
-        toastService.success('Meal completed! Pantry items deducted.');
+        toastService.success(t('toasts.mealCompletedDeducted'));
       } else {
-        toastService.success('Meal completed!');
+        toastService.success(t('toasts.mealCompleted'));
       }
     }
 
@@ -375,13 +407,17 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
     // Local-first: remove from the cache BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
     // surfaces as NotFound, which the queue drops).
-    executeCacheUpdate(() => {
+    try {
       if (mealPlanId) {
         removeFromMealPlanItems(client.cache, mealPlanId, id, {
           evictItem: true,
         });
       }
-    }, 'Delete Meal (optimistic)');
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Meal (optimistic)',
+      });
+    }
 
     // Claim the row for the duration of the mutation. A meal-plan event for
     // this same id — another member's earlier ITEM_ADDED still in flight, or
@@ -398,14 +434,17 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       );
     }
 
-    const result = await executeMutation(
-      () =>
-        deleteItemMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Delete Meal Plan Item error:',
-    );
+    let result;
+    try {
+      result = await deleteItemMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Delete Meal Plan Item error:',
+      });
+    }
 
     // Released on every outcome — `executeMutation` reports rather than throws,
     // so this runs whether the delete committed, was refused, or was queued.
@@ -415,14 +454,18 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
 
     if (outcome === 'rejected') {
       if (snapshot) {
-        executeCacheUpdate(() => {
+        try {
           writeItem(snapshot);
           if (mealPlanId) {
             addToMealPlanItems(client.cache, mealPlanId, snapshot, {
               position: 'end',
             });
           }
-        }, 'Restore refused Meal delete');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Restore refused Meal delete',
+          });
+        }
       }
       return false;
     }

@@ -5,8 +5,7 @@ import { UpdateShoppingListItemQuantityDocument } from '#features/shoppingList/g
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.generated';
 import { Telemetry } from '#/services/telemetry';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { resolveImageUrl } from '#utils/imageUtils';
 
 /**
@@ -157,31 +156,28 @@ export function useQuantityEditModal(
 
     setIsLoading(true);
 
-    await executeMutation(
-      async () => {
-        await updateQuantity({
-          variables: {
-            input: {
-              itemId: selectedItemRaw.id,
-              quantity,
-              unitId,
-              version: selectedItemRaw.version,
-            },
+    try {
+      await updateQuantity({
+        variables: {
+          input: {
+            itemId: selectedItemRaw.id,
+            quantity,
+            unitId,
+            version: selectedItemRaw.version,
           },
-        });
+        },
+      });
 
-        Telemetry.trackEvent('shopping_item_quantity_updated', {
-          item_id: selectedItemRaw.id,
-          quantity,
-        });
+      Telemetry.trackEvent('shopping_item_quantity_updated', {
+        item_id: selectedItemRaw.id,
+        quantity,
+      });
 
-        setVisible(false);
-        setSelectedItemId(null);
-      },
-      () => {
-        // Error handled by mutation onError
-      },
-    );
+      setVisible(false);
+      setSelectedItemId(null);
+    } catch {
+      // Error handled by mutation onError
+    }
 
     setIsLoading(false);
   };

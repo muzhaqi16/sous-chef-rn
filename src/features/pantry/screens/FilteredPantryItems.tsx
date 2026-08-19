@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 // RNGH's Pressable (not AppPressable/RN) for the cart button: it's nested in
 // the row's RNGH Swipeable, so RNGH's native button captures the tap and it
@@ -18,6 +18,8 @@ import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem
 import { Header } from '#components/molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -28,10 +30,6 @@ import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowSt
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -52,6 +50,8 @@ import {
 } from './FilteredItemsActionsContext';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
+import { errorService } from '#/services/errorService';
 
 // ── Types ──
 
@@ -86,11 +86,9 @@ interface ModeConfig {
   showCartAction: boolean;
 }
 
-type TFn = ReturnType<typeof useTranslation>['t'];
-
 function formatExpirySubtitle(
   expiresAt: string | null | undefined,
-  t: TFn,
+  t: Translate,
 ): string {
   if (!expiresAt) return '';
   const days = differenceInCalendarDays(new Date(expiresAt), new Date());
@@ -100,7 +98,9 @@ function formatExpirySubtitle(
   return t('filteredPantry.expiresInDays', { count: days });
 }
 
-function buildModeConfig(t: TFn): Record<FilteredPantryItemsMode, ModeConfig> {
+function buildModeConfig(
+  t: Translate,
+): Record<FilteredPantryItemsMode, ModeConfig> {
   return {
     lowStock: {
       title: t('filteredPantry.lowStockTitle'),
@@ -259,19 +259,28 @@ const FilteredRenderItem = FilteredRenderItemComponent;
 // ── Empty state ──
 
 interface FilteredEmptyProps {
-  loading: boolean;
-  hasItems: boolean;
+  state: DataState;
+  onRetry: () => void;
   icon: string;
   message: string;
 }
 
+/**
+ * The four states, for a list whose contents are filtered client-side.
+ *
+ * The empty message here is congratulatory — "Nothing is expiring", "You're all
+ * stocked up" — so it is the worst possible thing to show when the fetch failed:
+ * the app cheerfully reports good news it has no evidence for. Skeletons were
+ * the other half of the same problem, standing in for both "still loading" and
+ * "gave up", so a failure read as a load that never finished.
+ */
 const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
-  loading,
-  hasItems,
+  state,
+  onRetry,
   icon,
   message,
 }) => {
-  if (loading || !hasItems) {
+  if (state === 'loading') {
     return (
       <View style={styles.skeletonContainer}>
         {[1, 2, 3, 4, 5].map(key => (
@@ -279,6 +288,10 @@ const FilteredEmpty: React.FC<FilteredEmptyProps> = ({
         ))}
       </View>
     );
+  }
+
+  if (state === 'error' || state === 'offline') {
+    return <DataStateView state={state} onRetry={onRetry} />;
   }
 
   return (
@@ -323,9 +336,29 @@ export const FilteredPantryItems: React.FC<
   const client = useApolloClient();
 
   const {
-    state: { items: allItems, loading, hasMore, isLoadingMore },
+    state: {
+      items: allItems,
+      loading,
+      error,
+      hasResult,
+      skipped,
+      hasMore,
+      isLoadingMore,
+    },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id);
+
+  // Classified on the fetched set. The client-side filter narrowing to nothing
+  // is the genuine empty case; a fetch that never returned is not.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    skipped,
+    // Nullable in practice while the query is in flight, as the filter
+    // below already assumes.
+    isEmpty: !allItems?.length,
+  });
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
     {
@@ -386,46 +419,47 @@ export const FilteredPantryItems: React.FC<
 
     // Write the item into the cache before firing so it's on the list when it
     // comes into view — and survives a queued (offline / API-down) create.
-    executeCacheUpdate(
-      () =>
-        addOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          createOptimisticShoppingListItem(id, {
-            itemName: display.itemName,
-            unitId: display.unitId,
-          }),
-        ),
-      'Add Shopping List Item (optimistic)',
-    );
-
-    const result = await executeMutation(
-      () =>
-        addToShoppingList({
-          variables: {
-            input: {
-              shoppingListId: selectedShoppingListId,
-              items: [{ id, item: { itemId } }],
-            },
-          },
-          context: { localFirst: true },
+    try {
+      addOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        createOptimisticShoppingListItem(id, {
+          itemName: display.itemName,
+          unitId: display.unitId,
         }),
-      () => {
-        revertOptimisticShoppingListItem(
-          client.cache,
-          selectedShoppingListId,
-          id,
-        );
-        alertService.alert(
-          t('labels.error'),
-          t('filteredPantry.addToShoppingFailed'),
-        );
-      },
-    );
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
+
+    let result;
+    try {
+      result = await addToShoppingList({
+        variables: {
+          input: {
+            shoppingListId: selectedShoppingListId,
+            items: [{ id, item: { itemId } }],
+          },
+        },
+        context: { localFirst: true },
+      });
+    } catch {
+      revertOptimisticShoppingListItem(
+        client.cache,
+        selectedShoppingListId,
+        id,
+      );
+      alertService.alert(
+        t('labels.error'),
+        t('filteredPantry.addToShoppingFailed'),
+      );
+    }
     // A queued create (offline / API down) replays later — treat as success.
     // Only a real rejection surfaces an error; errorPolicy:'all' resolves
-    // rejections, so executeMutation's onError never fires for them — the
-    // reconciler classifies the result instead and discards the item we wrote.
+    // rejections, so the catch above never fires for them — the reconciler
+    // classifies the result instead and discards the item we wrote.
     if (
       result &&
       reconcileShoppingCreate(
@@ -486,8 +520,8 @@ export const FilteredPantryItems: React.FC<
           }
           ListEmptyComponent={
             <FilteredEmpty
-              loading={loading}
-              hasItems={!!allItems}
+              state={dataState}
+              onRetry={handleRefresh}
               icon={config.emptyIcon}
               message={config.emptyMessage}
             />

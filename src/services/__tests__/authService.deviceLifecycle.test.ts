@@ -113,7 +113,7 @@ beforeEach(() => {
   Object.assign(mockStoreState, {
     user: null,
     clearAuth: jest.fn(),
-    resetNotifications: jest.fn(),
+    resetStore: jest.fn(() => Promise.resolve()),
     setNavigationState: jest.fn(),
     getUserNavigationState: jest.fn(() => ({})),
     setUserNavigationState: jest.fn(),
@@ -167,9 +167,11 @@ describe('logout — push/notification teardown (P2-11)', () => {
     expect(updateCallsWith('delete')).toContainEqual(
       expect.objectContaining({ id: 'srv-1', delete: true }),
     );
-    // Refresh listener unsubscribed and notification state reset.
+    // Refresh listener unsubscribed and the session-scoped store state reset.
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.resetNotifications).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: true }),
+    );
   });
 
   it('completes local teardown even when deregistration rejects', async () => {
@@ -189,9 +191,13 @@ describe('logout — push/notification teardown (P2-11)', () => {
 
     await expect(authService.logout()).resolves.toBeUndefined();
 
-    // Local teardown still ran despite the network failure.
+    // Local teardown still ran despite the network failure. The auth branch
+    // of resetStore is what clears the session-scoped state a shared device
+    // would otherwise hand to the next person.
     expect(mockUnsubscribe).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.resetNotifications).toHaveBeenCalledTimes(1);
-    expect(mockStoreState.clearAuth).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.resetStore).toHaveBeenCalledTimes(1);
+    expect(mockStoreState.resetStore).toHaveBeenCalledWith(
+      expect.objectContaining({ auth: true }),
+    );
   });
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { IconButton } from './IconButton';
 
@@ -16,16 +17,19 @@ export const BackButton: React.FC<BackButtonProps> = ({
   style,
   disabled,
   testID,
-}) => (
-  <IconButton
-    name="arrow-back"
-    onPress={onPress}
-    accessibilityLabel="Go back"
-    color={color}
-    style={style}
-    disabled={disabled}
-    testID={testID}
-  />
-);
+}) => {
+  const { t } = useTranslation();
+  return (
+    <IconButton
+      name="arrow-back"
+      onPress={onPress}
+      accessibilityLabel={t('labels.goBack')}
+      color={color}
+      style={style}
+      disabled={disabled}
+      testID={testID}
+    />
+  );
+};
 
 export default BackButton;

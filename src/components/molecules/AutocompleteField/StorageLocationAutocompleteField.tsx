@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { useStorageLocationAutocomplete } from '#hooks/autocomplete/useStorageLocationAutocomplete';
 import { type StorageLocation } from '#/graphql/generated/schemaTypes';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
@@ -29,7 +30,7 @@ export const StorageLocationAutocompleteField: React.FC<
   label,
   value,
   onChangeText,
-  placeholder = 'Select storage location',
+  placeholder,
   required,
   error,
   testID,
@@ -37,6 +38,7 @@ export const StorageLocationAutocompleteField: React.FC<
   onStorageLocationSelected,
   onAddNewLocation,
 }) => {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
   const hasSelectionRef = useRef(false);
 
@@ -92,7 +94,9 @@ export const StorageLocationAutocompleteField: React.FC<
         label={label}
         value={value}
         onChangeText={handleTextChange}
-        placeholder={placeholder}
+        placeholder={
+          placeholder ?? t('autocomplete.storageLocationPlaceholder')
+        }
         required={required}
         error={error}
         testID={testID}
@@ -116,11 +120,11 @@ export const StorageLocationAutocompleteField: React.FC<
       label={label}
       value={value}
       onChangeText={handleTextChange}
-      placeholder={placeholder}
+      placeholder={placeholder ?? t('autocomplete.storageLocationPlaceholder')}
       required={required}
       error={error}
-      title="Select a storage location"
-      searchPlaceholder="Type to search storage locations..."
+      title={t('autocomplete.selectStorageLocation')}
+      searchPlaceholder={t('autocomplete.storageLocationSearch')}
       items={displayItems}
       loading={false}
       renderItem={renderItem}
@@ -128,13 +132,13 @@ export const StorageLocationAutocompleteField: React.FC<
       onSelect={handleSelect}
       emptyText={
         storageLocations.length === 0
-          ? 'No storage locations yet'
-          : 'No matching locations'
+          ? t('autocomplete.noStorageLocations')
+          : t('autocomplete.noMatchingLocations')
       }
       emptySubtext={
         searchTerm.length >= 2
-          ? `Tap "Add" below to create "${searchTerm}"`
-          : 'Type at least 2 characters to search or add new'
+          ? t('autocomplete.tapAddToCreate', { term: searchTerm })
+          : t('autocomplete.typeToSearch')
       }
       onSearchChange={setSearchTerm}
       showAddNew={showAddNew}

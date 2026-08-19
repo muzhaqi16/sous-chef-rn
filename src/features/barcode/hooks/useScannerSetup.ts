@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -94,12 +95,12 @@ export function useScannerSetup(options: UseScannerSetupOptions): void {
           onNoHomeRef.current();
         } else {
           alertService.alert(
-            'No Home Selected',
-            'You need to be a member of a home to scan items.',
+            t('scanner.noHomeTitle'),
+            t('scanner.noHomeBody'),
             [
-              { text: 'Cancel', style: 'cancel' },
+              { text: t('labels.cancel'), style: 'cancel' },
               {
-                text: 'Manage Homes',
+                text: t('scanner.manageHomes'),
                 onPress: () => toHomeManagement(),
                 style: 'default',
               },

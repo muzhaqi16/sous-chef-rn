@@ -16,14 +16,11 @@ import {
   type GetHomesQuery,
 } from '#operations/home/home.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import {
-  executeCacheUpdate,
-  executeMutation,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 const addInviteToHomeCache = createAddToParentConnectionUpdater(
   'Home',
@@ -65,14 +62,18 @@ export function useHomeInvitations({
           return;
         }
 
-        executeCacheUpdate(() => {
+        try {
           addInviteToHomeCache(
             cache,
             variables.input.homeId,
             payload.homeInvite,
             { position: 'end' },
           );
-        }, 'Cache update failed for inviteUser:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for inviteUser:',
+          });
+        }
       },
 
       // Error/rejection handling lives in inviteUserToHome below; the update
@@ -91,9 +92,13 @@ export function useHomeInvitations({
         if (data?.joinHomeByCode?.__typename !== 'JoinHomeByCodePayload')
           return;
 
-        executeCacheUpdate(() => {
+        try {
           refetch();
-        }, 'Failed to refetch homes after join:');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Failed to refetch homes after join:',
+          });
+        }
       },
       onCompleted: data => {
         if (data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload') {
@@ -109,8 +114,8 @@ export function useHomeInvitations({
           }
 
           alertService.alert(
-            'Success',
-            'You have successfully joined the home!',
+            t('home.joinSuccessTitle'),
+            t('home.joinSuccessBody'),
           );
         }
       },
@@ -155,17 +160,20 @@ export function useHomeInvitations({
 
   const joinHomeByCode = async (joinCode: string) => {
     if (!joinCode.trim()) {
-      alertService.alert('Error', 'Please enter a join code');
+      alertService.alert(t('labels.error'), t('home.enterJoinCode'));
       return false;
     }
 
-    const result = await executeMutation(
-      () =>
-        joinHomeByCodeMutation({
-          variables: { input: { joinCode: joinCode.trim() } },
-        }),
-      'Join home by code error:',
-    );
+    let result;
+    try {
+      result = await joinHomeByCodeMutation({
+        variables: { input: { joinCode: joinCode.trim() } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Join home by code error:',
+      });
+    }
     if (!result) return false;
 
     return result.data?.joinHomeByCode?.__typename === 'JoinHomeByCodePayload'
@@ -178,15 +186,14 @@ export function useHomeInvitations({
       return null;
     }
 
-    const result = await executeMutation(
-      () =>
-        getHomeByJoinCode({
-          variables: { joinCode: joinCode.trim() },
-        }),
-      error => {
-        handleMutationError(error, { operation: 'Preview Home' });
-      },
-    );
+    let result;
+    try {
+      result = await getHomeByJoinCode({
+        variables: { joinCode: joinCode.trim() },
+      });
+    } catch (error) {
+      handleMutationError(error, { operation: 'Preview Home' });
+    }
     if (!result) return null;
 
     return result.data?.homeByJoinCode || null;

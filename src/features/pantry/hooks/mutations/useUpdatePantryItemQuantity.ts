@@ -25,9 +25,10 @@ import {
 } from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
+import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#/utils/fractionUtils';
 
 interface UseUpdatePantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -86,7 +87,11 @@ export function useUpdatePantryItemQuantity({
       return;
     }
 
-    const newQuantity = parseFloat(quantityInput || quantityValue.toString());
+    // The field accepts fractions ("1 1/4") as well as decimals, so it needs
+    // the fraction-aware parser — `parseDecimalInput` declines a fraction
+    // outright rather than misreading it.
+    const quantityText = quantityInput || quantityValue.toString();
+    const newQuantity = parseFractionalInput(quantityText) ?? NaN;
 
     // Fire mutation asynchronously - don't await to allow immediate navigation
     const optimisticPantryItem = enhanceWithVersion(currentItem, {
@@ -107,16 +112,21 @@ export function useUpdatePantryItemQuantity({
         fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
         data,
       });
-    executeCacheUpdate(
-      () => writeItem(optimisticPantryItem),
-      'Update Pantry Item Quantity (optimistic)',
-    );
+    try {
+      writeItem(optimisticPantryItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Update Pantry Item Quantity (optimistic)',
+      });
+    }
 
     updateQuantityMutation({
       variables: {
         input: {
           pantryItemId: itemId,
-          quantity: quantityInput || quantityValue.toString(),
+          // Separators normalized, fraction preserved: the server parses
+          // this string itself and rejects a comma decimal outright.
+          quantity: normalizeNumericTextForApi(quantityText),
           unitId: unitId,
           version: currentItem.version ?? undefined,
         },
@@ -130,17 +140,23 @@ export function useUpdatePantryItemQuantity({
         // the user-facing alert comes from the mutation's onError.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
-          executeCacheUpdate(
-            () => writeItem(currentItem),
-            'Revert rejected Pantry Item quantity update',
-          );
+          try {
+            writeItem(currentItem);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert rejected Pantry Item quantity update',
+            });
+          }
         }
       })
       .catch(error => {
-        executeCacheUpdate(
-          () => writeItem(currentItem),
-          'Revert failed Pantry Item quantity update',
-        );
+        try {
+          writeItem(currentItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert failed Pantry Item quantity update',
+          });
+        }
         errorService.reportError(error, {
           operation: 'updatePantryItemQuantity',
         });

@@ -25,7 +25,7 @@ type PurchaseNode = {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
-  currencySymbol: string;
+  currency: { __typename: 'Currency'; id: string; code: string };
   unitSymbol: string;
 };
 
@@ -61,7 +61,7 @@ const purchase: PurchaseNode = {
   quantity: 2,
   unitPrice: 2.5,
   totalPrice: 5,
-  currencySymbol: '$',
+  currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
   unitSymbol: 'kg',
 };
 
@@ -103,7 +103,7 @@ describe('PurchaseHistoryScreen', () => {
       quantity: 1,
       unitPrice: 0,
       totalPrice: 0,
-      currencySymbol: '$',
+      currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
       unitSymbol: 'kg',
     };
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {

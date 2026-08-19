@@ -40,6 +40,35 @@ interface HomeInviteCardProps {
  * Subscribes to its HomeInvite cache entry via `useFragment` so it re-renders
  * independently when invite status changes (e.g. after a revoke mutation).
  */
+/**
+ * The two `status`-variant surfaces, each owning its own `useVariants` call.
+ *
+ * Extracted so `HomeInviteCard` keeps compiling — Unistyles' variant transform
+ * makes the React Compiler bail out of the containing function, and this card
+ * renders once per pending invite.
+ */
+const InviteSurface: React.FC<{
+  status: StatusKey;
+  children: React.ReactNode;
+}> = ({ status, children }) => {
+  styles.useVariants({ status });
+  return <View style={styles.inviteCard}>{children}</View>;
+};
+
+const InviteStatusBadge: React.FC<{
+  status: StatusKey;
+  children: React.ReactNode;
+}> = ({ status, children }) => {
+  styles.useVariants({ status });
+  return (
+    <View style={styles.inviteStatusBadge}>
+      <Text size="xs" weight="semibold" style={styles.inviteStatusText}>
+        {children}
+      </Text>
+    </View>
+  );
+};
+
 export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   inviteRef,
   displayName,
@@ -53,14 +82,13 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
   });
 
   const statusKey = getStatusKey(invite.status ?? 'EXPIRED');
-  styles.useVariants({ status: statusKey });
 
   if (!complete) return null;
 
   const statusText = formatInviteStatus(invite.status);
 
   return (
-    <View style={styles.inviteCard}>
+    <InviteSurface status={statusKey}>
       <View style={styles.inviteInfo}>
         <Text size="md" weight="medium" style={styles.inviteName}>
           {displayName}
@@ -70,18 +98,14 @@ export const HomeInviteCard: React.FC<HomeInviteCardProps> = ({
         </Text>
       </View>
       <View style={styles.inviteActions}>
-        <View style={styles.inviteStatusBadge}>
-          <Text size="xs" weight="semibold" style={styles.inviteStatusText}>
-            {statusText}
-          </Text>
-        </View>
+        <InviteStatusBadge status={statusKey}>{statusText}</InviteStatusBadge>
         {!!canRevoke && invite.status === InviteStatus.Pending && (
           <AppPressable style={styles.revokeButton} onPress={onRevoke}>
             <Icon name="close" size={20} />
           </AppPressable>
         )}
       </View>
-    </View>
+    </InviteSurface>
   );
 };
 

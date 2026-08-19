@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -57,6 +58,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   onUpdatePermission,
   onRevokeInvite,
 }) => {
+  const { t } = useTranslation();
   const pendingInvites = invites.filter(
     inv => inv.status !== InviteStatus.Accepted,
   );
@@ -93,7 +95,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
         <View style={styles.emptyContainer}>
           <Icon name="people-outline" size={24} tone="textSecondary" />
           <Text size="sm" tone="secondary" style={styles.emptyText}>
-            No members
+            {t('homeMembers.noMembers')}
           </Text>
         </View>
       )}
@@ -107,7 +109,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
             tone="secondary"
             style={styles.invitesSectionTitle}
           >
-            Pending Invitations
+            {t('homeMembers.pendingInvitations')}
           </Text>
           {pendingInvites.map(invite => (
             <HomeInviteCard

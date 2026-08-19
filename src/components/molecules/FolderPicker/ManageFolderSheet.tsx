@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -63,6 +64,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
   canRename,
   canDelete,
 }) => {
+  const { t } = useTranslation();
   const renameDisabled =
     !renameValue.trim() || renameValue.trim() === managingFolder;
 
@@ -79,7 +81,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
         {/* Header */}
         <View style={styles.manageFolderHeader}>
           <Text size="lg" weight="semibold">
-            Manage Folder
+            {t('folderPicker.manageTitle')}
           </Text>
           <Pressable
             onPress={onClose}
@@ -103,7 +105,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
           <View style={styles.deleteConfirmContainer}>
             <Icon name="warning-outline" size={32} tone="error" />
             <Text size="lg" weight="semibold" style={styles.deleteConfirmTitle}>
-              Delete this folder?
+              {t('folderPicker.deleteConfirm')}
             </Text>
             <Text
               size="base"
@@ -111,7 +113,9 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
               align="center"
               style={styles.deleteConfirmText}
             >
-              Recipes in this folder will be moved to "No Folder".
+              {t('folderPicker.deleteConfirmBody', {
+                folder: t('labels.noFolder'),
+              })}
             </Text>
             <View style={styles.deleteConfirmButtons}>
               <AppPressable
@@ -120,7 +124,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                 disabled={folderActionLoading}
               >
                 <Text size="base" weight="medium">
-                  Cancel
+                  {t('labels.cancel')}
                 </Text>
               </AppPressable>
               <AppPressable
@@ -136,7 +140,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                     weight="semibold"
                     style={styles.deleteConfirmDeleteText}
                   >
-                    Delete
+                    {t('labels.delete')}
                   </Text>
                 )}
               </AppPressable>
@@ -153,14 +157,14 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                   tone="secondary"
                   style={styles.sectionLabel}
                 >
-                  Rename
+                  {t('labels.rename')}
                 </Text>
                 <View style={styles.renameInputRow}>
                   <ThemedBottomSheetTextInput
                     style={styles.renameInput}
                     defaultValue={renameValue}
                     onChangeText={onRenameValueChange}
-                    placeholder="Enter new folder name..."
+                    placeholder={t('folderPicker.renamePlaceholder')}
                     autoCapitalize="words"
                     onSubmitEditing={onRenameConfirm}
                     editable={!folderActionLoading}
@@ -184,7 +188,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                           renameDisabled && styles.renameButtonTextDisabled,
                         ]}
                       >
-                        Rename
+                        {t('labels.rename')}
                       </Text>
                     )}
                   </AppPressable>
@@ -202,7 +206,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                 >
                   <Icon name="trash-outline" size={18} tone="error" />
                   <Text size="base" weight="medium" tone="error">
-                    Delete Folder
+                    {t('folderPicker.deleteFolder')}
                   </Text>
                 </AppPressable>
                 <Text
@@ -211,7 +215,7 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
                   align="center"
                   style={styles.deleteDescription}
                 >
-                  Recipes will be moved to No Folder
+                  {t('folderPicker.deleteHint')}
                 </Text>
               </View>
             )}

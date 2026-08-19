@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { DropdownStack } from '#components/atoms/DropdownStack';
@@ -8,6 +9,7 @@ import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import { Button } from '#/components/base/Button';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 export interface UnitEntry {
   id: string;
@@ -38,6 +40,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   onEntriesChanged,
   disabled = false,
 }) => {
+  const { t } = useTranslation();
   const handleAddEntry = () => {
     const isFirst = entries.length === 0;
     onEntriesChanged([...entries, createDefaultEntry(isFirst)]);
@@ -120,7 +123,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   return (
     <View style={styles.container}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Units
+        {t('unitEntryList.title')}
       </Text>
       <DropdownStack>
         {entries.map((entry, index) => (
@@ -129,24 +132,28 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
               <View style={styles.entryRow}>
                 <View style={styles.packageSizeField}>
                   <FormInput
-                    label="Size"
+                    label={t('unitEntryList.size')}
                     value={entry.packageSize || ''}
                     onChangeText={(text: string) =>
                       handleEntryChange(index, 'packageSize', text)
                     }
-                    placeholder="e.g., 12"
+                    placeholder={t('unitEntryList.sizePlaceholder')}
                     keyboardType="decimal-pad"
                   />
                 </View>
                 <View style={styles.unitField}>
                   <UnitAutocompleteField
                     variant="inline"
-                    label={index === 0 ? 'Unit (Default)' : 'Unit'}
+                    label={
+                      index === 0
+                        ? t('unitEntryList.unitDefaultLabel')
+                        : t('unitEntryList.unitLabel')
+                    }
                     value={entry.unitName || ''}
                     onChangeText={(text: string) =>
                       handleUnitTextChange(index, 'unitName', text)
                     }
-                    placeholder="e.g., kg, lbs"
+                    placeholder={t('unitEntryList.unitPlaceholder')}
                     onUnitSelected={(unitId, unitName) =>
                       handleUnitSelected(index, unitId, unitName)
                     }
@@ -160,22 +167,23 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                   <Icon name="trash-outline" size={20} tone="error" />
                 </AppPressable>
               </View>
-              {!!entry.packageSize && parseFloat(entry.packageSize) > 0 && (
-                <View style={styles.contentUnitRow}>
-                  <UnitAutocompleteField
-                    variant="inline"
-                    label="Contains"
-                    value={entry.contentUnitName || ''}
-                    onChangeText={(text: string) =>
-                      handleUnitTextChange(index, 'contentUnitName', text)
-                    }
-                    placeholder="e.g., can, bottle"
-                    onUnitSelected={(unitId, unitName) =>
-                      handleContentUnitSelected(index, unitId, unitName)
-                    }
-                  />
-                </View>
-              )}
+              {!!entry.packageSize &&
+                parseDecimalInput(entry.packageSize) > 0 && (
+                  <View style={styles.contentUnitRow}>
+                    <UnitAutocompleteField
+                      variant="inline"
+                      label={t('unitEntryList.contains')}
+                      value={entry.contentUnitName || ''}
+                      onChangeText={(text: string) =>
+                        handleUnitTextChange(index, 'contentUnitName', text)
+                      }
+                      placeholder={t('unitEntryList.containsPlaceholder')}
+                      onUnitSelected={(unitId, unitName) =>
+                        handleContentUnitSelected(index, unitId, unitName)
+                      }
+                    />
+                  </View>
+                )}
             </DropdownStack>
           </View>
         ))}
@@ -184,7 +192,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
           onPress={handleAddEntry}
           disabled={disabled}
         >
-          Add Unit
+          {t('unitEntryList.addUnit')}
         </Button>
       </DropdownStack>
     </View>

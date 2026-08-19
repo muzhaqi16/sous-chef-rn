@@ -19,7 +19,8 @@ export interface PantryContentRef {
 
 export interface PantryContentProps {
   // User info
-  userName: string;
+  /** Omitted when the account has no name yet; the header greets without one. */
+  userName?: string;
   householdName: string;
   avatarUrl?: string | null;
   notificationCount?: number;

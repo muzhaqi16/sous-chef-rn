@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useNavigation } from '@react-navigation/native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -19,7 +19,6 @@ import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useResendBackoff } from '#hooks/auth/useResendBackoff';
 import { useToast } from '#/hooks/useToast';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -64,10 +63,12 @@ export const SignUpScreen = (): React.JSX.Element => {
     const input: RegisterInput = { name, email, password };
 
     // Uses default rememberMe=true
-    const ok = await executeMutation(
-      () => authService.register(input),
-      err => authService.handleAuthError(err, 'Registration'),
-    );
+    let ok;
+    try {
+      ok = await authService.register(input);
+    } catch (err) {
+      authService.handleAuthError(err, 'Registration');
+    }
 
     if (ok) {
       // The activation mail has just gone out, so the cooldown starts here
@@ -78,7 +79,7 @@ export const SignUpScreen = (): React.JSX.Element => {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!sentToEmail || !canResend) return;
 
     // Counted before the request: the cooldown opens synchronously, so a second
@@ -86,33 +87,38 @@ export const SignUpScreen = (): React.JSX.Element => {
     // tight loop.
     registerAttempt();
 
-    executeMutation(
-      async () => {
-        const result = await resendVerificationEmail({
-          variables: { input: { email: sentToEmail } },
-        });
-        // Under errorPolicy:'all' failures resolve rather than throw — both a
-        // resolved error-union member and a transport error land here, so gate
-        // the success toast on the payload instead of on reaching this line.
-        const succeeded =
-          result.data?.resendVerificationEmail?.__typename ===
-            'ResendVerificationEmailPayload' && !result.error;
-        if (succeeded) {
-          toast({ message: t('auth.resendVerificationSent'), type: 'success' });
-          return;
-        }
-        // A throttled send says how long to wait; the generic failure text
-        // would read as "try again now", which is the opposite of the truth.
-        toast({
-          message: isRateLimitError(result.error)
-            ? getRateLimitMessage(result.error)
-            : t('auth.resendVerificationFailed'),
-          type: 'error',
-        });
-      },
-      () =>
-        toast({ message: t('auth.resendVerificationFailed'), type: 'error' }),
-    );
+    // Held in a local runner so the try below contains a single plain call —
+    // the React Compiler bails out of this component when a `?.`/`??`/ternary
+    // sits inside a try body. The catch still covers the whole body.
+    const runResend = async () => {
+      const result = await resendVerificationEmail({
+        variables: { input: { email: sentToEmail } },
+      });
+      // Under errorPolicy:'all' failures resolve rather than throw — both a
+      // resolved error-union member and a transport error land here, so gate
+      // the success toast on the payload instead of on reaching this line.
+      const succeeded =
+        result.data?.resendVerificationEmail?.__typename ===
+          'ResendVerificationEmailPayload' && !result.error;
+      if (succeeded) {
+        toast({ message: t('auth.resendVerificationSent'), type: 'success' });
+        return;
+      }
+      // A throttled send says how long to wait; the generic failure text
+      // would read as "try again now", which is the opposite of the truth.
+      toast({
+        message: isRateLimitError(result.error)
+          ? getRateLimitMessage(result.error)
+          : t('auth.resendVerificationFailed'),
+        type: 'error',
+      });
+    };
+
+    try {
+      await runResend();
+    } catch {
+      toast({ message: t('auth.resendVerificationFailed'), type: 'error' });
+    }
   };
 
   if (sentToEmail !== null) {

@@ -15,6 +15,7 @@
 />
 */
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { BaseInput, BaseInputProps } from './BaseInput/BaseInput';
 
 export const EmailInput: React.FC<
@@ -22,12 +23,15 @@ export const EmailInput: React.FC<
     BaseInputProps,
     'keyboardType' | 'autoCapitalize' | 'autoCorrect' | 'placeholder'
   >
-> = props => (
-  <BaseInput
-    keyboardType="email-address"
-    autoCapitalize="none"
-    autoCorrect={false}
-    placeholder="e.g. john@example.com"
-    {...props}
-  />
-);
+> = props => {
+  const { t } = useTranslation();
+  return (
+    <BaseInput
+      keyboardType="email-address"
+      autoCapitalize="none"
+      autoCorrect={false}
+      placeholder={t('auth.emailPlaceholder')}
+      {...props}
+    />
+  );
+};

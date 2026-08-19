@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
@@ -37,13 +38,14 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   onBrandSelected,
   onCategorySelected,
 }) => {
+  const { t } = useTranslation();
   const getFields = (): FieldDef<PantryItemFormData>[] => {
     if (mode === 'add') {
       return [
         {
           name: 'itemName',
-          label: 'Item Name',
-          placeholder: 'e.g., Rice, Pasta',
+          label: t('itemForm.itemName'),
+          placeholder: t('itemForm.placeholderItemName'),
           component: 'itemAutocomplete',
           props: { required: true },
           onSelectItem,
@@ -51,14 +53,14 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
         },
         {
           name: 'category',
-          label: 'Category',
-          placeholder: 'e.g., Grains, Dairy',
+          label: t('itemForm.category'),
+          placeholder: t('itemForm.placeholderCategory'),
           component: 'categoryAutocomplete',
           onCategorySelected,
         },
         {
           name: 'brand',
-          label: 'Brand',
+          label: t('itemForm.brand'),
           placeholder: "e.g., Kellogg's",
           component: 'brandAutocomplete',
           props: { suggestedBrands },
@@ -69,20 +71,20 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
       return [
         {
           name: 'itemName',
-          label: 'Item Name',
-          placeholder: 'e.g., Rice, Pasta',
+          label: t('itemForm.itemName'),
+          placeholder: t('itemForm.placeholderItemName'),
           component: FormInput,
         },
         {
           name: 'category',
-          label: 'Category',
-          placeholder: 'e.g., Grains, Dairy',
+          label: t('itemForm.category'),
+          placeholder: t('itemForm.placeholderCategory'),
           component: 'categoryAutocomplete',
           onCategorySelected,
         },
         {
           name: 'brand',
-          label: 'Brand (optional)',
+          label: t('itemForm.brandOptional'),
           placeholder: "e.g., Kellogg's",
           component: 'brandAutocomplete',
           props: { suggestedBrands, onBrandSelected },
@@ -94,7 +96,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Item Information
+        {t('itemForm.itemInformation')}
       </Text>
       <DynamicFormFields
         fields={getFields()}

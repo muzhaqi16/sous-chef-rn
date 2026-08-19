@@ -13,7 +13,6 @@ import { useSearchState, useBottomSheetState } from '#store/useAppStore';
 import { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { useImageUpload } from '#hooks/useImageUpload';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   mapFormToCreateItemInput,
   stashPendingFormImages,
@@ -21,6 +20,7 @@ import {
   cleanupPendingImageStorage as sharedCleanupPendingImageStorage,
   type AddItemFormData,
 } from '#/utils/items/createItemMapping';
+import { errorService } from '#/services/errorService';
 
 // Map Vision Camera barcode format to GraphQL UpcFormat enum.
 // Source: react-native-vision-camera-barcode-scanner's BarcodeFormat
@@ -193,16 +193,19 @@ export const useSearchResults = (barcode: string, format?: string) => {
           const createdItem = data.createItem.item;
 
           // Upload pending images (module-level function avoids try-catch in hook)
-          const result = await executeMutation(
-            () =>
-              uploadPendingImages(
-                createdItem,
-                uploadItemImage,
-                uploadItemImages,
-              ),
-            'Error handling pending image upload:',
-          );
-          const finalItem = result !== false ? result : createdItem;
+          let result;
+          try {
+            result = await uploadPendingImages(
+              createdItem,
+              uploadItemImage,
+              uploadItemImages,
+            );
+          } catch (error) {
+            errorService.reportError(error, {
+              operation: 'Error handling pending image upload:',
+            });
+          }
+          const finalItem = result ?? createdItem;
           cleanupPendingImageStorage();
 
           const newItem = convertToScannedItem(
@@ -371,13 +374,15 @@ export const useSearchResults = (barcode: string, format?: string) => {
 
     stashPendingFormImages(formData);
 
-    await executeMutation(
-      () =>
-        addNewItem({
-          variables: { input: mapFormToCreateItemInput(formData) },
-        }),
-      'Error adding item:',
-    );
+    try {
+      await addNewItem({
+        variables: { input: mapFormToCreateItemInput(formData) },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Error adding item:',
+      });
+    }
   };
 
   const handleRetry = () => {

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { errorMessageOr } from '#/services/errorService';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface NumberInputSheetProps {
   visible: boolean;
@@ -59,7 +60,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
     setError('');
 
     const numValue = allowDecimals
-      ? parseFloat(inputValue)
+      ? parseDecimalInput(inputValue)
       : parseInt(inputValue);
 
     if (isNaN(numValue) || inputValue.trim() === '') {
@@ -81,12 +82,12 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
         if (success) {
           onClose();
         } else {
-          setError(t('numberInputSheet.saveFailed'));
+          setError(t('errors.saveFailed'));
         }
       },
       setLoading,
       (err: unknown) => {
-        setError(errorMessageOr(err, t('numberInputSheet.genericError')));
+        setError(errorMessageOr(err, t('errors.generic')));
       },
     );
   };

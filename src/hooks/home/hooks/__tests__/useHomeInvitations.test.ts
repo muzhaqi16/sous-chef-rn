@@ -52,7 +52,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -455,15 +455,22 @@ describe('useHomeInvitations', () => {
       expect(returnValue).toBeNull();
     });
 
-    it('returns null on error', async () => {
-      // Apollo's mock link returns errors via error policy 'all' rather than
-      // throwing. To exercise the error path of `executeMutation`, mock the
-      // helper directly to return false (mirroring its behavior on rejection).
-      const { executeMutation } = require('#/utils/compilerSafeWrappers');
-      executeMutation.mockResolvedValueOnce(false);
-
-      const { result } = renderHookWithApollo(() =>
-        useHomeInvitations(createOptions()),
+    // `errorPolicy: 'all'` resolves a failed lookup with `error` set and no
+    // data rather than rejecting — that is the outcome the app actually gets.
+    it('returns null when the lookup fails', async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        {
+          operationMocks: [
+            {
+              request: {
+                query: GetHomeByJoinCodeDocument,
+                variables: { joinCode: 'ABC123' },
+              },
+              error: new Error('network down'),
+            },
+          ],
+        },
       );
 
       let returnValue: PreviewResult | undefined;

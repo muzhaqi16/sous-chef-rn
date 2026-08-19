@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -136,7 +136,9 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
           tone={hasVotedHelpful ? 'primary' : 'textSecondary'}
         />
         <Text size="xs" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
-          Helpful{review.helpful > 0 ? ` (${review.helpful})` : ''}
+          {review.helpful > 0
+            ? t('recipes.helpfulWithCount', { count: review.helpful })
+            : t('recipes.helpful')}
         </Text>
       </AppPressable>
     </View>

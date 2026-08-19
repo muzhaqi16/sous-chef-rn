@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -170,6 +171,7 @@ interface PantryItemCardProps {
 export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   pantryItemRef,
 }) => {
+  const { t } = useTranslation();
   const { data: pantryItem, complete } = useFragment({
     fragment: PantryItemCard_PantryItemFragmentDoc,
     fragmentName: 'PantryItemCard_pantryItem',
@@ -283,7 +285,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
     if (isOutOfStock) {
       return (
         <Text weight="medium" tone="warning" style={styles.outOfStock}>
-          Out of stock
+          {t('pantryScreen.outOfStock')}
         </Text>
       );
     }
@@ -327,6 +329,9 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       rightElement={
         <CardRightSlot
           type="meta"
+          // Keyed by item id, matching the row's own `pantry-item-${id}` and
+          // shopping list's `shopping-list-item-${itemId}-quantity`.
+          testID={`pantry-item-${id}-quantity`}
           primary={quantity}
           secondary={rightSecondary}
         />

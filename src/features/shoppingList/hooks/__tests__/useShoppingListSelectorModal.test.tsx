@@ -1,6 +1,7 @@
 'use no memo';
 
-import { act } from '@testing-library/react-native';
+import type { ReactElement } from 'react';
+import { act, render, screen } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   useShoppingListSelectorModal,
@@ -69,6 +70,20 @@ const makeOwnership = (
 const renderHook = <TResult, TProps>(callback: (props: TProps) => TResult) =>
   renderHookWithApollo(callback);
 
+/**
+ * `renderCustomItem` returns a React element, and a React element is always
+ * truthy — asserting that tells you nothing about which branch it took. Mount
+ * it so the branch becomes observable as rendered output.
+ */
+const mount = (element: ReactElement) => render(element);
+
+/**
+ * `Icon` is mocked to a host string, so the icon a branch chose is only
+ * readable off its props.
+ */
+const iconCount = (name: string) =>
+  screen.UNSAFE_queryAllByProps({ name }).length;
+
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
@@ -136,7 +151,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -313,12 +328,13 @@ describe('useShoppingListSelectorModal', () => {
       id: 'header-personal',
       title: 'Personal Lists',
     };
-    const rendered = result.current.listConfig.renderCustomItem!(
-      headerItem,
-      false,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(headerItem, false, jest.fn()),
     );
-    expect(rendered).toBeTruthy();
+
+    expect(screen.getByText('Personal Lists')).toBeTruthy();
+    expect(iconCount('person')).toBe(1);
+    expect(iconCount('home')).toBe(0);
   });
 
   it('renderCustomItem renders normal list item (non-owner) with shared text', () => {
@@ -331,12 +347,15 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const lists = makeLists();
-    const rendered = result.current.listConfig.renderCustomItem!(
-      lists[1],
-      false,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(lists[1], false, jest.fn()),
     );
-    expect(rendered).toBeTruthy();
+
+    // list-2: 'Party', shared by 'Other', 3 items with none completed.
+    expect(screen.getByText('Party')).toBeTruthy();
+    expect(screen.getByText('Shared by Other')).toBeTruthy();
+    expect(screen.getByText('3 of 3')).toBeTruthy();
+    expect(iconCount('checkmark')).toBe(0);
   });
 
   it('renderCustomItem renders selected list item with checkmark', () => {
@@ -349,12 +368,14 @@ describe('useShoppingListSelectorModal', () => {
     );
 
     const lists = makeLists();
-    const rendered = result.current.listConfig.renderCustomItem!(
-      lists[0],
-      true,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(lists[0], true, jest.fn()),
     );
-    expect(rendered).toBeTruthy();
+
+    // list-1: 'Groceries', owned, 5 items with 2 completed.
+    expect(screen.getByText('Groceries')).toBeTruthy();
+    expect(iconCount('checkmark')).toBe(1);
+    expect(screen.getByText('3 of 5')).toBeTruthy();
   });
 
   it('renderCustomItem renders list item with 0 totalItems (no count shown)', () => {
@@ -377,12 +398,13 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const rendered = result.current.listConfig.renderCustomItem!(
-      emptyList,
-      false,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(emptyList, false, jest.fn()),
     );
-    expect(rendered).toBeTruthy();
+
+    expect(screen.getByText('Empty List')).toBeTruthy();
+    // The count line is suppressed entirely rather than rendering '0 of 0'.
+    expect(screen.queryByText('0 of 0')).toBeNull();
   });
 
   it('onSelect skips header items', () => {
@@ -563,12 +585,19 @@ describe('useShoppingListSelectorModal', () => {
       }),
     );
 
-    const rendered = result.current.listConfig.renderCustomItem!(
-      listsNoProfile[0],
-      false,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(
+        listsNoProfile[0],
+        false,
+        jest.fn(),
+      ),
     );
-    expect(rendered).toBeTruthy();
+
+    // Neither a displayName nor an email is available, so the owner falls all
+    // the way back to the generic term.
+    expect(screen.getByText('Shared')).toBeTruthy();
+    expect(screen.getByText('Shared by someone')).toBeTruthy();
+    expect(screen.getByText('1 of 2')).toBeTruthy();
   });
 
   it('renderCustomItem for home section header with non-Personal title uses home icon', () => {
@@ -585,12 +614,13 @@ describe('useShoppingListSelectorModal', () => {
       id: 'header-home-1',
       title: 'Family Home',
     };
-    const rendered = result.current.listConfig.renderCustomItem!(
-      headerItem,
-      false,
-      jest.fn(),
+    mount(
+      result.current.listConfig.renderCustomItem!(headerItem, false, jest.fn()),
     );
-    expect(rendered).toBeTruthy();
+
+    expect(screen.getByText('Family Home')).toBeTruthy();
+    expect(iconCount('home')).toBe(1);
+    expect(iconCount('person')).toBe(0);
   });
 
   // ========== Additional branch/function coverage tests ==========
@@ -801,12 +831,12 @@ describe('useShoppingListSelectorModal', () => {
         }),
       );
 
-      const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0],
-        false,
-        jest.fn(),
+      mount(
+        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
       );
-      expect(rendered).toBeTruthy();
+
+      expect(screen.getByText('Shared by someone')).toBeTruthy();
+      expect(screen.getByText('1 of 1')).toBeTruthy();
     });
 
     it('shows email when displayName is missing', () => {
@@ -829,12 +859,12 @@ describe('useShoppingListSelectorModal', () => {
         }),
       );
 
-      const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0],
-        false,
-        jest.fn(),
+      mount(
+        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
       );
-      expect(rendered).toBeTruthy();
+
+      expect(screen.getByText('Shared by friend@test.com')).toBeTruthy();
+      expect(screen.getByText('1 of 2')).toBeTruthy();
     });
   });
 
@@ -891,12 +921,14 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       const lists = makeLists();
-      const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0],
-        false,
-        jest.fn(),
+      mount(
+        result.current.listConfig.renderCustomItem!(lists[0], false, jest.fn()),
       );
-      expect(rendered).toBeTruthy();
+
+      expect(screen.getByText('Groceries')).toBeTruthy();
+      expect(iconCount('checkmark')).toBe(0);
+      // An owned list carries no shared-by attribution line.
+      expect(screen.queryByText(/^Shared by/)).toBeNull();
     });
 
     it('renders owner item with checkmark when selected', () => {
@@ -909,12 +941,12 @@ describe('useShoppingListSelectorModal', () => {
       );
 
       const lists = makeLists();
-      const rendered = result.current.listConfig.renderCustomItem!(
-        lists[0],
-        true,
-        jest.fn(),
+      mount(
+        result.current.listConfig.renderCustomItem!(lists[0], true, jest.fn()),
       );
-      expect(rendered).toBeTruthy();
+
+      expect(screen.getByText('Groceries')).toBeTruthy();
+      expect(iconCount('checkmark')).toBe(1);
     });
   });
 

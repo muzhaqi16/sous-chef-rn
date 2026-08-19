@@ -14,7 +14,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   CreateRecurringShoppingListDocument,
   CancelRecurringDocument,
@@ -28,7 +28,7 @@ import { addShoppingListToQueryCache } from '#/apollo/utils/shoppingListCacheUpd
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useRecurringShoppingList() {
   const { t } = useTranslation();
@@ -87,20 +87,23 @@ export function useRecurringShoppingList() {
       'Set Recurring',
     );
 
-    const result = await executeMutation(
-      () =>
-        setupMutation({
-          variables: {
-            input: {
-              id,
-              recurringPattern: pattern,
-              recurringInterval: interval,
-            },
+    let result;
+    try {
+      result = await setupMutation({
+        variables: {
+          input: {
+            id,
+            recurringPattern: pattern,
+            recurringInterval: interval,
           },
-          context: { localFirst: true },
-        }),
-      'Set Recurring error:',
-    );
+        },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Set Recurring error:',
+      });
+    }
 
     if (!result) {
       revert();
@@ -122,14 +125,17 @@ export function useRecurringShoppingList() {
       'Cancel Recurring',
     );
 
-    const result = await executeMutation(
-      () =>
-        cancelMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Cancel Recurring error:',
-    );
+    let result;
+    try {
+      result = await cancelMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Cancel Recurring error:',
+      });
+    }
 
     if (!result) {
       revert();
@@ -146,10 +152,14 @@ export function useRecurringShoppingList() {
 
   // Returns the created list's id (for navigation) or null on failure.
   const generateNext = async (id: string): Promise<string | null> => {
-    const result = await executeMutation(
-      () => generateMutation({ variables: { input: { id } } }),
-      'Generate Next Recurring List error:',
-    );
+    let result;
+    try {
+      result = await generateMutation({ variables: { input: { id } } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Generate Next Recurring List error:',
+      });
+    }
 
     if (!result) return null;
     if (

@@ -1,12 +1,13 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#utils/formatQuantity';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 interface Item {
   id: string;
@@ -72,15 +73,15 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
         )}
         {!!item?.price && (
           <Text size="xl" weight="semibold" tone="success">
-            ${item?.price.toFixed(2)}
+            {formatCurrency(item.price, DEFAULT_CURRENCY)}
           </Text>
         )}
         <Text size="sm" tone="secondary" style={styles.itemBarcode}>
-          Barcode: {item.upc}
+          {t('barcode.barcodeValue', { barcode: item.upc })}
         </Text>
         {format ? (
           <Text size="xs" tone="tertiary" style={styles.itemFormat}>
-            Format: {format}
+            {t('barcode.formatValue', { format })}
           </Text>
         ) : null}
       </View>
@@ -104,7 +105,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             <Pressable style={styles.actionLink} onPress={onCreateVariant}>
               <Icon name="add-circle-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
-                New Version
+                {t('barcode.newVersion')}
               </Text>
             </Pressable>
           )}

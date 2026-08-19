@@ -16,10 +16,6 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
-import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
@@ -29,6 +25,8 @@ import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { ShoppingListItemInput } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { errorService } from '#/services/errorService';
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
@@ -70,7 +68,7 @@ export function useAddShoppingItem({
     // optimistic entity still needs a numeric quantity — parseFloat takes the
     // leading number ("1/3" → 1), matching the screen form's optimistic value.
     const optimisticQuantity = input.quantityInput
-      ? parseFloat(input.quantityInput) || 1
+      ? parseDecimalInput(input.quantityInput) || 1
       : input.quantity ?? 1;
 
     // One item per add — the batch mutation wraps it below. `shoppingListId`
@@ -88,7 +86,7 @@ export function useAddShoppingItem({
       ...(input.notes && { notes: input.notes }),
       ...(input.category && { category: input.category }),
       ...(input.estimatedPrice && {
-        pricing: { estimatedPrice: parseFloat(input.estimatedPrice) },
+        pricing: { estimatedPrice: parseDecimalInput(input.estimatedPrice) },
       }),
       ...((input.brandName || input.brandId) && {
         brand: {
@@ -123,19 +121,25 @@ export function useAddShoppingItem({
     // Write the item into the cache (full entity + connection edge + recomputed
     // list stats) before firing, so it shows immediately and stays if the create
     // is queued offline.
-    executeCacheUpdate(
-      () => addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
-      'Add Shopping List Item (optimistic)',
-    );
+    try {
+      addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Shopping List Item (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        addItemMutation({
-          variables: { input: { shoppingListId: listId, items: [itemInput] } },
-          context: { localFirst: true },
-        }),
-      'Add Shopping List Item error:',
-    );
+    let result;
+    try {
+      result = await addItemMutation({
+        variables: { input: { shoppingListId: listId, items: [itemInput] } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Add Shopping List Item error:',
+      });
+    }
     if (!result) return undefined;
 
     // A non-success payload (e.g. ValidationError / ConflictError) resolves under

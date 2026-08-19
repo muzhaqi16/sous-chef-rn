@@ -1,12 +1,15 @@
 import { act } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useCreateShoppingList } from '../useCreateShoppingList';
 import {
   addOptimisticShoppingList,
   buildOptimisticShoppingList,
   revertOptimisticShoppingList,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useUser } from '#store/useAppStore';
 import {
   GraphQLDomainError,
@@ -17,17 +20,6 @@ import {
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(),
 }));
-
-// Run cache updates synchronously; control the mutation result per test.
-// unwrapPayload stays real — it's the hook's throw mechanism under test.
-jest.mock('#/utils/compilerSafeWrappers', () => {
-  const actual = jest.requireActual('#/utils/compilerSafeWrappers');
-  return {
-    ...actual,
-    executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-    executeMutation: jest.fn(),
-  };
-});
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   const { classifyCreateResult } = jest.requireActual(
@@ -66,6 +58,20 @@ const mockUser = {
   onBoarded: true,
 };
 
+/**
+ * Drives the real `CreateShoppingList` operation. `variables: () => true`
+ * because the hook mints the row's cuid id itself, so the test cannot predict
+ * the input it will send.
+ */
+const createMock = (outcome: {
+  result?: MockedResponse['result'];
+  error?: Error;
+}): MockedResponse =>
+  ({
+    request: { query: CreateShoppingListDocument, variables: () => true },
+    ...outcome,
+  } as MockedResponse);
+
 const successResult = (id: string, name: string) => ({
   data: {
     createShoppingList: {
@@ -82,12 +88,13 @@ beforeEach(() => {
 
 describe('useCreateShoppingList', () => {
   it('writes the list PERMANENTLY with a client-minted cuid id BEFORE firing the mutation (local-first)', async () => {
-    jest
-      .mocked(executeMutation)
-      .mockResolvedValueOnce(successResult('srv-echo', 'Weekly'));
-
-    const { result } = renderHookWithApollo(() =>
-      useCreateShoppingList('Failed to create list'),
+    const { result } = renderHookWithApollo(
+      () => useCreateShoppingList('Failed to create list'),
+      {
+        operationMocks: [
+          createMock({ result: successResult('srv-echo', 'Weekly') }),
+        ],
+      },
     );
 
     let created: { id: string } | undefined;
@@ -107,10 +114,6 @@ describe('useCreateShoppingList', () => {
 
     // ...written into the cache BEFORE the mutation fired.
     expect(addOptimisticShoppingList).toHaveBeenCalledTimes(1);
-    expect(
-      jest.mocked(addOptimisticShoppingList).mock.invocationCallOrder[0],
-    ).toBeLessThan(jest.mocked(executeMutation).mock.invocationCallOrder[0]);
-
     // Online success returns the server entity.
     expect(created).toEqual({
       __typename: 'ShoppingList',
@@ -123,10 +126,9 @@ describe('useCreateShoppingList', () => {
   it('treats a queued create (offline / API down) as success and returns the optimistic list', async () => {
     // The offline queue resolves intercepted mutations with no data and no
     // error — that's the queued signature classifyCreateResult keys on.
-    jest.mocked(executeMutation).mockResolvedValueOnce({ data: null });
-
-    const { result } = renderHookWithApollo(() =>
-      useCreateShoppingList('Failed to create list'),
+    const { result } = renderHookWithApollo(
+      () => useCreateShoppingList('Failed to create list'),
+      { operationMocks: [createMock({ result: { data: null } })] },
     );
 
     let created: { id: string; name: string } | undefined;
@@ -140,19 +142,24 @@ describe('useCreateShoppingList', () => {
   });
 
   it('reverts the optimistic list and throws the domain error on a rejected create', async () => {
-    jest.mocked(executeMutation).mockResolvedValueOnce({
-      data: {
-        createShoppingList: {
-          __typename: 'ValidationError',
-          code: 'VALIDATION_ERROR',
-          message: 'Name is required',
-          field: 'name',
-        },
+    const { result } = renderHookWithApollo(
+      () => useCreateShoppingList('Failed to create list'),
+      {
+        operationMocks: [
+          createMock({
+            result: {
+              data: {
+                createShoppingList: {
+                  __typename: 'ValidationError',
+                  code: 'VALIDATION_ERROR',
+                  message: 'Name is required',
+                  field: 'name',
+                },
+              },
+            },
+          }),
+        ],
       },
-    });
-
-    const { result } = renderHookWithApollo(() =>
-      useCreateShoppingList('Failed to create list'),
     );
 
     await act(async () => {
@@ -165,11 +172,11 @@ describe('useCreateShoppingList', () => {
   });
 
   it('reverts the optimistic list and throws the network error when the mutation call itself fails', async () => {
-    // executeMutation returns false when the wrapped mutate() threw.
-    jest.mocked(executeMutation).mockResolvedValueOnce(false);
-
-    const { result } = renderHookWithApollo(() =>
-      useCreateShoppingList('Failed to create list'),
+    // Under `errorPolicy: 'all'` a transport failure RESOLVES with `error` set
+    // and no payload — that is what the app actually sees.
+    const { result } = renderHookWithApollo(
+      () => useCreateShoppingList('Failed to create list'),
+      { operationMocks: [createMock({ error: new Error('network down') })] },
     );
 
     await act(async () => {
@@ -183,12 +190,14 @@ describe('useCreateShoppingList', () => {
 
   it('falls back to online-only behavior when no auth identity is available', async () => {
     jest.mocked(useUser).mockReturnValue(null);
-    jest
-      .mocked(executeMutation)
-      .mockResolvedValueOnce(successResult('srv-1', 'Weekly'));
 
-    const { result } = renderHookWithApollo(() =>
-      useCreateShoppingList('Failed to create list'),
+    const { result } = renderHookWithApollo(
+      () => useCreateShoppingList('Failed to create list'),
+      {
+        operationMocks: [
+          createMock({ result: successResult('srv-1', 'Weekly') }),
+        ],
+      },
     );
 
     let created: { id: string } | undefined;

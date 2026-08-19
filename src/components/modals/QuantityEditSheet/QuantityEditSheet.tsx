@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 // TextInput type comes from RNGH because @gorhom/bottom-sheet's
 // BottomSheetTextInput is typed against RNGH's TextInput (it uses RNGH
 // internally for gesture coordination inside the sheet).
@@ -17,6 +17,7 @@ import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface ItemUnit {
   id: string;
@@ -82,7 +83,7 @@ const parseFractionInput = (input: string): number | null => {
   }
 
   // Decimal or whole number
-  const num = parseFloat(trimmed);
+  const num = parseDecimalInput(trimmed);
   return isNaN(num) || num < 0 ? null : num;
 };
 
@@ -253,6 +254,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             variant: 'primary',
             disabled: !hasChanges || loading,
             loading: loading,
+            testID: 'quantity-edit-save',
           },
         ]}
       />
@@ -275,6 +277,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
           <View style={styles.counterContainer}>
             {/* Decrement Button */}
             <AppPressable
+              testID="quantity-edit-decrement"
               style={styles.counterButton}
               onPress={handleDecrement}
               disabled={decrementDisabled}
@@ -288,6 +291,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Quantity Display - Tappable for direct input */}
             <AppPressable
+              testID="quantity-edit-value"
               style={styles.quantityDisplay}
               onPress={handleQuantityPress}
             >
@@ -311,6 +315,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {/* Increment Button */}
             <AppPressable
+              testID="quantity-edit-increment"
               style={styles.incrementButton}
               onPress={handleIncrement}
             >

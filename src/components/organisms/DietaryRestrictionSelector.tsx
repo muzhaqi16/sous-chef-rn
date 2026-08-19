@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#/components/molecules/RestrictionSection/RestrictionSection';
@@ -12,7 +12,7 @@ import {
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { isLifestyleDiet } from '#/constants/dietary';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 
 // Lifestyle dietary choices. Labels are i18n keys resolved via `t()` at render —
 // the enum value stays the stable identity used for selection and persistence.
@@ -256,7 +256,7 @@ export const DietaryRestrictionSelector: React.FC<
         setDietSheetVisible(false);
       } else {
         alertService.alert(
-          t('dietaryProfile.errorTitle'),
+          t('labels.error'),
           t('dietaryProfile.updateDietFailed'),
         );
       }
@@ -281,7 +281,7 @@ export const DietaryRestrictionSelector: React.FC<
         setConstraintSheetVisible(false);
       } else {
         alertService.alert(
-          t('dietaryProfile.errorTitle'),
+          t('labels.error'),
           t('dietaryProfile.addConstraintsFailed'),
         );
       }
@@ -311,7 +311,7 @@ export const DietaryRestrictionSelector: React.FC<
         setIntoleranceSheetVisible(false);
       } else {
         alertService.alert(
-          t('dietaryProfile.errorTitle'),
+          t('labels.error'),
           t('dietaryProfile.addIntolerancesFailed'),
         );
       }
@@ -338,7 +338,7 @@ export const DietaryRestrictionSelector: React.FC<
         setGoalSheetVisible(false);
       } else {
         alertService.alert(
-          t('dietaryProfile.errorTitle'),
+          t('labels.error'),
           t('dietaryProfile.addGoalsFailed'),
         );
       }

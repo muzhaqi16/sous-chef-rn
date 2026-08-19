@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -24,9 +24,10 @@ import { DetailSection } from '#components/molecules/DetailSection';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
 import {
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 
 type RouteParams = {
   listId: string;
@@ -176,8 +177,10 @@ export const ShoppingListItemDetail: React.FC<
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
   // of showing the raw number.
-  const priorityKey = PRIORITY_KEYS[item.priority];
-  const priorityLabel = priorityKey ? t(priorityLabelKey(priorityKey)) : null;
+  const priorityOption = PRIORITY_OPTION_BY_VALUE[item.priority];
+  const priorityLabel = priorityOption
+    ? t(priorityLabelKey(priorityOption))
+    : null;
 
   const estimatedPrice = item.priceEstimate?.estimated;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
@@ -262,7 +265,7 @@ export const ShoppingListItemDetail: React.FC<
           {estimatedPrice != null && (
             <DetailRow label={t('shoppingListScreens.estimatedPrice')}>
               <Text size="sm" weight="medium">
-                {`$${estimatedPrice.toFixed(2)}`}
+                {formatCurrency(estimatedPrice, DEFAULT_CURRENCY)}
               </Text>
             </DetailRow>
           )}
@@ -273,7 +276,10 @@ export const ShoppingListItemDetail: React.FC<
                   {item.purchaseInfo.purchasedPrice != null
                     ? `${
                         item.purchaseInfo.purchasedQuantity
-                      } @ $${item.purchaseInfo.purchasedPrice.toFixed(2)}`
+                      } @ ${formatCurrency(
+                        item.purchaseInfo.purchasedPrice,
+                        DEFAULT_CURRENCY,
+                      )}`
                     : `${item.purchaseInfo.purchasedQuantity}`}
                 </Text>
               </DetailRow>
@@ -375,6 +381,7 @@ export const ShoppingListItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
+          canEdit={!!item.item?.canEdit}
         />
       )}
     </>

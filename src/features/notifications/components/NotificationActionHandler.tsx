@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 import { readExpiryReminderFields } from '#utils/notifications/notificationHelpers';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
 import {
@@ -30,6 +31,7 @@ interface NotificationActionHandlerProps {
 export const NotificationActionHandler: React.FC<
   NotificationActionHandlerProps
 > = ({ children }) => {
+  const { t } = useTranslation();
   const [invitationModalVisible, setInvitationModalVisible] = useState(false);
   const [currentInvitation, setCurrentInvitation] =
     useState<InvitationData | null>(null);
@@ -95,15 +97,20 @@ export const NotificationActionHandler: React.FC<
     )?.pantryItemId;
     if (!pantryItemId) return null;
 
-    const result = await executeQuery(
-      () =>
-        client.query({
-          query: GetExpirationNotificationsForPantryItemDocument,
-          variables: { pantryItemId },
-          fetchPolicy: 'network-only',
-        }),
-      'resolveExpirationNotificationLink',
-    );
+    let result;
+    try {
+      result = await client.query({
+        query: GetExpirationNotificationsForPantryItemDocument,
+        variables: { pantryItemId },
+        fetchPolicy: 'network-only',
+      });
+    } catch (error) {
+      // Leaving `result` undefined resolves to no link, which is the correct
+      // outcome when the lookup cannot be made.
+      errorService.reportError(error, {
+        operation: 'resolveExpirationNotificationLink',
+      });
+    }
 
     const edges = result?.data?.me?.expirationNotificationsConnection.edges;
     const match = edges?.find(
@@ -168,12 +175,14 @@ export const NotificationActionHandler: React.FC<
       default:
         // Unknown action, show alert
         alertService.alert(
-          'Action Required',
-          `This notification requires action: ${notification.actionType}`,
+          t('notifications.actionRequiredTitle'),
+          t('notifications.actionRequiredBody', {
+            action: notification.actionType,
+          }),
           [
-            { text: 'OK' },
+            { text: t('labels.ok') },
             {
-              text: 'Go to Notifications',
+              text: t('notifications.goToNotifications'),
               onPress: () => {
                 toNotifications();
               },
@@ -203,12 +212,14 @@ export const NotificationActionHandler: React.FC<
           toPantryMain();
         });
       } else {
-        toastService.success(`Welcome to ${invitation.entityName}!`);
+        toastService.success(
+          t('toasts.welcomeToEntity', { name: invitation.entityName }),
+        );
         toPantryMain();
       }
     } else {
       toastService.success(
-        `You can now collaborate on ${invitation.entityName}`,
+        t('toasts.canCollaborateOn', { name: invitation.entityName }),
       );
       toShoppingListMain();
     }

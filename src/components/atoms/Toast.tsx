@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { usePanGesture, GestureDetector } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -70,6 +71,47 @@ type ToastQueueState = {
   generation: number;
 };
 
+type DismissTargets = {
+  translateY: SharedValue<number>;
+  translateX: SharedValue<number>;
+  opacity: SharedValue<number>;
+};
+
+/**
+ * Module scope so its identity is constant: the entry effect arms the
+ * auto-dismiss timer with it, and a per-render function there would re-arm the
+ * timer on every render and the toast would never leave.
+ *
+ * Idempotent — safe to call mid-animation.
+ */
+const animateDismiss = (
+  targets: DismissTargets,
+  dismissedGeneration: number,
+  setQueue: React.Dispatch<React.SetStateAction<ToastQueueState>>,
+) => {
+  const { translateY, translateX, opacity } = targets;
+  // The spring's completion hops to the JS thread a frame later. A toast
+  // arriving in that gap is already on screen by the time this lands, so
+  // clearing unconditionally would blank it mid-display.
+  const onDismissComplete = () => {
+    setQueue(prev =>
+      prev.generation === dismissedGeneration
+        ? { ...prev, current: null }
+        : prev,
+    );
+  };
+  translateY.set(
+    withSpring(TOAST.OFFSCREEN_Y, SPRING.TOAST_DISMISS, finished => {
+      'worklet';
+      if (finished) {
+        translateX.set(0);
+        scheduleOnRN(onDismissComplete);
+      }
+    }),
+  );
+  opacity.set(withTiming(0, { duration: TIMING.STANDARD }));
+};
+
 const sameType = (a: ToastOptions, b: ToastOptions) =>
   (a.type ?? 'default') === (b.type ?? 'default');
 
@@ -103,29 +145,14 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   // Mirrors `generation` for the gesture worklet, which can't read state.
   const currentGeneration = useSharedValue(0);
 
-  // The spring's completion hops to the JS thread a frame later. A toast
-  // arriving in that gap is already on screen by the time this lands, so
-  // clearing unconditionally would blank it mid-display.
-  const onDismissComplete = (dismissedGeneration: number) => {
-    setQueue(prev =>
-      prev.generation === dismissedGeneration
-        ? { ...prev, current: null }
-        : prev,
+  // Defined in RN scope so the gesture worklet can hand it to scheduleOnRN
+  // with a primitive argument only.
+  const dismissGeneration = (dismissedGeneration: number) => {
+    animateDismiss(
+      { translateY, translateX, opacity },
+      dismissedGeneration,
+      setQueue,
     );
-  };
-
-  // Idempotent — safe to call mid-animation.
-  const animateDismiss = (dismissedGeneration: number) => {
-    translateY.set(
-      withSpring(TOAST.OFFSCREEN_Y, SPRING.TOAST_DISMISS, finished => {
-        'worklet';
-        if (finished) {
-          translateX.set(0);
-          scheduleOnRN(onDismissComplete, dismissedGeneration);
-        }
-      }),
-    );
-    opacity.set(withTiming(0, { duration: TIMING.STANDARD }));
   };
 
   const showToast: ToastFn = opts => {
@@ -188,9 +215,17 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
       typeof requested === 'number' && requested > 0
         ? requested
         : TOAST.AUTO_DISMISS_SHORT;
-    const id = setTimeout(() => animateDismiss(generation), ms);
+    const id = setTimeout(
+      () =>
+        animateDismiss(
+          { translateY, translateX, opacity },
+          generation,
+          setQueue,
+        ),
+      ms,
+    );
     return () => clearTimeout(id);
-  }, [current, generation]);
+  }, [current, generation, currentGeneration, opacity, translateX, translateY]);
 
   // After dismissal, give it a beat before popping the next queued toast.
   useEffect(() => {
@@ -221,7 +256,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
         event.translationY < -TOAST.SWIPE_THRESHOLD ||
         Math.abs(event.translationX) > TOAST.SWIPE_THRESHOLD;
       if (shouldDismiss) {
-        scheduleOnRN(animateDismiss, currentGeneration.get());
+        scheduleOnRN(dismissGeneration, currentGeneration.get());
       } else {
         translateY.set(withSpring(0, SPRING.TOAST_ENTER));
         translateX.set(withSpring(0, SPRING.TOAST_ENTER));
@@ -240,7 +275,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   const handleActionPress = () => {
     if (current?.action) {
       current.action.onPress();
-      animateDismiss(generation);
+      dismissGeneration(generation);
     }
   };
 

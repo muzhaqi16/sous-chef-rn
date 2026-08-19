@@ -11,16 +11,17 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
+import { toastService } from '#/services/toastService';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
 
 export function useShoppingListBudget() {
   const { t } = useTranslation();
@@ -45,18 +46,35 @@ export function useShoppingListBudget() {
 
   const runUpdate = async (
     id: string,
-    input: Omit<UpdateShoppingListInput, 'id'>,
+    input: Omit<UpdateShoppingListInput, 'id' | 'version'>,
     revert: () => void,
     failureMessage: string,
   ): Promise<boolean> => {
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: { input: { id, ...input } },
-          context: { localFirst: true },
-        }),
-      'Update Shopping List budget error:',
-    );
+    // The server requires the version: an update sent without one reports
+    // success while overwriting a concurrent edit.
+    const current =
+      client.cache.readFragment<UseShoppingListBudget_ListFragment>({
+        id: client.cache.identify({ __typename: 'ShoppingList', id }),
+        fragment: UseShoppingListBudget_ListFragmentDoc,
+        fragmentName: 'useShoppingListBudget_list',
+      });
+    if (!current) {
+      revert();
+      toastService.error(failureMessage);
+      return false;
+    }
+
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { id, ...input, version: current.version } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Shopping List budget error:',
+      });
+    }
 
     if (!result) {
       revert();

@@ -117,6 +117,15 @@ export interface CardContentProps {
 export interface CardRightSlotProps {
   /** Type of content to render */
   type: 'meta' | 'counter' | 'dragHandle' | 'custom';
+  /**
+   * testID for the PRIMARY value (for type='meta').
+   *
+   * The primary text is the item's quantity, which is the value a parsing test
+   * needs to read back — "1 1/4" must arrive as "1.25 cup". Without an id the
+   * only way to assert it is `by.text`, which is locale- and unit-dependent.
+   * Shopping list's `QuantityBadge` already takes one for the same reason.
+   */
+  testID?: string;
   /** Primary text (for type='meta') */
   primary?: string;
   /** Secondary text (for type='meta') */

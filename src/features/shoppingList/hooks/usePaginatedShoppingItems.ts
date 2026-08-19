@@ -11,7 +11,8 @@ import {
   useConnectionData,
   type ConnectionData,
 } from '#hooks/utils/useConnectionData';
-import { executeRefetch } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
+import { isAbortError } from '#/utils/errors/abort';
 import type { HookReturn } from '#hooks/types';
 
 /**
@@ -142,13 +143,25 @@ export function usePaginatedShoppingItems({
   });
 
   // --- Refetch both queries ---
+  const refetchQuietly = async (
+    refetch: () => Promise<unknown>,
+    operation: string,
+  ) => {
+    try {
+      await refetch();
+    } catch (error) {
+      if (isAbortError(error)) return;
+      errorService.reportError(error, { operation });
+    }
+  };
+
   const handleRefetch = async () => {
     await Promise.all([
-      executeRefetch(
+      refetchQuietly(
         uRefetch,
         '[usePaginatedShoppingItems] Unpurchased refetch failed:',
       ),
-      executeRefetch(
+      refetchQuietly(
         pRefetch,
         '[usePaginatedShoppingItems] Purchased refetch failed:',
       ),

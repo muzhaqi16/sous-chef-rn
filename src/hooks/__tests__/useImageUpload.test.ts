@@ -10,7 +10,6 @@ import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ConfirmItemImageUploadDocument,
   CreateImageUploadUrlDocument,
-  UpdateItemImageDocument,
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { useImageUpload } from '../useImageUpload';
@@ -24,14 +23,6 @@ type ProfileUploadResult = Awaited<
 >;
 type ItemUploadResult = Awaited<ReturnType<ImageUploadApi['uploadItemImage']>>;
 type ItemImagesResult = Awaited<ReturnType<ImageUploadApi['uploadItemImages']>>;
-// `updateItemImageUrl` resolves to the `updateItem` result union; `item` exists
-// only on the success member. Optional fields (plus `__typename`) let the
-// success-path mock value be read for assertions.
-type ItemImageData = {
-  __typename?: string;
-  item?: { id?: string; imageUrl?: string | null } | null;
-} | null;
-
 jest.mock('../../apollo/links/tokenScheduler');
 jest.mock('../../apollo/links/refreshToken');
 
@@ -51,7 +42,7 @@ jest.mock('#store', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -122,34 +113,6 @@ function buildUpdateProfileMock(
             showPhone: true,
             createdAt: '2025-01-01T00:00:00.000Z',
             updatedAt: '2025-01-01T00:00:00.000Z',
-          },
-        },
-      },
-    },
-  };
-}
-
-function buildUpdateItemImageMock(
-  variables: { id: string; imageUrl: string },
-  itemImageUrl: string | null,
-  error?: Error,
-): MockedResponse {
-  if (error) {
-    return {
-      request: { query: UpdateItemImageDocument, variables },
-      error,
-    };
-  }
-  return {
-    request: { query: UpdateItemImageDocument, variables },
-    result: {
-      data: {
-        updateItem: {
-          __typename: 'UpdateItemPayload',
-          item: {
-            __typename: 'Item',
-            id: variables.id,
-            imageUrl: itemImageUrl,
           },
         },
       },
@@ -361,6 +324,100 @@ describe('useImageUpload', () => {
     });
   });
 
+  // The hero flag rides the confirm, not the presign — until the object is
+  // confirmed there is no ItemImage row to promote.
+  describe('makePrimary', () => {
+    const file = { uri: 'file://a.jpg', fileName: 'a.jpg', fileSize: 1024 };
+
+    // Same driver the presigned-POST block installs: without it `send()` never
+    // fires `onload`, the upload never reaches its confirm, and the test hangs
+    // to the 30s timeout instead of failing on an assertion.
+    beforeEach(() => {
+      mockXhr.send.mockImplementation(() => {
+        setImmediate(() => mockXhr.onload?.({} as ProgressEvent));
+      });
+    });
+
+    afterEach(() => {
+      mockXhr.send.mockReset();
+    });
+
+    function recordConfirm() {
+      return recordMock(ConfirmItemImageUploadDocument, {
+        data: {
+          confirmItemImageUpload: {
+            __typename: 'ConfirmItemImageUploadPayload',
+            url: 'https://cdn.test/a.jpg',
+          },
+        },
+        maxUsageCount: 10,
+      });
+    }
+
+    it('forwards makePrimary to confirmItemImageUpload', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(file, 'item-1', {
+          perspective: 'front',
+          makePrimary: true,
+        });
+      });
+
+      expect(fired).toContainEqual({
+        input: expect.objectContaining({ makePrimary: true }),
+      });
+    });
+
+    // Unset must stay unset rather than becoming `false`: an item's first photo
+    // is promoted automatically, and sending false on every other upload is the
+    // caller asserting a choice it did not make.
+    it('leaves makePrimary undefined when the caller does not ask', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImage(file, 'item-1', {
+          perspective: 'front',
+        });
+      });
+
+      expect(fired[0]).toMatchObject({
+        input: { makePrimary: undefined },
+      });
+    });
+
+    // The batch carries the flag per file, so the starred photo is promoted no
+    // matter where it sits in the run.
+    it('promotes only the flagged file in a batch', async () => {
+      const { mock, fired } = recordConfirm();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        operationMocks: [buildPresignMock(), mock],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImages(
+          [
+            { ...file, perspective: 'front' },
+            { ...file, perspective: 'back', isPrimary: true },
+          ],
+          'item-1',
+        );
+      });
+
+      const flags = fired.map(
+        variables =>
+          (variables as { input: { makePrimary?: boolean } }).input.makePrimary,
+      );
+      expect(flags).toEqual([undefined, true]);
+    });
+  });
+
   it('exposes all expected functions', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     expect(typeof result.current.uploadProfileImage).toBe('function');
@@ -368,7 +425,6 @@ describe('useImageUpload', () => {
     expect(typeof result.current.uploadItemImages).toBe('function');
     expect(typeof result.current.updateProfileAvatarUrl).toBe('function');
     expect(typeof result.current.updateProfileCoverUrl).toBe('function');
-    expect(typeof result.current.updateItemImageUrl).toBe('function');
   });
 
   it('updateProfileAvatarUrl calls updateProfile mutation', async () => {
@@ -390,12 +446,19 @@ describe('useImageUpload', () => {
     expect(profile?.avatar).toBe('http://img.jpg');
   });
 
-  it('updateProfileAvatarUrl returns null on failure', async () => {
-    // executeMutation returns false on error → updateProfileAvatarUrl returns null.
-    const { executeMutation } = require('#/utils/compilerSafeWrappers');
-    executeMutation.mockResolvedValueOnce(false);
-
-    const { result } = renderHookWithApollo(() => useImageUpload());
+  // `errorPolicy: 'all'` means a failed mutation RESOLVES with `error` set
+  // rather than rejecting, so this drives the path the app actually takes
+  // instead of stubbing the wrapper that used to catch a throw.
+  it('updateProfileAvatarUrl reports and returns null when the mutation fails', async () => {
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        buildUpdateProfileMock(
+          { avatar: 'http://img.jpg' },
+          { userProfile: { id: 'u1' } },
+          new Error('network down'),
+        ),
+      ],
+    });
 
     let profile: ProfileResult | undefined;
     await act(async () => {
@@ -403,6 +466,10 @@ describe('useImageUpload', () => {
     });
 
     expect(profile).toBeNull();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Update Failed',
+      'Failed to update profile avatar',
+    );
   });
 
   it('updateProfileCoverUrl calls updateProfile mutation with coverImage', async () => {
@@ -421,28 +488,6 @@ describe('useImageUpload', () => {
     });
 
     expect(profile?.coverImage).toBe('http://cover.jpg');
-  });
-
-  it('updateItemImageUrl calls updateItemImage mutation', async () => {
-    const { result } = renderHookWithApollo(() => useImageUpload(), {
-      operationMocks: [
-        buildUpdateItemImageMock(
-          { id: 'item1', imageUrl: 'http://item.jpg' },
-          'http://item.jpg',
-        ),
-      ],
-    });
-
-    let item: ItemImageData | undefined;
-    await act(async () => {
-      item = await result.current.updateItemImageUrl(
-        'item1',
-        'http://item.jpg',
-      );
-    });
-
-    expect(item?.item?.id).toBe('item1');
-    expect(item?.item?.imageUrl).toBe('http://item.jpg');
   });
 
   it('uploadProfileImage returns null when offline', async () => {
@@ -508,11 +553,16 @@ describe('useImageUpload', () => {
     // Just verifying no error thrown during cleanup
   });
 
-  it('updateProfileCoverUrl returns null on failure', async () => {
-    const { executeMutation } = require('#/utils/compilerSafeWrappers');
-    executeMutation.mockResolvedValueOnce(false);
-
-    const { result } = renderHookWithApollo(() => useImageUpload());
+  it('updateProfileCoverUrl reports and returns null when the mutation fails', async () => {
+    const { result } = renderHookWithApollo(() => useImageUpload(), {
+      operationMocks: [
+        buildUpdateProfileMock(
+          { coverImage: 'http://cover.jpg' },
+          { userProfile: { id: 'u1' } },
+          new Error('network down'),
+        ),
+      ],
+    });
 
     let profile: ProfileResult | undefined;
     await act(async () => {
@@ -520,35 +570,6 @@ describe('useImageUpload', () => {
     });
 
     expect(profile).toBeNull();
-  });
-
-  it('updateItemImageUrl returns null on failure', async () => {
-    // The hook uses executeMutation(...) — mock it once to simulate the
-    // error path without trying to coerce Apollo's mock link to throw under
-    // our test wrapper's errorPolicy: 'all' default.
-    const { executeMutation } = require('#/utils/compilerSafeWrappers');
-    executeMutation.mockImplementationOnce(
-      async (_fn: () => Promise<unknown>, onError: (e: unknown) => void) => {
-        onError(new Error('fail'));
-        return false;
-      },
-    );
-
-    const { result } = renderHookWithApollo(() => useImageUpload());
-
-    let item: ItemImageData | undefined;
-    await act(async () => {
-      item = await result.current.updateItemImageUrl(
-        'item1',
-        'http://item.jpg',
-      );
-    });
-
-    expect(item).toBeNull();
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Update Failed',
-      'Failed to update item image',
-    );
   });
 
   // These throw what the real `validateImageFile` throws — the code on

@@ -1,3 +1,4 @@
+import { useTranslation } from '#/i18n';
 import React from 'react';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useItemAutocomplete } from '#hooks/autocomplete/useItemAutocomplete';
@@ -31,6 +32,7 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
   onSelectItem,
   showBrand = false,
 }) => {
+  const { t } = useTranslation();
   const item = useItemAutocomplete();
 
   return (
@@ -65,9 +67,9 @@ export const ItemAutocompleteField: React.FC<ItemAutocompleteFieldProps> = ({
       }}
       inlineMinSearchLength={2}
       maxResults={5}
-      modalTitle="Search for an item"
-      modalSearchPlaceholder="Type to search items..."
-      modalEmptyText="No items found"
+      modalTitle={t('autocomplete.selectItem')}
+      modalSearchPlaceholder={t('autocomplete.itemSearch')}
+      modalEmptyText={t('autocomplete.noItems')}
       modalEmptySubtext={
         item.shouldSearch
           ? `Continue typing to add "${item.searchTerm}"`

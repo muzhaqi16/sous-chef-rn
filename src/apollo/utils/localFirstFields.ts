@@ -21,8 +21,8 @@
  */
 
 import type { ApolloCache, StoreObject } from '@apollo/client';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { classifyCreateResult } from './classifyCreateResult';
+import { errorService } from '#/services/errorService';
 
 /**
  * Identifies the normalized entity holding the fields. Its field names must
@@ -73,15 +73,15 @@ export interface LocalFirstFieldsOptions<TFields extends object> {
   previous: Partial<TFields>;
   /** Fires the mutation. MUST pass `context: { localFirst: true }`. */
   mutate: () => Promise<MutationResultLike>;
-  /** Operation label for `executeMutation`'s error reporting. */
+  /** Operation label for error reporting. */
   logLabel: string;
 }
 
 export interface LocalFirstFieldsResult {
   /** True when the change landed on the server OR was queued for replay. */
   persisted: boolean;
-  /** Raw mutation result; `false` when the call threw. Callers classify/report. */
-  result: MutationResultLike | false;
+  /** Raw mutation result; `undefined` when the call threw. Callers classify/report. */
+  result: MutationResultLike | undefined;
 }
 
 /**
@@ -100,7 +100,12 @@ export async function updateEntityFieldsLocalFirst<TFields extends object>({
 }: LocalFirstFieldsOptions<TFields>): Promise<LocalFirstFieldsResult> {
   writeEntityFields(cache, entity, updates);
 
-  const result = await executeMutation(mutate, logLabel);
+  let result;
+  try {
+    result = await mutate();
+  } catch (error) {
+    errorService.reportError(error, { operation: logLabel });
+  }
 
   // `classifyCreateResult` treats a null payload with no error as 'queued', so a
   // queued change keeps its cache write; only 'rejected' reverts.

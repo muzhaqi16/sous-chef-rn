@@ -6,6 +6,7 @@ import React, {
   ComponentRef,
 } from 'react';
 import { View, Modal } from 'react-native';
+import { useTranslation } from '#/i18n';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Pressable } from '#components/atoms/themedComponents';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -35,33 +36,42 @@ export interface InteractiveSwipeHintProps {
 interface StepConfig {
   type: 'swipe' | 'tap';
   direction: 'left' | 'right' | 'any';
-  instruction: string;
+  /**
+   * A key path, not a resolved string. These tables are built at import time,
+   * so a resolved string would freeze whichever language loaded first and never
+   * follow a language change; the consumer calls `t` at render instead.
+   */
+  instructionKey: string;
 }
 
 const PANTRY_STEPS: StepConfig[] = [
   {
     type: 'swipe',
     direction: 'right',
-    instruction: 'Swipe right to see item actions',
+    instructionKey: 'swipeHint.pantrySeeActions',
   },
   {
     type: 'swipe',
     direction: 'left',
-    instruction: 'Now swipe left for edit & delete',
+    instructionKey: 'swipeHint.pantryEditDelete',
   },
 ];
 
 const SHOPPING_STEPS: StepConfig[] = [
-  { type: 'swipe', direction: 'left', instruction: 'Swipe left to edit' },
+  {
+    type: 'swipe',
+    direction: 'left',
+    instructionKey: 'swipeHint.shoppingEdit',
+  },
   {
     type: 'swipe',
     direction: 'right',
-    instruction: 'Now swipe right to delete',
+    instructionKey: 'swipeHint.shoppingDelete',
   },
   {
     type: 'tap',
     direction: 'any',
-    instruction: 'Tap the checkbox to mark purchased',
+    instructionKey: 'swipeHint.shoppingMarkPurchased',
   },
 ];
 
@@ -86,6 +96,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   onDismiss,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const { t } = useTranslation();
   const [completed, setCompleted] = useState(false);
   const swipeableRef = useRef<ComponentRef<typeof Swipeable>>(null);
 
@@ -95,7 +106,9 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
   const pendingTimersRef = useRef<Array<ReturnType<typeof setTimeout>>>([]);
   const scheduleTimer = (cb: () => void, delayMs: number): void => {
     const id = setTimeout(() => {
-      pendingTimersRef.current = pendingTimersRef.current.filter(t => t !== id);
+      pendingTimersRef.current = pendingTimersRef.current.filter(
+        handle => handle !== id,
+      );
       cb();
     }, delayMs);
     pendingTimersRef.current.push(id);
@@ -208,7 +221,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             <Animated.View style={[styles.checkContainer, checkAnimatedStyle]}>
               <Icon name="checkmark-circle" size={64} tone="success" />
               <Text size="lg" weight="semibold" style={styles.completedText}>
-                You got it!
+                {t('tutorial.youGotIt')}
               </Text>
             </Animated.View>
           </View>
@@ -237,10 +250,10 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             style={styles.skipButton}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Skip tutorial"
+            accessibilityLabel={t('tutorial.skipTutorial')}
           >
             <Text size="md" weight="medium" tone="tertiary">
-              Skip
+              {t('labels.skip')}
             </Text>
           </Pressable>
 
@@ -251,7 +264,7 @@ export const InteractiveSwipeHint: React.FC<InteractiveSwipeHintProps> = ({
             align="center"
             style={styles.instruction}
           >
-            {step?.instruction}
+            {step?.instructionKey ? t(step.instructionKey) : null}
           </Text>
 
           {/* Card area — Swipeable for swipe steps, plain card for tap steps */}

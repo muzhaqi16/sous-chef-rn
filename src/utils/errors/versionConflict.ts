@@ -1,6 +1,6 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { isErrorTypename } from './mutationPayload';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 
 /**
  * Codes that mark an optimistic-concurrency conflict, whether the error arrives

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
@@ -107,7 +107,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
             align="center"
             style={styles.warningText}
           >
-            {t('addToMealPlan.noActivePlan')}
+            {t('errors.noActiveMealPlan')}
           </Text>
         )}
 

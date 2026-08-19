@@ -27,15 +27,22 @@ type DotState = 'error' | 'selected' | 'idle';
 
 const PageIndicatorItemRow: React.FC<{
   label: string;
+  index: number;
   selected: boolean;
   hasError: boolean;
   onPress: () => void;
-}> = ({ label, selected, hasError, onPress }) => {
+}> = ({ label, index, selected, hasError, onPress }) => {
   const state: DotState = hasError ? 'error' : selected ? 'selected' : 'idle';
   styles.useVariants({ state });
 
   return (
     <AppPressable
+      // Indexed rather than label-derived: the labels are translated, so a
+      // test targeting them would pass in English and fail in every other
+      // locale. Pages this component drives (the pantry item form's
+      // Main/Details/Storage/Stock) were previously unreachable from a test at
+      // all, so a field on a later page read as "no elements found".
+      testID={`page-indicator-${index}`}
       onPress={onPress}
       accessibilityRole="tab"
       accessibilityLabel={label}
@@ -68,6 +75,7 @@ export const PageIndicator: React.FC<PageIndicatorProps> = ({
           <PageIndicatorItemRow
             key={label}
             label={label}
+            index={index}
             selected={selected}
             hasError={hasError}
             onPress={() => onPagePress(index)}

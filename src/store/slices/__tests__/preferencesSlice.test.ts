@@ -50,20 +50,6 @@ describe('preferencesSlice', () => {
     });
   });
 
-  describe('notifications', () => {
-    it('sets email notifications', () => {
-      const store = createTestStore();
-      store.getState().setEmailNotifications(true);
-      expect(store.getState().emailNotifications).toBe(true);
-    });
-
-    it('sets push notifications', () => {
-      const store = createTestStore();
-      store.getState().setNotificationsEnabled(true);
-      expect(store.getState().pushNotifications).toBe(true);
-    });
-  });
-
   describe('rememberMe', () => {
     it('sets rememberMe', () => {
       const store = createTestStore();

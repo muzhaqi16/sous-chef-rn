@@ -4,7 +4,7 @@ import {
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -45,11 +45,10 @@ import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
-
-type TFn = ReturnType<typeof useTranslation>['t'];
+import type { Translate } from '#/i18n/types';
 
 // ── Pantry tutorial steps (data-driven, add entries to extend) ──
-function buildPantryTutorialSteps(t: TFn): TutorialStep[] {
+function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
   return [
     {
       featureId: 'pantry_tutorial_home',

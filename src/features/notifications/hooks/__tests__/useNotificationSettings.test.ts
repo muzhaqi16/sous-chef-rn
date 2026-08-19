@@ -53,7 +53,7 @@ const mockPreferencesData = {
   quietHoursTimezone: 'America/New_York',
 };
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Pinned so the timezone self-heal stays inert for every suite that isn't
 // exercising it — otherwise the effect fires an unmocked mutation on whatever

@@ -24,6 +24,7 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
   swipeMode,
   onEdit,
   onActionPress,
+  testIDPrefix,
 }) => {
   // Shopping mode: Show Edit button on left swipe
   if (swipeMode === 'shopping' && onEdit) {
@@ -42,6 +43,12 @@ const LeftActionsComponent: React.FC<SwipeActionsProps> = ({
           onPress={handleEditPress}
           icon="create-outline"
           circular={true}
+          // Matches `RightActions`, which has always built `${testIDPrefix}-edit`
+          // / `-delete`. In shopping mode edit moves to the LEFT swipe, and this
+          // side was never given the prefix — so the delete action was reachable
+          // from a test and the edit action, doing the same job on the other
+          // side, was not.
+          testID={testIDPrefix ? `${testIDPrefix}-edit` : undefined}
           progress={progress}
           index={0}
         />

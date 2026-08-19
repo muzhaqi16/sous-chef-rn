@@ -13,6 +13,8 @@ import { useMoveToPantry } from '../useMoveToPantry';
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     trackEvent: jest.fn(),
+    // errorService.reportError routes through this on the failure path.
+    trackError: jest.fn(),
   },
 }));
 
@@ -24,7 +26,7 @@ jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -132,12 +134,16 @@ describe('useMoveToPantry', () => {
     });
   });
 
-  it('returns false when executeMutation returns false', async () => {
-    const { executeMutation } = require('#/utils/compilerSafeWrappers');
-    executeMutation.mockResolvedValueOnce(false);
+  // `errorPolicy: 'all'` resolves a transport failure with `error` set rather
+  // than rejecting, so this drives the outcome the app actually gets.
+  it('returns false when the move fails', async () => {
+    const failing = recordMock(MoveShoppingItemToPantryDocument, {
+      error: new Error('network down'),
+    });
 
-    const { result } = renderHookWithApollo(() =>
-      useMoveToPantry({ currentListId: 'list-1' }),
+    const { result } = renderHookWithApollo(
+      () => useMoveToPantry({ currentListId: 'list-1' }),
+      { operationMocks: [failing.mock] },
     );
 
     let moveResult: boolean = false;

@@ -1,4 +1,5 @@
 import { BackButton } from '#components/atoms/BackButton';
+import { useTranslation } from '#/i18n';
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
@@ -50,14 +51,20 @@ export const OnBoardingWrapper = ({
   allowStepNavigation = false,
   testID,
 }: OnboardingWrapperProps) => {
+  const { t } = useTranslation();
   const progress = step && totalSteps ? (step / totalSteps) * 100 : 0;
 
   // Always call the hook, but handle if context is not provided
   const onboardingContext = useOnboardingContextSafe();
 
   const isLegacyMode = !onboardingContext;
-  const displayTitle = title || onboardingContext?.currentStep?.title;
-  const displaySubtitle = subtitle || onboardingContext?.currentStep?.subtitle;
+  // The step table is module-level, so it carries key paths and the title is
+  // resolved here where the hook lives.
+  const stepTitleKey = onboardingContext?.currentStep?.titleKey;
+  const stepSubtitleKey = onboardingContext?.currentStep?.subtitleKey;
+  const displayTitle = title || (stepTitleKey ? t(stepTitleKey) : undefined);
+  const displaySubtitle =
+    subtitle || (stepSubtitleKey ? t(stepSubtitleKey) : undefined);
 
   return (
     <ThemedSafeAreaView style={styles.safeArea} testID={testID}>
@@ -108,18 +115,18 @@ export const OnBoardingWrapper = ({
             onboardingContext.canGoNext || onboardingContext.isLastStep
           }
           showSkipButton={!!skipAction}
-          uniProps={t => ({
+          uniProps={theme => ({
             backAction: {
-              label: 'Back',
+              label: t('labels.back'),
               onPress: onboardingContext.goToPreviousStep,
-              backgroundColor: t.colors.surface,
-              labelColor: t.colors.textPrimary,
+              backgroundColor: theme.colors.surface,
+              labelColor: theme.colors.textPrimary,
             },
             continueAction: continueAction || {
-              label: 'Continue',
+              label: t('labels.continue'),
               onPress: onboardingContext.goToNextStep,
-              backgroundColor: t.colors.primary,
-              labelColor: t.colors.background,
+              backgroundColor: theme.colors.primary,
+              labelColor: theme.colors.background,
             },
           })}
           skipAction={skipAction}
@@ -133,7 +140,7 @@ export const OnBoardingWrapper = ({
               style={styles.skipButton}
               testID={testID ? `${testID}-skip-button` : undefined}
             >
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={styles.skipText}>{t('labels.skip')}</Text>
             </AppPressable>
           )}
           {step != null && totalSteps != null && (

@@ -16,7 +16,7 @@ jest.mock('#/services/errorService', () => ({
   ),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/errorHandlers', () => ({
   handleVersionConflictAlert: jest.fn(() => false),

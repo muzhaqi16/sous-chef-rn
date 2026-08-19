@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View, type GestureResponderEvent } from 'react-native';
 import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
@@ -43,6 +44,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   required = false,
   testID,
 }) => {
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
 
   styles.useVariants({ focused: isFocused, disabled });
@@ -70,15 +72,18 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         style={styles.container}
         accessible
         accessibilityRole="adjustable"
-        accessibilityLabel={`${label || 'Quantity'}, ${value}`}
+        accessibilityLabel={t('a11y.counterValue', {
+          label: label || t('a11y.quantityLabel'),
+          value,
+        })}
         accessibilityValue={{
           min: min,
           now: parseFractionalInput(value) ?? 0,
           text: value,
         }}
         accessibilityActions={[
-          { name: 'increment', label: 'Increase quantity' },
-          { name: 'decrement', label: 'Decrease quantity' },
+          { name: 'increment', label: t('editableCounter.increase') },
+          { name: 'decrement', label: t('editableCounter.decrease') },
         ]}
         onAccessibilityAction={event => {
           switch (event.nativeEvent.actionName) {
@@ -101,7 +106,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           ]}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Decrease quantity"
+          accessibilityLabel={t('editableCounter.decrease')}
           accessibilityHint={`Current quantity is ${value}`}
           accessibilityState={{ disabled }}
         >
@@ -125,8 +130,10 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           selectTextOnFocus
           textAlign="center"
           accessible
-          accessibilityLabel={label ? `${label} value` : 'Quantity value'}
-          accessibilityHint="Tap to edit manually or use buttons to adjust"
+          accessibilityLabel={
+            label ? t('a11y.valueSuffix', { label }) : t('a11y.quantityValue')
+          }
+          accessibilityHint={t('editableCounter.hint')}
           testID={testID}
         />
 
@@ -140,7 +147,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           ]}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Increase quantity"
+          accessibilityLabel={t('editableCounter.increase')}
           accessibilityHint={`Current quantity is ${value}`}
           accessibilityState={{ disabled }}
         >

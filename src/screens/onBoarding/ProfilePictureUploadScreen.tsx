@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   View,
   Image,
@@ -43,10 +43,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { CachedImage } from '#components/atoms/CachedImage';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 
 /** Module-level helper to seed existing avatar URL from profile */
 function syncExistingAvatar(
@@ -158,29 +155,29 @@ export const ProfilePictureUploadScreen = () => {
     }
   };
 
-  const handleTakePhoto = () => {
+  const handleTakePhoto = async () => {
     // Pre-compute permission outside try-catch to avoid value block bailout
     const cameraPermission =
       Platform.OS === 'ios'
         ? PERMISSIONS.IOS.CAMERA
         : PERMISSIONS.ANDROID.CAMERA;
 
-    executeMutation(
-      async () => {
-        const result = await request(cameraPermission);
-        if (result === RESULTS.GRANTED) {
-          launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-        } else {
-          alertService.alert(
-            t('onBoarding.cameraPermissionTitle'),
-            t('onBoarding.cameraPermissionTakePhotoMessage'),
-          );
-        }
-      },
-      () => {
-        launchCamera(DEFAULT_OPTIONS, handleImageResponse);
-      },
-    );
+    let permission;
+    try {
+      permission = await request(cameraPermission);
+    } catch {
+      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+      return;
+    }
+
+    if (permission === RESULTS.GRANTED) {
+      launchCamera(DEFAULT_OPTIONS, handleImageResponse);
+    } else {
+      alertService.alert(
+        t('onBoarding.cameraPermissionTitle'),
+        t('onBoarding.cameraPermissionTakePhotoMessage'),
+      );
+    }
   };
 
   const handleSelectPhoto = () => {
@@ -208,10 +205,7 @@ export const ProfilePictureUploadScreen = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              alertService.alert(
-                t('onBoarding.uploadFailedTitle'),
-                error.message,
-              );
+              alertService.alert(t('errors.uploadFailedTitle'), error.message);
             },
           },
         );
@@ -225,7 +219,7 @@ export const ProfilePictureUploadScreen = () => {
       error => {
         errorService.reportError(error, { operation: 'uploadAvatar' });
         alertService.alert(
-          t('onBoarding.uploadFailedTitle'),
+          t('errors.uploadFailedTitle'),
           t('onBoarding.updateProfilePhotoFailed'),
         );
       },

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 
 /**
@@ -165,7 +166,7 @@ export function useArrayManager<T>({
   const showError = (message: string) => {
     setError(message);
     if (showAlerts) {
-      alertService.alert('Error', message);
+      alertService.alert(t('labels.error'), message);
     }
   };
 

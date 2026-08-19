@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import {
   View,
   Modal,
@@ -41,6 +42,9 @@ export interface LoadingProps {
 
   /** Additional container styles */
   style?: StyleProp<ViewStyle>;
+
+  /** Test ID for E2E testing */
+  testID?: string;
 }
 
 export const Loading: React.FC<LoadingProps> = ({
@@ -54,7 +58,9 @@ export const Loading: React.FC<LoadingProps> = ({
   onCancel,
   color,
   style,
+  testID,
 }) => {
+  const { t } = useTranslation();
   styles.useVariants({ inline: variant === 'inline', overlayOpacity });
 
   // Don't render if not visible (for overlay/fullscreen variants)
@@ -70,7 +76,7 @@ export const Loading: React.FC<LoadingProps> = ({
     );
 
   const renderContent = () => (
-    <View style={[styles.container, style]}>
+    <View style={[styles.container, style]} testID={testID}>
       {spinner}
       {!!message && (
         <Text
@@ -108,7 +114,7 @@ export const Loading: React.FC<LoadingProps> = ({
         <SousChefLoader
           size="small"
           showBrand={false}
-          message={message || 'Loading'}
+          message={message || t('labels.loading')}
         />
         {!!submessage && (
           <Text

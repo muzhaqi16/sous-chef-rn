@@ -17,7 +17,6 @@
  */
 
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
-import { t } from '#/i18n/t';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import {
@@ -35,6 +34,7 @@ import {
   getVersionConflictMessage,
 } from '#/utils/errors/versionConflict';
 import { Telemetry } from '#/services/telemetry';
+import { t } from '#/i18n';
 
 /**
  * Result type for error operations
@@ -75,19 +75,21 @@ export interface ErrorConfig {
 
 export class ErrorService {
   /**
-   * Error code → i18n key under `errors.codes`.
+   * Error code → i18n key *suffix*. Each value is a fragment, not a whole key:
+   * {@link getUserFriendlyMessage} composes it as `errors.codes.<suffix>`, so
+   * `'signInRequired'` resolves `errors.codes.signInRequired`.
    *
-   * Keys, not strings: these messages are shown to the user (login failures and
-   * password-reset refusals are the most-seen strings in the app), and the app
-   * ships four locales. Resolution happens per call in
+   * Key suffixes, not strings: these messages are shown to the user (login
+   * failures and password-reset refusals are the most-seen strings in the app),
+   * and the app ships four locales. Resolution happens per call in
    * {@link getUserFriendlyMessage} rather than here, because this table is a
    * static class field — evaluating `t()` at module load would freeze whatever
    * language happened to be active first and ignore later changes.
    *
-   * Codes that warrant the same sentence deliberately share a key rather than
-   * getting near-duplicate translations that can drift apart.
+   * Codes that warrant the same sentence deliberately share a suffix rather
+   * than getting near-duplicate translations that can drift apart.
    */
-  private static readonly ERROR_MESSAGE_KEYS: Record<string, string> = {
+  private static readonly ERROR_MESSAGE_KEY_SUFFIXES: Record<string, string> = {
     // Authentication Errors
     AUTH_TOKEN_MISSING: 'signInRequired',
     AUTH_TOKEN_INVALID: 'sessionInvalid',
@@ -235,11 +237,12 @@ export class ErrorService {
   };
 
   getUserFriendlyMessage(errorCode: string, fallbackMessage?: string): string {
-    const key = ErrorService.ERROR_MESSAGE_KEYS[errorCode];
+    const suffix = ErrorService.ERROR_MESSAGE_KEY_SUFFIXES[errorCode];
     // An unmapped code falls back to the server's own message, which is at
     // least accurate even though it arrives untranslated.
-    if (!key) return fallbackMessage || t('errors.codes.unexpected');
-    return t(`errors.codes.${key}`, fallbackMessage);
+    if (!suffix) return fallbackMessage || t('errors.codes.unexpected');
+    // The table holds suffixes; the whole key is composed here.
+    return t(`errors.codes.${suffix}`, fallbackMessage);
   }
 
   getErrorCategory(errorCode: string): string {
@@ -430,7 +433,7 @@ export class ErrorService {
         success: false,
         error: {
           code: 'ERROR_HANDLER_FAILED',
-          message: 'Something went wrong. Please try again.',
+          message: t('errors.somethingWentWrong'),
           category: 'Unknown',
           shouldRetry: false,
           isAuthError: false,
@@ -451,7 +454,7 @@ export class ErrorService {
     return (
       result.error || {
         code: 'UNKNOWN_ERROR',
-        message: 'An unexpected error occurred',
+        message: t('errors.unexpected'),
         category: 'Unknown',
         shouldRetry: false,
         isAuthError: false,

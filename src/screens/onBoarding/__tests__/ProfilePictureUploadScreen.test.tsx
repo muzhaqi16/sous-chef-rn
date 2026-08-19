@@ -40,7 +40,7 @@ jest.mock('#features/profile/hooks/useProfileData', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/storage/mmkv');
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 jest.mock('#utils/imageValidation', () => ({
   validateImageFile: jest.fn(),
   ImageValidationError: class extends Error {},

@@ -1,12 +1,22 @@
 import { object, string, array } from 'yup';
 import { emailRule, normalizeSmartPunctuation } from './common';
+import { getI18n } from '#/i18n/config';
+
+/**
+ * Schemas are built once at module scope, so a message resolved eagerly would
+ * freeze whichever language was active at import time. Yup accepts a function
+ * and calls it when the rule fails, so the lookup lands after any language
+ * change. Same pattern as `validation/item.ts`.
+ */
+const msg = (key: string, options?: Record<string, unknown>) => (): string =>
+  getI18n().t(`onboardingValidation.${key}`, options);
 
 // home name rule
 const homeNameRule = string()
-  .required('Home name is required')
+  .required(msg('homeRequired'))
   .transform(normalizeSmartPunctuation)
-  .min(2, 'Home name must be at least 2 characters')
-  .max(50, 'Home name must be less than 50 characters')
+  .min(2, msg('homeMin', { count: 2 }))
+  .max(50, msg('homeMax', { count: 50 }))
   .matches(
     /^[a-zA-Z0-9\s'"-]+$/,
     'Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes',
@@ -15,18 +25,18 @@ const homeNameRule = string()
 
 // pantry name rule
 const pantryNameRule = string()
-  .required('Pantry name is required')
+  .required(msg('pantryRequired'))
   .transform(normalizeSmartPunctuation)
-  .min(2, 'Pantry name must be at least 2 characters')
-  .max(50, 'Pantry name must be less than 50 characters')
+  .min(2, msg('pantryMin', { count: 2 }))
+  .max(50, msg('pantryMax', { count: 50 }))
   .trim();
 
 // shopping list name rule
 const shoppingListNameRule = string()
-  .required('Shopping list name is required')
+  .required(msg('listRequired'))
   .transform(normalizeSmartPunctuation)
-  .min(2, 'Shopping list name must be at least 2 characters')
-  .max(50, 'Shopping list name must be less than 50 characters')
+  .min(2, msg('listMin', { count: 2 }))
+  .max(50, msg('listMax', { count: 50 }))
   .trim();
 
 // member invitation email rule (reuses emailRule)
@@ -86,7 +96,9 @@ export const getInviteMembersSchema = () => inviteMembersSchema;
 
 // 9) select pantry items schema (optional selection)
 export const selectPantryItemsSchema = object({
-  selectedItems: array().of(string()).max(5, 'You can select up to 5 items'),
+  selectedItems: array()
+    .of(string())
+    .max(5, msg('itemsMax', { count: 5 })),
 });
 
 export const getSelectPantryItemsSchema = () => selectPantryItemsSchema;

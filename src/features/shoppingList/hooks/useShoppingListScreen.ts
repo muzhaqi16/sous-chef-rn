@@ -29,7 +29,12 @@ export function useShoppingListScreen() {
   const client = useApolloClient();
 
   // 1. Query: Fetch all user's shopping lists (independent of home)
-  const { lists, loading: listsLoading } = useShoppingListsQuery();
+  const {
+    lists,
+    loading: listsLoading,
+    error: listsError,
+    hasResult: listsHasResult,
+  } = useShoppingListsQuery();
 
   // Lists whose read came back FORBIDDEN, or null (deleted/unshared), this
   // session. Excluded from selection so auto-select can't re-pick a list the user
@@ -198,6 +203,9 @@ export function useShoppingListScreen() {
       isLoadingInitial,
       isTransitioning,
       error,
+      listsLoading,
+      listsError,
+      listsHasResult,
 
       // Total counts
       totalCountUnpurchased,

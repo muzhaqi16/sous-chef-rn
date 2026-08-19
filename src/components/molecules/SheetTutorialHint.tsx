@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -30,6 +31,7 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
   variant,
   onSkip,
 }) => {
+  const { t } = useTranslation();
   if (variant === 'handle') {
     return (
       <Animated.View
@@ -44,7 +46,7 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
         {!!onSkip && (
           <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
             <Text size="sm" weight="medium" tone="tertiary">
-              Skip
+              {t('labels.skip')}
             </Text>
           </Pressable>
         )}
@@ -70,7 +72,7 @@ export const SheetTutorialHint: React.FC<SheetTutorialHintProps> = ({
       {!!onSkip && (
         <Pressable onPress={onSkip} hitSlop={8} style={styles.skipButton}>
           <Text size="sm" weight="medium" tone="tertiary">
-            Skip
+            {t('labels.skip')}
           </Text>
         </Pressable>
       )}

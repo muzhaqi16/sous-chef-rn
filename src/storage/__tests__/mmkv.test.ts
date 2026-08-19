@@ -93,7 +93,9 @@ describe('mmkv storage', () => {
     });
 
     const loadIsolated = (
-      keyImpl: () => Promise<string>,
+      keyImpl: () => Promise<
+        import('#/utils/security/deviceKey').DeviceEncryptionKey
+      >,
     ): {
       mmkvModule: typeof import('../mmkv');
       createMMKV: jest.Mock;
@@ -145,7 +147,10 @@ describe('mmkv storage', () => {
         calls += 1;
         return calls === 1
           ? Promise.reject(new Error('transient'))
-          : Promise.resolve('recovered-key');
+          : Promise.resolve({
+              key: 'recovered-key',
+              encryptionType: 'AES-256' as const,
+            });
       });
 
       const initPromise = mmkvModule.initializeSecureStorage();
@@ -157,6 +162,7 @@ describe('mmkv storage', () => {
       expect(createMMKV).toHaveBeenCalledWith({
         id: mmkvModule.STORAGE_KEY,
         encryptionKey: 'recovered-key',
+        encryptionType: 'AES-256',
       });
     });
   });

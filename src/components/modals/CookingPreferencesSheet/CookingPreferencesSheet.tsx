@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -12,6 +12,11 @@ import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
 import { Text } from '#components/atoms/Text';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
@@ -61,7 +66,7 @@ export const CookingPreferencesSheet: React.FC<
       setSkillLevel(initialValues?.cookingSkillLevel || '');
       setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() || '');
       setCookTime(initialValues?.maxCookTimeMinutes?.toString() || '');
-      setBudget(initialValues?.budgetPerMeal?.toString() || '');
+      setBudget(formatNumberForInput(initialValues?.budgetPerMeal));
     }
   }
 
@@ -120,7 +125,7 @@ export const CookingPreferencesSheet: React.FC<
 
     // Validate and add budget if provided
     if (budget) {
-      const budgetValue = parseFloat(budget);
+      const budgetValue = parseDecimalInput(budget);
       if (
         isNaN(budgetValue) ||
         budgetValue < DIETARY_LIMITS.budget.min ||
@@ -222,7 +227,9 @@ export const CookingPreferencesSheet: React.FC<
             value={budget}
             onChangeText={setBudget}
             keyboardType="decimal-pad"
-            placeholder={t('cookingPreferences.budgetPlaceholder')}
+            placeholder={localizeNumericHint(
+              t('cookingPreferences.budgetPlaceholder'),
+            )}
             useBottomSheetInput
           />
         </View>

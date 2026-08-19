@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
@@ -19,6 +19,10 @@ import {
 } from './PantryActionModal';
 import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface RecordWastePantryItemModalProps {
   visible: boolean;
@@ -61,7 +65,7 @@ export const RecordWastePantryItemModal: React.FC<
   const [isRecycled, setIsRecycled] = useState(false);
 
   const handleReset = (item: PantryActionModal_PantryItemFragment) => {
-    setWasteAmountInput(item.quantity.toString());
+    setWasteAmountInput(formatNumberForInput(item.quantity));
     setWasteReason(WasteReason.Expired);
     setIsComposted(false);
     setIsRecycled(false);
@@ -163,7 +167,9 @@ const WasteActionFields: React.FC<{
           required
           value={wasteAmountInput}
           onChangeText={setWasteAmountInput}
-          placeholder={t('recordWaste.wasteAmountPlaceholder')}
+          placeholder={localizeNumericHint(
+            t('recordWaste.wasteAmountPlaceholder'),
+          )}
           keyboardType="numeric"
           useBottomSheetInput
         />
@@ -179,7 +185,9 @@ const WasteActionFields: React.FC<{
             shared.selectedUnitInfo?.conversionConfidence ?? null
           }
           commonFractions={shared.commonFractions}
-          onFractionSelect={value => setWasteAmountInput(value.toString())}
+          onFractionSelect={value =>
+            setWasteAmountInput(formatNumberForInput(value))
+          }
           selectedFractionValue={wasteAmount ?? undefined}
         />
       </View>

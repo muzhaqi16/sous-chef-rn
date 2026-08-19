@@ -3,7 +3,9 @@ import {
   clearRetryState,
   clearAllRetryStates,
   isKnownServerError,
+  isPermanentSubscriptionRejection,
 } from '../subscriptionErrorHandler';
+import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { errorService } from '#/services/errorService';
 
 jest.mock('#/services/errorService', () => ({
@@ -152,6 +154,66 @@ describe('subscriptionErrorHandler', () => {
       jest.advanceTimersByTime(2000);
       expect(handleSubscriptionError('Sub1', error)).toBe(true);
       expect(handleSubscriptionError('Sub2', error)).toBe(true);
+    });
+  });
+
+  describe('isPermanentSubscriptionRejection', () => {
+    // The server validates subscription documents against depth 5 / cost 500,
+    // and refuses a breach identically every time — so these must never retry.
+    it('recognizes the depth rejection', () => {
+      expect(
+        isPermanentSubscriptionRejection({
+          message: 'Syntax Error: Query depth limit of 5 exceeded, found 8.',
+        }),
+      ).toBe(true);
+    });
+
+    it('recognizes the cost rejection', () => {
+      expect(
+        isPermanentSubscriptionRejection({
+          message: 'Syntax Error: Query Cost limit of 500 exceeded, found 812.',
+        }),
+      ).toBe(true);
+    });
+
+    it('recognizes the masked rejection message', () => {
+      // `exposeLimits: false` replaces the numbers with this generic string.
+      expect(
+        isPermanentSubscriptionRejection({
+          message: 'Syntax Error: Query validation error.',
+        }),
+      ).toBe(true);
+    });
+
+    it('recognizes a validation code carried on extensions', () => {
+      const error = new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Subscription refused',
+            extensions: { code: 'BAD_USER_INPUT' },
+          },
+        ],
+      });
+      expect(isPermanentSubscriptionRejection(error)).toBe(true);
+    });
+
+    it('does NOT treat the concurrent-subscription cap as permanent', () => {
+      // A capacity condition — it frees up as other devices disconnect.
+      const error = new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Maximum 20 concurrent subscriptions exceeded',
+            extensions: { code: 'SUBSCRIPTION_LIMIT_EXCEEDED' },
+          },
+        ],
+      });
+      expect(isPermanentSubscriptionRejection(error)).toBe(false);
+    });
+
+    it('does NOT treat a transport failure as permanent', () => {
+      expect(
+        isPermanentSubscriptionRejection({ message: 'socket closed' }),
+      ).toBe(false);
     });
   });
 

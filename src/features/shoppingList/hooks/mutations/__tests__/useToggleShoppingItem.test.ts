@@ -46,7 +46,7 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 beforeEach(() => {
   jest.clearAllMocks();

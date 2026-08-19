@@ -225,6 +225,13 @@ jobs:
             ./gradlew assembleRelease
           fi
 
+      # A third-party credential inside the shipped bundle is readable by
+      # anyone who obtains the app; rotating it does not change that. Runs
+      # against the ARTIFACT with the same .env the build used, and fails if it
+      # finds no bundle at all — a moved output must not read as clean.
+      - name: Check no third-party credential is in the bundle
+        run: node scripts/check-bundled-secrets.mjs android/app/build/generated/assets
+
       - name: List build outputs
         run: |
           if [ "${{ env.IS_PLAYSTORE }}" = "true" ]; then
@@ -490,6 +497,13 @@ jobs:
           else
             ./gradlew assembleRelease
           fi
+
+      # A third-party credential inside the shipped bundle is readable by
+      # anyone who obtains the app; rotating it does not change that. Runs
+      # against the ARTIFACT with the same .env the build used, and fails if it
+      # finds no bundle at all — a moved output must not read as clean.
+      - name: Check no third-party credential is in the bundle
+        run: node scripts/check-bundled-secrets.mjs android/app/build/generated/assets
 
       - name: List build outputs
         run: |

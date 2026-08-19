@@ -150,7 +150,7 @@ jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
 
 jest.mock('#hooks/performance/useScreenTransition');
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Mock form components
 jest.mock('../FormContent', () => ({
@@ -962,7 +962,7 @@ describe('CreateHomeScreen', () => {
     await user.press(await findByTestId('submit-button'));
 
     // executeWithLoadingState was called
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     await waitFor(() => {
       expect(executeWithLoadingState).toHaveBeenCalled();
     });
@@ -1170,7 +1170,7 @@ describe('CreateHomeScreen', () => {
     const { findByTestId } = renderScreen();
     await user.press(await findByTestId('submit-button'));
 
-    const { executeWithLoadingState } = require('#/utils/compilerSafeWrappers');
+    const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     await waitFor(() => {
       expect(executeWithLoadingState).toHaveBeenCalled();
     });

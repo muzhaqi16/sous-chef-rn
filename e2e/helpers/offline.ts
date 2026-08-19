@@ -67,34 +67,6 @@ export async function simulateOnline(): Promise<void> {
 }
 
 /**
- * Wait for sync indicator to complete
- * This waits for any pending sync operations to complete
- */
-export async function waitForSync(timeout = TIMEOUTS.NETWORK): Promise<void> {
-  console.log('⏳ Waiting for sync to complete...');
-
-  // Wait for syncing indicator to appear and then disappear
-  try {
-    // First check if syncing indicator appears
-    const syncIndicator = element(by.id('sync-indicator'));
-
-    try {
-      await waitFor(syncIndicator).toBeVisible().withTimeout(2000);
-      console.log('🔄 Sync in progress...');
-
-      // Wait for it to disappear (sync complete)
-      await waitFor(syncIndicator).not.toBeVisible().withTimeout(timeout);
-      console.log('✅ Sync complete');
-    } catch {
-      // Sync indicator never appeared - might mean sync was instant or already done
-      console.log('✅ No active sync detected');
-    }
-  } catch (error) {
-    console.warn('⚠️ Sync wait failed:', error);
-  }
-}
-
-/**
  * Wait for specific optimistic data to sync
  * @param dataType - The type of data being synced (e.g., 'PantryItem', 'ShoppingListItem')
  */
@@ -117,40 +89,6 @@ export async function waitForDataSync(
   // General wait for network idle
   await delay(500);
   console.log(`✅ ${dataType} sync complete`);
-}
-
-/**
- * Queue a mutation while offline and verify it syncs when online
- * @param mutationAction - Async function that performs the mutation
- * @param verificationAction - Async function that verifies the mutation completed
- */
-export async function testOfflineSync(
-  mutationAction: () => Promise<void>,
-  verificationAction: () => Promise<void>,
-): Promise<void> {
-  // 1. Go offline
-  await simulateOffline();
-
-  // 2. Perform mutation (will be queued)
-  console.log('📝 Performing offline mutation...');
-  await mutationAction();
-
-  // 3. Wait a bit for optimistic update to show
-  await delay(1000);
-
-  // 4. Verify optimistic update is visible
-  console.log('🔍 Verifying optimistic update...');
-  await verificationAction();
-
-  // 5. Go online
-  await simulateOnline();
-
-  // 6. Wait for sync
-  await waitForSync();
-
-  // 7. Verify persisted update
-  console.log('🔍 Verifying persisted update...');
-  await verificationAction();
 }
 
 /**

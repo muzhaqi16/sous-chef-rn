@@ -4,7 +4,7 @@ import { Text } from '#components/atoms/Text';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { Icon } from '#utils/iconUtils';
 import { EmailInput } from '#components/atoms/EmailInput';
@@ -15,10 +15,9 @@ import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters
 import { ROLE_PERMISSIONS, INVITE_ROLES } from '#/constants/collaboratorRoles';
 import { alertService } from '#/services/alertService';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
-import {
-  executeWithLoadingState,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import type { Translate } from '#/i18n/types';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 
 const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingList',
@@ -26,22 +25,11 @@ const addCollaboratorToCache = createAddToParentConnectionUpdater(
   'ShoppingListCollaborator',
 );
 
-const ROLE_LABEL_KEYS: Record<CollaboratorRole, string> = {
-  [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
-  [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
-  [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
-  [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
-  [CollaboratorRole.Admin]: 'collaboratorRoles.admin',
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
-};
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-const buildRoleOptions = (t: T) =>
+const buildRoleOptions = (t: Translate) =>
   INVITE_ROLES.map(role => ({
     key: role,
     icon: ROLE_PERMISSIONS[role].icon,
-    label: t(ROLE_LABEL_KEYS[role]),
+    label: t(ROLE_PERMISSIONS[role].labelKey),
   }));
 
 interface ShareInviteSectionProps {
@@ -106,7 +94,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
         unwrapPayload(
           data?.inviteToShoppingList,
           'InviteToShoppingListPayload',
-          t('shoppingListScreens.failedToSendInvitation'),
+          t('errors.sendInviteFailed'),
         );
         setEmail('');
         // No refetch needed: the update() callback above already inserts the
@@ -116,9 +104,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
       error => {
         alertService.alert(
           t('labels.error'),
-          error instanceof Error
-            ? error.message
-            : t('shoppingListScreens.failedToSendInvitation'),
+          error instanceof Error ? error.message : t('errors.sendInviteFailed'),
         );
       },
     );

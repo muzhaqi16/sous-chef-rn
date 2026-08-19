@@ -8,6 +8,10 @@ import type { StoreObject } from '@apollo/client';
 import { SubscriptionService } from '../SubscriptionService';
 import { CacheStrategy, LogLevel, type SubscriptionConfig } from '../types';
 import { logger } from '#/utils/environment';
+import {
+  isSubscriptionRejected,
+  resetRejectedSubscriptions,
+} from '../rejectedSubscriptions';
 
 // Production `SubscriptionHandlers` types `onData` as Apollo's `OnDataOptions`
 // and `onError` as `ErrorLike`. These tests exercise the handlers directly with
@@ -29,6 +33,7 @@ describe('SubscriptionService', () => {
     jest.useFakeTimers();
     service = SubscriptionService.getInstance();
     service.cleanup();
+    resetRejectedSubscriptions();
   });
 
   afterEach(() => {
@@ -315,6 +320,23 @@ describe('SubscriptionService', () => {
         expect.anything(),
         expect.anything(),
       );
+    });
+
+    it('closes the gate on a document the server will never accept', () => {
+      // Over the depth bound. The connection is fine — its other subscriptions
+      // keep delivering — so resending this one on every reconnect is waste.
+      const customOnError = jest.fn();
+      const handlers = reg(
+        createConfig({ subscriptionName: 'OverDepthEvents', customOnError }),
+      );
+
+      handlers.onError({
+        message: 'Syntax Error: Query depth limit of 5 exceeded, found 8.',
+      });
+
+      expect(isSubscriptionRejected('OverDepthEvents')).toBe(true);
+      // Not routed to the custom handler: there is nothing a caller can do.
+      expect(customOnError).not.toHaveBeenCalled();
     });
   });
 

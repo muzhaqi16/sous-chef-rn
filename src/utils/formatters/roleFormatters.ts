@@ -1,4 +1,4 @@
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import type { Theme } from '#/theme/themes';
 
 type RoleColorTheme = { colors: Pick<Theme['colors'], 'roles'> };

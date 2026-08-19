@@ -7,7 +7,7 @@ import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/grap
 import { alertService } from '#/services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },

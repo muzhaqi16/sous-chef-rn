@@ -5,6 +5,11 @@ import { LaunchArguments } from 'react-native-launch-arguments';
 import { logger } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
+import {
+  PantrySortDirection,
+  PantrySortOption,
+} from '#store/slices/preferenceTypes';
+import { suppressFeatureHintsForE2E } from '#/hooks/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
@@ -12,6 +17,7 @@ import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { hasCredentials, getLastBiometricEmail } from '#storage/keychain';
 import { initializeDeviceId } from '#/utils/deviceId';
 import { authService } from '#services/authService';
+import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureHandler';
 
 /**
  * DEV-only: read launch arguments injected by Detox to bypass the login UI
@@ -31,11 +37,16 @@ function injectDetoxLaunchArgs(
       detoxRefreshToken?: string;
       detoxUser?: string | Record<string, unknown>;
       detoxDisableBackgroundServices?: string;
+      detoxPantrySortOption?: string;
+      detoxPantrySortDirection?: string;
     }>();
     // Under Detox the LogBox dev-warning toast overlays the floating tab bar and
     // breaks screenshot/visibility checks — silence it for E2E runs only.
     if (args.detoxServer) {
       LogBox.ignoreAllLogs();
+      // The feature-hint tutorial dims the screen and swallows taps, on a 2s
+      // delay that lands after any post-login dismissal helper has run.
+      suppressFeatureHintsForE2E();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
       const user =
@@ -49,6 +60,21 @@ function injectDetoxLaunchArgs(
       // this the injected session renders the auth group anyway.
       store.setNavigationState('main_app');
       logger.debug('[Detox] Auth injected via launchArgs');
+    }
+    // Seed the pantry sort so a test does not have to drive the sort modal to
+    // reach a known order. That control renders under `{!!stats && …}`, so it
+    // only exists once the stats query resolves — driving it means waiting on
+    // the network for a value the test already knows. Seeding it here means the
+    // list is in the requested order from the first frame.
+    if (args.detoxPantrySortOption) {
+      const store = useStore.getState();
+      store.setPantrySortOption(args.detoxPantrySortOption as PantrySortOption);
+      if (args.detoxPantrySortDirection) {
+        store.setPantrySortDirection(
+          args.detoxPantrySortDirection as PantrySortDirection,
+        );
+      }
+      logger.debug('[Detox] Pantry sort injected via launchArgs');
     }
     if (args.detoxDisableBackgroundServices) {
       detoxBackgroundServicesDisabledRef.current = true;
@@ -94,6 +120,11 @@ export function useStartupInit(): void {
 
       // Initialize device ID early — needed for WebSocket subscription self-echo filtering
       initializeDeviceId();
+
+      // Local-first writes land in the cache before the server sees them, so
+      // something has to withdraw them when the server refuses. Registered
+      // before any queue drain can run.
+      registerQueueFailureHandler();
 
       // Credentials are scoped per account; the most-recently-enrolled account
       // is the one the login screen offers, so report on that account.

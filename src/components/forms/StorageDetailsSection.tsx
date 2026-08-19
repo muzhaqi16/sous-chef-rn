@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Control, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -25,10 +25,20 @@ import {
   ITEM_CONDITION_OPTIONS,
   conditionLabelKey,
 } from '#/utils/items/itemEnumLabels';
+import type { Translate } from '#/i18n/types';
 
-const STORAGE_STATE_OPTIONS: ChipOption<StorageState>[] = Object.values(
-  StorageState,
-).map(state => ({ key: state, label: state }));
+/**
+ * A function, not a const: built at import time these labels would freeze
+ * whatever language loaded first, and a later language change would never reach
+ * the chips. `enumKeyCoverage.test.ts` asserts every StorageState member has a
+ * key here, so codegen adding one fails the suite rather than shipping a raw
+ * SCREAMING_SNAKE value.
+ */
+const getStorageStateOptions = (t: Translate): ChipOption<StorageState>[] =>
+  Object.values(StorageState).map(state => ({
+    key: state,
+    label: t(`storageState.${state}`),
+  }));
 
 interface StorageDetailsSectionProps {
   control: Control<PantryItemFormData>;
@@ -71,8 +81,8 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   const locationFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'location',
-      label: 'Location',
-      placeholder: 'e.g., Top shelf, Drawer 2',
+      label: t('itemForm.location'),
+      placeholder: t('itemForm.locationPlaceholder'),
       component: 'storageLocationAutocomplete',
       storageLocations,
       onStorageLocationSelected,
@@ -83,8 +93,8 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   const notesFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'notes',
-      label: mode === 'edit' ? 'Storage Notes' : 'Notes',
-      placeholder: 'Any additional notes...',
+      label: mode === 'edit' ? t('itemForm.storageNotes') : t('itemForm.notes'),
+      placeholder: t('itemForm.notesPlaceholder'),
       component: FormTextArea,
       props: { numberOfLines: 3 },
     },
@@ -93,17 +103,17 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        Storage Details
+        {t('itemForm.storageDetails')}
       </Text>
 
       {/* Storage State - horizontally scrollable pills, matching the
           Storage Locations Type/Temperature selectors. Long options like
           REFRIGERATED scroll off the edge instead of wrapping. */}
       <View style={styles.field}>
-        <Label>Storage State</Label>
+        <Label>{t('itemForm.storageState')}</Label>
         <ChipScrollRow
           chipStyle={styles.statePill}
-          options={STORAGE_STATE_OPTIONS}
+          options={getStorageStateOptions(t)}
           selected={storageState}
           onSelect={onStorageStateChange}
           edgeFadeColor="background"
@@ -131,10 +141,10 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
 
       {/* Expiration Date - using reusable DatePickerField molecule */}
       <DatePickerField
-        label="Expiration Date"
+        label={t('itemForm.expirationDate')}
         value={expirationDate ?? null}
         onChange={onDateChange}
-        placeholder="Select date"
+        placeholder={t('itemForm.selectDate')}
       />
 
       {/* Notes */}

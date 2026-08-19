@@ -102,6 +102,75 @@ jobs:
       - name: Run inline fragment audit
         run: node scripts/audit-fragment-inlining.mjs
 
+  # React Compiler bailout check — a bailout is silent by design (the compiler
+  # skips the function and the build succeeds), and no linter can see it because
+  # ESLint reads the source while the bailout is introduced downstream by
+  # another Babel plugin. Compiling is the only way to know.
+  compiler-bailouts:
+    name: React Compiler Bailouts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for new compiler bailouts
+        run: node scripts/check-compiler-bailouts.mjs
+
+  # Stale cache field detector — a mutation that omits a field the server
+  # recomputes leaves the old value in the normalized cache, which reads as
+  # "wrong until I reload" and never corrects at all while offline.
+  stale-cache-fields:
+    name: Stale Cache Fields
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check for stale cache fields
+        run: node scripts/find-stale-cache-fields.mjs --check
+
+  # The bundled-secret scanner runs in the BUILD workflows, against a real
+  # artifact. This exercises the scanner itself on every PR so it cannot rot
+  # into a no-op unnoticed — it plants a known value and asserts a find.
+  bundled-secret-scanner:
+    name: Bundled Secret Scanner (self-test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Self-test the bundled secret scanner
+        run: node scripts/check-bundled-secrets.mjs --self-test
+
   # Unit tests
   unit-tests:
     name: Unit Tests

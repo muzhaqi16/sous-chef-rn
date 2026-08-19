@@ -13,7 +13,6 @@ import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#components/organisms/AddItemForm/AddItemForm';
 import { alertService } from '#/services/alertService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
@@ -22,7 +21,7 @@ jest.mock('#/services/alertService', () => ({
 // Passthrough auto-mock — real behavior, but overridable per test to force the
 // `false` return that a genuine throw produces. errorPolicy: 'all' means Apollo
 // resolves rather than throws, so it can't be provoked through a mocked link.
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const mockUploadItemImages = jest
   .fn()
@@ -228,13 +227,12 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
-  // A throw escaping errorPolicy leaves no union member and no result.error to
-  // read, so it has to alert from the default branch — returning `failed`
-  // silently would leave the sheet open with no explanation at all.
-  it('still tells the user when the suggestion throws outright', async () => {
-    (executeMutation as jest.Mock).mockResolvedValueOnce(false);
+  // A transport failure resolves (errorPolicy 'all') with no union member, so
+  // it has to alert from the default branch — returning `failed` silently would
+  // leave the sheet open with no explanation at all.
+  it('still tells the user when the suggestion fails outright', async () => {
     const { mock } = recordMock(CreateItemSuggestionDocument, {
-      data: suggestionPayload(NOTE),
+      error: new Error('network down'),
     });
     const { result } = renderHook([mock]);
 
@@ -247,9 +245,10 @@ describe('useSuggestItemEdit', () => {
     );
   });
 
-  it('still tells the user when a direct write throws outright', async () => {
-    (executeMutation as jest.Mock).mockResolvedValueOnce(false);
-    const { mock } = recordMock(UpdateItemDocument, { data: {} });
+  it('still tells the user when a direct write fails outright', async () => {
+    const { mock } = recordMock(UpdateItemDocument, {
+      error: new Error('network down'),
+    });
     const { result } = renderHook([mock]);
 
     const outcome = await result.current.submitEdit(

@@ -45,35 +45,20 @@ function initializeClient() {
   // Create cache instance
   const cache = makeCache();
 
-  // Restore persisted cache: load both critical and deferred partitions and
-  // merge into a single cache.restore() call. cache.restore() is destructive
-  // (it wipes the EntityStore via init()), so calling it twice would discard
-  // whichever partition was restored first. Merging first avoids that.
-  // Both reads are synchronous MMKV operations (~5-20ms total during native splash).
+  // Restore the persisted cache. One synchronous MMKV read + parse during the
+  // native splash (~5-20ms); `load()` migrates an install still holding data
+  // under the retired split-blob keys.
   const restoreT0 = performance.now();
-  const criticalCache = apolloCachePersistence.loadCritical();
-  const deferredCache = apolloCachePersistence.loadDeferred();
+  const persistedCache = apolloCachePersistence.load();
 
-  if (criticalCache || deferredCache) {
-    const merged = { ...(criticalCache || {}), ...(deferredCache || {}) };
+  if (persistedCache) {
     logger.info(
       `📦 Apollo: Restoring ${
-        Object.keys(merged).length
+        Object.keys(persistedCache).length
       } entities from storage`,
     );
-    cache.restore(merged);
+    cache.restore(persistedCache);
     emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0);
-  } else {
-    // Migration fallback: read old single-key format
-    const persistedCache = apolloCachePersistence.load();
-    if (persistedCache) {
-      logger.info('📦 Apollo: Restoring cache from legacy storage');
-      cache.restore(persistedCache);
-      emitHistogram(
-        'app_apollo_legacy_restore_ms',
-        performance.now() - restoreT0,
-      );
-    }
   }
 
   // Create link chain
@@ -179,6 +164,12 @@ function setupCachePersistence(client: ApolloClient) {
   // generic method signatures so the wrappers stay assignable back to the
   // (generic) cache methods. `evict` is non-generic, so it stays fully typed
   // via Parameters<>.
+  //
+  // These used to also report the written id as "dirty", which the persistence
+  // layer took as the complete set of things that could have changed. It never
+  // was: a query result reports only `ROOT_QUERY` while normalizing new field
+  // values into any number of entities. Change detection now scans the whole
+  // extracted cache by object identity, so there is nothing to report.
   cache.write = function <
     TData = unknown,
     TVariables extends OperationVariables = OperationVariables,
@@ -186,21 +177,12 @@ function setupCachePersistence(client: ApolloClient) {
     writeOptions: Cache.WriteOptions<TData, TVariables>,
   ): Reference | undefined {
     const result = originalWrite(writeOptions);
-    // Mark the written entity's cache ID as dirty for incremental persistence
-    const dataId = writeOptions.dataId;
-    if (dataId) {
-      apolloCachePersistence.markDirty([dataId]);
-    }
     schedulePersistence();
     return result;
   };
 
   cache.evict = function (...args: Parameters<typeof originalEvict>) {
     const result = originalEvict(...args);
-    const id = args[0]?.id;
-    if (id) {
-      apolloCachePersistence.markDirty([id]);
-    }
     schedulePersistence();
     return result;
   };
@@ -209,10 +191,6 @@ function setupCachePersistence(client: ApolloClient) {
     Entity extends Record<string, unknown> = Record<string, unknown>,
   >(options: Cache.ModifyOptions<Entity>): boolean {
     const result = originalModify(options);
-    const id = options.id;
-    if (id) {
-      apolloCachePersistence.markDirty([id]);
-    }
     schedulePersistence();
     return result;
   };

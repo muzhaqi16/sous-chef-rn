@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View, ViewStyle, ScrollView } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
@@ -79,13 +80,14 @@ interface HighlightBadgeProps {
 }
 
 const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
+  const { t } = useTranslation();
   const variant = toVariant(highlight.type);
   badgeStyles.useVariants({ variant });
 
   return (
     <View style={badgeStyles.badge}>
       <Text size="xs" weight="medium" style={badgeStyles.label}>
-        {highlight.label}
+        {t(highlight.labelKey)}
       </Text>
     </View>
   );
@@ -100,6 +102,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   style,
 }) => {
   styles.useVariants({ compact });
+  const { t } = useTranslation();
 
   const nutritions =
     typeof nutritionsRaw === 'object' && nutritionsRaw !== null
@@ -124,31 +127,31 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
           align="center"
           style={styles.servingSize}
         >
-          Per {macros.servingSize}
+          {t('nutritionSummary.perServing', { serving: macros.servingSize })}
         </Text>
       )}
 
       {/* Macro circles row */}
       <View style={styles.macrosRow}>
         <MacroCircle
-          label="Calories"
+          label={t('nutritionSummary.macroCalories')}
           value={formatCalories(macros.calories)}
           tone="calories"
         />
         <MacroCircle
-          label="Protein"
+          label={t('nutritionSummary.macroProtein')}
           value={formatNutritionValue(macros.protein, '')}
           unit="g"
           tone="protein"
         />
         <MacroCircle
-          label="Carbs"
+          label={t('nutritionSummary.macroCarbs')}
           value={formatNutritionValue(macros.carbs, '')}
           unit="g"
           tone="carbs"
         />
         <MacroCircle
-          label="Fat"
+          label={t('nutritionSummary.macroFat')}
           value={formatNutritionValue(macros.fat, '')}
           unit="g"
           tone="fat"
@@ -173,7 +176,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {!!onPress && (
         <View style={styles.actionRow}>
           <Text size="sm" weight="medium" tone="accent">
-            View Details
+            {t('labels.viewDetails')}
           </Text>
           <Icon name="chevron-forward" size={20} />
         </View>

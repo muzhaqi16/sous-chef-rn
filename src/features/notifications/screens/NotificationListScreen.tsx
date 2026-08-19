@@ -1,10 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { View, SectionList } from 'react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
 import { EmptyNotifications } from '#features/notifications/components/EmptyNotifications';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { NotificationHeader } from '#features/notifications/components/NotificationHeader';
 import { NotificationGroupHeader } from '#features/notifications/components/NotificationGroupHeader';
 import { NotificationFilters } from '#features/notifications/components/NotificationFilters';
@@ -41,10 +43,14 @@ export const NotificationListScreen: React.FC = () => {
 
   // Load the paginated read + unread history (server-side category filter) into
   // the store so the feed shows history and can page past the startup batch.
-  const { loadMore, loadingMore } = useNotificationHistory(
-    filterCategory,
-    true,
-  );
+  const {
+    loadMore,
+    loadingMore,
+    loading: historyLoading,
+    error: historyError,
+    hasResult: historyHasResult,
+    refetch: refetchHistory,
+  } = useNotificationHistory(filterCategory, true);
 
   // Filter notifications based on selected category
   const filteredNotifications = (() => {
@@ -56,6 +62,13 @@ export const NotificationListScreen: React.FC = () => {
   const filteredGroups = (() => {
     return groupNotificationsByDate(filteredNotifications);
   })();
+
+  const historyState = useDataState({
+    loading: historyLoading,
+    error: historyError,
+    hasResult: historyHasResult,
+    isEmpty: notifications.length === 0,
+  });
 
   const handleNotificationPress = async (
     notification: NotificationType,
@@ -176,7 +189,20 @@ export const NotificationListScreen: React.FC = () => {
               keyExtractor={keyExtractor}
               renderItem={renderNotificationItem}
               renderSectionHeader={renderSectionHeader}
-              ListEmptyComponent={<EmptyNotifications />}
+              ListEmptyComponent={
+                // The feed renders from the store, so an empty store looks
+                // exactly like a failed fetch unless the query is asked — and
+                // "You're all caught up" is the wrong thing to tell someone
+                // whose notifications simply did not load.
+                historyState === 'error' || historyState === 'offline' ? (
+                  <DataStateView
+                    state={historyState}
+                    onRetry={refetchHistory}
+                  />
+                ) : (
+                  <EmptyNotifications />
+                )
+              }
               ListFooterComponent={
                 loadingMore ? (
                   <ThemedActivityIndicator style={styles.footerLoader} />

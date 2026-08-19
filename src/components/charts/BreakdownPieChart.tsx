@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pie, PolarChart } from 'victory-native';
@@ -36,6 +37,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   showLegend = true,
   colorScale = DEFAULT_COLORS,
 }) => {
+  const { t } = useTranslation();
   const chartData = (() => {
     if (!data || data.length === 0) return [];
     return data.map((item, index) => ({
@@ -55,7 +57,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
         )}
         <View style={styles.emptyState}>
           <Text size="sm" tone="secondary">
-            No data available
+            {t('labels.noDataAvailable')}
           </Text>
         </View>
       </View>

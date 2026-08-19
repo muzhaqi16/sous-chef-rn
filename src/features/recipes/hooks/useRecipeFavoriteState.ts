@@ -9,7 +9,7 @@ import {
 } from './useRecipeFavoriteState.generated';
 import { type MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { extractNodes } from '#/utils/connectionUtils';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type {
   SaveToFavoritesOptions,
   UseRecipePreloadReturn,

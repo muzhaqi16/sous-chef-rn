@@ -5,22 +5,24 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Button } from '#components/base/Button';
+import { Loading } from '#components/base/Loading';
 import { useAppStore } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import {
   ResetPasswordDocument,
+  ValidatePasswordResetTokenDocument,
   type ResetPasswordMutation,
   type ResetPasswordMutationVariables,
 } from '#operations/auth/auth.generated';
 import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
-import { errorMessageOr } from '#/services/errorService';
+import { errorMessageOr, errorService } from '#/services/errorService';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -28,9 +30,10 @@ import {
 import { logValidationErrors } from '#/utils/validation/common';
 import { useToast } from '#/hooks/useToast';
 import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ToastFn } from '#/components/atoms/Toast';
 import { Text } from '#components/atoms/Text';
+import type { Translate } from '#/i18n/types';
 
 /** Module-level async function for password reset submission.
  *  Extracted from component body to avoid ThrowStatement-in-try-catch bailout. */
@@ -97,9 +100,7 @@ interface ResetPasswordForm {
   confirmPassword: string;
 }
 
-type T = (key: string) => string;
-
-const getResetPasswordSchema = (t: T) =>
+const getResetPasswordSchema = (t: Translate) =>
   object().shape({
     newPassword: string()
       .required(t('auth.passwordRequired'))
@@ -121,9 +122,15 @@ export const ResetPasswordScreen: React.FC = () => {
   const { token } = (route.params ?? {}) as Partial<ResetPasswordRouteParams>;
 
   const [resetPassword] = useMutation(ResetPasswordDocument);
+  const [validateToken] = useMutation(ValidatePasswordResetTokenDocument);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const hasValidTokenFormat = !!token && token.length >= 10;
   const [isTokenRejected, setIsTokenRejected] = useState(false);
+  // 'checking' until the server has ruled on the token. Nothing
+  // session-affecting happens before it leaves that state.
+  const [tokenCheck, setTokenCheck] = useState<'checking' | 'valid'>(
+    'checking',
+  );
 
   const form = useForm<ResetPasswordForm>({
     resolver: yupResolver(getResetPasswordSchema(t)),
@@ -136,10 +143,54 @@ export const ResetPasswordScreen: React.FC = () => {
 
   const watchedValues = useWatch({ control: form.control });
 
+  // Opening a link must not, by itself, end a session — any web page can
+  // present one. So the token is checked against the server FIRST, and only a
+  // token the server accepts clears the current session (which the reset then
+  // requires). A missing, malformed, expired or unverifiable token leaves the
+  // session untouched and shows the invalid-link view.
   useEffect(() => {
-    // Clear any existing auth state when entering password reset
-    clearAuth();
-  }, [token, clearAuth]);
+    // A missing or too-short token needs no server round trip — the render
+    // below already shows the invalid-link view for it, so this effect simply
+    // never runs and the session is never touched.
+    if (!hasValidTokenFormat || !token) return;
+
+    let cancelled = false;
+
+    const check = async () => {
+      let result;
+      try {
+        result = await validateToken({ variables: { input: { token } } });
+      } catch (error) {
+        // Unreachable server is NOT proof the link is good. Fail closed: keep
+        // the session, show the invalid-link view, let them try again.
+        errorService.reportError(error, {
+          operation: 'ResetPassword.validateToken',
+        });
+      }
+      if (cancelled) return;
+
+      const payload = result?.data?.validatePasswordResetToken;
+      const accepted =
+        payload?.__typename === 'ValidatePasswordResetTokenPayload' &&
+        payload.status !== PasswordActionStatus.InvalidOrExpired;
+
+      if (!accepted) {
+        setIsTokenRejected(true);
+        return;
+      }
+
+      // Only now: the link is genuine, and completing the reset requires the
+      // old session to be gone.
+      clearAuth();
+      setTokenCheck('valid');
+    };
+
+    check();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, hasValidTokenFormat, validateToken, clearAuth]);
 
   const handleTokenRejected = () => {
     setIsTokenRejected(true);
@@ -230,6 +281,17 @@ export const ResetPasswordScreen: React.FC = () => {
           >
             {t('auth.returnToLogin')}
           </Button>
+        </View>
+      </View>
+    );
+  }
+
+  if (tokenCheck === 'checking') {
+    return (
+      <View style={styles.container} testID="reset-password-checking">
+        <Header onClose={handleGoBack} />
+        <View style={styles.content}>
+          <Loading />
         </View>
       </View>
     );

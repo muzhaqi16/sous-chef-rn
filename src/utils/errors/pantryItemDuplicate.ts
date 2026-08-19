@@ -1,3 +1,4 @@
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
@@ -170,13 +171,9 @@ export function promptPantryDuplicate(opts: {
   onAddAnyway: () => void;
   onCancel?: () => void;
 }): void {
-  alertService.alert(
-    'Item Already in Pantry',
-    'This item is already in your pantry. Would you like to restock it or add a separate entry?',
-    [
-      { text: 'Cancel', style: 'cancel', onPress: opts.onCancel },
-      { text: 'Restock', onPress: opts.onRestock },
-      { text: 'Add Anyway', onPress: opts.onAddAnyway },
-    ],
-  );
+  alertService.alert(t('duplicateItem.title'), t('duplicateItem.body'), [
+    { text: t('labels.cancel'), style: 'cancel', onPress: opts.onCancel },
+    { text: t('duplicateItem.restock'), onPress: opts.onRestock },
+    { text: t('duplicateItem.addAnyway'), onPress: opts.onAddAnyway },
+  ]);
 }

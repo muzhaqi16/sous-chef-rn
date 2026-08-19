@@ -4,13 +4,9 @@ import { format } from 'date-fns/format';
 import { safeParseDate } from '#utils/dateUtils';
 import { getDateFnsLocale } from '#utils/dateLocale';
 import type { NotificationPayload } from '#store/slices/notificationSlice';
+import type { Translate } from '#/i18n/types';
 
 type IconProps = React.ComponentProps<typeof Icon>;
-
-// Minimal structural type for the translation function so this util doesn't
-// depend on i18next's generic `TFunction` namespace typing. `useTranslation().t`
-// is assignable to it.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 export const getNotificationAction = (
   type: NotificationType,

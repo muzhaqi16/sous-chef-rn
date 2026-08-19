@@ -15,6 +15,10 @@
  * **Adding a new locale:**
  *   1. Drop the JSON file in `src/i18n/locales/<lang>.json` mirroring `en.json`.
  *   2. Import it here and add it to the `resources` map under the matching key.
+ *
+ * Plural categories are completed automatically — see
+ * `completePluralCategories` below — so a new locale needing `few`, `many` or
+ * `zero` does not need those forms written by hand before it works.
  */
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
@@ -24,13 +28,96 @@ import sq from './locales/sq.json';
 import it from './locales/it.json';
 import es from './locales/es.json';
 
+type ResourceNode = { [key: string]: string | ResourceNode };
+
+/**
+ * Fill every CLDR plural category a locale needs but its JSON does not define,
+ * copying the `_other` form.
+ *
+ * A missing category is NOT a graceful degradation in i18next. Verified against
+ * the installed `i18next@26`: asking for a count in a category the resource
+ * lacks does not fall back to that locale's `_other` — it falls through to
+ * `fallbackLng`, so an Italian user sees ENGLISH:
+ *
+ *   it, count 1_000_000, no `_many` defined  ->  "1000000 items"
+ *
+ * English and Albanian need `one` and `other`; Spanish and Italian also need
+ * `many`, which CLDR selects only for exact millions. Nothing this app counts —
+ * items, tags, filters, reviews, members, days — reaches that, so the 82 hand-
+ * written `_many` strings it would otherwise take could never render. Deriving
+ * them costs nothing, cannot be forgotten, and extends to any locale added
+ * later (Polish needs `few`; Arabic needs `zero`, `two`, `few` and `many`).
+ *
+ * A translator who wants a distinct form still writes `key_many` explicitly —
+ * this only fills what is absent.
+ */
+function completePluralCategories(resources: Record<string, ResourceNode>) {
+  for (const [locale, tree] of Object.entries(resources)) {
+    const needed = neededPluralCategories(locale);
+    if (needed.length === 0) continue;
+
+    const fill = (node: ResourceNode) => {
+      for (const [key, value] of Object.entries(node)) {
+        if (typeof value !== 'string') {
+          fill(value);
+          continue;
+        }
+        const base = key.match(/^(.*)_other$/)?.[1];
+        if (base === undefined) continue;
+        for (const category of needed) {
+          const target = `${base}_${category}`;
+          if (!(target in node)) node[target] = value;
+        }
+      }
+    };
+
+    fill(tree);
+  }
+  return resources;
+}
+
+/**
+ * The CLDR plural categories a locale needs, or none if the engine cannot say.
+ *
+ * Hermes does not ship `Intl.PluralRules` on every platform and build, and this
+ * runs at module load — an unguarded `new Intl.PluralRules(...)` there is not a
+ * degraded translation, it is a red screen before React starts
+ * (`[runtime not ready]: TypeError: undefined cannot be used as a
+ * constructor`). Caught on the simulator; every Jest test passed, because Node
+ * has full Intl.
+ *
+ * Returning none is the correct answer rather than a shrug: i18next guards the
+ * very same call (`PluralResolver.getRule`) and falls back to a rule whose
+ * `pluralCategories` are `['one', 'other']`, so without `Intl.PluralRules`
+ * nothing beyond those two can ever be selected and there is no gap to fill.
+ * The app and the library degrade together.
+ *
+ * Matches the existing Intl handling in `src/utils/formatters/number.ts`.
+ */
+function neededPluralCategories(locale: string): readonly string[] {
+  let rules: Intl.PluralRules;
+  try {
+    rules = new Intl.PluralRules(locale);
+  } catch {
+    return [];
+  }
+  return rules.resolvedOptions().pluralCategories;
+}
+
+const resources = completePluralCategories({
+  en: en as ResourceNode,
+  sq: sq as ResourceNode,
+  it: it as ResourceNode,
+  es: es as ResourceNode,
+});
+
 if (!i18next.isInitialized) {
   void i18next.use(initReactI18next).init({
     resources: {
-      en: { translation: en },
-      sq: { translation: sq },
-      it: { translation: it },
-      es: { translation: es },
+      en: { translation: resources.en },
+      sq: { translation: resources.sq },
+      it: { translation: resources.it },
+      es: { translation: resources.es },
     },
     lng: 'en',
     fallbackLng: 'en',

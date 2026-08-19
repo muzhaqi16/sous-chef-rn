@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { useApolloClient, useFragment } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
-import { EmptyState } from '#components/base/EmptyState';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { useMutation } from '@apollo/client/react';
 import {
   DeleteRecipeDocument,
@@ -24,10 +25,6 @@ import {
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#utils/compilerSafeWrappers';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
@@ -82,9 +79,17 @@ export const MyRecipes: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
-    state: { recipes: myRecipes },
+    state: { recipes: myRecipes, loading, error, hasResult, skipped },
     actions: { refetch },
   } = useRecipeManagement();
+
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    skipped,
+    isEmpty: myRecipes.length === 0,
+  });
 
   const apolloClient = useApolloClient();
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
@@ -122,22 +127,24 @@ export const MyRecipes: React.FC = () => {
     // Local-first: remove from the list BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
     // surfaces as NotFound, which the queue drops).
-    executeCacheUpdate(
-      () => removeRecipeEdge(id),
-      'Delete Recipe (optimistic)',
-    );
+    try {
+      removeRecipeEdge(id);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Recipe (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        deleteRecipeMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      (error: unknown) => {
-        errorService.reportError(error, { operation: 'deleteRecipe' });
-        alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
-      },
-    );
+    let result;
+    try {
+      result = await deleteRecipeMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, { operation: 'deleteRecipe' });
+      alertService.alert(t('labels.error'), t('recipes.deleteRecipeFailed'));
+    }
     // A rejection means the recipe still exists server-side — alert (the silent
     // revert would otherwise just snap the recipe back) and refetch to restore
     // the authoritative list. A queued result keeps the removal and replays
@@ -176,12 +183,19 @@ export const MyRecipes: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {myRecipes.length === 0 ? (
-        <EmptyState
-          icon="create-outline"
-          title={t('recipes.myRecipesEmptyTitle')}
-          description={t('recipes.myRecipesEmptyDescription')}
-          action={{ label: t('recipes.createRecipe'), onPress: toRecipeCreate }}
+      {dataState !== 'ready' ? (
+        <DataStateView
+          state={dataState}
+          onRetry={handleRefresh}
+          empty={{
+            icon: 'create-outline',
+            title: t('recipes.myRecipesEmptyTitle'),
+            description: t('recipes.myRecipesEmptyDescription'),
+            action: {
+              label: t('recipes.createRecipe'),
+              onPress: toRecipeCreate,
+            },
+          }}
         />
       ) : (
         <FlashList

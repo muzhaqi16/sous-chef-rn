@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal, View, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
@@ -11,10 +11,9 @@ import {
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#/utils/iconUtils';
 import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { errorMessageOr } from '#/services/errorService';
-
-type TFn = ReturnType<typeof useTranslation>['t'];
+import type { Translate } from '#/i18n/types';
 
 interface InviteUserModalProps {
   visible: boolean;
@@ -26,7 +25,7 @@ interface InviteUserModalProps {
   allowedRoles?: MembershipRole[];
 }
 
-function buildRoleOptions(t: TFn) {
+function buildRoleOptions(t: Translate) {
   return [
     {
       value: MembershipRole.Member,

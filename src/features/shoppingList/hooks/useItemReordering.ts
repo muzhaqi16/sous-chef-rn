@@ -12,7 +12,6 @@ import {
   handleMutationError,
   versionConflictCheck,
 } from '#/utils/errorHandlers';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isUnpurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { logger } from '#/utils/environment';
@@ -235,27 +234,26 @@ export function useItemReordering<T extends ShoppingListItem>(
     // Execute mutation (NO optimisticResponse - cache already updated above)
     const moveAfterItemId = afterItemId ?? undefined;
     const moveBeforeItemId = beforeItemId ?? undefined;
-    const result = await executeMutation(
-      () =>
-        moveItem({
-          variables: {
-            input: {
-              itemId,
-              afterItemId: moveAfterItemId,
-              beforeItemId: moveBeforeItemId,
-            },
+    let result;
+    try {
+      result = await moveItem({
+        variables: {
+          input: {
+            itemId,
+            afterItemId: moveAfterItemId,
+            beforeItemId: moveBeforeItemId,
           },
-          // Local-first: queue on an API-down-while-online failure (moves are
-          // coalesced latest-wins on replay via SyncMoveShoppingListItem).
-          context: { localFirst: true },
-        }),
-      error => {
-        handleMutationError(error, {
-          operation: 'Move Item',
-          checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
-        });
-      },
-    );
+        },
+        // Local-first: queue on an API-down-while-online failure (moves are
+        // coalesced latest-wins on replay via SyncMoveShoppingListItem).
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      handleMutationError(error, {
+        operation: 'Move Item',
+        checks: [versionConflictCheck({ onRefresh: () => refetch?.() })],
+      });
+    }
     if (!result) {
       // The mutation threw (handled by the onError above). Drop the persisted
       // optimistic sortOrder — it carries no version, so the restoration hook

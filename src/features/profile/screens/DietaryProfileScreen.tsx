@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
@@ -29,8 +29,9 @@ import { CuisineSelector } from '#/components/organisms/CuisineSelector';
 import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { Text } from '#components/atoms/Text';
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
+import { errorService } from '#/services/errorService';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -78,7 +79,8 @@ export const DietaryProfileScreen: React.FC = () => {
     }[],
     severity: RestrictionSeverity,
   ) => {
-    const allSucceeded = await executeMutation(async () => {
+    let allSucceeded = false;
+    try {
       // Add all restrictions in sequence
       const results = await Promise.all(
         restrictions.map(restriction =>
@@ -86,10 +88,14 @@ export const DietaryProfileScreen: React.FC = () => {
         ),
       );
       // Check if all succeeded
-      return results.every(result => result === true);
-    }, 'DietaryProfile.addRestrictions');
-    // executeMutation returns false on throw — matches the "not all succeeded".
-    return allSucceeded === true;
+      allSucceeded = results.every(result => result === true);
+    } catch (error) {
+      // A throw means not all succeeded.
+      errorService.reportError(error, {
+        operation: 'DietaryProfile.addRestrictions',
+      });
+    }
+    return allSucceeded;
   };
 
   // Set the single lifestyle diet: add the new diet first, then clear the
@@ -363,7 +369,7 @@ export const DietaryProfileScreen: React.FC = () => {
             <InfoRow
               label={t('dietary.budgetPerMeal')}
               value={profile.budgetPerMeal}
-              formatter={val => `$${val}`}
+              formatter={val => formatCurrency(Number(val), DEFAULT_CURRENCY)}
               showBorder={false}
             />
           )}

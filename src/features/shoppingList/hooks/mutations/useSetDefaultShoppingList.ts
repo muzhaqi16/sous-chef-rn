@@ -11,13 +11,10 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
@@ -28,41 +25,48 @@ export function useSetDefaultShoppingList() {
     const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
     let previous: boolean | undefined;
 
-    executeCacheUpdate(
-      () =>
-        client.cache.modify({
-          id: cacheId,
-          fields: {
-            isDefault(existing: boolean) {
-              previous = existing;
-              return true;
-            },
+    try {
+      client.cache.modify({
+        id: cacheId,
+        fields: {
+          isDefault(existing: boolean) {
+            previous = existing;
+            return true;
           },
-        }),
-      'Set Default Shopping List (optimistic)',
-    );
+        },
+      });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Set Default Shopping List (optimistic)',
+      });
+    }
 
     const revert = () => {
       if (previous !== undefined) {
-        executeCacheUpdate(
-          () =>
-            client.cache.modify({
-              id: cacheId,
-              fields: { isDefault: () => previous },
-            }),
-          'Revert Set Default Shopping List',
-        );
+        try {
+          client.cache.modify({
+            id: cacheId,
+            fields: { isDefault: () => previous },
+          });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert Set Default Shopping List',
+          });
+        }
       }
     };
 
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Set Default Shopping List error:',
-    );
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Set Default Shopping List error:',
+      });
+    }
 
     if (!result) {
       revert();

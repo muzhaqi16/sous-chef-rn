@@ -84,4 +84,51 @@ describe('AlertProvider', () => {
     expect(await screen.findByText('Are you sure?')).toBeTruthy();
     expect(onPress).toHaveBeenCalledTimes(1);
   });
+
+  describe('exactly one alert is addressable at a time', () => {
+    // The stack renders up to ALERT.MAX_VISIBLE cards at once. RNTL treats the
+    // card behind as hidden (reduced opacity), which is why the tests above can
+    // ignore it — but Detox does not, and a second `alert-modal` on screen
+    // turns `by.id('alert-modal')` into a multiple-match error instead of the
+    // assertion the spec was making. So these query hidden elements too: that
+    // is the view the e2e layer actually gets.
+    const allWithHidden = (id: string) =>
+      screen.queryAllByTestId(id, { includeHiddenElements: true });
+
+    const showTwoStackedAlerts = () => {
+      // Distinct titles and a decision button apiece, so neither the
+      // informational collapse nor the identical-confirmation rule merges them.
+      showAlert('First', 'first message', [{ text: 'OK' }]);
+      showAlert('Second', 'second message', [{ text: 'OK' }]);
+    };
+
+    it('gives the stable id to the top card only', async () => {
+      renderProvider();
+      showTwoStackedAlerts();
+      expect(await screen.findByText('second message')).toBeTruthy();
+
+      expect(allWithHidden('alert-modal')).toHaveLength(1);
+      // The one behind is still present and inspectable, just not 'the alert'.
+      expect(allWithHidden('alert-modal-behind')).toHaveLength(1);
+    });
+
+    it('gives button ids to the top card only', async () => {
+      renderProvider();
+      showTwoStackedAlerts();
+      expect(await screen.findByText('second message')).toBeTruthy();
+
+      // Both cards render a button at index 0; only one answers to the id.
+      expect(allWithHidden('alert-button-0')).toHaveLength(1);
+    });
+
+    it('still exposes the alert when only one is showing', async () => {
+      renderProvider();
+      showAlert('Only', 'only message', [{ text: 'OK' }]);
+      expect(await screen.findByText('only message')).toBeTruthy();
+
+      expect(allWithHidden('alert-modal')).toHaveLength(1);
+      expect(allWithHidden('alert-button-0')).toHaveLength(1);
+      expect(allWithHidden('alert-modal-behind')).toHaveLength(0);
+    });
+  });
 });

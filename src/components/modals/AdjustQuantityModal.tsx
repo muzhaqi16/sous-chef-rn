@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -15,6 +15,11 @@ import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from './AdjustQuantityModal.generated';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -59,7 +64,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPrevVisible(visible);
     setPrevPantryItemId(pantryItem?.id);
     if (visible && pantryItem) {
-      setQuantityInput(pantryItem.quantity.toString());
+      setQuantityInput(formatNumberForInput(pantryItem.quantity));
       setReason('');
       setRemainingWeightInput('');
     }
@@ -83,7 +88,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       return;
     }
 
-    const parsedWeight = parseFloat(remainingWeightInput);
+    const parsedWeight = parseDecimalInput(remainingWeightInput);
     const remainingNetWeight =
       !isNaN(parsedWeight) && parsedWeight >= 0 ? parsedWeight : undefined;
 
@@ -146,7 +151,9 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 required
                 value={quantityInput}
                 onChangeText={setQuantityInput}
-                placeholder={t('adjustQuantity.quantityPlaceholder')}
+                placeholder={localizeNumericHint(
+                  t('adjustQuantity.quantityPlaceholder'),
+                )}
                 keyboardType="numeric"
                 useBottomSheetInput
               />

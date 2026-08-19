@@ -89,6 +89,10 @@ export function pantryItemData(
       item: {
         __typename: 'Item',
         id: 'item1',
+        // Read-only by default: the photo viewer's "set as main" action is
+        // gated on this, and a fixture that grants it would exercise a path
+        // most callers of these fixtures never reach.
+        canEdit: false,
         name: 'Milk',
         imageUrl: null,
         images: [],

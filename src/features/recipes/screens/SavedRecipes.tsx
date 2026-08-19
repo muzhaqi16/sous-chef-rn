@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { FlashList } from '@shopify/flash-list';
 import { useFragment } from '@apollo/client/react';
 import { StyleSheet } from 'react-native-unistyles';
@@ -10,7 +10,8 @@ import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { TagPicker } from '#components/molecules/TagPicker';
-import { EmptyState } from '#components/base/EmptyState';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -81,9 +82,20 @@ export const SavedRecipes: React.FC = () => {
 
   // Fetch saved recipes, folders, and tags
   const {
-    state: { recipes },
+    state: { recipes, loading, error, hasResult, skipped },
     actions: { refetch },
   } = useSavedRecipes();
+
+  // Classified on the fetched set, not the filtered one: a search that matches
+  // nothing is a different situation from a fetch that returned nothing, and
+  // neither is a failed request.
+  const dataState = useDataState({
+    loading,
+    error,
+    hasResult,
+    skipped,
+    isEmpty: recipes.length === 0,
+  });
 
   const { folders } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
@@ -254,11 +266,15 @@ export const SavedRecipes: React.FC = () => {
         />
       </View>
       {FilterHeader}
-      {filteredRecipes.length === 0 ? (
-        <EmptyState
-          icon="bookmark-outline"
-          title={t('recipes.savedRecipesEmptyTitle')}
-          description={t('recipes.savedRecipesEmptyDescription')}
+      {dataState !== 'ready' || filteredRecipes.length === 0 ? (
+        <DataStateView
+          state={dataState === 'ready' ? 'empty' : dataState}
+          onRetry={handleRefresh}
+          empty={{
+            icon: 'bookmark-outline',
+            title: t('recipes.savedRecipesEmptyTitle'),
+            description: t('recipes.savedRecipesEmptyDescription'),
+          }}
         />
       ) : (
         <FlashList

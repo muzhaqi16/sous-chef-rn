@@ -3,11 +3,12 @@ import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#/utils/iconUtils';
 import { getCollaboratorDisplayName } from '#/utils/formatters/memberFormatters';
 import { type ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { Translate } from '#/i18n/types';
 
 type StatusVariant = 'active' | 'pending' | 'declined' | 'expired' | 'owner';
 
@@ -26,9 +27,7 @@ const getStatusVariant = (status: string): StatusVariant => {
   }
 };
 
-type T = (key: string, opts?: Record<string, unknown>) => string;
-
-const getFormatStatus = (t: T) => (status: string) => {
+const getFormatStatus = (t: Translate) => (status: string) => {
   switch (status?.toUpperCase()) {
     case 'ACCEPTED':
     case 'ACTIVE':

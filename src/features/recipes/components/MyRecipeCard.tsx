@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -63,8 +63,10 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
           {recipe.name}
         </Text>
         <Text size="sm" tone="secondary" numberOfLines={1}>
-          {recipe.servings} {t('recipes.servingsSuffix')}
-          {totalTime != null ? ` • ${totalTime} ${t('recipes.minutes')}` : ''}
+          {t('recipes.servingsCount', { count: recipe.servings })}
+          {totalTime != null
+            ? ` • ${t('recipes.minutesValue', { count: totalTime })}`
+            : ''}
         </Text>
       </View>
       <View style={styles.actions}>

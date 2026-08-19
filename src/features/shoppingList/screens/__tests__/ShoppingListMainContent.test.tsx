@@ -133,7 +133,7 @@ jest.mock('#/utils/permissions/shoppingListPermissions', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
   '#components/organisms/AnimatedItemSelector/AnimatedItemSelector',

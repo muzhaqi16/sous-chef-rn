@@ -13,7 +13,7 @@ import {
   useIsOnline,
   useIsPantryQueryComplete,
 } from '#store/useAppStore';
-import { executeQuery } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 /**
  * Preloads reference data for offline-first autocomplete.
@@ -106,7 +106,14 @@ export function useDataPreloading() {
       if (inFlight.has(key) || !isStale(lastFetchedAt, now)) return;
       inFlight.add(key);
       requestIdleCallback(() => {
-        run().finally(() => inFlight.delete(key));
+        run()
+          .catch(error => {
+            // A failed warm skips `commitWarm` entirely, which leaves the
+            // timestamp null so the next online tick retries — the same
+            // outcome `commitWarm(undefined, …)` produced.
+            errorService.reportError(error, { operation: `preload ${key}` });
+          })
+          .finally(() => inFlight.delete(key));
       });
     };
 
@@ -115,7 +122,7 @@ export function useDataPreloading() {
     // `undefined` edges yields `undefined`), leaving the timestamp null to retry
     // on the next online tick.
     warm('units', lastUnitsFetchedAt, async () => {
-      const result = await executeQuery(() => fetchUnits(), 'preload units');
+      const result = await fetchUnits();
       const store = useStore.getState();
       commitWarm(
         result?.data?.units,
@@ -125,10 +132,7 @@ export function useDataPreloading() {
     });
 
     warm('categories', lastCategoriesFetchedAt, async () => {
-      const result = await executeQuery(
-        () => fetchCategories(),
-        'preload categories',
-      );
+      const result = await fetchCategories();
       const store = useStore.getState();
       commitWarm(
         result?.data?.categories.edges?.map(
@@ -148,7 +152,7 @@ export function useDataPreloading() {
     });
 
     warm('brands', lastBrandsFetchedAt, async () => {
-      const result = await executeQuery(() => fetchBrands(), 'preload brands');
+      const result = await fetchBrands();
       const store = useStore.getState();
       commitWarm(
         result?.data?.brands.edges?.map(edge => ({
@@ -161,7 +165,7 @@ export function useDataPreloading() {
     });
 
     warm('stores', lastStoresFetchedAt, async () => {
-      const result = await executeQuery(() => fetchStores(), 'preload stores');
+      const result = await fetchStores();
       const store = useStore.getState();
       commitWarm(
         result?.data?.stores.edges?.map(edge => ({

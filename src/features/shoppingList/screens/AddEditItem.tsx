@@ -6,7 +6,7 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -27,7 +27,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_VALUES,
-  PRIORITY_KEYS,
+  PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -43,11 +43,10 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
-import {
-  executeCacheUpdate,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 type RouteParams = {
   listId: string;
@@ -166,7 +165,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
-  const formatPriorityLabel = (key: string) => t(priorityLabelKey(key));
+  const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   // Handle form submission
   const handleSave = () => {
@@ -197,6 +196,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const unitData = buildUnitInput();
 
         if (isEdit) {
+          // The server requires the version for the optimistic-concurrency
+          // check, and it is only known once the item has loaded.
+          const itemVersion = itemVersionRef.current;
+          if (itemVersion == null) return;
+
           // Only send changed fields - sends raw quantityInput string
           const input = buildDirtyInput();
           const result = await updateItem({
@@ -205,7 +209,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                 ...input,
                 id: itemId,
                 // Include version for strict version checking (optimistic concurrency control)
-                version: itemVersionRef.current,
+                version: itemVersion,
               },
             },
           });
@@ -242,17 +246,19 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const id = generateEntityId();
         const optimisticItem = createOptimisticShoppingListItem(id, {
           itemName,
-          quantity: parseFloat(quantityInput) || 1,
+          quantity: parseDecimalInput(quantityInput) || 1,
           quantityInput,
           unitName: unit || null,
           category: category || null,
           unitId: 'unit' in unitData ? unitData.unit.unitId : undefined,
         });
-        executeCacheUpdate(
-          () =>
-            addOptimisticShoppingListItem(client.cache, listId, optimisticItem),
-          'Add Shopping List Item (optimistic)',
-        );
+        try {
+          addOptimisticShoppingListItem(client.cache, listId, optimisticItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Add Shopping List Item (optimistic)',
+          });
+        }
 
         const result = await addItem({
           variables: {
@@ -268,7 +274,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                   notes,
                   category,
                   ...(estimatedPrice && {
-                    pricing: { estimatedPrice: parseFloat(estimatedPrice) },
+                    pricing: {
+                      estimatedPrice: parseDecimalInput(estimatedPrice),
+                    },
                   }),
                   // Always send priority (0/1/2) so "low" (0) persists — matches
                   // the in-sheet add path and lets an edit lower priority back to
@@ -398,10 +406,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
       {/* Estimated Price Field */}
       <FormInput
+        testID={isEdit ? 'edit-item-price-input' : 'add-item-price-input'}
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
         onChangeText={text => updateField('estimatedPrice', text)}
-        placeholder={t('shoppingListScreens.estimatedPricePlaceholder')}
+        placeholder={localizeNumericHint(
+          t('shoppingListScreens.estimatedPricePlaceholder'),
+        )}
         keyboardType="numeric"
       />
 
@@ -409,8 +420,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <SegmentedControl
         label={t('shoppingListScreens.priority')}
         options={PRIORITY_OPTIONS}
-        value={PRIORITY_KEYS[priority] ?? 'low'}
-        onChange={key => updateField('priority', PRIORITY_VALUES[key] ?? 0)}
+        value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
+        onChange={option =>
+          updateField('priority', PRIORITY_VALUES[option] ?? 0)
+        }
         formatLabel={formatPriorityLabel}
       />
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -324,22 +324,29 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                 {!!isDualTracked && !isSingleUnitDualTracked && (
                   <Text style={commonStyles.bottomSheetItemLabel}>
                     {' '}
-                    (
-                    {pantryItem.quantityBreakdown
-                      ? `${
-                          pantryItem.quantityBreakdown.fullPackages
-                        } full + ${Math.floor(
-                          pantryItem.quantityBreakdown.looseContentUnits,
-                        )} loose ${
-                          pantryItem.quantityBreakdown.contentUnit?.symbol || ''
-                        }`
-                      : hasContentUnit
-                      ? `${contentUnitCount} ${
-                          pantryItem.packageBreakdown!.contentUnit.symbol ||
-                          pantryItem.packageBreakdown!.contentUnit.name
-                        }`
-                      : `${effectiveNetWeight} ${pantryItem.netWeightUnit?.symbol}`}{' '}
-                    remaining)
+                    {t('pantryAction.remainingAmount', {
+                      amount: pantryItem.quantityBreakdown
+                        ? t('pantryAction.quantityBreakdown', {
+                            packages: pantryItem.quantityBreakdown.fullPackages,
+                            loose: Math.floor(
+                              pantryItem.quantityBreakdown.looseContentUnits,
+                            ),
+                            unit:
+                              pantryItem.quantityBreakdown.contentUnit
+                                ?.symbol || '',
+                          })
+                        : hasContentUnit
+                        ? t('pantryAction.amountWithUnit', {
+                            amount: contentUnitCount,
+                            unit:
+                              pantryItem.packageBreakdown!.contentUnit.symbol ||
+                              pantryItem.packageBreakdown!.contentUnit.name,
+                          })
+                        : t('pantryAction.amountWithUnit', {
+                            amount: effectiveNetWeight,
+                            unit: pantryItem.netWeightUnit?.symbol ?? '',
+                          }),
+                    })}
                   </Text>
                 )}
               </View>

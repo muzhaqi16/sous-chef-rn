@@ -182,7 +182,12 @@ jest.mock('#hooks/ui/useSelectorManagement', () => ({
     handleOverlayClose: jest.fn(),
   }),
 }));
+// Spread the real module: a partial factory breaks the moment anything else in
+// the app imports another of its exports — `useTutorialSequence` now calls
+// `hasFeatureHintBeenShown`, and this mock omitting it failed all 22 tests here
+// with "is not a function".
 jest.mock('#hooks/useFeatureHint', () => ({
+  ...jest.requireActual('#hooks/useFeatureHint'),
   useFeatureHint: () => ({
     isVisible: false,
     hasBeenShown: true,

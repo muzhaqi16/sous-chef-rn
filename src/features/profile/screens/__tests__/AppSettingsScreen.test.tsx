@@ -53,7 +53,7 @@ jest.mock('#hooks/useFeatureHint', () => ({
   resetAllFeatureHints: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/styles/commonStyles', () => ({
   commonStyles: {

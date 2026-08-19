@@ -84,17 +84,24 @@ export function usePantryItemSuggestions({
     ...grouped.popular,
   ];
 
-  // Preload suggestion images into disk cache for instant display
+  // Preload suggestion images into disk cache for instant display. Keyed on the
+  // Apollo result, which only changes when the data does — the derived arrays
+  // above are rebuilt on every render.
   useEffect(() => {
-    if (suggestions.length > 0) {
-      const urls = suggestions
-        .map(s => s.imageUrl)
-        .filter((url): url is string => !!url);
-      if (urls.length > 0) {
-        preloadImages(urls);
-      }
+    if (!pantry) return;
+    const urls = [
+      ...(pantry.lowStock ?? []),
+      ...(pantry.expiringSoon ?? []),
+      ...(pantry.recentlyDeleted ?? []),
+      ...(pantry.frequentlyAdded ?? []),
+      ...(pantry.popular ?? []),
+    ]
+      .map(s => resolveImageUrl(s))
+      .filter((url): url is string => !!url);
+    if (urls.length > 0) {
+      preloadImages(urls);
     }
-  }, [suggestions]);
+  }, [pantry]);
 
   const hasSuggestions = !isOffline && suggestions.length > 0;
 

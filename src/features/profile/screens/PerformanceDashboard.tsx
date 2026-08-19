@@ -4,7 +4,7 @@ import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -13,7 +13,7 @@ import { Environment } from '#/utils/environment';
 import { useCanAccessDevTools } from '#store/useAppStore';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
 import { useFPSMonitor } from '#/hooks/performance/useFPSMonitor';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import performance from 'react-native-performance';
 import { Text } from '#components/atoms/Text';
 

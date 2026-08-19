@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -8,12 +9,22 @@ import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
 import { Badge } from '#components/base/Badge';
 import { Text } from '#components/atoms/Text';
+import { STORAGE_TYPE_VALUES } from './storageLocationFormConfig';
 
-const TEMPERATURE_LABELS: Record<string, string> = {
-  REFRIGERATED: 'Refrigerated',
-  FROZEN: 'Frozen',
-  AMBIENT: 'Ambient',
+/** Key paths, not resolved strings — `t` is only available inside the
+ *  component, and resolving at module load would freeze the language. */
+const TEMPERATURE_LABEL_KEYS: Record<string, string> = {
+  REFRIGERATED: 'storageState.REFRIGERATED',
+  FROZEN: 'storageState.FROZEN',
+  AMBIENT: 'storageState.AMBIENT',
 };
+
+const STORAGE_TYPE_LABEL_KEYS: Record<string, string> = Object.fromEntries(
+  STORAGE_TYPE_VALUES.map(({ value, key }) => [
+    value,
+    `storageLocationForm.${key}`,
+  ]),
+);
 
 /** The storage-location fields this card renders. */
 interface StorageLocationCardLocation {
@@ -45,6 +56,8 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   onDelete,
   onSetDefault,
 }) => {
+  const { t } = useTranslation();
+  /** Fallback for a type the schema gained after this table was written. */
   const formatType = (type: string): string => {
     return type
       .split('_')
@@ -53,9 +66,11 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   };
 
   const hasColor = !!location.color;
-  const temperatureLabel = location.temperature
-    ? TEMPERATURE_LABELS[location.temperature]
-    : null;
+  const typeLabelKey = STORAGE_TYPE_LABEL_KEYS[location.type];
+  const typeLabel = typeLabelKey ? t(typeLabelKey) : formatType(location.type);
+  const temperatureLabelKey = location.temperature
+    ? TEMPERATURE_LABEL_KEYS[location.temperature]
+    : undefined;
   const hasCapacity = location.capacity != null && location.capacity > 0;
 
   return (
@@ -84,28 +99,38 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                 <View style={commonStyles.rowSpaceBetween}>
                   <Text style={commonStyles.title}>{location.name}</Text>
                   <View style={styles.badges}>
-                    {!!isDefault && <Badge variant="primary">Default</Badge>}
-                    {!!temperatureLabel && (
-                      <Badge variant="primary">{temperatureLabel}</Badge>
+                    {!!isDefault && (
+                      <Badge variant="primary">
+                        {t('storageLocationCard.default')}
+                      </Badge>
+                    )}
+                    {!!temperatureLabelKey && (
+                      <Badge variant="primary">{t(temperatureLabelKey)}</Badge>
                     )}
                   </View>
                 </View>
                 <Text style={[commonStyles.caption, styles.subtitle]}>
-                  {!location.parentLocation && (
-                    <Text>{formatType(location.type)} • </Text>
-                  )}
-                  {location.currentItemCount}{' '}
-                  {location.currentItemCount === 1 ? 'item' : 'items'}
+                  {!location.parentLocation && <Text>{typeLabel} • </Text>}
+                  {t('storageLocationCard.itemCount', {
+                    // i18next selects the plural form from `count`, and a
+                    // non-number silently lands on the wrong one. The prop is
+                    // declared `number | null | undefined` even though the
+                    // schema has `currentItemCount: Int!`.
+                    count: location.currentItemCount ?? 0,
+                  })}
                   {hasCapacity ? (
                     <Text>
                       {' '}
-                      / {location.capacity} {location.capacityUnit || 'units'}
+                      / {location.capacity}{' '}
+                      {location.capacityUnit || t('storageLocationCard.units')}
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (
                     <Text tone="secondary" style={styles.parentInfo}>
-                      {' '}
-                      • Inside {location.parentLocation.name}
+                      {' • '}
+                      {t('storageLocationCard.insideParent', {
+                        parent: location.parentLocation.name,
+                      })}
                     </Text>
                   )}
                 </Text>
@@ -131,7 +156,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               >
                 <Icon name="star-outline" size={18} />
                 <Text size="sm" weight="medium">
-                  Set Default
+                  {t('storageLocationCard.setDefault')}
                 </Text>
               </AppPressable>
             )}
@@ -141,7 +166,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon name="create-outline" size={18} />
               <Text size="sm" weight="medium">
-                Edit
+                {t('labels.edit')}
               </Text>
             </AppPressable>
             <AppPressable
@@ -150,7 +175,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             >
               <Icon name="trash-outline" size={18} tone="error" />
               <Text size="sm" weight="medium" tone="error">
-                Delete
+                {t('labels.delete')}
               </Text>
             </AppPressable>
           </View>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AuthFormTemplate } from '../../components/templates/AuthFormTemplate';
 import { EmailInput } from '../../components/atoms/EmailInput';
 import { Text } from '#components/atoms/Text';
@@ -14,11 +14,8 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useToast } from '#/hooks/useToast';
 import { useResendBackoff } from '#hooks/auth/useResendBackoff';
 import { errorService } from '#/services/errorService';
-import {
-  executeMutation,
-  executeWithLoadingState,
-  isSuccessPayload,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -58,13 +55,16 @@ export function ForgotPasswordScreen() {
    * happened.
    */
   const requestResetLink = async (email: string): Promise<boolean> => {
-    const response = await executeMutation(
-      () => requestPasswordResetApi({ variables: { input: { email } } }),
-      error =>
-        errorService.reportError(error, {
-          operation: 'ForgotPassword.requestPasswordReset',
-        }),
-    );
+    let response;
+    try {
+      response = await requestPasswordResetApi({
+        variables: { input: { email } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'ForgotPassword.requestPasswordReset',
+      });
+    }
     // `false` means the mutation threw — already reported above.
     if (!response) {
       toast({ message: t('errors.somethingWentWrong'), type: 'error' });

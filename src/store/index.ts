@@ -312,8 +312,6 @@ const PERSISTED_KEYS = classifyKeys(
   'showNavigationLabels',
   'pantrySortOption',
   'pantrySortDirection',
-  'emailNotifications',
-  'pushNotifications',
   'userPreferences',
 
   // Entity selections + navigation memory

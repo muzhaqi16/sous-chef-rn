@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -27,6 +28,7 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
   onCamera,
   onLibrary,
 }) => {
+  const { t } = useTranslation();
   const pendingActionRef = useRef<(() => void) | null>(null);
 
   const { ref, modalProps, contentContainerStyle, dismiss } =
@@ -56,7 +58,7 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
     <VariantBottomSheetModal ref={ref} {...modalProps} stackBehavior="push">
       <BottomSheetView style={[styles.container, contentContainerStyle]}>
         <Text size="lg" weight="bold" align="center" style={styles.title}>
-          Add Photo
+          {t('imagePicker.addPhoto')}
         </Text>
         <View style={styles.optionsContainer}>
           <AppPressable style={styles.option} onPress={handleCamera}>
@@ -64,7 +66,7 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
               <Icon name="camera" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
-              Take Photo
+              {t('imagePicker.takePhoto')}
             </Text>
           </AppPressable>
           <AppPressable style={styles.option} onPress={handleLibrary}>
@@ -72,13 +74,13 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
               <Icon name="image" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
-              Choose from Library
+              {t('imagePicker.chooseFromLibrary')}
             </Text>
           </AppPressable>
         </View>
         <AppPressable style={styles.cancelButton} onPress={dismiss}>
           <Text size="md" weight="medium" tone="secondary">
-            Cancel
+            {t('labels.cancel')}
           </Text>
         </AppPressable>
       </BottomSheetView>

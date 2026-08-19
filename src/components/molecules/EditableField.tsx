@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { WhiteActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from './FormInput';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 interface EditableFieldProps {
@@ -29,6 +30,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
   validation,
   readOnly,
 }) => {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -65,7 +67,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
       },
       setSaving,
       err => {
-        setError(err instanceof Error ? err.message : 'Failed to save');
+        setError(err instanceof Error ? err.message : t('errors.saveFailed'));
       },
     );
   };
@@ -88,7 +90,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
             disabled={saving}
           >
             <Text weight="semibold" tone="secondary">
-              Cancel
+              {t('labels.cancel')}
             </Text>
           </AppPressable>
           <AppPressable
@@ -100,7 +102,7 @@ export const EditableField: React.FC<EditableFieldProps> = ({
               <WhiteActivityIndicator size="small" />
             ) : (
               <Text weight="semibold" style={styles.saveButtonText}>
-                Save
+                {t('labels.save')}
               </Text>
             )}
           </AppPressable>

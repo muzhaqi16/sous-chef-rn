@@ -1,6 +1,6 @@
 import React, { RefObject } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { format, parseISO } from 'date-fns';
 import { Icon } from '#utils/iconUtils';

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 // RNGH's Pressable (not the themed RN re-export). This badge is nested inside
 // the row's RNGH Swipeable/Pressable; RNGH's native button captures the tap so
@@ -11,6 +12,7 @@ import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
 interface QuantityBadgeProps {
+  testID?: string;
   quantity: number;
   quantityInput?: string | null;
   unit?: string | null;
@@ -41,7 +43,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
   disabled = false,
   isPurchased = false,
   themeColors,
+  testID,
 }) => {
+  const { t } = useTranslation();
   // Prefer quantityInput (user's original input like "1/4") over formatted numeric quantity
   const formattedQuantity = quantityInput || formatQuantity(quantity);
   const accessibilityText = unit
@@ -71,11 +75,14 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 
   return (
     <Pressable
+      testID={testID}
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      accessibilityLabel={`Quantity: ${accessibilityText}. Tap to edit`}
-      accessibilityHint="Opens quantity editor"
+      accessibilityLabel={t('quantityBadge.a11yLabel', {
+        quantity: accessibilityText,
+      })}
+      accessibilityHint={t('quantityBadge.a11yHint')}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       <View style={[styles.container, containerOverride]}>

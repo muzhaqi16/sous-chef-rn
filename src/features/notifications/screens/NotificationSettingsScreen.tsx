@@ -5,9 +5,8 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
+import { useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
@@ -24,7 +23,7 @@ import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
   executeWithLoadingState,
   executeRefreshWithFinally,
-} from '#/utils/compilerSafeWrappers';
+} from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 interface SettingDef {
@@ -129,7 +128,7 @@ const QUIET_HOURS_SETTINGS: SettingDef[] = [
   },
 ];
 
-const getFrequencyOptions = (t: T) => [
+const getFrequencyOptions = (t: Translate) => [
   {
     label: t('notifications.frequencyRealTime'),
     value: ExpirationFrequency.RealTime,
@@ -152,7 +151,7 @@ const getFrequencyOptions = (t: T) => [
   },
 ];
 
-const getThresholdOptions = (t: T) => [
+const getThresholdOptions = (t: Translate) => [
   { label: t('notifications.thresholdSameDay'), value: '0' },
   { label: t('notifications.thresholdNDaysBefore', { n: 1 }), value: '1' },
   {
@@ -188,7 +187,7 @@ const renderSettings = (
     key: keyof NotificationSettings,
     value: boolean | string | number | ExpirationFrequency,
   ) => void,
-  t: T,
+  t: Translate,
 ) =>
   defs.map(({ key, titleKey, descriptionKey }) => (
     <SettingSwitch
@@ -314,7 +313,7 @@ export const NotificationSettingsScreen: React.FC = () => {
             operation: 'requestNotificationPermission',
           });
           alertService.alert(
-            t('notifications.permissionErrorTitle'),
+            t('errors.permissionTitle'),
             t('notifications.permissionErrorMessage'),
           );
         },
@@ -358,7 +357,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                 } else {
                   alertService.alert(
                     t('labels.error'),
-                    t('notifications.resetFailed'),
+                    t('errors.resetSettingsFailed'),
                   );
                 }
               },

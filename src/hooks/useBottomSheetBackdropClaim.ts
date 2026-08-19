@@ -84,10 +84,12 @@ export function useBottomSheetBackdropClaim(
     () => () => releaseRef.current(),
   );
 
-  // Defensive unmount cleanup — the guaranteed release backstop.
+  // Defensive unmount cleanup — the guaranteed release backstop. Goes through
+  // `stableRelease` (identity fixed for the hook's lifetime) so this only ever
+  // runs on unmount while still calling the latest `releaseBackdrop`.
   useEffect(() => {
-    return () => releaseBackdrop();
-  }, []);
+    return () => stableRelease();
+  }, [stableRelease]);
 
   // BACKSTOP release for interrupted closes (a close that interrupts an open
   // that never settled), where gorhom skips `onChange(-1)`. This fires only when

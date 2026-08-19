@@ -49,7 +49,7 @@ jest.mock('#hooks/home/pantry/utils', () => ({
   addToPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/services/toastService', () => ({
   toastService: { success: jest.fn(), error: jest.fn() },
@@ -79,7 +79,7 @@ jest.mock('../../AddItemSheet/useAddItemSheetState', () => ({
 jest.mock('../../AddItemSheet/configs/pantryConfig', () => ({
   pantrySheetConfig: {
     deferFetch: false,
-    quickAdd: { toastMessage: (name: string) => `Added ${name}` },
+    quickAdd: { toastMessageKey: 'addItemSheet.added' },
   },
 }));
 

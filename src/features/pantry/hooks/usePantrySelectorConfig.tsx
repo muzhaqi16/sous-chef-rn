@@ -1,5 +1,5 @@
 import React, { RefObject } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';

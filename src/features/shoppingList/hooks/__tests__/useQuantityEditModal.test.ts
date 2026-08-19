@@ -28,7 +28,7 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { t as tGlobal } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
+import { t as tGlobal } from '#/i18n';
 import { View, Image, Dimensions, Platform } from 'react-native';
 import {
   ThemedBackButton,
@@ -30,10 +30,7 @@ import { ImageFile } from '#components/molecules/ImagePicker';
 import { storage } from '#/storage/mmkv';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 const DEFAULT_OPTIONS: CameraOptions | ImageLibraryOptions = {
@@ -145,19 +142,18 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
     }
   };
 
-  const handleTakePhoto = () => {
-    executeMutation(
-      () => requestCameraAndLaunch(handleImageResponse),
-      error => {
-        errorService.reportError(error, {
-          operation: 'ProfilePhotoUpload.cameraPermission',
-        });
-        alertService.alert(
-          t('profile.permissionErrorTitle'),
-          t('profile.permissionErrorMessage'),
-        );
-      },
-    );
+  const handleTakePhoto = async () => {
+    try {
+      await requestCameraAndLaunch(handleImageResponse);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'ProfilePhotoUpload.cameraPermission',
+      });
+      alertService.alert(
+        t('errors.permissionTitle'),
+        t('profile.permissionErrorMessage'),
+      );
+    }
   };
 
   const handleSelectPhoto = () => {
@@ -183,7 +179,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
           ImageUploadPurpose.ProfileAvatar,
           {
             onError: (error: Error) => {
-              alertService.alert(t('profile.uploadFailedTitle'), error.message);
+              alertService.alert(t('errors.uploadFailedTitle'), error.message);
             },
           },
         );
@@ -197,7 +193,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       setIsUploading,
       () => {
         alertService.alert(
-          t('profile.uploadFailedTitle'),
+          t('errors.uploadFailedTitle'),
           t('profile.updatePhotoFailed'),
         );
       },

@@ -13,7 +13,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   CreateMealTemplateDocument,
   UpdateMealTemplateDocument,
@@ -35,10 +35,6 @@ import {
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import {
@@ -48,6 +44,7 @@ import {
   type AddTemplateItemInput,
   type UpdateTemplateItemInput,
 } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
 
 const addToMealTemplates = createAddToQueryConnectionUpdater(
   'mealTemplates',
@@ -137,7 +134,7 @@ export function useMealTemplateEditor() {
       ? buildOptimisticMealTemplate(id, input, user.id)
       : null;
     if (optimisticTemplate) {
-      executeCacheUpdate(() => {
+      try {
         client.cache.writeFragment({
           id: client.cache.identify(optimisticTemplate),
           fragment: MealTemplateDisplayFragmentDoc,
@@ -150,27 +147,37 @@ export function useMealTemplateEditor() {
             category: optimisticTemplate.category,
           }),
         });
-      }, 'Create Meal Template (optimistic)');
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Create Meal Template (optimistic)',
+        });
+      }
     }
 
-    const result = await executeMutation(
-      () =>
-        createMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Create Meal Template error:',
-    );
+    let result;
+    try {
+      result = await createMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create Meal Template error:',
+      });
+    }
 
     const rejected =
       !result ||
       alertIfRejected(result, t('mealTemplateBuilder.failedToCreate'));
     if (rejected) {
       if (optimisticTemplate) {
-        executeCacheUpdate(
-          () => removeFromMealTemplates(client.cache, id, { evictItem: true }),
-          'Revert rejected Meal Template create',
-        );
+        try {
+          removeFromMealTemplates(client.cache, id, { evictItem: true });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected Meal Template create',
+          });
+        }
       }
       return null;
     }
@@ -192,51 +199,61 @@ export function useMealTemplateEditor() {
       : null;
 
     if (snapshot) {
-      executeCacheUpdate(
-        () =>
+      // Built before the try — conditional spreads inside a try body make the
+      // React Compiler bail out of this hook.
+      const optimisticTemplate = {
+        ...snapshot,
+        ...(input.name != null && { name: input.name }),
+        ...(input.description !== undefined && {
+          description: input.description,
+        }),
+        ...(input.category !== undefined && { category: input.category }),
+        ...(input.defaultServings !== undefined && {
+          defaultServings: input.defaultServings,
+        }),
+        ...(input.tags !== undefined && { tags: input.tags }),
+        updatedAt: new Date().toISOString(),
+      };
+      try {
+        client.cache.writeFragment({
+          id: cacheId,
+          fragment: UseMealTemplateEditor_TemplateFragmentDoc,
+          fragmentName: 'useMealTemplateEditor_template',
+          data: optimisticTemplate,
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Update Meal Template (optimistic)',
+        });
+      }
+    }
+
+    let result;
+    try {
+      result = await updateMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Meal Template error:',
+      });
+    }
+
+    const revert = () => {
+      if (snapshot) {
+        try {
           client.cache.writeFragment({
             id: cacheId,
             fragment: UseMealTemplateEditor_TemplateFragmentDoc,
             fragmentName: 'useMealTemplateEditor_template',
-            data: {
-              ...snapshot,
-              ...(input.name != null && { name: input.name }),
-              ...(input.description !== undefined && {
-                description: input.description,
-              }),
-              ...(input.category !== undefined && { category: input.category }),
-              ...(input.defaultServings !== undefined && {
-                defaultServings: input.defaultServings,
-              }),
-              ...(input.tags !== undefined && { tags: input.tags }),
-              updatedAt: new Date().toISOString(),
-            },
-          }),
-        'Update Meal Template (optimistic)',
-      );
-    }
-
-    const result = await executeMutation(
-      () =>
-        updateMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Update Meal Template error:',
-    );
-
-    const revert = () => {
-      if (snapshot) {
-        executeCacheUpdate(
-          () =>
-            client.cache.writeFragment({
-              id: cacheId,
-              fragment: UseMealTemplateEditor_TemplateFragmentDoc,
-              fragmentName: 'useMealTemplateEditor_template',
-              data: snapshot,
-            }),
-          'Revert Meal Template update',
-        );
+            data: snapshot,
+          });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert Meal Template update',
+          });
+        }
       }
     };
 
@@ -252,10 +269,14 @@ export function useMealTemplateEditor() {
   };
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
-    const result = await executeMutation(
-      () => addItemMutation({ variables: { input } }),
-      'Add Template Item error:',
-    );
+    let result;
+    try {
+      result = await addItemMutation({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Add Template Item error:',
+      });
+    }
     if (!result) return false;
     return !alertIfRejected(result, t('mealTemplateBuilder.failedToAddItem'));
   };
@@ -263,19 +284,29 @@ export function useMealTemplateEditor() {
   const updateItem = async (
     input: UpdateTemplateItemInput,
   ): Promise<boolean> => {
-    const result = await executeMutation(
-      () => updateItemMutation({ variables: { input } }),
-      'Update Template Item error:',
-    );
+    let result;
+    try {
+      result = await updateItemMutation({ variables: { input } });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Template Item error:',
+      });
+    }
     if (!result) return false;
     return !alertIfRejected(result, t('mealTemplateBuilder.failedToSaveItem'));
   };
 
   const removeItem = async (itemId: string): Promise<boolean> => {
-    const result = await executeMutation(
-      () => removeItemMutation({ variables: { input: { id: itemId } } }),
-      'Remove Template Item error:',
-    );
+    let result;
+    try {
+      result = await removeItemMutation({
+        variables: { input: { id: itemId } },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Remove Template Item error:',
+      });
+    }
     if (!result) return false;
     return !alertIfRejected(
       result,

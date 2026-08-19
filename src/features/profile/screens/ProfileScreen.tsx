@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {

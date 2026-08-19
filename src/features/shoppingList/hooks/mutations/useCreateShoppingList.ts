@@ -20,15 +20,12 @@ import {
   reconcileShoppingListCreate,
   revertOptimisticShoppingList,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import {
-  executeCacheUpdate,
-  executeMutation,
-  unwrapPayload,
-} from '#/utils/compilerSafeWrappers';
+import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
+import { errorService } from '#/services/errorService';
 
 export function useCreateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
@@ -60,29 +57,38 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
       ? buildOptimisticShoppingList(client.cache, id, input, user)
       : null;
     if (optimisticList) {
-      executeCacheUpdate(
-        () => addOptimisticShoppingList(client.cache, optimisticList),
-        'Create Shopping List (optimistic)',
-      );
+      try {
+        addOptimisticShoppingList(client.cache, optimisticList);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Create Shopping List (optimistic)',
+        });
+      }
     }
 
-    const result = await executeMutation(
-      () =>
-        mutate({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Create Shopping List error:',
-    );
+    let result;
+    try {
+      result = await mutate({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create Shopping List error:',
+      });
+    }
 
     if (!result) {
       // mutate() itself threw (non-queueable transport failure) — drop the
       // optimistic list and surface the standard failure to the caller.
       if (optimisticList) {
-        executeCacheUpdate(
-          () => revertOptimisticShoppingList(client.cache, id),
-          'Revert failed Shopping List create',
-        );
+        try {
+          revertOptimisticShoppingList(client.cache, id);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert failed Shopping List create',
+          });
+        }
       }
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }

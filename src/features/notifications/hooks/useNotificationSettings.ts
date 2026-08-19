@@ -9,8 +9,12 @@ import {
   ExpirationFrequency,
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
+import type { ApolloCache } from '@apollo/client';
 import { handleMutationError } from '#/utils/errorHandlers';
-import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  updateEntityFieldsLocalFirst,
+  type FieldsEntityRef,
+} from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   computeIsQuietTime,
@@ -110,7 +114,7 @@ function toNestedInput(
  * has none. Classification itself lives in `updateEntityFieldsLocalFirst`.
  */
 function reportRefusal(
-  result: { data?: unknown; error?: unknown } | false | null,
+  result: { data?: unknown; error?: unknown } | undefined | null,
 ): void {
   if (!result || result.error) return;
 
@@ -122,6 +126,58 @@ function reportRefusal(
     'UpdateNotificationPreferences rejected:',
     data?.updateNotificationPreferences,
   );
+}
+
+/**
+ * The shared write path: cache first, fire with `localFirst`, revert only on a
+ * genuine refusal. Lives at module scope so the quiet-hours timezone sync
+ * effect can reuse it without taking a per-render function as a dependency —
+ * which would re-arm the effect on every render.
+ *
+ * Returns whether the change is safe to treat as saved (queued counts).
+ */
+async function applySettingsUpdate({
+  cache,
+  entity,
+  updates,
+  previous,
+  mutate,
+}: {
+  cache: ApolloCache;
+  entity: FieldsEntityRef | undefined;
+  updates: Partial<NotificationSettings>;
+  previous: Partial<NotificationSettings>;
+  mutate: (
+    input: UpdateNotificationPreferencesInput,
+  ) => Promise<{ data?: unknown; error?: unknown }>;
+}): Promise<boolean> {
+  // Convert null to undefined for GraphQL input
+  const cleanedUpdates = Object.fromEntries(
+    Object.entries(updates).map(([key, value]) => [
+      key,
+      value === null ? undefined : value,
+    ]),
+  );
+
+  const { persisted, result } =
+    await updateEntityFieldsLocalFirst<NotificationSettings>({
+      cache,
+      entity,
+      updates,
+      previous,
+      // localFirst: an unreachable API queues the change for replay rather
+      // than failing it, so the toggle the user just flipped isn't lost.
+      mutate: () => mutate(toNestedInput(cleanedUpdates)),
+      logLabel: 'Failed to update notification settings',
+    });
+
+  // Queued counts as persisted — it replays later. `reportRefusal` logs the
+  // server's reason for the union-error case; the screen shows the alert.
+  if (!persisted) {
+    reportRefusal(result);
+    return false;
+  }
+  return true;
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
@@ -229,42 +285,22 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
   const updateMultipleSettings = async (
     updates: Partial<NotificationSettings>,
   ) => {
-    // Convert null to undefined for GraphQL input
-    const cleanedUpdates = Object.fromEntries(
-      Object.entries(updates).map(([key, value]) => [
-        key,
-        value === null ? undefined : value,
-      ]),
-    );
-
     const keys = Object.keys(updates) as (keyof NotificationSettings)[];
     const previous: Partial<NotificationSettings> = Object.fromEntries(
       keys.map(key => [key, settings[key]]),
     );
 
-    const { persisted, result } =
-      await updateEntityFieldsLocalFirst<NotificationSettings>({
-        cache: client.cache,
-        entity: preferencesEntity,
-        updates,
-        previous,
-        // localFirst: an unreachable API queues the change for replay rather
-        // than failing it, so the toggle the user just flipped isn't lost.
-        mutate: () =>
-          updatePreferences({
-            variables: { input: toNestedInput(cleanedUpdates) },
-            context: { localFirst: true },
-          }),
-        logLabel: 'Failed to update notification settings',
-      });
-
-    // Queued counts as persisted — it replays later. `reportRefusal` logs the
-    // server's reason for the union-error case; the screen shows the alert.
-    if (!persisted) {
-      reportRefusal(result);
-      return false;
-    }
-    return true;
+    return applySettingsUpdate({
+      cache: client.cache,
+      entity: preferencesEntity,
+      updates,
+      previous,
+      mutate: input =>
+        updatePreferences({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+    });
   };
 
   /** Single-key convenience over {@link updateMultipleSettings}. */
@@ -320,11 +356,25 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
       return;
     }
     syncedTimezone.current = deviceTimezone;
-    void updateNotificationSetting('quietHoursTimezone', deviceTimezone);
+    void applySettingsUpdate({
+      cache: client.cache,
+      entity: { __typename: 'NotificationPreferences', id: preferences.id },
+      updates: { quietHoursTimezone: deviceTimezone },
+      previous: {
+        quietHoursTimezone: preferences.quietHoursTimezone ?? null,
+      },
+      mutate: input =>
+        updatePreferences({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+    });
   }, [
+    client,
+    preferences?.id,
     preferences?.quietHoursEnabled,
     preferences?.quietHoursTimezone,
-    updateNotificationSetting,
+    updatePreferences,
   ]);
 
   // Evaluated in the user's configured IANA timezone (not the device's) so

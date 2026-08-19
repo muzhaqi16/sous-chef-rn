@@ -66,10 +66,25 @@ function captureCustomOnData() {
   };
 }
 
-const makeClient = (readFragment: jest.Mock = jest.fn()) => ({
+const makeClient = (
+  readFragment: jest.Mock = jest.fn(),
+  query: jest.Mock = jest.fn().mockResolvedValue({ data: {} }),
+) => ({
   cache: { readFragment },
   refetchQueries: jest.fn(),
+  query,
 });
+
+/** The read-back is a promise, so the handler finishes a microtask later. */
+const deliver = async (
+  onData: CapturedOnData,
+  payload: unknown,
+  client: unknown,
+) => {
+  await act(async () => {
+    onData(payload, client);
+  });
+};
 
 /**
  * The plan-aggregates refetch is debounced and waits out in-flight deletes, so
@@ -161,13 +176,18 @@ describe('useMealPlanSubscriptions', () => {
     expect(useStore.getState().selectedMealPlanId).toBe('plan-mine');
   });
 
-  it('adds a plan created elsewhere from the pushed payload', () => {
-    const plan = { __typename: 'MealPlan', id: 'plan-new', name: 'Camping' };
+  it('reads a plan created elsewhere back before adding it', async () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
-    const client = makeClient(jest.fn().mockReturnValue(plan));
+    const client = makeClient(
+      jest.fn(),
+      jest.fn().mockResolvedValue({
+        data: { mealPlan: { __typename: 'MealPlan', id: 'plan-new' } },
+      }),
+    );
 
-    getOnData()(
+    await deliver(
+      getOnData(),
       {
         subtype: MealPlanSubtype.MealPlanChanged,
         mutation: MutationType.Created,
@@ -178,6 +198,9 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
+    expect(client.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { id: 'plan-new' } }),
+    );
     // The ref, not the read-back object: handing the denormalized read to the
     // updater would inline `home`/`user`/`createdBy` over their entity refs.
     expect(mockAddToMealPlans).toHaveBeenCalledWith(
@@ -185,16 +208,20 @@ describe('useMealPlanSubscriptions', () => {
       { __typename: 'MealPlan', id: 'plan-new' },
       { position: 'start' },
     );
-    // The payload carried the list-card shape — no network round trip needed.
-    expect(client.refetchQueries).not.toHaveBeenCalled();
   });
 
-  it('refetches instead of writing a partial plan when the payload drifted', () => {
+  it('skips the add when the plan cannot be read back', async () => {
+    // Offline, or deleted between the event and the read. Adding an entity the
+    // overview cannot render completely would blank the list.
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
-    const client = makeClient(jest.fn().mockReturnValue(null));
+    const client = makeClient(
+      jest.fn(),
+      jest.fn().mockResolvedValue({ data: { mealPlan: null } }),
+    );
 
-    getOnData()(
+    await deliver(
+      getOnData(),
       {
         subtype: MealPlanSubtype.MealPlanChanged,
         mutation: MutationType.Created,
@@ -206,16 +233,15 @@ describe('useMealPlanSubscriptions', () => {
     );
 
     expect(mockAddToMealPlans).not.toHaveBeenCalled();
-    flushAggregateRefresh();
-    expect(client.refetchQueries).toHaveBeenCalled();
   });
 
-  it('does nothing for a plan updated elsewhere — normalization covers it', () => {
+  it('re-reads a plan updated elsewhere without touching the connection', async () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
     const client = makeClient(jest.fn());
 
-    getOnData()(
+    await deliver(
+      getOnData(),
       {
         subtype: MealPlanSubtype.MealPlanChanged,
         mutation: MutationType.Updated,
@@ -228,44 +254,17 @@ describe('useMealPlanSubscriptions', () => {
 
     expect(mockAddToMealPlans).not.toHaveBeenCalled();
     expect(mockRemoveFromMealPlans).not.toHaveBeenCalled();
-    expect(client.refetchQueries).not.toHaveBeenCalled();
-  });
-
-  it('attaches an item added elsewhere to its plan', () => {
-    const item = { __typename: 'MealPlanItem', id: 'item-1' };
-    const readFragment = jest.fn().mockReturnValue(item);
-    const getOnData = captureCustomOnData();
-    renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
-    const client = makeClient(readFragment);
-
-    getOnData()(
-      {
-        subtype: MealPlanSubtype.MealPlanItemChanged,
-        mutation: MutationType.ItemAdded,
-        mealPlanId: 'plan-1',
-        actorUserId: 'user-2',
-        node: { __typename: 'MealPlanItem', id: 'item-1' },
-      },
-      client,
-    );
-
-    expect(mockAddToMealPlanItems).toHaveBeenCalledWith(
-      client.cache,
-      'plan-1',
-      { __typename: 'MealPlanItem', id: 'item-1' },
-      { position: 'end' },
-    );
-    // Server-computed nutrition totals now describe a different item set.
+    // The event carries no values, so the plan itself has to be re-read.
     flushAggregateRefresh();
     expect(client.refetchQueries).toHaveBeenCalled();
   });
 
-  it('skips an incomplete item rather than blanking the screen', () => {
-    // readFragment returns null when the push didn't carry every field the
-    // screen fragment needs — adding it would make MealPlanMain incomplete.
+  it('refreshes the plan when an item is added elsewhere', () => {
+    // One plan read answers both halves — array membership and the
+    // server-computed totals — so an item add costs no read of its own.
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
-    const client = makeClient(jest.fn().mockReturnValue(null));
+    const client = makeClient();
 
     getOnData()(
       {
@@ -278,7 +277,9 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
-    expect(mockAddToMealPlanItems).not.toHaveBeenCalled();
+    expect(client.query).not.toHaveBeenCalled();
+    flushAggregateRefresh();
+    expect(client.refetchQueries).toHaveBeenCalled();
   });
 
   it('skips an item echo while a local delete is in flight', () => {
@@ -344,15 +345,19 @@ describe('useMealPlanSubscriptions', () => {
     expect(useStore.getState().selectedMealPlanId).toBe('plan-1');
   });
 
-  it('adds a template created elsewhere from the pushed payload', () => {
+  it('reads a template created elsewhere back before adding it', async () => {
     // The template browser is a sheet whose query mounts once with the screen,
     // so "it'll arrive on the next read" never happens while it stays mounted.
     const template = { __typename: 'MealTemplate', id: 'tpl-new' };
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
-    const client = makeClient(jest.fn().mockReturnValue(template));
+    const client = makeClient(
+      jest.fn().mockReturnValue(template),
+      jest.fn().mockResolvedValue({ data: { mealTemplate: template } }),
+    );
 
-    getOnData()(
+    await deliver(
+      getOnData(),
       {
         subtype: MealPlanSubtype.MealTemplateChanged,
         mutation: MutationType.Created,
@@ -363,6 +368,9 @@ describe('useMealPlanSubscriptions', () => {
       client,
     );
 
+    expect(client.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { id: 'tpl-new' } }),
+    );
     expect(mockAddToMealTemplates).toHaveBeenCalledWith(
       client.cache,
       template,
@@ -370,11 +378,13 @@ describe('useMealPlanSubscriptions', () => {
     );
   });
 
-  it('skips an incomplete template rather than blanking the list', () => {
+  it('skips an incomplete template rather than blanking the list', async () => {
     const getOnData = captureCustomOnData();
     renderHookWithApollo(() => useMealPlanSubscriptions('user-1'));
+    const template = { __typename: 'MealTemplate', id: 'tpl-new' };
 
-    getOnData()(
+    await deliver(
+      getOnData(),
       {
         subtype: MealPlanSubtype.MealTemplateChanged,
         mutation: MutationType.Created,
@@ -382,7 +392,12 @@ describe('useMealPlanSubscriptions', () => {
         actorUserId: 'user-2',
         node: { __typename: 'MealTemplate', id: 'tpl-new' },
       },
-      makeClient(jest.fn().mockReturnValue(null)),
+      // The read-back landed, but the cache still can't satisfy
+      // MealTemplateDisplay — adding it anyway would blank the browser sheet.
+      makeClient(
+        jest.fn().mockReturnValue(null),
+        jest.fn().mockResolvedValue({ data: { mealTemplate: template } }),
+      ),
     );
 
     expect(mockAddToMealTemplates).not.toHaveBeenCalled();

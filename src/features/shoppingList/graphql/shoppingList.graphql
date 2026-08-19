@@ -240,7 +240,12 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
           quantity
           unitPrice
           totalPrice
-          currencySymbol
+          # The ISO code, not just the symbol: Intl needs the code to place the
+          # symbol where the locale places it (`4,50 €`, not `€4.50`).
+          currency {
+            id
+            code
+          }
           unitSymbol
         }
       }
@@ -395,6 +400,8 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
         estimatedTotal
         totalItems
         completedItems
+        remainingItems
+        completionRate
         createdAt
         updatedAt
         ownerships {
@@ -929,6 +936,17 @@ mutation ToggleShoppingListItemPurchased(
       shoppingListItem {
         id
         ...useToggleShoppingItem_item
+        # Marking an item purchased creates a purchase row server-side, so this
+        # summary changes with every toggle. Selected here (not in the fragment,
+        # which mirrors the optimistic shape) so Apollo writes the new count
+        # through on the response. Without it the normalized item keeps the old
+        # `purchaseCount: 0`, and ItemDetail — which reads exactly these fields —
+        # paints "no purchase history" from cache until its own refetch lands.
+        purchaseHistory {
+          previouslyPurchased
+          purchaseCount
+          lastPurchaseDate
+        }
         shoppingList {
           id
           totalItems
@@ -1260,38 +1278,42 @@ mutation SyncMoveShoppingListItem($input: SyncMoveShoppingListItemInput!) {
 # subscription). The per-list shoppingListEvents(listId) variant is
 # intentionally NOT used — one stream covers every list the user can access,
 # and useShoppingListSubscriptions filters by the active list where needed.
+#
+# Thin event: the envelope plus the identity of what changed. Subscription
+# documents are validated against depth 5 / cost 500 rather than the HTTP
+# limits, because the server re-executes the document on every published event
+# for the life of the connection. An inline fragment counts as a depth level
+# (graphql-armor counts unflattened), so `node { ... on X { id } }` is already
+# depth 4 and a fragment spread inside a branch cannot fit.
+#
+# `updatedFields` drives the skip (an event that changed nothing on screen costs
+# nothing) and `clearedItemIds` still carries a batch clear on its own. When the
+# handler does need values it reads them back through `ShoppingListItemForEvent`
+# / `ShoppingListSummaryForEvent`, which get the generous HTTP limits.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription MyShoppingListsEvents {
   myShoppingListsEvents {
     subtype
     mutation
     listId
+    # The device that made the change — the server echoes back the
+    # `x-device-id` the mutation carried. Suppressing on this rather than on
+    # `actorUserId` is what lets the same user's second device keep updating.
+    originatorClientId
     actorUserId
     timestamp
     updatedFields
     clearedItemIds
     node {
+      __typename
       ... on ShoppingListItem {
         id
-        sortOrder
-        purchaseInfo {
-          isPurchased
-        }
-        ...useShoppingListSubscriptions_item
       }
       ... on ShoppingList {
         id
-        name
-        isCompleted
-        totalItems
-        completedItems
-        remainingItems
-        completionRate
       }
       ... on ShoppingListCollaborator {
         id
-        canEdit
-        lastViewedAt
-        ...useShoppingListSubscriptions_collaborator
       }
     }
   }

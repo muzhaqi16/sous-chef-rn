@@ -1,25 +1,26 @@
 import React from 'react';
 import { View, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { ChartSection } from '#components/analytics/ChartSection';
+import { EmptyState } from '#components/base/EmptyState';
 import { TrendLineChart as BaseTrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#components/charts/TopItemsBarChart';
 import { PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalytics';
-
-type T = (key: string, opts?: Record<string, unknown>) => string;
+import type { Translate } from '#/i18n/types';
 
 // Wrap chart primitives with withUnistyles so the per-call `uniProps` prop
 // (used at consumer sites for theme-derived colors) is recognized at the type
 // level. The wrappers declare no static theme mapping — all theme reads happen
 // at the call site via `uniProps={t => ({ … })}`.
 const TrendLineChart = withUnistyles(BaseTrendLineChart);
+import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 const TopItemsBarChart = withUnistyles(BaseTopItemsBarChart);
 const AnalyticsSummaryCard = withUnistyles(BaseAnalyticsSummaryCard);
 
@@ -31,7 +32,7 @@ interface SharedTabProps {
 }
 
 // Helper functions to format enum values via translation keys
-function formatPurpose(purpose: string, t: T): string {
+function formatPurpose(purpose: string, t: Translate): string {
   const map: Record<string, string> = {
     ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
     COOKING: 'pantryAnalytics.purposeCooking',
@@ -46,7 +47,7 @@ function formatPurpose(purpose: string, t: T): string {
   return map[purpose] ? t(map[purpose]) : purpose;
 }
 
-function formatSource(source: string, t: T): string {
+function formatSource(source: string, t: Translate): string {
   const map: Record<string, string> = {
     MANUAL: 'pantryAnalytics.sourceManual',
     RECIPE_AUTO: 'pantryAnalytics.sourceRecipeAuto',
@@ -57,7 +58,7 @@ function formatSource(source: string, t: T): string {
   return map[source] ? t(map[source]) : source;
 }
 
-function formatReason(reason: string, t: T): string {
+function formatReason(reason: string, t: Translate): string {
   const map: Record<string, string> = {
     BURNT: 'pantryAnalytics.reasonBurnt',
     COOKING_FAIL: 'pantryAnalytics.reasonCookingFail',
@@ -101,13 +102,56 @@ const GranularityButton: React.FC<{
   );
 };
 
+/**
+ * Offline with nothing cached for the current filters.
+ *
+ * One notice per tab, not one per chart: offline is a property of the whole
+ * screen, and eleven identical boxes stacked down a scroll view read as eleven
+ * separate failures. It stays inside the ScrollView so pull-to-refresh remains
+ * reachable — that is the retry, once the connection is back.
+ */
+const OfflineTabState: React.FC<SharedTabProps> = ({
+  refreshing,
+  onRefresh,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      style={styles.tabContent}
+      contentContainerStyle={styles.offlineContent}
+      refreshControl={
+        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
+      <EmptyState
+        icon="cloud-offline-outline"
+        title={t('pantryAnalytics.offlineTitle')}
+        description={t('pantryAnalytics.offlineDescription')}
+        action={{
+          label: t('labels.refresh'),
+          onPress: onRefresh,
+          variant: 'outline',
+        }}
+      />
+    </ScrollView>
+  );
+};
+
 export const UsageTab: React.FC<
   SharedTabProps & {
     usageData: AnalyticsResult['usageData'];
     usageLoading: AnalyticsResult['usageLoading'];
     usageError: AnalyticsResult['usageError'];
+    usageOffline: AnalyticsResult['usageOffline'];
   }
-> = ({ usageData, usageLoading, usageError, refreshing, onRefresh }) => {
+> = ({
+  usageData,
+  usageLoading,
+  usageError,
+  usageOffline,
+  refreshing,
+  onRefresh,
+}) => {
   const { t } = useTranslation();
 
   const usagePurposeData =
@@ -127,6 +171,10 @@ export const UsageTab: React.FC<
       label: item.itemName,
       value: item.count,
     })) ?? [];
+
+  if (usageOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -212,8 +260,16 @@ export const WasteTab: React.FC<
     wasteData: AnalyticsResult['wasteData'];
     wasteLoading: AnalyticsResult['wasteLoading'];
     wasteError: AnalyticsResult['wasteError'];
+    wasteOffline: AnalyticsResult['wasteOffline'];
   }
-> = ({ wasteData, wasteLoading, wasteError, refreshing, onRefresh }) => {
+> = ({
+  wasteData,
+  wasteLoading,
+  wasteError,
+  wasteOffline,
+  refreshing,
+  onRefresh,
+}) => {
   const { t } = useTranslation();
 
   const wasteReasonData =
@@ -228,6 +284,10 @@ export const WasteTab: React.FC<
       value: item.count,
       secondaryValue: item.estimatedValue ?? undefined,
     })) ?? [];
+
+  if (wasteOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -258,7 +318,10 @@ export const WasteTab: React.FC<
       <View style={styles.summaryRow}>
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.estValueLost')}
-          value={`$${(wasteData?.totalWasteValue ?? 0).toFixed(2)}`}
+          value={formatCurrency(
+            wasteData?.totalWasteValue ?? 0,
+            DEFAULT_CURRENCY,
+          )}
           icon="cash-outline"
           uniProps={theme => ({ color: theme.colors.error })}
         />
@@ -333,6 +396,7 @@ export const LedgerTab: React.FC<
     ledgerData: AnalyticsResult['ledgerData'];
     ledgerLoading: AnalyticsResult['ledgerLoading'];
     ledgerError: AnalyticsResult['ledgerError'];
+    ledgerOffline: AnalyticsResult['ledgerOffline'];
     ledgerGranularity: AnalyticsResult['ledgerGranularity'];
     setLedgerGranularity: AnalyticsResult['setLedgerGranularity'];
   }
@@ -340,6 +404,7 @@ export const LedgerTab: React.FC<
   ledgerData,
   ledgerLoading,
   ledgerError,
+  ledgerOffline,
   ledgerGranularity,
   setLedgerGranularity,
   refreshing,
@@ -375,6 +440,10 @@ export const LedgerTab: React.FC<
       label: t('pantryAnalytics.granularityMonthly'),
     },
   ];
+
+  if (ledgerOffline) {
+    return <OfflineTabState refreshing={refreshing} onRefresh={onRefresh} />;
+  }
 
   return (
     <ScrollView
@@ -462,15 +531,19 @@ export const LedgerTab: React.FC<
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('pantryAnalytics.totalSpent')}
-            value={`$${(ledgerData.costAnalytics.totalSpent ?? 0).toFixed(2)}`}
+            value={formatCurrency(
+              ledgerData.costAnalytics.totalSpent ?? 0,
+              DEFAULT_CURRENCY,
+            )}
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
           <AnalyticsSummaryCard
             title={t('pantryAnalytics.avgCostPerUnit')}
-            value={`$${(
-              ledgerData.costAnalytics.averageCostPerUnit ?? 0
-            ).toFixed(2)}`}
+            value={formatCurrency(
+              ledgerData.costAnalytics.averageCostPerUnit ?? 0,
+              DEFAULT_CURRENCY,
+            )}
             icon="calculator-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />
@@ -627,6 +700,16 @@ const styles = StyleSheet.create(theme => ({
   tabScrollContent: {
     padding: theme.spacing.md,
     paddingBottom: theme.spacing.xl,
+  },
+  // Standalone rather than composed with `tabScrollContent` — combining two
+  // `styles.*` on one element breaks the Unistyles v3 proxy. Fills the tab so
+  // the notice centers, while leaving the ScrollView scrollable enough to
+  // trigger pull-to-refresh.
+  offlineContent: {
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   summaryRow: {
     flexDirection: 'row',

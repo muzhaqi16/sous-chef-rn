@@ -9,7 +9,7 @@
 
 import type { ErrorLike } from '@apollo/client';
 import { toastService } from '#/services/toastService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateHomeDocument,
@@ -32,10 +32,7 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { buildOptimisticMutationResponse } from '#/apollo/utils/createOptimisticResponse';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { addToHomesCache, removeFromHomesCache } from './utils';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 interface UseHomeMutationsOptions {
   refetch: () => Promise<void>;
@@ -74,11 +71,14 @@ export function useHomeMutations({
         if (data?.createHome?.__typename !== 'CreateHomePayload') return;
         const newHome = data.createHome.home;
 
-        executeCacheUpdate(
-          () => addToHomesCache(cache, newHome, { position: 'end' }),
-          'Cache update failed for createHome:',
-          refetch,
-        );
+        try {
+          addToHomesCache(cache, newHome, { position: 'end' });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for createHome:',
+          });
+          refetch?.();
+        }
       },
       onCompleted: async data => {
         if (data?.createHome?.__typename === 'CreateHomePayload') {
@@ -180,14 +180,16 @@ export function useHomeMutations({
           return;
         }
 
-        executeCacheUpdate(
-          () =>
-            removeFromHomesCache(cache, variables.input.id, {
-              evictItem: true,
-            }),
-          'Cache update failed for deleteHome:',
-          refetch,
-        );
+        try {
+          removeFromHomesCache(cache, variables.input.id, {
+            evictItem: true,
+          });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Cache update failed for deleteHome:',
+          });
+          refetch?.();
+        }
       },
       onCompleted: async data => {
         if (data?.deleteHome?.__typename === 'DeleteHomePayload') {
@@ -277,24 +279,39 @@ export function useHomeMutations({
   ) => {
     // Handle default home update separately if needed
     if (updates.isDefault !== undefined && updates.isDefault) {
-      const defaultResult = await executeMutation(
-        () => setDefaultHome(homeId),
-        'Set default home error:',
-      );
+      let defaultResult;
+      try {
+        defaultResult = await setDefaultHome(homeId);
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Set default home error:',
+        });
+      }
       if (defaultResult === false) return false;
       delete updates.isDefault; // Remove from updates since we handle it separately
     }
 
     if (Object.keys(updates).length > 0) {
-      const result = await executeMutation(
-        () =>
-          updateHomeMutation({
-            variables: {
-              input: { ...updates, id: homeId },
-            },
-          }),
-        'Update home error:',
-      );
+      // The server requires the version: an update sent without one reports
+      // success while overwriting a concurrent edit.
+      const current = apolloClient.cache.readFragment({
+        id: apolloClient.cache.identify({ __typename: 'Home', id: homeId }),
+        fragment: UpdateHomeOptimistic_HomeFragmentDoc,
+      });
+      if (!current) return false;
+
+      let result;
+      try {
+        result = await updateHomeMutation({
+          variables: {
+            input: { ...updates, id: homeId, version: current.version },
+          },
+        });
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'Update home error:',
+        });
+      }
       if (!result) return false;
 
       return result.data?.updateHome?.__typename === 'UpdateHomePayload'

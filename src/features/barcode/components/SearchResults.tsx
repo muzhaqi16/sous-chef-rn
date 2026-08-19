@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { useTranslation } from '#/i18n';
 import { ProductResultCard } from './ProductResultCard';
 import { ActionButtons } from './ActionButtons';
 import { StyleSheet } from 'react-native-unistyles';
@@ -36,10 +36,7 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { generateEntityId } from '#/utils/generateEntityId';
-import {
-  executeCacheUpdate,
-  executeWithLoadingState,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
@@ -76,6 +73,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   pantryId,
   shoppingListId,
 }) => {
+  const { t } = useTranslation();
   const [isAdded, setIsAdded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const client = useApolloClient();
@@ -180,25 +178,26 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
           // Write the item into the cache before firing, so it's already there
           // when the pantry comes into view — and survives a queued create.
-          executeCacheUpdate(
-            () =>
-              addToPantryItemsCache(
-                client.cache,
-                pantryId,
-                buildOptimisticPantryItem(
-                  id,
-                  {
-                    pantryId,
-                    itemName: item.name,
-                    itemId: item.id,
-                    quantity,
-                    unitId: item.displayUnit?.id ?? item.unitId,
-                  },
-                  client.cache,
-                ),
-              ),
-            'Add Pantry Item (optimistic)',
+          // Built before the try: `?.`/`??` are value blocks, and the React
+          // Compiler bails out of this component when one is inside a try body.
+          const optimisticPantryItem = buildOptimisticPantryItem(
+            id,
+            {
+              pantryId,
+              itemName: item.name,
+              itemId: item.id,
+              quantity,
+              unitId: item.displayUnit?.id ?? item.unitId,
+            },
+            client.cache,
           );
+          try {
+            addToPantryItemsCache(client.cache, pantryId, optimisticPantryItem);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Add Pantry Item (optimistic)',
+            });
+          }
 
           const result = await addToPantry({
             variables: { input: mutationInput },
@@ -304,23 +303,28 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // Write the item into the cache before firing, so it's on the list
           // when it comes into view — and survives a queued (offline / API-down)
           // create that replays later.
-          executeCacheUpdate(
-            () =>
-              addOptimisticShoppingListItem(
-                client.cache,
-                shoppingListId,
-                createOptimisticShoppingListItem(id, {
-                  itemName: item.name,
-                  // One scanned item = quantity 1; the per-unit weight is the
-                  // separate netWeight, not the count.
-                  quantity: 1,
-                  itemId: item.id,
-                  unitId: item.displayUnit?.id ?? item.unitId,
-                  unitName: item.displayUnit?.name,
-                }),
-              ),
-            'Add Shopping List Item (optimistic)',
-          );
+          // Built before the try: `?.`/`??` are value blocks, and the React
+          // Compiler bails out of this component when one is inside a try body.
+          const optimisticListItem = createOptimisticShoppingListItem(id, {
+            itemName: item.name,
+            // One scanned item = quantity 1; the per-unit weight is the
+            // separate netWeight, not the count.
+            quantity: 1,
+            itemId: item.id,
+            unitId: item.displayUnit?.id ?? item.unitId,
+            unitName: item.displayUnit?.name,
+          });
+          try {
+            addOptimisticShoppingListItem(
+              client.cache,
+              shoppingListId,
+              optimisticListItem,
+            );
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Add Shopping List Item (optimistic)',
+            });
+          }
 
           const result = await addToShoppingList({
             variables: {
@@ -392,10 +396,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   // Determine button label based on source and state
   const getButtonLabel = () => {
     if (isAdded) {
-      return 'Added';
+      return t('barcode.added');
     }
 
-    return source === 'pantry' ? 'Add to Pantry' : 'Add to Shopping List';
+    return source === 'pantry'
+      ? t('addItemSheet.addToPantry')
+      : t('addItemSheet.addToShoppingList');
   };
 
   return (
@@ -431,7 +437,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             : undefined
         }
         secondaryAction={{
-          label: 'Scan Another',
+          label: t('barcode.scanAnother'),
           onPress: onScanAnother,
         }}
       />

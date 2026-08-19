@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   RecipeStatus,
   type CreateRecipeInput,
@@ -14,6 +14,8 @@ import {
 import { type RecipeForm_RecipeFragment } from './RecipeForm.generated';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 import { extractNodes } from '#/utils/connectionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface IngredientFormState {
   id: string; // local temp id
@@ -279,7 +281,8 @@ export function useRecipeForm() {
         cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
       },
       nutrition: {
-        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+        caloriesPerServing:
+          parseDecimalInput(state.caloriesPerServing) || undefined,
       },
       dietary: {
         diets: state.diets.length > 0 ? state.diets : undefined,
@@ -321,7 +324,8 @@ export function useRecipeForm() {
         cookTimeMinutes: parseInt(state.cookTimeMinutes) || undefined,
       },
       nutrition: {
-        caloriesPerServing: parseFloat(state.caloriesPerServing) || undefined,
+        caloriesPerServing:
+          parseDecimalInput(state.caloriesPerServing) || undefined,
       },
       dietary: {
         diets: state.diets.length > 0 ? state.diets : undefined,
@@ -346,9 +350,7 @@ export function useRecipeForm() {
       cookTimeMinutes: recipe.cookTimeMinutes
         ? String(recipe.cookTimeMinutes)
         : '',
-      caloriesPerServing: recipe.caloriesPerServing
-        ? String(recipe.caloriesPerServing)
-        : '',
+      caloriesPerServing: formatNumberForInput(recipe.caloriesPerServing),
       difficulty: recipe.difficulty ?? null,
       category: recipe.category ?? null,
       cuisine: recipe.cuisine ?? '',

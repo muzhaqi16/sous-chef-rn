@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { InviteUserModal } from '../InviteUserModal';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
@@ -8,7 +13,7 @@ jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: jest.fn(() => false),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 describe('InviteUserModal', () => {
   const defaultProps = {

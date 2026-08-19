@@ -1,16 +1,18 @@
 import { act } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderHookWithApollo,
+} from '#/test-utils/apolloMockProvider';
 import { useAddShoppingItem } from '../useAddShoppingItem';
 import { addOptimisticShoppingListItem } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 
-// Run the optimistic cache update synchronously; don't fire the real mutation.
-// The mocked result mirrors the real batch payload the hook reads
+// The response mirrors the real batch payload the hook reads
 // (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
-// it as a success and keeps the optimistic row.
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  executeCacheUpdate: jest.fn((fn: () => void) => fn()),
-  executeMutation: jest.fn(async () => ({
+// it as a success and keeps the optimistic row. `variables: () => true` because
+// the hook mints the row's cuid id itself.
+const addItemMock = () =>
+  recordMock(AddItemToShoppingListDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
@@ -23,8 +25,7 @@ jest.mock('#/utils/compilerSafeWrappers', () => ({
         ],
       },
     },
-  })),
-}));
+  });
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   const actual = jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters');
@@ -65,8 +66,10 @@ describe('useAddShoppingItem', () => {
   });
 
   it('writes the new item PERMANENTLY with a client-minted cuid id BEFORE firing the mutation (Pattern B / local-first)', async () => {
-    const { result } = renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
     );
 
     await act(async () => {
@@ -83,12 +86,14 @@ describe('useAddShoppingItem', () => {
     );
 
     // The create mutation was then fired.
-    expect(executeMutation).toHaveBeenCalled();
+    expect(created.fired).toHaveLength(1);
   });
 
   it('does nothing when listId is missing', async () => {
-    const { result } = renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: null, refetch: mockRefetch }),
+    const created = addItemMock();
+    const { result } = renderHookWithApollo(
+      () => useAddShoppingItem({ listId: null, refetch: mockRefetch }),
+      { operationMocks: [created.mock] },
     );
 
     await act(async () => {
@@ -96,6 +101,6 @@ describe('useAddShoppingItem', () => {
     });
 
     expect(addOptimisticShoppingListItem).not.toHaveBeenCalled();
-    expect(executeMutation).not.toHaveBeenCalled();
+    expect(created.fired).toHaveLength(0);
   });
 });

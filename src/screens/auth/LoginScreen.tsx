@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 
 import { AuthFormTemplate } from '#components/templates/AuthFormTemplate';
@@ -21,10 +21,7 @@ import { useAuthNavigation } from '#hooks/navigation/useAuthNavigation';
 import { useAppStore } from '#store/useAppStore';
 import { authService } from '#/services/authService';
 import { Telemetry } from '#/services/telemetry';
-import {
-  executeWithLoadingState,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 
 /** Module-level function to load auth info.
@@ -139,22 +136,19 @@ export function LoginScreen(): React.JSX.Element {
   }, []);
 
   // Simple form submission - directly use login with default rememberMe=true
-  const onSubmit = (input: LoginInput) => {
+  const onSubmit = async (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
 
-    executeMutation(
-      async () => {
-        await authService.login(input);
-        Telemetry.trackEvent('login_success', { method: 'email_password' });
-      },
-      (err: unknown) => {
-        Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
-          component: 'LoginScreen',
-          operation: 'email_password_login',
-        });
-        authService.handleAuthError(err, 'Login');
-      },
-    );
+    try {
+      await authService.login(input);
+      Telemetry.trackEvent('login_success', { method: 'email_password' });
+    } catch (err) {
+      Telemetry.trackError(err instanceof Error ? err : 'Login failed', {
+        component: 'LoginScreen',
+        operation: 'email_password_login',
+      });
+      authService.handleAuthError(err, 'Login');
+    }
   };
 
   // Biometric authentication handler

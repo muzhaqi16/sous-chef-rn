@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -27,13 +27,13 @@ import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDupli
 import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
 import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemSheet } from '../AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '../AddItemSheet/useAddItemSheetState';
 import type { SuggestionsHookResult } from '../AddItemSheet/types';
 import { pantrySheetConfig } from '../AddItemSheet/configs/pantryConfig';
 import { AddDetailsSheet } from './AddDetailsSheet';
+import { errorService } from '#/services/errorService';
 
 interface AddToPantrySheetProps {
   visible: boolean;
@@ -99,10 +99,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         return;
       const pantryItem = payload.pantryItem;
 
-      executeCacheUpdate(
-        () => addToPantryItemsCache(cache, pantryId, pantryItem),
-        'Cache update failed for createPantryItem:',
-      );
+      try {
+        addToPantryItemsCache(cache, pantryId, pantryItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed for createPantryItem:',
+        });
+      }
     },
   });
 
@@ -203,7 +206,9 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     pendingItemIds.current.add(item.id);
 
     // 1. Show toast immediately
-    toastService.success(pantrySheetConfig.quickAdd.toastMessage(item.name));
+    toastService.success(
+      t(pantrySheetConfig.quickAdd.toastMessageKey, { name: item.name }),
+    );
 
     // 2. Remove suggestion from cache immediately
     removeSuggestionFromCache(item.id);
@@ -211,23 +216,25 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // 3. Write the item into the cache before firing, so it shows immediately and
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
-    executeCacheUpdate(
-      () =>
-        addToPantryItemsCache(
+    try {
+      addToPantryItemsCache(
+        client.cache,
+        pantryId,
+        buildOptimisticPantryItem(
+          id,
+          {
+            pantryId,
+            itemName: item.name,
+            itemId: item.id,
+          },
           client.cache,
-          pantryId,
-          buildOptimisticPantryItem(
-            id,
-            {
-              pantryId,
-              itemName: item.name,
-              itemId: item.id,
-            },
-            client.cache,
-          ),
         ),
-      'Add Pantry Item (optimistic)',
-    );
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Pantry Item (optimistic)',
+      });
+    }
 
     // 4. Fire mutation without await (cache update handled by mutation's update callback)
     createPantryItem({ variables, context: { localFirst: true } })
@@ -275,7 +282,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         pendingItemIds.current.delete(item.id);
         // Real failure → revert the optimistic item.
         safeEvict(client.cache, 'PantryItem', id);
-        toastService.error(t('addToPantry.addFailedRetry'));
+        toastService.error(t('errors.addItemFailedRetry'));
       });
   };
 
@@ -304,29 +311,31 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
     // 2. Show toast immediately
     toastService.success(
-      pantrySheetConfig.quickAdd.toastMessage(pantryItem.name),
+      t(pantrySheetConfig.quickAdd.toastMessageKey, { name: pantryItem.name }),
     );
 
     // 3. Write the item into the cache before firing, so it shows immediately and
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
-    executeCacheUpdate(
-      () =>
-        addToPantryItemsCache(
+    try {
+      addToPantryItemsCache(
+        client.cache,
+        pantryId,
+        buildOptimisticPantryItem(
+          id,
+          {
+            pantryId,
+            itemName: pantryItem.name,
+            itemId: pantryItem.itemId,
+          },
           client.cache,
-          pantryId,
-          buildOptimisticPantryItem(
-            id,
-            {
-              pantryId,
-              itemName: pantryItem.name,
-              itemId: pantryItem.itemId,
-            },
-            client.cache,
-          ),
         ),
-      'Add Pantry Item (optimistic)',
-    );
+      );
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Pantry Item (optimistic)',
+      });
+    }
 
     // 4. Fire mutation without await (cache update handled by mutation's update callback)
     createPantryItem({ variables, context: { localFirst: true } })
@@ -377,7 +386,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
         // Real failure → revert the optimistic item.
         safeEvict(client.cache, 'PantryItem', id);
         state.completeExitAnimation(pantryItem.itemId);
-        toastService.error(t('addToPantry.addFailed'));
+        toastService.error(t('errors.addItemFailed'));
       });
   };
 

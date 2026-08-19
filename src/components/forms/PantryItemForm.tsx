@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useForm, useWatch, type Resolver } from 'react-hook-form';
 import { Text } from '#components/atoms/Text';
@@ -57,6 +58,7 @@ import {
   addItemSchema,
   editItemSchema,
 } from './pantryItemFormConfig';
+import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
   // Item information (add mode)
@@ -100,6 +102,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   itemId,
   onSuccess,
 }) => {
+  const { t } = useTranslation();
   const { goBack } = useNavigation();
 
   // Consolidated unit state using UnitSelection type
@@ -214,12 +217,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       const trackingUnitSymbol = item.unit?.symbol || '';
       return {
         itemName: item.itemName || '',
-        quantityInput: item.quantity?.toString() || '1',
+        quantityInput: formatNumberForInput(item.quantity) || '1',
         unit: trackingUnitSymbol, // Tracking unit
-        minQuantity: item.minQuantity?.toString() || '',
-        restockQuantity: item.restockQuantity?.toString() || '',
+        minQuantity: formatNumberForInput(item.minQuantity),
+        restockQuantity: formatNumberForInput(item.restockQuantity),
         brand: item.brand?.name || '',
-        netWeight: item.netWeight?.toString() || '',
+        netWeight: formatNumberForInput(item.netWeight),
         netWeightUnit:
           item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
         netWeightUnitId: item.netWeightUnit?.id || '',
@@ -284,12 +287,12 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     const trackingUnitSymbol = item.unit?.symbol || '';
     reset({
       itemName: item.itemName || '',
-      quantityInput: item.quantity?.toString() || '1',
+      quantityInput: formatNumberForInput(item.quantity) || '1',
       unit: trackingUnitSymbol,
-      minQuantity: item.minQuantity?.toString() || '',
-      restockQuantity: item.restockQuantity?.toString() || '',
+      minQuantity: formatNumberForInput(item.minQuantity),
+      restockQuantity: formatNumberForInput(item.restockQuantity),
       brand: item.brand?.name || '',
-      netWeight: item.netWeight?.toString() || '',
+      netWeight: formatNumberForInput(item.netWeight),
       netWeightUnit:
         item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
       netWeightUnitId: item.netWeightUnit?.id || '',
@@ -442,7 +445,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   if (mode === 'edit' && !existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
-        <Text style={styles.errorText}>Item not found</Text>
+        <Text style={styles.errorText}>{t('itemForm.itemNotFound')}</Text>
       </View>
     );
   }
@@ -451,8 +454,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'tags',
-      label: 'Tags',
-      placeholder: 'Enter tags separated by commas',
+      label: t('itemForm.tags'),
+      placeholder: t('itemForm.tagsPlaceholder'),
       component: FormInput,
       renderValue: (value: unknown) =>
         Array.isArray(value)
@@ -463,7 +466,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       transformValue: (value: unknown) => {
         return String(value ?? '')
           .split(',')
-          .map(t => t.trim())
+          .map(tag => tag.trim())
           .filter(Boolean);
       },
       transformOnBlur: true,
@@ -500,7 +503,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       >
         <Header
           variant="form"
-          title={mode === 'add' ? 'Add Pantry Item' : 'Edit Pantry Item'}
+          title={
+            mode === 'add' ? t('itemForm.addTitle') : t('itemForm.editTitle')
+          }
           onClose={() => goBack()}
           rightActions={[
             {
@@ -605,7 +610,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
                 {mode === 'edit' && (
                   <CollapsibleSection
-                    title="More options"
+                    title={t('labels.moreOptions')}
                     expanded={showTags}
                     onToggle={() => setTagsExpanded(prev => !prev)}
                   >

@@ -1,5 +1,5 @@
 import { isSameDay } from 'date-fns';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { type DailyMeals_ItemFragment } from './useDailyMeals.generated';
 import { type MealPlanItemCard_ItemFragment } from '#features/mealPlan/components/MealPlanItemCard.generated';

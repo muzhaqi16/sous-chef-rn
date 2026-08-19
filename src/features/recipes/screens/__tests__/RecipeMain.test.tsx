@@ -104,7 +104,7 @@ jest.mock('#features/recipes/hooks/useRecipeScreen', () => ({
   })),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock(
   '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',

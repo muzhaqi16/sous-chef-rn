@@ -55,7 +55,7 @@ jest.mock('#/utils/connectionUtils', () => ({
       c?.edges?.map(e => e.node) || [],
   ),
 }));
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 jest.mock('#utils/formatters/roleFormatters', () => ({
   formatRole: jest.fn(r => r),
 }));

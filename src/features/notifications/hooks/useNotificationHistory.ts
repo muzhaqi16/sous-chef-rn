@@ -39,7 +39,7 @@ export function useNotificationHistory(
     state => state.setServerNotificationCounts,
   );
 
-  const { data, error, loading, fetchMore, networkStatus } = useQuery(
+  const { data, error, loading, fetchMore, networkStatus, refetch } = useQuery(
     GetNotificationsDocument,
     {
       variables: {
@@ -119,5 +119,10 @@ export function useNotificationHistory(
     // networkStatus 3 = fetchMore in flight.
     loadingMore: networkStatus === 3,
     loading,
+    error,
+    // `data !== undefined` — a response arrived, empty or not. Separates "no
+    // notifications" from "the feed could not be loaded".
+    hasResult: data !== undefined,
+    refetch,
   };
 }

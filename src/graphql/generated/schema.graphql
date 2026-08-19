@@ -386,12 +386,6 @@ enum AcquisitionMethod {
   SHOPPING_LIST
 }
 
-input AddCollaboratorInput {
-  email: String!
-  role: CollaboratorRole!
-  shoppingListId: ID!
-}
-
 """Input for categorizing an item"""
 input AddItemToCategoryInput {
   categoryId: ID!
@@ -587,33 +581,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
-input AddWarningInput {
-  reason: String!
-  userId: ID!
-}
-
-type AddWarningPayload {
-  userModeration: UserModeration!
-}
-
-"""
-Result of AddWarning. Select on AddWarningPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AddWarningResult = AddWarningPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-enum AddedContext {
-  EXPIRING
-  FROM_MEAL_PLAN
-  FROM_RECIPE
-  LOW_STOCK
-  MANUAL
-  PANTRY_MISSING
-  RECURRING
-  SUGGESTED
-}
-
 """Item that was added to the shopping list from low stock detection"""
 type AddedLowStockItem {
   itemName: String!
@@ -644,8 +611,13 @@ input AdjustPantryItemQuantityInput {
   Explicit remaining net weight override for full recount scenarios (dual-tracked items only)
   """
   remainingNetWeight: Float
-  """Optimistic concurrency control — must match current version"""
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type AdjustPantryItemQuantityPayload {
@@ -689,262 +661,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input AdminBulkDeleteItemsInput {
-  ids: [ID!]!
-  permanent: Boolean
-}
-
-type AdminBulkDeleteItemsPayload {
-  """Items that were deleted by the batch."""
-  items: [Item!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of AdminBulkDeleteItems. Select on AdminBulkDeleteItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Input for batch deleting images from S3/MinIO storage.
-Used by admin panel after duplicate detection.
-"""
-input AdminDeleteImagesInput {
-  """Image URLs to delete from S3/MinIO storage"""
-  imageUrls: [String!]!
-  """
-  Optional Item IDs to update after deletion.
-  If not provided, all items will be checked for affected images.
-  """
-  itemIds: [ID!]
-  """
-  Force background job processing regardless of batch size.
-  By default, batches >50 images are automatically queued.
-  """
-  useQueue: Boolean
-}
-
-type AdminDeleteImagesPayload {
-  """Number of database Item records updated."""
-  databaseUpdated: Int!
-  """Number of images successfully deleted from storage."""
-  deletedFromStorage: Int!
-  """Storage deletion failures with error details."""
-  failedStorage: [ImageDeletionFailure!]!
-  """Job ID if the operation was queued for background processing."""
-  jobId: String
-  """Total number of images requested for deletion."""
-  totalRequested: Int!
-}
-
-"""
-Result of AdminDeleteImages. Select on AdminDeleteImagesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input AdminDeleteItemInput {
-  id: ID!
-  permanent: Boolean
-}
-
-type AdminDeleteItemPayload {
-  item: Item
-}
-
-"""
-Result of AdminDeleteItem. Select on AdminDeleteItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input AdminDeleteRecipeInput {
-  id: ID!
-  permanent: Boolean
-}
-
-type AdminDeleteRecipePayload {
-  recipe: Recipe
-}
-
-"""
-Result of AdminDeleteRecipe. Select on AdminDeleteRecipePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input AdminDeleteRecipeReviewInput {
-  id: ID!
-}
-
-type AdminDeleteRecipeReviewPayload {
-  recipeReview: RecipeReview!
-}
-
-"""
-Result of AdminDeleteRecipeReview. Select on AdminDeleteRecipeReviewPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input AdminDeleteUserInput {
-  """If true, permanently deletes the user (SuperAdmin only)"""
-  hard: Boolean
-  id: ID!
-}
-
-type AdminDeleteUserPayload {
-  user: User
-}
-
-"""
-Result of AdminDeleteUser. Select on AdminDeleteUserPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""Paginated result for admin item unit conversion listing"""
-type AdminItemUnitConversionsResult {
-  conversions: [ItemUnitConversion!]!
-  totalCount: Int!
-}
-
-"""
-Admin input to purge homes by id, bypassing ownership. Intended for data
-consistency / cleanup of junk or test homes.
-"""
-input AdminPurgeHomesInput {
-  """Home ids to purge."""
-  ids: [ID!]!
-  """
-  When true, permanently hard-delete each home and ALL associated data (pantries, pantry items, shopping lists + items, meal plans, meal templates, memberships, invites, storage). When false/omitted, soft-delete the home subtree.
-  """
-  permanent: Boolean
-}
-
-type AdminPurgeHomesPayload {
-  """Homes that were purged by the batch."""
-  homes: [Home!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of AdminPurgeHomes. Select on AdminPurgeHomesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminPurgeHomesResult = AdminPurgeHomesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Admin input to purge pantry items by id, bypassing ownership. Intended for
-cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
-RECENTLY_DELETED suggestion source.
-"""
-input AdminPurgePantryItemsInput {
-  """Pantry item row ids to delete."""
-  ids: [ID!]!
-  """
-  When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt).
-  """
-  permanent: Boolean
-}
-
-type AdminPurgePantryItemsPayload {
-  """Pantry items that were purged by the batch."""
-  pantryItems: [PantryItem!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of AdminPurgePantryItems. Select on AdminPurgePantryItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Admin input to purge shopping list items by id, bypassing ownership. Intended
-for cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
-RECENTLY_DELETED suggestion source.
-"""
-input AdminPurgeShoppingListItemsInput {
-  """Shopping list item row ids to delete."""
-  ids: [ID!]!
-  """
-  When true, hard-delete the rows. When false/omitted, soft-delete (sets deletedAt).
-  """
-  permanent: Boolean
-}
-
-type AdminPurgeShoppingListItemsPayload {
-  """Shopping list items that were purged by the batch."""
-  shoppingListItems: [ShoppingListItem!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of AdminPurgeShoppingListItems. Select on AdminPurgeShoppingListItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-type AdminUpdateItemPayload {
-  item: Item!
-}
-
-"""
-Result of AdminUpdateItem. Select on AdminUpdateItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminUpdateItemResult = AdminUpdateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-type AdminUpdateRecipePayload {
-  recipe: Recipe!
-}
-
-"""
-Result of AdminUpdateRecipe. Select on AdminUpdateRecipePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminUpdateRecipeResult = AdminUpdateRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Admin-authority twin of updateAccount — updates any user's User row,
-including privileged fields. Gated by @requireSystemRole(role: ADMIN); the
-SUPER_ADMIN role ceiling is enforced in the service.
-"""
-input AdminUpdateUserInput {
-  deletedAt: DateTime
-  email: String
-  emailVerified: Boolean
-  id: ID!
-  onBoarded: Boolean
-  preferredCurrency: String
-  role: UserRole
-  timezone: String
-}
-
-type AdminUpdateUserPayload {
-  user: User!
-}
-
-"""
-Result of AdminUpdateUser. Select on AdminUpdateUserPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union AdminUpdateUserResult = AdminUpdateUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 """Result of quantity aggregation (add/subtract)"""
 type AggregationResult {
@@ -995,181 +711,6 @@ input ApiAutomationInput {
   isAutomated: Boolean
 }
 
-"""
-A client credential for the API.
-
-Admin-only, and never carries secret material: the stored key is a one-way
-hash and is not exposed on this type or any other. Use keyPrefix to recognise
-a key in a list — it is the first characters of the secret and is safe to
-display.
-"""
-type ApiKey {
-  clientType: ApiKeyClientType!
-  createdAt: DateTime!
-  """Id of the administrator who created this key."""
-  createdBy: ID
-  description: String
-  """
-  Deployments this key authenticates against. A key not listing a deployment's environment is refused there.
-  """
-  environment: [ApiKeyEnvironment!]!
-  """When this key stops authenticating, or null if it does not expire."""
-  expiresAt: DateTime
-  id: ID!
-  """
-  First characters of the key, for identification. Not usable to authenticate.
-  """
-  keyPrefix: String!
-  """When this key last authenticated a request, or null if it never has."""
-  lastUsedAt: DateTime
-  """Human-readable label, e.g. Android Client."""
-  name: String!
-  """What this key may do. Enforced — see ApiKeyPermission."""
-  permissions: [ApiKeyPermission!]!
-  """Requests per window this key is allowed, or null for the default."""
-  rateLimit: Int
-  """When this key was permanently retired, or null if it has not been."""
-  revokedAt: DateTime
-  """
-  Id of the administrator who revoked this key, or null if it is not revoked.
-  """
-  revokedById: ID
-  """Derived lifecycle state. Not settable — use the lifecycle mutations."""
-  status: ApiKeyStatus!
-  updatedAt: DateTime!
-  """Total successful authentications by this key, all time."""
-  usageCount: Int!
-}
-
-"""
-Which client an API key credentials.
-
-Determines the key's display prefix (an ANDROID key reads and_...) and, for
-ADMIN, is the client type the admin panel's own credential is expected to
-carry.
-"""
-enum ApiKeyClientType {
-  ADMIN
-  ANDROID
-  IOS
-  TESTING
-  WEB
-}
-
-"""
-A page of ApiKey results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type ApiKeyConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [ApiKeyEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One ApiKey in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type ApiKeyEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The ApiKey this edge wraps."""
-  node: ApiKey!
-}
-
-"""
-A deployment environment an API key is valid for.
-
-A key authenticates against a deployment only when the deployment's
-environment is among the key's. A key listing no environment matching the
-deployment it is given to will never authenticate there — it is not an error
-at creation time, so check this before wondering why a new key is rejected.
-"""
-enum ApiKeyEnvironment {
-  DEVELOPMENT
-  PRODUCTION
-  STAGING
-  TEST
-}
-
-input ApiKeyFilters {
-  clientType: ApiKeyClientType
-  """Keys valid for this environment."""
-  environment: ApiKeyEnvironment
-  """Keys holding this permission."""
-  permission: ApiKeyPermission
-  """Keys in this lifecycle state."""
-  status: ApiKeyStatus
-}
-
-input ApiKeyOrderBy {
-  createdAt: SortOrder
-  lastUsedAt: SortOrder
-}
-
-"""
-What an API key is permitted to do. These are enforced, not advisory.
-
-A request is refused with API_KEY_INSUFFICIENT_PERMISSIONS when the key
-authenticating it does not hold the permission the operation needs. A key's
-permission never substitutes for the calling user's authority: an operation
-requiring a system role still requires it.
-"""
-enum ApiKeyPermission {
-  """
-  Authenticate against the admin deployment at all. Checked before an
-  operation is parsed, so it gates the whole service rather than any
-  particular field. Without it a key cannot reach the admin API even if the
-  caller is a system administrator.
-  """
-  ADMIN
-  """Execute queries and subscriptions."""
-  READ
-  """Execute mutations. Grant alongside READ."""
-  WRITE
-}
-
-"""
-A newly issued API key secret.
-
-THIS VALUE IS SHOWN ONCE AND CANNOT BE RETRIEVED AGAIN. It is stored only as
-a one-way hash, so no query, no re-read, and no support request can recover
-it. A caller that does not persist or display it immediately has lost it, and
-the only remedy is to rotate the key for a new one.
-
-It appears in exactly two places — the results of createApiKey and
-rotateApiKey. No other operation returns this type.
-"""
-type ApiKeySecret {
-  """First characters of the token, matching the key's keyPrefix."""
-  keyPrefix: String!
-  """The raw key, to be sent as the x-api-key header. Shown once."""
-  token: String!
-}
-
-"""
-The lifecycle state of an API key.
-
-Derived from the key's stored facts rather than set directly — there is no
-mutation that assigns a status. A terminal state is never masked by a
-reversible one: a revoked key reads REVOKED even if it is also expired.
-"""
-enum ApiKeyStatus {
-  """Authenticates normally."""
-  ACTIVE
-  """Reversibly paused. Re-enable to restore it, with its existing secret."""
-  DISABLED
-  """Past its expiry instant. Extend the expiry to restore it."""
-  EXPIRED
-  """Permanently retired. Cannot be re-enabled, edited, or rotated."""
-  REVOKED
-}
-
 enum AppTheme {
   DARK
   LIGHT
@@ -1183,59 +724,6 @@ enum AppealStatus {
   UNDER_REVIEW
   WITHDRAWN
 }
-
-"""
-Approve a primary item and merge the given secondary duplicates into it,
-atomically.
-"""
-input ApproveAndMergeInput {
-  primaryItemId: ID!
-  secondaryItemIds: [ID!]!
-}
-
-type ApproveAndMergePayload {
-  item: Item!
-}
-
-"""
-Result of ApproveAndMerge. Select on ApproveAndMergePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-type ApproveItemImagePayload {
-  item: Item!
-}
-
-"""
-Result of ApproveItemImage. Select on ApproveItemImagePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union ApproveItemImageResult = ApproveItemImagePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input ApproveItemInput {
-  itemId: ID!
-}
-
-type ApproveItemPayload {
-  item: Item!
-}
-
-"""
-Result of ApproveItem. Select on ApproveItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-"""
-Result of ApproveItemSuggestion. Select on ReviewItemSuggestionPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
 
 """Sub-input for attribution data"""
 input AttributionInput {
@@ -1303,43 +791,6 @@ type AutocompleteResult {
   totalCount: Int!
 }
 
-enum AutomatedFlag {
-  ABUSE_LANGUAGE
-  DUPLICATE_CONTENT
-  FAKE_REVIEWS
-  MULTIPLE_ACCOUNTS
-  PROMOTIONAL_CONTENT
-  SPAM_DETECTED
-  SUSPICIOUS_BEHAVIOR
-}
-
-"""
-Lifecycle state of a background job.
-
-Mirrors the queue engine's own job states (BullMQ JobState), which is the
-authority for this set — not a curated subset. UNKNOWN is a real state the
-engine returns for a job it can no longer resolve (typically reaped), so it
-is modelled rather than mapped away.
-"""
-enum BackgroundJobState {
-  """Currently being processed by a worker"""
-  ACTIVE
-  """Finished successfully"""
-  COMPLETED
-  """Scheduled to run at a later time"""
-  DELAYED
-  """Finished with an error"""
-  FAILED
-  """Queued behind higher-priority jobs"""
-  PRIORITIZED
-  """The engine could not resolve the job's state (usually already reaped)"""
-  UNKNOWN
-  """Queued, waiting for a worker"""
-  WAITING
-  """Waiting for child jobs to finish before becoming runnable"""
-  WAITING_CHILDREN
-}
-
 enum BaseDimension {
   COUNT
   MASS
@@ -1360,6 +811,21 @@ input BatchAddShoppingListItemInput {
   Distinct from clientId below, which is only a response-matching token.
   """
   id: ID
+  """
+  Optional client-minted CUID2 that makes this add idempotent.
+  
+  An add that resolves to an existing row applies a quantity increment, which
+  is atomic but not idempotent: the row carries nothing distinguishing a
+  replay from a genuine second addition. The key is claimed in the same
+  transaction as the increment, so a replay is refused with IDEMPOTENT_REPLAY
+  instead of merging twice.
+  
+  Precedence: this key when sent, otherwise the id field above. Sending
+  neither leaves the add non-idempotent. Send an explicit key when one batch
+  adds the same item more than once, where row identity cannot tell the
+  entries apart.
+  """
+  idempotencyKey: ID
   item: ItemRefInput!
   netWeight: NetWeightInput
   notes: String
@@ -1644,33 +1110,6 @@ input BulkDeviceUpdateInput {
   isVerified: Boolean
 }
 
-input BulkSendNotificationsInput {
-  actionUrl: String
-  batchId: String
-  category: NotificationCategory
-  expiresAt: DateTime
-  message: String
-  metadata: JSON
-  payload: JSON!
-  priority: Priority
-  title: String
-  type: NotificationType!
-  userIds: [ID!]!
-}
-
-type BulkSendNotificationsPayload {
-  """Notifications that were successfully sent."""
-  sent: [Notification!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkSendNotifications. Select on BulkSendNotificationsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
 """
 The single canonical summary for every bulk / batch / admin-purge mutation
 (bulk-operation-standard). Replaces the retired BulkOperationSummary and
@@ -1761,23 +1200,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
-
-input BulkUpdateLoginHistoriesInput {
-  ids: [ID!]!
-  update: UpdateLoginHistoryInput!
-}
-
-type BulkUpdateLoginHistoriesPayload {
-  loginHistories: [LoginHistory!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of BulkUpdateLoginHistories. Select on BulkUpdateLoginHistoriesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 input BulkUpsertItemsByExternalSourceInput {
   items: [BatchUpsertItemInput!]!
@@ -2202,20 +1624,6 @@ enum ConversionSource {
   USER_DEFINED
 }
 
-"""Count of conversions grouped by source"""
-type ConversionSourceCount {
-  count: Int!
-  source: ConversionSource!
-}
-
-"""Summary statistics for item unit conversions"""
-type ConversionStats {
-  bySource: [ConversionSourceCount!]!
-  totalConversions: Int!
-  unverifiedCount: Int!
-  verifiedCount: Int!
-}
-
 """Type of conversion being performed"""
 enum ConversionType {
   CROSS_TYPE_DENSITY_BASED
@@ -2350,38 +1758,6 @@ type CookingStats {
   totalCookingSessions: Int!
   totalRecipesCooked: Int!
 }
-
-input CreateApiKeyInput {
-  clientType: ApiKeyClientType!
-  description: String
-  """At least one. A key valid for no environment authenticates nowhere."""
-  environment: [ApiKeyEnvironment!]!
-  expiresAt: DateTime
-  name: String!
-  """
-  Defaults to READ when omitted. If given it must be non-empty, and ADMIN
-  must be accompanied by READ — ADMIN admits a key to the admin deployment
-  but grants no operation, so a key holding it alone can reach the admin API
-  and do nothing there.
-  """
-  permissions: [ApiKeyPermission!]
-  rateLimit: Int
-}
-
-type CreateApiKeyPayload {
-  apiKey: ApiKey!
-  """
-  The new secret, shown once. Not retrievable afterward — see ApiKeySecret.
-  """
-  secret: ApiKeySecret!
-}
-
-"""
-Result of CreateApiKey. Select on CreateApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union CreateApiKeyResult = ConflictError | CreateApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateBrandInput {
   description: String
@@ -2754,25 +2130,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError
 
-input CreateModerationRecordInput {
-  moderatorNotes: String
-  riskScore: Float
-  status: ModerationStatus
-  trustLevel: TrustLevel
-  userId: ID!
-}
-
-type CreateModerationRecordPayload {
-  userModeration: UserModeration!
-}
-
-"""
-Result of CreateModerationRecord. Select on CreateModerationRecordPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union CreateModerationRecordResult = ConflictError | CreateModerationRecordPayload | ForbiddenError | NotFoundError | ValidationError
-
 input CreateNotificationInput {
   actionUrl: String
   batchId: String
@@ -3081,30 +2438,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError
-
-input CreateShoppingListItemInput {
-  brand: BrandReferenceInput
-  category: String
-  """
-  Optional client-generated permanent ID (CUID2).
-  Offline-first clients mint this as the row's permanent primary key so a
-  re-synced create resolves to the same row (idempotent) instead of duplicating.
-  When omitted, the server generates one via @default(cuid(2)). Must match the
-  CUID2 format; invalid formats are rejected by ID validation.
-  """
-  id: ID
-  item: ItemRefInput!
-  netWeight: NetWeightInput
-  notes: String
-  pricing: PricingEstimatesInput
-  priority: Int
-  quantity: FlexibleQuantity
-  recipeContext: RecipeContextInput
-  shoppingListId: ID!
-  sortOrder: String
-  storePrefs: StorePreferencesInput
-  unit: UnitSpecInput
-}
 
 """Input for creating shopping list items from a recipe"""
 input CreateShoppingListItemsFromRecipeInput {
@@ -3424,21 +2757,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
 
-input DeleteApiKeyInput {
-  id: ID!
-}
-
-type DeleteApiKeyPayload {
-  apiKey: ApiKey!
-}
-
-"""
-Result of DeleteApiKey. Select on DeleteApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteApiKeyResult = ConflictError | DeleteApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
-
 input DeleteBrandInput {
   id: ID!
   """
@@ -3544,18 +2862,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeleteDeviceResult = ConflictError | DeleteDevicePayload | ForbiddenError | NotFoundError | ValidationError
 
-type DeleteExpiredNotificationsPayload {
-  notifications: [Notification!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of DeleteExpiredNotifications. Select on DeleteExpiredNotificationsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError
-
 input DeleteExternalSourceInput {
   id: ID!
 }
@@ -3616,22 +2922,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError | ValidationError
-
-"""Input for deleting an item unit conversion (admin only)"""
-input DeleteItemUnitConversionInput {
-  conversionId: ID!
-}
-
-type DeleteItemUnitConversionPayload {
-  unitConversion: ItemUnitConversion!
-}
-
-"""
-Result of DeleteItemUnitConversion. Select on DeleteItemUnitConversionPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteMealPlanInput {
   id: ID!
@@ -3858,30 +3148,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError
 
-"""Input for device cleanup operations"""
-input DeleteStaleDevicesInput {
-  """Clean up soft-deleted devices older than X days"""
-  deletedDevices: DeletedDeviceCleanupInput
-  """Clean up stale devices (not seen for X days)"""
-  staleDevices: StaleDeviceCleanupInput
-}
-
-type DeleteStaleDevicesPayload {
-  """
-  Devices removed by the cleanup. Empty for hard-delete cleanups where the
-  removed rows are no longer retrievable — the counts live in the summary.
-  """
-  devices: [Device!]!
-  summary: BulkSummary!
-}
-
-"""
-Result of DeleteStaleDevices. Select on DeleteStaleDevicesPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError
-
 input DeleteStorageLocationInput {
   id: ID!
 }
@@ -3942,11 +3208,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError
-
-"""Input for deleted device cleanup"""
-input DeletedDeviceCleanupInput {
-  olderThanDays: Int = 30
-}
 
 type DeletionBlocker {
   message: String!
@@ -4158,12 +3419,6 @@ input DeviceIdentificationInput {
   systemVersion: String
 }
 
-input DeviceLocationInput {
-  lastCity: String
-  lastCountry: String
-  lastIpAddress: String
-}
-
 input DeviceOrderBy {
   createdAt: SortOrder
   deviceName: SortOrder
@@ -4327,33 +3582,12 @@ enum Difficulty {
   VERY_EASY
 }
 
-input DisableApiKeyInput {
-  id: ID!
-}
-
-type DisableApiKeyPayload {
-  apiKey: ApiKey!
-}
-
-"""
-Result of DisableApiKey. Select on DisableApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union DisableApiKeyResult = ConflictError | DisableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
-
 """Display format for quantities"""
 enum DisplayFormat {
   AUTO
   DECIMAL
   FRACTION
   MIXED
-}
-
-"""An item that is a UPC-duplicate of another, with its reference counts."""
-type DuplicateItem {
-  item: Item!
-  references: ItemReferenceCounts!
 }
 
 input DuplicateMealPlanInput {
@@ -4412,21 +3646,6 @@ union DuplicateTemplateResult = ConflictError | DuplicateTemplatePayload | Forbi
 interface Edge {
   cursor: String!
 }
-
-input EnableApiKeyInput {
-  id: ID!
-}
-
-type EnableApiKeyPayload {
-  apiKey: ApiKey!
-}
-
-"""
-Result of EnableApiKey. Select on EnableApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union EnableApiKeyResult = ConflictError | EnableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError
 
 input EnableHomeJoinLinkInput {
   """ID of the home to enable the join link for."""
@@ -4969,12 +4188,24 @@ homeInviteChanged — subscribe once per home and branch on subtype, then on
 node's __typename (Membership vs HomeInvite).
 """
 type HomeEvent {
-  """Originator of the change, for self-echo suppression."""
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated or the acting user is unknown. For
+  suppressing the echo of your own write, prefer originatorClientId: this
+  field cannot tell your two devices apart.
+  """
   actorUserId: ID
   homeId: ID!
   mutation: MutationType!
   newRole: MembershipRole
   node: HomeEventNode!
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   previousRole: MembershipRole
   subtype: HomeSubtype!
   timestamp: DateTime!
@@ -5053,13 +4284,6 @@ type HomeInviteEdge implements Edge {
   cursor: String!
   """The HomeInvite this edge wraps."""
   node: HomeInvite!
-}
-
-enum HomeInviteMutationType {
-  ACCEPTED
-  CREATED
-  DECLINED
-  REVOKED
 }
 
 type HomeInviteStatsGroup {
@@ -5163,60 +4387,6 @@ type HomeUsageStats {
 type IPStat {
   count: Int!
   ipAddress: String!
-}
-
-"""Error details for a failed image deletion"""
-type ImageDeletionFailure {
-  """Error message describing the failure"""
-  error: String!
-  """
-  The S3/MinIO key (path) of the image (may be null if extraction failed)
-  """
-  key: String
-  """The full URL of the image that failed to delete"""
-  url: String!
-}
-
-"""
-Status of a background image deletion job.
-Use this to track progress of large batch deletions.
-"""
-type ImageDeletionJobStatus {
-  """When the job was created"""
-  createdAt: DateTime!
-  """When the job finished (null if still running)"""
-  finishedAt: DateTime
-  """Unique job identifier"""
-  jobId: String!
-  """Progress percentage (0-100)"""
-  progress: Int
-  """Deletion result (only available when status is COMPLETED)"""
-  result: ImageDeletionResult
-  """Current job state"""
-  status: BackgroundJobState!
-}
-
-"""
-Result of an image deletion operation.
-Contains counts of successfully deleted and failed images.
-"""
-type ImageDeletionResult {
-  code: String!
-  """Number of database Item records updated"""
-  databaseUpdated: Int!
-  """Number of images successfully deleted from S3/MinIO storage"""
-  deletedFromStorage: Int!
-  """List of storage deletion failures with error details"""
-  failedStorage: [ImageDeletionFailure!]!
-  """
-  Job ID if the operation was queued for background processing.
-  Use adminGetImageDeletionJobStatus to check progress.
-  """
-  jobId: String
-  message: String!
-  success: Boolean!
-  """Total number of images requested for deletion"""
-  totalRequested: Int!
 }
 
 input ImageInput {
@@ -5363,17 +4533,6 @@ type InviteActionCount {
   action: Int!
 }
 
-type InviteActionStats {
-  inviteAccepted: Int
-  inviteCancelled: Int
-  inviteCreated: Int
-  inviteDeclined: Int
-  inviteExpired: Int
-  inviteResent: Int
-  inviteSent: Int
-  inviteViewed: Int
-}
-
 type InviteLog {
   action: InviteAction!
   actor: User
@@ -5419,12 +4578,6 @@ input InviteLogOrderBy {
   createdAt: SortOrder
 }
 
-type InviteStats {
-  actions: InviteActionStats!
-  timeline: [InviteTimelineEntry!]!
-  total: Int!
-}
-
 enum InviteStatus {
   ACCEPTED
   DECLINED
@@ -5432,11 +4585,6 @@ enum InviteStatus {
   PENDING
   REVOKED
   USED
-}
-
-type InviteTimelineEntry {
-  action: InviteAction!
-  timestamp: DateTime!
 }
 
 input InviteToHomeInput {
@@ -5738,32 +4886,6 @@ type ItemConnection implements Connection {
   totalCount: Int
 }
 
-type ItemCreation {
-  createdAt: DateTime!
-  id: ID!
-  item: Item!
-  metadata: JSON
-  reason: String
-  source: DataSource!
-  """
-  Null when the creator's account was permanently deleted. The item and this provenance record remain.
-  """
-  user: User
-}
-
-"""A cluster of items that share a UPC."""
-type ItemDuplicateCluster {
-  items: [DuplicateItem!]!
-  upc: String!
-}
-
-"""A page of duplicate clusters (offset paginated)."""
-type ItemDuplicateClusterPage {
-  clusters: [ItemDuplicateCluster!]!
-  hasMore: Boolean!
-  totalCount: Int!
-}
-
 """
 One Item in a paginated result, paired with the cursor that identifies its
 position. Pass the cursor as "after" to resume from just past this edge.
@@ -5773,20 +4895,6 @@ type ItemEdge implements Edge {
   cursor: String!
   """The Item this edge wraps."""
   node: Item!
-}
-
-type ItemEdit {
-  createdAt: DateTime!
-  editReason: String
-  fieldsChanged: [String!]!
-  id: ID!
-  item: Item!
-  newValues: JSON
-  oldValues: JSON
-  """
-  Null when the editor's account was permanently deleted. The item and this provenance record remain.
-  """
-  user: User
 }
 
 """
@@ -5888,38 +4996,6 @@ type ItemImage {
   """
   status: ItemImageStatus!
   url: String!
-}
-
-"""
-A page of ItemImage results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type ItemImageConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [ItemImageEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One ItemImage in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type ItemImageEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The ItemImage this edge wraps."""
-  node: ItemImage!
-}
-
-"""Filters for the admin item-photo review queue."""
-input ItemImageFilters {
-  itemId: ID
-  status: ItemImageStatus
 }
 
 """
@@ -6079,16 +5155,6 @@ request is rejected before any resolver runs if zero or both are provided.
 input ItemRefInput {
   itemId: ID
   itemName: String
-}
-
-"""
-Number of records that reference an item, used to gauge the impact of a merge.
-"""
-type ItemReferenceCounts {
-  pantryItems: Int!
-  purchases: Int!
-  recipeIngredients: Int!
-  shoppingListItems: Int!
 }
 
 enum ItemStatus {
@@ -6843,7 +5909,13 @@ union MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPantryAsD
 
 input MarkPantryItemExpiredInput {
   id: ID!
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type MarkPantryItemExpiredPayload {
@@ -7081,12 +6153,25 @@ Only home-shared plans/templates (homeId set) are pushed — personal ones need
 no collaboration channel.
 """
 type MealPlanEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   homeId: ID!
   """Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events."""
   mealPlanId: ID
   mutation: MutationType!
   node: MealPlanEventNode
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   subtype: MealPlanSubtype!
   """Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events."""
   templateId: ID
@@ -7382,14 +6467,6 @@ type MembershipEdge implements Edge {
   node: Membership!
 }
 
-enum MembershipMutationType {
-  CREATED
-  LEFT
-  REJOINED
-  REMOVED
-  UPDATED
-}
-
 input MembershipOrderBy {
   createdAt: SortOrder
 }
@@ -7404,15 +6481,6 @@ enum MembershipRole {
   MEMBER
   """Full ownership of the household including the ability to delete it"""
   OWNER
-}
-
-type MembershipRoleChangedPayload {
-  changedBy: String!
-  homeId: ID!
-  membership: Membership!
-  newRole: MembershipRole!
-  previousRole: MembershipRole!
-  userId: ID!
 }
 
 type MembershipRoleStats {
@@ -7443,26 +6511,6 @@ type MembershipStatusStats {
   removed: Int!
   suspended: Int!
 }
-
-"""
-Merge one or more secondary items into a primary. References on the
-secondaries are retargeted onto the primary and the secondaries are deleted.
-"""
-input MergeItemsInput {
-  primaryItemId: ID!
-  secondaryItemIds: [ID!]!
-}
-
-type MergeItemsPayload {
-  item: Item!
-}
-
-"""
-Result of MergeItems. Select on MergeItemsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union MergeItemsResult = ConflictError | ForbiddenError | MergeItemsPayload | NotFoundError | ValidationError
 
 enum MfaMethod {
   BIOMETRIC
@@ -8513,6 +7561,12 @@ read-state and dismissal transitions arrive on this stream too. Bulk
 operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
 """
 type NotificationEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated or the acting user is unknown. For
+  suppressing the echo of your own write, prefer originatorClientId: this
+  field cannot tell your two devices apart.
+  """
   actorUserId: ID
   """
   Number of notifications affected by an aggregate subtype (BULK_READ /
@@ -8526,6 +7580,13 @@ type NotificationEvent {
   set-based mutation with no single node — read affectedCount instead.
   """
   node: Notification
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   subtype: NotificationSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
@@ -8961,7 +8022,13 @@ union OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoundError
 input OpenPantryItemInput {
   id: ID!
   idempotencyKey: ID
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type OpenPantryItemPayload {
@@ -9086,9 +8153,22 @@ Real-time notification for pantry domain mutations.
 Clients subscribe once per pantry; the subtype field routes payload interpretation.
 """
 type PantryEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   mutation: MutationType!
   node: PantryEventNode!
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   pantryId: ID!
   parents: PantryEventParents!
   subtype: PantrySubtype!
@@ -10803,42 +9883,6 @@ enum RegistrationStatus {
   VERIFICATION_SENT
 }
 
-type RejectItemImagePayload {
-  item: Item!
-}
-
-"""
-Result of RejectItemImage. Select on RejectItemImagePayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RejectItemImageResult = ConflictError | ForbiddenError | NotFoundError | RejectItemImagePayload | ValidationError
-
-"""Input for rejecting a user-created item"""
-input RejectItemInput {
-  itemId: ID!
-  notifyUser: Boolean
-  reason: String!
-}
-
-type RejectItemPayload {
-  item: Item!
-}
-
-"""
-Result of RejectItem. Select on RejectItemPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError
-
-"""
-Result of RejectItemSuggestion. Select on ReviewItemSuggestionPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError
-
 enum ReligiousDiet {
   HALAL
   KOSHER
@@ -11167,41 +10211,6 @@ type ReviewHelpful {
   user: User
 }
 
-"""
-Shared by approveItemImage and rejectItemImage — the two differ only in the
-verdict they record, which is carried by the mutation name.
-"""
-input ReviewItemImageInput {
-  """The ItemImage row being reviewed."""
-  imageId: ID!
-  reviewNote: String
-}
-
-"""Approve or reject a pending suggestion (admin only)."""
-input ReviewItemSuggestionInput {
-  id: ID!
-  reviewNote: String
-}
-
-type ReviewItemSuggestionPayload {
-  suggestion: ItemEditSuggestion!
-}
-
-input RevokeApiKeyInput {
-  id: ID!
-}
-
-type RevokeApiKeyPayload {
-  apiKey: ApiKey!
-}
-
-"""
-Result of RevokeApiKey. Select on RevokeApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RevokeApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RevokeApiKeyPayload | ValidationError
-
 """Sub-input for risk assessment data"""
 input RiskAssessmentInput {
   isRisky: Boolean
@@ -11226,26 +10235,6 @@ enum RiskFactor {
   UNUSUAL_TIME
   VPN_DETECTED
 }
-
-input RotateApiKeyInput {
-  id: ID!
-}
-
-type RotateApiKeyPayload {
-  apiKey: ApiKey!
-  """
-  The replacement secret, shown once. The key's previous secret stops
-  authenticating immediately.
-  """
-  secret: ApiKeySecret!
-}
-
-"""
-Result of RotateApiKey. Select on RotateApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union RotateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RotateApiKeyPayload | ValidationError
 
 type SavedRecipe {
   cookedCount: Int!
@@ -11598,7 +10587,12 @@ Clients subscribe once per list (or once for all their lists via
 myShoppingListsEvents); the subtype field routes payload interpretation.
 """
 type ShoppingListEvent {
-  """User who made the change."""
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   """Count of items cleared (ITEMS_BATCH_CLEARED only)."""
   clearedCount: Int
@@ -11613,7 +10607,12 @@ type ShoppingListEvent {
   node.status.
   """
   node: ShoppingListEventNode
-  """Device/client that triggered the change (for echo suppression)."""
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
   originatorClientId: ID
   subtype: ShoppingListSubtype!
   timestamp: DateTime!
@@ -12035,12 +11034,6 @@ input SpoonacularNutritionInput {
 input SpoonacularWeightPerServingInput {
   amount: Float
   unit: String
-}
-
-"""Input for stale device cleanup"""
-input StaleDeviceCleanupInput {
-  daysInactive: Int = 365
-  userId: ID!
 }
 
 """Reusable sub-input for storage details"""
@@ -12626,33 +11619,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError
 
-input SyncItemPopularityInput {
-  """
-  Reconcile a single item synchronously. Omit to enqueue a full backfill of all items.
-  """
-  itemId: ID
-}
-
-type SyncItemPopularityPayload {
-  """
-  True when a full ITEM_POPULARITY_RECALC backfill was enqueued instead of a single-item recompute.
-  """
-  enqueued: Boolean!
-  """
-  The item reconciled synchronously, or null when a full backfill was enqueued.
-  """
-  itemId: ID
-  """The item's reconciled popularity, when a single itemId was supplied."""
-  popularity: Int
-}
-
-"""
-Result of SyncItemPopularity. Select on SyncItemPopularityPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | SyncItemPopularityPayload | ValidationError
-
 input SyncMoveShoppingListItemInput {
   afterId: ID
   beforeId: ID
@@ -12719,33 +11685,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError
 
-input SyncRecipeRatingsInput {
-  """
-  Reconcile a single recipe synchronously. Omit to enqueue a full backfill of all recipes.
-  """
-  recipeId: ID
-}
-
-type SyncRecipeRatingsPayload {
-  averageRating: Float
-  """
-  True when a full RECIPE_RATING_RECALC backfill was enqueued instead of a single-recipe recompute.
-  """
-  enqueued: Boolean!
-  """
-  The recipe reconciled synchronously, or null when a full backfill was enqueued.
-  """
-  recipeId: ID
-  totalReviews: Int
-}
-
-"""
-Result of SyncRecipeRatings. Select on SyncRecipeRatingsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union SyncRecipeRatingsResult = ConflictError | ForbiddenError | NotFoundError | SyncRecipeRatingsPayload | ValidationError
-
 """Sub-input for sync settings"""
 input SyncSettingsInput {
   autoSync: Boolean
@@ -12755,6 +11694,13 @@ input SyncSettingsInput {
 input SyncShoppingListItemFieldsInput {
   brand: BrandReferenceInput
   category: String
+  """
+  Optional client-minted CUID2 making a sync that MERGES into an existing row
+  idempotent. Defaults to the enclosing clientId, which already identifies the
+  queued operation — supply this only to key the merge on something other than
+  the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
+  """
+  idempotencyKey: ID
   """
   Item reference: exactly one of a catalog item id or a free-text name (@oneOf).
   """
@@ -12768,7 +11714,7 @@ input SyncShoppingListItemFieldsInput {
   """
   Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
   Unitless by default; specify a unit via the unit field when needed (shopping
-  items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
+  items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
   """
   quantity: FlexibleQuantity
   recipeContext: RecipeContextInput
@@ -13239,37 +12185,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError
 
-"""
-Metadata changes only. There is no field here that alters the secret — use
-rotateApiKey for that, and the lifecycle mutations to change status.
-
-An omitted field is left unchanged.
-"""
-input UpdateApiKeyInput {
-  description: String
-  """Replaces the existing set. Must be non-empty."""
-  environment: [ApiKeyEnvironment!]
-  expiresAt: DateTime
-  id: ID!
-  name: String
-  """
-  Replaces the existing set. Same rules as on create: non-empty, and ADMIN requires READ.
-  """
-  permissions: [ApiKeyPermission!]
-  rateLimit: Int
-}
-
-type UpdateApiKeyPayload {
-  apiKey: ApiKey!
-}
-
-"""
-Result of UpdateApiKey. Select on UpdateApiKeyPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | UpdateApiKeyPayload | ValidationError
-
 input UpdateBrandInput {
   description: String
   id: ID!
@@ -13523,7 +12438,13 @@ input UpdateHomeInput {
   name: String
   tags: [String!]
   timezone: String
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 input UpdateHomeJoinCodeInput {
@@ -13744,39 +12665,6 @@ Always include a __typename so the variant can be discriminated.
 """
 union UpdateMembershipResult = ConflictError | ForbiddenError | NotFoundError | UpdateMembershipPayload | ValidationError
 
-"""
-Input for updateModeration mutation. Wraps the target userId alongside the
-consolidated moderation update fields so callers pass a single `input`.
-Handles status transitions, trust level, risk score, ban/suspend/unban/unsuspend, and review operations.
-"""
-input UpdateModerationInput {
-  moderatorNotes: String
-  """Ban/suspend reason"""
-  reason: String
-  """Review notes (used when completing a review)"""
-  reviewNotes: String
-  riskScore: Float
-  """
-  New moderation status (ACTIVE, WARNED, RESTRICTED, SUSPENDED, BANNED, UNDER_REVIEW, APPEALING)
-  """
-  status: ModerationStatus
-  """Suspension end date (required when status=SUSPENDED)"""
-  suspendedUntil: DateTime
-  trustLevel: TrustLevel
-  userId: ID!
-}
-
-type UpdateModerationPayload {
-  userModeration: UserModeration
-}
-
-"""
-Result of UpdateModeration. Select on UpdateModerationPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateModerationResult = ConflictError | ForbiddenError | NotFoundError | UpdateModerationPayload | ValidationError
-
 input UpdateNotificationInput {
   actionUrl: String
   category: NotificationCategory
@@ -13847,14 +12735,26 @@ input UpdatePantryItemInput {
   tags: [String!]
   thresholds: InventoryThresholdsInput
   unit: UnitSpecInput
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
   wasteReason: WasteReason
 }
 
 input UpdatePantryItemLocationInput {
   id: ID!
   storageLocationId: String!
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type UpdatePantryItemLocationPayload {
@@ -14083,7 +12983,13 @@ input UpdateShoppingListInput {
   """
   status: ListStatus
   tags: [String!]
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 input UpdateShoppingListItemInput {
@@ -14099,7 +13005,13 @@ input UpdateShoppingListItemInput {
   sortOrder: String
   storePrefs: StorePreferencesInput
   unit: UnitSpecInput
-  version: Int
+  """
+  Optimistic concurrency control. REQUIRED: the caller is updating a row it
+  already holds, so it has the version — and an update that silently skipped
+  the check when the field was omitted is one that reports success while
+  overwriting somebody else's concurrent edit.
+  """
+  version: Int!
 }
 
 type UpdateShoppingListItemPayload {
@@ -14361,7 +13273,11 @@ input UpdateUserAppealInput {
 }
 
 type UpdateUserAppealPayload {
-  userModeration: UserModeration
+  """
+  The appellant's own view of their record, after the appeal is written.
+  Present on both branches; it is what a non-admin caller reads.
+  """
+  myModeration: MyModerationStatus
 }
 
 """
@@ -14370,28 +13286,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
-
-"""Input for managing restrictions (add and/or remove in one call)."""
-input UpdateUserRestrictionsInput {
-  """Restrictions to add"""
-  add: [ModerationRestriction!]
-  reason: String
-  """Restrictions to remove"""
-  remove: [ModerationRestriction!]
-  restrictedUntil: DateTime
-  userId: ID!
-}
-
-type UpdateUserRestrictionsPayload {
-  userModeration: UserModeration
-}
-
-"""
-Result of UpdateUserRestrictions. Select on UpdateUserRestrictionsPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError
 
 type UploadFormField {
   name: String!
@@ -14581,7 +13475,7 @@ type User {
   defaultHome: Home
   defaultHomeId: ID
   defaultShoppingListId: ID
-  deviceStats: DeviceStats!
+  deviceStats: DeviceStats
   devicesConnection(after: String, before: String, first: Int, last: Int, orderBy: DeviceOrderBy): DeviceConnection!
   dietaryProfile: DietaryProfile
   """
@@ -14604,7 +13498,7 @@ type User {
   language: String
   lastActiveAt: DateTime
   loginHistoryConnection(after: String, before: String, first: Int, last: Int, orderBy: LoginHistoryOrderBy): LoginHistoryConnection!
-  loginHistoryStats(days: Int = 30): LoginHistoryStats!
+  loginHistoryStats(days: Int = 30): LoginHistoryStats
   membershipInHome(homeId: ID!): Membership
   membershipsConnection(after: String, before: String, first: Int, last: Int, orderBy: MembershipOrderBy): MembershipConnection!
   notificationPreferences: NotificationPreferences
@@ -14614,7 +13508,14 @@ type User {
   pendingHomeInvitesConnection(after: String, before: String, first: Int, last: Int): HomeInviteConnection!
   preferredCurrency: String
   profile: UserProfile
-  purchaseStats: PurchaseStats!
+  """
+  Null unless the caller is this user or an admin — the same self-or-admin
+  gate as email/role. Nullable because the gate is a normal outcome, not an
+  error: as a non-null field the denial was a field error that nulled the
+  whole User, and through a non-null edge (a home's members, a recipe's
+  author) it nulled the list containing it.
+  """
+  purchaseStats: PurchaseStats
   purchasesConnection(after: String, before: String, filters: PurchaseFilters, first: Int, last: Int, orderBy: PurchaseOrderBy): PurchaseConnection!
   """Null unless the caller is this user or an admin. See email."""
   role: UserRole
@@ -14623,7 +13524,7 @@ type User {
   settings: UserSettings
   shoppingListInvitesConnection(after: String, before: String, first: Int, last: Int): ShoppingListCollaboratorConnection!
   shoppingListOwnershipsConnection(after: String, before: String, first: Int, last: Int, orderBy: ShoppingListOwnershipOrderBy): ShoppingListOwnershipConnection!
-  suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity!
+  suspiciousLoginActivity(hours: Int = 24): SuspiciousActivity
   timezone: String
   unreadNotificationCount: Int!
   updatedAt: DateTime!
@@ -14678,41 +13579,17 @@ input UserAddressOrderBy {
 }
 
 """
-A page of User results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type UserConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [UserEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One User in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type UserEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The User this edge wraps."""
-  node: User!
-}
-
-"""
 Consolidated per-user event envelope. Discriminate by subtype; branch on
 node's __typename for ACCOUNT_UPDATED / PROFILE_CHANGED and read
 parents / reason / warningCount for the lifecycle subtypes.
 """
 type UserEvent {
   """
-  Originator of the change, for self-echo suppression. For account/profile
-  updates this is the user themselves; for moderation it is the moderator
-  (null for system actions).
+  The user who caused the change — never the user it happened TO. For
+  account/profile updates this is usually the user themselves; for moderation
+  it is the moderator, and null for system actions. For suppressing the echo
+  of your own write, prefer originatorClientId: this field cannot tell your
+  two devices apart.
   """
   actorUserId: ID
   """
@@ -14722,6 +13599,13 @@ type UserEvent {
   """
   mutation: MutationType!
   node: UserEventNode
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   parents: UserEventParents
   reason: String
   subtype: UserSubtype!
@@ -14747,78 +13631,6 @@ type UserEventParents {
   shoppingListId: ID
 }
 
-"""Filter criteria for the admin users list query."""
-input UserFilters {
-  """Free-text search across username / email"""
-  search: String
-}
-
-type UserModeration {
-  abuseScore: Float!
-  appealNotes: String
-  appealStatus: AppealStatus
-  appealedAt: DateTime
-  automatedFlags: [AutomatedFlag!]!
-  banReason: String
-  bannedAt: DateTime
-  createdAt: DateTime!
-  createdBy: User
-  createdById: ID
-  deletedBy: User
-  deletedById: ID
-  id: ID!
-  isBanned: Boolean!
-  isSuspended: Boolean!
-  lastModifiedBy: User
-  lastModifiedById: ID
-  lastViolationAt: DateTime
-  moderatorNotes: String
-  restrictedUntil: DateTime
-  restrictionReason: String
-  restrictions: [ModerationRestriction!]!
-  reviewStartedAt: DateTime
-  riskScore: Float!
-  spamScore: Float!
-  status: ModerationStatus!
-  suspendedAt: DateTime
-  suspendedUntil: DateTime
-  suspensionReason: String
-  trustLevel: TrustLevel!
-  underReview: Boolean!
-  updatedAt: DateTime!
-  user: User!
-  userId: ID!
-  version: Int!
-  violationCount: Int!
-  warningCount: Int!
-}
-
-"""
-A page of UserModeration results. Read "edges" for the rows and "pageInfo" to decide
-whether to request another page.
-"""
-type UserModerationConnection implements Connection {
-  """The rows in this page, in the connection's sort order."""
-  edges: [UserModerationEdge!]!
-  """Cursors and flags describing where this page sits in the full result."""
-  pageInfo: PageInfo!
-  """
-  Total rows matching the query across all pages. Computed only when selected; null when not available.
-  """
-  totalCount: Int
-}
-
-"""
-One UserModeration in a paginated result, paired with the cursor that identifies its
-position. Pass the cursor as "after" to resume from just past this edge.
-"""
-type UserModerationEdge implements Edge {
-  """Opaque position marker for this edge. Do not parse or construct it."""
-  cursor: String!
-  """The UserModeration this edge wraps."""
-  node: UserModeration!
-}
-
 """Sub-input for notification settings within user settings"""
 input UserNotificationSettingsInput {
   emailNotifications: Boolean
@@ -14829,12 +13641,6 @@ input UserNotificationSettingsInput {
   shoppingListUpdates: Boolean
   smsNotifications: Boolean
   weeklyDigest: Boolean
-}
-
-"""Order by options for users"""
-input UserOrderBy {
-  createdAt: SortOrder
-  username: SortOrder
 }
 
 """
@@ -14983,39 +13789,6 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload
-
-"""Input for verifying an item unit conversion (admin only)"""
-input VerifyItemUnitConversionInput {
-  confidence: Float
-  conversionId: ID!
-  notes: String
-}
-
-type VerifyItemUnitConversionPayload {
-  unitConversion: ItemUnitConversion!
-}
-
-"""
-Result of VerifyItemUnitConversion. Select on VerifyItemUnitConversionPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyItemUnitConversionPayload
-
-input VerifyUserEmailInput {
-  id: ID!
-}
-
-type VerifyUserEmailPayload {
-  user: User!
-}
-
-"""
-Result of VerifyUserEmail. Select on VerifyUserEmailPayload for the
-success case; every other member is a business error carrying a message.
-Always include a __typename so the variant can be discriminated.
-"""
-union VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyUserEmailPayload
 
 enum Visibility {
   PRIVATE

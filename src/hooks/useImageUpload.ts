@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import {
   validateImageFile,
@@ -11,7 +11,6 @@ import {
   CreateImageUploadUrlDocument,
   ConfirmProfileImageUploadDocument,
   ConfirmItemImageUploadDocument,
-  UpdateItemImageDocument,
 } from '#operations/image/imageUpload.generated';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
@@ -22,12 +21,12 @@ import {
   type ImageValidationError,
 } from '#utils/imageValidation';
 import { useStore } from '#store';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import {
   isRateLimitError,
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
 import { logger } from '#/utils/environment';
+import type { Translate } from '#/i18n/types';
 
 /**
  * An upload failure whose message is already localized and safe to show. Used
@@ -41,10 +40,6 @@ class UserFacingUploadError extends Error {
     this.userMessage = userMessage;
   }
 }
-
-// Minimal structural type for the translation function so this doesn't depend
-// on i18next's generic `TFunction` namespace typing.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Turns an upload failure into copy a user can act on.
@@ -123,6 +118,17 @@ export interface ItemImageUploadOptions extends ImageUploadOptions {
    * gallery's ordering and its per-photo label; an untagged photo sorts last.
    */
   perspective?: string;
+  /**
+   * Ask for this photo to become the item's hero, demoting the incumbent.
+   *
+   * Honoured only once the photo is APPROVED and only if the caller may edit
+   * the item, so a submission to someone else's catalog item (which lands
+   * PENDING) silently keeps the existing hero. An item's *first* photo becomes
+   * primary on its own, so this only matters when repointing a gallery that
+   * already has one — which is why the picker exposes it rather than the
+   * upload defaulting it to the first file.
+   */
+  makePrimary?: boolean;
 }
 
 export const useImageUpload = () => {
@@ -147,7 +153,6 @@ export const useImageUpload = () => {
   const [confirmProfileUpload] = useMutation(ConfirmProfileImageUploadDocument);
   const [confirmItemUpload] = useMutation(ConfirmItemImageUploadDocument);
   const [updateProfile] = useMutation(UpdateUserProfileDocument);
-  const [updateItemImage] = useMutation(UpdateItemImageDocument);
 
   /**
    * Uploads the bytes to object storage with the server's presigned POST.
@@ -258,85 +263,90 @@ export const useImageUpload = () => {
     setUploading(true);
     setProgress(0);
 
-    const result = await executeMutation(
-      async () => {
-        // For profile images, handle missing file size gracefully
-        let fileToUpload = { ...file };
-        if (isProfileImage && !fileToUpload.fileSize) {
-          logger.warn('File size missing, attempting to determine it...');
-          logger.warn('Proceeding without file size - server will validate');
-        }
+    // Held in a local runner so the try below contains a single plain call —
+    // the React Compiler bails out of this hook when a `?.`/`??`/ternary sits
+    // inside a try body. The catch still covers the whole body, and still
+    // rethrows so callers see the failure.
+    const runUpload = async () => {
+      // For profile images, handle missing file size gracefully
+      let fileToUpload = { ...file };
+      if (isProfileImage && !fileToUpload.fileSize) {
+        logger.warn('File size missing, attempting to determine it...');
+        logger.warn('Proceeding without file size - server will validate');
+      }
 
-        // Validate the image file
-        validateImageFile(fileToUpload, isProfileImage);
+      // Validate the image file
+      validateImageFile(fileToUpload, isProfileImage);
 
-        onProgress?.(10);
+      onProgress?.(10);
 
-        // Step 1: Get presigned URL. The picker's raw type may be the
-        // non-standard 'image/jpg' (some Android providers) — normalize to
-        // the API-accepted set before the mutation or the server rejects it
-        // with a ValidationError.
-        const mimeType = normalizeImageMimeType(
-          fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
-        );
-        const { data: uploadData, error: uploadUrlError } =
-          await createUploadUrl({
-            variables: {
-              input: {
-                mime: mimeType,
-                purpose: purpose,
-                itemId: itemId,
-              },
+      // Step 1: Get presigned URL. The picker's raw type may be the
+      // non-standard 'image/jpg' (some Android providers) — normalize to
+      // the API-accepted set before the mutation or the server rejects it
+      // with a ValidationError.
+      const mimeType = normalizeImageMimeType(
+        fileToUpload.type || getMimeTypeFromUri(fileToUpload.uri),
+      );
+      const { data: uploadData, error: uploadUrlError } = await createUploadUrl(
+        {
+          variables: {
+            input: {
+              mime: mimeType,
+              purpose: purpose,
+              itemId: itemId,
             },
-          });
-
-        const uploadPayload = uploadData?.createImageUploadUrl;
-        if (uploadPayload?.__typename !== 'CreateImageUploadUrlPayload') {
-          // Presign has its own per-user ceiling, and it arrives as a top-level
-          // GraphQL error rather than a member of the result union — so it
-          // lands here with no payload. Without this branch the user is told
-          // the upload simply failed and the server's retryAfter is discarded.
-          if (isRateLimitError(uploadUrlError)) {
-            throw new UserFacingUploadError(
-              getRateLimitMessage(uploadUrlError),
-            );
-          }
-          throw new Error('Failed to get upload URL');
-        }
-        const uploadResult = uploadPayload;
-
-        onProgress?.(30);
-
-        // Step 2: Upload the bytes with the presigned POST
-        await uploadToObjectStorage(
-          fileToUpload,
-          uploadResult,
-          uploadProgress => {
-            onProgress?.(30 + uploadProgress * 0.5);
           },
-        );
+        },
+      );
 
-        onProgress?.(80);
-
-        // Step 3: Confirm upload
-        const finalImageUrl = await confirmUploadFn(uploadResult.key);
-        if (!finalImageUrl) {
-          throw new Error('Failed to confirm upload');
+      const uploadPayload = uploadData?.createImageUploadUrl;
+      if (uploadPayload?.__typename !== 'CreateImageUploadUrlPayload') {
+        // Presign has its own per-user ceiling, and it arrives as a top-level
+        // GraphQL error rather than a member of the result union — so it
+        // lands here with no payload. Without this branch the user is told
+        // the upload simply failed and the server's retryAfter is discarded.
+        if (isRateLimitError(uploadUrlError)) {
+          throw new UserFacingUploadError(getRateLimitMessage(uploadUrlError));
         }
+        throw new Error('Failed to get upload URL');
+      }
+      const uploadResult = uploadPayload;
 
-        onProgress?.(100);
-        onSuccess?.(finalImageUrl);
+      onProgress?.(30);
 
-        setUploading(false);
-        setProgress(0);
-        return finalImageUrl;
-      },
-      error => {
-        setUploading(false);
-        setProgress(0);
-        throw error;
-      },
-    );
+      // Step 2: Upload the bytes with the presigned POST
+      await uploadToObjectStorage(
+        fileToUpload,
+        uploadResult,
+        uploadProgress => {
+          onProgress?.(30 + uploadProgress * 0.5);
+        },
+      );
+
+      onProgress?.(80);
+
+      // Step 3: Confirm upload
+      const finalImageUrl = await confirmUploadFn(uploadResult.key);
+      if (!finalImageUrl) {
+        throw new Error('Failed to confirm upload');
+      }
+
+      onProgress?.(100);
+      onSuccess?.(finalImageUrl);
+
+      setUploading(false);
+      setProgress(0);
+      return finalImageUrl;
+    };
+
+    let result;
+    try {
+      result = await runUpload();
+    } catch (error) {
+      setUploading(false);
+      setProgress(0);
+      throw error;
+    }
 
     return result || null;
   };
@@ -346,31 +356,30 @@ export const useImageUpload = () => {
     purpose: ImageUploadPurpose = ImageUploadPurpose.ProfileAvatar,
     options: ImageUploadOptions = {},
   ): Promise<string | null> => {
-    const result = await executeMutation(
-      () =>
-        uploadImage(
-          file,
-          purpose,
-          true,
-          undefined,
-          async (key: string) => {
-            const { data } = await confirmProfileUpload({
-              variables: { input: { key } },
-            });
-            return data?.confirmProfileImageUpload?.__typename ===
-              'ConfirmProfileImageUploadPayload'
-              ? data.confirmProfileImageUpload.url
-              : null;
-          },
-          options,
-        ),
-      error => {
-        logger.error('Profile image upload failed:', error);
-        const userErrorMessage = uploadErrorMessage(t, error, true);
-        options.onError?.(new Error(userErrorMessage));
-        alertService.alert(t('imageUpload.failedTitle'), userErrorMessage);
-      },
-    );
+    let result;
+    try {
+      result = await uploadImage(
+        file,
+        purpose,
+        true,
+        undefined,
+        async (key: string) => {
+          const { data } = await confirmProfileUpload({
+            variables: { input: { key } },
+          });
+          return data?.confirmProfileImageUpload?.__typename ===
+            'ConfirmProfileImageUploadPayload'
+            ? data.confirmProfileImageUpload.url
+            : null;
+        },
+        options,
+      );
+    } catch (error) {
+      logger.error('Profile image upload failed:', error);
+      const userErrorMessage = uploadErrorMessage(t, error, true);
+      options.onError?.(new Error(userErrorMessage));
+      alertService.alert(t('errors.uploadFailedTitle'), userErrorMessage);
+    }
     return result || null;
   };
 
@@ -379,45 +388,45 @@ export const useImageUpload = () => {
     itemId: string,
     options: ItemImageUploadOptions = {},
   ): Promise<string | null> => {
-    // The angle is set on confirm, not on the presign: until the object is
-    // confirmed there is no ItemImage row to tag.
+    // The angle and the hero flag are both set on confirm, not on the presign:
+    // until the object is confirmed there is no ItemImage row to tag.
     const perspective = toImagePerspective(options.perspective);
-    const result = await executeMutation(
-      () =>
-        uploadImage(
-          file,
-          ImageUploadPurpose.ItemImage,
-          false,
-          itemId,
-          async (key: string) => {
-            const { data } = await confirmItemUpload({
-              variables: {
-                input: { itemId, key, perspective },
-              },
-            });
-            return data?.confirmItemImageUpload?.__typename ===
-              'ConfirmItemImageUploadPayload'
-              ? data.confirmItemImageUpload.url
-              : null;
-          },
-          options,
-        ),
-      error => {
-        logger.error('Item image upload failed:', error);
-        const errorMessage = uploadErrorMessage(t, error, false);
-        // Forward the original when it is already user-facing: `uploadItemImages`
-        // needs to tell a rate limit (retry later, stop now) apart from one bad
-        // file (skip it, keep going).
-        options.onError?.(
-          error instanceof UserFacingUploadError
-            ? error
-            : new Error(errorMessage),
-        );
-        if (!options.suppressAlert) {
-          alertService.alert(t('imageUpload.failedTitle'), errorMessage);
-        }
-      },
-    );
+    const { makePrimary } = options;
+    let result;
+    try {
+      result = await uploadImage(
+        file,
+        ImageUploadPurpose.ItemImage,
+        false,
+        itemId,
+        async (key: string) => {
+          const { data } = await confirmItemUpload({
+            variables: {
+              input: { itemId, key, perspective, makePrimary },
+            },
+          });
+          return data?.confirmItemImageUpload?.__typename ===
+            'ConfirmItemImageUploadPayload'
+            ? data.confirmItemImageUpload.url
+            : null;
+        },
+        options,
+      );
+    } catch (error) {
+      logger.error('Item image upload failed:', error);
+      const errorMessage = uploadErrorMessage(t, error, false);
+      // Forward the original when it is already user-facing: `uploadItemImages`
+      // needs to tell a rate limit (retry later, stop now) apart from one bad
+      // file (skip it, keep going).
+      options.onError?.(
+        error instanceof UserFacingUploadError
+          ? error
+          : new Error(errorMessage),
+      );
+      if (!options.suppressAlert) {
+        alertService.alert(t('errors.uploadFailedTitle'), errorMessage);
+      }
+    }
     return result || null;
   };
 
@@ -435,7 +444,7 @@ export const useImageUpload = () => {
    * length against what they passed before reporting success.
    */
   const uploadItemImages = async (
-    files: Array<ImageFile & { perspective?: string }>,
+    files: Array<ImageFile & { perspective?: string; isPrimary?: boolean }>,
     itemId: string,
     options: ImageUploadOptions = {},
   ): Promise<Array<{ imageUrl: string; perspective: string }>> => {
@@ -448,6 +457,7 @@ export const useImageUpload = () => {
       const imageUrl = await uploadItemImage(file, itemId, {
         onProgress: p => options?.onProgress?.((index + p) / files.length),
         perspective: file.perspective,
+        makePrimary: file.isPrimary,
         suppressAlert: true,
         onError: error => {
           if (error instanceof UserFacingUploadError) fatal = error;
@@ -463,7 +473,7 @@ export const useImageUpload = () => {
       const remaining = files.length - results.length;
       options.onError?.(fatal);
       alertService.alert(
-        t('imageUpload.failedTitle'),
+        t('errors.uploadFailedTitle'),
         t('imageUpload.batchThrottledBody', {
           count: remaining,
           reason: (fatal as UserFacingUploadError).userMessage,
@@ -472,7 +482,7 @@ export const useImageUpload = () => {
     } else if (results.length < files.length) {
       options.onError?.(new Error('Some images failed to upload'));
       alertService.alert(
-        t('imageUpload.failedTitle'),
+        t('errors.uploadFailedTitle'),
         t('imageUpload.batchPartialBody', {
           count: files.length - results.length,
         }),
@@ -483,64 +493,55 @@ export const useImageUpload = () => {
   };
 
   const updateProfileAvatarUrl = async (avatarUrl: string) => {
-    const result = await executeMutation(
-      () =>
-        updateProfile({
-          variables: { input: { avatar: avatarUrl } },
-        }),
-      error => {
-        logger.error('Update profile avatar failed:', error);
-        alertService.alert(
-          t('imageUpload.updateFailedTitle'),
-          t('imageUpload.avatarUpdateFailedBody'),
-        );
-      },
-    );
-    if (!result) return null;
+    let result;
+    try {
+      result = await updateProfile({
+        variables: { input: { avatar: avatarUrl } },
+      });
+    } catch (error) {
+      logger.error('Update profile avatar failed:', error);
+    }
+
+    // `errorPolicy: 'all'` means a failed mutation RESOLVES with `error` set and
+    // a non-success union member — it does not reject. The catch above only
+    // fires when a link itself throws. Both outcomes land here, so the failure
+    // is reported once, in the one place that sees every failure.
+    const payload = result?.data?.updateProfile;
+    if (payload?.__typename !== 'UpdateProfilePayload') {
+      logger.error('Update profile avatar failed:', result?.error ?? payload);
+      alertService.alert(
+        t('imageUpload.updateFailedTitle'),
+        t('imageUpload.avatarUpdateFailedBody'),
+      );
+      return null;
+    }
+
     // Sync avatar to Zustand store so screens reading from the store
     // (e.g. Pantry header) reflect the change immediately.
     useStore.getState().updateUser({ profilePicture: avatarUrl });
-    return result.data?.updateProfile?.__typename === 'UpdateProfilePayload'
-      ? result.data.updateProfile.userProfile
-      : null;
+    return payload.userProfile;
   };
 
   const updateProfileCoverUrl = async (coverImageUrl: string) => {
-    const result = await executeMutation(
-      () =>
-        updateProfile({
-          variables: { input: { coverImage: coverImageUrl } },
-        }),
-      error => {
-        logger.error('Update profile cover failed:', error);
-        alertService.alert(
-          t('imageUpload.updateFailedTitle'),
-          t('imageUpload.coverUpdateFailedBody'),
-        );
-      },
-    );
-    if (!result) return null;
-    return result.data?.updateProfile?.__typename === 'UpdateProfilePayload'
-      ? result.data.updateProfile.userProfile
-      : null;
-  };
+    let result;
+    try {
+      result = await updateProfile({
+        variables: { input: { coverImage: coverImageUrl } },
+      });
+    } catch (error) {
+      logger.error('Update profile cover failed:', error);
+    }
 
-  const updateItemImageUrl = async (id: string, imageUrl: string) => {
-    const result = await executeMutation(
-      () =>
-        updateItemImage({
-          variables: { id, imageUrl },
-        }),
-      error => {
-        logger.error('Update item image failed:', error);
-        alertService.alert(
-          t('imageUpload.updateFailedTitle'),
-          t('imageUpload.itemImageUpdateFailedBody'),
-        );
-      },
-    );
-    if (!result) return null;
-    return result.data?.updateItem || null;
+    const payload = result?.data?.updateProfile;
+    if (payload?.__typename !== 'UpdateProfilePayload') {
+      logger.error('Update profile cover failed:', result?.error ?? payload);
+      alertService.alert(
+        t('imageUpload.updateFailedTitle'),
+        t('imageUpload.coverUpdateFailedBody'),
+      );
+      return null;
+    }
+    return payload.userProfile;
   };
 
   return {
@@ -551,6 +552,5 @@ export const useImageUpload = () => {
     uploadItemImages,
     updateProfileAvatarUrl,
     updateProfileCoverUrl,
-    updateItemImageUrl,
   };
 };

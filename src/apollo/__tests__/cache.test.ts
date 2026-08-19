@@ -1458,6 +1458,146 @@ describe('cache', () => {
     });
   });
 
+  describe('a cursorless refetch is authoritative for the page it covers', () => {
+    const LIST_QUERY = gql`
+      query GetListRefresh($id: ID!, $after: String) {
+        shoppingList(id: $id) {
+          id
+          itemsConnection(after: $after) {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `;
+
+    const edge = (id: string, name: string) => ({
+      __typename: 'ShoppingListItemEdge',
+      node: { __typename: 'ShoppingListItem', id, name },
+    });
+
+    const writePage = (
+      cache: ReturnType<typeof makeCache>,
+      edges: ReturnType<typeof edge>[],
+      pageInfo: { hasNextPage: boolean; endCursor: string | null },
+      variables: { id: string; after?: string } = { id: 'list-1' },
+    ) =>
+      cache.writeQuery({
+        query: LIST_QUERY,
+        variables,
+        data: {
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            itemsConnection: {
+              __typename: 'ShoppingListItemsConnection',
+              edges,
+              pageInfo: { __typename: 'PageInfo', ...pageInfo },
+            },
+          },
+        },
+      });
+
+    const readIds = (cache: ReturnType<typeof makeCache>) =>
+      (
+        cache.readQuery<{
+          shoppingList: {
+            itemsConnection: { edges: { node: { id: string } }[] };
+          };
+        }>({ query: LIST_QUERY, variables: { id: 'list-1' } })?.shoppingList
+          .itemsConnection.edges ?? []
+      ).map(e => e.node.id);
+
+    /** Two pages loaded, four items, more still to come. */
+    const seedTwoPages = () => {
+      const cache = makeCache();
+      writePage(cache, [edge('a', 'A'), edge('b', 'B')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
+      writePage(
+        cache,
+        [edge('c', 'C'), edge('d', 'D')],
+        { hasNextPage: true, endCursor: 'c4' },
+        { id: 'list-1', after: 'c2' },
+      );
+      expect(readIds(cache)).toEqual(['a', 'b', 'c', 'd']);
+      return cache;
+    };
+
+    it('drops an entry removed elsewhere, on a list long enough to paginate', () => {
+      // The defect: the merge only replaced when the refetch reported
+      // `hasNextPage: false`. Any list long enough to paginate fell through to
+      // the append-only branch, which keeps every cached edge — so an item
+      // deleted on another device stayed on screen and pull-to-refresh did
+      // nothing.
+      const cache = seedTwoPages();
+
+      // `b` was deleted elsewhere; page 1 now reads a, c.
+      writePage(cache, [edge('a', 'A'), edge('c', 'C')], {
+        hasNextPage: true,
+        endCursor: 'c3',
+      });
+
+      expect(readIds(cache)).not.toContain('b');
+    });
+
+    it('lands an entry that now sorts first', () => {
+      const cache = seedTwoPages();
+
+      // `d` was renamed and now sorts to the front.
+      writePage(cache, [edge('d', 'AAA'), edge('a', 'A')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
+
+      const ids = readIds(cache);
+      expect(ids[0]).toBe('d');
+      // …and only once, despite still being in the cached tail.
+      expect(ids.filter(id => id === 'd')).toHaveLength(1);
+    });
+
+    it('keeps pages the refresh did not cover', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [edge('a', 'A'), edge('b', 'B')], {
+        hasNextPage: true,
+        endCursor: 'c2',
+      });
+
+      // c and d came from page 2, which this response says nothing about.
+      expect(readIds(cache)).toEqual(['a', 'b', 'c', 'd']);
+    });
+
+    it('still replaces the whole list when the page is the whole list', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [edge('a', 'A')], {
+        hasNextPage: false,
+        endCursor: null,
+      });
+
+      expect(readIds(cache)).toEqual(['a']);
+    });
+
+    it('still ignores an empty page that is not authoritatively empty', () => {
+      const cache = seedTwoPages();
+
+      writePage(cache, [], { hasNextPage: false, endCursor: null });
+
+      // No totalCount saying "zero" — a blip, not a cleared list.
+      expect(readIds(cache)).toEqual(['a', 'b', 'c', 'd']);
+    });
+  });
+
   describe('itemsConnectionFieldPolicy - refetch preserves paginated items', () => {
     const LIST_CONNECTION_QUERY = gql`
       query GetList($id: ID!, $after: String) {

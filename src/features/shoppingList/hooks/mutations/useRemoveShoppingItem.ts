@@ -14,12 +14,9 @@ import { gql } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { removeFromShoppingListItemsCache } from './utils';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { errorService } from '#/services/errorService';
 
 // Minimal cache-read fragments — only the fields the optimistic-update path needs.
 const ShoppingListStatsFragment = gql`
@@ -67,13 +64,15 @@ export function useRemoveShoppingItem({
       ) {
         return;
       }
-      executeCacheUpdate(
-        () =>
-          removeFromShoppingListItemsCache(cache, listId, variables.input.id, {
-            evictItem: true,
-          }),
-        'Cache cleanup failed for removeItem:',
-      );
+      try {
+        removeFromShoppingListItemsCache(cache, listId, variables.input.id, {
+          evictItem: true,
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache cleanup failed for removeItem:',
+        });
+      }
     },
     onError: error => {
       // Network/transient error: queueLink queued the delete for replay — keep
@@ -122,7 +121,7 @@ export function useRemoveShoppingItem({
     const newCompletionRate = newTotal > 0 ? newCompleted / newTotal : 0;
 
     // Apply the removal to the cache before the mutation, and leave it in place.
-    executeCacheUpdate(() => {
+    try {
       removeFromShoppingListItemsCache(client.cache, listId, itemId, {
         evictItem: true,
       });
@@ -135,16 +134,23 @@ export function useRemoveShoppingItem({
           completionRate: () => newCompletionRate,
         },
       });
-    }, 'Remove Shopping List Item (optimistic evict + stats)');
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Remove Shopping List Item (optimistic evict + stats)',
+      });
+    }
 
-    return executeMutation(
-      () =>
-        removeItemMutation({
-          variables: { input: { id: itemId } },
-          context: { localFirst: true },
-        }),
-      'Remove Shopping List Item error:',
-    );
+    try {
+      return await removeItemMutation({
+        variables: { input: { id: itemId } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Remove Shopping List Item error:',
+      });
+      return undefined;
+    }
   };
 
   return { removeItem };

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
@@ -12,6 +13,7 @@ interface UrgentNotificationsBannerProps {
 export const UrgentNotificationsBanner: React.FC<
   UrgentNotificationsBannerProps
 > = ({ urgentNotifications }) => {
+  const { t } = useTranslation();
   const unreadUrgentCount = urgentNotifications.filter(n => !n.isRead).length;
 
   if (unreadUrgentCount === 0) {
@@ -22,8 +24,7 @@ export const UrgentNotificationsBanner: React.FC<
     <View style={styles.urgentBanner}>
       <Icon name="warning-outline" size={20} tone="white" />
       <Text size="sm" weight="bold" style={styles.urgentText}>
-        {unreadUrgentCount} urgent notification
-        {unreadUrgentCount !== 1 ? 's' : ''}
+        {t('notifications.urgentUnread', { count: unreadUrgentCount })}
       </Text>
     </View>
   );

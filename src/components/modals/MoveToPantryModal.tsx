@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
@@ -21,6 +21,11 @@ import { MoveToPantryModal_ShoppingListItemFragmentDoc } from './MoveToPantryMod
 import { PantrySelector } from './moveToPantry/PantrySelector';
 import { StorageStateControl } from './moveToPantry/StorageStateControl';
 import { ExpirationDateField } from './moveToPantry/ExpirationDateField';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface MoveToPantryModalProps {
   visible: boolean;
@@ -103,7 +108,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     setPrevShoppingListItemId(shoppingListItem?.id);
     setPrevSelectedPantryId(selectedPantryId);
     if (visible && shoppingListItem) {
-      setQuantityInput(shoppingListItem.quantity?.toString() || '1');
+      setQuantityInput(formatNumberForInput(shoppingListItem.quantity) || '1');
       setUnitValue(
         shoppingListItem.unit?.symbol || shoppingListItem.unitName || '',
       );
@@ -144,7 +149,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
     // Parse price value (optional)
     const actualPrice = actualPriceInput
-      ? parseFloat(actualPriceInput)
+      ? parseDecimalInput(actualPriceInput)
       : undefined;
 
     onConfirm({
@@ -271,7 +276,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   label={t('moveToPantry.purchasePrice')}
                   value={actualPriceInput}
                   onChangeText={setActualPriceInput}
-                  placeholder="0.00"
+                  placeholder={localizeNumericHint('0.00')}
                   keyboardType="decimal-pad"
                 />
               </View>

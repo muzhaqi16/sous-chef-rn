@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -11,6 +11,11 @@ import { Header } from '#/components/molecules/Header';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -35,16 +40,17 @@ interface PurchaseAmountSheetProps {
 const parseNumberInput = (input: string): number | null => {
   const trimmed = input.trim();
   if (!trimmed) return null;
-  const num = parseFloat(trimmed);
+  const num = parseDecimalInput(trimmed);
   return isNaN(num) || num < 0 ? null : num;
 };
 
 /**
  * Format a price for pre-fill — empty string when unknown so the input renders
- * its placeholder rather than "0".
+ * its placeholder rather than "0", and the device's decimal separator so the
+ * keypad can retype what it shows.
  */
 const formatPrice = (price: number | null): string =>
-  price == null ? '' : String(price);
+  formatNumberForInput(price);
 
 /**
  * PurchaseAmountSheet - Bottom sheet to record the actual purchased amounts.
@@ -168,7 +174,9 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               keyboardType="decimal-pad"
               selectTextOnFocus
               maxLength={10}
-              placeholder={t('purchaseAmountSheet.pricePlaceholder')}
+              placeholder={localizeNumericHint(
+                t('purchaseAmountSheet.pricePlaceholder'),
+              )}
               accessibilityLabel={t('purchaseAmountSheet.price')}
               testID="purchase-price-input"
             />

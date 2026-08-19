@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CreateItemFormData } from '#utils/validation/item';
@@ -18,11 +18,7 @@ import { type FieldDef } from '#/components/molecules/DynamicFormFields';
 // Type-only, so this does not create a runtime cycle with AddItemForm (which
 // imports the field builders below).
 import type { AddItemFormMode } from './AddItemForm';
-
-// Minimal structural type for the translation function so this module doesn't
-// depend on i18next's generic `TFunction` namespace typing. `useTranslation().t`
-// is assignable to it.
-type Translate = (key: string, options?: Record<string, unknown>) => string;
+import type { Translate } from '#/i18n/types';
 
 /** `edit` proposes changes for review; `directEdit` writes them through. Both
  *  render the same form, so most field logic branches on this rather than mode. */

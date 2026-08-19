@@ -18,9 +18,9 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { handleMutationError } from '#/utils/errorHandlers';
+import { errorService } from '#/services/errorService';
 
 export interface DietaryRestriction {
   id: string;
@@ -232,14 +232,17 @@ export const useDietaryProfile = () => {
       'Update Dietary Profile',
     );
 
-    const result = await executeMutation(
-      () =>
-        updateProfile({
-          variables: { input: cleanedUpdates },
-          context: { localFirst: true },
-        }),
-      'Failed to update dietary profile',
-    );
+    let result;
+    try {
+      result = await updateProfile({
+        variables: { input: cleanedUpdates },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to update dietary profile',
+      });
+    }
     if (classifyCreateResult(result) === 'rejected') {
       revert();
     }
@@ -256,18 +259,21 @@ export const useDietaryProfile = () => {
     notes?: string,
     appliesToHomeId?: string,
   ) => {
-    const result = await executeMutation(
-      () =>
-        addRestriction({
-          variables: {
-            input: { ...restriction, severity, notes, appliesToHomeId },
-          },
-          // No optimisticResponse to tear down — queue offline and replay
-          // idempotently; the cache update runs on the (replayed) response.
-          context: { localFirst: true },
-        }),
-      'Failed to add dietary restriction',
-    );
+    let result;
+    try {
+      result = await addRestriction({
+        variables: {
+          input: { ...restriction, severity, notes, appliesToHomeId },
+        },
+        // No optimisticResponse to tear down — queue offline and replay
+        // idempotently; the cache update runs on the (replayed) response.
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to add dietary restriction',
+      });
+    }
     return result ? !!result.data : false;
   };
 
@@ -292,14 +298,17 @@ export const useDietaryProfile = () => {
       'Update Dietary Restriction',
     );
 
-    const result = await executeMutation(
-      () =>
-        updateRestriction({
-          variables: { input: { id, ...updates } },
-          context: { localFirst: true },
-        }),
-      'Failed to update dietary restriction',
-    );
+    let result;
+    try {
+      result = await updateRestriction({
+        variables: { input: { id, ...updates } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to update dietary restriction',
+      });
+    }
     if (classifyCreateResult(result) === 'rejected') {
       revert();
     }
@@ -307,16 +316,19 @@ export const useDietaryProfile = () => {
   };
 
   const removeDietaryRestriction = async (id: string) => {
-    const result = await executeMutation(
-      () =>
-        removeRestriction({
-          variables: { input: { id } },
-          // No optimisticResponse to tear down — queue offline and replay
-          // idempotently; the cache removal runs on the (replayed) response.
-          context: { localFirst: true },
-        }),
-      'Failed to remove dietary restriction',
-    );
+    let result;
+    try {
+      result = await removeRestriction({
+        variables: { input: { id } },
+        // No optimisticResponse to tear down — queue offline and replay
+        // idempotently; the cache removal runs on the (replayed) response.
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Failed to remove dietary restriction',
+      });
+    }
     return result ? !!result.data : false;
   };
 

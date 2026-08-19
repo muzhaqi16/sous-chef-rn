@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';

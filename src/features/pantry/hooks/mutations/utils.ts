@@ -13,6 +13,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import type { UnitSelection, FormDataInput } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 // Cache updater for adding items to Pantry.itemsConnection
 export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
@@ -50,16 +51,22 @@ export function buildOptimisticUnit(
 }
 
 /**
- * Build dirty input for update mutation (only changed fields)
+ * Build dirty input for update mutation (only changed fields).
+ *
+ * `version` is excluded: it is not a field the form can dirty. The caller adds
+ * it from the entity it is updating — the server requires it for the
+ * optimistic-concurrency check.
  */
+type DirtyUpdateInput = Omit<UpdatePantryItemInput, 'id' | 'version'>;
+
 export function buildDirtyUpdateInput(
   data: FormDataInput,
   dirtyFields: Record<string, boolean>,
   locationId: string | null,
   brandId: string | null,
   unitSymbol?: string | null,
-): Omit<UpdatePantryItemInput, 'id'> {
-  const input: Omit<UpdatePantryItemInput, 'id'> = {};
+): DirtyUpdateInput {
+  const input: DirtyUpdateInput = {};
 
   if (dirtyFields.itemName) {
     input.itemName = data.itemName;
@@ -103,12 +110,12 @@ export function buildDirtyUpdateInput(
   const thresholds: InventoryThresholdsInput = {};
   if (dirtyFields.minQuantity) {
     thresholds.minQuantity = data.minQuantity
-      ? parseFloat(data.minQuantity)
+      ? parseDecimalInput(data.minQuantity)
       : null;
   }
   if (dirtyFields.restockQuantity) {
     thresholds.restockQuantity = data.restockQuantity
-      ? parseFloat(data.restockQuantity)
+      ? parseDecimalInput(data.restockQuantity)
       : null;
   }
   if (Object.keys(thresholds).length > 0) {
@@ -119,7 +126,7 @@ export function buildDirtyUpdateInput(
   const netWeightInput: NetWeightInput = {};
   if (dirtyFields.netWeight) {
     netWeightInput.netWeight = data.netWeight
-      ? parseFloat(data.netWeight)
+      ? parseDecimalInput(data.netWeight)
       : null;
   }
   if (dirtyFields.netWeightUnit || dirtyFields.netWeightUnitId) {
@@ -131,7 +138,7 @@ export function buildDirtyUpdateInput(
   // is dropped rather than sent alone.
   if (netWeightInput.netWeightUnitId) {
     if (netWeightInput.netWeight === undefined && data.netWeight) {
-      netWeightInput.netWeight = parseFloat(data.netWeight);
+      netWeightInput.netWeight = parseDecimalInput(data.netWeight);
     }
     if (netWeightInput.netWeight == null) {
       delete netWeightInput.netWeightUnitId;

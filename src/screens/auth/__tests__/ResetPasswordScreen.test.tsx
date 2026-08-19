@@ -1,13 +1,17 @@
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
+import { useRoute } from '@react-navigation/native';
 import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import type { RootState } from '#store';
-import { ResetPasswordDocument } from '#operations/auth/auth.generated';
+import {
+  ResetPasswordDocument,
+  ValidatePasswordResetTokenDocument,
+} from '#operations/auth/auth.generated';
 import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { ResetPasswordScreen } from '../ResetPasswordScreen';
 
 // --- Mocks ---
@@ -50,7 +54,7 @@ jest.mock('#/hooks/useToast', () => ({
   useToast: () => mockToast,
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#/utils/iconUtils', () => ({
   Icon: 'Icon',
@@ -121,6 +125,44 @@ jest.mock('#components/base/Button', () => {
   };
 });
 
+const TOKEN = 'valid-token-0123456789';
+
+/**
+ * The screen validates the link's token before it does anything
+ * session-affecting, so every render needs a verdict for that call.
+ */
+const validateMock = (
+  status: PasswordActionStatus | 'error' = PasswordActionStatus.Sent,
+): MockedResponse => {
+  const request = {
+    query: ValidatePasswordResetTokenDocument,
+    variables: { input: { token: TOKEN } },
+  };
+  return status === 'error'
+    ? { request, error: new Error('network down'), maxUsageCount: 99 }
+    : {
+        request,
+        maxUsageCount: 99,
+        result: {
+          data: {
+            validatePasswordResetToken: {
+              __typename: 'ValidatePasswordResetTokenPayload',
+              status,
+            },
+          },
+        },
+      };
+};
+
+/** Render with an accepted token and wait for the form to appear. */
+const renderOnForm = async (extraMocks: MockedResponse[] = []) => {
+  const result = renderWithApollo(<ResetPasswordScreen />, {
+    operationMocks: [validateMock(), ...extraMocks],
+  });
+  await screen.findByText('Reset Your Password');
+  return result;
+};
+
 const NEW_PASSWORD_INPUT = () =>
   screen.getByTestId('password-input-Enter your new password');
 const CONFIRM_PASSWORD_INPUT = () =>
@@ -129,44 +171,97 @@ const CONFIRM_PASSWORD_INPUT = () =>
 describe('ResetPasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // clearAllMocks wipes calls but keeps implementations, and one test below
+    // swaps the route params — restore the default link for every test.
+    (useRoute as jest.Mock).mockImplementation(() => ({
+      params: { token: TOKEN },
+      key: 'test-key',
+      name: 'ResetPassword',
+    }));
   });
 
-  it('renders the reset password form when token is valid', () => {
-    renderWithApollo(<ResetPasswordScreen />);
+  it('renders the reset password form when token is valid', async () => {
+    await renderOnForm();
     expect(screen.getByText('Reset Your Password')).toBeTruthy();
   });
 
-  it('renders password fields', () => {
-    renderWithApollo(<ResetPasswordScreen />);
+  it('renders password fields', async () => {
+    await renderOnForm();
     expect(screen.getByText('New Password')).toBeTruthy();
     expect(screen.getByText('Confirm Password')).toBeTruthy();
   });
 
-  it('renders the reset password button', () => {
-    renderWithApollo(<ResetPasswordScreen />);
+  it('renders the reset password button', async () => {
+    await renderOnForm();
     expect(screen.getByText('Reset Password')).toBeTruthy();
   });
 
-  it('renders description text', () => {
-    renderWithApollo(<ResetPasswordScreen />);
+  it('renders description text', async () => {
+    await renderOnForm();
     expect(screen.getByText(/Enter your new password below/)).toBeTruthy();
   });
 
-  it('calls clearAuth on mount', () => {
+  // Opening a link must not end a session by itself — any web page can present
+  // one. These four cover the whole rule: the session survives until the SERVER
+  // says the token is genuine, and survives outright if it says otherwise.
+  it('does NOT clear the session before the token is validated', () => {
+    renderWithApollo(<ResetPasswordScreen />, {
+      operationMocks: [validateMock()],
+    });
+
+    expect(screen.getByTestId('reset-password-checking')).toBeTruthy();
+    expect(mockClearAuth).not.toHaveBeenCalled();
+  });
+
+  it('clears the session only once the server accepts the token', async () => {
+    await renderOnForm();
+    expect(mockClearAuth).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the session and shows the invalid-link view for a spent token', async () => {
+    renderWithApollo(<ResetPasswordScreen />, {
+      operationMocks: [validateMock(PasswordActionStatus.InvalidOrExpired)],
+    });
+
+    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+    expect(mockClearAuth).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session and shows the invalid-link view when the link carries no token', () => {
+    // The invalid-link guard runs before the checking guard, so a malformed
+    // link never reaches the server and never touches the session.
+    (useRoute as jest.Mock).mockReturnValue({
+      params: {},
+      key: 'test-key',
+      name: 'ResetPassword',
+    });
+
     renderWithApollo(<ResetPasswordScreen />);
-    expect(mockClearAuth).toHaveBeenCalled();
+
+    expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
+    expect(mockClearAuth).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session when the token cannot be checked at all', async () => {
+    // An unreachable server is not proof the link is good — fail closed.
+    renderWithApollo(<ResetPasswordScreen />, {
+      operationMocks: [validateMock('error')],
+    });
+
+    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+    expect(mockClearAuth).not.toHaveBeenCalled();
   });
 
   it('calls goBack when header close button is pressed', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />);
+    await renderOnForm();
     await user.press(screen.getByTestId('header-close'));
     expect(mockGoBack).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the submit button disabled until the confirmation is filled in', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />);
+    await renderOnForm();
 
     const submit = screen.getByTestId('button-Reset Password');
     expect(submit).toBeDisabled();
@@ -178,7 +273,7 @@ describe('ResetPasswordScreen', () => {
 
   it('enables the submit button once both passwords are valid and match', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />);
+    await renderOnForm();
 
     await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
@@ -188,7 +283,7 @@ describe('ResetPasswordScreen', () => {
 
   it('keeps the submit button disabled when the passwords do not match', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />);
+    await renderOnForm();
 
     await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123?');
@@ -198,7 +293,7 @@ describe('ResetPasswordScreen', () => {
 
   it('keeps the submit button disabled for a password that fails complexity', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />);
+    await renderOnForm();
 
     await user.type(NEW_PASSWORD_INPUT(), 'alllowercase');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'alllowercase');
@@ -249,7 +344,7 @@ describe('ResetPasswordScreen', () => {
     ];
 
     const user = userEvent.setup();
-    renderWithApollo(<ResetPasswordScreen />, { operationMocks });
+    await renderOnForm(operationMocks);
 
     await user.type(NEW_PASSWORD_INPUT(), 'Test123!');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'Test123!');
@@ -263,7 +358,6 @@ describe('ResetPasswordScreen', () => {
 describe('ResetPasswordScreen - invalid token', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { useRoute } = require('@react-navigation/native');
     (useRoute as jest.Mock).mockReturnValue({
       params: { token: 'short' },
       key: 'test-key',

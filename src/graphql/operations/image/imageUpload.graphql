@@ -71,26 +71,3 @@ mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
 # Use: updateProfile(input: { avatar: null }) to remove avatar
 # Use: updateProfile(input: { coverImage: $url }) to set cover
 # Use: updateProfile(input: { coverImage: null }) to remove cover
-
-mutation UpdateItemImage($id: ID!, $imageUrl: String!) {
-  updateItem(input: { id: $id, media: { imageUrl: $imageUrl } }) {
-    __typename
-    ... on UpdateItemPayload {
-      item {
-        id
-        imageUrl
-      }
-    }
-    ... on Error {
-      code
-      message
-    }
-    ... on NotFoundError {
-      resource
-      resourceId
-    }
-    ... on ValidationError {
-      field
-    }
-  }
-}

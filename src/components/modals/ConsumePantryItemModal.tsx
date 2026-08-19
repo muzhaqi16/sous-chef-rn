@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { CollapsibleChipPicker } from '#components/molecules/CollapsibleChipPicker';
@@ -20,6 +20,10 @@ import {
 } from './PantryActionModal';
 import { type PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { Text } from '#components/atoms/Text';
+import {
+  formatNumberForInput,
+  localizeNumericHint,
+} from '#/utils/formatters/number';
 
 interface ConsumePantryItemModalProps {
   visible: boolean;
@@ -58,7 +62,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
     _defaultUnit: SelectedUnitInfo | null,
     increment: number | null,
   ) => {
-    setQuantityInput(increment ? increment.toString() : '1');
+    setQuantityInput(increment ? formatNumberForInput(increment) : '1');
     setPurpose(UsagePurpose.General);
   };
 
@@ -146,7 +150,9 @@ const ConsumeActionFields: React.FC<{
           required
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder={t('consumeItem.quantityPlaceholder')}
+          placeholder={localizeNumericHint(
+            t('consumeItem.quantityPlaceholder'),
+          )}
           keyboardType="numeric"
           useBottomSheetInput
         />
@@ -162,7 +168,9 @@ const ConsumeActionFields: React.FC<{
             shared.selectedUnitInfo?.conversionConfidence ?? null
           }
           commonFractions={shared.commonFractions}
-          onFractionSelect={value => setQuantityInput(value.toString())}
+          onFractionSelect={value =>
+            setQuantityInput(formatNumberForInput(value))
+          }
           selectedFractionValue={consumeAmount ?? undefined}
         />
         {showFifoHint ? (

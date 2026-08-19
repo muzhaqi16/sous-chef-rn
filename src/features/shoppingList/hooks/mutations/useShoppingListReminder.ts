@@ -7,7 +7,7 @@
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
@@ -18,7 +18,7 @@ import {
 } from './useShoppingListReminder.generated';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { applyOptimisticFragmentPatch } from '#/apollo/utils/cacheUpdaters';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
+import { errorService } from '#/services/errorService';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
@@ -57,14 +57,17 @@ export function useShoppingListReminder() {
       'Set Reminder',
     );
 
-    const result = await executeMutation(
-      () =>
-        setMutation({
-          variables: { input: { id, reminderDate, reminderEnabled } },
-          context: { localFirst: true },
-        }),
-      'Set Reminder error:',
-    );
+    let result;
+    try {
+      result = await setMutation({
+        variables: { input: { id, reminderDate, reminderEnabled } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Set Reminder error:',
+      });
+    }
 
     if (!result) {
       revert();
@@ -84,14 +87,17 @@ export function useShoppingListReminder() {
       'Clear Reminder',
     );
 
-    const result = await executeMutation(
-      () =>
-        clearMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Clear Reminder error:',
-    );
+    let result;
+    try {
+      result = await clearMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Clear Reminder error:',
+      });
+    }
 
     if (!result) {
       revert();

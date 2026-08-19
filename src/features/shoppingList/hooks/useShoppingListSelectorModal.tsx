@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
@@ -13,7 +13,6 @@ import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import type {
   SelectorConfig,
@@ -141,16 +140,18 @@ export function useShoppingListSelectorModal({
               subscriptionService.registerParentDeletion(id),
             );
 
-            const result = await executeMutation(
-              () => Promise.all(idsToDelete.map(id => deleteShoppingList(id))),
-              () => {
-                // Deletion failed — unregister immediately
-                idsToDelete.forEach(id =>
-                  subscriptionService.unregisterParentDeletion(id),
-                );
-                toastService.error(t('shoppingListSelector.deleteFailed'));
-              },
-            );
+            let result;
+            try {
+              result = await Promise.all(
+                idsToDelete.map(id => deleteShoppingList(id)),
+              );
+            } catch {
+              // Deletion failed — unregister immediately
+              idsToDelete.forEach(id =>
+                subscriptionService.unregisterParentDeletion(id),
+              );
+              toastService.error(t('shoppingListSelector.deleteFailed'));
+            }
 
             if (!result) return;
 

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useStore } from '#store';

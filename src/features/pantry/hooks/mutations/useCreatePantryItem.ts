@@ -11,7 +11,7 @@
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import {
   CreatePantryItemDocument,
   RestockPantryItemDocument,
@@ -26,14 +26,12 @@ import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPan
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import {
-  executeCacheUpdate,
-  executeMutation,
-  isSuccessPayload,
-} from '#/utils/compilerSafeWrappers';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import type { CreatePantryItemParams } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { errorService } from '#/services/errorService';
 
 interface UseCreatePantryItemOptions {
   pantryId: string | undefined;
@@ -69,10 +67,13 @@ export function useCreatePantryItem({
         return;
       const pantryItem = payload.pantryItem;
 
-      executeCacheUpdate(
-        () => addToPantryItemsCache(cache, pantryId, pantryItem),
-        'Cache update failed:',
-      );
+      try {
+        addToPantryItemsCache(cache, pantryId, pantryItem);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Cache update failed:',
+        });
+      }
     },
   });
 
@@ -123,10 +124,10 @@ export function useCreatePantryItem({
         ? {
             thresholds: {
               ...(input.minQuantity && {
-                minQuantity: parseFloat(input.minQuantity),
+                minQuantity: parseDecimalInput(input.minQuantity),
               }),
               ...(input.restockQuantity && {
-                restockQuantity: parseFloat(input.restockQuantity),
+                restockQuantity: parseDecimalInput(input.restockQuantity),
               }),
             },
           }
@@ -137,7 +138,7 @@ export function useCreatePantryItem({
       ...(input.netWeight && input.netWeightUnitId
         ? {
             netWeight: {
-              netWeight: parseFloat(input.netWeight),
+              netWeight: parseDecimalInput(input.netWeight),
               netWeightUnitId: input.netWeightUnitId,
             },
           }
@@ -172,31 +173,32 @@ export function useCreatePantryItem({
     // Write the item into the cache before firing, so it shows immediately and
     // stays if the create is queued offline (the queue replays it later, keyed by
     // this id).
-    executeCacheUpdate(
-      () =>
-        addToPantryItemsCache(
-          client.cache,
-          targetPantryId,
-          buildOptimisticPantryItem(
-            id,
-            {
-              pantryId: targetPantryId,
-              itemName: input.itemName?.trim() ?? '',
-              quantity: quantityValue,
-              itemId: input.selectedItemId,
-              unitId,
-              storageState: input.storageState,
-              expiresAt: input.expirationDate?.toISOString() ?? null,
-              location: input.location?.trim() || null,
-              minQuantity: input.minQuantity
-                ? parseFloat(input.minQuantity)
-                : null,
-            },
-            client.cache,
-          ),
-        ),
-      'Add Pantry Item (optimistic)',
+    // Built before the try: the `?.`/`??`/ternary below are value blocks, and
+    // the React Compiler bails out of a hook when one appears inside a try body.
+    const optimisticItem = buildOptimisticPantryItem(
+      id,
+      {
+        pantryId: targetPantryId,
+        itemName: input.itemName?.trim() ?? '',
+        quantity: quantityValue,
+        itemId: input.selectedItemId,
+        unitId,
+        storageState: input.storageState,
+        expiresAt: input.expirationDate?.toISOString() ?? null,
+        location: input.location?.trim() || null,
+        minQuantity: input.minQuantity
+          ? parseDecimalInput(input.minQuantity)
+          : null,
+      },
+      client.cache,
     );
+    try {
+      addToPantryItemsCache(client.cache, targetPantryId, optimisticItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Pantry Item (optimistic)',
+      });
+    }
 
     const result = await createMutation({
       variables: { input: mutationInput },
@@ -227,29 +229,34 @@ export function useCreatePantryItem({
           onCancel: () => resolve(false),
           onRestock: async () => {
             const restockQuantity = quantityValue ?? 1;
-            const restockResult = await executeMutation(
-              () =>
-                restockMutation({
-                  variables: {
-                    input: {
-                      id: duplicateInfo.existingPantryItemId,
-                      quantity: restockQuantity,
-                      // Carry the expiry the user entered into the restock batch
-                      // (the full-add form doesn't collect cost/store).
-                      ...(input.expirationDate && {
-                        expiresAt: input.expirationDate.toISOString(),
-                      }),
-                      // idempotencyKey dedups the restock ledger row on replay.
-                      idempotencyKey: generateEntityId(),
-                    },
-                  },
-                  // Local-first: queued offline, replayed as the canonical
-                  // mutation (deduped by its idempotencyKey).
-                  context: { localFirst: true },
-                }),
-              'Restock pantry item error:',
-            );
-            // executeMutation returns false only when the call threw; under
+            // Built before the try — the conditional spread is a value block,
+            // and the React Compiler bails out of this hook when one sits
+            // inside a try body.
+            const restockInput = {
+              id: duplicateInfo.existingPantryItemId,
+              quantity: restockQuantity,
+              // Carry the expiry the user entered into the restock batch
+              // (the full-add form doesn't collect cost/store).
+              ...(input.expirationDate && {
+                expiresAt: input.expirationDate.toISOString(),
+              }),
+              // idempotencyKey dedups the restock ledger row on replay.
+              idempotencyKey: generateEntityId(),
+            };
+            let restockResult;
+            try {
+              restockResult = await restockMutation({
+                variables: { input: restockInput },
+                // Local-first: queued offline, replayed as the canonical
+                // mutation (deduped by its idempotencyKey).
+                context: { localFirst: true },
+              });
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'Restock pantry item error:',
+              });
+            }
+            // `restockResult` is undefined only when the call threw; under
             // errorPolicy 'all' a transport/GraphQL error instead resolves as
             // `{ error }`. restockMutation has no `onError`, so surface both the
             // throw and the resolved-error cases here.
@@ -277,15 +284,18 @@ export function useCreatePantryItem({
             resolve(true);
           },
           onAddAnyway: async () => {
-            const retryResult = await executeMutation(
-              () =>
-                createMutation({
-                  variables: {
-                    input: { ...mutationInput, forceAdd: true },
-                  },
-                }),
-              'Force add pantry item error:',
-            );
+            let retryResult;
+            try {
+              retryResult = await createMutation({
+                variables: {
+                  input: { ...mutationInput, forceAdd: true },
+                },
+              });
+            } catch (error) {
+              errorService.reportError(error, {
+                operation: 'Force add pantry item error:',
+              });
+            }
             if (!retryResult) {
               alertService.alert(
                 t('labels.error'),

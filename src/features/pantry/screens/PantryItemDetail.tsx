@@ -16,7 +16,7 @@ import {
   PantryItemDetail_PantryItemFragmentDoc,
   type PantryItemDetail_PantryItemFragment,
 } from '#features/pantry/screens/PantryItemDetail.generated';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   GetPantryItemDocument,
   GetPantryItemBatchesDocument,
@@ -52,7 +52,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
-import { executeRefreshWithFinally } from '#/utils/compilerSafeWrappers';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#/components/base/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
@@ -211,7 +211,7 @@ export const PantryItemDetail: React.FC<
   const imageUrl = resolveImageUrl(item, 'large');
   const expiryInfo = getExpiryInfo(item?.expiresAt);
   const daysInPantry = getDaysInPantry(item?.createdAt);
-  const storageStateDisplay = formatStorageState(item?.storageState);
+  const storageStateDisplay = formatStorageState(item?.storageState, t);
   const brandName = item?.brand?.name || null;
   const categoryName = item?.item?.categories?.[0]?.category?.name || null;
   const itemPhotos = galleryPhotos(item?.item?.photos);
@@ -497,6 +497,7 @@ export const PantryItemDetail: React.FC<
           photos={itemPhotos}
           initialIndex={viewerIndex ?? 0}
           onClose={() => setViewerIndex(null)}
+          canEdit={!!item.item?.canEdit}
         />
       )}
     </>

@@ -25,6 +25,11 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   earliestBatchExpiration
   item {
     id
+    # Gates the photo viewer's "set as main photo" action. Viewer-scoped, but it
+    # costs this query nothing: the cache-policy warning in the schema applies to
+    # the root `item(id:)` read, and a pantry item's response is already
+    # PRIVATE/no-store for its membership data.
+    canEdit
     imageUrl
     images { url kind }
     photos {

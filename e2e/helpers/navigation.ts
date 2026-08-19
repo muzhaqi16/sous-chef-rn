@@ -48,7 +48,7 @@ export async function navigateToProfile() {
  */
 export async function goBack() {
   if (device.getPlatform() === 'ios') {
-    await tapByID('back-button');
+    await tapByID('header-back-button');
   } else {
     await device.pressBack();
   }

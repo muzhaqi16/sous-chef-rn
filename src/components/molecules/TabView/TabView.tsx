@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '#/i18n';
 import { View, useWindowDimensions } from 'react-native';
 import {
   TabView as RNTabView,
@@ -47,11 +48,12 @@ const ThemedTabBar = withUnistyles(TabBar<TabRoute>, theme => ({
 }));
 
 const DefaultLazyPlaceholder: React.FC<{ route: TabRoute }> = ({ route }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.placeholder}>
       <ThemedActivityIndicator size="large" />
       <Text size="md" tone="secondary">
-        Loading {route.title}...
+        {t('loading.loadingNamed', { name: route.title })}
       </Text>
     </View>
   );

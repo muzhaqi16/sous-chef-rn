@@ -1,4 +1,5 @@
 import React, { ReactNode, useState } from 'react';
+import { useTranslation } from '#/i18n';
 import {
   View,
   TextInput,
@@ -54,6 +55,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   ref,
   ...textInputProps
 }) => {
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && Boolean(value && value.length > 0);
@@ -108,7 +110,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             onPress={onClear}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityRole="button"
-            accessibilityLabel="Clear input"
+            accessibilityLabel={t('labels.clearInput')}
           >
             <Icon name="close" size={18} tone="textSecondary" />
           </AppPressable>

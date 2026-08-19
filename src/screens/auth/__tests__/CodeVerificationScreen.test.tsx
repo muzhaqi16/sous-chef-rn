@@ -82,7 +82,7 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
   }),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#components/templates/AuthWrapper', () => {
   const { View } = require('react-native');

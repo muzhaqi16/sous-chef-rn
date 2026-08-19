@@ -63,7 +63,13 @@ export interface BarcodeScannerState {
   resetScanner: () => void;
 }
 
-const initialBarcodeScannerState = {
+/**
+ * The slice with nothing in it, including `recentlyScanned` — which
+ * `resetScanner` deliberately keeps (it survives closing the scanner) but a
+ * session end must not. Exported so `resetManager` clears the whole slice
+ * rather than a hand-copied subset of it.
+ */
+export const initialBarcodeScannerState = {
   scannedBarcode: null,
   isScanning: false,
   searchResults: [],

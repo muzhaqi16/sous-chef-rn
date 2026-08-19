@@ -42,12 +42,9 @@ import {
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { handleMutationError } from '#/utils/errorHandlers';
-import {
-  executeCacheUpdate,
-  executeMutation,
-} from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
+import { errorService } from '#/services/errorService';
 
 const addToMealPlans = createAddToQueryConnectionUpdater(
   'mealPlans',
@@ -254,22 +251,29 @@ export function useMealPlanActions() {
       ? buildOptimisticMealPlan(client.cache, id, input, user.id)
       : null;
     if (optimisticPlan) {
-      executeCacheUpdate(() => {
+      try {
         writePlan(optimisticPlan);
         // Make the complete-gated detail screen render offline too.
         writePlanDetailStub(id);
         addToMealPlans(client.cache, optimisticPlan, { position: 'start' });
-      }, 'Create Meal Plan (optimistic)');
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Create Meal Plan (optimistic)',
+        });
+      }
     }
 
-    const result = await executeMutation(
-      () =>
-        createMealPlanMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Create Meal Plan error:',
-    );
+    let result;
+    try {
+      result = await createMealPlanMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Create Meal Plan error:',
+      });
+    }
 
     // Released on every outcome: acknowledged and rejected both leave nothing
     // for a detail read to miss, and a queued create has already been handed
@@ -280,10 +284,13 @@ export function useMealPlanActions() {
 
     if (outcome === 'rejected') {
       if (optimisticPlan) {
-        executeCacheUpdate(
-          () => removeFromMealPlans(client.cache, id, { evictItem: true }),
-          'Revert rejected Meal Plan',
-        );
+        try {
+          removeFromMealPlans(client.cache, id, { evictItem: true });
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected Meal Plan',
+          });
+        }
       }
       return result ? result.data?.createMealPlan ?? null : null;
     }
@@ -302,29 +309,38 @@ export function useMealPlanActions() {
     const snapshot = readPlanSnapshot(id);
     // Permanent write BEFORE firing — survives an offline/API-down queue.
     if (snapshot) {
-      executeCacheUpdate(
-        () => writePlan(mergeUpdateIntoSnapshot(snapshot, input)),
-        'Update Meal Plan (optimistic)',
-      );
+      try {
+        writePlan(mergeUpdateIntoSnapshot(snapshot, input));
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Update Meal Plan (optimistic)',
+        });
+      }
     }
 
-    const result = await executeMutation(
-      () =>
-        updateMealPlanMutation({
-          variables: { input: { ...input, id } },
-          context: { localFirst: true },
-        }),
-      'Update Meal Plan error:',
-    );
+    let result;
+    try {
+      result = await updateMealPlanMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Update Meal Plan error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {
-        executeCacheUpdate(
-          () => writePlan(snapshot),
-          'Revert rejected Meal Plan update',
-        );
+        try {
+          writePlan(snapshot);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected Meal Plan update',
+          });
+        }
       }
       return result ? result.data?.updateMealPlan ?? null : null;
     }
@@ -341,28 +357,38 @@ export function useMealPlanActions() {
     // Local-first: remove from the cache BEFORE firing, so the deletion is
     // visible immediately and survives an offline queue (a duplicate replay
     // surfaces as NotFound, which the queue drops).
-    executeCacheUpdate(
-      () => removeFromMealPlans(client.cache, id, { evictItem: true }),
-      'Delete Meal Plan (optimistic)',
-    );
+    try {
+      removeFromMealPlans(client.cache, id, { evictItem: true });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Meal Plan (optimistic)',
+      });
+    }
 
-    const result = await executeMutation(
-      () =>
-        deleteMealPlanMutation({
-          variables: { input: { id } },
-          context: { localFirst: true },
-        }),
-      'Delete Meal Plan error:',
-    );
+    let result;
+    try {
+      result = await deleteMealPlanMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Delete Meal Plan error:',
+      });
+    }
 
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
       if (snapshot) {
-        executeCacheUpdate(() => {
+        try {
           writePlan(snapshot);
           addToMealPlans(client.cache, snapshot, { position: 'start' });
-        }, 'Restore refused Meal Plan delete');
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Restore refused Meal Plan delete',
+          });
+        }
       }
       return false;
     }

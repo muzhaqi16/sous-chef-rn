@@ -25,7 +25,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Deterministic client-minted cooking-log id so we can assert the mutation
 // sends it.

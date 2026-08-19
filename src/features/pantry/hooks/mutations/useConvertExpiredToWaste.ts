@@ -22,9 +22,9 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { handleMutationError } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
+import { errorService } from '#/services/errorService';
 
 interface UseConvertExpiredToWasteOptions {
   onSuccess?: () => void;
@@ -90,10 +90,13 @@ export function useConvertExpiredToWaste({
       clearQuantityPersistence();
       clearConditionPersistence();
     };
-    executeCacheUpdate(
-      () => writeState(0, ItemCondition.Spoiled),
-      'Convert Expired To Waste (optimistic)',
-    );
+    try {
+      writeState(0, ItemCondition.Spoiled);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Convert Expired To Waste (optimistic)',
+      });
+    }
 
     const result = await convertMutation({
       variables: {
@@ -108,10 +111,13 @@ export function useConvertExpiredToWaste({
       // Only revert from a real snapshot — falling back to 0/SPOILED would
       // re-apply the optimistic write instead of restoring the item.
       if (snapshot) {
-        executeCacheUpdate(
-          () => writeState(snapshot.quantity, snapshot.condition),
-          'Revert rejected expired-to-waste convert',
-        );
+        try {
+          writeState(snapshot.quantity, snapshot.condition);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected expired-to-waste convert',
+          });
+        }
       }
       clearPersistence();
       // onError covers transport errors; a non-success union payload has none.

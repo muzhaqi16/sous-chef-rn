@@ -50,7 +50,7 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
+jest.mock('#/utils/finallyHelpers', () => ({
   executeMutation: jest.fn(<T>(fn: () => Promise<T>) => fn()),
 }));
 

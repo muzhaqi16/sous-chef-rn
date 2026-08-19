@@ -50,15 +50,8 @@ jest.mock('../utils', () => ({
   addToPantryItemsCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers', () => ({
-  ...jest.requireActual('#/utils/compilerSafeWrappers'),
-  executeCacheUpdate: jest.fn((fn: () => void) => {
-    try {
-      fn();
-    } catch {
-      // swallow
-    }
-  }),
+jest.mock('#/utils/finallyHelpers', () => ({
+  ...jest.requireActual('#/utils/finallyHelpers'),
   executeMutation: jest.fn(async <T>(fn: () => Promise<T>) => {
     try {
       return await fn();

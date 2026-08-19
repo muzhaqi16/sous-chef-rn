@@ -1,23 +1,44 @@
 import { useEffect, startTransition } from 'react';
-import { gql } from '@apollo/client';
 import { client } from '#/apollo/client';
-import { logger } from '#/utils/environment';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { useUser } from '#store/useAppStore';
 
-/** Minimal fragment for reading entity version from cache */
-const VERSION_FRAGMENT = gql`
-  fragment VersionCheck on Node {
-    id
-    version
-  }
-`;
+/**
+ * Whether a persisted value is a partial patch of an object-valued field
+ * rather than a whole replacement.
+ *
+ * A persisted field name has to be a field the entity actually has —
+ * `cache.modify` silently ignores a modifier for a field that isn't there. Some
+ * of what a mutation changes optimistically lives one level down
+ * (`ShoppingListItem.purchaseInfo.isPurchased`), so the persisted entry names
+ * the object field and carries only the keys it changed. Merging rather than
+ * replacing keeps the rest of that object intact.
+ *
+ * Arrays are replacements, not patches — a persisted array is the new list.
+ */
+const isPartialObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !Array.isArray(value) &&
+  Object.getPrototypeOf(value) === Object.prototype;
 
 /**
  * Hook to restore optimistic data for multiple entity types
  *
  * Convenience wrapper for restoring multiple types at once.
  * Handles array stability internally - consumers can pass inline arrays.
+ *
+ * Every persisted entry is applied. There is deliberately no guard comparing
+ * it against what the server last sent: an entry only exists while its mutation
+ * is unconfirmed — every call site clears it on success AND on rejection — so
+ * what survives a restart is exactly the local intent the offline queue is
+ * about to replay. Preferring the server's value there would drop the edit the
+ * person made and still expect to see.
+ *
+ * (The guard that used to sit here compared a `version` key among the persisted
+ * fields against a `VersionCheck on Node` fragment read. It never ran: no call
+ * site persists a `version` field, and the schema has no `Node` interface, so
+ * both halves of the condition were permanently false.)
  *
  * @param entityTypes - Array of GraphQL typenames
  * @param enabled - Whether restoration is enabled (default: true)
@@ -61,37 +82,20 @@ export function useOptimisticDataRestorationMultiple(
                 id: entityId,
               });
 
-              // Version guard: Only restore if cache version < persisted version
-              // This ensures API data (source of truth) is never overwritten by stale optimistic data
-              if (cacheId && fields.version) {
-                // Read the current version from cache using readFragment (avoids unnecessary cache broadcasts)
-                const cached = cache.readFragment<{ version?: number }>({
-                  id: cacheId,
-                  fragment: VERSION_FRAGMENT,
-                });
-                const currentVersion = cached?.version;
-
-                // If cache has newer or equal version, skip restoration
-                if (
-                  currentVersion !== undefined &&
-                  typeof fields.version === 'number' &&
-                  currentVersion >= fields.version
-                ) {
-                  // Cache has newer or equal version - skip restoration
-                  // This means API data is more recent than our optimistic update
-                  if (__DEV__) {
-                    logger.debug(
-                      `Skipping optimistic restoration for ${entityType}:${entityId} - cache version (${currentVersion}) >= persisted version (${fields.version})`,
-                    );
-                  }
-                  return;
-                }
-              }
+              // `cache.modify` with no id defaults to ROOT_QUERY, which would
+              // write these fields onto the query root instead of the entity.
+              if (!cacheId) return;
 
               const fieldUpdates = Object.keys(fields).reduce((acc, field) => {
-                acc[field] = () => fields[field];
+                const value = fields[field];
+                acc[field] = isPartialObject(value)
+                  ? (existing: unknown) =>
+                      isPartialObject(existing)
+                        ? { ...existing, ...value }
+                        : value
+                  : () => value;
                 return acc;
-              }, {} as Record<string, () => unknown>);
+              }, {} as Record<string, (existing: unknown) => unknown>);
 
               cache.modify({
                 id: cacheId,

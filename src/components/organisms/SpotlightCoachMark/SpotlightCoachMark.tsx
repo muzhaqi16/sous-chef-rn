@@ -27,7 +27,7 @@ import {
 } from '@shopify/react-native-skia';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { SPRING, TIMING } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
 import { useShowTutorials } from '#hooks/settings/useSettings';
@@ -395,7 +395,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           ]}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Skip tutorial"
+          accessibilityLabel={t('tutorial.skipTutorial')}
         >
           <Text size="md" weight="medium" style={styles.skipText}>
             {totalSteps != null && totalSteps > 1

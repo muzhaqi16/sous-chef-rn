@@ -1,4 +1,7 @@
 import { RootState } from './index';
+import { initialAppState } from './slices/appSlice';
+import { initialBarcodeScannerState } from './slices/barcodeScannerSlice';
+import { initialNotificationState } from './slices/notificationSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
 import {
@@ -60,6 +63,53 @@ export const RESET_SCENARIOS = {
   },
 };
 
+/**
+ * Everything in the store that belongs to the signed-in person, and the value
+ * each field takes when nobody is signed in.
+ *
+ * This is the one list. `resetStore` applies it in memory and
+ * `clearAuthFromStorage` deletes the same keys from the persisted blob, so the
+ * two cannot disagree about what a session end removes — which is how the
+ * notification inbox, the scanner's recent list and the item-suggestion LRU
+ * came to survive a sign-out on a shared device.
+ *
+ * The reference caches (`cachedUnits` / `cachedCategories` / `cachedBrands` /
+ * `cachedStores`) are deliberately absent: catalog data warmed for offline
+ * autocomplete, identical for every account, revealing nothing about who was
+ * signed in. Clearing them would cost offline autocomplete for no privacy gain.
+ */
+const SESSION_SCOPED_STATE = {
+  // `pendingEmail` / `pendingPassword` used to be cleared here. They are not
+  // fields of `RootState` and the persist migration sweeps every
+  // non-allowlisted key, so they cannot be in a current blob; the entries here
+  // were doing nothing, which an untyped `Object.assign` never revealed.
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  // In-flight auth progress. Left set, `isAutoLoggingIn` strands the splash
+  // gate and `sessionTokensInKeychain` claims a keychain pair that
+  // `clearAuthFromStorage` has just removed.
+  isAutoLoggingIn: false,
+  sessionTokensInKeychain: false,
+  // Navigation selections — the previous account's home/pantry/list ids.
+  selectedHomeId: null,
+  selectedPantryId: null,
+  selectedShoppingListId: null,
+  selectedMealPlanId: null,
+  // Allow a re-fetch on the next login, and stop stale pantry queries firing
+  // against the new session.
+  hasInitializedHomeData: false,
+  isHomeSelectionReady: false,
+  // Persisted and rendered directly to whoever opens the app next: the
+  // notification inbox, the barcode scanner's recent list, and the catalog
+  // items the item autocomplete offers as suggestions. The two slices are
+  // spread whole from their own initial state, so a field added to either is
+  // cleared here without anyone remembering to come back.
+  ...initialNotificationState,
+  ...initialBarcodeScannerState,
+  cachedItemSuggestions: initialAppState.cachedItemSuggestions,
+} satisfies Partial<RootState>;
+
 // Simplified reset manager
 export const createResetManager = (
   set: (state: Partial<RootState>) => void,
@@ -79,27 +129,10 @@ export const createResetManager = (
       // which of the two a caller picked decides whether a timer survives.
       cancelTokenRefresh();
 
-      Object.assign(newState, {
-        user: null,
-        accessToken: null,
-        refreshToken: null,
-        pendingEmail: undefined,
-        pendingPassword: undefined,
-        // In-flight auth progress. Left set, `isAutoLoggingIn` strands the
-        // splash gate and `sessionTokensInKeychain` claims a keychain pair
-        // that clearAuthFromStorage below has just removed.
-        isAutoLoggingIn: false,
-        sessionTokensInKeychain: false,
-        // Clear navigation selections when auth is reset
-        selectedHomeId: null,
-        selectedPantryId: null,
-        selectedShoppingListId: null,
-        selectedMealPlanId: null,
-        // Reset home data initialization flag to allow re-fetch on next login
-        hasInitializedHomeData: false,
-        // Reset home selection ready flag to prevent stale pantry queries on next login
-        isHomeSelectionReady: false,
-      });
+      // Applied under `auth` rather than `preferences` because this data ends
+      // with the session: `LOGOUT` sets `preferences: false`, so anything
+      // filed there survives a sign-out on a shared device.
+      Object.assign(newState, SESSION_SCOPED_STATE);
     }
 
     // Reset UI state
@@ -124,18 +157,10 @@ export const createResetManager = (
       Object.assign(newState, {
         // Reset onboarding state
         onBoardingStep: null,
-        // Reset notifications
-        notifications: [],
-        unreadCount: 0,
-        urgentCount: 0,
-        // Reset scanner state
-        scannedBarcode: null,
-        isScanning: false,
-        searchResults: [],
-        searchError: null,
-        recentlyScanned: [],
-        scannerSheetVisible: false,
-        scannerSheetIndex: 0,
+        // Same two slices the auth branch clears — spread rather than
+        // re-listed, so the two branches cannot describe "empty" differently.
+        ...initialNotificationState,
+        ...initialBarcodeScannerState,
       });
     }
 
@@ -263,22 +288,16 @@ const clearAuthFromStorage = async () => {
     if (currentData) {
       const parsedData = JSON.parse(currentData);
       if (parsedData.state) {
-        // Clear auth-related fields only
-        delete parsedData.state.user;
-        delete parsedData.state.accessToken;
-        delete parsedData.state.refreshToken;
-        delete parsedData.state.pendingEmail;
-        delete parsedData.state.pendingPassword;
-
-        // Clear selected IDs
-        delete parsedData.state.selectedHomeId;
-        delete parsedData.state.selectedPantryId;
-        delete parsedData.state.selectedShoppingListId;
-        delete parsedData.state.selectedMealPlanId;
-        // Reset home data initialization flag
-        delete parsedData.state.hasInitializedHomeData;
-        // Reset home selection ready flag
-        delete parsedData.state.isHomeSelectionReady;
+        // The same keys `resetStore` clears in memory. Zustand's persist
+        // middleware rewrites the whole blob after `set(newState)`, so this is
+        // about the window in between: killed there, the in-memory reset is
+        // lost and this copy is what the next person's session restores from.
+        // Keys that aren't persisted simply aren't in the blob — deleting them
+        // is a no-op, and driving both from one list is what keeps the on-disk
+        // cleanup from falling behind the in-memory one.
+        for (const key of Object.keys(SESSION_SCOPED_STATE)) {
+          delete parsedData.state[key];
+        }
 
         zustandStorage.setItem(STORAGE_KEY, JSON.stringify(parsedData));
       }

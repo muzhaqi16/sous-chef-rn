@@ -27,9 +27,9 @@ import {
 } from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
-import { executeCacheUpdate } from '#/utils/compilerSafeWrappers';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -117,17 +117,17 @@ export function useUpdatePantryItem({
     if (dirtyFields.tags) optimisticUpdate.tags = input.tags || [];
     if (dirtyFields.minQuantity) {
       optimisticUpdate.minQuantity = input.minQuantity
-        ? parseFloat(input.minQuantity)
+        ? parseDecimalInput(input.minQuantity)
         : null;
     }
     if (dirtyFields.restockQuantity) {
       optimisticUpdate.restockQuantity = input.restockQuantity
-        ? parseFloat(input.restockQuantity)
+        ? parseDecimalInput(input.restockQuantity)
         : null;
     }
     if (dirtyFields.netWeight) {
       optimisticUpdate.netWeight = input.netWeight
-        ? parseFloat(input.netWeight)
+        ? parseDecimalInput(input.netWeight)
         : null;
     }
     if (dirtyFields.location && selectedStorageLocation) {
@@ -172,13 +172,18 @@ export function useUpdatePantryItem({
         fragmentName: 'useUpdatePantryItem_pantryItem',
         data,
       });
-    executeCacheUpdate(
-      () => writeItem(optimisticPantryItem),
-      'Update Pantry Item (optimistic)',
-    );
+    try {
+      writeItem(optimisticPantryItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Update Pantry Item (optimistic)',
+      });
+    }
 
     updateMutation({
-      variables: { input: { ...updateInput, id: itemId } },
+      variables: {
+        input: { ...updateInput, id: itemId, version: currentItem.version },
+      },
       // Queue offline / on API-down — replays via the idempotent SyncPantryItem.
       context: { localFirst: true },
     })
@@ -189,17 +194,23 @@ export function useUpdatePantryItem({
         // user-facing alert comes from the mutation's onError.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
-          executeCacheUpdate(
-            () => writeItem(currentItem),
-            'Revert rejected Pantry Item update',
-          );
+          try {
+            writeItem(currentItem);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Revert rejected Pantry Item update',
+            });
+          }
         }
       })
       .catch(error => {
-        executeCacheUpdate(
-          () => writeItem(currentItem),
-          'Revert failed Pantry Item update',
-        );
+        try {
+          writeItem(currentItem);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert failed Pantry Item update',
+          });
+        }
         errorService.reportError(error, { operation: 'updatePantryItem' });
         // Error already handled by mutation's onError
       });

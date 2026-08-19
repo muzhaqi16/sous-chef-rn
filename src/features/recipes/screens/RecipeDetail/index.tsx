@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { DetailTitleRow } from '#components/molecules/DetailTitleRow';
@@ -330,12 +330,15 @@ const RecipeDetailScreen: React.FC = () => {
         <View style={styles.metadata}>
           {displayData.servings != null && (
             <Text style={styles.metadataText}>
-              🍽️ {displayData.servings} {t('recipes.servingsSuffix')}
+              🍽️ {t('recipes.servingsCount', { count: displayData.servings })}
             </Text>
           )}
           {!!displayData.readyInMinutes && (
             <Text style={styles.metadataText}>
-              ⏱️ {displayData.readyInMinutes} {t('recipes.minutes')}
+              ⏱️{' '}
+              {t('recipes.minutesValue', {
+                count: displayData.readyInMinutes,
+              })}
             </Text>
           )}
           {displayData.healthScore != null &&

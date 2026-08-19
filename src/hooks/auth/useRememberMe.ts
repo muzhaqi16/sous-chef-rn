@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { logger } from '#/utils/environment';
 import { useToast } from '#/hooks/useToast';
-import { executeMutation } from '#/utils/compilerSafeWrappers';
 import { useAuthPreferences } from '#/hooks/navigation/useAuthPreferences';
+import { t } from '#/i18n';
 
 export interface RememberMeCredentials {
   email: string;
@@ -32,21 +32,18 @@ export const useRememberMe = ({ onAccept, onDecline }: RememberMeEvents) => {
 
   const handleRememberMeAccept = async () => {
     if (pendingCredentials) {
-      await executeMutation(
-        async () => {
-          await onAccept(pendingCredentials);
-          logger.debug('Credentials accepted by user');
-        },
-        error => {
-          errorService.reportError(error, {
-            operation: 'processCredentialAcceptance',
-          });
-          toast({
-            message: 'Failed to save login information',
-            type: 'error',
-          });
-        },
-      );
+      try {
+        await onAccept(pendingCredentials);
+        logger.debug('Credentials accepted by user');
+      } catch (error) {
+        errorService.reportError(error, {
+          operation: 'processCredentialAcceptance',
+        });
+        toast({
+          message: t('errors.saveLoginFailed'),
+          type: 'error',
+        });
+      }
     }
     setShowRememberMeModal(false);
     setPendingCredentials(null);

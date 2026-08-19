@@ -19,6 +19,36 @@ import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { extractNodes } from '#/utils/connectionUtils';
 import { logger } from '#/utils/environment';
 
+// Minimal connection shape getDefaultPantry reads — satisfied by both the
+// GetHomes node and GetHome's home (both select pantriesConnection).
+type HomePantries = {
+  pantriesConnection?: {
+    edges?: Array<{
+      node?: { id: string; isDefault?: boolean } | null;
+    } | null>;
+  } | null;
+};
+
+// Flat home shape some callers (and tests) hand in instead of the
+// connection-shaped node.
+type FlatHome = { pantries?: Array<{ id: string; isDefault?: boolean }> };
+
+// Module scope: it closes over nothing from the hook, and an effect below
+// needs it, so a per-render identity would re-arm that effect every render.
+const pantriesOf = (home: HomePantries | FlatHome | undefined) => {
+  if (!home) return [];
+  const connection =
+    'pantriesConnection' in home ? home.pantriesConnection : undefined;
+  const fromConnection = extractNodes(connection) as Array<{
+    id: string;
+    isDefault?: boolean;
+  }>;
+  if (fromConnection.length) return fromConnection;
+  // Callers passing the flat shape hand in `{ pantries: [...] }`. Accept it.
+  const flat = 'pantries' in home ? home.pantries : undefined;
+  return Array.isArray(flat) ? flat : [];
+};
+
 /**
  * Manages home selection, default home resolution, and pantry ID tracking.
  *
@@ -127,36 +157,8 @@ export const useDefaultHome = () => {
     };
   };
 
-  // Minimal connection shape getDefaultPantry reads — satisfied by both the
-  // GetHomes node and GetHome's home (both select pantriesConnection).
-  type HomePantries = {
-    pantriesConnection?: {
-      edges?: Array<{
-        node?: { id: string; isDefault?: boolean } | null;
-      } | null>;
-    } | null;
-  };
-
-  // Flat home shape some callers (and tests) hand in instead of the
-  // connection-shaped node.
-  type FlatHome = { pantries?: Array<{ id: string; isDefault?: boolean }> };
-
   // Derive default home from isDefault field (no separate query needed)
   const remoteDefaultHomeId = homesList?.find(h => h.isDefault)?.id ?? null;
-
-  const pantriesOf = (home: HomePantries | FlatHome | undefined) => {
-    if (!home) return [];
-    const connection =
-      'pantriesConnection' in home ? home.pantriesConnection : undefined;
-    const fromConnection = extractNodes(connection) as Array<{
-      id: string;
-      isDefault?: boolean;
-    }>;
-    if (fromConnection.length) return fromConnection;
-    // Callers passing the flat shape hand in `{ pantries: [...] }`. Accept it.
-    const flat = 'pantries' in home ? home.pantries : undefined;
-    return Array.isArray(flat) ? flat : [];
-  };
 
   // Extract default pantry ID (React Compiler auto-memoizes this derivation)
   const defaultPantryId = (() => {

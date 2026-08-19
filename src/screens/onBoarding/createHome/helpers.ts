@@ -1,3 +1,4 @@
+import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { errorService } from '#/services/errorService';
 import type { useMutation } from '@apollo/client/react';
@@ -84,19 +85,19 @@ export const createPantryForHome = async (
 // Alert helpers
 export const showPantryCreationError = (onContinue: () => void) => {
   alertService.alert(
-    'Notice',
-    'Pantry creation failed but you can create it later from settings.',
-    [{ text: 'Continue', onPress: onContinue }],
+    t('createHome.pantryFailedTitle'),
+    t('createHome.pantryFailedBody'),
+    [{ text: t('labels.continue'), onPress: onContinue }],
   );
 };
 
 export const showSkipPantryWarning = (onSkip: () => void) => {
   alertService.alert(
-    'Skip Pantry Creation?',
-    'You have a home but no pantry. You can create one later from settings.',
+    t('createHome.skipPantryTitle'),
+    t('createHome.skipPantryBody'),
     [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Skip', onPress: onSkip, style: 'destructive' },
+      { text: t('labels.cancel'), style: 'cancel' },
+      { text: t('labels.skip'), onPress: onSkip, style: 'destructive' },
     ],
   );
 };

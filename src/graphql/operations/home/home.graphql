@@ -234,13 +234,36 @@ mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
   }
 }
 
+# The response exists to normalize the role flip, not to repaint the screen —
+# the caller reads nothing off it, and the detail screen reads Home through its
+# own query. Spreading `HomeDetailScreen_home` here cost 4885 against the HTTP
+# budget of 3000: its three `first: 20` connections multiply their subtrees, and
+# a mutation payload adds two more levels on top, each worth another 1.5×. So
+# the server refused every transfer. Select the memberships whose role actually
+# moved and let the rest stay as the query left it.
 mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
   transferHomeOwnership(input: $input) {
     __typename
     ... on TransferHomeOwnershipPayload {
       home {
         id
-        ...HomeDetailScreen_home
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canInviteOthers
+        }
+        membersConnection(first: 20) {
+          edges {
+            node {
+              id
+              role
+              ...HomeMemberCard_member
+            }
+          }
+          totalCount
+        }
       }
     }
     ... on Error {
@@ -487,55 +510,39 @@ mutation LeaveHome($input: LeaveHomeInput!) {
 # `subtype`, replacing the former membershipChanged + homeInviteChanged
 # subscriptions. Keeps the per-user concurrent-subscription count low (the
 # server caps it cluster-wide).
+#
+# Thin event: the envelope plus the identity of what changed. Subscription
+# documents are validated against depth 5 / cost 500 rather than the HTTP
+# limits, because the server re-executes the document on every published event
+# for the life of the connection. An inline fragment counts as a depth level
+# (graphql-armor counts unflattened), so `node { ... on X { id } }` is already
+# depth 4 and a fragment spread inside a branch cannot fit.
+#
+# A membership or invite change is a connection change, which no single entity
+# read can express — so the handler removes by id where the id is enough and
+# otherwise refetches `GetHome` / `GetMyPendingInvites` over HTTP.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription HomeEvents($homeId: ID!) {
   homeEvents(homeId: $homeId) {
     subtype
     mutation
     homeId
+    # The device that made the change — the server echoes back the
+    # `x-device-id` the mutation carried. Suppressing on this rather than on
+    # `actorUserId` is what lets the same user's second device keep updating.
+    originatorClientId
     actorUserId
     previousRole
     newRole
     updatedFields
     timestamp
     node {
+      __typename
       ... on Membership {
         id
-        homeId
-        userId
-        role
-        # Aliased to avoid a same-response-shape clash with HomeInvite.status
-        # (MembershipStatus! vs InviteStatus!) under this one `node` selection.
-        # Apollo normalizes by the real field name, so Membership.status is
-        # still written to cache correctly; the client only auto-normalizes here.
-        membershipStatus: status
-        displayName
-        canViewPantry
-        canEditPantry
-        canAddItems
-        canRemoveItems
-        canInviteOthers
-        canManageHome
-        lastActiveAt
-        joinedAt
-        home {
-          id
-          name
-          type
-        }
-        user {
-          id
-          email
-          profile {
-            id
-            displayName
-            avatar
-          }
-        }
       }
       ... on HomeInvite {
         id
-        ...InviteCard_invite
-        ...HomeInviteCard_invite
       }
     }
   }

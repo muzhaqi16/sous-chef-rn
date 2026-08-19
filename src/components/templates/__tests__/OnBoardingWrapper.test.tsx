@@ -53,9 +53,9 @@ jest.mock(
 );
 
 interface MockOnboardingContextValue {
-  steps: { id: string; title: string }[];
+  steps: { id: string; titleKey: string }[];
   activeStepIndex: number;
-  currentStep: { title: string; subtitle?: string } | null;
+  currentStep: { titleKey: string; subtitleKey?: string } | null;
   canGoBack: boolean;
   canGoNext: boolean;
   isLastStep: boolean;
@@ -159,9 +159,12 @@ describe('OnBoardingWrapper', () => {
 
   it('renders OnboardingNavigation when context is available', () => {
     mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', title: 'Step 1' }],
+      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
       activeStepIndex: 0,
-      currentStep: { title: 'Step 1', subtitle: 'Do this' },
+      currentStep: {
+        titleKey: 'onboardingSteps.CreateHome.title',
+        subtitleKey: 'onboardingSteps.CreateHome.subtitle',
+      },
       canGoBack: true,
       canGoNext: true,
       isLastStep: false,
@@ -180,9 +183,13 @@ describe('OnBoardingWrapper', () => {
 
   it('uses context title when no direct title prop', () => {
     mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', title: 'Context Title' }],
+      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
       activeStepIndex: 0,
-      currentStep: { title: 'Context Title', subtitle: 'Sub' },
+      // The step table carries key paths now; the wrapper resolves them.
+      currentStep: {
+        titleKey: 'onboardingSteps.CreateHome.title',
+        subtitleKey: 'onboardingSteps.CreateHome.subtitle',
+      },
       canGoBack: false,
       canGoNext: true,
       isLastStep: false,
@@ -195,14 +202,14 @@ describe('OnBoardingWrapper', () => {
         <Text>Content</Text>
       </OnBoardingWrapper>,
     );
-    expect(screen.getByText('Context Title')).toBeTruthy();
+    expect(screen.getByText('Create Home')).toBeTruthy();
   });
 
   it('renders step indicator when showSteps is true and context available', () => {
     mockOnboardingContext.mockReturnValue({
-      steps: [{ id: '1', title: 'Step 1' }],
+      steps: [{ id: '1', titleKey: 'onboardingSteps.CreateHome.title' }],
       activeStepIndex: 0,
-      currentStep: { title: 'Step 1' },
+      currentStep: { titleKey: 'onboardingSteps.CreateHome.title' },
       canGoBack: false,
       canGoNext: true,
       isLastStep: false,

@@ -5,7 +5,7 @@ import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { errorMessageOr } from '#/services/errorService';
 import { PasswordInput } from '#components/atoms/PasswordInput';
@@ -22,7 +22,7 @@ import { useToast } from '#hooks/useToast';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
 import { logValidationErrors } from '#utils/validation/common';
-import { executeWithLoadingState } from '#/utils/compilerSafeWrappers';
+import { executeWithLoadingState } from '#/utils/finallyHelpers';
 
 interface ChangePasswordForm {
   currentPassword: string;

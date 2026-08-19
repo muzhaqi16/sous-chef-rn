@@ -25,14 +25,7 @@ import {
 } from '../drag';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
 import { LANGUAGE_OPTIONS } from '../languages';
-import {
-  FRAGMENT_NAMES,
-  ICONS,
-  LABELS,
-  EMPTY_STATE_MESSAGES,
-  PAGINATION,
-  DEFAULTS,
-} from '../shoppingList';
+import { PAGINATION } from '../shoppingList';
 import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
 import { getTabBarBottomPadding } from '../layout';
 
@@ -133,31 +126,8 @@ describe('languages constants', () => {
 });
 
 describe('shoppingList constants', () => {
-  it('exports FRAGMENT_NAMES', () => {
-    expect(FRAGMENT_NAMES.ITEM_VERSION_DATA).toBe('ItemVersionData');
-  });
-
-  it('exports ICONS', () => {
-    expect(ICONS.ADD).toBe('add');
-    expect(ICONS.SCANNER).toBe('barcode-scan');
-  });
-
-  it('exports LABELS', () => {
-    expect(LABELS.ADD_ITEM).toBe('Add Item');
-    expect(LABELS.NO_LISTS).toBe('No Shopping Lists');
-  });
-
-  it('exports EMPTY_STATE_MESSAGES', () => {
-    expect(EMPTY_STATE_MESSAGES.NO_LISTS_TITLE).toBe('No Shopping Lists');
-  });
-
   it('exports PAGINATION', () => {
     expect(PAGINATION.ITEMS_PAGE_SIZE).toBe(20);
-  });
-
-  it('exports DEFAULTS', () => {
-    expect(DEFAULTS.SKELETON_COUNT).toBe(5);
-    expect(DEFAULTS.REFRESH_DELAY).toBe(300);
   });
 });
 

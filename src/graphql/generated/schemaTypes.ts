@@ -82,12 +82,6 @@ export enum AcquisitionMethod {
   ShoppingList = 'SHOPPING_LIST'
 }
 
-export type AddCollaboratorInput = {
-  email: Scalars['String']['input'];
-  role: CollaboratorRole;
-  shoppingListId: Scalars['ID']['input'];
-};
-
 /** Input for categorizing an item */
 export type AddItemToCategoryInput = {
   categoryId: Scalars['ID']['input'];
@@ -290,34 +284,6 @@ export type AddUserAddressPayload = {
  */
 export type AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
-export type AddWarningInput = {
-  reason: Scalars['String']['input'];
-  userId: Scalars['ID']['input'];
-};
-
-export type AddWarningPayload = {
-  __typename: 'AddWarningPayload';
-  userModeration: UserModeration;
-};
-
-/**
- * Result of AddWarning. Select on AddWarningPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AddWarningResult = AddWarningPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export enum AddedContext {
-  Expiring = 'EXPIRING',
-  FromMealPlan = 'FROM_MEAL_PLAN',
-  FromRecipe = 'FROM_RECIPE',
-  LowStock = 'LOW_STOCK',
-  Manual = 'MANUAL',
-  PantryMissing = 'PANTRY_MISSING',
-  Recurring = 'RECURRING',
-  Suggested = 'SUGGESTED'
-}
-
 /** Item that was added to the shopping list from low stock detection */
 export type AddedLowStockItem = {
   __typename: 'AddedLowStockItem';
@@ -348,8 +314,13 @@ export type AdjustPantryItemQuantityInput = {
   reason: Scalars['String']['input'];
   /** Explicit remaining net weight override for full recount scenarios (dual-tracked items only) */
   remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
-  /** Optimistic concurrency control — must match current version */
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type AdjustPantryItemQuantityPayload = {
@@ -393,269 +364,6 @@ export type AdjustPantryItemWeightPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type AdjustPantryItemWeightResult = AdjustPantryItemWeightPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminBulkDeleteItemsInput = {
-  ids: Array<Scalars['ID']['input']>;
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminBulkDeleteItemsPayload = {
-  __typename: 'AdminBulkDeleteItemsPayload';
-  /** Items that were deleted by the batch. */
-  items: Array<Item>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of AdminBulkDeleteItems. Select on AdminBulkDeleteItemsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminBulkDeleteItemsResult = AdminBulkDeleteItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/**
- * Input for batch deleting images from S3/MinIO storage.
- * Used by admin panel after duplicate detection.
- */
-export type AdminDeleteImagesInput = {
-  /** Image URLs to delete from S3/MinIO storage */
-  imageUrls: Array<Scalars['String']['input']>;
-  /**
-   * Optional Item IDs to update after deletion.
-   * If not provided, all items will be checked for affected images.
-   */
-  itemIds?: InputMaybe<Array<Scalars['ID']['input']>>;
-  /**
-   * Force background job processing regardless of batch size.
-   * By default, batches >50 images are automatically queued.
-   */
-  useQueue?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminDeleteImagesPayload = {
-  __typename: 'AdminDeleteImagesPayload';
-  /** Number of database Item records updated. */
-  databaseUpdated: Scalars['Int']['output'];
-  /** Number of images successfully deleted from storage. */
-  deletedFromStorage: Scalars['Int']['output'];
-  /** Storage deletion failures with error details. */
-  failedStorage: Array<ImageDeletionFailure>;
-  /** Job ID if the operation was queued for background processing. */
-  jobId: Maybe<Scalars['String']['output']>;
-  /** Total number of images requested for deletion. */
-  totalRequested: Scalars['Int']['output'];
-};
-
-/**
- * Result of AdminDeleteImages. Select on AdminDeleteImagesPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminDeleteImagesResult = AdminDeleteImagesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminDeleteItemInput = {
-  id: Scalars['ID']['input'];
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminDeleteItemPayload = {
-  __typename: 'AdminDeleteItemPayload';
-  item: Maybe<Item>;
-};
-
-/**
- * Result of AdminDeleteItem. Select on AdminDeleteItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminDeleteItemResult = AdminDeleteItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminDeleteRecipeInput = {
-  id: Scalars['ID']['input'];
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminDeleteRecipePayload = {
-  __typename: 'AdminDeleteRecipePayload';
-  recipe: Maybe<Recipe>;
-};
-
-/**
- * Result of AdminDeleteRecipe. Select on AdminDeleteRecipePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminDeleteRecipeResult = AdminDeleteRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminDeleteRecipeReviewInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type AdminDeleteRecipeReviewPayload = {
-  __typename: 'AdminDeleteRecipeReviewPayload';
-  recipeReview: RecipeReview;
-};
-
-/**
- * Result of AdminDeleteRecipeReview. Select on AdminDeleteRecipeReviewPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminDeleteRecipeReviewResult = AdminDeleteRecipeReviewPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminDeleteUserInput = {
-  /** If true, permanently deletes the user (SuperAdmin only) */
-  hard?: InputMaybe<Scalars['Boolean']['input']>;
-  id: Scalars['ID']['input'];
-};
-
-export type AdminDeleteUserPayload = {
-  __typename: 'AdminDeleteUserPayload';
-  user: Maybe<User>;
-};
-
-/**
- * Result of AdminDeleteUser. Select on AdminDeleteUserPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminDeleteUserResult = AdminDeleteUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/** Paginated result for admin item unit conversion listing */
-export type AdminItemUnitConversionsResult = {
-  __typename: 'AdminItemUnitConversionsResult';
-  conversions: Array<ItemUnitConversion>;
-  totalCount: Scalars['Int']['output'];
-};
-
-/**
- * Admin input to purge homes by id, bypassing ownership. Intended for data
- * consistency / cleanup of junk or test homes.
- */
-export type AdminPurgeHomesInput = {
-  /** Home ids to purge. */
-  ids: Array<Scalars['ID']['input']>;
-  /** When true, permanently hard-delete each home and ALL associated data (pantries, pantry items, shopping lists + items, meal plans, meal templates, memberships, invites, storage). When false/omitted, soft-delete the home subtree. */
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminPurgeHomesPayload = {
-  __typename: 'AdminPurgeHomesPayload';
-  /** Homes that were purged by the batch. */
-  homes: Array<Home>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of AdminPurgeHomes. Select on AdminPurgeHomesPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminPurgeHomesResult = AdminPurgeHomesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/**
- * Admin input to purge pantry items by id, bypassing ownership. Intended for
- * cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
- * RECENTLY_DELETED suggestion source.
- */
-export type AdminPurgePantryItemsInput = {
-  /** Pantry item row ids to delete. */
-  ids: Array<Scalars['ID']['input']>;
-  /** When true, hard-delete the rows (cascades photos/changes/batches, nulls usages). When false/omitted, soft-delete (sets deletedAt). */
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminPurgePantryItemsPayload = {
-  __typename: 'AdminPurgePantryItemsPayload';
-  /** Pantry items that were purged by the batch. */
-  pantryItems: Array<PantryItem>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of AdminPurgePantryItems. Select on AdminPurgePantryItemsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminPurgePantryItemsResult = AdminPurgePantryItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/**
- * Admin input to purge shopping list items by id, bypassing ownership. Intended
- * for cleaning up junk/test rows (e.g. E2E fixtures) that pollute the
- * RECENTLY_DELETED suggestion source.
- */
-export type AdminPurgeShoppingListItemsInput = {
-  /** Shopping list item row ids to delete. */
-  ids: Array<Scalars['ID']['input']>;
-  /** When true, hard-delete the rows. When false/omitted, soft-delete (sets deletedAt). */
-  permanent?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-export type AdminPurgeShoppingListItemsPayload = {
-  __typename: 'AdminPurgeShoppingListItemsPayload';
-  /** Shopping list items that were purged by the batch. */
-  shoppingListItems: Array<ShoppingListItem>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of AdminPurgeShoppingListItems. Select on AdminPurgeShoppingListItemsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminPurgeShoppingListItemsResult = AdminPurgeShoppingListItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminUpdateItemPayload = {
-  __typename: 'AdminUpdateItemPayload';
-  item: Item;
-};
-
-/**
- * Result of AdminUpdateItem. Select on AdminUpdateItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminUpdateItemResult = AdminUpdateItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type AdminUpdateRecipePayload = {
-  __typename: 'AdminUpdateRecipePayload';
-  recipe: Recipe;
-};
-
-/**
- * Result of AdminUpdateRecipe. Select on AdminUpdateRecipePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminUpdateRecipeResult = AdminUpdateRecipePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/**
- * Admin-authority twin of updateAccount — updates any user's User row,
- * including privileged fields. Gated by @requireSystemRole(role: ADMIN); the
- * SUPER_ADMIN role ceiling is enforced in the service.
- */
-export type AdminUpdateUserInput = {
-  deletedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  email?: InputMaybe<Scalars['String']['input']>;
-  emailVerified?: InputMaybe<Scalars['Boolean']['input']>;
-  id: Scalars['ID']['input'];
-  onBoarded?: InputMaybe<Scalars['Boolean']['input']>;
-  preferredCurrency?: InputMaybe<Scalars['String']['input']>;
-  role?: InputMaybe<UserRole>;
-  timezone?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type AdminUpdateUserPayload = {
-  __typename: 'AdminUpdateUserPayload';
-  user: User;
-};
-
-/**
- * Result of AdminUpdateUser. Select on AdminUpdateUserPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type AdminUpdateUserResult = AdminUpdateUserPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 /** Result of quantity aggregation (add/subtract) */
 export type AggregationResult = {
@@ -708,177 +416,6 @@ export type ApiAutomationInput = {
   isAutomated?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-/**
- * A client credential for the API.
- *
- * Admin-only, and never carries secret material: the stored key is a one-way
- * hash and is not exposed on this type or any other. Use keyPrefix to recognise
- * a key in a list — it is the first characters of the secret and is safe to
- * display.
- */
-export type ApiKey = {
-  __typename: 'ApiKey';
-  clientType: ApiKeyClientType;
-  createdAt: Scalars['DateTime']['output'];
-  /** Id of the administrator who created this key. */
-  createdBy: Maybe<Scalars['ID']['output']>;
-  description: Maybe<Scalars['String']['output']>;
-  /** Deployments this key authenticates against. A key not listing a deployment's environment is refused there. */
-  environment: Array<ApiKeyEnvironment>;
-  /** When this key stops authenticating, or null if it does not expire. */
-  expiresAt: Maybe<Scalars['DateTime']['output']>;
-  id: Scalars['ID']['output'];
-  /** First characters of the key, for identification. Not usable to authenticate. */
-  keyPrefix: Scalars['String']['output'];
-  /** When this key last authenticated a request, or null if it never has. */
-  lastUsedAt: Maybe<Scalars['DateTime']['output']>;
-  /** Human-readable label, e.g. Android Client. */
-  name: Scalars['String']['output'];
-  /** What this key may do. Enforced — see ApiKeyPermission. */
-  permissions: Array<ApiKeyPermission>;
-  /** Requests per window this key is allowed, or null for the default. */
-  rateLimit: Maybe<Scalars['Int']['output']>;
-  /** When this key was permanently retired, or null if it has not been. */
-  revokedAt: Maybe<Scalars['DateTime']['output']>;
-  /** Id of the administrator who revoked this key, or null if it is not revoked. */
-  revokedById: Maybe<Scalars['ID']['output']>;
-  /** Derived lifecycle state. Not settable — use the lifecycle mutations. */
-  status: ApiKeyStatus;
-  updatedAt: Scalars['DateTime']['output'];
-  /** Total successful authentications by this key, all time. */
-  usageCount: Scalars['Int']['output'];
-};
-
-/**
- * Which client an API key credentials.
- *
- * Determines the key's display prefix (an ANDROID key reads and_...) and, for
- * ADMIN, is the client type the admin panel's own credential is expected to
- * carry.
- */
-export enum ApiKeyClientType {
-  Admin = 'ADMIN',
-  Android = 'ANDROID',
-  Ios = 'IOS',
-  Testing = 'TESTING',
-  Web = 'WEB'
-}
-
-/**
- * A page of ApiKey results. Read "edges" for the rows and "pageInfo" to decide
- * whether to request another page.
- */
-export type ApiKeyConnection = Connection & {
-  __typename: 'ApiKeyConnection';
-  /** The rows in this page, in the connection's sort order. */
-  edges: Array<ApiKeyEdge>;
-  /** Cursors and flags describing where this page sits in the full result. */
-  pageInfo: PageInfo;
-  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
-  totalCount: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * One ApiKey in a paginated result, paired with the cursor that identifies its
- * position. Pass the cursor as "after" to resume from just past this edge.
- */
-export type ApiKeyEdge = Edge & {
-  __typename: 'ApiKeyEdge';
-  /** Opaque position marker for this edge. Do not parse or construct it. */
-  cursor: Scalars['String']['output'];
-  /** The ApiKey this edge wraps. */
-  node: ApiKey;
-};
-
-/**
- * A deployment environment an API key is valid for.
- *
- * A key authenticates against a deployment only when the deployment's
- * environment is among the key's. A key listing no environment matching the
- * deployment it is given to will never authenticate there — it is not an error
- * at creation time, so check this before wondering why a new key is rejected.
- */
-export enum ApiKeyEnvironment {
-  Development = 'DEVELOPMENT',
-  Production = 'PRODUCTION',
-  Staging = 'STAGING',
-  Test = 'TEST'
-}
-
-export type ApiKeyFilters = {
-  clientType?: InputMaybe<ApiKeyClientType>;
-  /** Keys valid for this environment. */
-  environment?: InputMaybe<ApiKeyEnvironment>;
-  /** Keys holding this permission. */
-  permission?: InputMaybe<ApiKeyPermission>;
-  /** Keys in this lifecycle state. */
-  status?: InputMaybe<ApiKeyStatus>;
-};
-
-export type ApiKeyOrderBy = {
-  createdAt?: InputMaybe<SortOrder>;
-  lastUsedAt?: InputMaybe<SortOrder>;
-};
-
-/**
- * What an API key is permitted to do. These are enforced, not advisory.
- *
- * A request is refused with API_KEY_INSUFFICIENT_PERMISSIONS when the key
- * authenticating it does not hold the permission the operation needs. A key's
- * permission never substitutes for the calling user's authority: an operation
- * requiring a system role still requires it.
- */
-export enum ApiKeyPermission {
-  /**
-   * Authenticate against the admin deployment at all. Checked before an
-   * operation is parsed, so it gates the whole service rather than any
-   * particular field. Without it a key cannot reach the admin API even if the
-   * caller is a system administrator.
-   */
-  Admin = 'ADMIN',
-  /** Execute queries and subscriptions. */
-  Read = 'READ',
-  /** Execute mutations. Grant alongside READ. */
-  Write = 'WRITE'
-}
-
-/**
- * A newly issued API key secret.
- *
- * THIS VALUE IS SHOWN ONCE AND CANNOT BE RETRIEVED AGAIN. It is stored only as
- * a one-way hash, so no query, no re-read, and no support request can recover
- * it. A caller that does not persist or display it immediately has lost it, and
- * the only remedy is to rotate the key for a new one.
- *
- * It appears in exactly two places — the results of createApiKey and
- * rotateApiKey. No other operation returns this type.
- */
-export type ApiKeySecret = {
-  __typename: 'ApiKeySecret';
-  /** First characters of the token, matching the key's keyPrefix. */
-  keyPrefix: Scalars['String']['output'];
-  /** The raw key, to be sent as the x-api-key header. Shown once. */
-  token: Scalars['String']['output'];
-};
-
-/**
- * The lifecycle state of an API key.
- *
- * Derived from the key's stored facts rather than set directly — there is no
- * mutation that assigns a status. A terminal state is never masked by a
- * reversible one: a revoked key reads REVOKED even if it is also expired.
- */
-export enum ApiKeyStatus {
-  /** Authenticates normally. */
-  Active = 'ACTIVE',
-  /** Reversibly paused. Re-enable to restore it, with its existing secret. */
-  Disabled = 'DISABLED',
-  /** Past its expiry instant. Extend the expiry to restore it. */
-  Expired = 'EXPIRED',
-  /** Permanently retired. Cannot be re-enabled, edited, or rotated. */
-  Revoked = 'REVOKED'
-}
-
 export enum AppTheme {
   Dark = 'DARK',
   Light = 'LIGHT',
@@ -892,62 +429,6 @@ export enum AppealStatus {
   UnderReview = 'UNDER_REVIEW',
   Withdrawn = 'WITHDRAWN'
 }
-
-/**
- * Approve a primary item and merge the given secondary duplicates into it,
- * atomically.
- */
-export type ApproveAndMergeInput = {
-  primaryItemId: Scalars['ID']['input'];
-  secondaryItemIds: Array<Scalars['ID']['input']>;
-};
-
-export type ApproveAndMergePayload = {
-  __typename: 'ApproveAndMergePayload';
-  item: Item;
-};
-
-/**
- * Result of ApproveAndMerge. Select on ApproveAndMergePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type ApproveAndMergeResult = ApproveAndMergePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type ApproveItemImagePayload = {
-  __typename: 'ApproveItemImagePayload';
-  item: Item;
-};
-
-/**
- * Result of ApproveItemImage. Select on ApproveItemImagePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type ApproveItemImageResult = ApproveItemImagePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type ApproveItemInput = {
-  itemId: Scalars['ID']['input'];
-};
-
-export type ApproveItemPayload = {
-  __typename: 'ApproveItemPayload';
-  item: Item;
-};
-
-/**
- * Result of ApproveItem. Select on ApproveItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type ApproveItemResult = ApproveItemPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-/**
- * Result of ApproveItemSuggestion. Select on ReviewItemSuggestionPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type ApproveItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
 
 /** Sub-input for attribution data */
 export type AttributionInput = {
@@ -1019,43 +500,6 @@ export type AutocompleteResult = {
   totalCount: Scalars['Int']['output'];
 };
 
-export enum AutomatedFlag {
-  AbuseLanguage = 'ABUSE_LANGUAGE',
-  DuplicateContent = 'DUPLICATE_CONTENT',
-  FakeReviews = 'FAKE_REVIEWS',
-  MultipleAccounts = 'MULTIPLE_ACCOUNTS',
-  PromotionalContent = 'PROMOTIONAL_CONTENT',
-  SpamDetected = 'SPAM_DETECTED',
-  SuspiciousBehavior = 'SUSPICIOUS_BEHAVIOR'
-}
-
-/**
- * Lifecycle state of a background job.
- *
- * Mirrors the queue engine's own job states (BullMQ JobState), which is the
- * authority for this set — not a curated subset. UNKNOWN is a real state the
- * engine returns for a job it can no longer resolve (typically reaped), so it
- * is modelled rather than mapped away.
- */
-export enum BackgroundJobState {
-  /** Currently being processed by a worker */
-  Active = 'ACTIVE',
-  /** Finished successfully */
-  Completed = 'COMPLETED',
-  /** Scheduled to run at a later time */
-  Delayed = 'DELAYED',
-  /** Finished with an error */
-  Failed = 'FAILED',
-  /** Queued behind higher-priority jobs */
-  Prioritized = 'PRIORITIZED',
-  /** The engine could not resolve the job's state (usually already reaped) */
-  Unknown = 'UNKNOWN',
-  /** Queued, waiting for a worker */
-  Waiting = 'WAITING',
-  /** Waiting for child jobs to finish before becoming runnable */
-  WaitingChildren = 'WAITING_CHILDREN'
-}
-
 export enum BaseDimension {
   Count = 'COUNT',
   Mass = 'MASS',
@@ -1074,6 +518,21 @@ export type BatchAddShoppingListItemInput = {
    * Distinct from clientId below, which is only a response-matching token.
    */
   id?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Optional client-minted CUID2 that makes this add idempotent.
+   *
+   * An add that resolves to an existing row applies a quantity increment, which
+   * is atomic but not idempotent: the row carries nothing distinguishing a
+   * replay from a genuine second addition. The key is claimed in the same
+   * transaction as the increment, so a replay is refused with IDEMPOTENT_REPLAY
+   * instead of merging twice.
+   *
+   * Precedence: this key when sent, otherwise the id field above. Sending
+   * neither leaves the add non-idempotent. Send an explicit key when one batch
+   * adds the same item more than once, where row identity cannot tell the
+   * entries apart.
+   */
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -1374,34 +833,6 @@ export type BulkDeviceUpdateInput = {
   isVerified?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
-export type BulkSendNotificationsInput = {
-  actionUrl?: InputMaybe<Scalars['String']['input']>;
-  batchId?: InputMaybe<Scalars['String']['input']>;
-  category?: InputMaybe<NotificationCategory>;
-  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
-  message?: InputMaybe<Scalars['String']['input']>;
-  metadata?: InputMaybe<Scalars['JSON']['input']>;
-  payload: Scalars['JSON']['input'];
-  priority?: InputMaybe<Priority>;
-  title?: InputMaybe<Scalars['String']['input']>;
-  type: NotificationType;
-  userIds: Array<Scalars['ID']['input']>;
-};
-
-export type BulkSendNotificationsPayload = {
-  __typename: 'BulkSendNotificationsPayload';
-  /** Notifications that were successfully sent. */
-  sent: Array<Notification>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of BulkSendNotifications. Select on BulkSendNotificationsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type BulkSendNotificationsResult = BulkSendNotificationsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
 /**
  * The single canonical summary for every bulk / batch / admin-purge mutation
  * (bulk-operation-standard). Replaces the retired BulkOperationSummary and
@@ -1495,24 +926,6 @@ export type BulkUpdateItemsPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type BulkUpdateItemsResult = BulkUpdateItemsPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
-
-export type BulkUpdateLoginHistoriesInput = {
-  ids: Array<Scalars['ID']['input']>;
-  update: UpdateLoginHistoryInput;
-};
-
-export type BulkUpdateLoginHistoriesPayload = {
-  __typename: 'BulkUpdateLoginHistoriesPayload';
-  loginHistories: Array<LoginHistory>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of BulkUpdateLoginHistories. Select on BulkUpdateLoginHistoriesPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type BulkUpdateLoginHistoriesResult = BulkUpdateLoginHistoriesPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError;
 
 export type BulkUpsertItemsByExternalSourceInput = {
   items: Array<BatchUpsertItemInput>;
@@ -1959,22 +1372,6 @@ export enum ConversionSource {
   UserDefined = 'USER_DEFINED'
 }
 
-/** Count of conversions grouped by source */
-export type ConversionSourceCount = {
-  __typename: 'ConversionSourceCount';
-  count: Scalars['Int']['output'];
-  source: ConversionSource;
-};
-
-/** Summary statistics for item unit conversions */
-export type ConversionStats = {
-  __typename: 'ConversionStats';
-  bySource: Array<ConversionSourceCount>;
-  totalConversions: Scalars['Int']['output'];
-  unverifiedCount: Scalars['Int']['output'];
-  verifiedCount: Scalars['Int']['output'];
-};
-
 /** Type of conversion being performed */
 export enum ConversionType {
   CrossTypeDensityBased = 'CROSS_TYPE_DENSITY_BASED',
@@ -2116,37 +1513,6 @@ export type CookingStats = {
   totalCookingSessions: Scalars['Int']['output'];
   totalRecipesCooked: Scalars['Int']['output'];
 };
-
-export type CreateApiKeyInput = {
-  clientType: ApiKeyClientType;
-  description?: InputMaybe<Scalars['String']['input']>;
-  /** At least one. A key valid for no environment authenticates nowhere. */
-  environment: Array<ApiKeyEnvironment>;
-  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
-  name: Scalars['String']['input'];
-  /**
-   * Defaults to READ when omitted. If given it must be non-empty, and ADMIN
-   * must be accompanied by READ — ADMIN admits a key to the admin deployment
-   * but grants no operation, so a key holding it alone can reach the admin API
-   * and do nothing there.
-   */
-  permissions?: InputMaybe<Array<ApiKeyPermission>>;
-  rateLimit?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type CreateApiKeyPayload = {
-  __typename: 'CreateApiKeyPayload';
-  apiKey: ApiKey;
-  /** The new secret, shown once. Not retrievable afterward — see ApiKeySecret. */
-  secret: ApiKeySecret;
-};
-
-/**
- * Result of CreateApiKey. Select on CreateApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type CreateApiKeyResult = ConflictError | CreateApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type CreateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
@@ -2520,26 +1886,6 @@ export type CreateMembershipPayload = {
  */
 export type CreateMembershipResult = ConflictError | CreateMembershipPayload | ForbiddenError | NotFoundError | ValidationError;
 
-export type CreateModerationRecordInput = {
-  moderatorNotes?: InputMaybe<Scalars['String']['input']>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  status?: InputMaybe<ModerationStatus>;
-  trustLevel?: InputMaybe<TrustLevel>;
-  userId: Scalars['ID']['input'];
-};
-
-export type CreateModerationRecordPayload = {
-  __typename: 'CreateModerationRecordPayload';
-  userModeration: UserModeration;
-};
-
-/**
- * Result of CreateModerationRecord. Select on CreateModerationRecordPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type CreateModerationRecordResult = ConflictError | CreateModerationRecordPayload | ForbiddenError | NotFoundError | ValidationError;
-
 export type CreateNotificationInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   batchId?: InputMaybe<Scalars['String']['input']>;
@@ -2854,30 +2200,6 @@ export type CreateShoppingListItemFromRecipeIngredientPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type CreateShoppingListItemFromRecipeIngredientResult = ConflictError | CreateShoppingListItemFromRecipeIngredientPayload | ForbiddenError | NotFoundError | ValidationError;
-
-export type CreateShoppingListItemInput = {
-  brand?: InputMaybe<BrandReferenceInput>;
-  category?: InputMaybe<Scalars['String']['input']>;
-  /**
-   * Optional client-generated permanent ID (CUID2).
-   * Offline-first clients mint this as the row's permanent primary key so a
-   * re-synced create resolves to the same row (idempotent) instead of duplicating.
-   * When omitted, the server generates one via @default(cuid(2)). Must match the
-   * CUID2 format; invalid formats are rejected by ID validation.
-   */
-  id?: InputMaybe<Scalars['ID']['input']>;
-  item: ItemRefInput;
-  netWeight?: InputMaybe<NetWeightInput>;
-  notes?: InputMaybe<Scalars['String']['input']>;
-  pricing?: InputMaybe<PricingEstimatesInput>;
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
-  recipeContext?: InputMaybe<RecipeContextInput>;
-  shoppingListId: Scalars['ID']['input'];
-  sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storePrefs?: InputMaybe<StorePreferencesInput>;
-  unit?: InputMaybe<UnitSpecInput>;
-};
 
 /** Input for creating shopping list items from a recipe */
 export type CreateShoppingListItemsFromRecipeInput = {
@@ -3202,22 +2524,6 @@ export type DeleteAllReadNotificationsPayload = {
  */
 export type DeleteAllReadNotificationsResult = ConflictError | DeleteAllReadNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
 
-export type DeleteApiKeyInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type DeleteApiKeyPayload = {
-  __typename: 'DeleteApiKeyPayload';
-  apiKey: ApiKey;
-};
-
-/**
- * Result of DeleteApiKey. Select on DeleteApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type DeleteApiKeyResult = ConflictError | DeleteApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
-
 export type DeleteBrandInput = {
   id: Scalars['ID']['input'];
   /**
@@ -3328,19 +2634,6 @@ export type DeleteDevicePayload = {
  */
 export type DeleteDeviceResult = ConflictError | DeleteDevicePayload | ForbiddenError | NotFoundError | ValidationError;
 
-export type DeleteExpiredNotificationsPayload = {
-  __typename: 'DeleteExpiredNotificationsPayload';
-  notifications: Array<Notification>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of DeleteExpiredNotifications. Select on DeleteExpiredNotificationsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type DeleteExpiredNotificationsResult = ConflictError | DeleteExpiredNotificationsPayload | ForbiddenError | NotFoundError | ValidationError;
-
 export type DeleteExternalSourceInput = {
   id: Scalars['ID']['input'];
 };
@@ -3405,23 +2698,6 @@ export type DeleteItemPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type DeleteItemResult = ConflictError | DeleteItemPayload | ForbiddenError | NotFoundError | ValidationError;
-
-/** Input for deleting an item unit conversion (admin only) */
-export type DeleteItemUnitConversionInput = {
-  conversionId: Scalars['ID']['input'];
-};
-
-export type DeleteItemUnitConversionPayload = {
-  __typename: 'DeleteItemUnitConversionPayload';
-  unitConversion: ItemUnitConversion;
-};
-
-/**
- * Result of DeleteItemUnitConversion. Select on DeleteItemUnitConversionPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type DeleteItemUnitConversionResult = ConflictError | DeleteItemUnitConversionPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type DeleteMealPlanInput = {
   id: Scalars['ID']['input'];
@@ -3662,31 +2938,6 @@ export type DeleteShoppingListReminderResult = ConflictError | DeleteShoppingLis
  */
 export type DeleteShoppingListResult = ConflictError | DeleteShoppingListPayload | ForbiddenError | NotFoundError | ValidationError;
 
-/** Input for device cleanup operations */
-export type DeleteStaleDevicesInput = {
-  /** Clean up soft-deleted devices older than X days */
-  deletedDevices?: InputMaybe<DeletedDeviceCleanupInput>;
-  /** Clean up stale devices (not seen for X days) */
-  staleDevices?: InputMaybe<StaleDeviceCleanupInput>;
-};
-
-export type DeleteStaleDevicesPayload = {
-  __typename: 'DeleteStaleDevicesPayload';
-  /**
-   * Devices removed by the cleanup. Empty for hard-delete cleanups where the
-   * removed rows are no longer retrievable — the counts live in the summary.
-   */
-  devices: Array<Device>;
-  summary: BulkSummary;
-};
-
-/**
- * Result of DeleteStaleDevices. Select on DeleteStaleDevicesPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type DeleteStaleDevicesResult = ConflictError | DeleteStaleDevicesPayload | ForbiddenError | NotFoundError | ValidationError;
-
 export type DeleteStorageLocationInput = {
   id: Scalars['ID']['input'];
 };
@@ -3751,11 +3002,6 @@ export type DeleteUserAddressPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type DeleteUserAddressResult = ConflictError | DeleteUserAddressPayload | ForbiddenError | NotFoundError | ValidationError;
-
-/** Input for deleted device cleanup */
-export type DeletedDeviceCleanupInput = {
-  olderThanDays?: InputMaybe<Scalars['Int']['input']>;
-};
 
 export type DeletionBlocker = {
   __typename: 'DeletionBlocker';
@@ -3970,12 +3216,6 @@ export type DeviceIdentificationInput = {
   systemVersion?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type DeviceLocationInput = {
-  lastCity?: InputMaybe<Scalars['String']['input']>;
-  lastCountry?: InputMaybe<Scalars['String']['input']>;
-  lastIpAddress?: InputMaybe<Scalars['String']['input']>;
-};
-
 export type DeviceOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
   deviceName?: InputMaybe<SortOrder>;
@@ -4135,22 +3375,6 @@ export enum Difficulty {
   VeryEasy = 'VERY_EASY'
 }
 
-export type DisableApiKeyInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type DisableApiKeyPayload = {
-  __typename: 'DisableApiKeyPayload';
-  apiKey: ApiKey;
-};
-
-/**
- * Result of DisableApiKey. Select on DisableApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type DisableApiKeyResult = ConflictError | DisableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
-
 /** Display format for quantities */
 export enum DisplayFormat {
   Auto = 'AUTO',
@@ -4158,13 +3382,6 @@ export enum DisplayFormat {
   Fraction = 'FRACTION',
   Mixed = 'MIXED'
 }
-
-/** An item that is a UPC-duplicate of another, with its reference counts. */
-export type DuplicateItem = {
-  __typename: 'DuplicateItem';
-  item: Item;
-  references: ItemReferenceCounts;
-};
 
 export type DuplicateMealPlanInput = {
   mealPlanId: Scalars['ID']['input'];
@@ -4223,22 +3440,6 @@ export type DuplicateTemplateResult = ConflictError | DuplicateTemplatePayload |
 export type Edge = {
   cursor: Scalars['String']['output'];
 };
-
-export type EnableApiKeyInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type EnableApiKeyPayload = {
-  __typename: 'EnableApiKeyPayload';
-  apiKey: ApiKey;
-};
-
-/**
- * Result of EnableApiKey. Select on EnableApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type EnableApiKeyResult = ConflictError | EnableApiKeyPayload | ForbiddenError | NotFoundError | ValidationError;
 
 export type EnableHomeJoinLinkInput = {
   /** ID of the home to enable the join link for. */
@@ -4874,12 +4075,24 @@ export type HomeEdge = Edge & {
  */
 export type HomeEvent = {
   __typename: 'HomeEvent';
-  /** Originator of the change, for self-echo suppression. */
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated or the acting user is unknown. For
+   * suppressing the echo of your own write, prefer originatorClientId: this
+   * field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
   mutation: MutationType;
   newRole: Maybe<MembershipRole>;
   node: HomeEventNode;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   previousRole: Maybe<MembershipRole>;
   subtype: HomeSubtype;
   timestamp: Scalars['DateTime']['output'];
@@ -4965,13 +4178,6 @@ export type HomeInviteEdge = Edge & {
   /** The HomeInvite this edge wraps. */
   node: HomeInvite;
 };
-
-export enum HomeInviteMutationType {
-  Accepted = 'ACCEPTED',
-  Created = 'CREATED',
-  Declined = 'DECLINED',
-  Revoked = 'REVOKED'
-}
 
 export type HomeInviteStatsGroup = {
   __typename: 'HomeInviteStatsGroup';
@@ -5079,61 +4285,6 @@ export type IpStat = {
   __typename: 'IPStat';
   count: Scalars['Int']['output'];
   ipAddress: Scalars['String']['output'];
-};
-
-/** Error details for a failed image deletion */
-export type ImageDeletionFailure = {
-  __typename: 'ImageDeletionFailure';
-  /** Error message describing the failure */
-  error: Scalars['String']['output'];
-  /** The S3/MinIO key (path) of the image (may be null if extraction failed) */
-  key: Maybe<Scalars['String']['output']>;
-  /** The full URL of the image that failed to delete */
-  url: Scalars['String']['output'];
-};
-
-/**
- * Status of a background image deletion job.
- * Use this to track progress of large batch deletions.
- */
-export type ImageDeletionJobStatus = {
-  __typename: 'ImageDeletionJobStatus';
-  /** When the job was created */
-  createdAt: Scalars['DateTime']['output'];
-  /** When the job finished (null if still running) */
-  finishedAt: Maybe<Scalars['DateTime']['output']>;
-  /** Unique job identifier */
-  jobId: Scalars['String']['output'];
-  /** Progress percentage (0-100) */
-  progress: Maybe<Scalars['Int']['output']>;
-  /** Deletion result (only available when status is COMPLETED) */
-  result: Maybe<ImageDeletionResult>;
-  /** Current job state */
-  status: BackgroundJobState;
-};
-
-/**
- * Result of an image deletion operation.
- * Contains counts of successfully deleted and failed images.
- */
-export type ImageDeletionResult = {
-  __typename: 'ImageDeletionResult';
-  code: Scalars['String']['output'];
-  /** Number of database Item records updated */
-  databaseUpdated: Scalars['Int']['output'];
-  /** Number of images successfully deleted from S3/MinIO storage */
-  deletedFromStorage: Scalars['Int']['output'];
-  /** List of storage deletion failures with error details */
-  failedStorage: Array<ImageDeletionFailure>;
-  /**
-   * Job ID if the operation was queued for background processing.
-   * Use adminGetImageDeletionJobStatus to check progress.
-   */
-  jobId: Maybe<Scalars['String']['output']>;
-  message: Scalars['String']['output'];
-  success: Scalars['Boolean']['output'];
-  /** Total number of images requested for deletion */
-  totalRequested: Scalars['Int']['output'];
 };
 
 export type ImageInput = {
@@ -5269,18 +4420,6 @@ export type InviteActionCount = {
   action: Scalars['Int']['output'];
 };
 
-export type InviteActionStats = {
-  __typename: 'InviteActionStats';
-  inviteAccepted: Maybe<Scalars['Int']['output']>;
-  inviteCancelled: Maybe<Scalars['Int']['output']>;
-  inviteCreated: Maybe<Scalars['Int']['output']>;
-  inviteDeclined: Maybe<Scalars['Int']['output']>;
-  inviteExpired: Maybe<Scalars['Int']['output']>;
-  inviteResent: Maybe<Scalars['Int']['output']>;
-  inviteSent: Maybe<Scalars['Int']['output']>;
-  inviteViewed: Maybe<Scalars['Int']['output']>;
-};
-
 export type InviteLog = {
   __typename: 'InviteLog';
   action: InviteAction;
@@ -5327,13 +4466,6 @@ export type InviteLogOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
 };
 
-export type InviteStats = {
-  __typename: 'InviteStats';
-  actions: InviteActionStats;
-  timeline: Array<InviteTimelineEntry>;
-  total: Scalars['Int']['output'];
-};
-
 export enum InviteStatus {
   Accepted = 'ACCEPTED',
   Declined = 'DECLINED',
@@ -5342,12 +4474,6 @@ export enum InviteStatus {
   Revoked = 'REVOKED',
   Used = 'USED'
 }
-
-export type InviteTimelineEntry = {
-  __typename: 'InviteTimelineEntry';
-  action: InviteAction;
-  timestamp: Scalars['DateTime']['output'];
-};
 
 export type InviteToHomeInput = {
   email: Scalars['String']['input'];
@@ -5700,33 +4826,6 @@ export type ItemConnection = Connection & {
   totalCount: Maybe<Scalars['Int']['output']>;
 };
 
-export type ItemCreation = {
-  __typename: 'ItemCreation';
-  createdAt: Scalars['DateTime']['output'];
-  id: Scalars['ID']['output'];
-  item: Item;
-  metadata: Maybe<Scalars['JSON']['output']>;
-  reason: Maybe<Scalars['String']['output']>;
-  source: DataSource;
-  /** Null when the creator's account was permanently deleted. The item and this provenance record remain. */
-  user: Maybe<User>;
-};
-
-/** A cluster of items that share a UPC. */
-export type ItemDuplicateCluster = {
-  __typename: 'ItemDuplicateCluster';
-  items: Array<DuplicateItem>;
-  upc: Scalars['String']['output'];
-};
-
-/** A page of duplicate clusters (offset paginated). */
-export type ItemDuplicateClusterPage = {
-  __typename: 'ItemDuplicateClusterPage';
-  clusters: Array<ItemDuplicateCluster>;
-  hasMore: Scalars['Boolean']['output'];
-  totalCount: Scalars['Int']['output'];
-};
-
 /**
  * One Item in a paginated result, paired with the cursor that identifies its
  * position. Pass the cursor as "after" to resume from just past this edge.
@@ -5737,19 +4836,6 @@ export type ItemEdge = Edge & {
   cursor: Scalars['String']['output'];
   /** The Item this edge wraps. */
   node: Item;
-};
-
-export type ItemEdit = {
-  __typename: 'ItemEdit';
-  createdAt: Scalars['DateTime']['output'];
-  editReason: Maybe<Scalars['String']['output']>;
-  fieldsChanged: Array<Scalars['String']['output']>;
-  id: Scalars['ID']['output'];
-  item: Item;
-  newValues: Maybe<Scalars['JSON']['output']>;
-  oldValues: Maybe<Scalars['JSON']['output']>;
-  /** Null when the editor's account was permanently deleted. The item and this provenance record remain. */
-  user: Maybe<User>;
 };
 
 /**
@@ -5849,38 +4935,6 @@ export type ItemImage = {
    */
   status: ItemImageStatus;
   url: Scalars['String']['output'];
-};
-
-/**
- * A page of ItemImage results. Read "edges" for the rows and "pageInfo" to decide
- * whether to request another page.
- */
-export type ItemImageConnection = Connection & {
-  __typename: 'ItemImageConnection';
-  /** The rows in this page, in the connection's sort order. */
-  edges: Array<ItemImageEdge>;
-  /** Cursors and flags describing where this page sits in the full result. */
-  pageInfo: PageInfo;
-  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
-  totalCount: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * One ItemImage in a paginated result, paired with the cursor that identifies its
- * position. Pass the cursor as "after" to resume from just past this edge.
- */
-export type ItemImageEdge = Edge & {
-  __typename: 'ItemImageEdge';
-  /** Opaque position marker for this edge. Do not parse or construct it. */
-  cursor: Scalars['String']['output'];
-  /** The ItemImage this edge wraps. */
-  node: ItemImage;
-};
-
-/** Filters for the admin item-photo review queue. */
-export type ItemImageFilters = {
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-  status?: InputMaybe<ItemImageStatus>;
 };
 
 /**
@@ -6036,15 +5090,6 @@ export type ItemPriceHistoryOrderBy = {
 export type ItemRefInput = {
   itemId?: InputMaybe<Scalars['ID']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
-};
-
-/** Number of records that reference an item, used to gauge the impact of a merge. */
-export type ItemReferenceCounts = {
-  __typename: 'ItemReferenceCounts';
-  pantryItems: Scalars['Int']['output'];
-  purchases: Scalars['Int']['output'];
-  recipeIngredients: Scalars['Int']['output'];
-  shoppingListItems: Scalars['Int']['output'];
 };
 
 export enum ItemStatus {
@@ -6826,7 +5871,13 @@ export type MarkPantryAsDefaultResult = ConflictError | ForbiddenError | MarkPan
 
 export type MarkPantryItemExpiredInput = {
   id: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type MarkPantryItemExpiredPayload = {
@@ -7070,12 +6121,25 @@ export type MealPlanEdge = Edge & {
  */
 export type MealPlanEvent = {
   __typename: 'MealPlanEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
   /** Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events. */
   mealPlanId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: Maybe<MealPlanEventNode>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: MealPlanSubtype;
   /** Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events. */
   templateId: Maybe<Scalars['ID']['output']>;
@@ -7367,14 +6431,6 @@ export type MembershipEdge = Edge & {
   node: Membership;
 };
 
-export enum MembershipMutationType {
-  Created = 'CREATED',
-  Left = 'LEFT',
-  Rejoined = 'REJOINED',
-  Removed = 'REMOVED',
-  Updated = 'UPDATED'
-}
-
 export type MembershipOrderBy = {
   createdAt?: InputMaybe<SortOrder>;
 };
@@ -7390,16 +6446,6 @@ export enum MembershipRole {
   /** Full ownership of the household including the ability to delete it */
   Owner = 'OWNER'
 }
-
-export type MembershipRoleChangedPayload = {
-  __typename: 'MembershipRoleChangedPayload';
-  changedBy: Scalars['String']['output'];
-  homeId: Scalars['ID']['output'];
-  membership: Membership;
-  newRole: MembershipRole;
-  previousRole: MembershipRole;
-  userId: Scalars['ID']['output'];
-};
 
 export type MembershipRoleStats = {
   __typename: 'MembershipRoleStats';
@@ -7432,27 +6478,6 @@ export type MembershipStatusStats = {
   removed: Scalars['Int']['output'];
   suspended: Scalars['Int']['output'];
 };
-
-/**
- * Merge one or more secondary items into a primary. References on the
- * secondaries are retargeted onto the primary and the secondaries are deleted.
- */
-export type MergeItemsInput = {
-  primaryItemId: Scalars['ID']['input'];
-  secondaryItemIds: Array<Scalars['ID']['input']>;
-};
-
-export type MergeItemsPayload = {
-  __typename: 'MergeItemsPayload';
-  item: Item;
-};
-
-/**
- * Result of MergeItems. Select on MergeItemsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type MergeItemsResult = ConflictError | ForbiddenError | MergeItemsPayload | NotFoundError | ValidationError;
 
 export enum MfaMethod {
   Biometric = 'BIOMETRIC',
@@ -11164,6 +10189,12 @@ export type NotificationEdge = Edge & {
  */
 export type NotificationEvent = {
   __typename: 'NotificationEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated or the acting user is unknown. For
+   * suppressing the echo of your own write, prefer originatorClientId: this
+   * field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /**
    * Number of notifications affected by an aggregate subtype (BULK_READ /
@@ -11177,6 +10208,13 @@ export type NotificationEvent = {
    * set-based mutation with no single node — read affectedCount instead.
    */
   node: Maybe<Notification>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: NotificationSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
@@ -11611,7 +10649,13 @@ export type OpenPantryItemBatchResult = ConflictError | ForbiddenError | NotFoun
 export type OpenPantryItemInput = {
   id: Scalars['ID']['input'];
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type OpenPantryItemPayload = {
@@ -11833,9 +10877,22 @@ export type PantryEdge = Edge & {
  */
 export type PantryEvent = {
   __typename: 'PantryEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: PantryEventNode;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   pantryId: Scalars['ID']['output'];
   parents: PantryEventParents;
   subtype: PantrySubtype;
@@ -14177,44 +13234,6 @@ export enum RegistrationStatus {
   VerificationSent = 'VERIFICATION_SENT'
 }
 
-export type RejectItemImagePayload = {
-  __typename: 'RejectItemImagePayload';
-  item: Item;
-};
-
-/**
- * Result of RejectItemImage. Select on RejectItemImagePayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type RejectItemImageResult = ConflictError | ForbiddenError | NotFoundError | RejectItemImagePayload | ValidationError;
-
-/** Input for rejecting a user-created item */
-export type RejectItemInput = {
-  itemId: Scalars['ID']['input'];
-  notifyUser?: InputMaybe<Scalars['Boolean']['input']>;
-  reason: Scalars['String']['input'];
-};
-
-export type RejectItemPayload = {
-  __typename: 'RejectItemPayload';
-  item: Item;
-};
-
-/**
- * Result of RejectItem. Select on RejectItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type RejectItemResult = ConflictError | ForbiddenError | NotFoundError | RejectItemPayload | ValidationError;
-
-/**
- * Result of RejectItemSuggestion. Select on ReviewItemSuggestionPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type RejectItemSuggestionResult = ConflictError | ForbiddenError | NotFoundError | ReviewItemSuggestionPayload | ValidationError;
-
 export enum ReligiousDiet {
   Halal = 'HALAL',
   Kosher = 'KOSHER'
@@ -14548,43 +13567,6 @@ export type ReviewHelpful = {
   user: Maybe<User>;
 };
 
-/**
- * Shared by approveItemImage and rejectItemImage — the two differ only in the
- * verdict they record, which is carried by the mutation name.
- */
-export type ReviewItemImageInput = {
-  /** The ItemImage row being reviewed. */
-  imageId: Scalars['ID']['input'];
-  reviewNote?: InputMaybe<Scalars['String']['input']>;
-};
-
-/** Approve or reject a pending suggestion (admin only). */
-export type ReviewItemSuggestionInput = {
-  id: Scalars['ID']['input'];
-  reviewNote?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type ReviewItemSuggestionPayload = {
-  __typename: 'ReviewItemSuggestionPayload';
-  suggestion: ItemEditSuggestion;
-};
-
-export type RevokeApiKeyInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type RevokeApiKeyPayload = {
-  __typename: 'RevokeApiKeyPayload';
-  apiKey: ApiKey;
-};
-
-/**
- * Result of RevokeApiKey. Select on RevokeApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type RevokeApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RevokeApiKeyPayload | ValidationError;
-
 /** Sub-input for risk assessment data */
 export type RiskAssessmentInput = {
   isRisky?: InputMaybe<Scalars['Boolean']['input']>;
@@ -14609,27 +13591,6 @@ export enum RiskFactor {
   UnusualTime = 'UNUSUAL_TIME',
   VpnDetected = 'VPN_DETECTED'
 }
-
-export type RotateApiKeyInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type RotateApiKeyPayload = {
-  __typename: 'RotateApiKeyPayload';
-  apiKey: ApiKey;
-  /**
-   * The replacement secret, shown once. The key's previous secret stops
-   * authenticating immediately.
-   */
-  secret: ApiKeySecret;
-};
-
-/**
- * Result of RotateApiKey. Select on RotateApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type RotateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | RotateApiKeyPayload | ValidationError;
 
 export type SavedRecipe = {
   __typename: 'SavedRecipe';
@@ -15043,7 +14004,12 @@ export type ShoppingListEdge = Edge & {
  */
 export type ShoppingListEvent = {
   __typename: 'ShoppingListEvent';
-  /** User who made the change. */
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /** Count of items cleared (ITEMS_BATCH_CLEARED only). */
   clearedCount: Maybe<Scalars['Int']['output']>;
@@ -15058,7 +14024,12 @@ export type ShoppingListEvent = {
    * node.status.
    */
   node: Maybe<ShoppingListEventNode>;
-  /** Device/client that triggered the change (for echo suppression). */
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
   originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: ShoppingListSubtype;
   timestamp: Scalars['DateTime']['output'];
@@ -15498,12 +14469,6 @@ export type SpoonacularNutritionInput = {
 export type SpoonacularWeightPerServingInput = {
   amount?: InputMaybe<Scalars['Float']['input']>;
   unit?: InputMaybe<Scalars['String']['input']>;
-};
-
-/** Input for stale device cleanup */
-export type StaleDeviceCleanupInput = {
-  daysInactive?: InputMaybe<Scalars['Int']['input']>;
-  userId: Scalars['ID']['input'];
 };
 
 /** Reusable sub-input for storage details */
@@ -16198,28 +15163,6 @@ export type SyncDeleteShoppingListItemInput = {
  */
 export type SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
 
-export type SyncItemPopularityInput = {
-  /** Reconcile a single item synchronously. Omit to enqueue a full backfill of all items. */
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type SyncItemPopularityPayload = {
-  __typename: 'SyncItemPopularityPayload';
-  /** True when a full ITEM_POPULARITY_RECALC backfill was enqueued instead of a single-item recompute. */
-  enqueued: Scalars['Boolean']['output'];
-  /** The item reconciled synchronously, or null when a full backfill was enqueued. */
-  itemId: Maybe<Scalars['ID']['output']>;
-  /** The item's reconciled popularity, when a single itemId was supplied. */
-  popularity: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * Result of SyncItemPopularity. Select on SyncItemPopularityPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncItemPopularityResult = ConflictError | ForbiddenError | NotFoundError | SyncItemPopularityPayload | ValidationError;
-
 export type SyncMoveShoppingListItemInput = {
   afterId?: InputMaybe<Scalars['ID']['input']>;
   beforeId?: InputMaybe<Scalars['ID']['input']>;
@@ -16287,28 +15230,6 @@ export type SyncPantryItemPayload = {
  */
 export type SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError;
 
-export type SyncRecipeRatingsInput = {
-  /** Reconcile a single recipe synchronously. Omit to enqueue a full backfill of all recipes. */
-  recipeId?: InputMaybe<Scalars['ID']['input']>;
-};
-
-export type SyncRecipeRatingsPayload = {
-  __typename: 'SyncRecipeRatingsPayload';
-  averageRating: Maybe<Scalars['Float']['output']>;
-  /** True when a full RECIPE_RATING_RECALC backfill was enqueued instead of a single-recipe recompute. */
-  enqueued: Scalars['Boolean']['output'];
-  /** The recipe reconciled synchronously, or null when a full backfill was enqueued. */
-  recipeId: Maybe<Scalars['ID']['output']>;
-  totalReviews: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * Result of SyncRecipeRatings. Select on SyncRecipeRatingsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncRecipeRatingsResult = ConflictError | ForbiddenError | NotFoundError | SyncRecipeRatingsPayload | ValidationError;
-
 /** Sub-input for sync settings */
 export type SyncSettingsInput = {
   autoSync?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16318,6 +15239,13 @@ export type SyncSettingsInput = {
 export type SyncShoppingListItemFieldsInput = {
   brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Optional client-minted CUID2 making a sync that MERGES into an existing row
+   * idempotent. Defaults to the enclosing clientId, which already identifies the
+   * queued operation — supply this only to key the merge on something other than
+   * the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
+   */
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
   item: ItemRefInput;
   netWeight?: InputMaybe<NetWeightInput>;
@@ -16329,7 +15257,7 @@ export type SyncShoppingListItemFieldsInput = {
   /**
    * Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
    * Unitless by default; specify a unit via the unit field when needed (shopping
-   * items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
+   * items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
    */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   recipeContext?: InputMaybe<RecipeContextInput>;
@@ -16757,36 +15685,6 @@ export type UpdateAccountPayload = {
  */
 export type UpdateAccountResult = ConflictError | ForbiddenError | NotFoundError | UpdateAccountPayload | ValidationError;
 
-/**
- * Metadata changes only. There is no field here that alters the secret — use
- * rotateApiKey for that, and the lifecycle mutations to change status.
- *
- * An omitted field is left unchanged.
- */
-export type UpdateApiKeyInput = {
-  description?: InputMaybe<Scalars['String']['input']>;
-  /** Replaces the existing set. Must be non-empty. */
-  environment?: InputMaybe<Array<ApiKeyEnvironment>>;
-  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
-  id: Scalars['ID']['input'];
-  name?: InputMaybe<Scalars['String']['input']>;
-  /** Replaces the existing set. Same rules as on create: non-empty, and ADMIN requires READ. */
-  permissions?: InputMaybe<Array<ApiKeyPermission>>;
-  rateLimit?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type UpdateApiKeyPayload = {
-  __typename: 'UpdateApiKeyPayload';
-  apiKey: ApiKey;
-};
-
-/**
- * Result of UpdateApiKey. Select on UpdateApiKeyPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type UpdateApiKeyResult = ConflictError | ForbiddenError | NotFoundError | UpdateApiKeyPayload | ValidationError;
-
 export type UpdateBrandInput = {
   description?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
@@ -17048,7 +15946,13 @@ export type UpdateHomeInput = {
   name?: InputMaybe<Scalars['String']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateHomeJoinCodeInput = {
@@ -17274,38 +16178,6 @@ export type UpdateMembershipPayload = {
  */
 export type UpdateMembershipResult = ConflictError | ForbiddenError | NotFoundError | UpdateMembershipPayload | ValidationError;
 
-/**
- * Input for updateModeration mutation. Wraps the target userId alongside the
- * consolidated moderation update fields so callers pass a single `input`.
- * Handles status transitions, trust level, risk score, ban/suspend/unban/unsuspend, and review operations.
- */
-export type UpdateModerationInput = {
-  moderatorNotes?: InputMaybe<Scalars['String']['input']>;
-  /** Ban/suspend reason */
-  reason?: InputMaybe<Scalars['String']['input']>;
-  /** Review notes (used when completing a review) */
-  reviewNotes?: InputMaybe<Scalars['String']['input']>;
-  riskScore?: InputMaybe<Scalars['Float']['input']>;
-  /** New moderation status (ACTIVE, WARNED, RESTRICTED, SUSPENDED, BANNED, UNDER_REVIEW, APPEALING) */
-  status?: InputMaybe<ModerationStatus>;
-  /** Suspension end date (required when status=SUSPENDED) */
-  suspendedUntil?: InputMaybe<Scalars['DateTime']['input']>;
-  trustLevel?: InputMaybe<TrustLevel>;
-  userId: Scalars['ID']['input'];
-};
-
-export type UpdateModerationPayload = {
-  __typename: 'UpdateModerationPayload';
-  userModeration: Maybe<UserModeration>;
-};
-
-/**
- * Result of UpdateModeration. Select on UpdateModerationPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type UpdateModerationResult = ConflictError | ForbiddenError | NotFoundError | UpdateModerationPayload | ValidationError;
-
 export type UpdateNotificationInput = {
   actionUrl?: InputMaybe<Scalars['String']['input']>;
   category?: InputMaybe<NotificationCategory>;
@@ -17378,14 +16250,26 @@ export type UpdatePantryItemInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   thresholds?: InputMaybe<InventoryThresholdsInput>;
   unit?: InputMaybe<UnitSpecInput>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
   wasteReason?: InputMaybe<WasteReason>;
 };
 
 export type UpdatePantryItemLocationInput = {
   id: Scalars['ID']['input'];
   storageLocationId: Scalars['String']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdatePantryItemLocationPayload = {
@@ -17625,7 +16509,13 @@ export type UpdateShoppingListInput = {
    */
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateShoppingListItemInput = {
@@ -17641,7 +16531,13 @@ export type UpdateShoppingListItemInput = {
   sortOrder?: InputMaybe<Scalars['String']['input']>;
   storePrefs?: InputMaybe<StorePreferencesInput>;
   unit?: InputMaybe<UnitSpecInput>;
-  version?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
+   * already holds, so it has the version — and an update that silently skipped
+   * the check when the field was omitted is one that reports success while
+   * overwriting somebody else's concurrent edit.
+   */
+  version: Scalars['Int']['input'];
 };
 
 export type UpdateShoppingListItemPayload = {
@@ -17913,7 +16809,11 @@ export type UpdateUserAppealInput = {
 
 export type UpdateUserAppealPayload = {
   __typename: 'UpdateUserAppealPayload';
-  userModeration: Maybe<UserModeration>;
+  /**
+   * The appellant's own view of their record, after the appeal is written.
+   * Present on both branches; it is what a non-admin caller reads.
+   */
+  myModeration: Maybe<MyModerationStatus>;
 };
 
 /**
@@ -17922,29 +16822,6 @@ export type UpdateUserAppealPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError;
-
-/** Input for managing restrictions (add and/or remove in one call). */
-export type UpdateUserRestrictionsInput = {
-  /** Restrictions to add */
-  add?: InputMaybe<Array<ModerationRestriction>>;
-  reason?: InputMaybe<Scalars['String']['input']>;
-  /** Restrictions to remove */
-  remove?: InputMaybe<Array<ModerationRestriction>>;
-  restrictedUntil?: InputMaybe<Scalars['DateTime']['input']>;
-  userId: Scalars['ID']['input'];
-};
-
-export type UpdateUserRestrictionsPayload = {
-  __typename: 'UpdateUserRestrictionsPayload';
-  userModeration: Maybe<UserModeration>;
-};
-
-/**
- * Result of UpdateUserRestrictions. Select on UpdateUserRestrictionsPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type UpdateUserRestrictionsResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserRestrictionsPayload | ValidationError;
 
 export type UploadFormField = {
   __typename: 'UploadFormField';
@@ -18135,7 +17012,7 @@ export type User = {
   defaultHome: Maybe<Home>;
   defaultHomeId: Maybe<Scalars['ID']['output']>;
   defaultShoppingListId: Maybe<Scalars['ID']['output']>;
-  deviceStats: DeviceStats;
+  deviceStats: Maybe<DeviceStats>;
   devicesConnection: DeviceConnection;
   dietaryProfile: Maybe<DietaryProfile>;
   /**
@@ -18158,7 +17035,7 @@ export type User = {
   language: Maybe<Scalars['String']['output']>;
   lastActiveAt: Maybe<Scalars['DateTime']['output']>;
   loginHistoryConnection: LoginHistoryConnection;
-  loginHistoryStats: LoginHistoryStats;
+  loginHistoryStats: Maybe<LoginHistoryStats>;
   membershipInHome: Maybe<Membership>;
   membershipsConnection: MembershipConnection;
   notificationPreferences: Maybe<NotificationPreferences>;
@@ -18168,7 +17045,14 @@ export type User = {
   pendingHomeInvitesConnection: HomeInviteConnection;
   preferredCurrency: Maybe<Scalars['String']['output']>;
   profile: Maybe<UserProfile>;
-  purchaseStats: PurchaseStats;
+  /**
+   * Null unless the caller is this user or an admin — the same self-or-admin
+   * gate as email/role. Nullable because the gate is a normal outcome, not an
+   * error: as a non-null field the denial was a field error that nulled the
+   * whole User, and through a non-null edge (a home's members, a recipe's
+   * author) it nulled the list containing it.
+   */
+  purchaseStats: Maybe<PurchaseStats>;
   purchasesConnection: PurchaseConnection;
   /** Null unless the caller is this user or an admin. See email. */
   role: Maybe<UserRole>;
@@ -18177,7 +17061,7 @@ export type User = {
   settings: Maybe<UserSettings>;
   shoppingListInvitesConnection: ShoppingListCollaboratorConnection;
   shoppingListOwnershipsConnection: ShoppingListOwnershipConnection;
-  suspiciousLoginActivity: SuspiciousActivity;
+  suspiciousLoginActivity: Maybe<SuspiciousActivity>;
   timezone: Maybe<Scalars['String']['output']>;
   unreadNotificationCount: Scalars['Int']['output'];
   updatedAt: Scalars['DateTime']['output'];
@@ -18480,32 +17364,6 @@ export type UserAddressOrderBy = {
 };
 
 /**
- * A page of User results. Read "edges" for the rows and "pageInfo" to decide
- * whether to request another page.
- */
-export type UserConnection = Connection & {
-  __typename: 'UserConnection';
-  /** The rows in this page, in the connection's sort order. */
-  edges: Array<UserEdge>;
-  /** Cursors and flags describing where this page sits in the full result. */
-  pageInfo: PageInfo;
-  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
-  totalCount: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * One User in a paginated result, paired with the cursor that identifies its
- * position. Pass the cursor as "after" to resume from just past this edge.
- */
-export type UserEdge = Edge & {
-  __typename: 'UserEdge';
-  /** Opaque position marker for this edge. Do not parse or construct it. */
-  cursor: Scalars['String']['output'];
-  /** The User this edge wraps. */
-  node: User;
-};
-
-/**
  * Consolidated per-user event envelope. Discriminate by subtype; branch on
  * node's __typename for ACCOUNT_UPDATED / PROFILE_CHANGED and read
  * parents / reason / warningCount for the lifecycle subtypes.
@@ -18513,9 +17371,11 @@ export type UserEdge = Edge & {
 export type UserEvent = {
   __typename: 'UserEvent';
   /**
-   * Originator of the change, for self-echo suppression. For account/profile
-   * updates this is the user themselves; for moderation it is the moderator
-   * (null for system actions).
+   * The user who caused the change — never the user it happened TO. For
+   * account/profile updates this is usually the user themselves; for moderation
+   * it is the moderator, and null for system actions. For suppressing the echo
+   * of your own write, prefer originatorClientId: this field cannot tell your
+   * two devices apart.
    */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /**
@@ -18525,6 +17385,13 @@ export type UserEvent = {
    */
   mutation: MutationType;
   node: Maybe<UserEventNode>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   parents: Maybe<UserEventParents>;
   reason: Maybe<Scalars['String']['output']>;
   subtype: UserSubtype;
@@ -18551,79 +17418,6 @@ export type UserEventParents = {
   shoppingListId: Maybe<Scalars['ID']['output']>;
 };
 
-/** Filter criteria for the admin users list query. */
-export type UserFilters = {
-  /** Free-text search across username / email */
-  search?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type UserModeration = {
-  __typename: 'UserModeration';
-  abuseScore: Scalars['Float']['output'];
-  appealNotes: Maybe<Scalars['String']['output']>;
-  appealStatus: Maybe<AppealStatus>;
-  appealedAt: Maybe<Scalars['DateTime']['output']>;
-  automatedFlags: Array<AutomatedFlag>;
-  banReason: Maybe<Scalars['String']['output']>;
-  bannedAt: Maybe<Scalars['DateTime']['output']>;
-  createdAt: Scalars['DateTime']['output'];
-  createdBy: Maybe<User>;
-  createdById: Maybe<Scalars['ID']['output']>;
-  deletedBy: Maybe<User>;
-  deletedById: Maybe<Scalars['ID']['output']>;
-  id: Scalars['ID']['output'];
-  isBanned: Scalars['Boolean']['output'];
-  isSuspended: Scalars['Boolean']['output'];
-  lastModifiedBy: Maybe<User>;
-  lastModifiedById: Maybe<Scalars['ID']['output']>;
-  lastViolationAt: Maybe<Scalars['DateTime']['output']>;
-  moderatorNotes: Maybe<Scalars['String']['output']>;
-  restrictedUntil: Maybe<Scalars['DateTime']['output']>;
-  restrictionReason: Maybe<Scalars['String']['output']>;
-  restrictions: Array<ModerationRestriction>;
-  reviewStartedAt: Maybe<Scalars['DateTime']['output']>;
-  riskScore: Scalars['Float']['output'];
-  spamScore: Scalars['Float']['output'];
-  status: ModerationStatus;
-  suspendedAt: Maybe<Scalars['DateTime']['output']>;
-  suspendedUntil: Maybe<Scalars['DateTime']['output']>;
-  suspensionReason: Maybe<Scalars['String']['output']>;
-  trustLevel: TrustLevel;
-  underReview: Scalars['Boolean']['output'];
-  updatedAt: Scalars['DateTime']['output'];
-  user: User;
-  userId: Scalars['ID']['output'];
-  version: Scalars['Int']['output'];
-  violationCount: Scalars['Int']['output'];
-  warningCount: Scalars['Int']['output'];
-};
-
-/**
- * A page of UserModeration results. Read "edges" for the rows and "pageInfo" to decide
- * whether to request another page.
- */
-export type UserModerationConnection = Connection & {
-  __typename: 'UserModerationConnection';
-  /** The rows in this page, in the connection's sort order. */
-  edges: Array<UserModerationEdge>;
-  /** Cursors and flags describing where this page sits in the full result. */
-  pageInfo: PageInfo;
-  /** Total rows matching the query across all pages. Computed only when selected; null when not available. */
-  totalCount: Maybe<Scalars['Int']['output']>;
-};
-
-/**
- * One UserModeration in a paginated result, paired with the cursor that identifies its
- * position. Pass the cursor as "after" to resume from just past this edge.
- */
-export type UserModerationEdge = Edge & {
-  __typename: 'UserModerationEdge';
-  /** Opaque position marker for this edge. Do not parse or construct it. */
-  cursor: Scalars['String']['output'];
-  /** The UserModeration this edge wraps. */
-  node: UserModeration;
-};
-
 /** Sub-input for notification settings within user settings */
 export type UserNotificationSettingsInput = {
   emailNotifications?: InputMaybe<Scalars['Boolean']['input']>;
@@ -18634,12 +17428,6 @@ export type UserNotificationSettingsInput = {
   shoppingListUpdates?: InputMaybe<Scalars['Boolean']['input']>;
   smsNotifications?: InputMaybe<Scalars['Boolean']['input']>;
   weeklyDigest?: InputMaybe<Scalars['Boolean']['input']>;
-};
-
-/** Order by options for users */
-export type UserOrderBy = {
-  createdAt?: InputMaybe<SortOrder>;
-  username?: InputMaybe<SortOrder>;
 };
 
 /**
@@ -18795,41 +17583,6 @@ export type VerifyEmailPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type VerifyEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyEmailPayload;
-
-/** Input for verifying an item unit conversion (admin only) */
-export type VerifyItemUnitConversionInput = {
-  confidence?: InputMaybe<Scalars['Float']['input']>;
-  conversionId: Scalars['ID']['input'];
-  notes?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type VerifyItemUnitConversionPayload = {
-  __typename: 'VerifyItemUnitConversionPayload';
-  unitConversion: ItemUnitConversion;
-};
-
-/**
- * Result of VerifyItemUnitConversion. Select on VerifyItemUnitConversionPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type VerifyItemUnitConversionResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyItemUnitConversionPayload;
-
-export type VerifyUserEmailInput = {
-  id: Scalars['ID']['input'];
-};
-
-export type VerifyUserEmailPayload = {
-  __typename: 'VerifyUserEmailPayload';
-  user: User;
-};
-
-/**
- * Result of VerifyUserEmail. Select on VerifyUserEmailPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type VerifyUserEmailResult = ConflictError | ForbiddenError | NotFoundError | ValidationError | VerifyUserEmailPayload;
 
 export enum Visibility {
   Private = 'PRIVATE',

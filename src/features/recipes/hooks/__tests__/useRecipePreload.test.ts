@@ -39,7 +39,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 // Deterministic client-minted SavedRecipe id so the optimistic-write/revert
 // assertions can target a known cache key.
@@ -427,11 +427,20 @@ describe('useRecipePreload', () => {
     expect(secondResult?.id).toBe('backend-1');
   });
 
-  it('preloadRecipe returns null when mutation fails', async () => {
-    const { executeMutation } = require('#/utils/compilerSafeWrappers');
-    executeMutation.mockResolvedValueOnce(false);
-
-    const { result } = renderHookWithApollo(() => useRecipePreload());
+  // `errorPolicy: 'all'` resolves a failed mutation with `error` set rather
+  // than rejecting, so this drives the outcome the app actually gets.
+  it('preloadRecipe returns null when the mutation fails', async () => {
+    const { result } = renderHookWithApollo(() => useRecipePreload(), {
+      operationMocks: [
+        {
+          request: {
+            query: UpsertExternalRecipeDocument,
+            variables: () => true,
+          },
+          error: new Error('network down'),
+        },
+      ],
+    });
 
     let preloaded!: PreloadedRecipe | null;
     await act(async () => {

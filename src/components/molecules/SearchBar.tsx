@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FC, type ReactNode } from 'react';
 import { View, StyleProp, ViewStyle, TextInputProps } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import {
   StyleSheet,
   useUnistyles,

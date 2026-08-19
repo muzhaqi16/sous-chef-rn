@@ -1,5 +1,6 @@
 'use no memo';
 
+import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
@@ -56,7 +57,7 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   gcResetResultCache: jest.fn(),
 }));
 
-jest.mock('#/utils/compilerSafeWrappers');
+jest.mock('#/utils/finallyHelpers');
 
 const mockUseAppStore = require('#store/useAppStore').useAppStore;
 
@@ -125,7 +126,7 @@ describe('useShoppingListSubscriptions', () => {
     );
   });
 
-  it('handles Created mutation in customOnData', () => {
+  it('reads a created item back before adding it', async () => {
     const {
       addNewItemToShoppingListCache,
     } = require('#/apollo/utils/shoppingListCacheUpdaters');
@@ -139,19 +140,33 @@ describe('useShoppingListSubscriptions', () => {
           update(mockCache),
       ),
     };
-    const mockClient = { cache: mockCache };
+    // The event carries only the id; the values come from the read-back.
+    const mockClient = {
+      cache: mockCache,
+      query: jest.fn().mockResolvedValue({
+        data: {
+          shoppingListItem: { __typename: 'ShoppingListItem', id: 'i1' },
+        },
+      }),
+    };
 
-    getOnData()(
-      {
-        subtype: 'ITEMS_CHANGED',
-        mutation: 'CREATED',
-        node: { __typename: 'ShoppingListItem', id: 'i1' },
-        listId: 'list-1',
-        actorUserId: 'other-user',
-      },
-      mockClient,
+    await act(async () => {
+      getOnData()(
+        {
+          subtype: 'ITEMS_CHANGED',
+          mutation: 'CREATED',
+          node: { __typename: 'ShoppingListItem', id: 'i1' },
+          listId: 'list-1',
+          actorUserId: 'other-user',
+          updatedFields: [],
+        },
+        mockClient,
+      );
+    });
+
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { id: 'i1' } }),
     );
-
     expect(addNewItemToShoppingListCache).toHaveBeenCalled();
   });
 

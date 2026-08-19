@@ -22,7 +22,7 @@ import { errorService, getErrorMessage } from '#/services/errorService';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
-import { t } from '#/i18n/t';
+import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 
 /**

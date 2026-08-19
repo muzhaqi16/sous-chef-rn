@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { detailsPageBaseStyles } from './detailsPageStyles';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
@@ -49,18 +49,12 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
-  const formatStorageStateLabel = (state: StorageState) => {
-    switch (state) {
-      case StorageState.Ambient:
-        return t('addToPantry.stateAmbient');
-      case StorageState.Refrigerated:
-        return t('addToPantry.stateRefrigerated');
-      case StorageState.Frozen:
-        return t('addToPantry.stateFrozen');
-      default:
-        return state;
-    }
-  };
+  // Keyed off the enum like every other StorageState picker, so `NONE` — which
+  // `Object.values(StorageState)` puts in this list — gets a label instead of
+  // falling through to the raw "NONE". `enumKeyCoverage.test.ts` fails if
+  // codegen adds a member this namespace lacks.
+  const formatStorageStateLabel = (state: StorageState) =>
+    t(`storageState.${state}`);
   return (
     <BottomSheetKeyboardAwareScrollView
       key="main"

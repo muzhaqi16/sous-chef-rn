@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -19,6 +20,7 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
   barcode,
   format,
 }) => {
+  const { t } = useTranslation();
   if (!scannedValue && !barcode) return null;
 
   return (
@@ -30,8 +32,8 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
         style={styles.barcodeLabel}
       >
         {scannedValue && detectScanType(scannedValue) === 'sku'
-          ? 'SKU'
-          : 'UPC/Barcode'}
+          ? t('barcode.sku')
+          : t('barcode.upc')}
       </Text>
       <Text size="md" weight="medium" style={styles.barcodeValue}>
         {scannedValue || barcode}
@@ -44,7 +46,7 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
             tone="secondary"
             style={styles.formatLabel}
           >
-            Format
+            {t('barcodeInfo.format')}
           </Text>
           <Text size="sm" weight="medium" tone="onSurfaceVariant">
             {format.toUpperCase()}

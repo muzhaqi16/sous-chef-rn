@@ -3,7 +3,6 @@ import { useApolloClient } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { shouldUseServerSort } from '#/utils/hybridSort';
-import { executeSearchQuery } from '#/utils/compilerSafeWrappers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -193,15 +192,23 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
     let cancelled = false;
 
     const run = async () => {
-      const data = await executeSearchQuery<TQuery>(
-        () =>
-          client.query<TQuery>({
-            query: searchDocument,
-            variables: effectVariables,
-            fetchPolicy: 'network-only',
-          }),
-        () => cancelled,
-      );
+      // `result.data ?? null` is deliberately OUTSIDE the try: the React
+      // Compiler bails out of the whole hook when a `??`/`?.`/ternary appears
+      // inside a try block ("Support value blocks … within a try/catch
+      // statement"). Keeping the try body to plain statements keeps this hook
+      // compiled. See scripts/probe-compiler-try-forms.mjs.
+      let result: Awaited<ReturnType<typeof client.query<TQuery>>> | undefined;
+      try {
+        result = await client.query<TQuery>({
+          query: searchDocument,
+          variables: effectVariables,
+          fetchPolicy: 'network-only',
+        });
+      } catch {
+        // A failed search leaves the previous results on screen rather than
+        // blanking them; the local source below still answers.
+      }
+      const data: TQuery | null = result?.data ?? null;
 
       if (cancelled) return;
 
