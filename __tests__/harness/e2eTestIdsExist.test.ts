@@ -79,10 +79,25 @@ const appTestIds = (): {
   exact: Set<string>;
   prefixes: string[];
   shapes: RegExp[];
+  collapsed: Set<string>;
 } => {
   const exact = new Set<string>();
   const prefixes: string[] = [];
   const shapes: RegExp[] = [];
+  /**
+   * Ids that are a real template with its DYNAMIC SEGMENT DROPPED.
+   *
+   * `` testID={`shopping-list-item-${itemId}-delete`} `` means the app renders
+   * `shopping-list-item-<id>-delete` and never `shopping-list-item-delete`. The
+   * second is the recurring typo — a spec writes the two literal halves and
+   * forgets the id in the middle. Structurally it is indistinguishable from a
+   * real id (`shopping-list-item-abc123` has the same shape), which is why the
+   * `prefixes` waiver below lets it through and why it needs naming explicitly.
+   *
+   * Derived from the templates themselves, so it costs nothing to maintain and
+   * cannot go stale: rename the id and the collapsed form moves with it.
+   */
+  const collapsed = new Set<string>();
   const files = walk(SRC, /\.tsx?$/);
 
   // Every `testIDPrefix` the app declares — as a config field OR as a JSX prop.
@@ -92,6 +107,14 @@ const appTestIds = (): {
   // is the most that can be resolved statically.
   const configPrefixes = new Set<string>();
   for (const file of files) {
+    // Same reason as the scan below, and it bites harder here. A prefix waives
+    // EVERY id beneath it, so a prefix invented by a fixture licenses a whole
+    // namespace of ids the app never renders: `ListTemplate.test.tsx` declares
+    // `testIDPrefix="pantry"`, which waived `pantry-item-1-quantity` — an
+    // index-keyed id the app does not render — and `FilterTabs.test.tsx`
+    // declares `location`. Both are fixtures. Neither is a render site.
+    if (isTestFile(file)) continue;
+
     const source = readFileSync(file, 'utf8');
     for (const m of source.matchAll(/testIDPrefix:\s*'([^']+)'/g)) {
       configPrefixes.add(m[1]);
@@ -155,7 +178,6 @@ const appTestIds = (): {
     //   - Templates whose interpolation IS a declared prefix are expanded into
     //     concrete ids above; re-adding them here as `.+` would only widen what
     //     the expansion already covers exactly.
-    if (isTestFile(file)) continue;
     for (const m of source.matchAll(/testID=\{`([^`]+)`\}/g)) {
       const template = m[1];
       if (!template.includes('${')) continue;
@@ -169,6 +191,14 @@ const appTestIds = (): {
         .map(literal => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
         .join('.+');
       shapes.push(new RegExp(`^${pattern}$`));
+
+      // One interpolation with a literal either side — the only form that has
+      // an unambiguous collapsed twin.
+      if (literals.length === 2) {
+        const head = literals[0].replace(/-$/, '');
+        const tail = literals[1].replace(/^-/, '');
+        if (head && tail) collapsed.add(`${head}-${tail}`);
+      }
     }
   }
 
@@ -186,7 +216,7 @@ const appTestIds = (): {
     }
   }
 
-  return { exact, prefixes, shapes };
+  return { exact, prefixes, shapes, collapsed };
 };
 
 /** testIDs the e2e layer looks for. */
@@ -218,7 +248,7 @@ const referencedTestIds = (): Array<{ id: string; where: string }> => {
 const KNOWN_MISSING = new Set<string>([]);
 
 describe('e2e testIDs exist in the app', () => {
-  const { exact, prefixes, shapes } = appTestIds();
+  const { exact, prefixes, shapes, collapsed } = appTestIds();
   const refs = referencedTestIds();
 
   it('finds testIDs on both sides, so the check is not vacuous', () => {
@@ -235,10 +265,18 @@ describe('e2e testIDs exist in the app', () => {
   });
 
   const unresolved = () =>
-    refs
-      .filter(({ id }) => !exact.has(id))
-      .filter(({ id }) => !prefixes.some(p => id.startsWith(`${p}-`)))
-      .filter(({ id }) => !shapes.some(shape => shape.test(id)));
+    refs.filter(({ id }) => {
+      // A collapsed form is never waived. It is exactly the id the waivers
+      // below would wave through — it shares its prefix with the real template
+      // and differs from a genuine id only in what the dropped segment held —
+      // so it has to be answered before them, not after.
+      if (collapsed.has(id)) return true;
+
+      if (exact.has(id)) return false;
+      if (prefixes.some(prefix => id.startsWith(`${prefix}-`))) return false;
+      if (shapes.some(shape => shape.test(id))) return false;
+      return true;
+    });
 
   it('no NEW id is referenced that the app cannot render', () => {
     const added = unresolved()

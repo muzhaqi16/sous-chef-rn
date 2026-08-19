@@ -89,7 +89,14 @@ const AlertCard: React.FC<AlertCardProps> = ({
       // validation alert ended up sitting un-dismissed over a bottom sheet,
       // blocking its cancel button, and surfacing three steps later as "the
       // list screen never came back".
-      testID="alert-modal"
+      // Only the TOP card claims the stable id. `AlertStack` renders up to
+      // ALERT.MAX_VISIBLE cards at once, so an unconditional id puts two
+      // matches on screen whenever a second alert queues behind the first —
+      // and Detox fails a bare `by.id('alert-modal')` with a multiple-match
+      // error rather than the assertion the test was making. The card behind
+      // is inert (see `accessibilityViewIsModal` below), so "the alert" can
+      // only sensibly mean this one.
+      testID={isTop ? 'alert-modal' : 'alert-modal-behind'}
       style={[styles.card, animatedStyle, { zIndex: 100 - stackIndex }]}
       accessibilityViewIsModal={isTop}
     >
@@ -128,7 +135,12 @@ const AlertCard: React.FC<AlertCardProps> = ({
               // Index-keyed: the button LABEL is translated, and its `style`
               // ('cancel' / 'destructive' / default) is optional, so neither is
               // a stable handle across locales or call sites.
-              testID={`alert-button-${index}`}
+              //
+              // Left off the stacked card entirely: its buttons sit under the
+              // top card and cannot be pressed by a person, but a Detox matcher
+              // does not know that and would happily resolve `alert-button-0`
+              // to one of them.
+              testID={isTop ? `alert-button-${index}` : undefined}
               accessibilityRole="button"
               style={[
                 styles.button,
