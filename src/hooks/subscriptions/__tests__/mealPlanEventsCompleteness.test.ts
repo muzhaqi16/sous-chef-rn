@@ -165,7 +165,7 @@ describe('MealPlanEvents completeness', () => {
 
   it('keeps the subscription branch to identity only', () => {
     // Anything more re-fattens the document past the depth-5 subscription
-    // bound; `__tests__/graphql/subscriptionLimits.test.ts` enforces the bound
+    // bound; `__tests__/graphql/documentLimits.test.ts` enforces the bound
     // itself, this pins the shape that keeps it there.
     const fragments = collectFragments([MealPlanEventsDocument]);
     expect(

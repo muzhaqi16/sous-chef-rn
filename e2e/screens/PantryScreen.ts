@@ -357,6 +357,25 @@ export class PantryScreen extends BaseScreen {
     await waitFor(element(by.id('pantry-screen')))
       .toBeVisible()
       .withTimeout(5000);
+
+    // Let the "Item added to pantry" toast finish before handing back. It is
+    // positioned at `top: insets.top`, so it sits over the greeting/header
+    // rather than over the list — which is why assertions on rows pass with it
+    // up — but anything the caller does in the header area would be tapping
+    // through it, and its entry/exit animation keeps Detox from reporting the
+    // app idle.
+    //
+    // Best-effort on purpose: the toast auto-dismisses, so a miss here means it
+    // already went. Failing the add because a transient confirmation banner was
+    // not observed would be inventing a failure.
+    try {
+      await waitFor(element(by.id('toast-success')))
+        .not.toBeVisible()
+        .withTimeout(6000);
+    } catch {
+      // Still up after 6s, or never rendered. Neither says the add failed —
+      // the assertions in the test are what decide that.
+    }
   }
 
   /**

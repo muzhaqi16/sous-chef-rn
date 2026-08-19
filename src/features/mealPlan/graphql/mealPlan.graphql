@@ -283,7 +283,7 @@ mutation GenerateShoppingListFromMealPlan($input: GenerateShoppingListFromMealPl
 # event whose changed fields are all off-screen needs no read at all. When one
 # is needed, `MealPlanForEvent` / `GetMealPlan` / `GetMealTemplate` fetch the
 # entity over HTTP, where the budget is generous.
-# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription MealPlanEvents($homeId: ID!) {
   mealPlanEvents(homeId: $homeId) {
     subtype

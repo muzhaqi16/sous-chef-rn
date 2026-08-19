@@ -1130,7 +1130,7 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
 #
 # The handler reads the entity back through a normal query
 # (`PantryItemForEvent` and friends), which gets the generous HTTP limits.
-# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription PantryEvents($pantryId: ID!) {
   pantryEvents(pantryId: $pantryId) {
     actorUserId

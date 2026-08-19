@@ -811,6 +811,21 @@ input BatchAddShoppingListItemInput {
   Distinct from clientId below, which is only a response-matching token.
   """
   id: ID
+  """
+  Optional client-minted CUID2 that makes this add idempotent.
+  
+  An add that resolves to an existing row applies a quantity increment, which
+  is atomic but not idempotent: the row carries nothing distinguishing a
+  replay from a genuine second addition. The key is claimed in the same
+  transaction as the increment, so a replay is refused with IDEMPOTENT_REPLAY
+  instead of merging twice.
+  
+  Precedence: this key when sent, otherwise the id field above. Sending
+  neither leaves the add non-idempotent. Send an explicit key when one batch
+  adds the same item more than once, where row identity cannot tell the
+  entries apart.
+  """
+  idempotencyKey: ID
   item: ItemRefInput!
   netWeight: NetWeightInput
   notes: String
@@ -11622,7 +11637,7 @@ input SyncShoppingListItemFieldsInput {
   Optional client-minted CUID2 making a sync that MERGES into an existing row
   idempotent. Defaults to the enclosing clientId, which already identifies the
   queued operation — supply this only to key the merge on something other than
-  the row id. See CreateShoppingListItemInput.idempotencyKey.
+  the row id. Same semantics as BatchAddShoppingListItemInput.idempotencyKey.
   """
   idempotencyKey: ID
   """
@@ -11638,7 +11653,7 @@ input SyncShoppingListItemFieldsInput {
   """
   Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
   Unitless by default; specify a unit via the unit field when needed (shopping
-  items are frequently unitless, e.g. Milk x2). Mirrors CreateShoppingListItemInput.
+  items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
   """
   quantity: FlexibleQuantity
   recipeContext: RecipeContextInput

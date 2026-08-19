@@ -969,10 +969,10 @@
       "body": "query MyShoppingListInvites {\n  me {\n    id\n    pendingCollaborationInvitesConnection(first: 50) {\n      edges {\n        node {\n          id\n          token\n          shoppingListId\n          collaboratorId\n          email\n          role\n          status\n          canEdit\n          canAddItems\n          canRemoveItems\n          canMarkPurchased\n          canInviteOthers\n          invitedAt\n          expiresAt\n          shoppingList {\n            id\n            name\n            description\n            __typename\n          }\n          collaborator {\n            id\n            email\n            profile {\n              id\n              displayName\n              avatar\n              __typename\n            }\n            __typename\n          }\n          invitedBy {\n            id\n            email\n            profile {\n              id\n              displayName\n              avatar\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "cd2ab877300372fea09eaf72afcf9b822dc6f23814088560003eb6061214bdfb",
+      "id": "90c547fd90297470da79dcf31a2bd1352576e6fd46b27b5211d9c5edd61e062f",
       "name": "MyShoppingListsEvents",
       "type": "subscription",
-      "body": "subscription MyShoppingListsEvents {\n  myShoppingListsEvents {\n    subtype\n    mutation\n    listId\n    actorUserId\n    timestamp\n    updatedFields\n    clearedItemIds\n    node {\n      __typename\n      ... on ShoppingListItem {\n        id\n        __typename\n      }\n      ... on ShoppingList {\n        id\n        __typename\n      }\n      ... on ShoppingListCollaborator {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
+      "body": "subscription MyShoppingListsEvents {\n  myShoppingListsEvents {\n    subtype\n    mutation\n    listId\n    originatorClientId\n    actorUserId\n    timestamp\n    updatedFields\n    clearedItemIds\n    node {\n      __typename\n      ... on ShoppingListItem {\n        id\n        __typename\n      }\n      ... on ShoppingList {\n        id\n        __typename\n      }\n      ... on ShoppingListCollaborator {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "a6dd0a41113b48d71f262fd149333c1685582463107f4b372414213c90cbd289",

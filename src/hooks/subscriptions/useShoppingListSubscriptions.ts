@@ -36,6 +36,7 @@ import {
 } from './useShoppingListSubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
@@ -398,10 +399,9 @@ export function useShoppingListSubscriptions(
             return;
           }
 
-          // Self-echo: the mutation response already delivered the new summary.
-          if (payload.actorUserId && userId && payload.actorUserId === userId) {
-            return;
-          }
+          // The mutation response already delivered the new summary — on the
+          // device that sent it, which is what this tests.
+          if (isSelfEcho(payload, userId)) return;
 
           // This stream carries every list the user can reach, so read back
           // only the ones the cache is holding.
@@ -427,11 +427,12 @@ export function useShoppingListSubscriptions(
         if (subscriptionService.isParentDeleting(selectedShoppingListId))
           return;
 
-        // Self-echo skip — local mutations already updated the cache
-        // optimistically.
-        if (payload.actorUserId && userId && payload.actorUserId === userId) {
+        // Self-echo skip — this device's own mutation already updated the
+        // cache optimistically. Keyed on the originating DEVICE, so the same
+        // user's other devices still receive the change.
+        if (isSelfEcho(payload, userId)) {
           if (__DEV__) {
-            logger.debug('⏭️ [Subscription] Skipping self-echo (same user)');
+            logger.debug('⏭️ [Subscription] Skipping self-echo (same device)');
           }
           return;
         }

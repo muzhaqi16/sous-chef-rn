@@ -234,13 +234,36 @@ mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
   }
 }
 
+# The response exists to normalize the role flip, not to repaint the screen —
+# the caller reads nothing off it, and the detail screen reads Home through its
+# own query. Spreading `HomeDetailScreen_home` here cost 4885 against the HTTP
+# budget of 3000: its three `first: 20` connections multiply their subtrees, and
+# a mutation payload adds two more levels on top, each worth another 1.5×. So
+# the server refused every transfer. Select the memberships whose role actually
+# moved and let the rest stay as the query left it.
 mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
   transferHomeOwnership(input: $input) {
     __typename
     ... on TransferHomeOwnershipPayload {
       home {
         id
-        ...HomeDetailScreen_home
+        version
+        myMembership {
+          id
+          role
+          canManageHome
+          canInviteOthers
+        }
+        membersConnection(first: 20) {
+          edges {
+            node {
+              id
+              role
+              ...HomeMemberCard_member
+            }
+          }
+          totalCount
+        }
       }
     }
     ... on Error {
@@ -498,7 +521,7 @@ mutation LeaveHome($input: LeaveHomeInput!) {
 # A membership or invite change is a connection change, which no single entity
 # read can express — so the handler removes by id where the id is enough and
 # otherwise refetches `GetHome` / `GetMyPendingInvites` over HTTP.
-# See `__tests__/graphql/subscriptionLimits.test.ts` for the enforced bound.
+# See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription HomeEvents($homeId: ID!) {
   homeEvents(homeId: $homeId) {
     subtype

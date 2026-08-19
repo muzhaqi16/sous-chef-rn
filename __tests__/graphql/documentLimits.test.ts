@@ -58,9 +58,14 @@ import {
 
 const SRC = resolve(__dirname, '..', '..', 'src');
 
-// Server settings — see the docblock above.
+// Server settings — see the docblock above. Two profiles, one per transport:
+// HTTP is what a query or mutation is validated against, WebSocket what a
+// subscription gets. Only the ceilings differ; the counting rule is identical,
+// which is why one implementation checks both.
 const MAX_SUBSCRIPTION_DEPTH = 5;
 const MAX_SUBSCRIPTION_COST = 500;
+const MAX_QUERY_DEPTH = 12;
+const MAX_QUERY_COST = 3000;
 const OBJECT_COST = 1;
 const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
@@ -76,9 +81,15 @@ function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   return out;
 }
 
+interface Operation {
+  name: string;
+  file: string;
+  def: OperationDefinitionNode;
+}
+
 const fragments = new Map<string, FragmentDefinitionNode>();
-const subscriptions: { name: string; file: string; def: OperationDefinitionNode }[] =
-  [];
+const subscriptions: Operation[] = [];
+const httpOperations: Operation[] = [];
 
 for (const file of collectGraphqlFiles(SRC)) {
   let doc;
@@ -90,15 +101,14 @@ for (const file of collectGraphqlFiles(SRC)) {
   for (const def of doc.definitions) {
     if (def.kind === Kind.FRAGMENT_DEFINITION) {
       fragments.set(def.name.value, def);
-    } else if (
-      def.kind === Kind.OPERATION_DEFINITION &&
-      def.operation === 'subscription'
-    ) {
-      subscriptions.push({
+    } else if (def.kind === Kind.OPERATION_DEFINITION) {
+      const operation: Operation = {
         name: def.name?.value ?? '(anonymous)',
         file: file.slice(SRC.length + 1),
         def,
-      });
+      };
+      if (def.operation === 'subscription') subscriptions.push(operation);
+      else httpOperations.push(operation);
     }
   }
 }
@@ -219,6 +229,39 @@ describe('subscription document limits', () => {
           `${name} (${file}) costs ${Math.round(cost)}; the limit is ` +
             `${MAX_SUBSCRIPTION_COST}. Cost grows by ${DEPTH_COST_FACTOR}× per ` +
             `level, so trimming depth is what brings it down.`,
+        );
+      }
+    },
+  );
+});
+
+describe('HTTP document limits', () => {
+  it('finds the query and mutation documents', () => {
+    expect(httpOperations.length).toBeGreaterThan(100);
+  });
+
+  it.each(httpOperations.map(o => [o.name, o]))(
+    '%s is within the HTTP depth and cost bounds',
+    (_name, operation) => {
+      const { name, file, def } = operation as Operation;
+      const depth = countDepth(def);
+      const cost = computeCost(def);
+
+      if (depth > MAX_QUERY_DEPTH) {
+        throw new Error(
+          `${name} (${file}) is depth ${depth}; the HTTP limit is ` +
+            `${MAX_QUERY_DEPTH}. A named spread counts as a level plus the ` +
+            `fragment's own depth, so a deep fragment reached through a ` +
+            `mutation payload is the usual cause.`,
+        );
+      }
+      if (cost > MAX_QUERY_COST) {
+        throw new Error(
+          `${name} (${file}) costs ${Math.round(cost)}; the HTTP limit is ` +
+            `${MAX_QUERY_COST}. A \`first:\`/\`last:\` argument multiplies its ` +
+            `whole subtree by the page size, and every level above it multiplies ` +
+            `by another ${DEPTH_COST_FACTOR} — which is why the same fragment is ` +
+            `affordable in a query and not inside a mutation payload.`,
         );
       }
     },
