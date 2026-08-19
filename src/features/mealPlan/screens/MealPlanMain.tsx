@@ -161,6 +161,7 @@ const MealPlanMainInner: React.FC = () => {
       initialLoading: plansInitialLoading,
       error: plansError,
       hasResult: plansHasResult,
+      skipped: plansSkipped,
     },
   } = useMealPlans();
 
@@ -202,6 +203,7 @@ const MealPlanMainInner: React.FC = () => {
     loading: plansInitialLoading,
     error: plansError,
     hasResult: plansHasResult,
+    skipped: plansSkipped,
     isEmpty: mealPlans.length === 0,
   });
 

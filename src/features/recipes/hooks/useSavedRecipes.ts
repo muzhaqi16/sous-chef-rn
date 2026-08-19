@@ -27,6 +27,8 @@ interface SavedRecipesState {
   error: Error | undefined;
   /** `data !== undefined` — a response arrived, empty or not. */
   hasResult: boolean;
+  /** The query was skipped, so no response was ever requested. */
+  skipped: boolean;
   totalCount: number | undefined;
   hasMore: boolean;
 }
@@ -79,6 +81,9 @@ export function useSavedRecipes(folder?: string | null): UseSavedRecipesResult {
       loading,
       error: error as Error | undefined,
       hasResult: data !== undefined,
+      // Signed out, so the query above was never sent. Reported so the screen
+      // shows its empty state rather than accusing the network of a failure.
+      skipped: isLoggedOut,
       totalCount: connectionData.totalCount,
       hasMore: connectionData.hasMore,
     },

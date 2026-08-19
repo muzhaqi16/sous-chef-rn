@@ -123,4 +123,65 @@ describe('useDataState', () => {
       ).toBe('ready');
     });
   });
+
+  describe('a query that was never asked', () => {
+    // Apollo reports `skip: true` exactly as it reports a swallowed error:
+    // not loading, no error, `data === undefined`. Only the caller knows which
+    // it is, so every hook passing `skip` has to pass the same predicate here.
+    const skippedByApollo = {
+      loading: false,
+      error: undefined,
+      hasResult: false,
+      isEmpty: true,
+    };
+
+    it('is empty, not an error, when the screen chose not to ask', () => {
+      // The regression this guards: no pantry selected yet on cold start, or a
+      // signed-out recipe list. Both rendered a failure screen with a Retry
+      // button that could not help, because absence was read as a failure.
+      expect(classify({ ...skippedByApollo, skipped: true })).toBe('empty');
+    });
+
+    it('still reports the swallowed-error case as an error', () => {
+      // Same inputs, `skipped` absent — this one really did lose an answer.
+      expect(classify(skippedByApollo)).toBe('error');
+    });
+
+    it('does not let skipped mask a real error', () => {
+      expect(
+        classify({
+          ...skippedByApollo,
+          skipped: true,
+          error: new Error('boom'),
+        }),
+      ).toBe('error');
+    });
+
+    it('does not let skipped mask an in-flight fetch', () => {
+      expect(
+        classify({ ...skippedByApollo, skipped: true, loading: true }),
+      ).toBe('loading');
+    });
+
+    it('stays empty when skipped offline — the skip is why, not the network', () => {
+      // `skipped` is something the caller KNOWS; the offline reading of a bare
+      // absence is an inference from not having an answer. Knowledge wins, so
+      // a signed-out list does not blame the connection for a request it was
+      // never going to send. A genuine offline failure still reports offline —
+      // that branch is decided by `useOfflineAwareError` above this one.
+      offline();
+      expect(classify({ ...skippedByApollo, skipped: true })).toBe('empty');
+    });
+
+    it('is ready when a skipped query still has cached data to show', () => {
+      expect(
+        classify({
+          loading: false,
+          hasResult: true,
+          isEmpty: false,
+          skipped: true,
+        }),
+      ).toBe('ready');
+    });
+  });
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';

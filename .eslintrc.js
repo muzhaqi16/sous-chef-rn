@@ -421,6 +421,16 @@ module.exports = {
       },
     },
     {
+      // The two files that DEFINE the '#/i18n' entry point. They are what
+      // everything else is banned from bypassing, so they are the one place
+      // react-i18next may be imported directly. The exemption lives in config
+      // rather than an inline eslint-disable, matching the override above.
+      files: ['src/i18n/index.ts', 'src/i18n/config.ts'],
+      rules: {
+        'no-restricted-imports': 'off',
+      },
+    },
+    {
       // The shared Swipeable surface must use ONLY RNGH's Pressable. RN's
       // Pressable (the themedComponents re-export), AppPressable, and
       // PressableScale all wrap RN's Pressable, which lives in a separate
@@ -523,6 +533,11 @@ module.exports = {
             importNames: ['useMemo', 'useCallback'],
             message:
               'useMemo/useCallback are unnecessary — the React Compiler handles memoization automatically.',
+          },
+          {
+            name: 'react-i18next',
+            message:
+              "Import from '#/i18n' instead — it is the single entry point for translation, and it pins the namespace so call sites cannot drift onto a second one. `const { t } = useTranslation()` in components and hooks; `import { t }` at module scope. Only src/i18n's own entry files may reach for react-i18next directly (exempted in this config).",
           },
           {
             name: '@gorhom/bottom-sheet',

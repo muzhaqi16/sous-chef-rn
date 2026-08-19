@@ -341,6 +341,7 @@ export const FilteredPantryItems: React.FC<
       loading,
       error,
       hasResult,
+      skipped,
       hasMore,
       isLoadingMore,
     },
@@ -353,6 +354,7 @@ export const FilteredPantryItems: React.FC<
     loading,
     error,
     hasResult,
+    skipped,
     // Nullable in practice while the query is in flight, as the filter
     // below already assumes.
     isEmpty: !allItems?.length,

@@ -82,7 +82,7 @@ export const SavedRecipes: React.FC = () => {
 
   // Fetch saved recipes, folders, and tags
   const {
-    state: { recipes, loading, error, hasResult },
+    state: { recipes, loading, error, hasResult, skipped },
     actions: { refetch },
   } = useSavedRecipes();
 
@@ -93,6 +93,7 @@ export const SavedRecipes: React.FC = () => {
     loading,
     error,
     hasResult,
+    skipped,
     isEmpty: recipes.length === 0,
   });
 

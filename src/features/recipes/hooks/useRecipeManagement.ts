@@ -65,6 +65,9 @@ export function useRecipeManagement(filters?: RecipeFilters) {
       // this to tell "the server says you have no recipes" from "we never got
       // an answer", which must not render the same way.
       hasResult: data !== undefined,
+      // Signed out, so the query above was never sent. Reported so the screen
+      // shows its empty state rather than accusing the network of a failure.
+      skipped: isLoggedOut,
       totalCount: connectionData.totalCount ?? 0,
       hasMore: connectionData.hasMore,
       isLoadingMore: connectionData.isLoadingMore,

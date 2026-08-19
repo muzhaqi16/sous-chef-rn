@@ -79,7 +79,7 @@ export const MyRecipes: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
-    state: { recipes: myRecipes, loading, error, hasResult },
+    state: { recipes: myRecipes, loading, error, hasResult, skipped },
     actions: { refetch },
   } = useRecipeManagement();
 
@@ -87,6 +87,7 @@ export const MyRecipes: React.FC = () => {
     loading,
     error,
     hasResult,
+    skipped,
     isEmpty: myRecipes.length === 0,
   });
 

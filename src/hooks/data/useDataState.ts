@@ -25,6 +25,12 @@ interface DataStateInput {
   hasResult: boolean;
   /** That response contained no items. */
   isEmpty: boolean;
+  /**
+   * The query was never asked — Apollo's `skip`. Presents exactly like a
+   * swallowed error (not loading, no error, no data), so without this the two
+   * are indistinguishable and a deliberate non-request reads as a failure.
+   */
+  skipped?: boolean;
 }
 
 /**
@@ -39,20 +45,33 @@ interface DataStateInput {
  * Apollo discards the error and leaves `data === undefined`. Nothing is left to
  * classify, so absence plus the same offline predicate has to stand in.
  *
+ * A SKIPPED query looks identical to that — not loading, no error, no data —
+ * and must not be read the same way. `skip` means the screen decided not to ask
+ * (no pantry selected yet, signed out), which is a question with no answer
+ * rather than an answer that failed to arrive. Callers pass the same predicate
+ * they gave Apollo's `skip`, so the two cannot drift.
+ *
  * Priority is deliberate:
  * 1. Data on screen wins over everything. A background refetch that fails must
  *    not blank out content that is already rendered and still true.
  * 2. Loading, so an in-flight first fetch never flashes an error.
  * 3. A cache miss we never attempted — offline.
  * 4. A genuine failure — error.
- * 5. No result and no error at all: the swallowed case above.
- * 6. Genuinely empty.
+ * 5. Never asked: nothing to report, so the screen says what it says when there
+ *    is nothing rather than accusing the network. This sits ABOVE the fallback
+ *    below on purpose — `skipped` is something the caller knows, while reading
+ *    a bare absence as offline is an inference from having no answer, and
+ *    knowledge beats inference. A real offline failure is already settled at
+ *    step 3, so nothing reportable is lost.
+ * 6. No result and no error at all: the swallowed case above.
+ * 7. Genuinely empty.
  */
 export function useDataState({
   loading,
   error,
   hasResult,
   isEmpty,
+  skipped = false,
 }: DataStateInput): DataState {
   const hasData = hasResult && !isEmpty;
   const networkBlocked = useBlocksCacheMissQueries();
@@ -62,6 +81,7 @@ export function useDataState({
   if (loading) return 'loading';
   if (classified.offline) return 'offline';
   if (classified.error) return 'error';
+  if (skipped) return 'empty';
   if (!hasResult) return networkBlocked ? 'offline' : 'error';
   return 'empty';
 }
