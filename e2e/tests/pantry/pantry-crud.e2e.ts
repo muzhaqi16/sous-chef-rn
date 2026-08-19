@@ -89,6 +89,7 @@ describe('Pantry CRUD', () => {
       await pantryScreen.addItem(itemName, '2', 'lb');
 
       await pantryScreen.expectItemInPantry(itemName);
+      await pantryScreen.expectQuantityRendered('2 lb');
     });
 
     it('refuses to submit without a name', async () => {
@@ -154,6 +155,11 @@ describe('Pantry CRUD', () => {
     // These are the inputs that have actually regressed: `parseFloat('4,99')`
     // is 4, and a fraction typed into a number field used to be dropped. The
     // parser has unit tests; this pins the wiring through the real form.
+    //
+    // Each case asserts the RENDERED quantity, not just that a row appeared.
+    // Presence-only was the original shape and it could not fail for the bug
+    // these tests exist to catch: "1 1/4" arriving as 1 still produces a row
+    // with the right name.
     it('accepts a fractional quantity', async () => {
       const itemName = generateItemName('Fraction');
       itemsToCleanup.push(itemName);
@@ -161,6 +167,11 @@ describe('Pantry CRUD', () => {
       await pantryScreen.addItem(itemName, '1 1/4', 'cup');
 
       await pantryScreen.expectItemInPantry(itemName);
+      // The POINT of this test. `parseFloat('1 1/4')` is 1, so a row simply
+      // existing proves nothing about the parse — this asserts the value that
+      // reached the card. `formatQuantityDisplay` renders a non-integer under 10
+      // with two decimals.
+      await pantryScreen.expectQuantityRendered('1.25 cup');
     });
 
     it('accepts a decimal quantity', async () => {
@@ -170,6 +181,7 @@ describe('Pantry CRUD', () => {
       await pantryScreen.addItem(itemName, '0.25', 'kg');
 
       await pantryScreen.expectItemInPantry(itemName);
+      await pantryScreen.expectQuantityRendered('0.25 kg');
     });
 
     it('accepts a long item name', async () => {

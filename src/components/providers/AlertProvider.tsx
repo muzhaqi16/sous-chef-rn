@@ -83,6 +83,13 @@ const AlertCard: React.FC<AlertCardProps> = ({
 
   return (
     <Animated.View
+      // `alertService` replaces `Alert.alert` with this in-app modal, so a test
+      // cannot reach it through Detox's system-alert matchers — and with no
+      // testID the only handle was the translated button text. That is how a
+      // validation alert ended up sitting un-dismissed over a bottom sheet,
+      // blocking its cancel button, and surfacing three steps later as "the
+      // list screen never came back".
+      testID="alert-modal"
       style={[styles.card, animatedStyle, { zIndex: 100 - stackIndex }]}
       accessibilityViewIsModal={isTop}
     >
@@ -118,6 +125,10 @@ const AlertCard: React.FC<AlertCardProps> = ({
           return (
             <AppPressable
               key={index}
+              // Index-keyed: the button LABEL is translated, and its `style`
+              // ('cancel' / 'destructive' / default) is optional, so neither is
+              // a stable handle across locales or call sites.
+              testID={`alert-button-${index}`}
               accessibilityRole="button"
               style={[
                 styles.button,

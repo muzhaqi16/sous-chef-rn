@@ -21,11 +21,11 @@ import { Text } from '#components/atoms/Text';
  * Lightweight meta slot — no useUnistyles, all colors from stylesheet
  */
 const MetaSlot: React.FC<
-  Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary'>
-> = ({ primary, secondary, tertiary }) => (
+  Pick<CardRightSlotProps, 'primary' | 'secondary' | 'tertiary' | 'testID'>
+> = ({ primary, secondary, tertiary, testID }) => (
   <View style={styles.metaContainer}>
     {primary ? (
-      <Text size="base" weight="semibold">
+      <Text size="base" weight="semibold" testID={testID}>
         {primary}
       </Text>
     ) : null}
@@ -130,6 +130,7 @@ export const CardRightSlot: React.FC<CardRightSlotProps> = props => {
   if (type === 'meta' || (!type && !props.children)) {
     return (
       <MetaSlot
+        testID={props.testID}
         primary={props.primary}
         secondary={props.secondary}
         tertiary={props.tertiary}

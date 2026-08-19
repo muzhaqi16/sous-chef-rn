@@ -358,7 +358,6 @@ describe('ResetPasswordScreen', () => {
 describe('ResetPasswordScreen - invalid token', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    const { useRoute } = require('@react-navigation/native');
     (useRoute as jest.Mock).mockReturnValue({
       params: { token: 'short' },
       key: 'test-key',

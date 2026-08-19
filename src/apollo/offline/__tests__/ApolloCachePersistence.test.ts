@@ -1,6 +1,6 @@
 'use no memo';
 
-import type { NormalizedCacheObject, StoreObject } from '@apollo/client';
+import type { StoreObject } from '@apollo/client';
 import { storage } from '#storage/mmkv';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';

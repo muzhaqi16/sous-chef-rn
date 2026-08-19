@@ -126,6 +126,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
         progress={progress}
         swipeMode={swipeMode}
         onEdit={onEdit}
+        testIDPrefix={testIDPrefix}
         onActionPress={handleActionPress}
       />
     );

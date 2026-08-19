@@ -37,9 +37,22 @@ describe('Smoke Tests', () => {
     await bootstrapAuthenticatedSession();
   });
 
-  it('launches and clears the splash screen', async () => {
-    await waitFor(element(by.id('splash-screen')))
-      .not.toBeVisible()
+  it('launches into the app', async () => {
+    // Asserts the state that must hold once the splash clears, NOT that the
+    // splash is absent.
+    //
+    // `waitFor(by.id('splash-screen')).not.toBeVisible()` was the whole test,
+    // and it could not fail. `SplashScreen` is a real component
+    // (`src/screens/SplashScreen.tsx`), but `beforeAll` has already launched the
+    // app and waited for it to settle, so the splash is gone before this line
+    // runs — and a `not.toBeVisible()` on something absent passes the instant it
+    // is evaluated. It held for any app state whatsoever, a crash included.
+    //
+    // The splash half is not recoverable here: nothing in this test can observe
+    // the splash to begin with, so there is no "it was there, now it is gone"
+    // to assert. What IS checkable is that the launch arrived somewhere real.
+    await waitFor(element(by.id('tab-bar')))
+      .toBeVisible()
       .withTimeout(TIMEOUTS.LONG);
   });
 

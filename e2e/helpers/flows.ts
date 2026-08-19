@@ -135,6 +135,33 @@ export async function relaunchToHomeTab() {
   //
   // ~2s per test, which is cheaper than a false failure: the previous version
   // turned one real bug into nine reports.
+  // Let the previous test's work finish before tearing down the JS runtime.
+  //
+  // `reloadReactNative` destroys the runtime underneath Fabric. If a mounting
+  // transaction is still in flight when it lands, the app takes SIGSEGV inside
+  // `Scheduler::uiManagerDidFinishTransaction` and Detox reports
+  // `The pending request ("reactNativeReload") has been rejected` — followed by
+  // every remaining test in the file failing in a few hundred ms against a dead
+  // app. It looked like flake because WHICH test died depended on what the one
+  // before it left running; in practice it was always the swipe tests, which
+  // leave the most in flight (row-removal animation, FlashList re-layout, and
+  // the confirmation toast).
+  //
+  // Detox would normally hold the reload until the app went idle, but this suite
+  // launches with `detoxEnableSynchronization: 0` (see
+  // `launchAppWithFabricWorkaround` — Fabric keeps the run loop busy, so sync
+  // never settles), which means nothing is waiting on our behalf. Waiting for
+  // the toast to clear covers the animation that actually overlaps the reload;
+  // the short delay after it covers the list's own removal animation.
+  try {
+    await waitFor(element(by.id('toast-success')))
+      .not.toBeVisible()
+      .withTimeout(6000);
+  } catch {
+    // Never rendered, or still up — neither is a reason to fail a reload.
+  }
+  await delay(500);
+
   await device.reloadReactNative();
   await dismissBiometricPromptIfPresent();
   await delay(500);

@@ -114,16 +114,39 @@ export class PantryScreen extends BaseScreen {
    * swiped row has its actions mounted, so `atIndex(0)` is unambiguous.
    */
   async deleteItemByName(name: string) {
-    await this.expectItemInPantry(name);
-    await element(by.text(name)).swipe('left', 'fast', 0.7);
+    // Two attempts, because a single pass has two ways to silently no-op and
+    // both report identically ("the row is still there") ten seconds later:
+    //
+    //   - The swipe can spring back instead of latching open, so the tap lands
+    //     on a row that has already closed.
+    //   - `by.id(/^pantry-item-.+-delete$/)` matches EVERY row's delete button,
+    //     and `.atIndex(0)` takes the first in the hierarchy — not necessarily
+    //     the row just swiped. The list holds 50+ rows in a working account, so
+    //     which one is index 0 depends on what FlashList currently has mounted.
+    //
+    // Re-swiping is the cheap, honest recovery: verify the row actually went,
+    // and if it did not, do it again before failing.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await this.expectItemInPantry(name);
+      await element(by.text(name)).swipe('left', 'fast', 0.7);
 
-    const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
-    await waitFor(deleteButton).toBeVisible().withTimeout(5000);
-    await deleteButton.tap();
+      const deleteButton = element(by.id(/^pantry-item-.+-delete$/)).atIndex(0);
+      await waitFor(deleteButton).toBeVisible().withTimeout(5000);
+      await deleteButton.tap();
 
-    await waitFor(element(by.text(name)))
-      .not.toBeVisible()
-      .withTimeout(10000);
+      try {
+        await waitFor(element(by.text(name)))
+          .not.toBeVisible()
+          .withTimeout(10000);
+        return;
+      } catch (error) {
+        // Out of attempts — report the original expectation failure rather than
+        // a synthesized one, so the message still names the row and the matcher.
+        if (attempt === 1) {
+          throw error;
+        }
+      }
+    }
   }
 
   /**
@@ -194,6 +217,11 @@ export class PantryScreen extends BaseScreen {
     return element(by.id(`pantry-item-${index}-expiration`));
   }
 
+  /**
+   * NOTE: index-keyed, which the app does not render — rows are
+   * `pantry-item-<itemId>`. Kept only for `expectItemQuantity`'s existing
+   * signature; prefer `expectQuantityRendered`, which matches by rendered text.
+   */
   private getItemQuantityByIndex(index: number) {
     return element(by.id(`pantry-item-${index}-quantity`));
   }
@@ -519,6 +547,34 @@ export class PantryScreen extends BaseScreen {
    */
   async expectItemQuantity(index: number, quantity: string) {
     await expect(this.getItemQuantityByIndex(index)).toHaveText(quantity);
+  }
+
+  /**
+   * Assert the app RENDERED this quantity.
+   *
+   * This is what the quantity tests were missing. `addItem(name, '1 1/4', 'cup')`
+   * followed by "a row with that name exists" passes just as happily when the
+   * fraction is parsed as `1` — which is the bug the test exists for, and one
+   * this repo has actually shipped a fix for.
+   *
+   * Matched by TEXT, not by `by.id(/^pantry-item-.+-quantity$/).atIndex(0)`.
+   * That earlier form assumed index 0 was the newest row; it is not. FlashList
+   * RECYCLES its views, so hierarchy order — which is what `atIndex` walks — is
+   * not visual order. The assertion passed several full runs, then failed on a
+   * decimal that had rendered perfectly well, then passed again when that test
+   * was run alone. Order-dependent is worse than absent: it reads as a real
+   * regression.
+   *
+   * The trade: this confirms the value is on screen, not that it belongs to the
+   * row this test created. Callers already assert the row itself via
+   * `expectItemInPantry`, which keeps that gap small, and it stays falsifiable —
+   * a dropped fraction renders "1 cup" and this fails. Tying it to the row needs
+   * the item's id, which the test does not have.
+   */
+  async expectQuantityRendered(expected: string) {
+    await waitFor(element(by.text(expected)).atIndex(0))
+      .toBeVisible()
+      .withTimeout(5000);
   }
 
   /**

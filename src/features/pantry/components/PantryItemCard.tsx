@@ -329,6 +329,9 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
       rightElement={
         <CardRightSlot
           type="meta"
+          // Keyed by item id, matching the row's own `pantry-item-${id}` and
+          // shopping list's `shopping-list-item-${itemId}-quantity`.
+          testID={`pantry-item-${id}-quantity`}
           primary={quantity}
           secondary={rightSecondary}
         />

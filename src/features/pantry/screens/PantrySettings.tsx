@@ -209,19 +209,22 @@ export const PantrySettings: React.FC<
     },
   });
 
+  // Report + announce a failed load. Kept apart from the form sync below: `t`
+  // is a dependency here, and a language change must not re-run the sync and
+  // overwrite whatever the user has typed.
   useEffect(() => {
-    // Handle error case
-    if (pantryError && pantryId) {
-      errorService.reportError(pantryError, {
-        operation: 'PantrySettings.loadPantry',
-      });
-      alertService.alert(
-        t('pantrySettings.loadErrorTitle'),
-        t('pantrySettings.loadErrorMessage'),
-      );
-      return;
-    }
+    if (!pantryError || !pantryId) return;
+    errorService.reportError(pantryError, {
+      operation: 'PantrySettings.loadPantry',
+    });
+    alertService.alert(
+      t('pantrySettings.loadErrorTitle'),
+      t('pantrySettings.loadErrorMessage'),
+    );
+  }, [pantryError, pantryId, t]);
 
+  useEffect(() => {
+    if (pantryError && pantryId) return;
     syncPantryFormState(
       pantry,
       pantryId,

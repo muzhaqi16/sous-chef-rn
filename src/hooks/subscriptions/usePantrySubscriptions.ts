@@ -33,6 +33,7 @@ import {
 } from '#hooks/subscriptions/usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
@@ -240,7 +241,10 @@ export function usePantrySubscriptions(userId?: string) {
         return;
       }
 
-      if (payload.actorUserId && userId && payload.actorUserId === userId) {
+      // Keyed on the originating DEVICE: the mutation response already applied
+      // this change here, and nowhere else — the same user's other devices
+      // still need it.
+      if (isSelfEcho(payload, userId)) {
         if (__DEV__) {
           logger.debug('⏭️ [Subscription] Skipping pantry self-echo');
         }

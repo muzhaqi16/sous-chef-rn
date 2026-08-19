@@ -1,8 +1,4 @@
-import type {
-  ApolloCache,
-  InMemoryCache,
-  NormalizedCacheObject,
-} from '@apollo/client';
+import type { NormalizedCacheObject } from '@apollo/client';
 import { getVersion } from 'react-native-device-info';
 import { storage, isStorageReady } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';

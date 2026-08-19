@@ -753,10 +753,10 @@
       "body": "query GetUserSettings {\n  me {\n    id\n    settings {\n      id\n      theme\n      compactMode\n      showTutorials\n      autoSync\n      offlineMode\n      shareUsageData\n      shareWithPartners\n      personalizedAds\n      preferredUnitSystem\n      language\n      timezone\n      preferredCurrency\n      enabledFeatures\n      betaFeatures\n      createdAt\n      updatedAt\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "a22f2a43dda264452355ffc762c7cd76362b69af84f1870ab1a5f01ebae1299b",
+      "id": "b3c13c273ecd9f8b1f9f9a77ea619a73e1a40a6ca80cfc25e12fe80e4846c730",
       "name": "HomeEvents",
       "type": "subscription",
-      "body": "subscription HomeEvents($homeId: ID!) {\n  homeEvents(homeId: $homeId) {\n    subtype\n    mutation\n    homeId\n    actorUserId\n    previousRole\n    newRole\n    updatedFields\n    timestamp\n    node {\n      __typename\n      ... on Membership {\n        id\n        __typename\n      }\n      ... on HomeInvite {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
+      "body": "subscription HomeEvents($homeId: ID!) {\n  homeEvents(homeId: $homeId) {\n    subtype\n    mutation\n    homeId\n    originatorClientId\n    actorUserId\n    previousRole\n    newRole\n    updatedFields\n    timestamp\n    node {\n      __typename\n      ... on Membership {\n        id\n        __typename\n      }\n      ... on HomeInvite {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "8ae8eb9bb39f64d22950b815c437e3d3bc7945dbd2d9a05ca13b8e8f27014d6d",
@@ -915,10 +915,10 @@
       "body": "query MatchRecipeIngredientsToPantry($pantryId: ID!, $recipeId: ID!, $servings: Int) {\n  matchRecipeIngredientsToPantry(\n    pantryId: $pantryId\n    recipeId: $recipeId\n    servings: $servings\n  ) {\n    ingredient {\n      id\n      ...RecipeIngredientFragment\n      __typename\n    }\n    isAvailable\n    matchConfidence\n    availableQuantity\n    suggestedQuantity\n    shortfall\n    suggestedUnit {\n      id\n      name\n      symbol\n      __typename\n    }\n    matchedPantryItem {\n      id\n      itemName\n      quantity\n      unit {\n        id\n        name\n        symbol\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment RecipeIngredientFragment on RecipeIngredient {\n  id\n  name\n  quantity\n  estimatedPrice\n  item {\n    id\n    name\n    imageUrl\n    __typename\n  }\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  image\n  isOptional\n  notes\n  preparation\n  sortOrder\n  section\n  __typename\n}"
     },
     {
-      "id": "2b1948533e627cddeb773867f7ec890a1414888255769a20889cdc282d7589ba",
+      "id": "479033be33cb2befa78790cb17f010fc5bfaaf55b1df7adeb160295de86c47e4",
       "name": "MealPlanEvents",
       "type": "subscription",
-      "body": "subscription MealPlanEvents($homeId: ID!) {\n  mealPlanEvents(homeId: $homeId) {\n    subtype\n    mutation\n    homeId\n    mealPlanId\n    templateId\n    updatedFields\n    actorUserId\n    timestamp\n    node {\n      __typename\n      ... on MealPlan {\n        id\n        __typename\n      }\n      ... on MealPlanItem {\n        id\n        __typename\n      }\n      ... on MealTemplate {\n        id\n        __typename\n      }\n      ... on MealTemplateItem {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
+      "body": "subscription MealPlanEvents($homeId: ID!) {\n  mealPlanEvents(homeId: $homeId) {\n    subtype\n    mutation\n    homeId\n    mealPlanId\n    templateId\n    updatedFields\n    originatorClientId\n    actorUserId\n    timestamp\n    node {\n      __typename\n      ... on MealPlan {\n        id\n        __typename\n      }\n      ... on MealPlanItem {\n        id\n        __typename\n      }\n      ... on MealTemplate {\n        id\n        __typename\n      }\n      ... on MealTemplateItem {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "c96bed63b52f51eb2c0595c3d71803126f44d677e50348050cbecce70f492a2e",
@@ -987,10 +987,10 @@
       "body": "mutation OpenPantryItemBatch($input: OpenPantryItemBatchInput!) {\n  openPantryItemBatch(input: $input) {\n    __typename\n    ... on OpenPantryItemBatchPayload {\n      pantryItem {\n        id\n        ...useOpenPantryItemBatch_pantryItem\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment useOpenPantryItemBatch_pantryItem on PantryItem {\n  id\n  version\n  activeBatchCount\n  lastUsedAt\n  __typename\n}"
     },
     {
-      "id": "a26edef2391192666fe6a4418de1b3cb593d991c7e88cfb7d9804223a33146fe",
+      "id": "ae76e4013106ad2efd33d6723e2f36a575ec5da6797b180670f6a7581ff52f2c",
       "name": "PantryEvents",
       "type": "subscription",
-      "body": "subscription PantryEvents($pantryId: ID!) {\n  pantryEvents(pantryId: $pantryId) {\n    actorUserId\n    mutation\n    subtype\n    pantryId\n    timestamp\n    node {\n      __typename\n      ... on PantryItem {\n        id\n        __typename\n      }\n      ... on Pantry {\n        id\n        __typename\n      }\n      ... on PantryItemUsage {\n        id\n        __typename\n      }\n      ... on ExpirationNotification {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
+      "body": "subscription PantryEvents($pantryId: ID!) {\n  pantryEvents(pantryId: $pantryId) {\n    originatorClientId\n    actorUserId\n    mutation\n    subtype\n    pantryId\n    timestamp\n    node {\n      __typename\n      ... on PantryItem {\n        id\n        __typename\n      }\n      ... on Pantry {\n        id\n        __typename\n      }\n      ... on PantryItemUsage {\n        id\n        __typename\n      }\n      ... on ExpirationNotification {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "924d4f08f57c8f6c96c14d043f02140ed884cb1fb1d7ad97025cbf5d9ca7cd87",

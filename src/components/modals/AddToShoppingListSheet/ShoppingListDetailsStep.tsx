@@ -188,6 +188,10 @@ export const ShoppingListDetailsStep: React.FC<
       />
 
       <BottomSheetScrollView
+        // Named so a test can scroll a field into view. The unit picker sits in
+        // the second `FieldRow`, below the fold once the keyboard is up, and
+        // Detox refuses to type into a view that is not hittable.
+        testID="add-shopping-item-scroll"
         style={styles.body}
         contentContainerStyle={[
           styles.content,

@@ -232,8 +232,23 @@ export function BottomSheetAutocompleteInput<T>({
     );
   };
 
-  const renderAutocompleteItem = ({ item }: { item: T }) => (
+  const renderAutocompleteItem = ({
+    item,
+    index,
+  }: {
+    item: T;
+    index: number;
+  }) => (
     <Pressable
+      // Index-keyed off the field's own testID, because the row's CONTENT is
+      // per-field (a unit symbol, a brand name) and often translated.
+      //
+      // Selecting a suggestion is not the same action as typing the same text:
+      // `onSelect` hands back the entity (`onUnitSelected(item.id, …)`), while
+      // committing the text via the search field's return key only calls
+      // `onChangeText`. Without a handle here a test could only do the latter,
+      // so it exercised the free-text path and never the resolution one.
+      testID={testID ? `${testID}-suggestion-${index}` : undefined}
       onPress={() => handleSelectItem(item)}
       style={({ pressed }) => pressed && styles.pressed}
     >

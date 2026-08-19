@@ -25,6 +25,18 @@ import { join, relative } from 'path';
  *
  * So this resolves the template forms rather than grepping for literals, and
  * runs in the unit suite where it costs milliseconds instead of a device run.
+ *
+ * WHAT THIS CANNOT SEE. A prefix declared as a prop — `testIDPrefix="shopping-list-item"`
+ * — licenses `shopping-list-item-<anything>`, because the id it renders is
+ * `shopping-list-item-${itemId}` and an item id is a runtime value. That makes
+ * `shopping-list-item-delete` indistinguishable from a legitimate id here, even
+ * though the app renders `shopping-list-item-<id>-delete` (the swipe actions
+ * append `-delete` / `-edit` to a prefix that ALREADY ends in the item id). A
+ * spec written against the short form finds nothing and times out on device.
+ *
+ * The rule that follows from that: match swipe-action ids with a REGEX that
+ * requires the middle segment — `by.id(/^shopping-list-item-.+-delete$/)` — not
+ * a literal. Both CRUD specs now do.
  */
 // Lives outside any `e2e` path segment: jest.config ignores those, so a file
 // under `__tests__/e2e/` is silently never run.
@@ -59,9 +71,18 @@ const walk = (dir: string, match: RegExp, out: string[] = []): string[] => {
  * quo; a false alarm means nobody trusts the check. So it errs toward silence
  * and every failure it does report is real.
  */
-const appTestIds = (): { exact: Set<string>; prefixes: string[] } => {
+/** Fixtures and mocks render invented ids; they are not app render sites. */
+const isTestFile = (file: string): boolean =>
+  file.includes('__tests__') || /\.test\.tsx?$/.test(file);
+
+const appTestIds = (): {
+  exact: Set<string>;
+  prefixes: string[];
+  shapes: RegExp[];
+} => {
   const exact = new Set<string>();
   const prefixes: string[] = [];
+  const shapes: RegExp[] = [];
   const files = walk(SRC, /\.tsx?$/);
 
   // Every `testIDPrefix` the app declares — as a config field OR as a JSX prop.
@@ -83,6 +104,14 @@ const appTestIds = (): { exact: Set<string>; prefixes: string[] } => {
   }
 
   for (const file of files) {
+    // Unit tests and their mocks are not app render sites. `splash-screen`
+    // existed ONLY as a testID on a stub inside `RootNavigator.test.tsx`, and
+    // because this scan read that file, the id counted as "the app renders it"
+    // — which let `smoke.e2e.ts` assert the splash screen goes away when the
+    // app has never rendered one. That assertion passed unconditionally for as
+    // long as it existed.
+    if (isTestFile(file)) continue;
+
     const source = readFileSync(file, 'utf8');
 
     // Any kebab-case string literal. See the docblock for why this is broad.
@@ -90,18 +119,74 @@ const appTestIds = (): { exact: Set<string>; prefixes: string[] } => {
       exact.add(m[1]);
     }
 
+    // `${config.testIDPrefix}-add-manually-button` and `${testIDPrefix}-delete`
+    // resolve to CONCRETE ids, because every prefix the app declares is known.
+    // Expanding them is what lets `add-shopping-item-add-manually-button` be
+    // recognised while `add-shopping-add-manually-button` — the recurring typo
+    // this file was written for — is not.
     for (const m of source.matchAll(
-      /testID=\{`\$\{config\.testIDPrefix\}-([a-z0-9-]+)`\}/g,
+      /testID=\{`\$\{(?:config\.)?testIDPrefix\}-([a-z0-9-]+)`\}/g,
     )) {
       for (const prefix of configPrefixes) exact.add(`${prefix}-${m[1]}`);
     }
 
-    for (const m of source.matchAll(/testID=\{`([a-z][a-z0-9-]*)-\$\{/g)) {
-      prefixes.push(m[1]);
+    // Whole template SHAPES, not bare prefixes.
+    //
+    // `` testID={`shopping-list-item-${id}-delete`} `` has to license
+    // `shopping-list-item-<something>-delete` and NOT `shopping-list-item-delete`
+    // — the app never renders the latter, because the item id sits in the
+    // middle. Recording only the leading `shopping-list-item` and excusing
+    // everything under it waved through exactly the ids this file exists to
+    // catch: `shopping-list-item-edit`, `shopping-list-item-delete` and
+    // `add-shopping-add-manually-button` were all referenced by a spec, all
+    // fictional, and all reported green here while each cost a full Detox run
+    // to discover.
+    //
+    // Each `${…}` becomes `.+`, so a dynamic segment must actually be present.
+    // A template becomes a SHAPE only when it pins down enough to be worth
+    // anything. Two rules, both learned the hard way:
+    //
+    //   - `` `${testIDPrefix}-${tab.id}` `` is nothing but interpolations and a
+    //     separator, so it compiles to `^.+-.+$` — which matches essentially
+    //     every kebab-case id in the app. A single template of that shape
+    //     silently licensed EVERY unresolved id, turning this whole file green
+    //     while the ids it exists to catch sailed through. So a shape needs a
+    //     real literal segment, not just punctuation.
+    //   - Templates whose interpolation IS a declared prefix are expanded into
+    //     concrete ids above; re-adding them here as `.+` would only widen what
+    //     the expansion already covers exactly.
+    if (isTestFile(file)) continue;
+    for (const m of source.matchAll(/testID=\{`([^`]+)`\}/g)) {
+      const template = m[1];
+      if (!template.includes('${')) continue;
+      if (/\$\{(?:config\.)?testIDPrefix\}/.test(template)) continue;
+
+      const literals = template.split(/\$\{[^}]*\}/);
+      const anchored = literals.some(part => /[a-z]{3}/.test(part));
+      if (!anchored) continue;
+
+      const pattern = literals
+        .map(literal => literal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('.+');
+      shapes.push(new RegExp(`^${pattern}$`));
     }
   }
 
-  return { exact, prefixes };
+  // `SheetFormHeader` derives its cancel id from the submit id it was given:
+  //
+  //     cancelTestID ?? `${submitTestID.replace(/-submit-button$/, '')}-cancel-button`
+  //
+  // so `add-pantry-item-submit-button` renders a real, tappable
+  // `add-pantry-item-cancel-button` that appears nowhere as a literal. Mirrored
+  // here rather than exempted, because it is a rule the app actually follows —
+  // an exemption would also hide a genuinely wrong cancel id.
+  for (const id of [...exact]) {
+    if (id.endsWith('-submit-button')) {
+      exact.add(`${id.replace(/-submit-button$/, '')}-cancel-button`);
+    }
+  }
+
+  return { exact, prefixes, shapes };
 };
 
 /** testIDs the e2e layer looks for. */
@@ -133,7 +218,7 @@ const referencedTestIds = (): Array<{ id: string; where: string }> => {
 const KNOWN_MISSING = new Set<string>([]);
 
 describe('e2e testIDs exist in the app', () => {
-  const { exact, prefixes } = appTestIds();
+  const { exact, prefixes, shapes } = appTestIds();
   const refs = referencedTestIds();
 
   it('finds testIDs on both sides, so the check is not vacuous', () => {
@@ -152,7 +237,8 @@ describe('e2e testIDs exist in the app', () => {
   const unresolved = () =>
     refs
       .filter(({ id }) => !exact.has(id))
-      .filter(({ id }) => !prefixes.some(p => id.startsWith(`${p}-`)));
+      .filter(({ id }) => !prefixes.some(p => id.startsWith(`${p}-`)))
+      .filter(({ id }) => !shapes.some(shape => shape.test(id)));
 
   it('no NEW id is referenced that the app cannot render', () => {
     const added = unresolved()

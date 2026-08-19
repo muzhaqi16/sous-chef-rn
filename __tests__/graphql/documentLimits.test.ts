@@ -168,7 +168,7 @@ function computeCost(
         if (arg.name.value === 'first' || arg.name.value === 'last') {
           if (arg.value.kind === Kind.INT) {
             setMultiplier = Math.max(
-              parseInt(arg.value.value, 10) || 1,
+              parseInt(arg.value.value) || 1,
               setMultiplier,
             );
           }

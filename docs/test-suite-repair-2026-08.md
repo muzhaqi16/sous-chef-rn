@@ -552,3 +552,178 @@ Mid-diagnosis, a screenshot of the running app showed a fully populated pantry:
 — it is the persisted MMKV Apollo cache doing exactly what it is designed to do
 (§ *Cache Persistence* in `CLAUDE.md`). **A healthy-looking screen is not a
 reachable backend**, and on an offline-first app it cannot be used as one.
+
+## 13. `shopping-list-crud` — 0/10 to 10/10, and none of it was the app
+
+Ten tests, all failing. Six distinct causes, every one a mismatch between what
+the spec believed and what the app renders.
+
+### 13.1 A `variant="modal"` autocomplete is not a text field
+
+`ShoppingListDetailsStep` renders the item-name and unit fields as
+`variant="modal"`, so `BottomSheetAutocompleteInput` answers typing by
+presenting **its own `BottomSheetModal` with `stackBehavior="push"`** — a second
+sheet on top of the details sheet. That sheet covers the header, and the run
+then timed out on `add-shopping-item-submit-button` while Detox's own artifact
+log recorded the button present, at a valid frame, `visible: false` /
+`hittable: false`. It reads as a missing testID and is actually a sheet in front
+of it.
+
+The value is committed on every keystroke (`handleBottomSheetTextChange` calls
+`onChangeText`); the return key only *closes* the picker. So the fix is to type
+into the picker's own `${testID}-search` field and press return — and, when that
+does not land, press it again. **Not** to swipe the picker away: a swipe on a
+stacked `BottomSheetModal` takes the whole stack with it, including the sheet
+that owns the submit button, which is how a "fallback" deleted the element it
+was waiting for.
+
+### 13.2 `replaceText` requires 100% visibility
+
+Stricter than `toBeVisible`'s 75%. The keyboard from the picker's `autoFocus`
+search field overlapped the quantity input's bottom edge, and Detox failed the
+type with "View is not hittable at its visible point" while quoting bounds that
+look entirely fine. Blurring between fields fixes it — by tapping the DETAILS
+SHEET, not the screen container that `BaseScreen.dismissKeyboard` taps, since
+that sits behind the sheet.
+
+### 13.3 Edit and delete are on opposite sides
+
+In `swipeMode === 'shopping'`, `RightActions` returns delete only — "edit is on
+left swipe", per its own comment — and `LeftActions` renders edit. The spec
+swiped LEFT for both, so the edit action could never appear no matter how long
+it waited. Tapping the row is not the alternative either: that opens the item
+detail screen.
+
+`LeftActions` also never received `testIDPrefix`, though `SwipeActionsProps`
+declares it and `RightActions` has always used it — so the delete action was
+reachable from a test and the edit action, doing the same job on the other side,
+was not. Same omission as `BaseItemCard` (§ earlier), one component deeper.
+
+### 13.4 Two add/edit surfaces, not one
+
+`add-item-modal` / `edit-item-modal` belong to the `AddEditItem` **screen**.
+"Add Manually" opens the **bottom sheet** (`add-shopping-item-*`). A test
+waiting for the screen's id after opening the sheet can only time out.
+
+### 13.5 A wait that asserted nothing
+
+`waitFor(add-shopping-item-modal).not.toBeVisible()` was the check that the item
+had been submitted. That id belongs to the picker sheet, which is not on screen
+at that point — and `not.toBeVisible()` on an absent id passes the instant it is
+evaluated. The step proved nothing, and the run continued whether or not
+anything had been saved.
+
+### 13.6 A disabled button is a silent no-op
+
+`quantity-edit-save` is `disabled: !hasChanges`. Tapping a disabled `Pressable`
+raises nothing, so an increment that failed to register left the sheet open and
+surfaced 15s later as "the sheet did not close" — pointing at the save rather
+than at the tap that never landed. The step now increments, saves, and repeats
+once if the sheet is still up.
+
+### 13.7 `device.pressBack()` is Android-only
+
+Two tests used it to close the sheet. It throws outright on iOS.
+
+**Result: 10/10, twice consecutively, zero crashes.** The only app changes were
+two testID consistency fixes (`LeftActions`, and a testID on the details
+scroll view); everything else was the harness describing a UI that had moved.
+
+## 14. Enhancements after the specs were green
+
+Green was the starting point, not the finish. Four things the passing suite still
+did not do.
+
+### 14.1 The edge-case tests did not test the edge case
+
+`addItem(name, '1 1/4', 'cup')` asserted only that a row with that NAME existed.
+`parseFloat('1 1/4')` is `1`, so the test passed just as happily with the parse
+broken — which is the bug it was written for, and one this repo has shipped a fix
+for. Same for `'0.25'`.
+
+Fixed by asserting the RENDERED quantity. That needed a testID on the pantry
+card's quantity (`pantry-item-<id>-quantity`, mirroring shopping list's
+`QuantityBadge`), forwarded through `CardRightSlot`. The existing helper built
+`pantry-item-<INDEX>-quantity`, an id the app has never rendered — rows are keyed
+by item id.
+
+**Falsified**: changing the expectation to `'9.99 cup'` fails; `'1.25 cup'` passes.
+
+The first version of the assertion read the row as
+`by.id(/^pantry-item-.+-quantity$/).atIndex(0)`, on the reasoning that the sort is
+seeded newest-first so index 0 is the new row. That is wrong, and wrong in a way
+that hid itself: **FlashList recycles its views**, so hierarchy order — which is
+what `atIndex` walks — is not visual order. It passed several full runs, then
+failed on a decimal that had rendered perfectly well, then passed again when that
+test was run alone. Order-dependent is worse than absent, because it reads as a
+real regression. Now matched by text, which costs precision (it confirms the
+value is on screen, not that it belongs to this row) and buys determinism; the
+callers already assert the row itself via `expectItemInPantry`.
+
+Deliberately NOT done for shopping list, because three things block it and each
+would have to be worked around rather than fixed: there is no seeded newest-first
+order (so "row 0" is not the new row), `QuantityBadge` splits value and unit
+across two `<Text>` nodes (so `toHaveText` has no single string), and the badge
+prefers `quantityInput` over the formatted number (so it shows `"1/4"`, not
+`"0.25"` — a weaker check of the parse). The pantry covers the parse end-to-end.
+
+### 14.2 Typing a value is not selecting it
+
+`fillModalAutocomplete` committed values with the return key, which calls
+`handleSubmitCustomValue` — `onChangeText` and nothing else. Tapping a suggestion
+instead calls the field's `onSelect`, which hands back the resolved entity
+(`onUnitSelected(item.id, name, type, symbol)`). So every unit in the suite was
+saved as free text and the resolution path was never exercised.
+
+The suggestion rows had no testID. Added one keyed off the field
+(`${testID}-suggestion-<index>`), since row CONTENT is per-field and translated.
+
+Selection is **opt-in**, and that distinction is the whole lesson: applying it to
+the item name too broke six tests at once, because the specs use generated names
+and tapping a fuzzy catalog match replaces the unique name with an existing
+item's. Closed catalog (unit) → select. Open field (name) → type.
+
+### 14.3 The in-app alert had no handle
+
+`alertService` is "a custom modal alert replacement for React Native's
+Alert.alert" and falls back to the native one only if its provider is unmounted.
+So Detox's system-alert matchers do not apply — and `AlertProvider` carried no
+testID at all, leaving translated button text as the only handle. A validation
+alert therefore sat un-dismissed over a bottom sheet, blocking its cancel button,
+and surfaced three steps later as "the list screen never came back".
+
+Added `alert-modal` and index-keyed `alert-button-<index>`. Index, because the
+label is translated and `style` ('cancel' / 'destructive') is optional.
+
+### 14.4 Detox synchronization — the recorded reason had expired
+
+`launchAppWithFabricWorkaround` said sync was off because Fabric "keeps the main
+run loop busy, preventing Detox from ever reaching idle". Measured by flipping
+the flag:
+
+| | result | wall clock | busy-wait messages |
+|---|---|---|---|
+| sync off | 9/9 | 330s | 1 |
+| sync on | 8/9 | 480s | 1 |
+
+It reaches idle fine. The real trade is ~45% wall clock, plus one test that then
+fails because Detox waits out the validation alert and the form is behind it —
+arguably a more accurate observation, and one that needs the test reworked rather
+than the flag flipped back. Left off, with the measurement recorded in place of
+the expired claim.
+
+### 14.5 What the new guard does and does not do
+
+`e2eDisappearanceAssertions.test.ts` flags a `.not.toBeVisible()` whose target the
+spec never establishes anywhere — the shape that passes the instant it is
+evaluated. It found one real case: `smoke.e2e.ts` asserted the splash screen goes
+away without ever observing it, and since `beforeAll` has already launched and
+settled the app, that assertion could not fail for any app state, a crash
+included.
+
+It does NOT catch the wrong-screen case — the bug that motivated it lived in a
+screen object and referenced an id that IS tapped elsewhere in the file. Only
+proving presence at runtime catches that, which is what `expectDisappearsAfter`
+is for. The guard was verified falsifiable before landing; an earlier version of
+it passed on the very shape it was written to catch, which is why the check is
+recorded here rather than assumed.

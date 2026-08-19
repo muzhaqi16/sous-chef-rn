@@ -1133,6 +1133,10 @@ mutation SyncDeletePantryItem($input: SyncDeletePantryItemInput!) {
 # See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription PantryEvents($pantryId: ID!) {
   pantryEvents(pantryId: $pantryId) {
+    # The device that made the change — the server echoes back the
+    # `x-device-id` the mutation carried. Suppressing on this rather than on
+    # `actorUserId` is what lets the same user's second device keep updating.
+    originatorClientId
     actorUserId
     mutation
     subtype

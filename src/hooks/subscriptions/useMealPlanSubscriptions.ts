@@ -31,6 +31,7 @@ import {
 } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
@@ -362,9 +363,10 @@ export function useMealPlanSubscriptions(userId?: string) {
     ) => {
       if (!payload) return;
 
-      // Our own writes already updated the cache locally — replaying them here
-      // would fight the local-first path (re-adding a row mid-delete, say).
-      if (payload.actorUserId && userId && payload.actorUserId === userId) {
+      // This device's own writes already updated the cache locally — replaying
+      // them here would fight the local-first path (re-adding a row mid-delete,
+      // say). Keyed on the device, so the user's other devices still update.
+      if (isSelfEcho(payload, userId)) {
         if (__DEV__) {
           logger.debug('⏭️ [Subscription] Skipping meal plan self-echo');
         }

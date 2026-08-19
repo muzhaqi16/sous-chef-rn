@@ -4075,12 +4075,24 @@ export type HomeEdge = Edge & {
  */
 export type HomeEvent = {
   __typename: 'HomeEvent';
-  /** Originator of the change, for self-echo suppression. */
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated or the acting user is unknown. For
+   * suppressing the echo of your own write, prefer originatorClientId: this
+   * field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
   mutation: MutationType;
   newRole: Maybe<MembershipRole>;
   node: HomeEventNode;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   previousRole: Maybe<MembershipRole>;
   subtype: HomeSubtype;
   timestamp: Scalars['DateTime']['output'];
@@ -6109,12 +6121,25 @@ export type MealPlanEdge = Edge & {
  */
 export type MealPlanEvent = {
   __typename: 'MealPlanEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   homeId: Scalars['ID']['output'];
   /** Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events. */
   mealPlanId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: Maybe<MealPlanEventNode>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: MealPlanSubtype;
   /** Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events. */
   templateId: Maybe<Scalars['ID']['output']>;
@@ -10164,6 +10189,12 @@ export type NotificationEdge = Edge & {
  */
 export type NotificationEvent = {
   __typename: 'NotificationEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated or the acting user is unknown. For
+   * suppressing the echo of your own write, prefer originatorClientId: this
+   * field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /**
    * Number of notifications affected by an aggregate subtype (BULK_READ /
@@ -10177,6 +10208,13 @@ export type NotificationEvent = {
    * set-based mutation with no single node — read affectedCount instead.
    */
   node: Maybe<Notification>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: NotificationSubtype;
   timestamp: Scalars['DateTime']['output'];
   updatedFields: Maybe<Array<Scalars['String']['output']>>;
@@ -10839,9 +10877,22 @@ export type PantryEdge = Edge & {
  */
 export type PantryEvent = {
   __typename: 'PantryEvent';
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   mutation: MutationType;
   node: PantryEventNode;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   pantryId: Scalars['ID']['output'];
   parents: PantryEventParents;
   subtype: PantrySubtype;
@@ -13953,7 +14004,12 @@ export type ShoppingListEdge = Edge & {
  */
 export type ShoppingListEvent = {
   __typename: 'ShoppingListEvent';
-  /** User who made the change. */
+  /**
+   * The user who caused the change — never the user it happened TO. Null when
+   * the change was system-initiated (a background job) or the acting user is
+   * unknown. For suppressing the echo of your own write, prefer
+   * originatorClientId: this field cannot tell your two devices apart.
+   */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /** Count of items cleared (ITEMS_BATCH_CLEARED only). */
   clearedCount: Maybe<Scalars['Int']['output']>;
@@ -13968,7 +14024,12 @@ export type ShoppingListEvent = {
    * node.status.
    */
   node: Maybe<ShoppingListEventNode>;
-  /** Device/client that triggered the change (for echo suppression). */
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
   originatorClientId: Maybe<Scalars['ID']['output']>;
   subtype: ShoppingListSubtype;
   timestamp: Scalars['DateTime']['output'];
@@ -17310,9 +17371,11 @@ export type UserAddressOrderBy = {
 export type UserEvent = {
   __typename: 'UserEvent';
   /**
-   * Originator of the change, for self-echo suppression. For account/profile
-   * updates this is the user themselves; for moderation it is the moderator
-   * (null for system actions).
+   * The user who caused the change — never the user it happened TO. For
+   * account/profile updates this is usually the user themselves; for moderation
+   * it is the moderator, and null for system actions. For suppressing the echo
+   * of your own write, prefer originatorClientId: this field cannot tell your
+   * two devices apart.
    */
   actorUserId: Maybe<Scalars['ID']['output']>;
   /**
@@ -17322,6 +17385,13 @@ export type UserEvent = {
    */
   mutation: MutationType;
   node: Maybe<UserEventNode>;
+  /**
+   * Device/client that triggered the change (for echo suppression). Compare it
+   * against your own device id: a match means this event is the echo of your
+   * own write. Null when no device caused the change (a background job) or the
+   * request sent no device id.
+   */
+  originatorClientId: Maybe<Scalars['ID']['output']>;
   parents: Maybe<UserEventParents>;
   reason: Maybe<Scalars['String']['output']>;
   subtype: UserSubtype;

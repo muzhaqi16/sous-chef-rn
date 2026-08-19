@@ -29,6 +29,7 @@ import {
 } from '#operations/home/home.generated';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
   CacheStrategy,
@@ -73,8 +74,10 @@ export function useHomeSubscriptions(userId?: string) {
     ) => {
       if (!payload) return;
 
-      // Skip self-echo — local mutations already updated the cache.
-      if (payload.actorUserId && userId && payload.actorUserId === userId) {
+      // Skip this device's own echo — its mutation already updated the cache.
+      // An admin acting on you reports the admin, so this no longer swallows
+      // the event that removed you.
+      if (isSelfEcho(payload, userId)) {
         if (__DEV__) {
           logger.debug('⏭️ [HomeEvents] Skipping self-echo');
         }

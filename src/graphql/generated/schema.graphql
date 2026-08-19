@@ -4188,12 +4188,24 @@ homeInviteChanged — subscribe once per home and branch on subtype, then on
 node's __typename (Membership vs HomeInvite).
 """
 type HomeEvent {
-  """Originator of the change, for self-echo suppression."""
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated or the acting user is unknown. For
+  suppressing the echo of your own write, prefer originatorClientId: this
+  field cannot tell your two devices apart.
+  """
   actorUserId: ID
   homeId: ID!
   mutation: MutationType!
   newRole: MembershipRole
   node: HomeEventNode!
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   previousRole: MembershipRole
   subtype: HomeSubtype!
   timestamp: DateTime!
@@ -6141,12 +6153,25 @@ Only home-shared plans/templates (homeId set) are pushed — personal ones need
 no collaboration channel.
 """
 type MealPlanEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   homeId: ID!
   """Set for MEAL_PLAN_CHANGED / MEAL_PLAN_ITEM_CHANGED events."""
   mealPlanId: ID
   mutation: MutationType!
   node: MealPlanEventNode
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   subtype: MealPlanSubtype!
   """Set for MEAL_TEMPLATE_CHANGED / MEAL_TEMPLATE_ITEM_CHANGED events."""
   templateId: ID
@@ -7536,6 +7561,12 @@ read-state and dismissal transitions arrive on this stream too. Bulk
 operations arrive as a single BULK_READ / BULK_CLEARED / BULK_EXPIRED event.
 """
 type NotificationEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated or the acting user is unknown. For
+  suppressing the echo of your own write, prefer originatorClientId: this
+  field cannot tell your two devices apart.
+  """
   actorUserId: ID
   """
   Number of notifications affected by an aggregate subtype (BULK_READ /
@@ -7549,6 +7580,13 @@ type NotificationEvent {
   set-based mutation with no single node — read affectedCount instead.
   """
   node: Notification
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   subtype: NotificationSubtype!
   timestamp: DateTime!
   updatedFields: [String!]
@@ -8115,9 +8153,22 @@ Real-time notification for pantry domain mutations.
 Clients subscribe once per pantry; the subtype field routes payload interpretation.
 """
 type PantryEvent {
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   mutation: MutationType!
   node: PantryEventNode!
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   pantryId: ID!
   parents: PantryEventParents!
   subtype: PantrySubtype!
@@ -10536,7 +10587,12 @@ Clients subscribe once per list (or once for all their lists via
 myShoppingListsEvents); the subtype field routes payload interpretation.
 """
 type ShoppingListEvent {
-  """User who made the change."""
+  """
+  The user who caused the change — never the user it happened TO. Null when
+  the change was system-initiated (a background job) or the acting user is
+  unknown. For suppressing the echo of your own write, prefer
+  originatorClientId: this field cannot tell your two devices apart.
+  """
   actorUserId: ID
   """Count of items cleared (ITEMS_BATCH_CLEARED only)."""
   clearedCount: Int
@@ -10551,7 +10607,12 @@ type ShoppingListEvent {
   node.status.
   """
   node: ShoppingListEventNode
-  """Device/client that triggered the change (for echo suppression)."""
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
   originatorClientId: ID
   subtype: ShoppingListSubtype!
   timestamp: DateTime!
@@ -13524,9 +13585,11 @@ parents / reason / warningCount for the lifecycle subtypes.
 """
 type UserEvent {
   """
-  Originator of the change, for self-echo suppression. For account/profile
-  updates this is the user themselves; for moderation it is the moderator
-  (null for system actions).
+  The user who caused the change — never the user it happened TO. For
+  account/profile updates this is usually the user themselves; for moderation
+  it is the moderator, and null for system actions. For suppressing the echo
+  of your own write, prefer originatorClientId: this field cannot tell your
+  two devices apart.
   """
   actorUserId: ID
   """
@@ -13536,6 +13599,13 @@ type UserEvent {
   """
   mutation: MutationType!
   node: UserEventNode
+  """
+  Device/client that triggered the change (for echo suppression). Compare it
+  against your own device id: a match means this event is the echo of your
+  own write. Null when no device caused the change (a background job) or the
+  request sent no device id.
+  """
+  originatorClientId: ID
   parents: UserEventParents
   reason: String
   subtype: UserSubtype!

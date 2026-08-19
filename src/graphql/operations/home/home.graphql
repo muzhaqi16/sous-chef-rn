@@ -527,6 +527,10 @@ subscription HomeEvents($homeId: ID!) {
     subtype
     mutation
     homeId
+    # The device that made the change — the server echoes back the
+    # `x-device-id` the mutation carried. Suppressing on this rather than on
+    # `actorUserId` is what lets the same user's second device keep updating.
+    originatorClientId
     actorUserId
     previousRole
     newRole

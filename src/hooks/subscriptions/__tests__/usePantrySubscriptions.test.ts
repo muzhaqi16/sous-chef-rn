@@ -16,6 +16,10 @@ type CapturedOnData = (data: unknown, client: unknown) => void;
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
+jest.mock('#/utils/deviceId', () => ({
+  getDeviceIdSync: jest.fn(() => 'device_this'),
+}));
+
 const mockRegister = jest.fn().mockReturnValue({});
 const mockIsPendingDelete = jest.fn().mockReturnValue(false);
 
@@ -69,7 +73,10 @@ const deliver = async (
   });
 };
 
-const itemEvent = (mutation: MutationType, actorUserId = 'user-2') => ({
+const itemEvent = (
+  mutation: MutationType,
+  actorUserId: string | undefined = 'user-2',
+) => ({
   subtype: PantrySubtype.ItemChanged,
   mutation,
   pantryId: 'pantry-1',
@@ -242,5 +249,74 @@ describe('usePantrySubscriptions', () => {
       jest.runOnlyPendingTimers();
     });
     expect(client.query).toHaveBeenCalledTimes(1);
+  });
+
+  describe('echo suppression', () => {
+    it('drops the echo of a write this device made', async () => {
+      const getOnData = captureCustomOnData();
+      renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+      const client = makeClient();
+
+      await deliver(
+        getOnData(),
+        {
+          ...itemEvent(MutationType.ItemUpdated, 'user-1'),
+          originatorClientId: 'device_this',
+        },
+        client,
+      );
+
+      expect(client.query).not.toHaveBeenCalled();
+    });
+
+    it('applies a write the SAME user made on another device', async () => {
+      // The whole reason this keys on the device: the mutation response landed
+      // on the other device, so this one has nothing applied yet.
+      const getOnData = captureCustomOnData();
+      renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+      const client = makeClient(
+        jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
+        jest.fn().mockResolvedValue({
+          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        }),
+      );
+
+      await deliver(
+        getOnData(),
+        {
+          ...itemEvent(MutationType.ItemUpdated, 'user-1'),
+          originatorClientId: 'device_other',
+        },
+        client,
+      );
+
+      expect(client.query).toHaveBeenCalledWith(
+        expect.objectContaining({ variables: { id: 'item-1' } }),
+      );
+    });
+
+    it('applies a system-initiated event, which names no actor at all', async () => {
+      // Background jobs send neither an originator nor an actor. The fallback
+      // must read that as "not mine" rather than dropping it.
+      const getOnData = captureCustomOnData();
+      renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+      const client = makeClient(
+        jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
+        jest.fn().mockResolvedValue({
+          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        }),
+      );
+
+      await deliver(
+        getOnData(),
+        {
+          ...itemEvent(MutationType.ItemUpdated, undefined),
+          originatorClientId: null,
+        },
+        client,
+      );
+
+      expect(client.query).toHaveBeenCalled();
+    });
   });
 });

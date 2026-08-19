@@ -104,32 +104,274 @@ export class ShoppingListScreen extends BaseScreen {
   }
 
   /**
-   * Add new item to shopping list
-   * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
+   * Type a value into one of the details sheet's `variant="modal"` autocompletes.
+   *
+   * These do NOT behave like text inputs. `ShoppingListDetailsStep` renders the
+   * item-name and unit fields as `variant="modal"`, and
+   * `BottomSheetAutocompleteInput` responds to typing by presenting its own
+   * `BottomSheetModal` with `stackBehavior="push"` — a second sheet ON TOP of
+   * the details sheet.
+   *
+   * That is what made every add test fail. Typing the name opened the picker,
+   * the picker covered the header, and the run then timed out on
+   * `add-shopping-item-submit-button` — with Detox's own artifact log showing
+   * the button present, at a valid frame, `visible: false` / `hittable: false`.
+   * It reads like a missing testID and is actually a sheet in front of it.
+   *
+   * Committing a typed value means going through the picker's own search field
+   * (`${testID}-search`) and pressing return: `handleSubmitCustomValue` writes
+   * the term back and sets `showAutocomplete(false)`, which is what closes the
+   * picker. Tapping the details sheet to "dismiss the keyboard" cannot work —
+   * the details sheet is behind the picker.
+   *
+   * Test names are generated, so they never match a suggestion; the custom-value
+   * path is the only one that applies.
    */
-  async addItem(name: string, quantity?: string | number, unit?: string) {
-    // Tap add button and wait for modal - retry once if needed
+  /**
+   * Blur whatever holds the keyboard, by tapping the DETAILS SHEET's top-left
+   * corner.
+   *
+   * Distinct from `BaseScreen.dismissKeyboard`, which taps the screen container
+   * — that sits BEHIND the sheet during this flow, so the tap never reaches the
+   * focused field.
+   *
+   * `replaceText` requires ONE HUNDRED PERCENT visibility — stricter than
+   * `toBeVisible`'s 75% — so a keyboard overlapping even the bottom edge of the
+   * quantity input fails the type with "View is not hittable at its visible
+   * point", quoting bounds that look entirely fine. The picker's search field
+   * is `autoFocus`, so the keyboard is up as soon as a name is committed and is
+   * still up when the next field is typed.
+   */
+  private async dismissSheetKeyboard() {
+    try {
+      await element(by.id('add-shopping-item-details')).tap({ x: 10, y: 10 });
+    } catch {
+      // Nothing focused, or the sheet moved — the next action reports it.
+    }
+  }
+
+  private async fillModalAutocomplete(
+    testID: string,
+    value: string,
+    { selectSuggestion = false }: { selectSuggestion?: boolean } = {},
+  ) {
+    // Bring the field into view first. The unit picker is in the second
+    // `FieldRow`, which the keyboard pushes below the fold after the name is
+    // entered — Detox then fails the type with "View is not hittable at its
+    // visible point", which names the symptom and not the scroll position.
+    try {
+      await waitFor(element(by.id(testID)))
+        .toBeVisible()
+        .whileElement(by.id('add-shopping-item-scroll'))
+        .scroll(200, 'down', NaN, 0.85);
+    } catch {
+      // Already on screen, or the sheet does not scroll — the type below is
+      // what decides.
+    }
+
+    await element(by.id(testID)).replaceText(value);
+
+    const search = element(by.id(`${testID}-search`));
+    try {
+      await waitFor(search).toBeVisible().withTimeout(5000);
+    } catch {
+      // No picker opened — the field already holds the value, so there is
+      // nothing to commit and nothing covering the submit button.
+      return;
+    }
+
+    await search.replaceText(value);
+
+    // Selecting a suggestion and committing the typed text are DIFFERENT
+    // actions, and which one is correct depends on the field:
+    //
+    //   - UNIT is a closed catalog. Tapping the row calls
+    //     `onUnitSelected(item.id, name, type, symbol)`, so the item is saved
+    //     against a real unit. The return key only calls `onChangeText`, which
+    //     saves the string and never exercises resolution — not what a user
+    //     picking "lb — pound" out of the list does.
+    //   - ITEM NAME is open. The tests use generated names, and a fuzzy match
+    //     against the catalog is NOT the value under test — tapping it replaces
+    //     the unique name with an existing item's, and the row the test then
+    //     looks for never appears. (Six tests failed exactly this way when
+    //     selection was applied to both fields.)
+    //
+    // So selection is opt-in, and the return key remains the default.
+    if (selectSuggestion) {
+      try {
+        const suggestion = element(by.id(`${testID}-suggestion-0`));
+        await waitFor(suggestion).toBeVisible().withTimeout(3000);
+        await suggestion.tap();
+      } catch {
+        // No suggestion for this value — commit it as typed.
+        await search.tapReturnKey();
+      }
+    } else {
+      await search.tapReturnKey();
+    }
+
+    // The typed value is ALREADY committed at this point:
+    // `handleBottomSheetTextChange` calls `onChangeText` on every keystroke. The
+    // return key only closes the picker (`handleSubmitCustomValue` sets
+    // `showAutocomplete(false)`). So if the picker is still up, swiping it away
+    // loses nothing — which makes a fallback safe, and worth having, because the
+    // return key intermittently does not land on the unit field.
+    try {
+      await waitFor(element(by.id('add-shopping-item-submit-button')))
+        .toBeVisible()
+        .withTimeout(5000);
+      await this.dismissSheetKeyboard();
+      return;
+    } catch {
+      // Press return again rather than swiping the sheet away. A swipe on a
+      // stacked `BottomSheetModal` takes the whole stack with it — including the
+      // details sheet that owns the submit button — so the fallback removed the
+      // very element it was waiting for.
+      try {
+        await search.tapReturnKey();
+      } catch {
+        // Picker closed between the check and the retry.
+      }
+      // Deliberately NOT dismissing the keyboard here: that taps the details
+      // sheet, which is still BEHIND the picker on this path, so the tap lands
+      // on the picker and can undo the close it is meant to follow. The keyboard
+      // is dismissed after the submit button is confirmed back.
+    }
+
+    // Wait for the SUBMIT BUTTON to come back, not for the search field to go
+    // away. Those are not the same claim: the picker's dismissal animation and
+    // the host sheet's re-layout finish at different times, so a `not.toBeVisible`
+    // on the search field can still be false while the thing the caller actually
+    // needs — a hittable header — is already there, and vice versa. Asserting
+    // the precondition directly is both stabler and honest about the intent.
+    await waitFor(element(by.id('add-shopping-item-submit-button')))
+      .toBeVisible()
+      .withTimeout(10000);
+
+    // The picker is gone but its keyboard is not; the next field needs the room.
+    await this.dismissSheetKeyboard();
+  }
+
+  /**
+   * Close the picker sheet (`AddItemSheet`).
+   *
+   * By swipe: the sheet renders no close button, and `device.pressBack()` — what
+   * the specs used — is Android-only and throws outright on iOS.
+   */
+  async dismissAddItemSheet() {
+    // Unwind the DETAILS step first if it is up. `AddItemSheet` stacks it over
+    // the picker, so swiping the picker down while the details form is in front
+    // dismisses nothing and the list never comes back. Cancel is derived by
+    // `SheetFormHeader` from the submit id (`-submit-button` -> `-cancel-button`).
+    try {
+      await element(by.id('add-shopping-item-cancel-button')).tap();
+      await waitFor(element(by.id('add-shopping-item-name-input')))
+        .not.toBeVisible()
+        .withTimeout(5000);
+    } catch {
+      // Details step not open — the picker swipe below is all that is needed.
+    }
+
+    try {
+      await element(by.id('add-shopping-item-modal'))
+        .atIndex(0)
+        .swipe('down', 'fast', 0.9);
+    } catch {
+      // Already closed.
+    }
+    // Confirm we are actually back on the list, and take one more pass if not.
+    // The sheet stack is two deep (picker + details) and either layer can still
+    // be unwinding; a single blind swipe leaves the list covered and the next
+    // assertion blames the list.
+    try {
+      await waitFor(element(by.id(this.screenID)))
+        .toBeVisible()
+        .withTimeout(5000);
+      return;
+    } catch {
+      // Fall through and unwind whatever is still up.
+    }
+
+    try {
+      await element(by.id('add-shopping-item-cancel-button')).tap();
+    } catch {
+      // Details step already gone.
+    }
+    try {
+      await element(by.id('add-shopping-item-modal'))
+        .atIndex(0)
+        .swipe('down', 'fast', 0.9);
+    } catch {
+      // Picker already gone.
+    }
+
+    await waitFor(element(by.id(this.screenID)))
+      .toBeVisible()
+      .withTimeout(10000);
+  }
+
+  /**
+   * Swipe a row away by name.
+   *
+   * Left swipe: in `swipeMode === 'shopping'` the RIGHT actions are delete-only
+   * (edit lives on the left). Two attempts, because a swipe that springs back
+   * instead of latching leaves the tap landing on a closed row, and
+   * `by.id(/…-delete$/).atIndex(0)` is not pinned to the row just swiped — with
+   * 50+ rows, which one is index 0 depends on what is currently mounted.
+   */
+  async deleteItemByName(name: string) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await waitFor(element(by.text(name)))
+        .toBeVisible()
+        .withTimeout(5000);
+      await element(by.text(name)).swipe('left', 'fast', 0.7);
+
+      const deleteButton = element(
+        by.id(/^shopping-list-item-.+-delete$/),
+      ).atIndex(0);
+      await waitFor(deleteButton).toBeVisible().withTimeout(5000);
+      await deleteButton.tap();
+
+      try {
+        await waitFor(element(by.text(name)))
+          .not.toBeVisible()
+          .withTimeout(10000);
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          throw error;
+        }
+      }
+    }
+  }
+
+  /**
+   * Open the details form: tab-bar add button -> picker sheet -> "Add Manually".
+   *
+   * Both taps are retried. Landing either one mid-animation gets it swallowed
+   * with no error, which is what made this flow pass on one run and fail on the
+   * next. Extracted so every caller gets the retries — `should validate empty
+   * item name` drove the two taps by hand and failed on the details step for
+   * exactly that reason, while `addItem` (same taps, with retries) passed.
+   */
+  async openAddDetailsForm() {
     await this.tapAddButton();
 
-    // Wait for "Add Manually" button to appear (indicates sheet is open)
     try {
       await waitFor(element(by.id('add-shopping-item-add-manually-button')))
         .toBeVisible()
         .withTimeout(3000);
     } catch {
-      // Modal didn't open - retry the tap
-      console.log('Modal did not open, retrying add button tap...');
+      console.log('Picker sheet did not open, retrying add button tap...');
       await this.tapAddButton();
       await waitFor(element(by.id('add-shopping-item-add-manually-button')))
         .toBeVisible()
         .withTimeout(3000);
     }
-    // Retry the tap, and wait on the NAME INPUT rather than
-    // `add-shopping-item-modal`. That id belongs to the picker sheet
-    // (`AddItemSheet` renders `${config.testIDPrefix}-modal`), which this tap
-    // navigates AWAY from — so waiting for it after the tap can only time out.
-    // Landing the tap mid-animation also gets it swallowed, which made the
-    // flow pass on one run and fail on the next.
+
+    // Wait on the NAME INPUT, not on `add-shopping-item-modal`: that id belongs
+    // to the PICKER sheet, which this tap navigates away from, so waiting for it
+    // afterwards can only time out.
     await element(by.id('add-shopping-item-add-manually-button')).tap();
     try {
       await waitFor(element(by.id('add-shopping-item-name-input')))
@@ -142,38 +384,63 @@ export class ShoppingListScreen extends BaseScreen {
         .toBeVisible()
         .withTimeout(5000);
     }
+  }
 
-    // Fill in item details - use replaceText to avoid Android stylus popup
-    const nameInput = element(by.id('add-shopping-item-name-input'));
-    await nameInput.replaceText(name);
+  /**
+   * Add new item to shopping list
+   * @param quantity - Can be number, fraction (e.g., "1 1/4"), or decimal (e.g., "0.25")
+   */
+  async addItem(name: string, quantity?: string | number, unit?: string) {
+    await this.openAddDetailsForm();
+
+    // Name and unit are `variant="modal"` autocompletes, so typing into the
+    // field opens a SECOND BottomSheetModal stacked over this sheet — see
+    // `fillModalAutocomplete` for why that matters and how it is closed.
+    await this.fillModalAutocomplete('add-shopping-item-name-input', name);
 
     if (quantity !== undefined) {
+      // `EditableCounter` is a plain input — no picker. But `replaceText`
+      // requires ONE HUNDRED PERCENT visibility (stricter than `toBeVisible`'s
+      // 75%), and the keyboard left over from the name picker overlaps this
+      // field's bottom edge often enough to matter. The failure reads "View is
+      // not hittable at its visible point" and quotes bounds that look fine.
+      //
+      // Two attempts, each blurring and scrolling first, because the keyboard
+      // dismissal is itself best-effort — a tap that lands while the picker is
+      // still unwinding does nothing, and the retry is cheaper than a flake.
       const quantityStr =
         typeof quantity === 'number' ? quantity.toString() : quantity;
       const quantityInput = element(by.id('add-shopping-item-quantity-input'));
 
-      // Use replaceText instead of clearAndType for better reliability
-      await quantityInput.replaceText(quantityStr);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        await this.dismissSheetKeyboard();
+        try {
+          await waitFor(quantityInput)
+            .toBeVisible()
+            .whileElement(by.id('add-shopping-item-scroll'))
+            .scroll(150, 'up', NaN, 0.15);
+        } catch {
+          // Already in view, or the sheet does not scroll.
+        }
+
+        try {
+          await quantityInput.replaceText(quantityStr);
+          break;
+        } catch (error) {
+          if (attempt === 1) {
+            throw error;
+          }
+        }
+      }
     }
 
     if (unit) {
-      // Use replaceText for unit to avoid Android stylus popup
-      const unitInput = element(by.id('add-shopping-item-unit-picker'));
-      await unitInput.replaceText(unit);
-
-      // Press enter to confirm the unit
-      await element(by.id('add-shopping-item-unit-picker')).tapReturnKey();
-
-      // Wait for autocomplete to process
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Selected from the list, not typed: the unit has to resolve to a real
+      // catalog entity for the save to mean anything.
+      await this.fillModalAutocomplete('add-shopping-item-unit-picker', unit, {
+        selectSuggestion: true,
+      });
     }
-
-    // Tap outside inputs to dismiss keyboard and ensure submit button is accessible
-    // The modal container is safe to tap without closing the modal
-    await element(by.id('add-shopping-item-modal')).tap({ x: 10, y: 10 });
-
-    // Wait for keyboard to fully dismiss
-    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Submit - tap the checkmark button in the header
     await this.tapByID('add-shopping-item-submit-button');
@@ -201,8 +468,16 @@ export class ShoppingListScreen extends BaseScreen {
       // Otherwise, error modal didn't appear (good!), continue
     }
 
-    // Wait for modal to close (15s max to account for GraphQL mutation + Apollo cache updates)
-    await waitFor(element(by.id('add-shopping-item-modal')))
+    // Wait for the form to close (15s max, to cover the GraphQL mutation plus
+    // the Apollo cache update).
+    //
+    // Waits on the NAME INPUT, which only the details step renders. The previous
+    // wait was on `add-shopping-item-modal` — an id `AddItemSheet` composes as
+    // `${config.testIDPrefix}-modal` for the PICKER sheet, not for this form. A
+    // `not.toBeVisible()` on an id that is not on screen passes the instant it
+    // is evaluated, so this step asserted nothing at all and the run continued
+    // whether or not the item had been submitted.
+    await waitFor(element(by.id('add-shopping-item-name-input')))
       .not.toBeVisible()
       .withTimeout(15000);
 
@@ -267,7 +542,7 @@ export class ShoppingListScreen extends BaseScreen {
    */
   async searchFor(query: string) {
     await this.clearAndType(this.searchInput, query);
-    await this.dismissKeyboard();
+    await this.dismissSheetKeyboard();
   }
 
   /**

@@ -193,25 +193,6 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   const sentTokenRef = useRef<string | null>(null);
   const userId = user?.id;
 
-  // `verifyEmail` returns the user but no tokens, so a link followed from the
-  // registration mail activates the account without opening a session — signing
-  // in is the next step. A user who already had a session (verification
-  // deferred, link opened later) is moved along by the root navigator
-  // re-deriving its target from `emailVerified`; this screen sits in the
-  // always-mounted deep-link group, so it has to step aside to reveal that.
-  //
-  // Both branches REMOVE this screen rather than navigate over it. The deep-link
-  // group has no `if`, so this screen outlives the `Auth` group that signing in
-  // takes away: left on the stack it resurfaces, still showing "Email Verified!",
-  // as the top route right after login — with nothing beneath it to go back to.
-  const handleVerified = () => {
-    if (!userId) {
-      replaceWithLogin();
-      return;
-    }
-    dismiss();
-  };
-
   const performVerification = () => {
     performVerificationImpl({
       token,
@@ -248,11 +229,29 @@ export const EmailVerificationDeepLinkScreen: React.FC = () => {
   // Unlike the verification itself this is safe to re-schedule — the cleanup
   // cancels the pending hand-off, including on an unmount from the close
   // button, so a user who dismisses the screen isn't navigated a second later.
+  //
+  // `verifyEmail` returns the user but no tokens, so a link followed from the
+  // registration mail activates the account without opening a session — signing
+  // in is the next step. A user who already had a session (verification
+  // deferred, link opened later) is moved along by the root navigator
+  // re-deriving its target from `emailVerified`; this screen sits in the
+  // always-mounted deep-link group, so it has to step aside to reveal that.
+  //
+  // Both branches REMOVE this screen rather than navigate over it. The deep-link
+  // group has no `if`, so this screen outlives the `Auth` group that signing in
+  // takes away: left on the stack it resurfaces, still showing "Email Verified!",
+  // as the top route right after login — with nothing beneath it to go back to.
   useEffect(() => {
     if (verificationResult !== 'success') return;
-    const id = setTimeout(handleVerified, HANDOFF_DELAY_MS);
+    const id = setTimeout(() => {
+      if (!userId) {
+        replaceWithLogin();
+        return;
+      }
+      dismiss();
+    }, HANDOFF_DELAY_MS);
     return () => clearTimeout(id);
-  }, [verificationResult, handleVerified]);
+  }, [verificationResult, userId, replaceWithLogin, dismiss]);
 
   return (
     <View style={styles.container}>
