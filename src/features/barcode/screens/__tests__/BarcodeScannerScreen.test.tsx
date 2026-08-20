@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 import type { BarcodeSource } from '#/types/navigation';
 
@@ -31,8 +31,22 @@ jest.mock('../../hooks/useBarcodeScanner', () => ({
   })),
 }));
 
+interface CapturedCameraProps {
+  torchMode?: 'on' | 'off';
+  onStarted?: () => void;
+  onStopped?: () => void;
+  onError?: (error: Error) => void;
+}
+
+// Captured so the torch tests can assert what the screen commands, and drive
+// the session's started/stopped events the way the native camera would.
+let mockCameraProps: CapturedCameraProps = {};
+
 jest.mock('react-native-vision-camera', () => ({
-  Camera: () => null,
+  Camera: (props: CapturedCameraProps) => {
+    mockCameraProps = props;
+    return null;
+  },
   useCameraDevices: jest.fn(() => []),
 }));
 
@@ -62,7 +76,22 @@ jest.mock('#components/base/Button', () => ({
 }));
 
 jest.mock('#components/atoms/IconButton', () => ({
-  IconButton: () => null,
+  IconButton: ({
+    name,
+    onPress,
+    accessibilityLabel,
+  }: {
+    name?: string;
+    onPress?: () => void;
+    accessibilityLabel?: string;
+  }) => {
+    const { Text, Pressable } = require('react-native');
+    return (
+      <Pressable accessibilityLabel={accessibilityLabel} onPress={onPress}>
+        <Text>{name}</Text>
+      </Pressable>
+    );
+  },
 }));
 
 jest.mock('#services/haptic/HapticService', () => ({
@@ -159,6 +188,68 @@ describe('BarcodeScannerScreen', () => {
 
     const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
     expect(getByText('Cancel')).toBeTruthy();
+  });
+
+  describe('torch', () => {
+    beforeEach(() => {
+      mockCameraProps = {};
+      const { usePermission } = jest.requireMock(
+        '#hooks/permissions/usePermission',
+      );
+      usePermission.mockReturnValue({
+        isGranted: true,
+        isBlocked: false,
+        request: mockRequestPermission,
+        openSettings: mockOpenSettings,
+      });
+
+      const { useCameraDevices } = jest.requireMock(
+        'react-native-vision-camera',
+      );
+      useCameraDevices.mockReturnValue([{ position: 'back', id: 'back-cam' }]);
+    });
+
+    // A defined torchMode makes VisionCamera call setTorchMode() as soon as the
+    // controller exists — before the session has opened — which CameraX rejects
+    // with "Camera is not active.".
+    it('commands no torch mode before the session starts', () => {
+      render(<BarcodeScannerScreen route={defaultRoute} />);
+
+      expect(mockCameraProps.torchMode).toBeUndefined();
+    });
+
+    it('defers a flash press made while the session is still starting', () => {
+      const { getByLabelText } = render(
+        <BarcodeScannerScreen route={defaultRoute} />,
+      );
+
+      fireEvent.press(getByLabelText('Turn flash on'));
+      expect(mockCameraProps.torchMode).toBeUndefined();
+
+      act(() => {
+        mockCameraProps.onStarted?.();
+      });
+      expect(mockCameraProps.torchMode).toBe('on');
+    });
+
+    it('stops commanding the torch once the session stops', () => {
+      const { getByLabelText } = render(
+        <BarcodeScannerScreen route={defaultRoute} />,
+      );
+
+      act(() => {
+        mockCameraProps.onStarted?.();
+      });
+      fireEvent.press(getByLabelText('Turn flash on'));
+      expect(mockCameraProps.torchMode).toBe('on');
+
+      act(() => {
+        mockCameraProps.onStopped?.();
+      });
+      expect(mockCameraProps.torchMode).toBeUndefined();
+      // Back to the "off" affordance, so the next session starts dark.
+      expect(getByLabelText('Turn flash on')).toBeTruthy();
+    });
   });
 
   it('renders with undefined route params', () => {
