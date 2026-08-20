@@ -29,6 +29,17 @@ export interface ShoppingListItemInput {
   preferredStoreId?: string;
 }
 
-export interface ShoppingListItemUpdate extends Partial<ShoppingListItemInput> {
-  completed?: boolean;
-}
+/**
+ * The fields an item edit can change. A type alias, not an interface extending
+ * with extras: it carried a `completed?: boolean` that no caller ever set and
+ * `UpdateShoppingListItemInput` has no field for — `updateItem` spreads updates
+ * straight into the mutation input, so setting it would have sent an unknown
+ * field and had the whole mutation rejected.
+ *
+ * Purchase state is deliberately absent. It moves through
+ * `useToggleShoppingItem` (a checkbox tap, or the long-press amounts sheet),
+ * never through a field update — `purchaseTracking.isPurchased` turning on is a
+ * PURCHASE server-side, writing a purchase row and moving the item's counters,
+ * so it must not be reachable as an incidental part of an edit.
+ */
+export type ShoppingListItemUpdate = Partial<ShoppingListItemInput>;
