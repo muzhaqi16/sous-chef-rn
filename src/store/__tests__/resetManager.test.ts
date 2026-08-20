@@ -36,6 +36,10 @@ import {
   clearCredentials,
 } from '#/storage/keychain';
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
+import {
+  registerSessionTeardown,
+  clearSessionTeardown,
+} from '../sessionTeardown';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 
@@ -454,6 +458,54 @@ describe('resetManager', () => {
             typeof msg === 'string' && msg.includes('account_inactive'),
         );
         expect(sessionLogs).toHaveLength(1);
+      });
+
+      // Clearing the tokens stops nothing already running: the socket keeps
+      // dialling, queries keep landing, the queue keeps waking — all against
+      // credentials the server has refused.
+      describe('stopping the transports', () => {
+        afterEach(() => {
+          clearSessionTeardown();
+        });
+
+        it('runs the registered teardown before clearing the store', async () => {
+          const order: string[] = [];
+          registerSessionTeardown('apollo', () => {
+            order.push('teardown');
+          });
+          const set = jest.fn(() => {
+            order.push('set');
+          });
+
+          await createResetManager(
+            set,
+            jest.fn(() => ({} as RootState)) as never,
+          ).endSession('refresh_token_dead');
+
+          expect(order[0]).toBe('teardown');
+          expect(order).toContain('set');
+        });
+
+        it.each(REASONS)('runs it for reason %s', async reason => {
+          const teardown = jest.fn();
+          registerSessionTeardown('apollo', teardown);
+
+          await resetManager.endSession(reason);
+
+          expect(teardown).toHaveBeenCalledTimes(1);
+        });
+
+        it('still clears the session when a teardown step throws', async () => {
+          // The tokens have to go even if the socket refuses to close.
+          registerSessionTeardown('apollo', () => {
+            throw new Error('dispose failed');
+          });
+
+          await resetManager.endSession('session_revoked');
+
+          expect(findAuthResetCall(mockSet)?.[0]?.accessToken).toBeNull();
+          expectPersistedCacheCleared();
+        });
       });
 
       it('removes the persisted cache blob so the next sign-in restores nothing', async () => {

@@ -1,5 +1,4 @@
 import { useRef, useEffect, useContext, useState } from 'react';
-import { Keyboard } from 'react-native';
 import {
   BottomSheetModal as GorhomBottomSheetModal,
   type BottomSheetModalProps,
@@ -43,15 +42,11 @@ export interface UseStandardBottomSheetOptions {
   keyboardBehavior?: 'extend' | 'fillParent' | 'interactive';
   enableDynamicSizing?: boolean;
   /**
-   * When truthy:
-   * - Appends an expanded snap point (if not already present)
-   * - Defaults keyboardBehavior to 'interactive'
-   * - Snaps back to index 0 when keyboard hides
-   *
-   * Pass `true` to use the default '95%' expanded point,
-   * or a string (e.g. `'85%'`) to specify a custom expanded snap point.
+   * Caps the height a dynamically-sized sheet can reach. Only meaningful with
+   * `enableDynamicSizing`; gorhom defaults it to the container height, which
+   * `topInset` has already reduced to the safe area.
    */
-  keyboardAware?: boolean | string;
+  maxDynamicContentSize?: number;
   /** Optional user-supplied onChange — wrapped so the hook can drive the
    *  global backdrop slot off gorhom's authoritative index transitions. */
   onChange?: (index: number, position: number, type: number) => void;
@@ -119,7 +114,7 @@ export function useStandardBottomSheet({
   snapPoints,
   keyboardBehavior,
   enableDynamicSizing = false,
-  keyboardAware = false,
+  maxDynamicContentSize,
   onChange: userOnChange,
   onAnimate: userOnAnimate,
 }: UseStandardBottomSheetOptions) {
@@ -141,16 +136,18 @@ export function useStandardBottomSheet({
     onAnimate: handleBackdropAnimate,
   } = useBottomSheetBackdropClaim(ref);
 
-  // Compute final snap points: append expanded point when keyboardAware and not already present
-  const expandedPoint =
-    typeof keyboardAware === 'string' ? keyboardAware : '95%';
-  const finalSnapPoints =
-    keyboardAware && snapPoints[snapPoints.length - 1] !== expandedPoint
-      ? [...snapPoints, expandedPoint]
-      : snapPoints;
-
   // 'interactive' fits the vast majority of input-bearing sheets; callers
   // can still pass 'extend' or 'fillParent' explicitly when needed.
+  //
+  // It lifts the sheet by the keyboard height measured from the sheet's
+  // TALLEST snap point, not from wherever it currently sits
+  // (`BottomSheet.tsx`: `max(0, highestDetentPosition - keyboardHeight)`).
+  // So every snap point a sheet declares is added to how far the keyboard
+  // pushes it up. A `keyboardAware` option here used to append a '95%' point
+  // on top of the caller's own, which drove that expression straight to 0 —
+  // the sheet went full screen the instant a field was focused, content
+  // pinned to the top over half a screen of blank surface. Declare only the
+  // snap points the sheet actually wants; the lift follows from them.
   const resolvedKeyboardBehavior = keyboardBehavior ?? 'interactive';
 
   // ── Auto present/dismiss — single source of truth ──
@@ -263,15 +260,6 @@ export function useStandardBottomSheet({
     userOnAnimateRef.current?.(fromIndex, toIndex, fromPosition, toPosition);
   };
 
-  // Snap back to initial position when keyboard hides (keyboardAware only)
-  useEffect(() => {
-    if (!keyboardAware) return;
-    const sub = Keyboard.addListener('keyboardDidHide', () => {
-      ref.current?.snapToIndex(0);
-    });
-    return () => sub.remove();
-  }, [keyboardAware]);
-
   // Gorhom fires `onClose` and `onChange(-1)` from separate animated
   // reactions. If `onClose` wins the race it calls `unmount()` — tearing
   // down the portal before `onChange(-1)` reaches JS — so our
@@ -299,9 +287,10 @@ export function useStandardBottomSheet({
   // Theme-derived `backgroundStyle` / `handleIndicatorStyle` come from the
   // wrapped `BottomSheetModal` re-exported above — no theme reads here.
   const modalProps: Partial<BottomSheetModalProps> = {
-    snapPoints: finalSnapPoints,
+    snapPoints,
     enablePanDownToClose: true,
     enableDynamicSizing,
+    maxDynamicContentSize,
     topInset: insets.top,
     onDismiss: safeOnDismiss,
     onChange: handleChange,

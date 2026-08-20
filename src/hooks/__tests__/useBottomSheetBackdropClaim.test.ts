@@ -145,7 +145,7 @@ describe('useBottomSheetBackdropClaim', () => {
     expect(mockRelease).not.toHaveBeenCalled();
   });
 
-  it('treats a snap 0 -> 1 (keyboardAware expand) as a no-op (already claimed)', () => {
+  it('treats a snap 0 -> 1 (multi-detent expand) as a no-op (already claimed)', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
     result.current.onAnimate(-1, 0); // claim

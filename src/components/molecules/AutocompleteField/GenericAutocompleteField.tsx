@@ -23,6 +23,8 @@ export interface GenericAutocompleteFieldProps<T> {
   // Inline-variant tuning.
   inlineMinSearchLength?: number;
   maxResults?: number;
+  /** See `InlineAutocomplete`: for hosts sized to their own content. */
+  reserveDropdownSpace?: boolean;
   // Modal-variant copy + tuning.
   modalTitle: string;
   modalSearchPlaceholder: string;
@@ -55,6 +57,7 @@ export function GenericAutocompleteField<T>({
   autoCapitalize,
   inlineMinSearchLength,
   maxResults,
+  reserveDropdownSpace,
   modalTitle,
   modalSearchPlaceholder,
   modalEmptyText,
@@ -81,6 +84,7 @@ export function GenericAutocompleteField<T>({
         keyExtractor={keyExtractor}
         onSelect={onSelect}
         autoCapitalize={autoCapitalize}
+        reserveDropdownSpace={reserveDropdownSpace}
       />
     );
   }

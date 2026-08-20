@@ -5,7 +5,7 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
  * on: as a `*Result` union member's `code` (login, auto-login, refresh) and as
  * a top-level error's `extensions.code` on any ordinary operation.
  *
- * Three questions get asked about the same code and they are NOT the same
+ * Four questions get asked about the same code and they are NOT the same
  * question, so they get one list each — with the relationships spelled out here
  * rather than rediscovered per call site:
  *
@@ -22,6 +22,10 @@ import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
  *    exchange failed and the session is over, while the same code on an
  *    ordinary operation is exactly what a refresh fixes. Only ask this one
  *    about errors from operations other than the refresh itself.
+ *  - {@link isSupersededRefreshCode} — the odd one out: neither refreshable nor
+ *    fatal. The exchange failed and the session is fine. Another request
+ *    rotated first, so the answer is to retry with a *different* token, not to
+ *    re-send this one and not to sign anybody out.
  *
  * `AUTH_ACCOUNT_LOCKED` is in none of them, deliberately. The schema documents
  * it as a temporary, self-clearing failed-attempt lockout, so every path defers
@@ -48,6 +52,10 @@ const DEAD_CREDENTIAL_CODES: string[] = [
 
 // Everything above, plus the token-side refusals — the refresh token can't be
 // exchanged now or later, so the only correct move is to end the session.
+//
+// AUTH_REFRESH_TOKEN_SUPERSEDED is pointedly absent. It names the same failed
+// exchange but a living session, and listing it here is what would turn a lost
+// race into a sign-out.
 const SESSION_ENDING_CODES: string[] = [
   ...DEAD_CREDENTIAL_CODES,
   ErrorCode.AuthRefreshTokenInvalid,
@@ -74,6 +82,12 @@ const REFRESHABLE_CODES: string[] = [
 const DEAD_REFRESH_TOKEN_CODES: string[] = [
   ErrorCode.AuthRefreshTokenInvalid,
   TopLevelErrorCode.AuthRefreshTokenMissing,
+];
+
+// The token we presented was spent by a rotation that beat us to it, and its
+// successor is valid. The exchange failed; the session did not.
+const SUPERSEDED_REFRESH_CODES: string[] = [
+  ErrorCode.AuthRefreshTokenSuperseded,
 ];
 
 /**
@@ -103,16 +117,28 @@ export const isDeadRefreshTokenCode = (code: string): boolean =>
   DEAD_REFRESH_TOKEN_CODES.includes(code);
 
 /**
+ * Somebody else rotated first — retry with the successor they stored.
+ *
+ * Retrying means presenting a *different* token. Re-sending the one that was
+ * refused hot-loops until the server's reuse grace window elapses, and past it a
+ * replay is read as compromise and revokes the whole lineage — turning the one
+ * recoverable refresh refusal into the terminal one.
+ */
+export const isSupersededRefreshCode = (code: string): boolean =>
+  SUPERSEDED_REFRESH_CODES.includes(code);
+
+/**
  * Any auth refusal at all, whichever of the two token sides it names.
  *
- * The union of {@link isSessionEndingAuthCode} and {@link isRefreshableAuthCode},
- * which answer opposite questions — this is for the one caller that needs
- * neither answer, only "is this the auth pipeline's problem". The offline queue
- * asks it that way on purpose: it classifies the entry as `auth`, spends exactly
- * one refresh attempt, and lets the outcome decide, so it does not need to
- * predict which side of the family the code came from. Defined here rather than
- * OR-ed at the call site so the fourth question stays answered from the same
- * lists as the other three.
+ * The union of the other three, which answer different questions — this is for
+ * the one caller that needs none of those answers, only "is this the auth
+ * pipeline's problem". The offline queue asks it that way on purpose: it
+ * classifies the entry as `auth`, spends exactly one refresh attempt, and lets
+ * the outcome decide, so it does not need to predict which side of the family
+ * the code came from. Defined here rather than OR-ed at the call site so this
+ * question stays answered from the same lists as the others.
  */
 export const isAuthRefusalCode = (code: string): boolean =>
-  isSessionEndingAuthCode(code) || isRefreshableAuthCode(code);
+  isSessionEndingAuthCode(code) ||
+  isRefreshableAuthCode(code) ||
+  isSupersededRefreshCode(code);

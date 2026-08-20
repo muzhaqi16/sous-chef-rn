@@ -17,6 +17,42 @@
   It provides the ref, standard `modalProps` (backdrop, animations, insets, back handler),
   and `contentContainerStyle`. Control visibility via a `visible` boolean state + `onDismiss`
   callback — never call `present()` / `dismiss()` directly outside of an effect.
+- **Every text input inside a sheet must resolve to gorhom's `BottomSheetTextInput`.**
+  This is the library's own requirement, not a local preference: the
+  [keyboard-handling docs](https://gorhom.dev/react-native-bottom-sheet/keyboard-handling)
+  say it is "pre-integrated" to "communicate internally to react to the keyboard
+  appearance", and the only sanctioned alternative is to "copy the `handleOnFocus`
+  and `handleOnBlur`" logic into your own component.
+
+  The mechanism, from the installed source: `BottomSheetTextInput.handleOnFocus`
+  sets `animatedKeyboardState.target`, and `useAnimatedKeyboard.ts` **caches and
+  discards** a keyboard-shown event while that target is unset. A plain RN
+  `TextInput` therefore leaves the sheet blind to the keyboard — `keyboardBehavior`
+  never fires and the sheet sits still while the keyboard covers the field.
+
+  It cannot be hardcoded, because `BottomSheetTextInput` reads the sheet's internal
+  context and **throws outside a sheet** (`useBottomSheetInternal`), and shared
+  fields render on full screens too. Pick it from context, as `FormInput`,
+  `FractionInput`, `EditableCounter` and `BottomSheetAutocompleteInput` do:
+
+  ```tsx
+  const InputComponent = useIsBottomSheetInput()
+    ? ThemedBottomSheetTextInput
+    : ThemedTextInput;
+  ```
+
+  `BottomSheetFormScrollView` supplies that context, so a sheet whose form uses it
+  gets the right input everywhere for free.
+
+- **Sheets containing inputs use `BottomSheetFormScrollView`, not
+  `BottomSheetScrollView`** — a gorhom-registered `KeyboardAwareScrollView` from
+  `react-native-keyboard-controller`, which is what `react-native-edge-to-edge`'s
+  README recommends once edge-to-edge stops `adjustResize` from resizing the window.
+  Pass `bottomOffset={16}` (the value every other call site uses); it is measured
+  from the focused input's **bottom edge**, not the caret the prop's docstring
+  mentions — see `point = absoluteY + inputHeight` in
+  `KeyboardAwareScrollView/index.tsx`. Without it a focused field lands flush
+  against the keyboard, and without the container nothing scrolls at all.
 
 ### Pressable & Modal Convention
 
@@ -504,13 +540,25 @@ Consumer hooks do not need to implement their own relevance checks.
 
 ### Autocomplete UI Variants & Dropdown Stacking
 
-- **Inside a bottom sheet, prefer `variant="inline"`** for `*AutocompleteField`
-  components. The modal variant opens a second `BottomSheetModal`, which stacks
-  a near-identical sheet over the host (confusing) — reserve it for full-screen
-  hosts (e.g. `AddEditItem`). Any modal-variant picker that CAN be presented
-  while another sheet is open must keep `stackBehavior="push"` (gorhom's
-  default `'switch'` minimizes the host sheet, which reads as the whole sheet
-  crashing closed). `BottomSheetAutocompleteInput` sets this.
+- **Both variants are fine inside a bottom sheet — pick by result set, not by host.**
+  This rule previously said to avoid `variant="modal"` in a sheet because stacking
+  a second sheet is "confusing". That was a local preference dressed up as a
+  constraint: gorhom advertises
+  ["Support stack sheet modals"](https://gorhom.dev/react-native-bottom-sheet/modal)
+  as a feature, with an Apple Maps clone as its reference. The library has no
+  position here, so neither should this file. What survives is measurable:
+  [Baymard's mobile autocomplete research](https://baymard.com/blog/autocomplete-design)
+  targets **4–8 suggestions on mobile** because the list is squeezed between the
+  field and the keyboard. `InlineAutocomplete` caps at `maxResults = 6`, so inline
+  suits a set the user narrows by typing; a catalog that needs its own search and
+  browsing suits the modal picker.
+- **Two things a stacked picker must get right.** `stackBehavior="push"` — gorhom's
+  default `'switch'` "minimize[s] the current modal then mount[s] the new one"
+  (`bottomSheetModal/types.d.ts`), which reads as the host crashing closed. And a
+  snap point **taller than its host**, so the picker reads as a separate surface
+  rather than the host redrawing itself; that height difference is what makes the
+  Apple Maps reference legible. `BottomSheetAutocompleteInput` sets both
+  (`stackBehavior="push"`, `snapPoint = '85%'` over hosts that sit at 70%).
 - **Every sibling an inline dropdown can overlap needs an explicit, non-zero,
   descending zIndex on a `collapsable={false}` view — at every ancestor level
   up to where the overlap happens.** RN `zIndex` only orders siblings, and
@@ -751,11 +799,11 @@ The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert o
 **Two ways to translate, and they differ only by whether you are in a component.**
 
 ```ts
-import { useTranslation } from '#/i18n';   // components and hooks
+import { useTranslation } from '#/i18n'; // components and hooks
 const { t } = useTranslation();
 
-import { t } from '#/i18n';                // module scope: services, utilities,
-                                           // mutation onError handlers
+import { t } from '#/i18n'; // module scope: services, utilities,
+// mutation onError handlers
 ```
 
 The module-scope `t` does **not** subscribe to language changes. A
@@ -786,8 +834,8 @@ entry names its exact key set and must still describe a live duplicate.
 **Never concatenate a number with a translated noun.**
 
 ```ts
-`${count} ${t('recipes.ingredientsSuffix')}`   // ✗ "1 ingredients"
-t('recipes.ingredientCount', { count })        // ✓
+`${count} ${t('recipes.ingredientsSuffix')}`; // ✗ "1 ingredients"
+t('recipes.ingredientCount', { count }); // ✓
 ```
 
 Concatenation loses plural agreement, bakes English word order into code, and
@@ -804,7 +852,7 @@ locale needs but its JSON lacks, from `_other`, before `init`.
 > A missing category is not graceful degradation. Verified against `i18next@26`:
 > it does NOT fall back to that locale's `_other` — it falls through to
 > `fallbackLng`, so an Italian user at a count of 1,000,000 reads `"1000000
-> items"` in English. Spanish and Italian need `many`; nothing this app counts
+items"` in English. Spanish and Italian need `many`; nothing this app counts
 > reaches it, so the 82 hand-written strings would never have rendered.
 > `__tests__/i18n/pluralCategories.test.ts` asks `Intl.PluralRules` which
 > categories each locale needs rather than hardcoding one/other, so a locale
@@ -852,6 +900,74 @@ remembering.
 it plants a marker in **every** key of the real `PERSISTED_KEYS` allowlist and
 requires each survivor to be named in `KEPT_ON_PURPOSE` with a reason. Adding a
 persisted key fails the test until someone classifies it.
+
+**A session end must also STOP things, not just clear them.** Clearing the tokens
+leaves the socket dialling, in-flight queries landing and the offline queue
+waking — all against credentials the server has already refused, which is what
+the user sees as a screen that never loads. `endSession` therefore runs
+`runSessionTeardown()` (`src/store/sessionTeardown.ts`) _before_ the state reset.
+
+That registry exists because the steps live in the Apollo layer while
+`endSession` lives in the store, and importing both ways closes the cycle
+`store → resetManager → apollo/client → links → store`. Each module registers
+its own step at module init — `logoutCleanup` the Apollo teardown, `queueManager`
+the drain cancel — the same hand-off `registerApolloClient` and
+`registerTokenRefresh` use. Three things about it are load-bearing:
+
+- **`completeLogout()` must run after `performLogoutCleanup()`.** That latch makes
+  `authLink` and `errorLink` refuse every operation; left set, the next sign-in
+  cannot send its login mutation.
+- **`queueManager.onLogout()` is deliberately NOT called.** It deletes the user's
+  queued writes, and a rejected refresh token is not the user choosing to discard
+  unsynced work. Only the pending drain is cancelled; the entries wait for that
+  user's next sign-in. `onLogout` stays on the deliberate sign-out path.
+- **`apiReachabilityBreaker`'s `/health` probe keeps running.** It is
+  unauthenticated, and the sign-in screen needs to know whether the API is up.
+
+### Token Refresh & WebSocket Close Codes
+
+**Both transports rotate, and that is safe** — but only because the server tells
+a lost race apart from a dead session. Rotation is single-use; when an HTTP
+refresh and a WebSocket handshake reach for the same token, the loser is refused
+`AUTH_REFRESH_TOKEN_SUPERSEDED`, which means the winner's successor is valid and
+the session is alive. `AUTH_REFRESH_TOKEN_INVALID` is the terminal one. Never
+collapse the two: signing out on the first ends a session the server considers
+perfectly healthy.
+
+**The hazard that remains is re-presenting a token you already know was spent.**
+The server forgives a replay for ten seconds and then reads it as compromise,
+revoking the whole token lineage — successor included. So the retry rule is not
+"retry on superseded", it is **retry only once a different token is stored**
+(`retryWithSuccessorToken` in `refreshToken.ts`). An unchanged token means our own
+response was the one that went missing and no successor exists anywhere; there is
+nothing to recover, so defer rather than spend the lineage looking. That decision
+lives in one place, and the socket's 4403 handling routes through it rather than
+reconnecting straight into a second rotation attempt — the reconnect backoff
+crosses the ten-second window by its fourth attempt.
+
+`connectionParams` sends the refresh token on every connect. The server spends it
+only when the access token has actually expired, so an ordinary connect costs
+nothing, and the rotated pair comes back in the `connection_ack` payload — the
+only delivery there will ever be.
+
+**WebSocket close handling has two enforcement points that must agree.**
+graphql-ws re-dials on its own via `shouldRetry`, independently of the backoff in
+the `closed` handler — and `shouldAutoReconnect = false` does not stop it, because
+that flag governs only our timer. `src/apollo/links/wsCloseCodes.ts` is the one
+table both read.
+
+| Code                      | Meaning                                                            | Response                                                      |
+| ------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 4403                      | Token is stale — expired, or superseded by a rotation we lost      | **Never terminal.** Refresh once, then reconnect with backoff |
+| 4410                      | Subscription lifetime cap                                          | Reconnect immediately, no backoff                             |
+| 4411                      | Build below the server minimum                                     | Stop; prompt to update                                        |
+| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream | Stop **and** `endSession`                                     |
+| 4413                      | API key refused                                                    | Stop, but do **not** sign the user out — it is a build fault  |
+| 4429 / 4500 / 1006        | Transient                                                          | Bounded backoff                                               |
+| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                 | Stop; only a code change fixes it                             |
+
+**Never branch on the close reason.** Each code now carries exactly one verdict,
+and the same reason string is emitted for several distinct conditions.
 
 ### Bundled Credentials Convention
 

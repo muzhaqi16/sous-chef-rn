@@ -77,19 +77,33 @@ describe('tokenScheduler', () => {
       );
     });
 
-    it('does not schedule when token expires within the buffer window', () => {
-      // Token expires in 5 minutes (300s), buffer is 600s, so delay = -300s (negative)
+    it('refreshes immediately when the token is already inside the buffer window', () => {
+      // Token expires in 5 minutes (300s), buffer is 600s, so the refresh is
+      // already overdue. Scheduling nothing here would leave the exchange to a
+      // request that has already been refused.
       const soonExp = Math.floor(Date.now() / 1000) + 300;
       mockedJwtDecode.mockReturnValue({ exp: soonExp, iat: 0, userId: '1' });
 
-      const callback = jest.fn();
+      const callback = jest.fn().mockResolvedValue(undefined);
       scheduleTokenRefresh('fake-token', callback);
 
-      expect(getScheduleState().isScheduled).toBe(false);
-      expect(callback).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('[TokenScheduler] Token expires too soon'),
-      );
+      expect(getScheduleState().isScheduled).toBe(true);
+      jest.advanceTimersByTime(0);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes immediately for a token that has already expired', () => {
+      // What a token restored from storage looks like after the app has been
+      // closed longer than the token's lifetime.
+      const pastExp = Math.floor(Date.now() / 1000) - 3600;
+      mockedJwtDecode.mockReturnValue({ exp: pastExp, iat: 0, userId: '1' });
+
+      const callback = jest.fn().mockResolvedValue(undefined);
+      scheduleTokenRefresh('fake-token', callback);
+
+      expect(getScheduleState().isScheduled).toBe(true);
+      jest.advanceTimersByTime(0);
+      expect(callback).toHaveBeenCalledTimes(1);
     });
 
     it('calls the callback when the timer fires and device is online', () => {

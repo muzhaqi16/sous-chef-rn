@@ -60,53 +60,48 @@ export function scheduleTokenRefresh(
     // - Offline->online transitions
     const REFRESH_BUFFER_MS = 10 * 60 * 1000;
     const refreshAt = expiresAt - REFRESH_BUFFER_MS;
-    const delay = refreshAt - now;
 
-    // Only schedule if token has more than the buffer time left
-    if (delay > 0) {
-      logger.debug(
-        `[TokenScheduler] Scheduling proactive refresh in ${Math.round(
-          delay / 1000,
-        )}s ` + `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`,
-      );
+    // Clamped, so a token already inside the buffer — or restored from storage
+    // long past its expiry — refreshes now rather than not at all. Otherwise the
+    // exchange waits for a request to be refused first, and the user sees that
+    // refusal on whichever screen loads.
+    const delay = Math.max(refreshAt - now, 0);
 
-      refreshTimer = setTimeout(async () => {
-        // OFFLINE PROTECTION: Check network status before attempting refresh
-        // This prevents unnecessary network attempts and battery drain when offline
-        //
-        // NOTE: Using direct store access (getState) instead of useNetworkState() hook
-        // because this code runs outside React component lifecycle (setTimeout callback).
-        // React hooks can only be used inside React components, but Zustand's getState()
-        // is specifically designed for accessing state from non-React code.
-        const state = useStore.getState();
-        if (!state.isOnline) {
-          logger.debug(
-            '[TokenScheduler] Skipping proactive refresh - device is offline. ' +
-              'Reactive refresh will handle token expiration when back online.',
-          );
-          return;
-        }
+    logger.debug(
+      `[TokenScheduler] Scheduling proactive refresh in ${Math.round(
+        delay / 1000,
+      )}s ` + `(token expires in ${Math.round((expiresAt - now) / 1000)}s)`,
+    );
 
-        logger.debug('[TokenScheduler] Proactive token refresh triggered');
-        try {
-          await refreshCallback();
-          logger.debug(
-            '[TokenScheduler] Proactive token refresh completed successfully',
-          );
-        } catch (error) {
-          logger.error('[TokenScheduler] Proactive refresh failed:', error);
-          // Reactive refresh (errorLink) will handle it if this fails
-          // This is our fallback - user may experience a brief 401 error
-        }
-      }, delay);
-    } else {
-      logger.warn(
-        `[TokenScheduler] Token expires too soon (in ${Math.round(
-          (expiresAt - now) / 1000,
-        )}s), ` +
-          'skipping proactive refresh. Reactive refresh will handle expiration.',
-      );
-    }
+    refreshTimer = setTimeout(async () => {
+      // OFFLINE PROTECTION: Check network status before attempting refresh
+      // This prevents unnecessary network attempts and battery drain when offline
+      //
+      // NOTE: Using direct store access (getState) instead of useNetworkState() hook
+      // because this code runs outside React component lifecycle (setTimeout callback).
+      // React hooks can only be used inside React components, but Zustand's getState()
+      // is specifically designed for accessing state from non-React code.
+      const state = useStore.getState();
+      if (!state.isOnline) {
+        logger.debug(
+          '[TokenScheduler] Skipping proactive refresh - device is offline. ' +
+            'Reactive refresh will handle token expiration when back online.',
+        );
+        return;
+      }
+
+      logger.debug('[TokenScheduler] Proactive token refresh triggered');
+      try {
+        await refreshCallback();
+        logger.debug(
+          '[TokenScheduler] Proactive token refresh completed successfully',
+        );
+      } catch (error) {
+        logger.error('[TokenScheduler] Proactive refresh failed:', error);
+        // Reactive refresh (errorLink) will handle it if this fails
+        // This is our fallback - user may experience a brief 401 error
+      }
+    }, delay);
   } catch (error) {
     logger.error(
       '[TokenScheduler] Failed to decode token for scheduling:',

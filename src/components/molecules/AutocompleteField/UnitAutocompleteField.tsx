@@ -22,6 +22,8 @@ interface UnitAutocompleteFieldProps {
     unitType?: string | null,
     unitSymbol?: string | null,
   ) => void;
+  /** See `InlineAutocomplete`: for hosts sized to their own content. */
+  reserveDropdownSpace?: boolean;
 }
 
 export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
@@ -34,6 +36,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   error,
   testID,
   onUnitSelected,
+  reserveDropdownSpace,
 }) => {
   const { t } = useTranslation();
   const unit = useUnitAutocomplete();
@@ -41,6 +44,7 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
   return (
     <GenericAutocompleteField<UnitItem>
       variant={variant}
+      reserveDropdownSpace={reserveDropdownSpace}
       label={label}
       value={value}
       placeholder={placeholder}

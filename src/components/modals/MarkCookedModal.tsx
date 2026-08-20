@@ -39,7 +39,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['55%'],
-    keyboardAware: true,
   });
 
   // Form state

@@ -126,6 +126,13 @@ const styles = StyleSheet.create(theme => ({
           color: theme.colors.error,
         },
       },
+      // `size` overrides only `fontSize`, so a size larger than the variant's
+      // font keeps that variant's leading — and `variant` defaults to `body`,
+      // whose leading is 24. At `2xl` and up the glyphs are as tall as or
+      // taller than that line box and get clipped top and bottom, so those
+      // sizes carry their own leading. Declared after `variant` and before
+      // `lineHeight` so it wins over the former and yields to an explicit
+      // `lineHeight` prop.
       size: {
         '2xs': { fontSize: theme.fonts.size['2xs'] },
         xs: { fontSize: theme.fonts.size.xs },
@@ -134,10 +141,22 @@ const styles = StyleSheet.create(theme => ({
         md: { fontSize: theme.fonts.size.md },
         lg: { fontSize: theme.fonts.size.lg },
         xl: { fontSize: theme.fonts.size.xl },
-        '2xl': { fontSize: theme.fonts.size['2xl'] },
-        '3xl': { fontSize: theme.fonts.size['3xl'] },
-        '4xl': { fontSize: theme.fonts.size['4xl'] },
-        '5xl': { fontSize: theme.fonts.size['5xl'] },
+        '2xl': {
+          fontSize: theme.fonts.size['2xl'],
+          lineHeight: theme.fonts.size['2xl'] * 1.25,
+        },
+        '3xl': {
+          fontSize: theme.fonts.size['3xl'],
+          lineHeight: theme.fonts.size['3xl'] * 1.2,
+        },
+        '4xl': {
+          fontSize: theme.fonts.size['4xl'],
+          lineHeight: theme.fonts.size['4xl'] * 1.2,
+        },
+        '5xl': {
+          fontSize: theme.fonts.size['5xl'],
+          lineHeight: theme.fonts.size['5xl'] * 1.2,
+        },
       },
       weight: {
         regular: { fontWeight: theme.fonts.weight.regular },

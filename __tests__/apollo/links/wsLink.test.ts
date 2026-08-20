@@ -181,34 +181,34 @@ describe('wsLink createClient config', () => {
     });
   });
 
-  it('connectionParams includes token, apiKey, and deviceId', () => {
+  const loadConnectionParams = (): (() => Record<
+    string,
+    string | undefined
+  >) => {
+    let connectionParams!: () => Record<string, string | undefined>;
     jest.isolateModules(() => {
       const { createClient } = require('graphql-ws');
       createClient.mockClear();
       require('#/apollo/links/wsLink');
-      const config = createClient.mock.calls[0][0];
-      const params = config.connectionParams();
-      expect(params).toEqual(
-        expect.objectContaining({
-          'x-api-key': 'test-api-key',
-          authorization: 'Bearer test-token',
-          deviceId: 'test-device-id',
-        }),
-      );
+      connectionParams = createClient.mock.calls[0][0].connectionParams;
     });
+    return connectionParams;
+  };
+
+  it('connectionParams includes token, apiKey, and deviceId', () => {
+    expect(loadConnectionParams()()).toEqual(
+      expect.objectContaining({
+        'x-api-key': 'test-api-key',
+        authorization: 'Bearer test-token',
+        deviceId: 'test-device-id',
+      }),
+    );
   });
 
   it('connectionParams omits authorization when token is null', () => {
-    jest.isolateModules(() => {
-      const storeModule = require('#store');
-      storeModule.useStore.getState.mockReturnValue({ accessToken: null });
+    const storeModule = require('#store');
+    storeModule.useStore.getState.mockReturnValue({ accessToken: null });
 
-      const { createClient } = require('graphql-ws');
-      createClient.mockClear();
-      require('#/apollo/links/wsLink');
-      const config = createClient.mock.calls[0][0];
-      const params = config.connectionParams();
-      expect(params.authorization).toBeUndefined();
-    });
+    expect(loadConnectionParams()().authorization).toBeUndefined();
   });
 });

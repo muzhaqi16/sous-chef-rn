@@ -24,6 +24,7 @@ import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { registerSessionTeardown } from '#store/sessionTeardown';
 
 /** Module-level fragment for reading ShoppingListItem data from cache during queue processing */
 const QUEUE_ITEM_DATA_FRAGMENT = gql`
@@ -743,6 +744,16 @@ export class QueueManager {
   }
 
   /**
+   * Drop a drain that hasn't fired yet, so a timer cannot wake up against
+   * credentials that cannot come back. The entries themselves stay.
+   */
+  cancelPendingDrain(): void {
+    if (!this.drainTimer) return;
+    clearTimeout(this.drainTimer);
+    this.drainTimer = null;
+  }
+
+  /**
    * Event: User went offline
    */
   onOffline(): void {
@@ -790,3 +801,12 @@ export class QueueManager {
 
 // Singleton instance
 export const queueManager = new QueueManager();
+
+// A pending drain would otherwise wake up against credentials the server has
+// already refused. The queued entries themselves stay: a rejected refresh token
+// is not the user choosing to discard unsynced work, so they wait for that
+// user's next sign-in (`onLogout`, which does delete them, stays on the
+// deliberate sign-out path).
+registerSessionTeardown('offline-queue', () => {
+  queueManager.cancelPendingDrain();
+});

@@ -1,27 +1,14 @@
 import { SetContextLink } from '@apollo/client/link/context';
-import { jwtDecode } from 'jwt-decode';
 import { useStore } from '#store';
 import { env } from '#/config/env';
 import { LogoutCleanup } from '../logoutCleanup';
 import { getDeviceIdSync } from '#/utils/deviceId';
+import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { proactiveTokenRefresh } from './refreshToken';
 import { logger } from '#/utils/environment';
 
 // Pre-request token validation buffer (5 minutes before expiry)
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
-
-/**
- * Check if token is expiring within the buffer window
- */
-const isTokenExpiringSoon = (token: string, bufferMs: number): boolean => {
-  try {
-    const decoded = jwtDecode<{ exp: number }>(token);
-    const expiresAt = decoded.exp * 1000;
-    return Date.now() > expiresAt - bufferMs;
-  } catch {
-    return true; // Invalid token, treat as expired
-  }
-};
 
 export const authLink = new SetContextLink(async ({ headers }, operation) => {
   // Skip operations during logout to prevent unnecessary auth errors

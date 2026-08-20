@@ -7,26 +7,47 @@ import { RecipeIngredientEditor } from '../../../../../src/features/recipes/scre
 jest.mock('../../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
-  ItemAutocompleteField: (
-    props: React.ComponentProps<
-      typeof import('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField').ItemAutocompleteField
-    >,
-  ) => {
-    const { Text } = require('react-native');
-    return <Text>{props.label}</Text>;
+// The real one builds a gorhom scrollable at module load, which needs
+// SCROLLABLE_TYPE from the (mocked) library. Stand it in with a plain View —
+// the same shape MarkCookedModal's suite uses.
+jest.mock(
+  '../../../../../src/components/atoms/BottomSheetFormScrollView',
+  () => {
+    const RN = require('react-native');
+    const R = require('react');
+    return {
+      BottomSheetFormScrollView: (props: { children?: React.ReactNode }) =>
+        R.createElement(RN.View, props),
+    };
   },
-}));
-jest.mock('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
-  UnitAutocompleteField: (
-    props: React.ComponentProps<
-      typeof import('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField').UnitAutocompleteField
-    >,
-  ) => {
-    const { Text } = require('react-native');
-    return <Text>{props.label}</Text>;
-  },
-}));
+);
+
+jest.mock(
+  '../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField',
+  () => ({
+    ItemAutocompleteField: (
+      props: React.ComponentProps<
+        typeof import('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField').ItemAutocompleteField
+      >,
+    ) => {
+      const { Text } = require('react-native');
+      return <Text>{props.label}</Text>;
+    },
+  }),
+);
+jest.mock(
+  '../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField',
+  () => ({
+    UnitAutocompleteField: (
+      props: React.ComponentProps<
+        typeof import('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField').UnitAutocompleteField
+      >,
+    ) => {
+      const { Text } = require('react-native');
+      return <Text>{props.label}</Text>;
+    },
+  }),
+);
 jest.mock('../../../../../src/components/molecules/FormInput', () => ({
   FormInput: (
     props: React.ComponentProps<

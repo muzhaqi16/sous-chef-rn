@@ -62,7 +62,6 @@ export const IngredientSelectorSheet: React.FC<
       onSheetChange(false);
     },
     snapPoints: ['50%', '75%', '90%'],
-    keyboardAware: true,
     onChange: index => handleSheetChange(index),
   });
 

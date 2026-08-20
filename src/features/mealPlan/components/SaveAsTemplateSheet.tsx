@@ -67,7 +67,6 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardAware: true,
   });
 
   const [name, setName] = useState('');

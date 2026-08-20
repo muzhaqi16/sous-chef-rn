@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
 import { QuantityEditSheet } from '../QuantityEditSheet';
 import type { HeaderAction } from '#/components/atoms/HeaderActionIcon';
 
@@ -121,6 +126,7 @@ jest.mock('#components/atoms/BottomSheetFormScrollView', () => ({
 
 jest.mock('#/utils/formatQuantity', () => ({
   formatQuantity: jest.fn((v: number) => String(v)),
+  formatQuantityAsFraction: jest.fn((v: number) => String(v)),
 }));
 
 const makeItem = (
@@ -365,10 +371,48 @@ describe('QuantityEditSheet', () => {
 
   it('handles save call via header action', async () => {
     const user = userEvent.setup();
-    render(<QuantityEditSheet {...defaultProps} />);
-    const saveButton = screen.getByTestId('header-action-0');
-    await user.press(saveButton);
-    expect(defaultProps.onSave).toHaveBeenCalled();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-increment'));
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).toHaveBeenCalledWith('3', 'cups', 'unit-1');
+  });
+
+  it('saves a quantity typed but not yet blurred', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '1.5');
+    // No blur: the header action is pressed straight from the open keyboard.
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).toHaveBeenCalledWith('1.5', 'cups', 'unit-1');
+  });
+
+  it('saves a mixed-number quantity', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '2 1/3');
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).toHaveBeenCalledWith('2 1/3', 'cups', 'unit-1');
+  });
+
+  it('offers a keyboard that can type a fraction', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    expect(screen.getByTestId('quantity-edit-input').props.keyboardType).toBe(
+      'numbers-and-punctuation',
+    );
+  });
+
+  it('blocks saving an unparseable quantity and shows the format hint', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '1/0');
+    expect(screen.getByTestId('quantity-edit-format-hint')).toBeTruthy();
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
   });
 
   it('resets editing state when item becomes not visible', () => {

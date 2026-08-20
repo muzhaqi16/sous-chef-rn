@@ -5,6 +5,8 @@ import { storage } from '#/storage/mmkv';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
 import { cancelTokenRefresh } from './links/tokenScheduler';
+import { disposeWebSocket } from './links/wsLink';
+import { registerSessionTeardown } from '#store/sessionTeardown';
 import { logger } from '#/utils/environment';
 
 interface LogoutCleanupOptions {
@@ -79,7 +81,7 @@ export class LogoutCleanup {
       }
 
       // 4. Stop all in-flight queries
-      await LogoutCleanup.stopInFlightQueries();
+      LogoutCleanup.stopInFlightQueries();
 
       // 5. Clear Apollo cache (only cache we need now)
       if (clearCache) {
@@ -132,19 +134,15 @@ export class LogoutCleanup {
   /**
    * Stop all in-flight GraphQL queries and clean up WebSocket
    */
-  private static async stopInFlightQueries(): Promise<void> {
+  private static stopInFlightQueries(): void {
     try {
       // Stop all queries by stopping the network layer temporarily
       client.stop();
 
-      // Clean up WebSocket connections
-      try {
-        const { disposeWebSocket } = await import('./links/wsLink');
-        disposeWebSocket();
-        logger.info('🔌 WebSocket connection disposed');
-      } catch (wsError) {
-        logger.warn('Failed to dispose WebSocket:', wsError);
-      }
+      // Disposing the socket also turns auto-reconnect off, so nothing dials
+      // again on the credentials this is in the middle of clearing.
+      disposeWebSocket();
+      logger.info('🔌 WebSocket connection disposed');
 
       logger.info('🛑 Stopped all in-flight queries and connections');
     } catch (error) {
@@ -243,3 +241,14 @@ export class LogoutCleanup {
     return false;
   }
 }
+
+// A session the server ended gets the same teardown a deliberate sign-out does:
+// the difference is who decided, not how much of the session is still usable.
+//
+// `completeLogout()` is not optional. `performLogoutCleanup` latches a flag that
+// `authLink` and `errorLink` read to refuse operations; left set, the next
+// sign-in cannot send its login mutation.
+registerSessionTeardown('apollo', async () => {
+  await LogoutCleanup.performLogoutCleanup();
+  LogoutCleanup.completeLogout();
+});

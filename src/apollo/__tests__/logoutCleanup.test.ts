@@ -42,7 +42,7 @@ jest.mock('#/storage/mmkv');
 // Mock wsLink dynamic import
 jest.mock('../links/wsLink', () => ({
   disposeWebSocket: jest.fn(),
-  registerSessionAuthRefresh: jest.fn(),
+  registerTokenRefresh: jest.fn(),
 }));
 
 // ---------------------------------------------------------------------------
@@ -272,5 +272,37 @@ describe('LogoutCleanup', () => {
       );
       expect(result).toBe(false);
     });
+  });
+});
+
+// logoutCleanup registers the teardown a server-ended session runs; these pin
+// what it registered.
+describe('session teardown step', () => {
+  const runStep = async () => {
+    const { runSessionTeardown } = require('#store/sessionTeardown');
+    await runSessionTeardown();
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    LogoutCleanup.completeLogout();
+  });
+
+  it('stops in-flight operations, disposes the socket, and clears the cache', async () => {
+    await runStep();
+
+    const { disposeWebSocket } = require('../links/wsLink');
+
+    expect(client.stop).toHaveBeenCalled();
+    expect(disposeWebSocket).toHaveBeenCalled();
+    expect(apolloCachePersistence.clear).toHaveBeenCalled();
+  });
+
+  it('leaves the logout latch clear so the next sign-in can send its login', async () => {
+    // Left set, the latch would brick the sign-in the session end just sent the
+    // user to.
+    await runStep();
+
+    expect(LogoutCleanup.isInLogoutProcess()).toBe(false);
   });
 });

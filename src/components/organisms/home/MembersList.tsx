@@ -136,7 +136,7 @@ const styles = StyleSheet.create(theme => ({
   },
   memberChip: {
     paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     minWidth: theme.spacing['3xl'] - 4,
@@ -156,6 +156,10 @@ const styles = StyleSheet.create(theme => ({
   },
   memberChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
+    // Text defaults to variant="body", whose lineHeight of 24 survives a
+    // fontSize-only override — that inherited leading, not padding, is what
+    // made these chips 66dp tall with the role pushed away from the name.
+    lineHeight: (theme.typography.fontSize.sm - 1) * 1.25,
     fontWeight: theme.fonts.weight.semibold,
     variants: {
       currentUser: {
@@ -171,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
   },
   memberRole: {
     fontSize: theme.typography.fontSize.xs - 2,
-    marginTop: 2,
+    lineHeight: (theme.typography.fontSize.xs - 2) * 1.2,
     textAlign: 'center',
     variants: {
       currentUser: {
@@ -183,7 +187,7 @@ const styles = StyleSheet.create(theme => ({
   inviteChip: {
     backgroundColor: theme.colors.transparent,
     paddingHorizontal: theme.spacing['3'],
-    paddingVertical: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs + 2,
     borderRadius: theme.radii.xl,
     borderCurve: 'continuous',
     borderWidth: 1,
@@ -201,6 +205,8 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteChipText: {
     fontSize: theme.typography.fontSize.sm - 1,
+    // Same explicit leading as memberChipText above.
+    lineHeight: (theme.typography.fontSize.sm - 1) * 1.25,
     fontWeight: theme.fonts.weight.semibold,
     variants: {
       status: {
@@ -213,7 +219,7 @@ const styles = StyleSheet.create(theme => ({
   },
   inviteStatus: {
     fontSize: theme.typography.fontSize.xs - 2,
-    marginTop: 2,
+    lineHeight: (theme.typography.fontSize.xs - 2) * 1.2,
     textAlign: 'center',
     fontWeight: theme.fonts.weight.medium,
     variants: {

@@ -71,7 +71,6 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     visible: visible && !!shoppingListItem,
     onDismiss: onClose,
     snapPoints: ['75%', '95%'],
-    keyboardAware: true,
   });
 
   // Form state

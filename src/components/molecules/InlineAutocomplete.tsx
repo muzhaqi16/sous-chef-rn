@@ -10,6 +10,11 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { Text } from '#components/atoms/Text';
 
+/** Tallest the suggestion list is allowed to get; mirrored in `suggestionsContainer`. */
+const DROPDOWN_MAX_HEIGHT = 220;
+/** The list's offset below the input; mirrored from `suggestionsContainer.marginTop`. */
+const DROPDOWN_GAP = 4;
+
 export interface InlineAutocompleteProps<T> {
   // Core
   label?: string;
@@ -39,6 +44,21 @@ export interface InlineAutocompleteProps<T> {
 
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+
+  /**
+   * Reserve in-flow space for the open dropdown.
+   *
+   * The suggestion list is absolutely positioned, so it adds nothing to the
+   * height its parent measures. In a sheet sized to its own content
+   * (`enableDynamicSizing`) that means the list opens past the sheet's bottom
+   * edge — and with the keyboard up, straight into the keyboard. Setting this
+   * renders a spacer of the list's height beneath the input while it is open,
+   * so the measured content grows and the sheet grows with it.
+   *
+   * Off by default: in a fixed-height container the surrounding layout already
+   * has the room, and a spacer there would just push the following fields down.
+   */
+  reserveDropdownSpace?: boolean;
 }
 
 /**
@@ -75,10 +95,15 @@ export function InlineAutocomplete<T>({
   onSelect,
   footerComponent,
   autoCapitalize = 'none',
+  reserveDropdownSpace = false,
 }: InlineAutocompleteProps<T>) {
   // Track internal search term for visibility logic
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
+  // Height of the open dropdown, for the reserved spacer. Starts at the
+  // list's own maximum so the first frame reserves too much rather than too
+  // little — growing into place reads worse than settling down into it.
+  const [dropdownHeight, setDropdownHeight] = useState(DROPDOWN_MAX_HEIGHT);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -164,60 +189,75 @@ export function InlineAutocomplete<T>({
   styles.useVariants({ error: !!error });
 
   return (
-    // collapsable={false}: this view carries the dropdown's own zIndex; if
-    // Android view flattening pruned it, the overlay would lose its stacking.
-    <View style={styles.container} collapsable={false}>
-      {label ? <Label required={required}>{label}</Label> : null}
-      <View style={styles.inputContainer}>
-        <ThemedBottomSheetTextInput
-          style={styles.input}
-          value={searchTerm}
-          onChangeText={handleTextChange}
-          placeholder={placeholder}
-          onBlur={handleBlur}
-          onFocus={handleFocus}
-          autoCapitalize={autoCapitalize}
-          testID={testID}
-        />
-        {!!loading && !!hasSearchQuery && (
-          <ThemedActivityIndicator
-            size="small"
-            style={styles.loadingIndicator}
+    <>
+      {/* collapsable={false}: this view carries the dropdown's own zIndex; if
+          Android view flattening pruned it, the overlay would lose its stacking. */}
+      <View style={styles.container} collapsable={false}>
+        {label ? <Label required={required}>{label}</Label> : null}
+        <View style={styles.inputContainer}>
+          <ThemedBottomSheetTextInput
+            style={styles.input}
+            value={searchTerm}
+            onChangeText={handleTextChange}
+            placeholder={placeholder}
+            onBlur={handleBlur}
+            onFocus={handleFocus}
+            autoCapitalize={autoCapitalize}
+            testID={testID}
           />
-        )}
-      </View>
-      {error ? (
-        <Text size="sm" tone="error" style={styles.errorText}>
-          {error}
-        </Text>
-      ) : null}
-      {!!shouldShowDropdown &&
-        !!(slicedItems.length > 0 || footerComponent) && (
-          <View style={styles.suggestionsContainer}>
-            <ScrollView
-              style={styles.scrollView}
-              keyboardShouldPersistTaps="handled"
-              nestedScrollEnabled={true}
-              showsVerticalScrollIndicator={true}
+          {!!loading && !!hasSearchQuery && (
+            <ThemedActivityIndicator
+              size="small"
+              style={styles.loadingIndicator}
+            />
+          )}
+        </View>
+        {error ? (
+          <Text size="sm" tone="error" style={styles.errorText}>
+            {error}
+          </Text>
+        ) : null}
+        {!!shouldShowDropdown &&
+          !!(slicedItems.length > 0 || footerComponent) && (
+            <View
+              style={styles.suggestionsContainer}
+              onLayout={
+                reserveDropdownSpace
+                  ? event => setDropdownHeight(event.nativeEvent.layout.height)
+                  : undefined
+              }
             >
-              {slicedItems.map((item, index) => (
-                <React.Fragment key={keyExtractor(item)}>
-                  <AppPressable
-                    onPress={() => handleSelect(item)}
-                    style={styles.suggestion}
-                  >
-                    {renderItem(item, index)}
-                  </AppPressable>
-                  {index < slicedItems.length - 1 && (
-                    <View style={styles.separator} />
-                  )}
-                </React.Fragment>
-              ))}
-              {footerComponent}
-            </ScrollView>
-          </View>
-        )}
-    </View>
+              <ScrollView
+                style={styles.scrollView}
+                keyboardShouldPersistTaps="handled"
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+              >
+                {slicedItems.map((item, index) => (
+                  <React.Fragment key={keyExtractor(item)}>
+                    <AppPressable
+                      onPress={() => handleSelect(item)}
+                      style={styles.suggestion}
+                    >
+                      {renderItem(item, index)}
+                    </AppPressable>
+                    {index < slicedItems.length - 1 && (
+                      <View style={styles.separator} />
+                    )}
+                  </React.Fragment>
+                ))}
+                {footerComponent}
+              </ScrollView>
+            </View>
+          )}
+      </View>
+      {/* Sibling, not a child: the list is anchored at `top: '100%'` of the
+          container above, so a spacer inside it would push the list down by
+          its own height instead of making room for it. */}
+      {!!shouldShowDropdown && !!reserveDropdownSpace && (
+        <View style={{ height: dropdownHeight + DROPDOWN_GAP }} />
+      )}
+    </>
   );
 }
 
@@ -266,8 +306,8 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginTop: theme.spacing.xs,
-    maxHeight: 220,
+    marginTop: DROPDOWN_GAP,
+    maxHeight: DROPDOWN_MAX_HEIGHT,
     zIndex: theme.zIndex.dropdown,
     overflow: 'hidden',
     ...theme.shadows.lg,

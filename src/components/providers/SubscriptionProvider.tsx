@@ -64,10 +64,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   useEffect(() => {
     const initializeWebSocket = () => {
       if (isAuthenticated) {
-        // Server-side WS auth handles token refresh during connection —
-        // connectionParams sends both access + refresh tokens, and the server
-        // auto-refreshes expired access tokens, returning new tokens in ConnectionAck.
-        // No blocking HTTP refresh needed before enabling WebSocket.
+        // No blocking refresh is needed here. The socket exchanges an
+        // already-expired access token itself, inside connectionParams, before
+        // the handshake presents it — so enabling reconnects is safe even when
+        // the stored token is stale.
         enableAutoReconnect();
         setIsTokenReady(true);
       } else {
@@ -103,8 +103,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
 
   return (
     <ListAnimationProvider>
-      {/* Only initialize data when user is authenticated AND token is ready.
-          Server-side WS auth handles expired tokens via connectionParams refresh token. */}
+      {/* Only initialize data when user is authenticated AND token is ready. */}
       {/* Key by userId to force remount when user changes - this ensures hooks
           like useDefaultHome reset their refs and fetch fresh data for the new user */}
       {!!isAuthenticated && !!user?.id && !!isTokenReady && (

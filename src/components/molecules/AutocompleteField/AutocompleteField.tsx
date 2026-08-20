@@ -30,6 +30,8 @@ interface InlineVariantProps<TItem> extends SharedProps<TItem> {
   minSearchLength?: number;
   maxResults?: number;
   debounceMs?: number;
+  /** See `InlineAutocomplete`: for hosts sized to their own content. */
+  reserveDropdownSpace?: boolean;
 }
 
 interface ModalVariantProps<TItem> extends SharedProps<TItem> {
@@ -117,6 +119,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         onSelect={props.onSelect}
         autoCapitalize={props.autoCapitalize}
         footerComponent={addNewFooter}
+        reserveDropdownSpace={props.reserveDropdownSpace}
       />
     );
   }

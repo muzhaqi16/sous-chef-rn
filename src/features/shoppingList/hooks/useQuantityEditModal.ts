@@ -7,6 +7,9 @@ import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.gen
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 
 /**
  * Transformed item for QuantityEditSheet
@@ -156,30 +159,44 @@ export function useQuantityEditModal(
 
     setIsLoading(true);
 
+    let result;
     try {
-      await updateQuantity({
+      result = await updateQuantity({
         variables: {
           input: {
             itemId: selectedItemRaw.id,
-            quantity,
+            // Separators normalized, fraction preserved: the server parses this
+            // string itself and rejects a comma decimal outright, so a
+            // comma-decimal keypad would otherwise lose every fractional edit.
+            quantity: normalizeNumericTextForApi(quantity),
             unitId,
             version: selectedItemRaw.version,
           },
         },
       });
-
-      Telemetry.trackEvent('shopping_item_quantity_updated', {
-        item_id: selectedItemRaw.id,
-        quantity,
-      });
-
-      setVisible(false);
-      setSelectedItemId(null);
     } catch {
-      // Error handled by mutation onError
+      // A link-level throw; the mutation's onError has already reported it.
     }
 
     setIsLoading(false);
+
+    // A refused quantity resolves as a ValidationError payload with no `error`,
+    // so onError never fires. Closing the sheet on that reads as a save that
+    // took, and the value the user typed is simply gone. Keep the sheet open
+    // and say so instead. 'queued' (offline) replays via SyncShoppingListItem,
+    // so it closes like a success.
+    if (classifyCreateResult(result) === 'rejected') {
+      alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
+      return;
+    }
+
+    Telemetry.trackEvent('shopping_item_quantity_updated', {
+      item_id: selectedItemRaw.id,
+      quantity,
+    });
+
+    setVisible(false);
+    setSelectedItemId(null);
   };
 
   return { visible, selectedItem, isLoading, openForItem, close, save };

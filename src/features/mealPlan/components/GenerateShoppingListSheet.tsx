@@ -74,7 +74,6 @@ export const GenerateShoppingListSheet: React.FC<
       visible={visible}
       onDismiss={onClose}
       snapPoints={['65%']}
-      keyboardAware
       mode="form"
       style={styles.scrollView}
       contentContainerStyle={styles.contentContainer}

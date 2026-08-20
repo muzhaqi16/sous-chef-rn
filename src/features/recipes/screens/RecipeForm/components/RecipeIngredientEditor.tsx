@@ -2,7 +2,7 @@ import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import {
   BottomSheetModal,
@@ -152,9 +152,12 @@ export const RecipeIngredientEditor = forwardRef<
         ]}
       />
 
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
+        // Scrolls the focused field clear of the keyboard and leaves this much
+        // room below it, measured from the field's bottom edge.
+        bottomOffset={16}
       >
         <DropdownStack>
           <View style={styles.autocompleteWrapper}>
@@ -216,7 +219,7 @@ export const RecipeIngredientEditor = forwardRef<
             <BaseSwitch value={isOptional} onValueChange={setIsOptional} />
           </View>
         </DropdownStack>
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 });

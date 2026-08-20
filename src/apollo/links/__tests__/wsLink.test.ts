@@ -1,10 +1,15 @@
 'use no memo';
 
 // Mock store before importing wsLink
+const mockSetTokens = jest.fn();
+const mockEndSession = jest.fn();
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({
       accessToken: 'mock-token',
+      isOnline: true,
+      setTokens: mockSetTokens,
+      endSession: mockEndSession,
     })),
   },
 }));
@@ -24,6 +29,7 @@ type WsLifecycleHandlers = {
 let onHandlers: WsLifecycleHandlers;
 // Captured in beforeAll for the same reason as onHandlers.
 let connectionParams: () => Record<string, string | undefined>;
+let shouldRetry: (errOrCloseEvent: unknown) => boolean;
 
 beforeAll(() => {
   (Environment.getApiConfig as jest.Mock).mockReturnValue({
@@ -36,6 +42,7 @@ beforeAll(() => {
     string,
     string | undefined
   >;
+  shouldRetry = config.shouldRetry as (errOrCloseEvent: unknown) => boolean;
 });
 
 // Mock errorSerialization
@@ -51,8 +58,8 @@ jest.mock('#/utils/deviceId', () => ({
   getDeviceIdSync: jest.fn(() => 'test-device-id'),
 }));
 
-// The 4403 close handler calls whatever refresh function was registered via
-// registerSessionAuthRefresh (in the app, refreshToken.ts registers
+// The socket calls whatever refresh function was registered via
+// registerTokenRefresh (in the app, refreshToken.ts registers
 // proactiveTokenRefresh at module init). Tests register their own mock.
 
 import {
@@ -64,7 +71,7 @@ import {
   getWebSocketState,
   resumeWebSocketAfterOnline,
   onWebSocketReconnected,
-  registerSessionAuthRefresh,
+  registerTokenRefresh,
 } from '../wsLink';
 
 describe('wsLink', () => {
@@ -287,7 +294,7 @@ describe('wsLink', () => {
       disableAutoReconnect();
       enableAutoReconnect();
       mockSessionRefresh = jest.fn().mockResolvedValue('new-token');
-      registerSessionAuthRefresh(mockSessionRefresh);
+      registerTokenRefresh(mockSessionRefresh);
     });
 
     afterEach(() => {
@@ -312,12 +319,17 @@ describe('wsLink', () => {
       expect(getWebSocketState().reconnectAttempts).toBe(0);
     });
 
-    it('repeated 4403 before a stable connection ends the session (revoked)', () => {
+    it('repeated 4403 backs off instead of signing the user out', () => {
+      // 4403 is never terminal: it says the token is stale, and a rotation the
+      // client lost a race for produces it too. Anything unrecoverable arrives
+      // as 4412. Ending the session here would sign the user out of a session
+      // the winner of that race just renewed.
       const { useStore } = require('#store');
       const endSession = jest.fn(() => Promise.resolve());
       const clearAuth = jest.fn();
       useStore.getState.mockReturnValue({
         accessToken: 'mock-token',
+        isOnline: true,
         endSession,
         clearAuth,
       });
@@ -325,15 +337,15 @@ describe('wsLink', () => {
       onHandlers.closed({ code: 4403, reason: 'Session expired' });
       expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
 
-      // The refreshed token was rejected too — the session is revoked. That is
-      // the same verdict the HTTP paths act on, so it gets the same cleanup:
-      // clearing tokens alone would strand the revoked account's entities in
-      // the persisted Apollo cache.
-      onHandlers.closed({ code: 4403, reason: 'Session revoked' });
-      expect(endSession).toHaveBeenCalledTimes(1);
-      expect(endSession).toHaveBeenCalledWith('session_revoked');
+      onHandlers.closed({ code: 4403, reason: 'Session expired' });
+
+      expect(endSession).not.toHaveBeenCalled();
       expect(clearAuth).not.toHaveBeenCalled();
+      // The latch is a loop breaker, not a verdict — one refresh, then the
+      // ordinary reconnect backoff takes over.
       expect(mockSessionRefresh).toHaveBeenCalledTimes(1);
+      jest.advanceTimersByTime(2000);
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThan(0);
     });
 
     it('a connection that survives the stability window re-arms the refresh recovery', () => {
@@ -463,6 +475,257 @@ describe('wsLink', () => {
       jest.advanceTimersByTime(31000);
 
       expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+  });
+
+  // graphql-ws re-dials on its own, before the `closed` handler's backoff runs.
+  // These pin the table both sides read.
+  describe('shouldRetry', () => {
+    it.each([
+      ['session auth, the closed handler refreshes first', 4403],
+      ['client upgrade required', 4411],
+      ['re-authentication required', 4412],
+      ['API key refused', 4413],
+      ['malformed frame', 4400],
+      ['subscribed before the ack', 4401],
+      ['subprotocol not acceptable', 4406],
+      ['duplicate operation id', 4409],
+    ])('refuses to re-dial after %s (%i)', (_label, code) => {
+      expect(shouldRetry({ code, reason: '' })).toBe(false);
+    });
+
+    it.each([
+      ['subscription duration exceeded', 4410],
+      ['too many initialisation requests', 4429],
+      ['internal server error', 4500],
+      ['abnormal close', 1006],
+    ])('re-dials after %s (%i)', (_label, code) => {
+      expect(shouldRetry({ code, reason: '' })).toBe(true);
+    });
+
+    it('re-dials on a failure that carries no close code at all', () => {
+      // DNS and TCP failures arrive as plain errors, and they are transient.
+      expect(shouldRetry(new Error('getaddrinfo ENOTFOUND'))).toBe(true);
+      expect(shouldRetry(undefined)).toBe(true);
+    });
+  });
+
+  // 4412 is the server saying these credentials cannot be refreshed into a
+  // working session. Every later request is answered identically, so the socket
+  // has to stop and the user has to be put in front of a sign-in screen.
+  describe('re-authentication required (close 4412)', () => {
+    let endSession: jest.Mock;
+    let clearAuth: jest.Mock;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+      endSession = jest.fn(() => Promise.resolve());
+      clearAuth = jest.fn();
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        isOnline: true,
+        endSession,
+        clearAuth,
+      });
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('ends the session and schedules no reconnect', () => {
+      onHandlers.closed({
+        code: 4412,
+        reason: 'Re-authentication required',
+        wasClean: true,
+      });
+
+      expect(endSession).toHaveBeenCalledTimes(1);
+      expect(endSession).toHaveBeenCalledWith('session_revoked');
+
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+
+    it('stops reconnecting on subsequent closes for the rest of the session', () => {
+      onHandlers.closed({ code: 4412, reason: 'Authentication required' });
+      onHandlers.closed({ code: 1006, reason: '', wasClean: false });
+
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+  });
+
+  // 4413 refuses the API key, not the user. It is just as permanent as 4412,
+  // but signing the user out would hide a build fault behind a login screen
+  // they cannot do anything about.
+  describe('API key refused (close 4413)', () => {
+    let endSession: jest.Mock;
+    let clearAuth: jest.Mock;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+      endSession = jest.fn(() => Promise.resolve());
+      clearAuth = jest.fn();
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        isOnline: true,
+        endSession,
+        clearAuth,
+      });
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('stops reconnecting but leaves the session signed in', () => {
+      onHandlers.closed({
+        code: 4413,
+        reason: 'Invalid API key',
+        wasClean: true,
+      });
+
+      expect(endSession).not.toHaveBeenCalled();
+      expect(clearAuth).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(31000);
+      expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+  });
+
+  // The server names its auth refusals with their own codes (4403 / 4412 /
+  // 4413), so 4500 is a genuine server fault — the one shape backoff exists for.
+  describe('server fault (close 4500)', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        isOnline: true,
+      });
+    });
+
+    afterEach(() => {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+      disableAutoReconnect();
+      enableAutoReconnect();
+    });
+
+    it('backs off and reconnects', () => {
+      onHandlers.closed({
+        code: 4500,
+        reason: 'Internal server error',
+        wasClean: false,
+      });
+
+      jest.advanceTimersByTime(2000);
+      expect(getWebSocketState().reconnectAttempts).toBeGreaterThan(0);
+    });
+  });
+
+  // The handshake rotates an expired access token itself when it is given a
+  // refresh token, which is what removes the connect → 4403 → refresh →
+  // reconnect round trip.
+  describe('connect-time rotation', () => {
+    const setStoredTokens = (
+      accessToken: string | null,
+      refreshToken: string | null,
+    ) => {
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken,
+        refreshToken,
+        isOnline: true,
+      });
+    };
+
+    it('sends the refresh token alongside the access token', () => {
+      setStoredTokens('access-token', 'refresh-token');
+
+      expect(connectionParams()).toMatchObject({
+        authorization: 'Bearer access-token',
+        refreshToken: 'refresh-token',
+      });
+    });
+
+    it('omits the refresh token when there is none stored', () => {
+      setStoredTokens('access-token', null);
+
+      expect(connectionParams().refreshToken).toBeUndefined();
+    });
+
+    it('does not refuse to dial when only the refresh token is stored', () => {
+      // Hydration can land the pair in either order; a handshake with no access
+      // token is refused 4412, which is the correct verdict to receive rather
+      // than one to pre-empt here.
+      setStoredTokens(null, 'refresh-token');
+
+      const params = connectionParams();
+      expect(params.authorization).toBeUndefined();
+      expect(params.refreshToken).toBe('refresh-token');
+    });
+  });
+
+  // The ack is the only delivery of a rotated pair. Dropping it would leave HTTP
+  // on a token the socket has already replaced, and strand a refresh token
+  // nothing can recover.
+  describe('rotated tokens in the connection_ack payload', () => {
+    let setTokens: jest.Mock;
+
+    beforeEach(() => {
+      setTokens = jest.fn();
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        isOnline: true,
+        setTokens,
+      });
+    });
+
+    it('persists the pair when the server reports a rotation', () => {
+      onHandlers.connected(
+        {},
+        {
+          accessToken: 'rotated-access',
+          refreshToken: 'rotated-refresh',
+          tokenRefreshed: true,
+        },
+      );
+
+      expect(setTokens).toHaveBeenCalledWith({
+        accessToken: 'rotated-access',
+        refreshToken: 'rotated-refresh',
+      });
+    });
+
+    it('ignores an ordinary ack, which reports no rotation at all', () => {
+      onHandlers.connected({}, undefined);
+      onHandlers.connected({}, { tokenRefreshed: false });
+      onHandlers.connected(
+        {},
+        {
+          accessToken: 'rotated-access',
+          refreshToken: 'rotated-refresh',
+        },
+      );
+
+      expect(setTokens).not.toHaveBeenCalled();
     });
   });
 });

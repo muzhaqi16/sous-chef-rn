@@ -28,6 +28,11 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+const mockAlert = jest.fn();
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: (...args: unknown[]) => mockAlert(...args) },
+}));
+
 jest.mock('#/utils/finallyHelpers');
 
 jest.mock('#utils/imageUtils', () => ({
@@ -211,6 +216,105 @@ describe('useQuantityEditModal', () => {
         version: 3,
       },
     });
+  });
+
+  it('sends a comma decimal to the API with the separator normalized', async () => {
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      data: {
+        updateShoppingListItemQuantity: {
+          __typename: 'UpdateShoppingListItemQuantityPayload',
+          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        },
+      },
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('1,5', 'gal', 'unit-1');
+    });
+
+    expect(m.fired[0]).toEqual({
+      input: {
+        itemId: 'item-1',
+        quantity: '1.5',
+        unitId: 'unit-1',
+        version: 3,
+      },
+    });
+  });
+
+  it('passes a mixed number through untouched', async () => {
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      data: {
+        updateShoppingListItemQuantity: {
+          __typename: 'UpdateShoppingListItemQuantityPayload',
+          shoppingListItem: { __typename: 'ShoppingListItem', id: 'item-1' },
+        },
+      },
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('2 1/3', 'gal', 'unit-1');
+    });
+
+    expect(m.fired[0]).toEqual({
+      input: {
+        itemId: 'item-1',
+        quantity: '2 1/3',
+        unitId: 'unit-1',
+        version: 3,
+      },
+    });
+  });
+
+  it('keeps the sheet open and alerts when the server refuses the quantity', async () => {
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      data: {
+        updateShoppingListItemQuantity: {
+          __typename: 'ValidationError',
+          code: 'VALIDATION_FAILED',
+          message: 'Invalid fraction format',
+          field: 'quantity',
+        },
+      },
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('nonsense', null, null);
+    });
+
+    expect(result.current.visible).toBe(true);
+    expect(result.current.selectedItem).not.toBeNull();
+    expect(mockAlert).toHaveBeenCalled();
   });
 
   it('closes modal after successful save', async () => {
