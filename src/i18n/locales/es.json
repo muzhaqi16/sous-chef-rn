@@ -1004,6 +1004,7 @@
     "loading": "Cargando...",
     "itemNotFound": "Artículo no encontrado",
     "purchased": "Comprado",
+    "purchasedBy": "Comprado por",
     "information": "Información",
     "priority": "Prioridad",
     "additionalDetails": "Detalles adicionales",

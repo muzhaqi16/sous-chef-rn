@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
+import { GraphQLError } from 'graphql';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -27,7 +28,32 @@ type PurchaseNode = {
   totalPrice: number;
   currency: { __typename: 'Currency'; id: string; code: string };
   unitSymbol: string;
+  user: {
+    __typename: 'User';
+    id: string;
+    email: string | null;
+    profile: {
+      __typename: 'UserProfile';
+      id: string;
+      displayName: string | null;
+    } | null;
+  };
 };
+
+// Distinct ids matter: two fixtures sharing one id are the SAME normalized
+// User, so a display name or email on either would be read for both.
+const purchaser = (
+  displayName: string | null,
+  email: string | null = null,
+  id = 'u1',
+): PurchaseNode['user'] => ({
+  __typename: 'User',
+  id,
+  email,
+  profile: displayName
+    ? { __typename: 'UserProfile', id: `profile-${id}`, displayName }
+    : null,
+});
 
 const historyMock = (nodes: PurchaseNode[]): MockedResponse => ({
   request: {
@@ -63,6 +89,26 @@ const purchase: PurchaseNode = {
   totalPrice: 5,
   currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
   unitSymbol: 'kg',
+  user: purchaser('Sam'),
+};
+
+// The shape a failure takes on this query: every hop from `Purchase.currency`
+// up through `node!` → `edges!` → `purchasesConnection!` is non-null, so one
+// field error nulls `shoppingListItem` and the screen gets an error alongside
+// a response that contains nothing. Empty and failed must not render alike.
+const failingMock: MockedResponse = {
+  request: {
+    query: GetItemPurchaseHistoryDocument,
+    variables: () => true,
+  },
+  result: {
+    data: { shoppingListItem: null },
+    errors: [
+      new GraphQLError(
+        'Cannot return null for non-nullable field Purchase.currency.',
+      ),
+    ],
+  },
 };
 
 const route = { params: { itemId: '1', itemName: 'Milk' } };
@@ -105,6 +151,7 @@ describe('PurchaseHistoryScreen', () => {
       totalPrice: 0,
       currency: { __typename: 'Currency', id: 'c1', code: 'USD' },
       unitSymbol: 'kg',
+      user: purchaser('Sam'),
     };
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([unpriced])],
@@ -113,10 +160,51 @@ describe('PurchaseHistoryScreen', () => {
     expect(screen.queryByText('Price:')).toBeNull();
   });
 
+  it('names who recorded the purchase', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([purchase])],
+    });
+    expect(await screen.findByText('Sam')).toBeTruthy();
+  });
+
+  it('falls back through email to "Someone" when there is no display name', async () => {
+    const noProfile: PurchaseNode = {
+      ...purchase,
+      id: 'p3',
+      user: purchaser(null, 'sam@example.com', 'u2'),
+    };
+    const anonymous: PurchaseNode = {
+      ...purchase,
+      id: 'p4',
+      // `email` is null for every purchaser but the caller themself — the API
+      // gates the address to self-or-admin.
+      user: purchaser(null, null, 'u3'),
+    };
+
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([noProfile, anonymous])],
+    });
+
+    expect(await screen.findByText('sam@example.com')).toBeTruthy();
+    expect(screen.getByText('Someone')).toBeTruthy();
+  });
+
   it('renders empty state when no purchases', async () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([])],
     });
     expect(await screen.findByText('No purchase history')).toBeTruthy();
+  });
+
+  it('renders an error state, not an empty history, when the query fails', async () => {
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [failingMock],
+    });
+
+    expect(await screen.findByText("Couldn't load this")).toBeTruthy();
+    // "Mark this item as purchased to start tracking history" is advice to buy
+    // something the person may already have bought — wrong precisely when the
+    // app doesn't know what the history holds.
+    expect(screen.queryByText('No purchase history')).toBeNull();
   });
 });

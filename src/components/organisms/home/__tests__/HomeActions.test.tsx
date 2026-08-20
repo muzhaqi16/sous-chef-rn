@@ -1,4 +1,5 @@
 import React from 'react';
+import { StyleSheet } from 'react-native-unistyles';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { HomeActions } from '../HomeActions';
 
@@ -68,5 +69,28 @@ describe('HomeActions', () => {
     render(<HomeActions {...defaultProps} />);
     await user.press(screen.getByText('Delete'));
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1');
+  });
+
+  // Regression: the row used to be a plain `flexDirection: 'row'` with no
+  // flexWrap and no flexShrink on the chips (Yoga defaults flexShrink to 0), so
+  // a long label — sq "Vendos si parazgjedhur" for cardSetDefault — pushed the
+  // Delete chip off the right edge of the screen. Jest has no Yoga layout pass,
+  // so these assert the style contract that makes wrapping possible; the actual
+  // wrap has to be confirmed on device.
+  it('wraps the action row instead of overflowing with long labels', () => {
+    render(<HomeActions {...defaultProps} />);
+    const row = StyleSheet.flatten(
+      screen.getByTestId('home-actions').props.style,
+    );
+    expect(row.flexWrap).toBe('wrap');
+  });
+
+  it('lets each action label shrink and wrap', () => {
+    render(<HomeActions {...defaultProps} />);
+    for (const label of ['Set Default', 'Invite', 'Delete']) {
+      const text = screen.getByText(label);
+      expect(text.props.numberOfLines).toBe(2);
+      expect(StyleSheet.flatten(text.props.style).flexShrink).toBe(1);
+    }
   });
 });

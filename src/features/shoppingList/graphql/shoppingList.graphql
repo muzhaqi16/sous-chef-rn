@@ -247,6 +247,17 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
             code
           }
           unitSymbol
+          # Who recorded the purchase. `email` is nullable by design (the API
+          # gates it to self-or-admin), which the row's
+          # displayName -> email -> "Someone" fallback already covers.
+          user {
+            id
+            email
+            profile {
+              id
+              displayName
+            }
+          }
         }
       }
       pageInfo {
@@ -851,6 +862,36 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
       shoppingListItem {
         id
         ...useUpdateShoppingItem_item
+        # Marking an item purchased records a purchase server-side, so this
+        # summary moves with the write. Selected here (not in the fragment,
+        # which mirrors the optimistic shape) so ItemDetail's count and last
+        # date are right straight from the response, with no refetch.
+        purchaseHistory {
+          previouslyPurchased
+          purchaseCount
+          lastPurchaseDate
+        }
+        # The purchase amounts and the purchaser move with this write, and
+        # ItemDetail reads all five fields. Selected in full — not just
+        # `isPurchased`, which the hook fragment mirrors for its optimistic
+        # `cache.modify` — so the response carries the server's whole answer.
+        # The type policy in apollo/cache.ts keeps a partial write from dropping
+        # the siblings; selecting them here is what keeps the survivors from
+        # being the PREVIOUS purchase's amounts sitting beside the new flag.
+        purchaseInfo {
+          isPurchased
+          purchasedQuantity
+          purchasedPrice
+          purchaseDate
+          purchasedBy {
+            id
+            profile {
+              id
+              displayName
+              avatar
+            }
+          }
+        }
       }
       shoppingList {
         id
@@ -946,6 +987,27 @@ mutation ToggleShoppingListItemPurchased(
           previouslyPurchased
           purchaseCount
           lastPurchaseDate
+        }
+        # The purchase amounts and the purchaser move with this write, and
+        # ItemDetail reads all five fields. Selected in full — not just
+        # `isPurchased`, which the hook fragment mirrors for its optimistic
+        # `cache.modify` — so the response carries the server's whole answer.
+        # The type policy in apollo/cache.ts keeps a partial write from dropping
+        # the siblings; selecting them here is what keeps the survivors from
+        # being the PREVIOUS purchase's amounts sitting beside the new flag.
+        purchaseInfo {
+          isPurchased
+          purchasedQuantity
+          purchasedPrice
+          purchaseDate
+          purchasedBy {
+            id
+            profile {
+              id
+              displayName
+              avatar
+            }
+          }
         }
         shoppingList {
           id

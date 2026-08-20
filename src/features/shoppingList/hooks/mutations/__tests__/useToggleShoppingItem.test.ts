@@ -213,6 +213,33 @@ function updatePurchaseMock(
                 shoppingListItem: {
                   __typename: 'ShoppingListItem',
                   id: 'item-1',
+                  // Recording a purchase through `purchaseTracking` writes a
+                  // purchase row server-side, so the summary and the amounts
+                  // move with the response — the mutation selects both so the
+                  // detail screen doesn't need its own refetch to catch up.
+                  purchaseHistory: {
+                    __typename: 'PurchaseHistorySummary',
+                    previouslyPurchased: true,
+                    purchaseCount: 2,
+                    lastPurchaseDate: '2026-08-19T00:00:00.000Z',
+                  },
+                  purchaseInfo: {
+                    __typename: 'ShoppingListItemPurchaseInfo',
+                    isPurchased: true,
+                    purchasedQuantity: 2,
+                    purchasedPrice: 4.5,
+                    purchaseDate: '2026-08-19T00:00:00.000Z',
+                    purchasedBy: {
+                      __typename: 'User',
+                      id: 'user-1',
+                      profile: {
+                        __typename: 'UserProfile',
+                        id: 'profile-1',
+                        displayName: 'Sam',
+                        avatar: null,
+                      },
+                    },
+                  },
                 },
               }
             : {
@@ -265,6 +292,41 @@ describe('useToggleShoppingItem — recordPurchase', () => {
       },
     });
     expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
+
+  it("writes the server's purchase summary and amounts into the cache", async () => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const cache = seedShoppingItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { cache, operationMocks: [updatePurchaseMock(recorded, 'success')] },
+    );
+
+    await act(async () => {
+      await result.current.recordPurchase('item-1', {
+        purchasedQuantity: 2,
+        purchasedPrice: 4.5,
+      });
+    });
+
+    // Assert the cache, not the mock: this route moves `purchaseCount` and the
+    // amounts server-side, and ItemDetail reads them straight from the
+    // normalized entity. Before the mutation selected them the entity kept the
+    // pre-purchase count and no amounts at all.
+    const entity = cache.extract()['ShoppingListItem:item-1'] as {
+      purchaseHistory?: Record<string, unknown>;
+      purchaseInfo?: Record<string, unknown>;
+    };
+    expect(entity.purchaseHistory).toMatchObject({
+      previouslyPurchased: true,
+      purchaseCount: 2,
+      lastPurchaseDate: '2026-08-19T00:00:00.000Z',
+    });
+    expect(entity.purchaseInfo).toMatchObject({
+      isPurchased: true,
+      purchasedQuantity: 2,
+      purchasedPrice: 4.5,
+    });
   });
 
   it('omits purchasedPrice when null and reverts on a resolved rejection', async () => {

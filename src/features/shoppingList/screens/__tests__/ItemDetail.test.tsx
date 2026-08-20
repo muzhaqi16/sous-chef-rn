@@ -211,6 +211,49 @@ describe('ShoppingListItemDetail', () => {
     await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
   });
 
+  it('names who purchased the item', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              purchasedQuantity: 2,
+              purchasedPrice: 3.5,
+              purchaseDate: '2026-08-19T00:00:00Z',
+              purchasedBy: {
+                __typename: 'User',
+                id: 'u2',
+                profile: {
+                  __typename: 'UserProfile',
+                  id: 'profile-2',
+                  displayName: 'Sam',
+                  avatar: null,
+                },
+              },
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
+    expect(screen.getByText('Sam')).toBeTruthy();
+    // The amounts row alongside it.
+    expect(screen.getByText('2 @ $3.50')).toBeTruthy();
+  });
+
+  it('omits the purchaser row when the item is not purchased', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [buildItemMock('si1', buildShoppingListItem())],
+    });
+
+    await waitFor(() => expect(screen.getByText('Item Details')).toBeTruthy());
+    expect(screen.queryByText('Purchased By')).toBeNull();
+  });
+
   it('shows notes', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],

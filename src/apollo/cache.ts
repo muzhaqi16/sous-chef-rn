@@ -607,6 +607,37 @@ export function makeCache(): InMemoryCache {
           purchasesConnection: mergeConnectionByNodeId(['orderBy']),
         },
       },
+      // A nested object with NO type policy is REPLACED wholesale on write, not
+      // merged field-by-field. Verified against the installed
+      // @apollo/client@4.1.7 — re-derive with:
+      //
+      //   node -e "const {InMemoryCache, gql} = require('@apollo/client');
+      //   const c = new InMemoryCache();
+      //   const Q1 = gql\`{ shoppingListItem(id:\"1\") { id purchaseInfo {
+      //     isPurchased purchaseDate purchasedBy { id } } } }\`;
+      //   const Q2 = gql\`{ shoppingListItem(id:\"1\") { id purchaseInfo {
+      //     isPurchased purchasedQuantity } } }\`; /* write Q1 then Q2 */
+      //   console.log(c.diff({query: Q1, optimistic: false}).complete)"  // false
+      //
+      // Eleven operations select `purchaseInfo { isPurchased }` and nothing
+      // else — GetShoppingListItemsFiltered (refetched cache-and-network on
+      // every list visit), the item subscription fragment, both offline-queue
+      // fragments, both purchase mutations. ItemDetail selects all five fields
+      // and returns null when its fragment reads incomplete, so without these
+      // policies any one of those writes lands under the open detail screen and
+      // it renders "Item not found" — with the item sitting right there in the
+      // cache, minus the four fields the last writer didn't ask for.
+      //
+      // The trade: a field now leaves the object only when a write overwrites
+      // it, so unmarking an item purchased leaves a stale `purchasedQuantity`
+      // behind. Harmless — every consumer gates the amounts on
+      // `purchaseInfo.isPurchased`, and both purchase mutations now select the
+      // whole object, so the server's own values replace them on the next write.
+      ShoppingListItemPurchaseInfo: { merge: true },
+      PurchaseHistorySummary: { merge: true },
+      ShoppingListItemSource: { merge: true },
+      ShoppingListItemStoreInfo: { merge: true },
+      PriceEstimate: { merge: true },
       ShoppingList: {
         merge: true, // Enable automatic field-level merging for partial data
         fields: {
