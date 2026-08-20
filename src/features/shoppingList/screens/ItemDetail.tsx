@@ -284,6 +284,15 @@ export const ShoppingListItemDetail: React.FC<
                 </Text>
               </DetailRow>
             )}
+          {!!item.purchaseInfo?.isPurchased &&
+            !!item.purchaseInfo.purchasedBy && (
+              <DetailRow label={t('shoppingListScreens.purchasedBy')}>
+                <Text size="sm" weight="medium">
+                  {item.purchaseInfo.purchasedBy.profile?.displayName ||
+                    t('labels.someone')}
+                </Text>
+              </DetailRow>
+            )}
           {!!priorityLabel && (
             <DetailRow label={t('shoppingListScreens.priority')}>
               <Text size="sm" weight="medium">

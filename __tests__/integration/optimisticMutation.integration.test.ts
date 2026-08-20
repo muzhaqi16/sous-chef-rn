@@ -119,9 +119,28 @@ function buildSettledServerResponse(
         quantity: 1,
         quantityInput: '1',
         displayFormat: DisplayFormat.Decimal,
+        // The whole object, matching the mutation's selection: a partial
+        // `purchaseInfo` write REPLACES the cached one (see the type policies in
+        // apollo/cache.ts), so the server response has to carry every field it
+        // owns rather than just the flag that changed.
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
           isPurchased: newPurchased,
+          purchasedQuantity: newPurchased ? 1 : null,
+          purchasedPrice: newPurchased ? 2.5 : null,
+          purchaseDate: newPurchased ? '2026-01-01T00:00:00.000Z' : null,
+          purchasedBy: newPurchased
+            ? {
+                __typename: 'User',
+                id: 'user-1',
+                profile: {
+                  __typename: 'UserProfile',
+                  id: 'profile-1',
+                  displayName: 'Sam',
+                  avatar: null,
+                },
+              }
+            : null,
         },
         // The server creates a purchase row on each mark-purchased, so the
         // summary moves with `newPurchased`. The mutation selects it precisely

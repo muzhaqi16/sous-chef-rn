@@ -4,7 +4,10 @@ import { useTranslation } from '#/i18n';
 import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
-import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetItemPurchaseHistoryDocument,
+  type GetItemPurchaseHistoryQuery,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { errorService } from '#/services/errorService';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
@@ -14,6 +17,8 @@ import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { DataStateView } from '#components/base/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import {
   PurchaseHistoryProvider,
   usePurchaseHistoryContext,
@@ -30,24 +35,17 @@ type RouteParams = {
   itemName: string;
 };
 
-type PurchaseItem = {
-  id: string;
-  purchaseDate: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  currency: { code: string };
-  unitSymbol: string;
-  // Not selected by GetItemPurchaseHistory today, but kept optional so the row's
-  // "purchased by" line degrades gracefully if the query starts returning it.
-  user?: {
-    id: string;
-    email: string;
-    profile?: {
-      displayName?: string;
-    };
-  };
-};
+/**
+ * One purchase row, derived from the query instead of restated beside it.
+ *
+ * The restated copy had `user.email` as `string` where the schema has `String`
+ * — the API gates the address to self-or-admin — so the first query that
+ * actually selected the field failed to compile. Deriving keeps the two from
+ * disagreeing again.
+ */
+type PurchaseItem = NonNullable<
+  GetItemPurchaseHistoryQuery['shoppingListItem']
+>['purchasesConnection']['edges'][number]['node'];
 
 // `undefined` as the locale makes Intl use the device's own, so the date reads
 // natively for the user. A hardcoded 'en-US' put the month before the day for
@@ -133,19 +131,19 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
           )}
         </View>
 
-        {!!purchase.user && (
-          <View style={styles.purchaseDetailRow}>
-            <Icon name="person-outline" size={18} tone="iconSecondary" />
-            <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
-              {t('purchaseHistory.purchasedBy')}
-            </Text>
-            <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
-              {purchase.user.profile?.displayName ||
-                purchase.user.email ||
-                t('labels.someone')}
-            </Text>
-          </View>
-        )}
+        <View style={styles.purchaseDetailRow}>
+          <Icon name="person-outline" size={18} tone="iconSecondary" />
+          <Text size="sm" tone="secondary" style={styles.purchaseDetailLabel}>
+            {t('purchaseHistory.purchasedBy')}
+          </Text>
+          {/* displayName -> email -> "Someone": `email` is null for anyone but
+              the caller themself, and a profile is optional. */}
+          <Text size="sm" weight="medium" style={styles.purchaseDetailValue}>
+            {purchase.user.profile?.displayName ||
+              purchase.user.email ||
+              t('labels.someone')}
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -221,11 +219,29 @@ export const PurchaseHistoryScreen: React.FC<
   // Fetch the history on demand (ItemDetail only carries the summary), paging
   // in more as the user scrolls — a frequently re-bought item can exceed a
   // single page.
-  const { data, loading, fetchMore, networkStatus } = useQuery(
+  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
     GetItemPurchaseHistoryDocument,
     {
       variables: { itemId, first: PAGE_SIZE },
       notifyOnNetworkStatusChange: true,
+      // Keeps the app-wide `errorPolicy: 'all'` — partial data and the error
+      // both reach the hook, which is what `useDataState` below classifies.
+      //
+      // Worth knowing what that costs on this particular query:
+      // `purchasesConnection` is `PurchaseConnection!`, so a field error
+      // anywhere inside it propagates up every non-null hop and nulls
+      // `shoppingListItem` itself, and under `'all'` Apollo writes that partial
+      // `{ shoppingListItem: null }` to the cache (verified in the installed
+      // @apollo/client@4.1.7, `core/QueryInfo.js` `shouldWriteResult`: it
+      // writes whenever the policy ignores errors and `result.data` is truthy).
+      // It lands on `ROOT_QUERY.shoppingListItem({"id": itemId})` — the SAME
+      // field `GetShoppingListItem` reads — so the ItemDetail screen still
+      // mounted underneath this one flips to "Item not found" and stays there:
+      // the `Query.shoppingListItem` redirect in `apollo/cache.ts` only fires
+      // when `existing === undefined`, `nextFetchPolicy: 'cache-first'` issues
+      // no fetch on resume, and `cache.extract()` persists the null to MMKV.
+      // That is a server-side contract failure (an unresolved non-null
+      // `Purchase` relation), fixed in the API rather than papered over here.
     },
   );
 
@@ -247,6 +263,30 @@ export const PurchaseHistoryScreen: React.FC<
     }).catch(error =>
       errorService.reportError(error, {
         operation: 'PurchaseHistory.loadMore',
+      }),
+    );
+  };
+
+  // A failed read and a genuinely empty history are NOT the same thing, and the
+  // screen used to render both as "No purchase history — mark this item as
+  // purchased to start tracking history": advice to buy something the person
+  // may well have bought already, shown precisely when the app does not know.
+  // `useDataState` also splits offline out of error, which the empty state
+  // cannot express at all.
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: data !== undefined,
+    isEmpty: purchases.length === 0,
+  });
+
+  const handleRetry = () => {
+    // `errorPolicy: 'all'` resolves a failed refetch rather than rejecting, so
+    // this catch is for a link-level throw only — kept so the retry button can
+    // never surface an unhandled rejection.
+    void refetch().catch(refetchError =>
+      errorService.reportError(refetchError, {
+        operation: 'PurchaseHistory.retry',
       }),
     );
   };
@@ -278,7 +318,7 @@ export const PurchaseHistoryScreen: React.FC<
       </View>
 
       {/* Purchase List */}
-      {loading && purchases.length === 0 ? (
+      {state === 'loading' ? (
         <View style={styles.loadingContainer}>
           <ThemedActivityIndicator />
         </View>
@@ -308,7 +348,13 @@ export const PurchaseHistoryScreen: React.FC<
                 <ThemedActivityIndicator style={styles.footerLoader} />
               ) : null
             }
-            ListEmptyComponent={PurchaseHistoryEmpty}
+            ListEmptyComponent={
+              state === 'error' || state === 'offline' ? (
+                <DataStateView state={state} onRetry={handleRetry} />
+              ) : (
+                <PurchaseHistoryEmpty />
+              )
+            }
             contentContainerStyle={styles.content}
             style={styles.scrollView}
           />
