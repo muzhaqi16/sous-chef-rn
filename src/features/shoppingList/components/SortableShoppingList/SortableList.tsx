@@ -9,7 +9,6 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
-import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { SwipeableListItem } from './SortableItem';
 import {
   SortableListActionsProvider,
@@ -169,7 +168,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
           <View style={styles.container}>
             <FlashList<ShoppingListRowItem>
               ref={flashListRef}
-              CellRendererComponent={AnimatedCellRenderer}
+              CellRendererComponent={perfCallbacks.CellRendererComponent}
               data={items}
               extraData={`${disabled}-${canRemoveItems}-${canEditItems}-${canMarkPurchased}-${canReorderItems}`}
               keyExtractor={keyExtractor}
@@ -185,6 +184,9 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               onLoad={perfCallbacks.onLoad}
               onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
               drawDistance={DRAW_DISTANCE}
+              maxItemsInRecyclePool={
+                FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool
+              }
               onScroll={onScroll}
               onScrollBeginDrag={onScrollBeginDrag}
               onScrollEndDrag={onScrollEndDrag}

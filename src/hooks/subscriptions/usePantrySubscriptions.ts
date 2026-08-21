@@ -297,6 +297,15 @@ export function usePantrySubscriptions(userId?: string) {
   const pantryEvents = useSubscription(PantryEventsDocument, {
     variables: { pantryId: selectedPantryId! },
     skip: pantrySkip,
+    // The envelope's `node` carries only `__typename` + `id`, and every handler
+    // reads the entity back with a query, so nothing needs it in the cache.
+    // Writing it is actively harmful: `removeItem` evicts the row before the
+    // delete mutation fires and the server pushes this event before the
+    // mutation resolves, so the write re-created the evicted PantryItem as a
+    // bare `{ id }`. Its connection edge stopped dangling, the node now lacked
+    // every other field, and Apollo repaired the incomplete GetPantry result
+    // by refetching the whole page — one network round-trip per delete.
+    fetchPolicy: 'no-cache',
     ...eventHandlers,
   });
   useSubscriptionTransportRecovery('PantryEvents', pantryEvents, pantrySkip);

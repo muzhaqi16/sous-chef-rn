@@ -14,7 +14,6 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '../base/EmptyState';
 import { ItemCard } from './ItemCard';
-import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';
 import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
@@ -287,7 +286,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         data={items}
         keyExtractor={keyExtractor}
         getItemType={getItemType}
-        CellRendererComponent={AnimatedCellRenderer}
+        CellRendererComponent={perfCallbacks.CellRendererComponent}
         contentContainerStyle={contentStyle}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}

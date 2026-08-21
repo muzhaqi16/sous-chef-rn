@@ -28,7 +28,6 @@ import {
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
-import { AnimatedCellRenderer } from '#components/atoms/AnimatedCellRenderer';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -411,7 +410,7 @@ export const PantryContent = React.forwardRef<
           <View style={styles.container}>
             <FlashList<PantryListItem>
               ref={flashListRef}
-              CellRendererComponent={AnimatedCellRenderer}
+              CellRendererComponent={perfCallbacks.CellRendererComponent}
               testID="pantry-list"
               data={listData}
               renderItem={renderPantryListItem}

@@ -116,32 +116,33 @@ with `inactiveBehavior: 'pause'` — a resumed `Activity` subtree re-renders at 
 Offscreen lane, which is also interruptible. They sit under `HomeTabs`
 (`inactiveBehavior: 'none'`) today.
 
-This also unblocks the pantry row-reflow animation recorded in
-`docs/premium-ux-overhaul.md` (Phase 5), which was reverted precisely because the
-delete landed in a deferred second commit that `prepareForLayoutAnimationRender()`
-had not armed.
+This also unblocks the pantry row-reflow animation (rows sliding up to fill a
+deleted row's gap), which was attempted twice and reverted because the delete
+landed in a deferred second commit that `prepareForLayoutAnimationRender()` had
+not armed. With the delete now committing synchronously, that blocker is gone.
 
-## Validation (2026-08-20, Android dev build, DevTools attached, 59-item pantry)
+## Validation (2026-08-20, Android dev build, DevTools attached)
 
-The deferral had been added for throughput (the shopping-list comment recorded
-pagination renders dropping from 680 ms to 220 ms), so the removal was measured with
-the existing dev instrumentation (`useRenderTime`, `useFlashListPerformance`):
+The deferral had been added for throughput, so its removal was measured with the
+existing dev instrumentation. Read those numbers with `flashlist-performance-analysis.md`
+§ "Reading the instrumentation" in mind: that day's blank-cell percentages came from the viewability-based
+detector (since rewritten to count mounted cells) and are not cited here; frame
+gaps and timings are.
 
-- **Crash:** 7 rapid swipe-deletes, 0 throws. The pre-change run on the same build threw
-  on 4 of 4.
-- **Scroll quality, 190 s session:** sustained blanks 2.7% (the `DRAW_DISTANCE` tuning
-  had called 12.2% "too few pre-rendered cells"); 0 of 8 data-reference changes
-  correlated with a blank frame; long frames 2, peak frame gap 63 ms — unchanged by the
-  deletes.
-- **Local window appends** (24 → 48 → 59, now rendered synchronously) filled in within a
-  few frames at `gap=0ms`.
-- **Per-delete commit intervals** 87–476 ms, the same order as before the change. (The
-  `useRenderTime` "exceeded 1000ms cap" lines measure wall time between commits and
-  include the `DeletePantryItem` + `GetPantry` round-trips; they are not render cost.)
-
-Server pagination past 100 items and the shopping list were not part of this run.
-Nothing in the numbers above suggests they would differ, and the 24-item client window
-keeps each synchronous append small.
+- **Crash (pantry, 59 items):** 7 rapid swipe-deletes, 0 throws. The pre-change run on
+  the same build threw on 4 of 4.
+- **Pantry deletes:** long frames unchanged at 2, peak frame gap 63 ms across a 190 s
+  session; per-delete commit intervals 87–476 ms, the same order as before. (The
+  `useRenderTime` "exceeded 1000ms cap" lines are wall time between commits and include
+  the `DeletePantryItem` + `GetPantry` round-trips.)
+- **Pantry local-window appends** (24 → 48 → 59, now rendered synchronously) never
+  registered a long frame.
+- **Shopping list, cold cache after sign-out (43 items, 25 per page):** the page-2
+  `after:` append produced 0 long frames (>32 ms) in the 20 s report containing it.
+  That run also carries the per-node row cache described in
+  `flashlist-performance-analysis.md`; before it, an append re-rendered every mounted
+  cell and cost a 1006 ms frame gap — that was the cost the deferral had been hiding,
+  and it was fixed rather than re-hidden.
 
 ## Related symptom, same root shape
 

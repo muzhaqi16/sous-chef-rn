@@ -373,7 +373,7 @@ export class FlashListDiagnostics {
         const offset = formatDuration(f.timestamp - s.sessionStart);
         return `  +${offset}  gap=${f.frameGap.toFixed(0)}ms  visible=[${
           f.visibleStart
-        },${f.visibleEnd}]  viewable=${f.viewableCount}/${f.expectedCount}`;
+        },${f.visibleEnd}]  mounted=${f.mountedCount}/${f.expectedCount}`;
       })
       .join('\n');
 

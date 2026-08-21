@@ -349,7 +349,10 @@ The Unistyles babel plugin must run **before** the React Compiler plugin.
 `SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
 inside a `ScrollView`.
 
-`estimatedItemSize` is deprecated in FlashList v2 and must not be used. See
+`estimatedItemSize` is deprecated in FlashList v2 and must not be used. List
+`data` must never come through `useDeferredValue` / `startTransition` —
+[`flashlist-layout-index-race.md`](flashlist-layout-index-race.md). How the two
+big lists are fed and what an append costs:
 [`flashlist-performance-analysis.md`](flashlist-performance-analysis.md).
 
 ### Bottom sheets

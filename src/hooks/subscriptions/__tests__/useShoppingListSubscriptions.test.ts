@@ -3,6 +3,12 @@
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
+import { InMemoryCache } from '@apollo/client';
+import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  MutationType,
+  ShoppingListSubtype,
+} from '#/graphql/generated/schemaTypes';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import type { RootState } from '#store/index';
 
@@ -369,5 +375,48 @@ describe('useShoppingListSubscriptions', () => {
       expect.any(Function),
     );
     expect(removeFromShoppingListItemsConnection).toHaveBeenCalled();
+  });
+});
+
+describe('useShoppingListSubscriptions: event envelope and the cache', () => {
+  it('keeps the envelope out of the cache, so an event for a just-deleted row cannot re-create it', async () => {
+    // The server echoes our own delete before the mutation resolves, while the
+    // row is already evicted. A cacheable subscription would normalise
+    // `node { id }` into a bare ShoppingListItem and leave the list query
+    // incomplete — see `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`.
+    const cache = new InMemoryCache();
+    renderHookWithApollo(() => useShoppingListSubscriptions('user-1'), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: MyShoppingListsEventsDocument },
+          result: {
+            data: {
+              __typename: 'Subscription',
+              myShoppingListsEvents: {
+                __typename: 'ShoppingListEvent',
+                subtype: ShoppingListSubtype.ItemsChanged,
+                mutation: MutationType.ItemRemoved,
+                listId: 'list-1',
+                originatorClientId: 'device_other',
+                actorUserId: 'user-2',
+                timestamp: '2026-01-01T00:00:00.000Z',
+                updatedFields: [],
+                clearedItemIds: [],
+                node: { __typename: 'ShoppingListItem', id: 'item-1' },
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    // MockLink delivers the subscription result on a (real) timer.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+
+    expect(cache.extract()['ShoppingListItem:item-1']).toBeUndefined();
+    expect(cache.extract().ROOT_SUBSCRIPTION).toBeUndefined();
   });
 });
