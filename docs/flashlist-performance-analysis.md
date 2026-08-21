@@ -1,8 +1,9 @@
 # FlashList performance — current state
 
 How the two FlashList-heavy screens (pantry, shopping list) are fed today, what a
-page append costs, where the per-delete round-trips came from, how to read the
-dev instrumentation, and what is still open. Last measured 2026-08-20 (Android
+page append costs, where the per-delete round-trips came from, why a hidden tab
+re-ran recipe discovery on every pantry write, how to read the dev
+instrumentation, and what is still open. Last measured 2026-08-20 (Android
 dev build, DevTools attached).
 
 An earlier version of this file was a one-off investigation into "shopping list

@@ -3,6 +3,9 @@
 - `npm run lint` also lints every `.graphql` operation against the codegen-pulled schema (`@graphql-eslint` override in `.eslintrc.js`, files `**/*.graphql`): `fields-on-correct-type` (selecting a field/arg the schema lacks) and `no-deprecated` (using an `@deprecated` field/arg/enum value) are both `error`. This surfaces API drift — a renamed/removed field or a freshly-deprecated one — at lint time, one at a time, instead of as a surprise `npm run codegen` batch failure. The guard reads `src/graphql/generated/schema.graphql`, so run `npm run codegen` first if the schema is stale.
 - typecasting \_\_typename: 'Mutation' as any, is never needed
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
+- **Never hand a FlashList `data` prop a value produced by `useDeferredValue` or updated inside `startTransition`.** FlashList truncates its layout table during _render_ and re-indexes cells only at commit; only a transition render can be interrupted between the two, and a native `onLayout` landing in that gap throws `index out of bounds, not enough layouts` — a production fatal. Mechanism, rule and validation: `docs/flashlist-layout-index-race.md`.
+- **Every FlashList that uses `useFlashListPerformance` passes `perfCallbacks.CellRendererComponent`.** That renderer is how blank cells are counted (committed cells vs visible indices); FlashList's own viewability is geometric and 250 ms-lagged, so reports from before 2026-08-20 measured scroll speed, not blanks. `docs/flashlist-performance-analysis.md` § "Reading the instrumentation".
+- **Event subscriptions whose payload is an envelope + `node { id }` run with `fetchPolicy: 'no-cache'`** (`PantryEvents`, `MyShoppingListsEvents`). Cached, the envelope re-creates a just-deleted row as a bare `{ id }`, the list query goes incomplete, and Apollo refetches the whole page per delete. `docs/flashlist-performance-analysis.md` § "Refetch after every write".
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
 
 ### Bottom Sheet Convention
@@ -184,6 +187,19 @@ happen inside that factory.
   trade for 4 FlashLists, and the wrong one almost everywhere else — which is
   why every other navigator stays on `'pause'`, and why adding a fifth tab or a
   heavy subscription to a tab should prompt re-measuring rather than assuming.
+
+  **`'none'` keeps the tree mounted; it does not make its watchers free.** A
+  screen that watches _another_ tab's query as a secondary consumer must stand
+  that watcher down while blurred. `useRecipeDiscovery` held a live `GetPantry`
+  watcher, so every pantry delete re-rendered the hidden Recipes tab and —
+  because its discovery cache is keyed by the ingredient list — called the
+  recipe API from a hidden tab. It now passes
+  `PantryQueryOptions { skip: !isFocused, fetchPolicy: 'cache-first' }` driven
+  by `useFocusEffect` (the repo's preference over `useIsFocused`, see
+  `useTabBarAddButton`). `cache-first` is load-bearing: Apollo resets a
+  re-enabled query to its initial policy, so `skip` alone costs a
+  `cache-and-network` round-trip per focus. `usePreservedConnection` holds the
+  last result across the skip, so nothing downstream moves while blurred.
 
   Asserted by `HomeTabs.test.tsx` and `RootNavigator.test.tsx` (the latter
   checks `Home` is the ONLY root screen that opts out). Every other navigator

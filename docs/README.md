@@ -35,7 +35,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | Document | What's in it |
 | --- | --- |
 | [Backdrop lifecycle design](backdrop-lifecycle-design.md) | The global bottom-sheet backdrop system and the leak it was designed to fix. |
-| [FlashList performance — current state](flashlist-performance-analysis.md) | How the pantry and shopping-list FlashLists are fed, what a page append costs (measured), how to read the perf instrumentation (and which of its numbers to ignore), and the disposition of the earlier investigation's issues. |
+| [FlashList performance — current state](flashlist-performance-analysis.md) | How the pantry and shopping-list FlashLists are fed, what a page append costs (measured), why every write used to refetch a page and recompute the hidden Recipes tab (and the fixes), how to read the perf instrumentation, and the disposition of the earlier investigation's issues. |
 | [FlashList layout-index race](flashlist-layout-index-race.md) | Resolved `not enough layouts` crash on rapid deletes — FlashList shrinks its layout table during render, so list data must never come through `useDeferredValue`/`startTransition`; mechanism, the rule, validation. |
 | [Performance monitoring](performance-monitoring.md) | Render-time, memory, and screen-transition instrumentation behind the in-app Performance Dashboard. |
 
