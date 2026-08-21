@@ -1,4 +1,4 @@
-import { waitFor } from '@testing-library/react-native';
+import { act, waitFor } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { useRecipeDiscovery } from '../useRecipeDiscovery';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
@@ -23,8 +23,31 @@ jest.mock('#hooks/home/useDefaultHome', () => ({
 
 const mockUsePantryManagement = jest.fn();
 jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
-  usePantryManagement: (id?: string) => mockUsePantryManagement(id),
+  usePantryManagement: (...args: unknown[]) => mockUsePantryManagement(...args),
 }));
+
+// The hook gates its pantry watch on screen focus through `useFocusEffect`.
+// Capture the callback so tests can drive focus/blur; it is never invoked
+// automatically, so a rendered hook starts in its initial (focused) state.
+type FocusCallback = () => (() => void) | void;
+let focusCallback: FocusCallback | undefined;
+let blurCleanup: (() => void) | void;
+const mockUseFocusEffect = jest.fn((cb: FocusCallback) => {
+  focusCallback = cb;
+});
+jest.mock('@react-navigation/native', () => ({
+  useFocusEffect: (cb: FocusCallback) => mockUseFocusEffect(cb),
+}));
+const focus = () => {
+  act(() => {
+    blurCleanup = focusCallback?.();
+  });
+};
+const blur = () => {
+  act(() => {
+    if (typeof blurCleanup === 'function') blurCleanup();
+  });
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -241,5 +264,88 @@ describe('useRecipeDiscovery', () => {
     );
     expect(result.current.items).toHaveLength(20);
     expect(result.current.discoveryHasMore).toBe(false);
+  });
+});
+
+describe('useRecipeDiscovery: focus gate on the pantry watch', () => {
+  const pantryWatchArgs = (skip: boolean) => [
+    'pantry-1',
+    null,
+    null,
+    undefined,
+    { skip, fetchPolicy: 'cache-first' },
+  ];
+
+  it('watches the pantry while focused and stands the watch down while blurred', () => {
+    (spoonacularService.getRandomRecipes as jest.Mock).mockReturnValue(
+      new Promise(() => {}),
+    );
+    renderHookWithApollo(() => useRecipeDiscovery());
+    expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
+      ...pantryWatchArgs(false),
+    );
+
+    focus();
+    blur();
+    expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
+      ...pantryWatchArgs(true),
+    );
+
+    focus();
+    expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
+      ...pantryWatchArgs(false),
+    );
+  });
+
+  it('does not re-run discovery across a blur/focus cycle when the pantry is unchanged', async () => {
+    // The Recipes tab stays mounted while hidden. Before the gate, every pantry
+    // write on another tab re-rendered it and — the discovery cache being keyed
+    // by the ingredient list — called the recipe API again. Focus changes alone
+    // must not cost a request either.
+    mockUsePantryManagement.mockReturnValue({
+      state: {
+        items: [
+          { id: 'p1', itemName: 'tomato' },
+          { id: 'p2', itemName: 'pasta' },
+        ],
+        loading: false,
+        hasMore: false,
+        isLoadingMore: false,
+      },
+      actions: { loadMore: jest.fn() },
+    });
+    (
+      spoonacularService.searchRecipesByIngredients as jest.Mock
+    ).mockResolvedValue([
+      {
+        id: 200,
+        title: 'Tomato Pasta',
+        usedIngredientCount: 2,
+        missedIngredientCount: 1,
+        likes: 50,
+        image: 'https://example.com/tp.jpg',
+      },
+    ]);
+    (
+      spoonacularService.getBulkRecipeInformation as jest.Mock
+    ).mockResolvedValue([]);
+
+    const { result } = renderHookWithApollo(() => useRecipeDiscovery());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(spoonacularService.searchRecipesByIngredients).toHaveBeenCalledTimes(
+      1,
+    );
+
+    focus();
+    blur();
+    focus();
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(spoonacularService.searchRecipesByIngredients).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(result.current.mode).toBe('pantry');
   });
 });

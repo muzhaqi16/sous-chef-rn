@@ -17,7 +17,7 @@ import {
   type PantryItemFilters,
   type PantryItemOrderBy,
 } from '#/graphql/generated/schemaTypes';
-import { usePantryQuery } from './usePantryQuery';
+import { usePantryQuery, type PantryQueryOptions } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './usePantryItemMutations';
 
@@ -26,6 +26,7 @@ export function usePantryManagement(
   itemsFilter?: PantryItemFilters | null,
   itemsOrderBy?: PantryItemOrderBy | null,
   itemsFirst?: number,
+  options?: PantryQueryOptions,
 ) {
   // Query hook - fetches pantry data
   const {
@@ -43,7 +44,7 @@ export function usePantryManagement(
       isLoadingMore,
     },
     actions: { refetch, loadMore },
-  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy, itemsFirst);
+  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy, itemsFirst, options);
 
   // Stats hook - computes location counts
   // Use stats.totalItems for the "all" tab (always full count, not filtered)

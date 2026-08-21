@@ -89,11 +89,53 @@ read-backs), so nothing needed the envelope in the cache.
 real cache and asserts the incompleteness; the hook suites assert the envelope no
 longer reaches the cache.
 
+**Validated on device (2026-08-20, Android dev build):** three pantry deletes and
+three shopping-list deletes produced zero list-query refetches — every
+`DeletePantryItem` / `RemoveItemFromShoppingList` now stands alone in the
+`consoleLink` log, where each used to be followed by `GetPantry` or both
+`GetShoppingListItemsFiltered` variants. `Data Ref Changes` per pantry delete fell
+from 3 to 2; no new long frames were recorded during the deletes; the subscription
+events still arrive (they log, they are just not written to the cache).
+
 **Rule:** an event subscription whose `node` is an envelope + id must run with
 `fetchPolicy: 'no-cache'`. `HomeEvents` and `MealPlanEvents` have the same shape
 and `CacheStrategy.NONE`, and are the obvious next candidates if their domains show
 a refetch per write; `UserEvents` selects real fields on `User` and must be checked
 before changing. `NotificationEvents` selects the node's fields deliberately.
+
+## Hidden Recipes tab re-ran discovery on every pantry write — root cause and fix
+
+Visible in the delete logs as `RecipeMain` re-rendering and `ItemList.items`
+changing after every `DeletePantryItem` while the **Pantry** tab was focused.
+`HomeTabs` runs `inactiveBehavior: 'none'`, so the Recipes tab stays mounted, and
+`useRecipeDiscovery` held a live `GetPantry` watcher through
+`usePantryManagement`. Each pantry write therefore:
+
+1. re-rendered the hidden `RecipeMain`;
+2. changed the discovery fetch key (`fetch|${pantryItems.length}`), re-running the
+   discovery effect; and
+3. because the discovery cache is keyed by the ingredient list, which the delete
+   had just changed, **called the recipe API again** (`searchRecipesByIngredients`)
+   from a hidden tab — the `ItemList.items` change was that response landing.
+
+**Fix:** `usePantryQuery` / `usePantryManagement` take a `PantryQueryOptions`
+argument (`skip`, `fetchPolicy`). `useRecipeDiscovery` tracks focus with
+`useFocusEffect` (the repo's preference over `useIsFocused`) and passes
+`{ skip: !isFocused, fetchPolicy: 'cache-first' }`: while blurred there is no
+watcher, and `usePreservedConnection` holds the last result so nothing downstream
+moves; on focus it resumes from the cache the Pantry tab keeps current — no
+round-trip, because Apollo resets a re-enabled query to its initial policy and
+`cache-first` makes that a cache read — and discovery refreshes once if the pantry
+changed meanwhile. Starts focused because tabs are lazy (the screen mounts on its
+first focus); a blurred first render would fire a throwaway random-mode fetch.
+
+**Rule:** a screen that reads another tab's query as a secondary consumer must
+stand its watcher down while blurred. `inactiveBehavior: 'none'` keeps the tree
+mounted; it does not make every watcher in it free.
+
+Tests: `useRecipeDiscovery.test.ts` ("focus gate on the pantry watch") asserts the
+skip flag follows focus and that a blur/focus cycle costs no request;
+`usePantryQuery.test.ts` ("consumer options") covers `skip` and lifting it.
 
 ## Reading the instrumentation
 

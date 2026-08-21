@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import { NetworkStatus } from '@apollo/client';
+import type { WatchQueryFetchPolicy } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
 import {
@@ -56,6 +57,24 @@ export type PantryListItemNode = NonNullable<
  * @returns `{ state, actions }` — state contains pantryItems, storageLocations, stats,
  *   loading/error flags, and pagination indicators; actions contains refetch and loadMore
  */
+/**
+ * Consumer-side controls for the pantry watch.
+ *
+ * The Pantry tab is the primary consumer and keeps the cache current (its
+ * watcher stays mounted under `inactiveBehavior: 'none'`, and the PantryEvents
+ * subscription writes through). A secondary consumer on another tab should not
+ * keep a second watcher live while its screen is blurred — every pantry write
+ * would re-render that hidden screen — so it passes `skip` while blurred and
+ * `fetchPolicy: 'cache-first'` so resuming reads the cache the primary keeps
+ * fresh instead of firing a network request per focus. Note Apollo resets a
+ * re-enabled query to its initial fetch policy, so a consumer that toggles
+ * `skip` without `cache-first` pays a `cache-and-network` round-trip each time.
+ */
+export interface PantryQueryOptions {
+  skip?: boolean;
+  fetchPolicy?: WatchQueryFetchPolicy;
+}
+
 export function usePantryQuery(
   pantryId: string | undefined,
   itemsFilter?: PantryItemFilters | null,
@@ -64,6 +83,7 @@ export function usePantryQuery(
   // pantries arrive in one page for instant client-side sort/filter/search;
   // a consumer that only needs a sample can pass a smaller value.
   itemsFirst: number = PAGE_SIZE.MAX,
+  options?: PantryQueryOptions,
 ) {
   const isLoggedOut = useIsLoggedOut();
   const isHomeSelectionReady = useIsHomeSelectionReady();
@@ -100,8 +120,11 @@ export function usePantryQuery(
   // The query should run when EITHER:
   // 1. hasValidPantryId is currently true (normal path), OR
   // 2. We previously activated for this exact pantryId (latch prevents flickering)
+  // — unless the consumer asked to stand down (`options.skip`), which the latch
+  // deliberately does not override: that skip is the consumer's own decision.
   const isLatched = activatedForId === pantryId && !!pantryId;
-  const shouldSkip = !hasValidPantryId && !isLatched;
+  const shouldSkip =
+    (!hasValidPantryId && !isLatched) || options?.skip === true;
 
   const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
     GetPantryDocument,
@@ -114,6 +137,7 @@ export function usePantryQuery(
         storageLocationsFirst: PAGE_SIZE.COMPACT,
       },
       skip: shouldSkip,
+      ...(options?.fetchPolicy ? { fetchPolicy: options.fetchPolicy } : {}),
       // After the initial network fetch, use cache-first for re-renders to avoid
       // duplicate requests. On variable changes (filter/sort), revert to the
       // initial policy so the user gets fresh data.

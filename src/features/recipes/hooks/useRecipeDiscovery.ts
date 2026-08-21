@@ -10,6 +10,7 @@ import type {
   RecipeInformation,
 } from '#/services/recipeApi/types';
 import { useQuery } from '@apollo/client/react';
+import { useFocusEffect } from '@react-navigation/native';
 import { GetHomeDocument } from '#operations/home/home.generated';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { t } from '#/i18n';
@@ -287,6 +288,27 @@ export function useRecipeDiscovery(
   });
 
   const defaultPantry = getDefaultPantry(homeData?.home);
+
+  // Focus gate for the pantry watch. The Recipes tab stays mounted while
+  // hidden (HomeTabs runs `inactiveBehavior: 'none'`), so a live watcher here
+  // re-rendered this screen on every pantry write — and because the fetch key
+  // below tracks the item count while the discovery cache is keyed by the
+  // ingredient list, every delete on the Pantry tab also called the recipe API
+  // from a hidden tab. While blurred the watch is skipped and
+  // `usePreservedConnection` holds the last result, so nothing downstream
+  // moves; on focus it resumes from the cache the Pantry tab keeps current
+  // (`cache-first`, no round-trip) and discovery refreshes once if the pantry
+  // changed meanwhile. Starts focused: tabs are lazy, so this screen mounts on
+  // its first focus, and a blurred first render would fire a throwaway
+  // random-mode fetch before the focus effect runs. `useFocusEffect` rather
+  // than `useIsFocused`, per `useTabBarAddButton`.
+  const [isFocused, setIsFocused] = useState(true);
+  const [onFocusChange] = useState(() => () => {
+    setIsFocused(true);
+    return () => setIsFocused(false);
+  });
+  useFocusEffect(onFocusChange);
+
   const {
     state: {
       items: pantryItems,
@@ -295,7 +317,10 @@ export function useRecipeDiscovery(
       isLoadingMore: pantryLoadingMore,
     },
     actions: { loadMore: loadMorePantryItems },
-  } = usePantryManagement(defaultPantry?.id);
+  } = usePantryManagement(defaultPantry?.id, null, null, undefined, {
+    skip: !isFocused,
+    fetchPolicy: 'cache-first',
+  });
 
   const hasPantryItems = (pantryItems?.length ?? 0) > 0;
 
