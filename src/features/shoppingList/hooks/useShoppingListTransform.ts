@@ -4,20 +4,35 @@ import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];
 
 /**
- * Per-source transform cache.
+ * Two-level transform cache.
  *
  * After the per-row `useFragment` migration the row component computes every
  * piece of display data itself, so this hook no longer produces a transformed
  * shape — it just wraps each node with the primitive metadata the FlashList
  * needs (`id`, `isPurchased`, `sortOrder`) and the masked fragment ref.
  *
- * The WeakMap cache keeps the wrapper array stable as long as the source
- * array is stable, which lets the React Compiler skip re-renders downstream.
+ * Array level: the wrapper array is reused while the source array is stable,
+ * so downstream memoization holds across unrelated re-renders.
+ *
+ * Row level: each row object is cached against its node. A page append hands
+ * us a NEW nodes array, but Apollo's structural sharing keeps every unchanged
+ * node identical — and FlashList re-renders a cell only when its `item` prop
+ * changes identity (`ViewHolder`'s memo compares `item` with `===`).
+ * Rebuilding every row on append therefore re-rendered every mounted cell to
+ * show a handful of new ones; reusing rows for unchanged nodes makes an append
+ * cost only the cells it adds. Apollo produces a new node object whenever any
+ * of its fields change, so a `sortOrder` edit still yields a fresh row. One
+ * row cache per tab, because the same node is wrapped with a different
+ * `isPurchased` on each tab while a toggle is in flight.
  */
 const wrapItemsCache = new WeakMap<
   readonly ShoppingListItemNode[],
   { key: string; result: ShoppingListRowItem[] }
 >();
+const rowCacheByTab = {
+  unpurchased: new WeakMap<ShoppingListItemNode, ShoppingListRowItem>(),
+  purchased: new WeakMap<ShoppingListItemNode, ShoppingListRowItem>(),
+};
 
 function wrapItems(
   items: readonly ShoppingListItemNode[],
@@ -27,6 +42,9 @@ function wrapItems(
   const key = String(forcePurchasedState);
   const cached = wrapItemsCache.get(items);
   if (cached && cached.key === key) return cached.result;
+  const rowCache = forcePurchasedState
+    ? rowCacheByTab.purchased
+    : rowCacheByTab.unpurchased;
   const result: ShoppingListRowItem[] = [];
   for (const node of items) {
     if (!node.id || !node.itemName) {
@@ -38,12 +56,17 @@ function wrapItems(
       }
       continue;
     }
-    result.push({
-      id: node.id,
-      isPurchased: forcePurchasedState,
-      sortOrder: node.sortOrder ?? null,
-      itemRef: node,
-    });
+    let row = rowCache.get(node);
+    if (!row) {
+      row = {
+        id: node.id,
+        isPurchased: forcePurchasedState,
+        sortOrder: node.sortOrder ?? null,
+        itemRef: node,
+      };
+      rowCache.set(node, row);
+    }
+    result.push(row);
   }
   wrapItemsCache.set(items, { key, result });
   return result;

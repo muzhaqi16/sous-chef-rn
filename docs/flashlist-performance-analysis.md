@@ -351,3 +351,27 @@ Before implementing fixes, gather data to confirm the analysis:
 | `src/components/organisms/SortableShoppingList/SortableList.tsx` | Issue 5: Add `maxItemsInRecyclePool` |
 | `src/components/pantry/PantryContent.tsx` | Issue 5: Add `maxItemsInRecyclePool` |
 | `src/hooks/shoppingList/useShoppingListScreen.ts` (lines 84-88) | Issue 6: Add `useDeferredValue` bypass |
+
+---
+
+## Update 2026-08-20 — shopping-list pagination re-profiled
+
+Re-measured on a 95-item list (Android dev build, DevTools attached) after the
+`useDeferredValue` on FlashList data was removed for the crash documented in
+`docs/flashlist-layout-index-race.md`: peak frame gap 1006 ms, sustained blanks 15–17%,
+every page append correlated with blank frames. The pantry on the same build sat at 4.6%.
+
+The deferral had been time-slicing a cost the pantry does not have, so the cost was fixed
+rather than re-hidden:
+
+- **Issue 2 / Issue 6, resolved differently.** `wrapItems` (`useShoppingListTransform.ts`)
+  cached rows per *source array*, so a `fetchMore` rebuilt every row object and FlashList
+  (`ViewHolder` memo: `prevProps.item === nextProps.item`) re-rendered every mounted
+  `SwipeableListItem` to show ~20 new ones. Rows are now cached per *node* as well;
+  Apollo's structural sharing keeps unchanged nodes identical, so an append renders only
+  the cells it adds — the same behaviour the pantry gets for free by passing nodes through.
+- **Page size 20 → 25** (`PAGINATION.ITEMS_PAGE_SIZE`): each page append runs the full
+  pipeline, so fewer pages cost less.
+- Items in the comparison table that have since changed: pantry now fetches 100 in one
+  page and windows client-side in 24-item steps; `maxItemsInRecyclePool` is set on the
+  pantry list (15) but still not on `SortableList`; neither list defers its data any more.

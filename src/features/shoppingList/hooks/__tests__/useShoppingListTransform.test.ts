@@ -142,6 +142,74 @@ describe('useShoppingListTransformMulti', () => {
     expect(result.current.unpurchasedItems).toBe(firstUnpurchased);
   });
 
+  it('reuses row objects for unchanged nodes when a page append yields a new source array', () => {
+    // A fetchMore gives Apollo a new nodes array while structural sharing
+    // keeps every existing node identical. FlashList re-renders a cell only
+    // when its `item` changes identity, so the rows for the existing nodes
+    // must be the same objects — otherwise every mounted cell re-renders to
+    // show the appended ones.
+    const first = node({ id: '1' });
+    const second = node({ id: '2' });
+
+    const { result, rerender } = renderHook(
+      (props: { u: ShoppingListItemNode[] }) =>
+        useShoppingListTransformMulti({
+          rawUnpurchasedItems: props.u,
+          rawPurchasedItems: [],
+        }),
+      { initialProps: { u: [first] } },
+    );
+
+    const rowBefore = result.current.unpurchasedItems[0];
+    rerender({ u: [first, second] });
+
+    expect(result.current.unpurchasedItems).toHaveLength(2);
+    expect(result.current.unpurchasedItems[0]).toBe(rowBefore);
+    expect(result.current.unpurchasedItems[1].id).toBe('2');
+  });
+
+  it('produces a new row when the node object itself changes', () => {
+    // Apollo emits a new node object whenever any of its fields change, so
+    // row identity must follow node identity — a reorder must not be hidden
+    // behind a stale cached row.
+    const before = node({ id: '1', sortOrder: 'aaa' });
+    const after = node({ id: '1', sortOrder: 'bbb' });
+
+    const { result, rerender } = renderHook(
+      (props: { u: ShoppingListItemNode[] }) =>
+        useShoppingListTransformMulti({
+          rawUnpurchasedItems: props.u,
+          rawPurchasedItems: [],
+        }),
+      { initialProps: { u: [before] } },
+    );
+
+    const rowBefore = result.current.unpurchasedItems[0];
+    rerender({ u: [after] });
+
+    expect(result.current.unpurchasedItems[0]).not.toBe(rowBefore);
+    expect(result.current.unpurchasedItems[0].sortOrder).toBe('bbb');
+  });
+
+  it('keeps separate rows per tab for the same node', () => {
+    // While a toggle is in flight the same node can sit in both tabs, wrapped
+    // with a different pinned `isPurchased` on each.
+    const shared = node({ id: '1' });
+
+    const { result } = renderHook(() =>
+      useShoppingListTransformMulti({
+        rawUnpurchasedItems: [shared],
+        rawPurchasedItems: [shared],
+      }),
+    );
+
+    expect(result.current.unpurchasedItems[0]).not.toBe(
+      result.current.purchasedItems[0],
+    );
+    expect(result.current.unpurchasedItems[0].isPurchased).toBe(false);
+    expect(result.current.purchasedItems[0].isPurchased).toBe(true);
+  });
+
   it('returns empty arrays for empty inputs', () => {
     const { result } = renderHook(() =>
       useShoppingListTransformMulti({
