@@ -35,10 +35,11 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         <AppPressable
           style={styles.actionButton}
           onPress={() => onSetDefault(homeId)}
+          accessibilityRole="button"
         >
-          <Icon name="star-outline" size={20} tone="textSecondary" />
+          <Icon name="star-outline" size={22} tone="textSecondary" />
           <Text
-            size="sm"
+            size="xs"
             tone="secondary"
             numberOfLines={2}
             style={styles.actionText}
@@ -51,10 +52,11 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         <AppPressable
           style={styles.actionButton}
           onPress={() => onInvite(homeId)}
+          accessibilityRole="button"
         >
-          <Icon name="person-add" size={20} tone="textSecondary" />
+          <Icon name="person-add" size={22} tone="textSecondary" />
           <Text
-            size="sm"
+            size="xs"
             tone="secondary"
             numberOfLines={2}
             style={styles.actionText}
@@ -67,10 +69,11 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
         <AppPressable
           style={styles.actionButton}
           onPress={() => onDelete(homeId)}
+          accessibilityRole="button"
         >
-          <Icon name="trash-outline" size={20} tone="error" />
+          <Icon name="trash-outline" size={22} tone="error" />
           <Text
-            size="sm"
+            size="xs"
             tone="error"
             numberOfLines={2}
             style={styles.actionText}
@@ -84,39 +87,36 @@ export const HomeActions: React.FC<HomeActionsProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // Horizontal grid: chips size to their labels, share the leftover space, and
-  // wrap to the next row when they can't fit. Without `flexWrap` — and with
-  // Yoga's `flexShrink` defaulting to 0, not 1 — the chips kept their intrinsic
-  // width and ran off the screen edge in locales with long labels (sq "Vendos
-  // si parazgjedhur" / es "Establecer Predeterminado" vs en "Set Default").
-  // Same shape as AnimatedItemSelector/ActionButtons and MembersList below.
   homeActions: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: theme.spacing.sm,
     paddingTop: theme.spacing['3'],
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   actionButton: {
-    flexDirection: 'row',
+    // The label sits UNDER the icon, not beside it. Beside the icon a chip has
+    // to be as wide as its longest word plus the glyph, and sq "Vendos si
+    // parazgjedhur" / es "Establecer Predeterminado" then push the third chip
+    // onto a second row on any phone. Stacked, each button is a fixed third of
+    // the row and the label has the button's whole width to wrap into.
+    flex: 1,
+    minHeight: theme.sizes.touchTarget.min,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    // `flexBasis: 'auto'` makes Yoga break the line on CONTENT width, so
-    // short-label locales keep their single tidy row; minWidth stops a wrapped
-    // chip from collapsing to its icon.
-    flexGrow: 1,
-    flexShrink: 1,
-    flexBasis: 'auto',
-    minWidth: 88,
-    gap: theme.spacing.xs + 2,
+    gap: theme.spacing.xs,
     paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing['3'],
+    paddingHorizontal: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.surface,
   },
   actionText: {
-    flexShrink: 1,
+    // Text defaults to variant="body", whose lineHeight of 24 survives the
+    // size="xs" override — on a two-line label that alone adds 18dp of dead
+    // height to the row.
+    lineHeight: theme.fonts.size.xs * 1.25,
+    textAlign: 'center',
   },
 }));

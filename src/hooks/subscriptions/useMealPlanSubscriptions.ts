@@ -48,6 +48,7 @@ import {
 import { useIsHomeSelectionReady, useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { logger } from '#/utils/environment';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type MealPlanEventsPayload = MealPlanEventsSubscription['mealPlanEvents'];
 
@@ -393,9 +394,15 @@ export function useMealPlanSubscriptions(userId?: string) {
     },
   });
 
-  useSubscription(MealPlanEventsDocument, {
+  const mealPlanSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
+  const mealPlanEvents = useSubscription(MealPlanEventsDocument, {
     variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady || rejected,
+    skip: mealPlanSkip,
     ...eventHandlers,
   });
+  useSubscriptionTransportRecovery(
+    'MealPlanEvents',
+    mealPlanEvents,
+    mealPlanSkip,
+  );
 }

@@ -2,7 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Dimensions, Platform } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { Camera, useCameraDevices } from 'react-native-vision-camera';
+import {
+  Camera,
+  useCameraDevices,
+  type TorchMode,
+} from 'react-native-vision-camera';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
@@ -17,6 +21,7 @@ import { HapticService } from '#services/haptic/HapticService';
 import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
 import type { BarcodeSource } from '#/types/navigation';
 import { Text } from '#components/atoms/Text';
+import { logger } from '#/utils/environment';
 
 const { height: screenHeight } = Dimensions.get('window');
 
@@ -55,7 +60,17 @@ export const BarcodeScannerScreen: React.FC<
   // local UI state
   const [isActive, setIsActive] = useState(false);
   const [hasScanned, setHasScanned] = useState(false);
-  const [flashEnabled, setFlashEnabled] = useState(false);
+  // `undefined` means we have not commanded the torch during this camera
+  // session. VisionCamera's torch updater skips a nullish `torchMode`, so
+  // leaving it undefined is what keeps it from firing `setTorchMode('off')`
+  // the moment the controller exists — before the session has opened, which
+  // CameraX rejects with "Camera is not active.".
+  const [torch, setTorch] = useState<TorchMode | undefined>(undefined);
+  const flashEnabled = torch === 'on';
+  // The camera only accepts torch commands while its session is running, and
+  // start/stop are both asynchronous. Track the session's own started/stopped
+  // events so a command issued mid-transition is deferred rather than rejected.
+  const [isSessionRunning, setIsSessionRunning] = useState(false);
 
   // 1) Request permission once the initial check completes and status is undetermined
   useEffect(() => {
@@ -75,13 +90,14 @@ export const BarcodeScannerScreen: React.FC<
     setHasScanned(false);
     setIsActive(true);
     setScanning(true);
+    // Covers a focus where the session never started, so onStopped never ran.
+    // Writing undefined can't emit a native command, so this is safe at any
+    // point in the session's lifecycle.
+    setTorch(undefined);
 
     return () => {
       setIsActive(false);
       setScanning(false);
-      // Drop the torch on blur so the next focus doesn't carry a stale 'on'
-      // state, and so we never command the torch while the session tears down.
-      setFlashEnabled(false);
     };
   });
 
@@ -119,11 +135,22 @@ export const BarcodeScannerScreen: React.FC<
       });
     },
     onError: error => {
-      console.warn('Barcode scanner error:', error);
+      logger.warn('[BarcodeScanner] Scanner error:', error);
     },
   });
 
-  const toggleFlash = () => setFlashEnabled(f => !f);
+  const toggleFlash = () => setTorch(mode => (mode === 'on' ? 'off' : 'on'));
+
+  const handleSessionStarted = () => setIsSessionRunning(true);
+  const handleSessionStopped = () => {
+    setIsSessionRunning(false);
+    // Leave the next session dark rather than resuming with the torch lit.
+    setTorch(undefined);
+  };
+  const handleCameraError = (error: Error) => {
+    logger.error('[BarcodeScanner] Camera error:', error);
+  };
+
   const resetScan = () => {
     setHasScanned(false);
     resetScanner();
@@ -203,7 +230,10 @@ export const BarcodeScannerScreen: React.FC<
         device={device}
         isActive={isActive}
         outputs={[barcodeOutput]}
-        torchMode={isActive && flashEnabled ? 'on' : 'off'}
+        torchMode={isSessionRunning ? torch : undefined}
+        onStarted={handleSessionStarted}
+        onStopped={handleSessionStopped}
+        onError={handleCameraError}
         enableNativeZoomGesture
       />
 

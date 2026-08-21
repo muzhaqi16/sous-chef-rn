@@ -10,6 +10,7 @@ import {
 } from '#/storage/keychain';
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import { runSessionTeardown } from './sessionTeardown';
 import { logger } from '#/utils/environment';
 
 /**
@@ -19,7 +20,7 @@ import { logger } from '#/utils/environment';
  *  - `refresh_rejected`   — the refresh mutation's own response was an auth refusal
  *  - `refresh_token_dead` — an ordinary operation reported the refresh token gone or rejected
  *  - `account_inactive`   — the account is suspended, banned, or deleted
- *  - `session_revoked`    — the subscription socket closed on session auth again after a refresh
+ *  - `session_revoked`    — the subscription socket was refused as unrecoverable (close 4412)
  */
 export type SessionEndReason =
   | 'refresh_rejected'
@@ -243,6 +244,14 @@ export const createResetManager = (
     // `cache-and-network` restores them on the next sign-in — so a path that
     // skips it shows the previous user's pantry and lists to the next one
     // until each query's network response lands.
+
+    // Stop the transports FIRST, so in-flight work is cancelled rather than
+    // re-fired against cleared tokens. Without this the socket keeps dialling,
+    // in-flight queries keep landing and the queue keeps waking, all against
+    // credentials the server has already refused — a dead session that goes on
+    // asking, which is what the user sees as an endless loading state.
+    await runSessionTeardown();
+
     const resetManager = createResetManager(set, get);
     await resetManager.resetStore({
       auth: true,

@@ -71,7 +71,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     visible: visible && !!item,
     onDismiss: onClose,
     snapPoints: ['45%'],
-    keyboardAware: true,
   });
 
   const [quantityInput, setQuantityInput] = useState('');

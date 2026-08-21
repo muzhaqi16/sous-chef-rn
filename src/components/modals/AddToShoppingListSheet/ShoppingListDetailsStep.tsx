@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { StyleSheet } from 'react-native-unistyles';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
@@ -187,7 +187,7 @@ export const ShoppingListDetailsStep: React.FC<
         submitTestID="add-shopping-item-submit-button"
       />
 
-      <BottomSheetScrollView
+      <BottomSheetFormScrollView
         // Named so a test can scroll a field into view. The unit picker sits in
         // the second `FieldRow`, below the fold once the keyboard is up, and
         // Detox refuses to type into a view that is not hittable.
@@ -306,7 +306,7 @@ export const ShoppingListDetailsStep: React.FC<
           numberOfLines={3}
           useBottomSheetInput
         />
-      </BottomSheetScrollView>
+      </BottomSheetFormScrollView>
     </View>
   );
 };

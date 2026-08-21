@@ -5,6 +5,7 @@
       "sessionInvalid": "La tua sessione non è valida. Accedi di nuovo",
       "sessionExpired": "La tua sessione è scaduta. Accedi di nuovo",
       "sessionEnded": "Sessione scaduta. Accedi di nuovo",
+      "sessionRetrying": "Riconnessione della sessione in corso. Riprova.",
       "credentialsInvalid": "Email o password non validi",
       "accountLocked": "Il tuo account è stato bloccato temporaneamente per sicurezza",
       "accountSuspended": "Questo account non è più attivo. Contatta l’assistenza.",
@@ -1827,7 +1828,7 @@
       "pantry": "Dispensa",
       "shoppingList": "Lista",
       "recipes": "Ricette",
-      "mealPlan": "Piano pasti"
+      "mealPlan": "Pasti"
     }
   },
   "nutritionSummary": {

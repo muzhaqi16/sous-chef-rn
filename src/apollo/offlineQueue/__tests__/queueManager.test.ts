@@ -2059,3 +2059,30 @@ describe('QueueManager', () => {
     });
   });
 });
+
+// A session the server ended must not leave a timer waiting to replay against
+// credentials that cannot come back.
+describe('session teardown step', () => {
+  it('cancels a pending drain without touching the queued entries', async () => {
+    const { queueManager } = require('../queueManager');
+    const { runSessionTeardown } = require('#store/sessionTeardown');
+
+    jest.useFakeTimers();
+    const processQueue = jest
+      .spyOn(queueManager, 'processQueue')
+      .mockResolvedValue(undefined);
+    (queueStore.clearQueueForUser as jest.Mock).mockClear();
+
+    queueManager.requestDrain(600);
+    await runSessionTeardown();
+    jest.advanceTimersByTime(5000);
+
+    expect(processQueue).not.toHaveBeenCalled();
+    // The entries stay: a rejected refresh token is not the user choosing to
+    // discard unsynced work. Only `onLogout` deletes them.
+    expect(queueStore.clearQueueForUser).not.toHaveBeenCalled();
+
+    processQueue.mockRestore();
+    jest.useRealTimers();
+  });
+});

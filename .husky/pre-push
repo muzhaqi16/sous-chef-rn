@@ -1,6 +1,11 @@
 npm run typecheck || exit 1
 npm run i18n:check || exit 1
 npm run check:codegen-orphans || exit 1
+# getVersion() is native, so a platform whose version was not bumped ships
+# reporting the previous release: the version-keyed Apollo cache purge never
+# fires there and CLIENT_VERSION reaches the server's minimum-version gate
+# wrong. Nothing else fails to warn you, which is why it runs here.
+npm run check:version-sync || exit 1
 
 if ! git diff --quiet HEAD || ! git diff --cached --quiet HEAD; then
   echo "Working tree has uncommitted changes; skipping codegen drift check." >&2

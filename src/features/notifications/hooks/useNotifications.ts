@@ -38,6 +38,7 @@ import {
 } from '#utils/subscriptionErrorHandler';
 import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
+import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubscriptionTransportRecovery';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 const selectListenerState = (state: RootState) => ({
@@ -232,8 +233,9 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
 
   // Consolidated notification stream — CREATED + UPDATED on one subscription,
   // routed by `subtype` (replaces notificationCreated + notificationUpdated).
-  useSubscription(NotificationEventsDocument, {
-    skip: config.skip || !user?.id,
+  const notificationEventsSkip = config.skip || !user?.id;
+  const notificationEvents = useSubscription(NotificationEventsDocument, {
+    skip: notificationEventsSkip,
     onData: ({ data }) => {
       const event = data.data?.notificationEvents;
       if (!event) return;
@@ -328,6 +330,11 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       handleError('NotificationEvents', error);
     },
   });
+  useSubscriptionTransportRecovery(
+    'NotificationEvents',
+    notificationEvents,
+    notificationEventsSkip,
+  );
 
   // PERFORMANCE: App state handling - store in ref to avoid re-renders
   useEffect(() => {

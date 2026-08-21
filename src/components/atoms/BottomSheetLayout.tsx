@@ -45,7 +45,6 @@ export interface BottomSheetLayoutProps extends UseStandardBottomSheetOptions {
  *   visible={visible}
  *   onDismiss={onClose}
  *   snapPoints={['55%']}
- *   keyboardAware
  *   mode="form"
  *   style={styles.scrollView}
  *   contentContainerStyle={styles.content}

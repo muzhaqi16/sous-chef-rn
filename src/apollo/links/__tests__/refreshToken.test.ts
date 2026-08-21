@@ -30,7 +30,7 @@ jest.mock('#/utils/isNetworkError', () => ({
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),
   isWebSocketReconnecting: jest.fn(() => false),
-  registerSessionAuthRefresh: jest.fn(),
+  registerTokenRefresh: jest.fn(),
 }));
 
 // Mock Apollo client
@@ -472,6 +472,106 @@ describe('refreshToken', () => {
           expect(mockTokenRefreshFailed).toHaveBeenCalledWith('auth_rejected');
           done();
         },
+      });
+    });
+
+    // A refresh token spent by a rotation that beat us to it. The session the
+    // winner renewed is alive, so the only wrong move is to end it — and the
+    // second-worst is to re-present the token that was just refused, which
+    // hot-loops until the server's reuse grace window elapses and then revokes
+    // the whole lineage.
+    describe('superseded by a concurrent rotation', () => {
+      let mockTokenRefreshFailed: jest.Mock;
+
+      /**
+       * Refuse the first exchange as superseded, then succeed.
+       *
+       * `storesSuccessor` is the difference between the two shapes: true means
+       * the request that won the race wrote its successor through setTokens as
+       * it resolved, so the store answers with a different token by the time we
+       * retry. False is the lost-response case, where the winner was us and no
+       * successor exists anywhere.
+       */
+      const supersedeFirstExchange = (storesSuccessor: boolean) => {
+        let stored = 'spent-refresh-token';
+        let call = 0;
+
+        (mockedUseStore.getState as jest.Mock).mockImplementation(() => ({
+          refreshToken: stored,
+          tokenRefreshFailed: mockTokenRefreshFailed,
+          setTokens: jest.fn(),
+          setNeedsTokenRefresh: jest.fn(),
+        }));
+
+        (mockedClient.mutate as jest.Mock).mockImplementation(() => {
+          call += 1;
+          if (call === 1) {
+            if (storesSuccessor) stored = 'successor-refresh-token';
+            return Promise.resolve({
+              data: {
+                refresh: {
+                  __typename: 'AuthenticationError',
+                  code: 'AUTH_REFRESH_TOKEN_SUPERSEDED',
+                  message:
+                    'Refresh token was superseded by a more recent rotation.',
+                },
+              },
+            });
+          }
+          return Promise.resolve({
+            data: {
+              refresh: {
+                __typename: 'RefreshTokenPayload',
+                accessToken: 'access-from-successor',
+                refreshToken: 'refresh-after-successor',
+              },
+            },
+          });
+        });
+      };
+
+      beforeEach(() => {
+        mockTokenRefreshFailed = jest.fn();
+        (mockedIsNetworkError as jest.Mock).mockReturnValue(false);
+      });
+
+      it('retries with the successor the winner stored, and never ends the session', done => {
+        supersedeFirstExchange(true);
+
+        attemptTokenRefresh(mockOperation, createMockForward()).subscribe({
+          next: () => {
+            const calls = (mockedClient.mutate as jest.Mock).mock.calls;
+            expect(calls).toHaveLength(2);
+            // The retry presents the successor, NOT the token just refused.
+            expect(calls[1][0].variables).toEqual({
+              input: { token: 'successor-refresh-token' },
+            });
+            expect(mockTokenRefreshFailed).not.toHaveBeenCalled();
+            done();
+          },
+        });
+      });
+
+      it('defers without re-sending the spent token when no successor was stored', done => {
+        // Our own response was the one that got lost, so nothing wrote a
+        // successor. Re-sending the spent token would cross the server's
+        // ten-second reuse window, and a replay past it revokes the whole
+        // lineage — the one move that turns this recoverable refusal into a
+        // dead session.
+        supersedeFirstExchange(false);
+
+        attemptTokenRefresh(mockOperation, createMockForward()).subscribe({
+          error: () => {
+            expect((mockedClient.mutate as jest.Mock).mock.calls).toHaveLength(
+              1,
+            );
+            expect(mockTokenRefreshFailed).toHaveBeenCalledWith('unknown');
+            expect(mockTokenRefreshFailed).not.toHaveBeenCalledWith(
+              'auth_rejected',
+            );
+            done();
+          },
+        });
       });
     });
 

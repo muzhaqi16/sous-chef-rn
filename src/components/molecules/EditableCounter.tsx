@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View, type GestureResponderEvent } from 'react-native';
-import { Pressable, ThemedTextInput } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedBottomSheetTextInput,
+  ThemedTextInput,
+} from '#components/atoms/themedComponents';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Label } from '#components/atoms/Label';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface EditableCounterProps {
   label?: string;
@@ -46,6 +51,13 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
+  // Inside a sheet the value field has to be a `BottomSheetTextInput`, or
+  // gorhom never registers the focus and the host sheet ignores the keyboard.
+  // Chosen from context because this counter is also used on full screens,
+  // where `BottomSheetTextInput` would throw. Same rule as `FormInput`.
+  const InputComponent = useIsBottomSheetInput()
+    ? ThemedBottomSheetTextInput
+    : ThemedTextInput;
 
   styles.useVariants({ focused: isFocused, disabled });
 
@@ -118,7 +130,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         </Pressable>
 
         {/* Editable Number Input */}
-        <ThemedTextInput
+        <InputComponent
           style={styles.input}
           value={value}
           onChangeText={onChangeText}

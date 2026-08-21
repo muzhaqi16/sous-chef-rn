@@ -3710,9 +3710,13 @@ enum ErrorCode {
   AUTH_ACCOUNT_SUSPENDED
   AUTH_CREDENTIALS_INVALID
   """
-  Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). Emitted by the refresh mutation; the REST /refresh route reports the same code top-level.
+  Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. Emitted by the refresh mutation; the REST /refresh route reports the same code top-level.
   """
   AUTH_REFRESH_TOKEN_INVALID
+  """
+  Refresh token was consumed by a recent rotation and a valid successor exists — the request lost a race, it did not end the session. Recommended handling: re-read stored credentials and retry with the current token. Clients must NOT sign the user out on this code.
+  """
+  AUTH_REFRESH_TOKEN_SUPERSEDED
   AUTH_TOKEN_EXPIRED
   AUTH_TOKEN_MISSING
   CONFLICT
@@ -11890,10 +11894,14 @@ enum TopLevelErrorCode {
   """
   AUTH_EMAIL_NOT_VERIFIED
   """
-  Refresh token rejected by rotation (unverifiable, unknown, revoked or already used).
+  Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over.
   """
   AUTH_REFRESH_TOKEN_INVALID
   AUTH_REFRESH_TOKEN_MISSING
+  """
+  Refresh token was consumed by a recent rotation and a valid successor exists — the request lost a race, it did not end the session. Recommended handling: re-read stored credentials and retry with the current token. Clients must NOT sign the user out on this code.
+  """
+  AUTH_REFRESH_TOKEN_SUPERSEDED
   """
   Access token expired. On an ordinary operation this is what a refresh fixes; on the refresh response itself the session is over.
   """

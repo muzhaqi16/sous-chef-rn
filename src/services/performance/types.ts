@@ -116,12 +116,13 @@ export interface ScrollFrameMetric {
   timestamp: number;
   visibleStart: number;
   visibleEnd: number;
-  viewableCount: number;
+  /** Distinct visible indices that have a committed cell */
+  mountedCount: number;
   expectedCount: number;
   blankDetected: boolean;
   /** ms between rAF callbacks */
   frameGap: number;
-  /** viewableCount / expectedCount (0.0 - 1.0) */
+  /** mountedCount / expectedCount (0.0 - 1.0) */
   coverageRatio: number;
   /** Estimated scroll speed in items/second */
   scrollVelocity: number;

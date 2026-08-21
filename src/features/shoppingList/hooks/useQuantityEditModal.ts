@@ -7,6 +7,9 @@ import { UseQuantityEditModal_ItemFragmentDoc } from './useQuantityEditModal.gen
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 
 /**
  * Transformed item for QuantityEditSheet
@@ -156,30 +159,54 @@ export function useQuantityEditModal(
 
     setIsLoading(true);
 
+    let result;
     try {
-      await updateQuantity({
+      result = await updateQuantity({
         variables: {
           input: {
             itemId: selectedItemRaw.id,
-            quantity,
+            // Separators normalized, fraction preserved: the server parses this
+            // string itself and rejects a comma decimal outright, so a
+            // comma-decimal keypad would otherwise lose every fractional edit.
+            quantity: normalizeNumericTextForApi(quantity),
             unitId,
             version: selectedItemRaw.version,
           },
         },
       });
-
-      Telemetry.trackEvent('shopping_item_quantity_updated', {
-        item_id: selectedItemRaw.id,
-        quantity,
-      });
-
-      setVisible(false);
-      setSelectedItemId(null);
     } catch {
-      // Error handled by mutation onError
+      // Deliberately silent: this mutation's own `onError` above already
+      // reported the throw. DeleteAccountScreen and OnboardingCompleteScreen
+      // report from their catch instead, because their mutations carry no
+      // `onError` — copying that here would double-report.
     }
 
     setIsLoading(false);
+
+    // A link-level throw leaves `result` undefined, which
+    // `classifyCreateResult` reads as 'rejected' while `alertRejectedMutation`
+    // only suppresses when there is a `result.error` to suppress on — so
+    // without this guard the one failure produces two alerts. The sheet stays
+    // open, as it would for any rejection.
+    if (!result) return;
+
+    // A refused quantity resolves as a ValidationError payload with no `error`,
+    // so onError never fires. Closing the sheet on that reads as a save that
+    // took, and the value the user typed is simply gone. Keep the sheet open
+    // and say so instead. 'queued' (offline) replays via SyncShoppingListItem,
+    // so it closes like a success.
+    if (classifyCreateResult(result) === 'rejected') {
+      alertRejectedMutation(result, t('errors.adjustQuantityFailed'));
+      return;
+    }
+
+    Telemetry.trackEvent('shopping_item_quantity_updated', {
+      item_id: selectedItemRaw.id,
+      quantity,
+    });
+
+    setVisible(false);
+    setSelectedItemId(null);
   };
 
   return { visible, selectedItem, isLoading, openForItem, close, save };

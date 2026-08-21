@@ -6,9 +6,17 @@ import { useStore } from '#store';
 import { Environment, logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceId } from '#/utils/deviceId';
-import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { CLIENT_NAME, CLIENT_VERSION } from '../clientIdentity';
 import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
+import {
+  isProtocolErrorCloseCode,
+  isRetryableWebSocketClose,
+  WS_CLOSE_AUTH_FAILED,
+  WS_CLOSE_CLIENT_REJECTED,
+  WS_CLOSE_DURATION_EXCEEDED,
+  WS_CLOSE_SESSION_AUTH,
+  WS_CLOSE_UPGRADE_REQUIRED,
+} from './wsCloseCodes';
 import { LaunchArguments } from 'react-native-launch-arguments';
 
 // pick the right WebSocket constructor
@@ -20,8 +28,11 @@ const webSocketImpl =
 // Use env.WEB_SOCKET_URL from .env if set, otherwise use environment-specific default
 const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
 
-// Store the client instance so we can reconnect it
-let wsClient: Client;
+// The live graphql-ws client. Replaceable, because `dispose()` is one-way:
+// it latches `disposed` inside the client with no reset, after which every
+// retry silently gives up. A session that ends must therefore drop the client
+// rather than keep a poisoned one for the next sign-in.
+let currentClient: Client | null = null;
 let isReconnecting = false;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
@@ -48,16 +59,33 @@ function notifyReconnectListeners(): void {
   });
 }
 
-// Auto-reconnection state
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
+// Reconnection is graphql-ws's loop, not ours. It re-dials on its own after
+// every retryable close, re-evaluating `connectionParams` each attempt.
+//
+// This module used to run a SECOND backoff beside it whose only action was
+// `wsClient.terminate()` — which is `if (connecting) emit('closed')` and so
+// does nothing once a socket has closed (graphql-ws clears `connecting` in its
+// own close handler). It could interrupt a live connection; it could never
+// dial one. Everything that looked like recovery went through it.
+//
+// What we DO own is the pacing, and it is deliberately not driven by the
+// library's own `retries` argument. That counter means "consecutive FAILED
+// dials" — graphql-ws resets it to 0 on every `connection_ack`
+// (`dist/client.js:233`, commit "Lazy connects after successful reconnects are
+// not retries"), which is correct for its purpose and useless for ours: a
+// server that accepts the handshake and then immediately closes is not a
+// failed dial, so the curve would never escalate. That is precisely the
+// subscription-cap case CONNECTION_STABLE_MS exists for. So the count below is
+// ours, and only a connection that proves stable clears it.
+let dialAttempts = 0;
 const BASE_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
-let reconnectTimeoutId: ReturnType<typeof setTimeout> | null = null;
 let shouldAutoReconnect = true;
-// Set when a reconnect was requested while the device was offline — resumed
-// by useOnlineQueueSync on the next offline→online transition.
-let reconnectDeferredUntilOnline = false;
+
+// Resolvers for retries parked until the device is back online. Dialling into
+// an airplane-mode radio re-errors every active subscription and wakes the
+// radio for nothing, so the wait is gated rather than timed.
+let onlineWaiters: Array<() => void> = [];
 
 // A connection is only treated as "healthy" — and the exponential-backoff
 // counter reset — once it has stayed open for this long. Critical: when the
@@ -69,37 +97,20 @@ let reconnectDeferredUntilOnline = false;
 // escalating the backoff and eventually stops, instead of hammering the server.
 const CONNECTION_STABLE_MS = 10_000;
 
-// Close code the server uses to refuse a build below its configured minimum
-// version. Terminal: the same build reconnecting sends the same version.
-const WS_CLOSE_CLIENT_UPGRADE_REQUIRED = 4411;
-// Mid-stream session re-validation close. Reason is "Session expired" (refresh
-// the token, then reconnect) or "Session revoked" (re-authenticate) — plain
-// reconnection sends the same rejected token and closes identically.
-const WS_CLOSE_SESSION_AUTH = 4403;
-// The server recycles sockets that exceed its max subscription duration.
-// Operational, not an error: reconnect immediately without backoff.
-const WS_CLOSE_DURATION_EXCEEDED = 4410;
-// Deterministic graphql-ws protocol violations: malformed frame (4400),
-// subscribing before connection_ack (4401), unacceptable subprotocol (4406),
-// duplicate operation id (4409). All indicate a client bug — the next attempt
-// sends the same bad frame and closes identically, so reconnecting just
-// hot-loops. Never retry these; only a code change resolves them.
-const WS_CLOSE_PROTOCOL_ERROR_CODES = new Set([4400, 4401, 4406, 4409]);
 // One-shot guard for 4403: set when a close already triggered a token refresh,
-// cleared once a connection proves stable. A second 4403 while set means the
-// freshly refreshed token was rejected too — the session is revoked.
+// cleared once a connection proves stable. It stops a socket the refresh cannot
+// fix from spending one refresh per close.
 let sessionAuthRefreshAttempted = false;
 
-// The 4403 recovery needs proactiveTokenRefresh, but refreshToken.ts already
-// statically imports this module (reconnectWebSocket) — importing it back
-// would be a cycle. refreshToken.ts registers the function here at its module
-// init instead; it is always loaded before any socket exists (errorLink pulls
-// it into the link chain).
-let sessionAuthTokenRefresh: (() => Promise<string | null>) | null = null;
-export const registerSessionAuthRefresh = (
+// The 4403 fast path needs proactiveTokenRefresh, but refreshToken.ts already
+// imports this module, so importing it back would be a cycle. It registers the
+// function here at its own module init, which the link chain always runs before
+// any socket exists.
+let refreshAccessToken: (() => Promise<string | null>) | null = null;
+export const registerTokenRefresh = (
   refresh: () => Promise<string | null>,
 ): void => {
-  sessionAuthTokenRefresh = refresh;
+  refreshAccessToken = refresh;
 };
 
 let connectionStableTimeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -124,49 +135,63 @@ const getReconnectDelay = (attempt: number): number => {
   return delay + jitter;
 };
 
+const sleep = (ms: number) =>
+  new Promise<void>(resolve => setTimeout(resolve, ms));
+
 /**
- * Schedule a WebSocket reconnection with exponential backoff
+ * Park a pending retry until the device is back online.
+ *
+ * Strict `=== false` mirrors isOnline's err-toward-online semantics: unknown
+ * connectivity dials rather than stalling.
  */
-const scheduleReconnect = () => {
-  // Clear any pending reconnection
-  if (reconnectTimeoutId !== null) {
-    clearTimeout(reconnectTimeoutId);
-    reconnectTimeoutId = null;
-  }
+const waitUntilOnline = (): Promise<void> => {
+  if (useStore.getState().isOnline !== false) return Promise.resolve();
 
-  // Offline: dialing is pointless — every attempt re-errors all active
-  // subscriptions (log churn + radio wakeups). Defer the cycle; the
-  // offline→online transition resumes it via resumeWebSocketAfterOnline().
-  // Strict `=== false` mirrors isOnline's err-toward-online semantics.
-  if (useStore.getState().isOnline === false) {
-    if (!reconnectDeferredUntilOnline) {
-      reconnectDeferredUntilOnline = true;
-      logger.info(
-        '🔌 WebSocket reconnect deferred until the device is back online',
-      );
-    }
-    return;
-  }
-
-  // Check if we've exceeded max attempts
-  if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-    logger.error('❌ WebSocket max reconnection attempts reached');
-    reconnectAttempts = 0;
-    return;
-  }
-
-  const delay = getReconnectDelay(reconnectAttempts);
   logger.info(
-    `🔄 WebSocket scheduling reconnection in ${Math.round(delay)}ms (attempt ${
-      reconnectAttempts + 1
-    }/${MAX_RECONNECT_ATTEMPTS})`,
+    '🔌 WebSocket reconnect deferred until the device is back online',
   );
+  return new Promise<void>(resolve => {
+    onlineWaiters.push(resolve);
+  });
+};
 
-  reconnectTimeoutId = setTimeout(() => {
-    reconnectTimeoutId = null;
-    reconnectAttempts++;
-    reconnectWebSocket();
-  }, delay);
+const releaseOnlineWaiters = () => {
+  const waiters = onlineWaiters;
+  onlineWaiters = [];
+  waiters.forEach(resolve => resolve());
+};
+
+/**
+ * Hold every dial until it is allowed to proceed, then count it.
+ *
+ * This runs from `url()`, which graphql-ws documents as "called on every
+ * WebSocket connection attempt", stalling the connecting phase until it
+ * resolves. That is the only hook that sees EVERY dial. `retryWait` — the
+ * library's dedicated pacing hook, and where this logic would otherwise belong
+ * — is skipped entirely for a close of 1000: `shouldRetryConnectOrThrow`
+ * returns `locks > 0` before `retrying` is ever set, so `connect()` never
+ * enters its wait. Code 1000 right after the handshake is exactly how this
+ * server refuses a subscription over the per-user cap, so pacing that lives in
+ * `retryWait` would not cover the one case it was written for. Measured against
+ * the installed graphql-ws: an unpaced 1000 flap dials ~1259 times in 4s; the
+ * same flap through this gate dials 8.
+ *
+ * The first dial after a stable connection is immediate — this only paces a
+ * socket that keeps coming back.
+ */
+const awaitDialPermission = async (): Promise<void> => {
+  if (dialAttempts > 0) {
+    const delay = getReconnectDelay(dialAttempts - 1);
+    logger.info(
+      `🔄 WebSocket re-dialling in ${Math.round(delay)}ms (attempt ${
+        dialAttempts + 1
+      } since the last stable connection)`,
+    );
+    await sleep(delay);
+  }
+
+  await waitUntilOnline();
+  dialAttempts++;
 };
 
 /**
@@ -189,14 +214,59 @@ const getKeepAliveInterval = (): number => {
   return 12_000; // 12 seconds — normal operation
 };
 
+/**
+ * Persist a token pair the server rotated during the handshake.
+ *
+ * The ack carries `tokenRefreshed: true` and a new pair whenever the server
+ * rotated our expired access token, and it is the only delivery of that pair —
+ * dropping it would leave HTTP on a token the socket has already replaced, and
+ * strand a refresh token nothing can recover. An ordinary accept acks with no
+ * payload, so absence means nothing changed rather than something failed.
+ */
+const persistRotatedTokensFromAck = (payload: unknown): void => {
+  if (!payload || typeof payload !== 'object') return;
+
+  const { tokenRefreshed, accessToken, refreshToken } = payload as {
+    tokenRefreshed?: unknown;
+    accessToken?: unknown;
+    refreshToken?: unknown;
+  };
+
+  if (tokenRefreshed !== true) return;
+  if (typeof accessToken !== 'string' || !accessToken) return;
+  if (typeof refreshToken !== 'string' || !refreshToken) return;
+
+  logger.info('🔌 WebSocket handshake rotated the token pair — persisting');
+  useStore.getState().setTokens({ accessToken, refreshToken });
+};
+
 const createWsClient = () => {
   return createClient({
-    url: WS_URL,
+    url: async () => {
+      await awaitDialPermission();
+      return WS_URL;
+    },
     webSocketImpl, // ← critical for RN
     lazy: true, // only connect on first subscribe
     keepAlive: getKeepAliveInterval(),
+    // Unbounded on purpose. `awaitDialPermission` gates on connectivity and
+    // never dials faster than the 30s ceiling, so an unbounded count costs
+    // nothing — whereas a cap would mean real-time delivery stops permanently
+    // after an outage longer than it, with nothing left to restart it.
+    retryAttempts: Infinity,
+    // Pacing lives in `url()` instead, because that is the only hook every dial
+    // passes through (see awaitDialPermission). Resolving on a macrotask rather
+    // than a microtask: a microtask-only wait starves the timers the gate and
+    // the socket both run on.
+    retryWait: () => sleep(0),
+    // The one hook over the library's loop, and it answers only "is this
+    // verdict terminal" (./wsCloseCodes). `shouldAutoReconnect` is folded in
+    // here rather than kept in a timer of our own, because this is now the
+    // only thing that can stop a re-dial.
+    shouldRetry: errOrCloseEvent =>
+      shouldAutoReconnect && isRetryableWebSocketClose(errOrCloseEvent),
     connectionParams: () => {
-      const { accessToken: token } = useStore.getState();
+      const { accessToken: token, refreshToken } = useStore.getState();
       const apiKey = env.API_KEY;
       // Read the persisted id (not the nullable sync cache): this runs once
       // per connect, and a stable per-install deviceId is what lets the server
@@ -226,11 +296,23 @@ const createWsClient = () => {
         params.authorization = `Bearer ${token}`;
       }
 
-      // Refresh-token rotation is single-use and owned solely by the HTTP path
-      // (refreshToken.ts). Sending the refresh token here too would race it: the
-      // server rotates once and 401s the loser, which the HTTP path treats as a
-      // genuine auth failure and logs the user out. The socket carries only the
-      // access token and reconnects with a fresh one after an HTTP refresh.
+      // The refresh token rides along so the handshake can rotate an expired
+      // access token itself and be accepted, instead of being refused 4403 and
+      // needing a whole refresh-and-reconnect round trip first. The new pair
+      // comes back in the ack (persistRotatedTokensFromAck).
+      //
+      // This is also what makes a 4403 recoverable by a plain re-dial: the
+      // retry re-runs this function, so the attempt after a stale-token close
+      // presents whatever is stored now and can rotate server-side.
+      //
+      // It is only spent when the access token has actually expired — a valid
+      // one is accepted before the server ever reads this field. And racing the
+      // HTTP path is safe: whichever rotation loses is refused as superseded,
+      // which retries with the winner's successor rather than ending the
+      // session.
+      if (refreshToken) {
+        params.refreshToken = refreshToken;
+      }
 
       // deviceId does double duty: the server echoes it back as
       // originatorClientId so we can skip our own mutations' subscription
@@ -248,18 +330,16 @@ const createWsClient = () => {
         logger.info('🔌 WebSocket connectionParams', {
           deviceId: deviceId ?? '(none)',
           hasToken: !!token,
+          hasRefreshToken: !!refreshToken,
         });
       }
 
       return params;
     },
     on: {
-      connected: () => {
+      connected: (_socket: unknown, payload: unknown) => {
         isReconnecting = false;
-        if (reconnectTimeoutId !== null) {
-          clearTimeout(reconnectTimeoutId);
-          reconnectTimeoutId = null;
-        }
+        persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — backfill
         // listeners (notifications, etc.) catch anything missed while dropped.
@@ -271,14 +351,18 @@ const createWsClient = () => {
         // Defer the backoff reset until the connection proves stable. If the
         // server closes the socket before this fires (e.g. concurrent-
         // subscription cap rejection → code 1000), the `closed` handler clears
-        // this timer so the counter survives and scheduleReconnect() escalates
-        // the backoff instead of looping at the 1s base delay.
+        // this timer so the library's own retry counter keeps escalating the
+        // backoff instead of looping at the 1s base delay.
         clearConnectionStableTimer();
         connectionStableTimeoutId = setTimeout(() => {
           connectionStableTimeoutId = null;
-          reconnectAttempts = 0;
+          // The ONLY place the curve resets. Not on `connected` — a socket that
+          // is accepted and then closed straight away has not proved anything,
+          // and resetting there is what let the cap-rejection cycle repeat at
+          // the base delay forever.
+          dialAttempts = 0;
           // The connection held with the current token — a future 4403 is a
-          // fresh expiry, so the refresh-then-reconnect recovery re-arms.
+          // fresh expiry, so the one-shot refresh fast path re-arms.
           sessionAuthRefreshAttempted = false;
         }, CONNECTION_STABLE_MS);
 
@@ -303,11 +387,15 @@ const createWsClient = () => {
         const reason =
           typeof closeEvent?.reason === 'string' ? closeEvent.reason : '';
 
+        // Everything below either records a verdict or spends one fast-path
+        // refresh. None of it dials: `shouldRetry` + `retryWait` own that, and
+        // a second mechanism here is what previously made "recovery" a no-op.
+
         // This build is below the server's minimum version. Reconnecting sends
         // the same version and closes identically, so stop the cycle entirely
         // rather than backing off — only a store update can clear it. The HTTP
         // half surfaces the same refusal as CLIENT_UPGRADE_REQUIRED.
-        if (code === WS_CLOSE_CLIENT_UPGRADE_REQUIRED) {
+        if (code === WS_CLOSE_UPGRADE_REQUIRED) {
           shouldAutoReconnect = false;
           logger.error(
             `🔌 WebSocket closed: client upgrade required (app version ${CLIENT_VERSION}): ${reason}`,
@@ -318,48 +406,72 @@ const createWsClient = () => {
           return;
         }
 
-        // Mid-stream session-auth close. First 4403: refresh the token — a
-        // successful refresh reconnects the socket itself (performTokenRefresh
-        // → reconnectWebSocket), so nothing else is scheduled here. Repeated
-        // 4403 before the connection ever proved stable: the refreshed token
-        // was rejected too, i.e. the session is revoked — end the session
-        // instead of hot-looping reconnects the server will keep closing.
+        // The credentials cannot be refreshed into a working session: no token
+        // was sent, the token is malformed, or the refresh token was rejected.
+        // Retrying reproduces it exactly, so this is where a dead session has to
+        // stop asking — and the session end is what puts the user in front of
+        // the sign-in screen that actually resolves it.
+        if (code === WS_CLOSE_AUTH_FAILED) {
+          shouldAutoReconnect = false;
+          logger.error(
+            `🔌 WebSocket closed: re-authentication required (4412: ${reason}) — ending session`,
+          );
+          void useStore.getState().endSession('session_revoked');
+          return;
+        }
+
+        // The API key was refused, not the user. Also permanent, but the session
+        // is probably fine and signing the user out would hide a build or
+        // deployment fault behind a login screen they cannot fix.
+        if (code === WS_CLOSE_CLIENT_REJECTED) {
+          shouldAutoReconnect = false;
+          logger.error(
+            `🔌 WebSocket closed: API key refused (4413: ${reason}) — real-time updates are unavailable for this build`,
+          );
+          return;
+        }
+
+        // The access token is stale — expired, or superseded by a rotation
+        // another request won. Never terminal: anything unrecoverable arrives as
+        // 4412 above, and the retry re-runs connectionParams, so the next
+        // attempt presents whatever is stored by then and the server can rotate
+        // it during the handshake.
+        //
+        // The HTTP refresh here is a FAST PATH, not the recovery: it gets a
+        // fresh access token into the store before the backoff elapses. It is
+        // spent once per unstable connection because a socket the refresh
+        // cannot fix must not spend one per close.
         if (code === WS_CLOSE_SESSION_AUTH) {
           if (!sessionAuthRefreshAttempted) {
             sessionAuthRefreshAttempted = true;
             logger.info(
-              `🔌 WebSocket closed: session auth (4403: ${reason}) — refreshing token`,
+              `🔌 WebSocket closed: token stale (4403: ${reason}) — refreshing token`,
             );
-            sessionAuthTokenRefresh?.().catch(() => {
-              // Refresh failed — reactive HTTP refresh recovers on the next
-              // request and reconnects the socket then.
+            refreshAccessToken?.().catch(() => {
+              // Refresh failed — the retry still re-dials with the refresh
+              // token in connectionParams, and the reactive HTTP refresh
+              // recovers on the next request.
             });
           } else {
-            logger.error(
-              '🔌 WebSocket closed: repeated 4403 — session revoked, signing out',
+            logger.warn(
+              `🔌 WebSocket closed: token still stale (4403: ${reason}) — retrying with backoff`,
             );
-            void useStore.getState().endSession('session_revoked');
           }
           return;
         }
 
-        // Duration recycle: dial straight back (reset the backoff counter so
-        // the reconnect lands at the base delay, not an escalated one).
+        // Duration recycle: an operational close, not a fault. Reset the
+        // counter so the library's next wait lands at the base delay rather
+        // than an escalated one.
         if (code === WS_CLOSE_DURATION_EXCEEDED) {
-          if (shouldAutoReconnect) {
-            reconnectAttempts = 0;
-            scheduleReconnect();
-          }
+          dialAttempts = 0;
           return;
         }
 
         // Deterministic protocol violations (4400/4401/4406/4409): a client
         // bug the next attempt reproduces exactly. Stop reconnecting entirely —
         // backing off would just hot-loop against the same rejection.
-        if (
-          typeof code === 'number' &&
-          WS_CLOSE_PROTOCOL_ERROR_CODES.has(code)
-        ) {
+        if (typeof code === 'number' && isProtocolErrorCloseCode(code)) {
           shouldAutoReconnect = false;
           logger.error(
             `🔌 WebSocket closed: protocol error (${code}: ${reason}) — not retrying`,
@@ -367,22 +479,7 @@ const createWsClient = () => {
           return;
         }
 
-        // Auth error detection: 4500 (connection-time auth rejection, masked as
-        // internal error) or 1006+401. 4401 is NOT auth — it's a protocol
-        // violation handled above.
-        const isAuthCode = code === 4500;
-        const is401Rejection = code === 1006 && reason.includes('401');
-
-        // Specific auth error reasons from server. A close reason is the
-        // top-level channel, so these come from TopLevelErrorCode — which is
-        // also the only one of the two enums that declares AUTH_TOKEN_INVALID.
-        const hasAuthReason = [
-          TopLevelErrorCode.AuthTokenExpired,
-          TopLevelErrorCode.AuthRefreshTokenInvalid,
-          TopLevelErrorCode.AuthTokenInvalid,
-        ].some(r => reason.includes(r));
-
-        if (__DEV__ && !isAuthCode) {
+        if (__DEV__) {
           logger.info('🔌 WebSocket closed:', {
             code,
             reason: closeEvent?.reason,
@@ -391,24 +488,15 @@ const createWsClient = () => {
           });
         }
 
-        // Auth errors — don't reconnect from here. Recovery flows through:
-        // authLink detects expired token on next HTTP request →
-        // proactiveTokenRefresh() in refreshToken.ts →
-        // reconnectWebSocket() in wsLink.ts (one-directional dependency)
-        if (isAuthCode || is401Rejection || hasAuthReason) {
-          logger.info(
-            '🔌 WebSocket closed: auth error, awaiting re-authentication',
-          );
-          return;
-        }
-
-        // Don't reconnect when explicitly disabled (e.g., during logout)
-        if (!shouldAutoReconnect) {
-          return;
-        }
-
-        // Schedule automatic reconnection with backoff
-        scheduleReconnect();
+        // Everything left — 4500, 4429, 1006, 1000 — is transient. Auth
+        // refusals no longer reach here: the server names each one with its own
+        // code above, so nothing has to be inferred from a close reason, which
+        // is truncated in production anyway.
+        //
+        // 4429 and 4500 are the exception the subscription layer covers:
+        // graphql-ws refuses to retry them whatever `shouldRetry` says
+        // (isLibraryFatalCloseCode), so their subscriptions end and only a
+        // re-subscribe brings delivery back.
       },
       error: (error: unknown) => {
         isReconnecting = false;
@@ -452,15 +540,45 @@ const createWsClient = () => {
   });
 };
 
-// Initialize the client
-wsClient = createWsClient();
+const getOrCreateClient = (): Client => {
+  if (!currentClient) {
+    currentClient = createWsClient();
+  }
+  return currentClient;
+};
 
-export const wsLink = new GraphQLWsLink(wsClient);
+currentClient = createWsClient();
 
-// Function to reconnect WebSocket with new token
-// Uses terminate() to force-close the connection, which triggers the `closed`
-// handler in createWsClient. The library's lazy reconnection then re-establishes
-// the connection, picking up the latest token via the connectionParams function.
+/**
+ * A stable stand-in for the client, so the real one can be replaced.
+ *
+ * `GraphQLWsLink` captures whatever it is constructed with and only ever calls
+ * `subscribe`, so handing it the client directly would pin the first instance
+ * for the life of the process — including after `dispose()` has latched it
+ * shut. Every method forwards to whichever client is current, creating one if
+ * a session end dropped it.
+ */
+const wsClientFacade: Client = {
+  on: (...args: Parameters<Client['on']>) => getOrCreateClient().on(...args),
+  subscribe: (...args: Parameters<Client['subscribe']>) =>
+    getOrCreateClient().subscribe(...args),
+  iterate: (...args: Parameters<Client['iterate']>) =>
+    getOrCreateClient().iterate(...args),
+  dispose: () => currentClient?.dispose(),
+  terminate: () => currentClient?.terminate(),
+};
+
+export const wsLink = new GraphQLWsLink(wsClientFacade);
+
+/**
+ * Force the socket to re-dial so it picks up a token that just changed.
+ *
+ * `terminate()` closes a live connection, which starts the library's retry —
+ * and that retry re-runs `connectionParams`, which is the point. It does
+ * nothing when no socket is open, which is correct rather than a gap: with no
+ * connection there is also no subscription waiting on one, and the subscription
+ * layer re-subscribing is what dials again.
+ */
 export const reconnectWebSocket = () => {
   const now = Date.now();
 
@@ -475,41 +593,26 @@ export const reconnectWebSocket = () => {
 
   try {
     logger.info('🔄 WebSocket reconnecting with new token...');
-
-    // Terminate forces an immediate close (unlike dispose which is graceful)
-    // This triggers the `closed` handler which will call scheduleReconnect()
-    // The new client created by scheduleReconnect gets the latest token
-    // via the connectionParams function (already a function, so no hack needed)
-    if (wsClient) {
-      wsClient.terminate();
-    }
-
-    isReconnecting = false;
+    currentClient?.terminate();
   } catch (error) {
-    isReconnecting = false;
     logger.error('❌ WebSocket reconnection failed:', {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
-    // Schedule another attempt if auto-reconnect is enabled
-    if (shouldAutoReconnect) {
-      scheduleReconnect();
-    }
+  } finally {
+    isReconnecting = false;
   }
 };
 
 /**
- * Resume a reconnect cycle that was deferred while the device was offline.
- * Called by useOnlineQueueSync on the offline→online transition. No-ops when
- * nothing was deferred or auto-reconnect is disabled (logout).
+ * Resume retries that were parked while the device was offline.
+ * Called by useOnlineQueueSync on the offline→online transition.
  */
 export const resumeWebSocketAfterOnline = () => {
-  if (!reconnectDeferredUntilOnline) return;
-  reconnectDeferredUntilOnline = false;
-  if (!shouldAutoReconnect) return;
-  reconnectAttempts = 0;
+  if (onlineWaiters.length === 0) return;
   logger.info('🔌 Device back online — resuming deferred WebSocket reconnect');
-  reconnectWebSocket();
+  dialAttempts = 0;
+  releaseOnlineWaiters();
 };
 
 // Export state checkers for other modules
@@ -518,42 +621,59 @@ export const isWebSocketReconnecting = () => isReconnecting;
 /**
  * Disable automatic WebSocket reconnection.
  * Call this during logout to prevent reconnection attempts.
+ *
+ * `shouldRetry` reads this flag, so it stops the library's loop as well as any
+ * retry currently parked waiting to come back online.
  */
 export const disableAutoReconnect = () => {
   shouldAutoReconnect = false;
-  reconnectDeferredUntilOnline = false;
-  if (reconnectTimeoutId !== null) {
-    clearTimeout(reconnectTimeoutId);
-    reconnectTimeoutId = null;
-  }
   clearConnectionStableTimer();
-  reconnectAttempts = 0;
+  dialAttempts = 0;
   sessionAuthRefreshAttempted = false;
+  // Let parked retries proceed so they reach `shouldRetry` and stop there,
+  // instead of holding a promise that never settles.
+  releaseOnlineWaiters();
 };
 
 /**
  * Enable automatic WebSocket reconnection.
  * Call this after login to allow reconnection on socket close.
+ *
+ * Also restores a client if the previous session's teardown disposed one: a
+ * disposed client connects once and then silently refuses every retry, so it
+ * must not be inherited by a new session.
  */
 export const enableAutoReconnect = () => {
   shouldAutoReconnect = true;
+  getOrCreateClient();
 };
 
 // Export function to dispose WebSocket for logout cleanup
 export const disposeWebSocket = () => {
+  // Disable auto-reconnect before disposing
+  disableAutoReconnect();
+
+  const client = currentClient;
+  // Dropped BEFORE the dispose can throw. `dispose()` is one-way inside
+  // graphql-ws — a client that has been asked to dispose can only ever be a
+  // client that silently refuses to retry — so a failed dispose is the one
+  // case where keeping the reference is worst: it hands the next sign-in a
+  // socket that connects once and then goes quiet.
+  currentClient = null;
+  // Module state, not client state. Reset whether or not there was a client to
+  // dispose, so two session ends in a row leave the same thing behind as one.
+  // Next session's first connect is a fresh connection, not a reconnect:
+  // without this reset it would fire the reconnect listeners and trigger a
+  // spurious notifications backfill.
+  isReconnecting = false;
+  lastReconnectTime = 0;
+  hasConnectedBefore = false;
+
+  if (!client) return;
+
   try {
-    // Disable auto-reconnect before disposing
-    disableAutoReconnect();
-    if (wsClient) {
-      logger.info('🔌 Disposing WebSocket client for logout');
-      wsClient.dispose();
-      isReconnecting = false;
-      lastReconnectTime = 0;
-      // Next session's first connect is a fresh connection, not a reconnect —
-      // without this reset it would fire the reconnect listeners and trigger a
-      // spurious notifications backfill.
-      hasConnectedBefore = false;
-    }
+    logger.info('🔌 Disposing WebSocket client for logout');
+    client.dispose();
   } catch (error) {
     logger.warn('Error disposing WebSocket:', serializeError(error));
   }
@@ -564,7 +684,9 @@ export const getWebSocketState = () => {
   return {
     isReconnecting,
     lastReconnectTime,
-    hasClient: !!wsClient,
-    reconnectAttempts,
+    hasClient: !!currentClient,
+    // Dials since the last connection that proved stable — what the backoff
+    // curve is actually indexed on.
+    reconnectAttempts: dialAttempts,
   };
 };

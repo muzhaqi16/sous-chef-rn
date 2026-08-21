@@ -57,6 +57,7 @@ import { Telemetry } from '#/services/telemetry';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 /**
  * Cached `itemsConnection` shape as seen inside a `cache.modify` field
@@ -475,8 +476,21 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useSubscription(MyShoppingListsEventsDocument, {
-    skip: !userId || rejected,
+  const myListsSkip = !userId || rejected;
+  const myListsEvents = useSubscription(MyShoppingListsEventsDocument, {
+    skip: myListsSkip,
+    // Envelope + id only; handlers read entities back with queries. Left
+    // cacheable, Apollo re-creates a just-deleted item as a bare `{ id }` from
+    // the server's echo of our own delete. The handler above re-evicts it, and
+    // that only avoids a page refetch because Apollo defers its incomplete-
+    // result check by a tick — see usePantrySubscriptions for the pantry,
+    // which had no such re-eviction and refetched GetPantry on every delete.
+    fetchPolicy: 'no-cache',
     ...myListsEventsHandlers,
   });
+  useSubscriptionTransportRecovery(
+    'MyShoppingListsEvents',
+    myListsEvents,
+    myListsSkip,
+  );
 }

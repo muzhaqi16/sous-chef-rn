@@ -37,6 +37,7 @@ import {
 } from '#/services/subscriptions/types';
 import { logger } from '#/utils/environment';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
@@ -121,9 +122,11 @@ export function useHomeSubscriptions(userId?: string) {
     },
   });
 
-  useSubscription(HomeEventsDocument, {
+  const homeSkip = !selectedHomeId || !isHomeSelectionReady || rejected;
+  const homeEvents = useSubscription(HomeEventsDocument, {
     variables: { homeId: selectedHomeId! },
-    skip: !selectedHomeId || !isHomeSelectionReady || rejected,
+    skip: homeSkip,
     ...homeEventHandlers,
   });
+  useSubscriptionTransportRecovery('HomeEvents', homeEvents, homeSkip);
 }

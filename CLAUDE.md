@@ -3,6 +3,9 @@
 - `npm run lint` also lints every `.graphql` operation against the codegen-pulled schema (`@graphql-eslint` override in `.eslintrc.js`, files `**/*.graphql`): `fields-on-correct-type` (selecting a field/arg the schema lacks) and `no-deprecated` (using an `@deprecated` field/arg/enum value) are both `error`. This surfaces API drift — a renamed/removed field or a freshly-deprecated one — at lint time, one at a time, instead of as a surprise `npm run codegen` batch failure. The guard reads `src/graphql/generated/schema.graphql`, so run `npm run codegen` first if the schema is stale.
 - typecasting \_\_typename: 'Mutation' as any, is never needed
 - estimatedItemSize has been deprecated in version 2 of flashlist and to never use it which is the version that is app is uisng
+- **Never hand a FlashList `data` prop a value produced by `useDeferredValue` or updated inside `startTransition`.** FlashList truncates its layout table during _render_ and re-indexes cells only at commit; only a transition render can be interrupted between the two, and a native `onLayout` landing in that gap throws `index out of bounds, not enough layouts` — a production fatal. Mechanism, rule and validation: `docs/flashlist-layout-index-race.md`.
+- **Every FlashList that uses `useFlashListPerformance` passes `perfCallbacks.CellRendererComponent`.** That renderer is how blank cells are counted (committed cells vs visible indices); FlashList's own viewability is geometric and 250 ms-lagged, so reports from before 2026-08-20 measured scroll speed, not blanks. `docs/flashlist-performance-analysis.md` § "Reading the instrumentation".
+- **Event subscriptions whose payload is an envelope + `node { id }` run with `fetchPolicy: 'no-cache'`** (`PantryEvents`, `MyShoppingListsEvents`). Cached, the envelope re-creates a just-deleted row as a bare `{ id }`, the list query goes incomplete, and Apollo refetches the whole page per delete. `docs/flashlist-performance-analysis.md` § "Refetch after every write".
 - **Never use `InteractionManager` from `react-native`.** It has been deprecated. Avoid long-running work on the JS thread and use `requestIdleCallback` instead for deferring non-urgent tasks.
 
 ### Bottom Sheet Convention
@@ -17,6 +20,53 @@
   It provides the ref, standard `modalProps` (backdrop, animations, insets, back handler),
   and `contentContainerStyle`. Control visibility via a `visible` boolean state + `onDismiss`
   callback — never call `present()` / `dismiss()` directly outside of an effect.
+- **Every text input inside a sheet must resolve to gorhom's `BottomSheetTextInput`.**
+  This is the library's own requirement, not a local preference: the
+  [keyboard-handling docs](https://gorhom.dev/react-native-bottom-sheet/keyboard-handling)
+  say it is "pre-integrated" to "communicate internally to react to the keyboard
+  appearance", and the only sanctioned alternative is to "copy the `handleOnFocus`
+  and `handleOnBlur`" logic into your own component.
+
+  The mechanism, from the installed source: `BottomSheetTextInput.handleOnFocus`
+  sets `animatedKeyboardState.target`, and `useAnimatedKeyboard.ts` **caches and
+  discards** a keyboard-shown event while that target is unset. A plain RN
+  `TextInput` therefore leaves the sheet blind to the keyboard — `keyboardBehavior`
+  never fires and the sheet sits still while the keyboard covers the field.
+
+  It cannot be hardcoded, because `BottomSheetTextInput` reads the sheet's internal
+  context and **throws outside a sheet** (`useBottomSheetInternal`), and shared
+  fields render on full screens too. Pick it from context, as `FormInput`,
+  `FractionInput`, `EditableCounter` and `BottomSheetAutocompleteInput` do:
+
+  ```tsx
+  const InputComponent = useIsBottomSheetInput()
+    ? ThemedBottomSheetTextInput
+    : ThemedTextInput;
+  ```
+
+  `BottomSheetFormScrollView` supplies that context, so a sheet whose form uses it
+  gets the right input everywhere for free.
+
+- **Sheets containing inputs use `BottomSheetFormScrollView`, not
+  `BottomSheetScrollView`** — a gorhom-registered `KeyboardAwareScrollView` from
+  `react-native-keyboard-controller`, which is what `react-native-edge-to-edge`'s
+  README recommends once edge-to-edge stops `adjustResize` from resizing the window.
+  `bottomOffset` defaults to `16` in the component — do NOT restate it at call
+  sites, which only creates a second place to change. It is measured from the
+  focused input's **bottom edge**, not the caret the prop's docstring mentions —
+  see `point = absoluteY + inputHeight` in `KeyboardAwareScrollView/index.tsx`.
+  Without it a focused field lands flush against the keyboard, and without the
+  container nothing scrolls at all.
+
+  **This migration is not finished.** Eight sheets still use
+  `BottomSheetKeyboardAwareScrollView` directly and therefore do NOT supply
+  `BottomSheetInputContext`, so their inputs resolve to the plain RN one:
+  `AdjustQuantityModal`, `PantryActionModal`, `ManageRecipeSheet`,
+  `SearchResultsScreen`, and the four `AddToPantrySheet` pages
+  (`grep -rl BottomSheetKeyboardAwareScrollView src` — that list is the whole
+  set, so the count above is checkable rather than remembered). Convert one when you are
+  already working in it; the rule above describes where this is going, not
+  where it entirely is.
 
 ### Pressable & Modal Convention
 
@@ -138,6 +188,19 @@ happen inside that factory.
   why every other navigator stays on `'pause'`, and why adding a fifth tab or a
   heavy subscription to a tab should prompt re-measuring rather than assuming.
 
+  **`'none'` keeps the tree mounted; it does not make its watchers free.** A
+  screen that watches _another_ tab's query as a secondary consumer must stand
+  that watcher down while blurred. `useRecipeDiscovery` held a live `GetPantry`
+  watcher, so every pantry delete re-rendered the hidden Recipes tab and —
+  because its discovery cache is keyed by the ingredient list — called the
+  recipe API from a hidden tab. It now passes
+  `PantryQueryOptions { skip: !isFocused, fetchPolicy: 'cache-first' }` driven
+  by `useFocusEffect` (the repo's preference over `useIsFocused`, see
+  `useTabBarAddButton`). `cache-first` is load-bearing: Apollo resets a
+  re-enabled query to its initial policy, so `skip` alone costs a
+  `cache-and-network` round-trip per focus. `usePreservedConnection` holds the
+  last result across the skip, so nothing downstream moves while blurred.
+
   Asserted by `HomeTabs.test.tsx` and `RootNavigator.test.tsx` (the latter
   checks `Home` is the ONLY root screen that opts out). Every other navigator
   stays on the default `'pause'`. (Unistyles ShadowTree updates on paused
@@ -198,9 +261,7 @@ The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 
   > **Verified 2026-08 against `babel-plugin-react-compiler@1.0.0`.** Re-derive with
   > `node scripts/probe-compiler-try-forms.mjs`, which compiles one fixture per shape and
-  > prints the compiler's own diagnostic (`"Handle TryStatement with a finalizer
-('finally') clause"`, `"Support value blocks (conditional, logical, optional chaining,
-etc) within a try/catch statement"`, `"Unexpected terminal in optional"`).
+  > prints the compiler's own diagnostic — `Handle TryStatement with a finalizer ('finally') clause`, `Support value blocks (conditional, logical, optional chaining, etc) within a try/catch statement`, `Unexpected terminal in optional`.
   >
   > This rule previously read "never write try-catch **or** try-finally". That was
   > over-broad — a plain `try/catch` compiles — but it was not wrong by accident: most
@@ -504,13 +565,35 @@ Consumer hooks do not need to implement their own relevance checks.
 
 ### Autocomplete UI Variants & Dropdown Stacking
 
-- **Inside a bottom sheet, prefer `variant="inline"`** for `*AutocompleteField`
-  components. The modal variant opens a second `BottomSheetModal`, which stacks
-  a near-identical sheet over the host (confusing) — reserve it for full-screen
-  hosts (e.g. `AddEditItem`). Any modal-variant picker that CAN be presented
-  while another sheet is open must keep `stackBehavior="push"` (gorhom's
-  default `'switch'` minimizes the host sheet, which reads as the whole sheet
-  crashing closed). `BottomSheetAutocompleteInput` sets this.
+- **Both variants are fine inside a bottom sheet — pick by result set, not by host.**
+  This rule previously said to avoid `variant="modal"` in a sheet because stacking
+  a second sheet is "confusing". That was a local preference dressed up as a
+  constraint: gorhom advertises
+  ["Support stack sheet modals"](https://gorhom.dev/react-native-bottom-sheet/modal)
+  as a feature, with an Apple Maps clone as its reference. The library has no
+  position here, so neither should this file. What survives is measurable:
+  [Baymard's mobile autocomplete research](https://baymard.com/blog/autocomplete-design)
+  targets **4–8 suggestions on mobile** because the list is squeezed between the
+  field and the keyboard. `InlineAutocomplete` caps at `maxResults = 6`, so inline
+  suits a set the user narrows by typing; a catalog that needs its own search and
+  browsing suits the modal picker.
+- **Two things a stacked picker must get right.** `stackBehavior="push"` — gorhom's
+  default `'switch'` "minimize[s] the current modal then mount[s] the new one"
+  (`bottomSheetModal/types.d.ts`), which reads as the host crashing closed. And,
+  where it can, a snap point **taller than its host**, so the picker reads as a
+  separate surface rather than the host redrawing itself; that height difference
+  is what makes the Apple Maps reference legible.
+  `BottomSheetAutocompleteInput` sets both (`stackBehavior="push"`,
+  `snapPoint = '85%'` over hosts that mostly sit at 70%).
+
+  The height half is a preference, not an invariant, and the file used to state
+  it as one. Hosts in this app run from 35% to 95% — `CorrectWeightModal`
+  expands to 85%, `MoveToPantryModal` and `ManageRecipeSheet` to 95% — so no
+  single default can clear all of them, and `topInset` caps everything at the
+  safe area anyway. Over a tall host the stack reads through the push animation
+  and the dimmed backdrop instead. `snapPoint` is a prop; override it per call
+  site rather than moving the default to chase one host.
+
 - **Every sibling an inline dropdown can overlap needs an explicit, non-zero,
   descending zIndex on a `collapsable={false}` view — at every ancestor level
   up to where the overlap happens.** RN `zIndex` only orders siblings, and
@@ -751,11 +834,11 @@ The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert o
 **Two ways to translate, and they differ only by whether you are in a component.**
 
 ```ts
-import { useTranslation } from '#/i18n';   // components and hooks
+import { useTranslation } from '#/i18n'; // components and hooks
 const { t } = useTranslation();
 
-import { t } from '#/i18n';                // module scope: services, utilities,
-                                           // mutation onError handlers
+import { t } from '#/i18n'; // module scope: services, utilities,
+// mutation onError handlers
 ```
 
 The module-scope `t` does **not** subscribe to language changes. A
@@ -786,8 +869,8 @@ entry names its exact key set and must still describe a live duplicate.
 **Never concatenate a number with a translated noun.**
 
 ```ts
-`${count} ${t('recipes.ingredientsSuffix')}`   // ✗ "1 ingredients"
-t('recipes.ingredientCount', { count })        // ✓
+`${count} ${t('recipes.ingredientsSuffix')}`; // ✗ "1 ingredients"
+t('recipes.ingredientCount', { count }); // ✓
 ```
 
 Concatenation loses plural agreement, bakes English word order into code, and
@@ -803,8 +886,7 @@ locale needs but its JSON lacks, from `_other`, before `init`.
 
 > A missing category is not graceful degradation. Verified against `i18next@26`:
 > it does NOT fall back to that locale's `_other` — it falls through to
-> `fallbackLng`, so an Italian user at a count of 1,000,000 reads `"1000000
-> items"` in English. Spanish and Italian need `many`; nothing this app counts
+> `fallbackLng`, so an Italian user at a count of 1,000,000 reads `1000000 items` in English. Spanish and Italian need `many`; nothing this app counts
 > reaches it, so the 82 hand-written strings would never have rendered.
 > `__tests__/i18n/pluralCategories.test.ts` asks `Intl.PluralRules` which
 > categories each locale needs rather than hardcoding one/other, so a locale
@@ -853,6 +935,97 @@ it plants a marker in **every** key of the real `PERSISTED_KEYS` allowlist and
 requires each survivor to be named in `KEPT_ON_PURPOSE` with a reason. Adding a
 persisted key fails the test until someone classifies it.
 
+**A session end must also STOP things, not just clear them.** Clearing the tokens
+leaves the socket dialling, in-flight queries landing and the offline queue
+waking — all against credentials the server has already refused, which is what
+the user sees as a screen that never loads. `endSession` therefore runs
+`runSessionTeardown()` (`src/store/sessionTeardown.ts`) _before_ the state reset.
+
+That registry exists because the steps live in the Apollo layer while
+`endSession` lives in the store, and importing both ways closes the cycle
+`store → resetManager → apollo/client → links → store`. Each module registers
+its own step at module init — `logoutCleanup` the Apollo teardown, `queueManager`
+the drain cancel — the same hand-off `registerApolloClient` and
+`registerTokenRefresh` use. Three things about it are load-bearing:
+
+- **`completeLogout()` must run after `performLogoutCleanup()`.** That latch makes
+  `authLink` and `errorLink` refuse every operation; left set, the next sign-in
+  cannot send its login mutation.
+- **`queueManager.onLogout()` is deliberately NOT called.** It deletes the user's
+  queued writes, and a rejected refresh token is not the user choosing to discard
+  unsynced work. Only the pending drain is cancelled; the entries wait for that
+  user's next sign-in. `onLogout` stays on the deliberate sign-out path.
+- **`apiReachabilityBreaker`'s `/health` probe keeps running.** It is
+  unauthenticated, and the sign-in screen needs to know whether the API is up.
+
+### Token Refresh & WebSocket Close Codes
+
+**Both transports rotate, and that is safe** — but only because the server tells
+a lost race apart from a dead session. Rotation is single-use; when an HTTP
+refresh and a WebSocket handshake reach for the same token, the loser is refused
+`AUTH_REFRESH_TOKEN_SUPERSEDED`, which means the winner's successor is valid and
+the session is alive. `AUTH_REFRESH_TOKEN_INVALID` is the terminal one. Never
+collapse the two: signing out on the first ends a session the server considers
+perfectly healthy.
+
+**The hazard that remains is re-presenting a token you already know was spent.**
+The server forgives a replay for ten seconds and then reads it as compromise,
+revoking the whole token lineage — successor included. So the retry rule is not
+"retry on superseded", it is **retry only once a different token is stored**
+(`retryWithSuccessorToken` in `refreshToken.ts`). An unchanged token means our own
+response was the one that went missing and no successor exists anywhere; there is
+nothing to recover, so defer rather than spend the lineage looking. That decision
+lives in one place, and the socket's 4403 handling routes through it rather than
+reconnecting straight into a second rotation attempt — the reconnect backoff
+crosses the ten-second window by its fourth attempt.
+
+`connectionParams` sends the refresh token on every connect. The server spends it
+only when the access token has actually expired, so an ordinary connect costs
+nothing, and the rotated pair comes back in the `connection_ack` payload — the
+only delivery there will ever be.
+
+**graphql-ws owns the reconnect loop. The app owns only the verdict.**
+The library re-dials after every retryable close, re-evaluating
+`connectionParams` each attempt; `retryWait` in `wsLink.ts` supplies the backoff
+curve and parks a retry while the device is offline. `shouldRetry` is the single
+hook over that loop and answers one question — **is this verdict terminal** —
+reading `src/apollo/links/wsCloseCodes.ts`. `shouldAutoReconnect` is folded into
+it, because it is now the only thing that can stop a re-dial.
+
+Do NOT add a second backoff beside it. There was one: a timer whose only action
+was `wsClient.terminate()`, which is `if (connecting) emit('closed')` — a no-op
+once a socket has closed, since graphql-ws clears `connecting` in its own close
+handler. It could interrupt a live connection; it could never dial one, so every
+path that looked like recovery silently wasn't.
+
+| Code                      | Meaning                                                            | Response                                                         |
+| ------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 4403                      | Token is stale — expired, or superseded by a rotation we lost      | **Never terminal.** Retry; one HTTP refresh as a fast path       |
+| 4410                      | Subscription lifetime cap                                          | Retry with the counter reset, so the next wait is the base delay |
+| 4411                      | Build below the server minimum                                     | Stop; prompt to update                                           |
+| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream | Stop **and** `endSession`                                        |
+| 4429 / 4500               | Transient, but the library refuses to retry them regardless        | The subscription layer re-subscribes (see below)                 |
+| 4413                      | API key refused                                                    | Stop, but do **not** sign the user out — it is a build fault     |
+| 1006 / 1000               | Transient                                                          | Library retry with backoff                                       |
+| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                 | Stop; only a code change fixes it                                |
+
+**`shouldRetry` is not consulted for every code.** `shouldRetryConnectOrThrow`
+(graphql-ws `dist/client.js:278`) rethrows 4400, 4401, 4406, 4409, 4429, 4500 and
+the internal fatal range before reaching it — and a rethrow errors every active
+subscription's sink. Apollo's `useSubscription` has no auto-restart, so those
+subscriptions are finished until something re-subscribes.
+`useSubscriptionTransportRecovery` is what does, on the line after every
+`useSubscription`; `isLibraryFatalCloseCode` records the list.
+
+**Never branch on the close reason.** Each code carries exactly one verdict, and
+the same reason string is emitted for several distinct conditions.
+
+**A session end must drop the socket client, not just dispose it.** `dispose()`
+latches `disposed` inside graphql-ws with no reset, and a disposed client
+connects once and then refuses every retry — silently. `disposeWebSocket()`
+therefore clears the reference so the next `enableAutoReconnect()` builds a fresh
+one.
+
 ### Bundled Credentials Convention
 
 Every credential-shaped var in `generate-env.js`'s `KEYS` must be classified in
@@ -878,7 +1051,7 @@ npm run lint       # Verify code quality
 npm test           # Run test suite
 ```
 
-Two checks are not part of those and fail independently:
+Two checks are not part of those, and nothing runs them for you:
 
 ```bash
 node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
@@ -890,3 +1063,15 @@ node scripts/check-bundled-secrets.mjs --self-test
 bails in the files where a variant call was deliberately extracted into a leaf —
 moving it back into the composite keeps the count unchanged and would otherwise
 pass.
+
+`npm run check:version-sync` runs on **pre-push**, alongside `typecheck`,
+`i18n:check` and `check:codegen-orphans`. It compares `package.json`,
+`versionName`, and **each** `MARKETING_VERSION` in the pbxproj. A failure means
+the mismatched platform would ship reporting a version it is not: `getVersion()`
+is native, so the version-keyed Apollo cache purge
+(`ApolloCachePersistence.ts`) never fires there and `CLIENT_VERSION` reaches the
+server's minimum-version gate wrong — with nothing else failing to warn you,
+which is exactly why it is a hook and not a habit. iOS
+`CURRENT_PROJECT_VERSION` and Android `versionCode` are deliberately NOT
+compared: they are per-platform build counters on independent sequences, read by
+`getBuildNumber()`.

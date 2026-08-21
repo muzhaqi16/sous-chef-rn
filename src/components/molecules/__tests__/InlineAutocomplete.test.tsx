@@ -96,4 +96,56 @@ describe('InlineAutocomplete', () => {
     expect(onRows).toHaveBeenCalledTimes(1);
     expect((onRows.mock.calls[0][0] as Row[])[0].unitName).toBe('kg');
   });
+
+  // `reserveDropdownSpace` renders an in-flow spacer so a sheet sized to its own
+  // content grows to fit the absolutely-positioned list. The spacer must be tied
+  // to the list ACTUALLY rendering, not to the broader "should the dropdown
+  // show" flag — that stays true for a settled search that matched nothing, and
+  // reserving then leaves a band of blank sheet under the field.
+  describe('reserveDropdownSpace', () => {
+    const Field: React.FC<{ items: string[]; loading?: boolean }> = ({
+      items,
+      loading,
+    }) => (
+      <InlineAutocomplete<string>
+        label="Unit"
+        value="kg"
+        onChangeText={() => {}}
+        items={items}
+        loading={loading}
+        renderItem={item => <Text>{item}</Text>}
+        keyExtractor={item => item}
+        onSelect={() => {}}
+        reserveDropdownSpace
+        testID="unit-input"
+      />
+    );
+
+    // Typing is what opens the dropdown — focus only opens it when there are
+    // already suggestions to show, so it cannot reach the empty-result state
+    // this is about.
+    const search = (term: string) => {
+      fireEvent.changeText(screen.getByTestId('unit-input'), term);
+      act(() => {
+        jest.advanceTimersByTime(300);
+      });
+    };
+
+    it('reserves space while suggestions are on screen', () => {
+      render(<Field items={['kg', 'kilogram']} />);
+      search('k');
+
+      expect(screen.getByTestId('dropdown-spacer')).toBeTruthy();
+    });
+
+    it('reserves nothing when a settled search matched no suggestions', () => {
+      render(<Field items={[]} />);
+      // A search that has come back empty: the dropdown is "showing" by the
+      // flag, but there is no list and no footer, so nothing renders.
+      search('zzz');
+
+      expect(screen.queryByText('kg')).toBeNull();
+      expect(screen.queryByTestId('dropdown-spacer')).toBeNull();
+    });
+  });
 });

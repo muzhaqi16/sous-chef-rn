@@ -1,10 +1,13 @@
 import { Observable, type ApolloClient } from '@apollo/client';
 import type { ApolloLink } from '@apollo/client/link';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
-import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { isSessionEndingAuthCode } from '#/utils/authErrorCodes';
+import {
+  isSessionEndingAuthCode,
+  isSupersededRefreshCode,
+} from '#/utils/authErrorCodes';
+import { isTokenExpiringSoon } from '#/utils/tokenExpiry';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
@@ -12,7 +15,7 @@ import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import {
   reconnectWebSocket,
   isWebSocketReconnecting,
-  registerSessionAuthRefresh,
+  registerTokenRefresh,
 } from './wsLink';
 
 // The Apollo client singleton is injected after creation rather than imported
@@ -121,6 +124,10 @@ const REFRESH_CONFIG = {
   RETRY_DELAY_BASE: 1000, // Base delay in ms
   MIN_REFRESH_INTERVAL: 5000, // Minimum time between refresh attempts
   BACKOFF_MULTIPLIER: 2,
+  // How long to give the winner of a rotation race to store its successor
+  // before concluding there isn't one. Short, because the server's reuse grace
+  // window is 10s and the successor is written the moment the winner resolves.
+  SUPERSEDED_SETTLE_MS: 300,
 };
 
 const processQueue = (token: string | null) => {
@@ -171,6 +178,58 @@ const calculateRetryDelay = (retryCount: number): number => {
     REFRESH_CONFIG.RETRY_DELAY_BASE *
     Math.pow(REFRESH_CONFIG.BACKOFF_MULTIPLIER, retryCount)
   );
+};
+
+/**
+ * Recover from a rotation we lost.
+ *
+ * Our token was spent by a rotation that got there first — the socket's
+ * handshake, or a request whose response we never saw. The session is intact, so
+ * the exchange is retryable, but ONLY with a different token: re-sending the
+ * spent one loops until the server's reuse grace window elapses, and a replay
+ * past it is read as compromise and revokes the entire lineage.
+ *
+ * So the successor has to actually be there. Usually it is — the winner writes
+ * it through `setTokens` as it resolves — but a concurrent race can settle this
+ * loser first, hence the one delayed re-check. Still unchanged after that means
+ * the winner was us and our own response went missing, leaving no successor
+ * anywhere: defer rather than spend the lineage looking for one.
+ */
+const retryWithSuccessorToken = async (
+  presentedToken: string,
+  state: ReturnType<typeof useStore.getState>,
+): Promise<string | null> => {
+  const hasSuccessor = () => {
+    const stored = useStore.getState().refreshToken;
+    return !!stored && stored !== presentedToken;
+  };
+
+  if (!hasSuccessor()) {
+    await new Promise(resolve =>
+      setTimeout(resolve, REFRESH_CONFIG.SUPERSEDED_SETTLE_MS),
+    );
+  }
+
+  if (!hasSuccessor()) {
+    logger.error(
+      'Refresh token was superseded but no successor was stored, deferring token refresh',
+    );
+    state.tokenRefreshFailed('unknown');
+    throw new Error('Refresh token superseded with no successor available');
+  }
+
+  if (refreshState.retryCount >= REFRESH_CONFIG.MAX_RETRIES) {
+    logger.error(
+      'Refresh token superseded repeatedly, deferring token refresh',
+    );
+    state.tokenRefreshFailed('unknown');
+    throw new Error('Refresh token superseded after max retries');
+  }
+
+  logger.info(
+    'Refresh token was superseded by a concurrent rotation, retrying with the successor',
+  );
+  return performTokenRefresh();
 };
 
 const performTokenRefresh = async (): Promise<string | null> => {
@@ -255,6 +314,10 @@ const performTokenRefresh = async (): Promise<string | null> => {
     // like "unreachable" would spin the refresh in a retry loop against a
     // token the server has already rejected for good.
     if (error instanceof RefreshRejectedError) {
+      if (isSupersededRefreshCode(error.code)) {
+        return retryWithSuccessorToken(refreshToken, state);
+      }
+
       if (isAuthRejectionError(error)) {
         logger.info(
           `Refresh rejected by the server (${error.code}), triggering logout with cache clear`,
@@ -399,15 +462,8 @@ export const clearRefreshState = () => {
  * Check if a refresh token is still valid (not expired)
  * Useful for pre-request validation to avoid wasted API calls
  */
-export const isRefreshTokenValid = (refreshToken: string | null): boolean => {
-  if (!refreshToken) return false;
-  try {
-    const decoded = jwtDecode<{ exp: number }>(refreshToken);
-    return Date.now() < decoded.exp * 1000;
-  } catch {
-    return false;
-  }
-};
+export const isRefreshTokenValid = (refreshToken: string | null): boolean =>
+  !!refreshToken && !isTokenExpiringSoon(refreshToken);
 
 /**
  * Proactive token refresh - called by scheduler before token expires
@@ -454,8 +510,10 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
   }
 };
 
-// Hand the WS layer its 4403 (session expired) recovery: refresh the token,
-// which on success reconnects the socket itself (performTokenRefresh →
-// reconnectWebSocket). Registered here because wsLink cannot import this
+// Hand the socket its one use of the refresh: the 4403 close handler's fast
+// path, which gets a fresh access token into the store before the socket's
+// backoff elapses. It is not the recovery — the re-dial re-runs
+// `connectionParams` and the server can rotate there — so a failure here is
+// survivable. Registered rather than imported because wsLink cannot import this
 // module back without a cycle.
-registerSessionAuthRefresh(proactiveTokenRefresh);
+registerTokenRefresh(proactiveTokenRefresh);

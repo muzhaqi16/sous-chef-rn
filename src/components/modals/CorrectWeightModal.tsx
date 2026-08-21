@@ -9,7 +9,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
-import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
+import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { commonStyles } from '#/styles/commonStyles';
 import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
@@ -117,14 +117,13 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <BottomSheetKeyboardAwareScrollView
+      <BottomSheetFormScrollView
         style={commonStyles.bottomSheetScrollView}
         contentContainerStyle={[
           commonStyles.bottomSheetContent,
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={t('correctWeight.title')}
@@ -204,7 +203,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
             </View>
           </>
         )}
-      </BottomSheetKeyboardAwareScrollView>
+      </BottomSheetFormScrollView>
     </BottomSheetModal>
   );
 };

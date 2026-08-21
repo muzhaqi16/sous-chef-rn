@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.3.2",
+  "version": "4.3.4",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -37,6 +37,7 @@
     "check:echo": "node scripts/check-subscription-echo.mjs",
     "audit:fragments": "node scripts/audit-fragment-inlining.mjs",
     "check:codegen-orphans": "node scripts/check-codegen-orphans.mjs",
+    "check:version-sync": "node scripts/check-version-sync.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p __tests__/tsconfig.json",
     "i18n:check": "node scripts/check-i18n.mjs",

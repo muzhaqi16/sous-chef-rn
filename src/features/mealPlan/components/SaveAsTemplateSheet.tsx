@@ -67,7 +67,6 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
     visible,
     onDismiss: onClose,
     snapPoints: ['70%'],
-    keyboardAware: true,
   });
 
   const [name, setName] = useState('');
@@ -116,7 +115,6 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={t('saveAsTemplate.title')}

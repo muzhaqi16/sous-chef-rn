@@ -3,6 +3,8 @@ import {
   isSessionEndingAuthCode,
   isRefreshableAuthCode,
   isDeadRefreshTokenCode,
+  isSupersededRefreshCode,
+  isAuthRefusalCode,
 } from '../authErrorCodes';
 
 // The credentials themselves are gone — both predicates must agree.
@@ -47,6 +49,46 @@ describe('isSessionEndingAuthCode', () => {
     'leaves the session alone on %s',
     code => {
       expect(isSessionEndingAuthCode(code)).toBe(false);
+    },
+  );
+});
+
+// The one auth refusal that is neither refreshable nor fatal. Another request
+// rotated the token first; the session the winner renewed is perfectly alive,
+// and signing the user out of it is the regression this guards.
+describe('isSupersededRefreshCode', () => {
+  const SUPERSEDED = 'AUTH_REFRESH_TOKEN_SUPERSEDED';
+
+  it('recognizes the lost-race refusal', () => {
+    expect(isSupersededRefreshCode(SUPERSEDED)).toBe(true);
+  });
+
+  it('never ends the session', () => {
+    expect(isSessionEndingAuthCode(SUPERSEDED)).toBe(false);
+    expect(isDeadCredentialCode(SUPERSEDED)).toBe(false);
+  });
+
+  // isDeadRefreshTokenCode is what makes errorLink end the session on sight,
+  // without even attempting a refresh.
+  it('is not a dead refresh token', () => {
+    expect(isDeadRefreshTokenCode(SUPERSEDED)).toBe(false);
+  });
+
+  // The refresh that clears it presents a DIFFERENT token, so this is not the
+  // question the top-level refreshable branch asks.
+  it('is not the refreshable-on-an-ordinary-operation answer', () => {
+    expect(isRefreshableAuthCode(SUPERSEDED)).toBe(false);
+  });
+
+  // The offline queue asks only "is this the auth pipeline's problem" — it is.
+  it('still counts as an auth refusal for the offline queue', () => {
+    expect(isAuthRefusalCode(SUPERSEDED)).toBe(true);
+  });
+
+  it.each(['AUTH_REFRESH_TOKEN_INVALID', 'AUTH_TOKEN_EXPIRED'])(
+    'does not claim %s',
+    code => {
+      expect(isSupersededRefreshCode(code)).toBe(false);
     },
   );
 });

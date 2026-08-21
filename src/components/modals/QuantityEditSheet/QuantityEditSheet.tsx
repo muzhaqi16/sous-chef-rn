@@ -6,7 +6,7 @@ import { useTranslation } from '#/i18n';
 // internally for gesture coordination inside the sheet).
 import { TextInput } from 'react-native-gesture-handler';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Header } from '#/components/molecules/Header';
@@ -15,9 +15,13 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
 import Chip from '#/components/atoms/Chip';
 import { Icon } from '#utils/iconUtils';
-import { formatQuantity } from '#/utils/formatQuantity';
+import {
+  formatQuantity,
+  formatQuantityAsFraction,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { parseFractionalInput } from '#/utils/fractionUtils';
+import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface ItemUnit {
   id: string;
@@ -56,38 +60,6 @@ interface QuantityEditSheetProps {
 }
 
 /**
- * Parse fractional quantity input to a number
- * Supports: decimals (1.5), simple fractions (1/4), mixed numbers (1 1/4)
- */
-const parseFractionInput = (input: string): number | null => {
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-
-  // Mixed number: "1 1/4"
-  const mixedMatch = trimmed.match(/^(\d+)\s+(\d+)\/(\d+)$/);
-  if (mixedMatch) {
-    const whole = parseInt(mixedMatch[1]);
-    const numerator = parseInt(mixedMatch[2]);
-    const denominator = parseInt(mixedMatch[3]);
-    if (denominator === 0) return null;
-    return whole + numerator / denominator;
-  }
-
-  // Simple fraction: "1/4"
-  const fractionMatch = trimmed.match(/^(\d+)\/(\d+)$/);
-  if (fractionMatch) {
-    const numerator = parseInt(fractionMatch[1]);
-    const denominator = parseInt(fractionMatch[2]);
-    if (denominator === 0) return null;
-    return numerator / denominator;
-  }
-
-  // Decimal or whole number
-  const num = parseDecimalInput(trimmed);
-  return isNaN(num) || num < 0 ? null : num;
-};
-
-/**
  * QuantityEditSheet - Bottom sheet for editing item quantity and unit
  *
  * Layout:
@@ -104,11 +76,14 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   loading = false,
 }) => {
   const { t } = useTranslation();
-  const { ref, modalProps } = useStandardBottomSheet({
+  // No snap points: the sheet measures its own content, so the keyboard lift
+  // seats that content directly on top of the keyboard instead of stretching a
+  // fixed-height sheet up the screen and leaving the difference blank.
+  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible: visible && !!item,
     onDismiss: onClose,
-    snapPoints: ['55%'],
-    keyboardAware: true,
+    snapPoints: [],
+    enableDynamicSizing: true,
   });
 
   // Local state for editing
@@ -116,9 +91,10 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   const [unitName, setUnitName] = useState<string | null>(null);
   const [unitId, setUnitId] = useState<string | null>(null);
 
-  // Edit mode state for direct quantity input
+  // Whether the large number is currently a focused text field. The typed text
+  // itself lives in `quantityInput` — the single value the save button reads —
+  // so a quantity typed and saved without leaving the field is not lost.
   const [isEditing, setIsEditing] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<TextInput>(null);
 
   // Use item-specific units if available (sorted: preferred first, then default, then alphabetically)
@@ -169,25 +145,35 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     }
   }
 
-  // Handle quantity changes (with hybrid mode support)
+  // Stepping keeps the notation the quantity is already written in, so a
+  // half-typed `1 1/4` does not come back from the + button as `2.25`.
+  const parsedQuantity = parseFractionalInput(quantityInput);
+
+  // What `+`/`-` step FROM. An empty field is "nothing typed yet", so it steps
+  // from zero — tapping `+` on a blank field giving 1 is the point of the
+  // control. Text that is present but unreadable is different: stepping it
+  // would overwrite what the user typed with a formatted number and lose it,
+  // with no undo. So the buttons go inert instead, which is also what the
+  // format hint below is already telling them.
+  const stepBase = quantityInput.trim() === '' ? 0 : parsedQuantity;
+  const stepDisabled = stepBase === null;
+
+  const stepTo = (newValue: number) => {
+    setQuantityInput(
+      quantityInput.includes('/')
+        ? formatQuantityAsFraction(newValue)
+        : formatQuantity(newValue),
+    );
+  };
+
   const handleIncrement = () => {
-    const parsed = parseFractionInput(quantityInput) ?? 0;
-    const newValue = parsed + 1;
-    const formatted = formatQuantity(newValue);
-    setQuantityInput(formatted);
-    if (isEditing) {
-      setInputValue(formatted);
-    }
+    if (stepBase === null) return;
+    stepTo(stepBase + 1);
   };
 
   const handleDecrement = () => {
-    const parsed = parseFractionInput(quantityInput) ?? 0;
-    const newValue = Math.max(0, parsed - 1);
-    const formatted = formatQuantity(newValue);
-    setQuantityInput(formatted);
-    if (isEditing) {
-      setInputValue(formatted);
-    }
+    if (stepBase === null) return;
+    stepTo(Math.max(0, stepBase - 1));
   };
 
   // Handle unit chip selection
@@ -198,7 +184,6 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
   // Handle tap on quantity to enter edit mode
   const handleQuantityPress = () => {
-    setInputValue(quantityInput);
     setIsEditing(true);
     // Focus after render paint when input is focusable
     requestAnimationFrame(() => {
@@ -206,22 +191,17 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     });
   };
 
-  // Handle input text change - no sanitization to avoid cursor jumping
-  // Validation happens on blur instead
+  // No sanitization while typing — that moves the caret mid-word. `1 1/4` and
+  // `2 1/3` are only whole values on the last keystroke, so what is typed is
+  // kept as typed and `parsedQuantity` decides whether it can be saved.
   const handleInputChange = (text: string) => {
-    setInputValue(text);
+    setQuantityInput(text);
   };
 
-  // Handle input blur - update quantityInput (validation happens on save by server)
   const handleInputBlur = () => {
     setIsEditing(false);
-
-    if (inputValue.trim() === '') {
-      // Empty input becomes 0
+    if (quantityInput.trim() === '') {
       setQuantityInput('0');
-    } else {
-      // Keep whatever the user typed - validation happens on save
-      setQuantityInput(inputValue);
     }
   };
 
@@ -237,155 +217,184 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     item &&
     (quantityInput !== originalQuantityInput || unitName !== item.unitName);
 
-  const decrementDisabled = (parseFractionInput(quantityInput) ?? 0) <= 0;
+  // The server parses this string itself and rejects anything it can't read,
+  // which offline would surface only once the queue replayed. Catch it here.
+  const quantityIsValid = parsedQuantity !== null && parsedQuantity >= 0;
+
+  // Both buttons refuse the same state, rather than `-` refusing it and `+`
+  // silently rewriting the field.
+  const decrementDisabled = stepDisabled || stepBase <= 0;
 
   styles.useVariants({ editing: isEditing });
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
-      <Header
-        title={t('quantityEditSheet.title')}
-        centerTitle
-        onClose={onClose}
-        rightActions={[
-          {
-            icon: 'checkmark',
-            onPress: handleSave,
-            variant: 'primary',
-            disabled: !hasChanges || loading,
-            loading: loading,
-            testID: 'quantity-edit-save',
-          },
-        ]}
-      />
-      <View style={styles.headerSpacer} />
-      <BottomSheetScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Quantity Section */}
-        <View style={styles.section}>
-          <Text
-            size="sm"
-            weight="medium"
-            tone="secondary"
-            style={styles.sectionLabel}
-          >
-            {t('quantityEditSheet.quantity')}
-          </Text>
-          <View style={styles.counterContainer}>
-            {/* Decrement Button */}
-            <AppPressable
-              testID="quantity-edit-decrement"
-              style={styles.counterButton}
-              onPress={handleDecrement}
-              disabled={decrementDisabled}
+      {/* One measured container: `BottomSheetView` reports its own height as
+          the sheet's content height, so everything the sheet shows — header
+          included — has to sit inside it. */}
+      <BottomSheetView style={[styles.content, contentContainerStyle]}>
+        <Header
+          title={t('quantityEditSheet.title')}
+          centerTitle
+          onClose={onClose}
+          rightActions={[
+            {
+              icon: 'checkmark',
+              onPress: handleSave,
+              variant: 'primary',
+              disabled: !hasChanges || !quantityIsValid || loading,
+              loading: loading,
+              testID: 'quantity-edit-save',
+            },
+          ]}
+        />
+        <View style={styles.headerSpacer} />
+        {/* The header spans the sheet's full width; only the fields below it are
+          inset, so the padding lives here rather than on the measured view. */}
+        <View style={styles.sections}>
+          {/* Quantity Section */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="medium"
+              tone="secondary"
+              style={styles.sectionLabel}
             >
-              <Icon
-                name="remove-outline"
-                size={24}
-                tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
-              />
-            </AppPressable>
-
-            {/* Quantity Display - Tappable for direct input */}
-            <AppPressable
-              testID="quantity-edit-value"
-              style={styles.quantityDisplay}
-              onPress={handleQuantityPress}
-            >
-              {isEditing ? (
-                <ThemedBottomSheetTextInput
-                  ref={inputRef}
-                  style={styles.quantityInput}
-                  value={inputValue}
-                  onChangeText={handleInputChange}
-                  onBlur={handleInputBlur}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                  maxLength={10}
+              {t('quantityEditSheet.quantity')}
+            </Text>
+            <View style={styles.counterContainer}>
+              {/* Decrement Button */}
+              <AppPressable
+                testID="quantity-edit-decrement"
+                style={styles.counterButton}
+                onPress={handleDecrement}
+                disabled={decrementDisabled}
+              >
+                <Icon
+                  name="remove-outline"
+                  size={24}
+                  tone={decrementDisabled ? 'textTertiary' : 'textPrimary'}
                 />
-              ) : (
-                <Text size="5xl" weight="semibold">
-                  {quantityInput || '0'}
-                </Text>
-              )}
-            </AppPressable>
+              </AppPressable>
 
-            {/* Increment Button */}
-            <AppPressable
-              testID="quantity-edit-increment"
-              style={styles.incrementButton}
-              onPress={handleIncrement}
+              {/* Quantity Display - Tappable for direct input */}
+              <AppPressable
+                testID="quantity-edit-value"
+                style={styles.quantityDisplay}
+                onPress={handleQuantityPress}
+              >
+                {isEditing ? (
+                  <ThemedBottomSheetTextInput
+                    ref={inputRef}
+                    style={styles.quantityInput}
+                    value={quantityInput}
+                    onChangeText={handleInputChange}
+                    onBlur={handleInputBlur}
+                    // A digits-only pad has no `/` and no space, so `1/4` and
+                    // `2 1/3` — quantities the server accepts — could not be
+                    // typed at all. Same keyboard as `FractionInput`.
+                    keyboardType="numbers-and-punctuation"
+                    selectTextOnFocus
+                    maxLength={10}
+                    testID="quantity-edit-input"
+                  />
+                ) : (
+                  <Text size="5xl" weight="semibold">
+                    {quantityInput || '0'}
+                  </Text>
+                )}
+              </AppPressable>
+
+              {/* Increment Button */}
+              <AppPressable
+                testID="quantity-edit-increment"
+                style={styles.incrementButton}
+                onPress={handleIncrement}
+                disabled={stepDisabled}
+              >
+                <Icon name="add" size={24} tone="white" />
+              </AppPressable>
+            </View>
+            {/* An empty field is "nothing typed yet", not a malformed quantity —
+              the save button is disabled either way. */}
+            {quantityInput.trim() !== '' && !quantityIsValid && (
+              <Text
+                size="sm"
+                tone="error"
+                align="center"
+                style={styles.quantityHint}
+                testID="quantity-edit-format-hint"
+              >
+                {localizeNumericHint(t('fractionInput.formatsHint'))}
+              </Text>
+            )}
+          </View>
+
+          {/* Unit Section */}
+          <View style={styles.section}>
+            <Text
+              size="sm"
+              weight="medium"
+              tone="secondary"
+              style={styles.sectionLabel}
             >
-              <Icon name="add" size={24} tone="white" />
-            </AppPressable>
+              {t('quantityEditSheet.unit')}
+            </Text>
+
+            {/* Item-specific Units Chips - only show if available */}
+            {/* Use displayNamePlural for better UX (e.g., "pineapples" instead of "count") */}
+            {itemUnits.length > 0 && (
+              <View style={styles.chipsContainer}>
+                {itemUnits.map(unit => (
+                  <Chip
+                    key={unit.id}
+                    label={unit.displayNamePlural || unit.symbol}
+                    selected={unitName === unit.symbol}
+                    onPress={() => handleUnitChipPress(unit)}
+                  />
+                ))}
+              </View>
+            )}
+
+            {/* Autocomplete for custom/search */}
+            <UnitAutocompleteField
+              variant="inline"
+              // The sheet is sized to its content, so the absolutely-positioned
+              // suggestion list would otherwise open past its bottom edge.
+              reserveDropdownSpace
+              value={unitName || ''}
+              onChangeText={text => {
+                // Convert empty string to null to properly clear the unit
+                setUnitName(text || null);
+                // Clear unitId when user types custom text
+                setUnitId(null);
+              }}
+              onUnitSelected={(selectedUnitId, selectedUnitName) => {
+                // Only update unitName when a unit is actually selected, not when clearing
+                if (selectedUnitName !== null) {
+                  setUnitName(selectedUnitName);
+                }
+                setUnitId(selectedUnitId);
+              }}
+              placeholder={
+                itemUnits.length > 0
+                  ? t('quantityEditSheet.orTypeToSearch')
+                  : t('quantityEditSheet.typeToSearchUnits')
+              }
+            />
           </View>
         </View>
-
-        {/* Unit Section */}
-        <View style={styles.section}>
-          <Text
-            size="sm"
-            weight="medium"
-            tone="secondary"
-            style={styles.sectionLabel}
-          >
-            {t('quantityEditSheet.unit')}
-          </Text>
-
-          {/* Item-specific Units Chips - only show if available */}
-          {/* Use displayNamePlural for better UX (e.g., "pineapples" instead of "count") */}
-          {itemUnits.length > 0 && (
-            <View style={styles.chipsContainer}>
-              {itemUnits.map(unit => (
-                <Chip
-                  key={unit.id}
-                  label={unit.displayNamePlural || unit.symbol}
-                  selected={unitName === unit.symbol}
-                  onPress={() => handleUnitChipPress(unit)}
-                />
-              ))}
-            </View>
-          )}
-
-          {/* Autocomplete for custom/search */}
-          <UnitAutocompleteField
-            variant="inline"
-            value={unitName || ''}
-            onChangeText={text => {
-              // Convert empty string to null to properly clear the unit
-              setUnitName(text || null);
-              // Clear unitId when user types custom text
-              setUnitId(null);
-            }}
-            onUnitSelected={(selectedUnitId, selectedUnitName) => {
-              // Only update unitName when a unit is actually selected, not when clearing
-              if (selectedUnitName !== null) {
-                setUnitName(selectedUnitName);
-              }
-              setUnitId(selectedUnitId);
-            }}
-            placeholder={
-              itemUnits.length > 0
-                ? t('quantityEditSheet.orTypeToSearch')
-                : t('quantityEditSheet.typeToSearchUnits')
-            }
-          />
-        </View>
-      </BottomSheetScrollView>
+      </BottomSheetView>
     </BottomSheetModal>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  scrollView: {
-    flex: 1,
-  },
   content: {
-    paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,
+  },
+  sections: {
+    paddingHorizontal: theme.spacing.lg,
   },
   headerSpacer: {
     height: theme.spacing.md,
@@ -429,6 +438,9 @@ const styles = StyleSheet.create(theme => ({
   },
   quantityDisplay: {
     minWidth: 80,
+    // A mixed number is several times wider than a digit; shrink rather than
+    // push the +/- buttons off the edge of a narrow screen.
+    flexShrink: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: theme.spacing.lg,
@@ -444,6 +456,9 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  quantityHint: {
+    marginTop: theme.spacing.sm,
   },
   quantityInput: {
     fontSize: theme.typography.fontSize['5xl'],

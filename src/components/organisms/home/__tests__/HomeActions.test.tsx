@@ -71,26 +71,25 @@ describe('HomeActions', () => {
     expect(defaultProps.onDelete).toHaveBeenCalledWith('home-1');
   });
 
-  // Regression: the row used to be a plain `flexDirection: 'row'` with no
-  // flexWrap and no flexShrink on the chips (Yoga defaults flexShrink to 0), so
-  // a long label — sq "Vendos si parazgjedhur" for cardSetDefault — pushed the
-  // Delete chip off the right edge of the screen. Jest has no Yoga layout pass,
-  // so these assert the style contract that makes wrapping possible; the actual
-  // wrap has to be confirmed on device.
-  it('wraps the action row instead of overflowing with long labels', () => {
+  // Regression: the chips used to size to their labels and sit BESIDE them, so
+  // sq "Vendos si parazgjedhur" / es "Establecer Predeterminado" made the chip
+  // wider than a third of the card and pushed Delete onto a second row. The
+  // label is stacked under the icon now, so each button is a fixed third and
+  // the label wraps into the button's full width instead of widening it. Jest
+  // has no Yoga layout pass, so this asserts the style contract that guarantees
+  // it; confirm the wrap on device.
+  it('stacks each label under its icon in an equal-width third of one row', () => {
     render(<HomeActions {...defaultProps} />);
-    const row = StyleSheet.flatten(
-      screen.getByTestId('home-actions').props.style,
-    );
-    expect(row.flexWrap).toBe('wrap');
-  });
 
-  it('lets each action label shrink and wrap', () => {
-    render(<HomeActions {...defaultProps} />);
     for (const label of ['Set Default', 'Invite', 'Delete']) {
       const text = screen.getByText(label);
       expect(text.props.numberOfLines).toBe(2);
-      expect(StyleSheet.flatten(text.props.style).flexShrink).toBe(1);
+
+      const button = StyleSheet.flatten(
+        screen.getByRole('button', { name: label }).props.style,
+      );
+      expect(button.flex).toBe(1);
+      expect(button.flexDirection).toBe('column');
     }
   });
 });

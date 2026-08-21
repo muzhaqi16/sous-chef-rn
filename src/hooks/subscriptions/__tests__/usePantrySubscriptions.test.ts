@@ -10,6 +10,8 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '../usePantrySubscriptions';
+import { InMemoryCache } from '@apollo/client';
+import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 
@@ -318,5 +320,51 @@ describe('usePantrySubscriptions', () => {
 
       expect(client.query).toHaveBeenCalled();
     });
+  });
+});
+
+describe('usePantrySubscriptions: event envelope and the cache', () => {
+  it('keeps the envelope out of the cache, so an event for a just-deleted row cannot re-create it', async () => {
+    // `removeItem` evicts the row before the mutation fires; the server pushes
+    // this event before the mutation resolves. A cacheable subscription would
+    // normalise `node { id }` into a bare PantryItem, the connection edge would
+    // stop dangling, and Apollo would refetch GetPantry to repair the now
+    // incomplete result — once per delete. `fetchPolicy: 'no-cache'` is what
+    // stops the write; `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`
+    // shows the damage the write does.
+    const cache = new InMemoryCache();
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: PantryEventsDocument,
+            variables: { pantryId: 'pantry-1' },
+          },
+          result: {
+            data: {
+              pantryEvents: {
+                __typename: 'PantryEvent',
+                originatorClientId: 'device_other',
+                actorUserId: 'user-2',
+                mutation: MutationType.ItemRemoved,
+                subtype: PantrySubtype.ItemChanged,
+                pantryId: 'pantry-1',
+                timestamp: '2026-01-01T00:00:00.000Z',
+                node: { __typename: 'PantryItem', id: 'item-1' },
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    // MockLink delivers the subscription result on a timer.
+    await act(async () => {
+      jest.advanceTimersByTime(50);
+    });
+
+    expect(cache.extract()['PantryItem:item-1']).toBeUndefined();
+    expect(cache.extract().ROOT_SUBSCRIPTION).toBeUndefined();
   });
 });

@@ -224,24 +224,24 @@ export const PurchaseHistoryScreen: React.FC<
     {
       variables: { itemId, first: PAGE_SIZE },
       notifyOnNetworkStatusChange: true,
-      // Keeps the app-wide `errorPolicy: 'all'` — partial data and the error
-      // both reach the hook, which is what `useDataState` below classifies.
+      // NOT the app-wide `'all'`. `purchasesConnection` is
+      // `PurchaseConnection!`, so a field error anywhere inside it propagates
+      // up every non-null hop and nulls `shoppingListItem` itself — and under
+      // `'all'` Apollo WRITES that partial `{ shoppingListItem: null }` to the
+      // cache (`shouldWriteResult` writes whenever the policy ignores errors
+      // and `result.data` is truthy). It would land on
+      // `ROOT_QUERY.shoppingListItem({"id": itemId})`, the same field
+      // `GetShoppingListItem` reads, so the ItemDetail screen still mounted
+      // underneath this one would flip to "Item not found" and STAY there: the
+      // `Query.shoppingListItem` redirect only fires when `existing ===
+      // undefined`, `nextFetchPolicy: 'cache-first'` issues no fetch on resume,
+      // and `cache.extract()` persists the null to MMKV.
       //
-      // Worth knowing what that costs on this particular query:
-      // `purchasesConnection` is `PurchaseConnection!`, so a field error
-      // anywhere inside it propagates up every non-null hop and nulls
-      // `shoppingListItem` itself, and under `'all'` Apollo writes that partial
-      // `{ shoppingListItem: null }` to the cache (verified in the installed
-      // @apollo/client@4.1.7, `core/QueryInfo.js` `shouldWriteResult`: it
-      // writes whenever the policy ignores errors and `result.data` is truthy).
-      // It lands on `ROOT_QUERY.shoppingListItem({"id": itemId})` — the SAME
-      // field `GetShoppingListItem` reads — so the ItemDetail screen still
-      // mounted underneath this one flips to "Item not found" and stays there:
-      // the `Query.shoppingListItem` redirect in `apollo/cache.ts` only fires
-      // when `existing === undefined`, `nextFetchPolicy: 'cache-first'` issues
-      // no fetch on resume, and `cache.extract()` persists the null to MMKV.
-      // That is a server-side contract failure (an unresolved non-null
-      // `Purchase` relation), fixed in the API rather than papered over here.
+      // `'none'` refuses the write instead of letting one screen's failed read
+      // decide whether an item exists. The cost is a partial page: if some rows
+      // resolve and others error, none are shown. Worth it — `useDataState`
+      // classifies the same either way, and a retry is one tap.
+      errorPolicy: 'none',
     },
   );
 
@@ -281,9 +281,11 @@ export const PurchaseHistoryScreen: React.FC<
   });
 
   const handleRetry = () => {
-    // `errorPolicy: 'all'` resolves a failed refetch rather than rejecting, so
-    // this catch is for a link-level throw only — kept so the retry button can
-    // never surface an unhandled rejection.
+    // Under this query's `errorPolicy: 'none'` a failed refetch REJECTS rather
+    // than resolving with the error, so this catch is the one that runs on an
+    // ordinary failure — not just on a link-level throw. `useDataState` keeps
+    // the error state on screen either way; reporting here is what stops the
+    // rejection going unhandled.
     void refetch().catch(refetchError =>
       errorService.reportError(refetchError, {
         operation: 'PurchaseHistory.retry',

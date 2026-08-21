@@ -14,6 +14,7 @@ import {
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
+import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useIsOnline } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
@@ -77,7 +78,19 @@ export function BottomSheetAutocompleteInput<T>({
   title,
   searchPlaceholder,
   minSearchLength = 2,
-  snapPoint = '70%',
+  // Taller than the hosts this picker is usually presented over — most sit at
+  // 70% — so it reads as a separate surface stacked over one, rather than the
+  // host redrawing itself. gorhom supports stacking (its own reference is the
+  // Apple Maps clone), where the sheets are told apart by their heights.
+  //
+  // It cannot be taller than EVERY host: several reach 85-95%
+  // (`CorrectWeightModal` expands to 85%, `MoveToPantryModal` and
+  // `ManageRecipeSheet` to 95%). Over those, what distinguishes the picker is
+  // the push animation and the backdrop dimming the host, not its height. Pass
+  // `snapPoint` explicitly at such a call site if the stack needs to read more
+  // clearly there — it is a prop precisely because one number cannot be right
+  // for every host.
+  snapPoint = '85%',
 
   // Data props
   data,
@@ -101,6 +114,16 @@ export function BottomSheetAutocompleteInput<T>({
   onModalClose,
 }: BottomSheetAutocompleteInputProps<T>) {
   const { t } = useTranslation();
+  // The trigger is a real, typeable field, so gorhom has to see it focus:
+  // `BottomSheetTextInput` is what sets `animatedKeyboardState.target`, and
+  // without a target gorhom caches the keyboard-shown event and discards it —
+  // `keyboardBehavior` then never fires and the host sheet sits still while the
+  // keyboard covers this field. It cannot be `BottomSheetTextInput`
+  // unconditionally: that component reads the sheet's internal context, which
+  // throws outside a sheet, and this field is also used on full screens.
+  const InputComponent = useIsBottomSheetInput()
+    ? ThemedBottomSheetTextInput
+    : ThemedTextInput;
   const [userDismissed, setUserDismissed] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -266,7 +289,7 @@ export function BottomSheetAutocompleteInput<T>({
 
   return (
     <FormFieldWrapper label={label || ''} error={error} required={required}>
-      <ThemedTextInput
+      <InputComponent
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
         onChangeText={handleTextChange}

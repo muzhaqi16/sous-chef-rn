@@ -215,3 +215,39 @@ describe('usePantryQuery', () => {
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 });
+
+describe('usePantryQuery: consumer options', () => {
+  it('stands the query down while options.skip is set, even with a valid pantryId', () => {
+    // No mocks: nothing may fire. A secondary consumer (the Recipes tab's
+    // discovery hook) passes this while its screen is blurred so a pantry
+    // write on another tab cannot re-render it.
+    const { result } = renderHookWithApollo(() =>
+      usePantryQuery('pantry-1', null, null, undefined, { skip: true }),
+    );
+    expect(result.current.state.skipped).toBe(true);
+    expect(result.current.state.loading).toBe(false);
+    expect(result.current.state.pantryItems).toEqual([]);
+  });
+
+  it('starts the query once options.skip is lifted', async () => {
+    const { result, rerender } = renderHookWithApollo(
+      ({ skip }: { skip: boolean }) =>
+        usePantryQuery('pantry-1', null, null, undefined, {
+          skip,
+          fetchPolicy: 'cache-first',
+        }),
+      {
+        initialProps: { skip: true },
+        mocks: {
+          Query: () => ({ pantry: { id: 'pantry-1', name: 'Test Pantry' } }),
+        },
+      },
+    );
+    expect(result.current.state.skipped).toBe(true);
+
+    rerender({ skip: false });
+    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    expect(result.current.state.skipped).toBe(false);
+    expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
+  });
+});

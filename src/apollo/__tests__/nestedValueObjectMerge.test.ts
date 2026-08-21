@@ -192,4 +192,70 @@ describe('nested value objects on ShoppingListItem', () => {
     // the writer actually selected still wins.
     expect(readDetail(cache)?.purchaseInfo?.isPurchased).toBe(false);
   });
+
+  // The five purchase fields are ONE FACT. Preserving siblings across a write
+  // that CHANGES `isPurchased` is what let a collaborator's purchase inherit
+  // the previous purchaser's name and amounts — and gating the UI on
+  // `isPurchased` cannot help, because `isPurchased` is exactly the field the
+  // narrow write sets.
+  describe('a write that changes isPurchased describes a different purchase', () => {
+    const writeNarrowPurchaseState = (
+      cache: ReturnType<typeof makeCache>,
+      isPurchased: boolean,
+    ) =>
+      cache.writeFragment({
+        id: ITEM_CACHE_ID,
+        fragment: UseToggleShoppingItem_ItemFragmentDoc,
+        fragmentName: 'useToggleShoppingItem_item',
+        data: {
+          ...narrowItem,
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased,
+          },
+        },
+      });
+
+    it('clears the previous purchase rather than attributing it to the new one', () => {
+      const cache = seedFullItem();
+
+      // A collaborator unmarks the item, then buys it themselves. Only
+      // `isPurchased` travels on the subscription push.
+      writeNarrowPurchaseState(cache, false);
+      writeNarrowPurchaseState(cache, true);
+
+      const purchaseInfo = readDetail(cache)?.purchaseInfo;
+      expect(purchaseInfo?.isPurchased).toBe(true);
+      expect(purchaseInfo?.purchasedBy).toBeNull();
+      expect(purchaseInfo?.purchasedQuantity).toBeNull();
+      expect(purchaseInfo?.purchasedPrice).toBeNull();
+      expect(purchaseInfo?.purchaseDate).toBeNull();
+    });
+
+    it('clears by writing null, so the detail screen still renders', () => {
+      const cache = seedFullItem();
+
+      writeNarrowPurchaseState(cache, false);
+
+      // Removing the fields would read incomplete and blank the screen — the
+      // exact bug the type policy exists to prevent. Every dependent field is
+      // nullable, so clearing them keeps the read complete.
+      expect(readDetail(cache)).not.toBeNull();
+      expect(readDetail(cache)?.purchaseInfo?.purchasedBy).toBeNull();
+    });
+
+    it('still merges field-wise while isPurchased is unchanged', () => {
+      const cache = seedFullItem();
+
+      // A list refetch of an item nobody has touched: same purchase, partial
+      // selection. The amounts must survive.
+      writeNarrowPurchaseState(cache, true);
+
+      expect(readDetail(cache)?.purchaseInfo).toMatchObject({
+        isPurchased: true,
+        purchasedQuantity: 2,
+        purchasedPrice: 3.5,
+      });
+    });
+  });
 });

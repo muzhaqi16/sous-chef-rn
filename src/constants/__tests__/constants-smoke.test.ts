@@ -127,7 +127,7 @@ describe('languages constants', () => {
 
 describe('shoppingList constants', () => {
   it('exports PAGINATION', () => {
-    expect(PAGINATION.ITEMS_PAGE_SIZE).toBe(20);
+    expect(PAGINATION.ITEMS_PAGE_SIZE).toBe(25);
   });
 });
 

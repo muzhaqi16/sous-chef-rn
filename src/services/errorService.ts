@@ -96,6 +96,13 @@ export class ErrorService {
     AUTH_TOKEN_EXPIRED: 'sessionExpired',
     AUTH_REFRESH_TOKEN_MISSING: 'sessionEnded',
     AUTH_REFRESH_TOKEN_INVALID: 'sessionEnded',
+    // Its own sentence, not a shared session-ending one. The exchange lost a
+    // rotation race and the session is alive; the refresh path recovers without
+    // the user doing anything. 'sessionExpired' and 'sessionEnded' BOTH read
+    // "Please sign in again", so either would tell the user to fix something
+    // that is already fixing itself — and send them to a sign-in screen their
+    // live session does not need.
+    AUTH_REFRESH_TOKEN_SUPERSEDED: 'sessionRetrying',
     AUTH_CREDENTIALS_INVALID: 'credentialsInvalid',
     AUTH_ACCOUNT_LOCKED: 'accountLocked',
     // Distinct from the lockout above: a moderation decision, not a window
@@ -190,6 +197,7 @@ export class ErrorService {
     'SERVICE_OVERLOADED',
     TopLevelErrorCode.RateLimitExceeded,
     TopLevelErrorCode.AuthTokenExpired,
+    TopLevelErrorCode.AuthRefreshTokenSuperseded,
   ];
 
   // Expected user-input / business-rule outcomes — normal UX, not system

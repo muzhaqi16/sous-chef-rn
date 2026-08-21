@@ -3499,8 +3499,10 @@ export enum ErrorCode {
   /** Banned, suspended or deleted — a moderation decision, not a transient lockout. Clients end the session on this code. Also emitted top-level by the auth directive for the same account state. */
   AuthAccountSuspended = 'AUTH_ACCOUNT_SUSPENDED',
   AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
-  /** Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). Emitted by the refresh mutation; the REST /refresh route reports the same code top-level. */
+  /** Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. Emitted by the refresh mutation; the REST /refresh route reports the same code top-level. */
   AuthRefreshTokenInvalid = 'AUTH_REFRESH_TOKEN_INVALID',
+  /** Refresh token was consumed by a recent rotation and a valid successor exists — the request lost a race, it did not end the session. Recommended handling: re-read stored credentials and retry with the current token. Clients must NOT sign the user out on this code. */
+  AuthRefreshTokenSuperseded = 'AUTH_REFRESH_TOKEN_SUPERSEDED',
   AuthTokenExpired = 'AUTH_TOKEN_EXPIRED',
   AuthTokenMissing = 'AUTH_TOKEN_MISSING',
   Conflict = 'CONFLICT',
@@ -15424,9 +15426,11 @@ export enum TopLevelErrorCode {
   AuthCredentialsInvalid = 'AUTH_CREDENTIALS_INVALID',
   /** Credentials are valid and the session is live; the account's email address is unverified. A 403, not a 401 — clients must not sign the user out. */
   AuthEmailNotVerified = 'AUTH_EMAIL_NOT_VERIFIED',
-  /** Refresh token rejected by rotation (unverifiable, unknown, revoked or already used). */
+  /** Refresh token rejected by rotation and unrecoverable: unverifiable, unknown, revoked, or replayed long enough after use to be treated as compromise. The session is over. */
   AuthRefreshTokenInvalid = 'AUTH_REFRESH_TOKEN_INVALID',
   AuthRefreshTokenMissing = 'AUTH_REFRESH_TOKEN_MISSING',
+  /** Refresh token was consumed by a recent rotation and a valid successor exists — the request lost a race, it did not end the session. Recommended handling: re-read stored credentials and retry with the current token. Clients must NOT sign the user out on this code. */
+  AuthRefreshTokenSuperseded = 'AUTH_REFRESH_TOKEN_SUPERSEDED',
   /** Access token expired. On an ordinary operation this is what a refresh fixes; on the refresh response itself the session is over. */
   AuthTokenExpired = 'AUTH_TOKEN_EXPIRED',
   AuthTokenInvalid = 'AUTH_TOKEN_INVALID',

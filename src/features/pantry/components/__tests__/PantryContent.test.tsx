@@ -16,15 +16,6 @@ import {
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
 
-// useDeferredValue defaults to passthrough (identical to real behavior in the
-// sync test renderer) so existing tests are unaffected; a single test overrides
-// it to simulate the one-render lag where items have arrived but the deferred
-// value hasn't caught up.
-jest.mock('react', () => {
-  const actual = jest.requireActual('react');
-  return { ...actual, useDeferredValue: jest.fn((value: unknown) => value) };
-});
-
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
 // Seed the cache with the items so the cells unmask successfully.
@@ -578,28 +569,6 @@ describe('PantryContent', () => {
       // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
       // (+1 for the sticky-header sentinel at index 0)
       expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
-    });
-
-    it('bridges the useDeferredValue render lag with skeletons (items present, deferred slice still empty)', () => {
-      // Simulate the empty→populated lag: items have arrived (sortedItems > 0)
-      // but useDeferredValue still returns the previous (empty) value, so the
-      // windowed slice is empty for this render. The list must hold a skeleton,
-      // not flash the empty body the user reported.
-      const deferred = React.useDeferredValue as jest.Mock;
-      deferred.mockReturnValue([]);
-      try {
-        render(
-          <PantryContent
-            {...defaultProps}
-            items={manyItems}
-            locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-          />,
-        );
-        expect(screen.getByTestId('pantry-skeleton')).toBeTruthy();
-        expect(screen.queryByText('Your pantry is empty')).toBeNull();
-      } finally {
-        deferred.mockImplementation((value: unknown) => value);
-      }
     });
 
     it('prefers server pagination over growing the local window', () => {

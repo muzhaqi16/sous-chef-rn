@@ -77,19 +77,86 @@ describe('tokenScheduler', () => {
       );
     });
 
-    it('does not schedule when token expires within the buffer window', () => {
-      // Token expires in 5 minutes (300s), buffer is 600s, so delay = -300s (negative)
+    it('refreshes immediately when the token is already inside the buffer window', () => {
+      // Token expires in 5 minutes (300s), buffer is 600s, so the refresh is
+      // already overdue. Scheduling nothing here would leave the exchange to a
+      // request that has already been refused.
       const soonExp = Math.floor(Date.now() / 1000) + 300;
       mockedJwtDecode.mockReturnValue({ exp: soonExp, iat: 0, userId: '1' });
 
-      const callback = jest.fn();
+      const callback = jest.fn().mockResolvedValue(undefined);
       scheduleTokenRefresh('fake-token', callback);
 
-      expect(getScheduleState().isScheduled).toBe(false);
-      expect(callback).not.toHaveBeenCalled();
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('[TokenScheduler] Token expires too soon'),
-      );
+      expect(getScheduleState().isScheduled).toBe(true);
+      jest.advanceTimersByTime(0);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    it('refreshes immediately for a token that has already expired', () => {
+      // What a token restored from storage looks like after the app has been
+      // closed longer than the token's lifetime.
+      const pastExp = Math.floor(Date.now() / 1000) - 3600;
+      mockedJwtDecode.mockReturnValue({ exp: pastExp, iat: 0, userId: '1' });
+
+      const callback = jest.fn().mockResolvedValue(undefined);
+      scheduleTokenRefresh('fake-token', callback);
+
+      expect(getScheduleState().isScheduled).toBe(true);
+      jest.advanceTimersByTime(0);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+
+    // Scheduling at zero delay is a chain: refresh -> setTokens -> schedule
+    // again. `proactiveTokenRefresh` bypasses the refresh mutex's
+    // MIN_REFRESH_INTERVAL, so nothing outside this module bounds it. With the
+    // default one-hour access token against a ten-minute buffer neither of
+    // these runs; they exist for a deployment that shortens the lifetime.
+    describe('a token whose lifetime is shorter than the refresh buffer', () => {
+      const scheduleWithLifetime = (
+        secondsFromNow: number,
+        callback: jest.Mock,
+      ) => {
+        mockedJwtDecode.mockReturnValue({
+          exp: Math.floor(Date.now() / 1000) + secondsFromNow,
+          iat: 0,
+          userId: '1',
+        });
+        scheduleTokenRefresh('fake-token', callback);
+      };
+
+      it('spaces the chain instead of rescheduling at zero forever', () => {
+        const callback = jest.fn().mockResolvedValue(undefined);
+
+        // Five-minute token, ten-minute buffer: every schedule is immediate.
+        scheduleWithLifetime(300, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // The refresh moved the expiry forward, so a further refresh is
+        // legitimate — but not instantly.
+        scheduleWithLifetime(600, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        jest.advanceTimersByTime(5000);
+        expect(callback).toHaveBeenCalledTimes(2);
+      });
+
+      it('gives up once refreshing stops moving the expiry forward', () => {
+        const callback = jest.fn().mockResolvedValue(undefined);
+
+        scheduleWithLifetime(300, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // Same expiry back: refreshing is not what fixes this, so the reactive
+        // path takes over rather than this spinning against it.
+        scheduleWithLifetime(300, callback);
+        expect(getScheduleState().isScheduled).toBe(false);
+
+        jest.advanceTimersByTime(600 * 1000);
+        expect(callback).toHaveBeenCalledTimes(1);
+      });
     });
 
     it('calls the callback when the timer fires and device is online', () => {

@@ -5,6 +5,7 @@
       "sessionInvalid": "Sesioni juaj nuk është i vlefshëm. Hyni sërish",
       "sessionExpired": "Sesioni juaj ka skaduar. Hyni sërish",
       "sessionEnded": "Sesioni skadoi. Hyni sërish",
+      "sessionRetrying": "Sesioni po rilidhet. Provo përsëri.",
       "credentialsInvalid": "Email ose fjalëkalim i pasaktë",
       "accountLocked": "Llogaria juaj është bllokuar përkohësisht për siguri",
       "accountSuspended": "Kjo llogari nuk është më aktive. Kontaktoni mbështetjen.",
