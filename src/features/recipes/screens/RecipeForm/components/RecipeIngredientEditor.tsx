@@ -155,9 +155,6 @@ export const RecipeIngredientEditor = forwardRef<
       <BottomSheetFormScrollView
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
-        // Scrolls the focused field clear of the keyboard and leaves this much
-        // room below it, measured from the field's bottom edge.
-        bottomOffset={16}
       >
         <DropdownStack>
           <View style={styles.autocompleteWrapper}>

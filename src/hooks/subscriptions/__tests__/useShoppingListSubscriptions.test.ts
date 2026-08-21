@@ -36,6 +36,9 @@ jest.mock('#store/useAppStore', () => {
       <T>(selector: (state: RootState) => T): T => selector(getState()),
     ),
     useSelectedShoppingListId: jest.fn(() => getState().selectedShoppingListId),
+    // Transport recovery reads connectivity; a partial factory here would
+    // otherwise make every subscription in this suite throw on mount.
+    useIsOnline: jest.fn(() => true),
   };
 });
 

@@ -85,7 +85,6 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         {/* Header — no title; the "Mark Cooked" action and the recipe name
             below already convey intent. */}

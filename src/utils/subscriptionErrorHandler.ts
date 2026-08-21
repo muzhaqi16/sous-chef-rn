@@ -1,6 +1,7 @@
 import { errorService } from '#/services/errorService';
 import { serializeError } from './errorSerialization';
 import { getTopLevelGraphQLError } from './errors/graphqlErrors';
+import { isRetryableWebSocketClose } from '#/apollo/links/wsCloseCodes';
 
 // Define a simple error interface instead of importing ApolloError
 interface SubscriptionError {
@@ -32,6 +33,47 @@ export const isExpectedNetworkTransitionError = (message?: string): boolean => {
     m.includes('connection') ||
     m.includes('websocket')
   );
+};
+
+/**
+ * The exact message `GraphQLWsLink` produces when the SOCKET ended a
+ * subscription, rather than the subscription failing on its own.
+ *
+ * From the installed `@apollo/client/link/subscriptions`:
+ * `` new Error(`Socket closed${likeClose ? ` with event ${err.code}` : ''}${likeClose ? ` ${err.reason}` : ''}`) ``
+ * — so the close code is in the message and nowhere else. A connection failure
+ * with no CloseEvent (DNS, TCP) produces the bare `Socket closed`.
+ */
+const SOCKET_CLOSED_MESSAGE = /^Socket closed(?: with event (\d+))?/i;
+
+/**
+ * Whether this error means the transport ended the subscription, AND whether
+ * re-subscribing has any chance of working.
+ *
+ * This is deliberately narrower than {@link isExpectedNetworkTransitionError},
+ * which matches any message mentioning a network and is used to pick a LOG
+ * LEVEL. Deciding to re-subscribe off that would restart on unrelated failures.
+ *
+ * The verdict comes from the same table the socket itself reads
+ * ({@link isRetryableWebSocketClose}), so a code that latched reconnection off —
+ * an upgrade requirement, a dead session, a refused API key, a protocol bug —
+ * is never restarted here either. Restarting one of those would dial straight
+ * back into the refusal the socket just stopped for.
+ *
+ * @returns `null` when the error is not a transport termination, or is one no
+ *          re-subscribe can fix.
+ */
+export const classifyTransportTermination = (
+  error: SubscriptionError,
+): { code?: number } | null => {
+  const match = SOCKET_CLOSED_MESSAGE.exec(error?.message ?? '');
+  if (!match) return null;
+
+  // No code: a connection-level failure (DNS, TCP, an error event). Transient.
+  if (match[1] === undefined) return {};
+
+  const code = Number(match[1]);
+  return isRetryableWebSocketClose({ code, reason: '' }) ? { code } : null;
 };
 
 /**

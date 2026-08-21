@@ -39,7 +39,10 @@ jest.mock('#store', () => ({
 
 jest.mock('#/storage/mmkv');
 
-// Mock wsLink dynamic import
+// wsLink is a static import here. This stub keeps the assertion at the seam —
+// that cleanup asks the socket to go away — while what disposal DOES with the
+// client (drop it, so the next sign-in is not handed one that has latched
+// itself shut) is asserted against the real module in wsLink.test.ts.
 jest.mock('../links/wsLink', () => ({
   disposeWebSocket: jest.fn(),
   registerTokenRefresh: jest.fn(),

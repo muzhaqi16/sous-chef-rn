@@ -173,9 +173,14 @@ describe('wsLink createClient config', () => {
       require('#/apollo/links/wsLink');
       expect(createClient).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: expect.any(String),
+          // A function, not a string: graphql-ws awaits `url` before every
+          // dial, which is where the backoff and offline gate live — it is the
+          // only hook every dial passes through (see wsCloseCodes.library.test).
+          url: expect.any(Function),
           lazy: true,
           keepAlive: expect.any(Number),
+          shouldRetry: expect.any(Function),
+          retryAttempts: Infinity,
         }),
       );
     });

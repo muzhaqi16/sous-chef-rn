@@ -65,6 +65,9 @@ jest.mock('#store/useAppStore', () => ({
       getNotificationsByCategory: mockGetNotificationsByCategory,
     }),
   ),
+  // Transport recovery reads connectivity; a partial factory here would
+  // otherwise make every subscription in this suite throw on mount.
+  useIsOnline: jest.fn(() => true),
 }));
 
 jest.mock('zustand/react/shallow', () => ({

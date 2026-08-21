@@ -100,10 +100,13 @@ export function InlineAutocomplete<T>({
   // Track internal search term for visibility logic
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
-  // Height of the open dropdown, for the reserved spacer. Starts at the
-  // list's own maximum so the first frame reserves too much rather than too
-  // little — growing into place reads worse than settling down into it.
-  const [dropdownHeight, setDropdownHeight] = useState(DROPDOWN_MAX_HEIGHT);
+  // Space the open dropdown needs — its measured height plus the gap above it.
+  // Starts at the list's own maximum so the first frame reserves too much
+  // rather than too little: settling down into place reads better than growing
+  // into it.
+  const [dropdownHeight, setDropdownHeight] = useState(
+    DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP,
+  );
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -114,6 +117,24 @@ export function InlineAutocomplete<T>({
   const hasSearchQuery = searchTerm.length >= minSearchLength;
   const hasData = slicedItems.length > 0 || (hasSearchQuery && !loading);
   const shouldShowDropdown = showDropdown && hasSearchQuery && hasData;
+  // `shouldShowDropdown` is true for a settled search that matched NOTHING
+  // (`hasData` counts "done looking" as data), and with no footer there is then
+  // nothing to render. One condition for the list and the reserved space, so
+  // the space can never be held open for a list that is not there.
+  const isDropdownOpen =
+    shouldShowDropdown && (slicedItems.length > 0 || !!footerComponent);
+
+  // Forget the last list's height when the dropdown closes, so reopening with
+  // fewer results does not reserve the taller list's space until `onLayout`
+  // corrects it. Adjusting state during render rather than in an effect keeps
+  // the reset in the commit that closed the dropdown.
+  const [wasDropdownOpen, setWasDropdownOpen] = useState(isDropdownOpen);
+  if (isDropdownOpen !== wasDropdownOpen) {
+    setWasDropdownOpen(isDropdownOpen);
+    if (!isDropdownOpen) {
+      setDropdownHeight(DROPDOWN_MAX_HEIGHT + DROPDOWN_GAP);
+    }
+  }
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -217,45 +238,58 @@ export function InlineAutocomplete<T>({
             {error}
           </Text>
         ) : null}
-        {!!shouldShowDropdown &&
-          !!(slicedItems.length > 0 || footerComponent) && (
-            <View
-              style={styles.suggestionsContainer}
-              onLayout={
-                reserveDropdownSpace
-                  ? event => setDropdownHeight(event.nativeEvent.layout.height)
-                  : undefined
-              }
+        {!!isDropdownOpen && (
+          <View
+            style={styles.suggestionsContainer}
+            onLayout={
+              reserveDropdownSpace
+                ? event =>
+                    setDropdownHeight(
+                      event.nativeEvent.layout.height + DROPDOWN_GAP,
+                    )
+                : undefined
+            }
+          >
+            <ScrollView
+              style={styles.scrollView}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={true}
             >
-              <ScrollView
-                style={styles.scrollView}
-                keyboardShouldPersistTaps="handled"
-                nestedScrollEnabled={true}
-                showsVerticalScrollIndicator={true}
-              >
-                {slicedItems.map((item, index) => (
-                  <React.Fragment key={keyExtractor(item)}>
-                    <AppPressable
-                      onPress={() => handleSelect(item)}
-                      style={styles.suggestion}
-                    >
-                      {renderItem(item, index)}
-                    </AppPressable>
-                    {index < slicedItems.length - 1 && (
-                      <View style={styles.separator} />
-                    )}
-                  </React.Fragment>
-                ))}
-                {footerComponent}
-              </ScrollView>
-            </View>
-          )}
+              {slicedItems.map((item, index) => (
+                <React.Fragment key={keyExtractor(item)}>
+                  <AppPressable
+                    onPress={() => handleSelect(item)}
+                    style={styles.suggestion}
+                  >
+                    {renderItem(item, index)}
+                  </AppPressable>
+                  {index < slicedItems.length - 1 && (
+                    <View style={styles.separator} />
+                  )}
+                </React.Fragment>
+              ))}
+              {footerComponent}
+            </ScrollView>
+          </View>
+        )}
       </View>
       {/* Sibling, not a child: the list is anchored at `top: '100%'` of the
           container above, so a spacer inside it would push the list down by
-          its own height instead of making room for it. */}
-      {!!shouldShowDropdown && !!reserveDropdownSpace && (
-        <View style={{ height: dropdownHeight + DROPDOWN_GAP }} />
+          its own height instead of making room for it.
+
+          Being a sibling is also why it needs an explicit zIndex and
+          `collapsable={false}`: it occupies exactly the region the dropdown
+          paints into, and RN orders siblings by zIndex only — leaving this one
+          at the default would put a transparent view over every suggestion,
+          swallowing the taps. Android-only, and invisible to typecheck, lint
+          and jest. */}
+      {!!isDropdownOpen && !!reserveDropdownSpace && (
+        <View
+          collapsable={false}
+          testID="dropdown-spacer"
+          style={[styles.dropdownSpacer, { height: dropdownHeight }]}
+        />
       )}
     </>
   );
@@ -295,6 +329,11 @@ const styles = StyleSheet.create(theme => ({
   loadingIndicator: {
     position: 'absolute',
     right: theme.spacing.sm,
+  },
+  dropdownSpacer: {
+    // Below the container's own zIndex (10) so the dropdown paints over it,
+    // and non-zero so Android's view flattening cannot prune the ordering.
+    zIndex: 1,
   },
   suggestionsContainer: {
     position: 'absolute',

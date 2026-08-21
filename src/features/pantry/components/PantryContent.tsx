@@ -1,10 +1,4 @@
-import React, {
-  useDeferredValue,
-  useEffect,
-  useRef,
-  useState,
-  useImperativeHandle,
-} from 'react';
+import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
 import { View, RefreshControl } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
@@ -232,7 +226,14 @@ export const PantryContent = React.forwardRef<
     };
 
     const sortedItems = useServerSort ? items : sortItems(items);
-    const deferredSortedItems = useDeferredValue(sortedItems);
+    // Handed to FlashList as-is — never through `useDeferredValue`. FlashList
+    // truncates its layout table while *rendering* (`processDataUpdate` runs in
+    // a `useMemo`) and only gives cells their new index at commit. A deferred
+    // (transition) render can be interrupted between those two points, and a
+    // native `onLayout` that lands in the gap looks up a stale index and throws
+    // "index out of bounds, not enough layouts" — fatal in release. A normal
+    // render cannot be interrupted, so the shrink and the re-index are atomic.
+    // See docs/flashlist-layout-index-race.md.
 
     // Client-side render window: hand FlashList only a growing slice of the
     // loaded set so it never mounts the whole load-all page (~100 cells) at once.
@@ -249,7 +250,7 @@ export const PantryContent = React.forwardRef<
       setClientWindow(INITIAL_RENDER_WINDOW);
     }
 
-    const windowedItems = deferredSortedItems.slice(0, clientWindow);
+    const windowedItems = sortedItems.slice(0, clientWindow);
 
     // A tab switch whose new page is still fetching (server mode only): armed on
     // press, cleared once `fetching` transitions true→false. Cleared only on
@@ -289,11 +290,6 @@ export const PantryContent = React.forwardRef<
       return () => cancelAnimationFrame(handle);
     }, [sortOption, sortDirection]);
 
-    // Items exist but the deferred/windowed slice hasn't caught up yet — a
-    // one-render `useDeferredValue` lag on the empty→populated transition.
-    // Skeletons bridge it until the rows are in the window. Transient by
-    // construction (the deferred value always catches up next render).
-    const renderLag = sortedItems.length > 0 && windowedItems.length === 0;
     // The anti-flash minimum applies only to the *initial* (no-content-yet)
     // skeletons: a fast cache-warm load could otherwise flash them for a
     // sub-perceptible frame and then swap straight to content — the "switches
@@ -301,8 +297,7 @@ export const PantryContent = React.forwardRef<
     // render the latch never arms, so nothing is delayed. The switch overlay
     // (`switching && fetching`) keeps its own arm/lift timing so a freshly
     // fetched tab/sort isn't held back by the minimum.
-    const initialSkeletons =
-      awaitingItems || renderLag || (!hasShownContent && loading);
+    const initialSkeletons = awaitingItems || (!hasShownContent && loading);
     const showSkeletons =
       useMinimumVisible(initialSkeletons) || (switching && fetching);
 
@@ -321,9 +316,9 @@ export const PantryContent = React.forwardRef<
         onEndReached();
         return;
       }
-      if (clientWindow < deferredSortedItems.length) {
+      if (clientWindow < sortedItems.length) {
         setClientWindow(w =>
-          Math.min(w + RENDER_WINDOW_STEP, deferredSortedItems.length),
+          Math.min(w + RENDER_WINDOW_STEP, sortedItems.length),
         );
       }
     };

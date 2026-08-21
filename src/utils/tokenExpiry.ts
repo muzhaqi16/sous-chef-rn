@@ -6,10 +6,15 @@ import { jwtDecode } from 'jwt-decode';
  * A token that cannot be decoded is reported as expiring: refreshing one we
  * cannot read beats presenting it.
  *
- * The buffer differs per caller — the auth link asks five minutes early so a
- * request never races the expiry, the scheduler ten to absorb wake-up latency,
- * and the socket with none at all, since it only wants to know whether the token
- * it is about to present is already dead.
+ * Two callers, and they ask with different buffers: `authLink` five minutes
+ * early, so a request never races the expiry, and `isRefreshTokenValid` with
+ * none at all, since it only wants to know whether the refresh token is already
+ * dead.
+ *
+ * `tokenScheduler` decodes the token itself rather than calling this — it needs
+ * the expiry instant to schedule against, not a boolean — and the WebSocket
+ * never asks: it sends the refresh token in `connectionParams` and lets the
+ * server decide whether to spend it.
  */
 export const isTokenExpiringSoon = (token: string, bufferMs = 0): boolean => {
   try {

@@ -148,6 +148,16 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   // Stepping keeps the notation the quantity is already written in, so a
   // half-typed `1 1/4` does not come back from the + button as `2.25`.
   const parsedQuantity = parseFractionalInput(quantityInput);
+
+  // What `+`/`-` step FROM. An empty field is "nothing typed yet", so it steps
+  // from zero — tapping `+` on a blank field giving 1 is the point of the
+  // control. Text that is present but unreadable is different: stepping it
+  // would overwrite what the user typed with a formatted number and lose it,
+  // with no undo. So the buttons go inert instead, which is also what the
+  // format hint below is already telling them.
+  const stepBase = quantityInput.trim() === '' ? 0 : parsedQuantity;
+  const stepDisabled = stepBase === null;
+
   const stepTo = (newValue: number) => {
     setQuantityInput(
       quantityInput.includes('/')
@@ -157,11 +167,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   };
 
   const handleIncrement = () => {
-    stepTo((parsedQuantity ?? 0) + 1);
+    if (stepBase === null) return;
+    stepTo(stepBase + 1);
   };
 
   const handleDecrement = () => {
-    stepTo(Math.max(0, (parsedQuantity ?? 0) - 1));
+    if (stepBase === null) return;
+    stepTo(Math.max(0, stepBase - 1));
   };
 
   // Handle unit chip selection
@@ -209,7 +221,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   // which offline would surface only once the queue replayed. Catch it here.
   const quantityIsValid = parsedQuantity !== null && parsedQuantity >= 0;
 
-  const decrementDisabled = (parsedQuantity ?? 0) <= 0;
+  // Both buttons refuse the same state, rather than `-` refusing it and `+`
+  // silently rewriting the field.
+  const decrementDisabled = stepDisabled || stepBase <= 0;
 
   styles.useVariants({ editing: isEditing });
 
@@ -296,6 +310,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 testID="quantity-edit-increment"
                 style={styles.incrementButton}
                 onPress={handleIncrement}
+                disabled={stepDisabled}
               >
                 <Icon name="add" size={24} tone="white" />
               </AppPressable>

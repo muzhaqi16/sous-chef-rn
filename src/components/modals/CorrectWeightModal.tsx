@@ -124,7 +124,6 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={t('correctWeight.title')}

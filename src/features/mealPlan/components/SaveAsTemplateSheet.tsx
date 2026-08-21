@@ -115,7 +115,6 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         style={styles.scrollView}
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={t('saveAsTemplate.title')}

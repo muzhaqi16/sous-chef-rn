@@ -415,6 +415,38 @@ describe('QuantityEditSheet', () => {
     expect(defaultProps.onSave).not.toHaveBeenCalled();
   });
 
+  // Stepping formats a number back into the field, so on text it cannot read it
+  // would replace what the user typed with `1` — losing it, with no undo, at
+  // the moment the hint is telling them to fix the text.
+  it('leaves an unparseable quantity alone instead of stepping it', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '1/0');
+
+    await user.press(screen.getByTestId('quantity-edit-increment'));
+    await user.press(screen.getByTestId('quantity-edit-decrement'));
+
+    expect(screen.getByTestId('quantity-edit-input').props.value).toBe('1/0');
+    // And the state stays refused rather than looking saveable.
+    expect(screen.getByTestId('quantity-edit-format-hint')).toBeTruthy();
+    await user.press(screen.getByTestId('header-action-0'));
+    expect(defaultProps.onSave).not.toHaveBeenCalled();
+  });
+
+  // An empty field is not unreadable text — it is "nothing typed yet", and
+  // tapping `+` to get 1 is what the control is for.
+  it('still steps up from an empty field', async () => {
+    const user = userEvent.setup();
+    renderWithInit();
+    await user.press(screen.getByTestId('quantity-edit-value'));
+    fireEvent.changeText(screen.getByTestId('quantity-edit-input'), '');
+
+    await user.press(screen.getByTestId('quantity-edit-increment'));
+
+    expect(screen.getByTestId('quantity-edit-input').props.value).toBe('1');
+  });
+
   it('resets editing state when item becomes not visible', () => {
     const { rerender } = render(<QuantityEditSheet {...defaultProps} />);
     rerender(<QuantityEditSheet {...defaultProps} visible={false} />);

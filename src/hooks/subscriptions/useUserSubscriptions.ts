@@ -38,6 +38,7 @@ import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type UserEventPayload = UserEventsSubscription['userEvents'];
 
@@ -182,9 +183,11 @@ export function useUserSubscriptions(userId?: string) {
     },
   });
 
-  useSubscription(UserEventsDocument, {
+  const userSkip = !userId;
+  const userEvents = useSubscription(UserEventsDocument, {
     variables: { userId: userId! },
-    skip: !userId,
+    skip: userSkip,
     ...userEventHandlers,
   });
+  useSubscriptionTransportRecovery('UserEvents', userEvents, userSkip);
 }

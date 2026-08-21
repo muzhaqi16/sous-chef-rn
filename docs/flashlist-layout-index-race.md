@@ -1,11 +1,20 @@
 # FlashList: "index out of bounds, not enough layouts" on rapid deletes
 
-**Status:** open upstream bug in `@shopify/flash-list`, unpatched here by choice.
-**Affects:** `@shopify/flash-list@2.3.2` (latest published as of 2026-08-20 — upgrading does not help).
-**Seen on:** Pantry (`PantryContent`), Android. Any FlashList whose `data` shrinks
-while cells are mounted can hit it.
+**Status: resolved — does not occur in this app.** Fixed on the client on 2026-08-20 by
+never handing FlashList `data` a value produced by `useDeferredValue`, and validated on
+device the same day (see "Validation"). No library patch is carried or needed: the
+unguarded accessor inside `@shopify/flash-list@2.3.2` is unreachable from our code once
+the list's data updates render synchronously.
 
-## Symptom
+Upstream still has the underlying gap — [#2291](https://github.com/Shopify/flash-list/issues/2291)
+(P1, open since May 2026; PR #2293 proposes a guard, unmerged) and
+[#2440](https://github.com/Shopify/flash-list/issues/2440). That is context for anyone who
+meets the stack below after a future change, not an open item for us.
+
+**Was seen on:** Pantry (`PantryContent`), Android, swipe-delete. Reached production as a
+fatal before the fix.
+
+## Symptom (historical)
 
 ```
 Error: index out of bounds, not enough layouts
@@ -16,78 +25,123 @@ Error: index out of bounds, not enough layouts
     at executeDispatch / batchedUpdates$1 / dispatchEvent
 ```
 
-Reproduce by deleting several pantry rows in quick succession, especially rows
-near the end of the list.
+Reproduced by deleting several rows in quick succession, especially near the end of the
+list. It reached `ErrorUtils.reportFatalError` with `isFatal: true`, so
+`setupGlobalErrorHandler` (`src/utils/globalErrorHandler.ts`) recorded it as
+`app_unhandled_exceptions_total{fatal="true"}` and release builds crashed. An error
+boundary could not catch it: the throw happens inside an event handler, not during
+render.
+
+If this stack ever reappears, a FlashList `data` prop has been put behind a transition
+again — check for `useDeferredValue` / `startTransition` on the data path, or a list
+moved under a navigator with `inactiveBehavior: 'pause'`. That is the whole search
+space; see "Mechanism".
 
 ## Mechanism
 
-A cell's **native** `onLayout` event is queued for the index it had when the frame
-was laid out. If the data (and therefore the layout array) shrinks below that index
-before the event is dispatched into JS, the handler looks up a layout that no longer
-exists and throws. The `dispatchEvent → batchedUpdates → executeDispatch` frames in
-the stack are that late event arriving.
+> An earlier version of this document blamed `LayoutManager.deleteLayout()` splicing
+> "during the delete commit" and concluded nothing app-side was involved. Both claims
+> were wrong: `deleteLayout` is never called anywhere in the shipped build, the shrink
+> happens during **render**, and the app's `useDeferredValue` is what made that render
+> interruptible. Re-derived 2026-08-20 against the installed `dist/`.
 
-The chain, in upstream source terms:
+Three facts combine:
 
-| Step | File (upstream `src/`)                                  | What happens                                                                                        |
-| ---- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 1    | `recyclerview/ViewHolder.tsx:90-95`                     | `onLayout` calls `onSizeChanged(index, layout)` with the cell's captured `index` — no bounds check. |
-| 2    | `recyclerview/RecyclerView.tsx:610`                     | `onSizeChanged` is `validateItemSize`.                                                              |
-| 3    | `recyclerview/RecyclerView.tsx:377`                     | `validateItemSize` calls `recyclerViewManager.getLayout(index)` — the **throwing** accessor.        |
-| 4    | `recyclerview/RecyclerViewManager.ts:138`               | forwards to the layout manager.                                                                     |
-| 5    | `recyclerview/layout-managers/LayoutManager.ts:230-233` | `if (index >= this.layouts.length) throw new Error(ErrorMessages.indexOutOfBounds)`.                |
+1. **FlashList shrinks its layout table while rendering.**
+   `dist/recyclerview/hooks/useRecyclerViewManager.js:16-17` runs
+   `recyclerViewManager.processDataUpdate()` inside a `useMemo` keyed on `data` — a
+   side effect in the render phase. It calls `modifyChildrenLayout([], data.length)`
+   → `LayoutManager.modifyLayout()` (`LayoutManager.js:112-120`), which does
+   `this.layouts.length = totalItemCount`. From that moment, the table has no row for
+   the old last index. (`modifyLayout` even filters stale indices out of its _own_
+   input — upstream knows stale cells exist; it just did not guard the next site.)
 
-The shrink itself is `LayoutManager.deleteLayout()`, which splices `layouts`
-synchronously during the delete commit.
+2. **Cells learn their new index only at commit.** `ViewHolderCollection` renders each
+   `ViewHolder` with `index` from the render stack, and `ViewHolder.onLayout`
+   (`ViewHolder.js:25-27`) calls `onSizeChanged(index, …)` with the index it was
+   committed with. `onSizeChanged` is `validateItemSize` (`RecyclerView.js:244`),
+   which calls the **throwing** accessor `recyclerViewManager.getLayout(index)`
+   rather than the library's own guarded `tryGetLayout(index)`, which it uses 130
+   lines earlier for the same lookup.
 
-In the shipped build this is `dist/recyclerview/RecyclerView.js:244`, which is the
-frame that appears in the stack above.
+3. **Only a transition render can be interrupted between (1) and (2).** A normal React
+   render and its commit run as one synchronous task; no native event can be
+   dispatched in between, so for ordinary state updates the window has zero width.
+   The installed renderer time-slices **only transition lanes**:
+   `node_modules/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js:13081-13087`
+   sends any lane in `lanes & 127` (sync, input-continuous, default, gesture) to
+   `renderRootSync`; only `useDeferredValue` / `startTransition` / Offscreen work goes
+   through `renderRootConcurrent` and yields to the scheduler.
 
-## Why it is a library bug
+`PantryContent` fed FlashList through `useDeferredValue(sortedItems)` (and `ItemList` /
+`useShoppingListScreen` did the same). A delete therefore rendered as a transition:
+React ran `RecyclerView` (table truncated), yielded, and a native `onLayout` — queued
+by the _previous_ delete repositioning the cells below it — was dispatched to a cell
+still holding the old last index. That is the `dispatchEvent → batchedUpdates →
+executeDispatch` tail in the stack, and why the repro was _rapid_ deletes.
 
-FlashList already ships the guarded accessor for exactly this situation —
-`RecyclerViewManager.tryGetLayout(index)` (`recyclerview/RecyclerViewManager.ts:145-154`)
-returns `undefined` when the index is out of range, and other call sites use it.
-`validateItemSize` simply calls the throwing variant instead. The upstream fix is
-one line:
+Apollo's `useQuery` updates arrive through `useSyncExternalStore`, which React always
+renders synchronously (even inside `startTransition`), so removing the deferral is
+sufficient for data that comes from the cache. That is why the client-side change is
+the fix rather than a mitigation: with no transition on the data path, the window in
+which the library's unguarded lookup can run has zero width.
 
-```ts
-const validateItemSize = useCallback(
-  (index: number, size: RVDimension) => {
-    const layout = recyclerViewManager.tryGetLayout(index);
-    // A native onLayout event can be dispatched after the data shrank past this
-    // index; the cell is already gone, so there is nothing to validate.
-    if (!layout) return;
-    …
-  },
-  [recyclerViewContext, recyclerViewManager]
-);
-```
+### Why it looked like a rare library bug
 
-## Nothing on our side provokes it
+Most FlashList users pass `data` straight from state, which renders synchronously, so
+they never open the window. It needs `data` behind a transition **and** an `onLayout`
+in flight **and** a shrink — which is why upstream has only three reports and the
+earlier investigation here could not find an app-side cause by reading the delete
+path alone.
 
-- `prepareForLayoutAnimationRender()` in the delete paths (`PantryContent.tsx:225`,
-  `SortableList.tsx:123,133`, `ItemList.tsx:228`) is **not** the trigger. In 2.3.2 its
-  only effect is skipping one commit's scroll-offset correction
-  (`animationOptimizationsEnabled`, read solely at
-  `recyclerview/hooks/useRecyclerViewController.tsx:181`); the "disables item
-  recycling" wording in its docstring does not match the code. Removing the call
-  would not close the race and would re-enable offset correction mid-delete.
-- `keyExtractor` (`pantryListKeyExtractor`) is stable and id-based.
-- The pantry's delete animation is a manual slide-out that calls `onDelete` **after**
-  it finishes (`PantryItemCard.tsx`, `SlideAnimatedWrapper`), so there is no
-  Reanimated layout/exiting animation holding cells past their removal.
+## The fix — FlashList `data` never goes through `useDeferredValue`
 
-There is no app-side change that closes the window: the event is already queued in
-the native layer before JS decides to shrink the list.
+- `src/features/pantry/components/PantryContent.tsx` — `sortedItems` is windowed and
+  handed to FlashList directly. The `renderLag` skeleton bridge (which only existed to
+  cover the deferred value's one-render lag) and its test are gone.
+- `src/components/organisms/ItemList.tsx` — `items` passed directly; the data-reference
+  tracker label is now `ItemList.items`.
+- `src/features/shoppingList/hooks/useShoppingListScreen.ts` — the transform output is
+  returned as-is. `isLoadingInitial` keeps its `hasRawData` term (its comment explains
+  what it still covers); that is a separate clean-up.
+- `DRAW_DISTANCE`'s comment in `pantryDisplay/constants.ts` no longer cites the deferral
+  as the reason the 2× buffer is affordable.
 
-## Severity
+Each site carries a comment with the mechanism so the deferral is not re-added for
+throughput.
 
-Not just a dev red box. The error reaches `ErrorUtils.reportFatalError`
-(`@react-native/js-polyfills/error-guard.js`), which calls the global handler with
-`isFatal: true`. `setupGlobalErrorHandler` (`src/utils/globalErrorHandler.ts`)
-therefore records it as `app_unhandled_exceptions_total{fatal="true"}` and forwards it
-to React Native's default handler — a JS-fatal path in release builds.
+**Rule:** do not hand a FlashList `data` prop a value produced by `useDeferredValue`
+or updated inside `startTransition`, and do not move these lists under a navigator
+with `inactiveBehavior: 'pause'` — a resumed `Activity` subtree re-renders at the
+Offscreen lane, which is also interruptible. They sit under `HomeTabs`
+(`inactiveBehavior: 'none'`) today.
+
+This also unblocks the pantry row-reflow animation recorded in
+`docs/premium-ux-overhaul.md` (Phase 5), which was reverted precisely because the
+delete landed in a deferred second commit that `prepareForLayoutAnimationRender()`
+had not armed.
+
+## Validation (2026-08-20, Android dev build, DevTools attached, 59-item pantry)
+
+The deferral had been added for throughput (the shopping-list comment recorded
+pagination renders dropping from 680 ms to 220 ms), so the removal was measured with
+the existing dev instrumentation (`useRenderTime`, `useFlashListPerformance`):
+
+- **Crash:** 7 rapid swipe-deletes, 0 throws. The pre-change run on the same build threw
+  on 4 of 4.
+- **Scroll quality, 190 s session:** sustained blanks 2.7% (the `DRAW_DISTANCE` tuning
+  had called 12.2% "too few pre-rendered cells"); 0 of 8 data-reference changes
+  correlated with a blank frame; long frames 2, peak frame gap 63 ms — unchanged by the
+  deletes.
+- **Local window appends** (24 → 48 → 59, now rendered synchronously) filled in within a
+  few frames at `gap=0ms`.
+- **Per-delete commit intervals** 87–476 ms, the same order as before the change. (The
+  `useRenderTime` "exceeded 1000ms cap" lines measure wall time between commits and
+  include the `DeletePantryItem` + `GetPantry` round-trips; they are not render cost.)
+
+Server pagination past 100 items and the shopping list were not part of this run.
+Nothing in the numbers above suggests they would differ, and the 24-item client window
+keeps each synchronous append small.
 
 ## Related symptom, same root shape
 
@@ -95,10 +149,3 @@ to React Native's default handler — a JS-fatal path in release builds.
 window: `renderItem` transiently receiving an `undefined` item after a purchase toggle
 or delete. That one is handled defensively in the row component because it surfaces
 during render rather than in a native event handler.
-
-## Decision
-
-Documented, **not patched**. `patch-package` is wired into `postinstall` but the repo
-carries no patches, and this crash is upstream's to fix. Re-check `validateItemSize`
-on the next `@shopify/flash-list` bump: if it still calls `getLayout` rather than
-`tryGetLayout`, the bug is still present.

@@ -175,10 +175,20 @@ export function useQuantityEditModal(
         },
       });
     } catch {
-      // A link-level throw; the mutation's onError has already reported it.
+      // Deliberately silent: this mutation's own `onError` above already
+      // reported the throw. DeleteAccountScreen and OnboardingCompleteScreen
+      // report from their catch instead, because their mutations carry no
+      // `onError` — copying that here would double-report.
     }
 
     setIsLoading(false);
+
+    // A link-level throw leaves `result` undefined, which
+    // `classifyCreateResult` reads as 'rejected' while `alertRejectedMutation`
+    // only suppresses when there is a `result.error` to suppress on — so
+    // without this guard the one failure produces two alerts. The sheet stays
+    // open, as it would for any rejection.
+    if (!result) return;
 
     // A refused quantity resolves as a ValidationError payload with no `error`,
     // so onError never fires. Closing the sheet on that reads as a save that

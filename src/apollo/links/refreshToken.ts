@@ -510,9 +510,10 @@ export const proactiveTokenRefresh = async (): Promise<string | null> => {
   }
 };
 
-// Hand the socket the one refresh entry point. It uses it twice: before
-// connecting with an already-expired token, and to recover from a 4403 close —
-// where a successful refresh reconnects the socket itself (performTokenRefresh →
-// reconnectWebSocket). Registered here because wsLink cannot import this module
-// back without a cycle.
+// Hand the socket its one use of the refresh: the 4403 close handler's fast
+// path, which gets a fresh access token into the store before the socket's
+// backoff elapses. It is not the recovery — the re-dial re-runs
+// `connectionParams` and the server can rotate there — so a failure here is
+// survivable. Registered rather than imported because wsLink cannot import this
+// module back without a cycle.
 registerTokenRefresh(proactiveTokenRefresh);

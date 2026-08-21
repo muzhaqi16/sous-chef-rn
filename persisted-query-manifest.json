@@ -1149,10 +1149,10 @@
       "body": "mutation ShareShoppingList($input: ShareShoppingListInput!) {\n  shareShoppingList(input: $input) {\n    __typename\n    ... on ShareShoppingListPayload {\n      shoppingList {\n        id\n        shareCode\n        isPublic\n        shareLink {\n          universal\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
-      "id": "5a0da416292bea26c0c81b6f2fe2104ddc5d6cf28f35ba9886799d0a5ee74fcc",
+      "id": "5c65a6bd59c2edccbbcbec6010cd289648dd6298a1d2c90269ad579ed7e4416e",
       "name": "ShoppingListItemForEvent",
       "type": "query",
-      "body": "query ShoppingListItemForEvent($id: ID!) {\n  shoppingListItem(id: $id) {\n    id\n    ...useShoppingListSubscriptions_item\n    __typename\n  }\n}\n\nfragment useShoppingListSubscriptions_item on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+      "body": "query ShoppingListItemForEvent($id: ID!) {\n  shoppingListItem(id: $id) {\n    id\n    ...useShoppingListSubscriptions_item\n    __typename\n  }\n}\n\nfragment useShoppingListSubscriptions_item on ShoppingListItem {\n  id\n  itemName\n  quantity\n  quantityInput\n  displayFormat\n  purchaseInfo {\n    isPurchased\n    purchasedQuantity\n    purchasedPrice\n    purchaseDate\n    purchasedBy {\n      id\n      profile {\n        id\n        displayName\n        avatar\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  version\n  updatedAt\n  category\n  notes\n  unitName\n  unit {\n    id\n    name\n    symbol\n    __typename\n  }\n  sortOrder\n  item {\n    id\n    imageUrl\n    images {\n      url\n      kind\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
     },
     {
       "id": "863a52cca98f21879e891e165f27f5443a78befec9764c0dd3629f6b0baff934",

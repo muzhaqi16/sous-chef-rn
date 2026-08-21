@@ -1,5 +1,9 @@
 import { InMemoryCache } from '@apollo/client';
-import type { FieldFunctionOptions, Reference } from '@apollo/client';
+import type {
+  FieldFunctionOptions,
+  Reference,
+  StoreObject,
+} from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import { queueStore } from './offlineQueue/queueStore';
@@ -628,12 +632,55 @@ export function makeCache(): InMemoryCache {
       // it renders "Item not found" — with the item sitting right there in the
       // cache, minus the four fields the last writer didn't ask for.
       //
-      // The trade: a field now leaves the object only when a write overwrites
-      // it, so unmarking an item purchased leaves a stale `purchasedQuantity`
-      // behind. Harmless — every consumer gates the amounts on
-      // `purchaseInfo.isPurchased`, and both purchase mutations now select the
-      // whole object, so the server's own values replace them on the next write.
-      ShoppingListItemPurchaseInfo: { merge: true },
+      // The trade with a plain `merge: true` is that a field only ever leaves
+      // the object when a write overwrites it — and the five purchase fields
+      // are ONE FACT, not five. A narrow write that flips `isPurchased` leaves
+      // the previous purchase's amounts and purchaser sitting beside the new
+      // flag, and the detail screen attributes them to the new purchase: buy an
+      // item, have a collaborator unmark and re-buy it, and their purchase
+      // shows your name and your amounts. Gating every consumer on
+      // `isPurchased` does not help, because `isPurchased` is precisely the
+      // field the narrow write sets.
+      //
+      // So the merge expresses the invariant instead: a write that CHANGES
+      // `isPurchased` describes a different purchase, so the fields it does not
+      // carry are cleared rather than inherited. A write that leaves
+      // `isPurchased` alone is a partial read of the SAME purchase and merges
+      // field-wise as before — which is what keeps a list refetch from blanking
+      // an open detail screen.
+      //
+      // Cleared means written as `null`, never removed. Every dependent field
+      // is nullable in the schema, and an explicit null still reads COMPLETE —
+      // whereas removing them would blank the detail screen, which is the bug
+      // the policy exists to prevent. So the two failures are avoided together
+      // rather than traded against each other.
+      ShoppingListItemPurchaseInfo: {
+        merge(
+          existing: StoreObject | Reference | undefined,
+          incoming: StoreObject,
+          options: FieldFunctionOptions,
+        ) {
+          if (!existing) return incoming;
+
+          const wasPurchased = options.readField('isPurchased', existing);
+          const isPurchased = options.readField('isPurchased', incoming);
+          if (isPurchased === undefined || isPurchased === wasPurchased) {
+            return options.mergeObjects(existing, incoming);
+          }
+
+          // Derived from what is actually stored rather than a hardcoded field
+          // list, so a field added to the type is covered without anyone
+          // remembering to add it here.
+          const cleared: Record<string, null> = {};
+          for (const field of Object.keys(existing)) {
+            if (field !== '__typename' && !(field in incoming)) {
+              cleared[field] = null;
+            }
+          }
+
+          return options.mergeObjects({ ...existing, ...cleared }, incoming);
+        },
+      },
       PurchaseHistorySummary: { merge: true },
       ShoppingListItemSource: { merge: true },
       ShoppingListItemStoreInfo: { merge: true },

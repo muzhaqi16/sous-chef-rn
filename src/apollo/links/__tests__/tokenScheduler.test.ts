@@ -106,6 +106,59 @@ describe('tokenScheduler', () => {
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
+    // Scheduling at zero delay is a chain: refresh -> setTokens -> schedule
+    // again. `proactiveTokenRefresh` bypasses the refresh mutex's
+    // MIN_REFRESH_INTERVAL, so nothing outside this module bounds it. With the
+    // default one-hour access token against a ten-minute buffer neither of
+    // these runs; they exist for a deployment that shortens the lifetime.
+    describe('a token whose lifetime is shorter than the refresh buffer', () => {
+      const scheduleWithLifetime = (
+        secondsFromNow: number,
+        callback: jest.Mock,
+      ) => {
+        mockedJwtDecode.mockReturnValue({
+          exp: Math.floor(Date.now() / 1000) + secondsFromNow,
+          iat: 0,
+          userId: '1',
+        });
+        scheduleTokenRefresh('fake-token', callback);
+      };
+
+      it('spaces the chain instead of rescheduling at zero forever', () => {
+        const callback = jest.fn().mockResolvedValue(undefined);
+
+        // Five-minute token, ten-minute buffer: every schedule is immediate.
+        scheduleWithLifetime(300, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // The refresh moved the expiry forward, so a further refresh is
+        // legitimate — but not instantly.
+        scheduleWithLifetime(600, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        jest.advanceTimersByTime(5000);
+        expect(callback).toHaveBeenCalledTimes(2);
+      });
+
+      it('gives up once refreshing stops moving the expiry forward', () => {
+        const callback = jest.fn().mockResolvedValue(undefined);
+
+        scheduleWithLifetime(300, callback);
+        jest.advanceTimersByTime(0);
+        expect(callback).toHaveBeenCalledTimes(1);
+
+        // Same expiry back: refreshing is not what fixes this, so the reactive
+        // path takes over rather than this spinning against it.
+        scheduleWithLifetime(300, callback);
+        expect(getScheduleState().isScheduled).toBe(false);
+
+        jest.advanceTimersByTime(600 * 1000);
+        expect(callback).toHaveBeenCalledTimes(1);
+      });
+    });
+
     it('calls the callback when the timer fires and device is online', () => {
       // Token expires in 20 minutes => refresh at 10 minutes => delay ~600s
       const futureExp = Math.floor(Date.now() / 1000) + 1200;

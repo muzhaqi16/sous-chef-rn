@@ -199,9 +199,6 @@ export const ShoppingListDetailsStep: React.FC<
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        // Scrolls the focused field clear of the keyboard and leaves this much
-        // room below it, measured from the field's bottom edge.
-        bottomOffset={16}
       >
         <ItemAutocompleteField
           variant="modal"

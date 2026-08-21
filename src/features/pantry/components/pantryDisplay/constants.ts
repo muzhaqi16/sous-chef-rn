@@ -4,9 +4,11 @@ import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
 // Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
-// ~95px/item. useDeferredValue on FlashList data makes pagination non-blocking,
-// so the extra buffer is affordable. Previous testing showed 1.5× had too few
-// pre-rendered cells (12.2% sustained blanks) while 3×+ was excessive.
+// ~95px/item. Previous testing showed 1.5× had too few pre-rendered cells
+// (12.2% sustained blanks) while 3×+ was excessive. That testing ran with the
+// FlashList data behind `useDeferredValue`, since removed (see
+// docs/flashlist-layout-index-race.md) — re-measure blanks if pagination
+// renders now feel heavier.
 export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Minimum height for structural empty states (no home / no home selected)

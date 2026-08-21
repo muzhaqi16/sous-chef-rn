@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   type NativeSyntheticEvent,
@@ -174,15 +174,19 @@ export const ItemList: React.FC<ItemListProps> = ({
   const [refreshing, setRefreshing] = useState(false);
   const flashListRef = useRef<FlashListRef<Item>>(null);
   const { bottom: safeBottom } = useSafeAreaInsets();
-  const deferredItems = useDeferredValue(items);
+  // `items` reaches FlashList as-is — never through `useDeferredValue`. A
+  // deferred render can be interrupted after FlashList has shrunk its layout
+  // table but before cells are re-indexed, and a native `onLayout` in that gap
+  // throws "index out of bounds, not enough layouts" (fatal in release). See
+  // docs/flashlist-layout-index-race.md.
 
   // ── Performance instrumentation (matches PantryContent & SortableList) ──
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'ItemList',
   });
   useDataReferenceTracker(
-    deferredItems,
-    'ItemList.deferredItems',
+    items,
+    'ItemList.items',
     perfCallbacks.onDataReferenceChange,
   );
 
@@ -239,7 +243,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   // extraData encodes action availability — FlashList re-renders items when this changes
   const extraData = `${!!onItemEdit}-${!!onItemDelete}-${!!onItemConsume}-${!!onItemWaste}-${!!onItemRestock}`;
 
-  if (deferredItems.length === 0 && emptyState) {
+  if (items.length === 0 && emptyState) {
     return (
       <ScrollView
         contentContainerStyle={{
@@ -280,7 +284,7 @@ export const ItemList: React.FC<ItemListProps> = ({
     <ItemListActionsProvider actions={actions}>
       <FlashList
         ref={flashListRef}
-        data={deferredItems}
+        data={items}
         keyExtractor={keyExtractor}
         getItemType={getItemType}
         CellRendererComponent={AnimatedCellRenderer}

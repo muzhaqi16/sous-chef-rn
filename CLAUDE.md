@@ -48,11 +48,22 @@
   `BottomSheetScrollView`** — a gorhom-registered `KeyboardAwareScrollView` from
   `react-native-keyboard-controller`, which is what `react-native-edge-to-edge`'s
   README recommends once edge-to-edge stops `adjustResize` from resizing the window.
-  Pass `bottomOffset={16}` (the value every other call site uses); it is measured
-  from the focused input's **bottom edge**, not the caret the prop's docstring
-  mentions — see `point = absoluteY + inputHeight` in
-  `KeyboardAwareScrollView/index.tsx`. Without it a focused field lands flush
-  against the keyboard, and without the container nothing scrolls at all.
+  `bottomOffset` defaults to `16` in the component — do NOT restate it at call
+  sites, which only creates a second place to change. It is measured from the
+  focused input's **bottom edge**, not the caret the prop's docstring mentions —
+  see `point = absoluteY + inputHeight` in `KeyboardAwareScrollView/index.tsx`.
+  Without it a focused field lands flush against the keyboard, and without the
+  container nothing scrolls at all.
+
+  **This migration is not finished.** Eight sheets still use
+  `BottomSheetKeyboardAwareScrollView` directly and therefore do NOT supply
+  `BottomSheetInputContext`, so their inputs resolve to the plain RN one:
+  `AdjustQuantityModal`, `PantryActionModal`, `ManageRecipeSheet`,
+  `SearchResultsScreen`, and the four `AddToPantrySheet` pages
+  (`grep -rl BottomSheetKeyboardAwareScrollView src` — that list is the whole
+  set, so the count above is checkable rather than remembered). Convert one when you are
+  already working in it; the rule above describes where this is going, not
+  where it entirely is.
 
 ### Pressable & Modal Convention
 
@@ -234,9 +245,7 @@ The Unistyles babel plugin must run **before** `babel-plugin-react-compiler`
 
   > **Verified 2026-08 against `babel-plugin-react-compiler@1.0.0`.** Re-derive with
   > `node scripts/probe-compiler-try-forms.mjs`, which compiles one fixture per shape and
-  > prints the compiler's own diagnostic (`"Handle TryStatement with a finalizer
-('finally') clause"`, `"Support value blocks (conditional, logical, optional chaining,
-etc) within a try/catch statement"`, `"Unexpected terminal in optional"`).
+  > prints the compiler's own diagnostic — `Handle TryStatement with a finalizer ('finally') clause`, `Support value blocks (conditional, logical, optional chaining, etc) within a try/catch statement`, `Unexpected terminal in optional`.
   >
   > This rule previously read "never write try-catch **or** try-finally". That was
   > over-broad — a plain `try/catch` compiles — but it was not wrong by accident: most
@@ -554,11 +563,21 @@ Consumer hooks do not need to implement their own relevance checks.
   browsing suits the modal picker.
 - **Two things a stacked picker must get right.** `stackBehavior="push"` — gorhom's
   default `'switch'` "minimize[s] the current modal then mount[s] the new one"
-  (`bottomSheetModal/types.d.ts`), which reads as the host crashing closed. And a
-  snap point **taller than its host**, so the picker reads as a separate surface
-  rather than the host redrawing itself; that height difference is what makes the
-  Apple Maps reference legible. `BottomSheetAutocompleteInput` sets both
-  (`stackBehavior="push"`, `snapPoint = '85%'` over hosts that sit at 70%).
+  (`bottomSheetModal/types.d.ts`), which reads as the host crashing closed. And,
+  where it can, a snap point **taller than its host**, so the picker reads as a
+  separate surface rather than the host redrawing itself; that height difference
+  is what makes the Apple Maps reference legible.
+  `BottomSheetAutocompleteInput` sets both (`stackBehavior="push"`,
+  `snapPoint = '85%'` over hosts that mostly sit at 70%).
+
+  The height half is a preference, not an invariant, and the file used to state
+  it as one. Hosts in this app run from 35% to 95% — `CorrectWeightModal`
+  expands to 85%, `MoveToPantryModal` and `ManageRecipeSheet` to 95% — so no
+  single default can clear all of them, and `topInset` caps everything at the
+  safe area anyway. Over a tall host the stack reads through the push animation
+  and the dimmed backdrop instead. `snapPoint` is a prop; override it per call
+  site rather than moving the default to chase one host.
+
 - **Every sibling an inline dropdown can overlap needs an explicit, non-zero,
   descending zIndex on a `collapsable={false}` view — at every ancestor level
   up to where the overlap happens.** RN `zIndex` only orders siblings, and
@@ -851,8 +870,7 @@ locale needs but its JSON lacks, from `_other`, before `init`.
 
 > A missing category is not graceful degradation. Verified against `i18next@26`:
 > it does NOT fall back to that locale's `_other` — it falls through to
-> `fallbackLng`, so an Italian user at a count of 1,000,000 reads `"1000000
-items"` in English. Spanish and Italian need `many`; nothing this app counts
+> `fallbackLng`, so an Italian user at a count of 1,000,000 reads `1000000 items` in English. Spanish and Italian need `many`; nothing this app counts
 > reaches it, so the 82 hand-written strings would never have rendered.
 > `__tests__/i18n/pluralCategories.test.ts` asks `Intl.PluralRules` which
 > categories each locale needs rather than hardcoding one/other, so a locale
@@ -950,24 +968,47 @@ only when the access token has actually expired, so an ordinary connect costs
 nothing, and the rotated pair comes back in the `connection_ack` payload — the
 only delivery there will ever be.
 
-**WebSocket close handling has two enforcement points that must agree.**
-graphql-ws re-dials on its own via `shouldRetry`, independently of the backoff in
-the `closed` handler — and `shouldAutoReconnect = false` does not stop it, because
-that flag governs only our timer. `src/apollo/links/wsCloseCodes.ts` is the one
-table both read.
+**graphql-ws owns the reconnect loop. The app owns only the verdict.**
+The library re-dials after every retryable close, re-evaluating
+`connectionParams` each attempt; `retryWait` in `wsLink.ts` supplies the backoff
+curve and parks a retry while the device is offline. `shouldRetry` is the single
+hook over that loop and answers one question — **is this verdict terminal** —
+reading `src/apollo/links/wsCloseCodes.ts`. `shouldAutoReconnect` is folded into
+it, because it is now the only thing that can stop a re-dial.
 
-| Code                      | Meaning                                                            | Response                                                      |
-| ------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------- |
-| 4403                      | Token is stale — expired, or superseded by a rotation we lost      | **Never terminal.** Refresh once, then reconnect with backoff |
-| 4410                      | Subscription lifetime cap                                          | Reconnect immediately, no backoff                             |
-| 4411                      | Build below the server minimum                                     | Stop; prompt to update                                        |
-| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream | Stop **and** `endSession`                                     |
-| 4413                      | API key refused                                                    | Stop, but do **not** sign the user out — it is a build fault  |
-| 4429 / 4500 / 1006        | Transient                                                          | Bounded backoff                                               |
-| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                 | Stop; only a code change fixes it                             |
+Do NOT add a second backoff beside it. There was one: a timer whose only action
+was `wsClient.terminate()`, which is `if (connecting) emit('closed')` — a no-op
+once a socket has closed, since graphql-ws clears `connecting` in its own close
+handler. It could interrupt a live connection; it could never dial one, so every
+path that looked like recovery silently wasn't.
 
-**Never branch on the close reason.** Each code now carries exactly one verdict,
-and the same reason string is emitted for several distinct conditions.
+| Code                      | Meaning                                                            | Response                                                         |
+| ------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 4403                      | Token is stale — expired, or superseded by a rotation we lost      | **Never terminal.** Retry; one HTTP refresh as a fast path       |
+| 4410                      | Subscription lifetime cap                                          | Retry with the counter reset, so the next wait is the base delay |
+| 4411                      | Build below the server minimum                                     | Stop; prompt to update                                           |
+| 4412                      | Session unrecoverable — at the handshake **or** revoked mid-stream | Stop **and** `endSession`                                        |
+| 4429 / 4500               | Transient, but the library refuses to retry them regardless        | The subscription layer re-subscribes (see below)                 |
+| 4413                      | API key refused                                                    | Stop, but do **not** sign the user out — it is a build fault     |
+| 1006 / 1000               | Transient                                                          | Library retry with backoff                                       |
+| 4400 / 4401 / 4406 / 4409 | Protocol violation                                                 | Stop; only a code change fixes it                                |
+
+**`shouldRetry` is not consulted for every code.** `shouldRetryConnectOrThrow`
+(graphql-ws `dist/client.js:278`) rethrows 4400, 4401, 4406, 4409, 4429, 4500 and
+the internal fatal range before reaching it — and a rethrow errors every active
+subscription's sink. Apollo's `useSubscription` has no auto-restart, so those
+subscriptions are finished until something re-subscribes.
+`useSubscriptionTransportRecovery` is what does, on the line after every
+`useSubscription`; `isLibraryFatalCloseCode` records the list.
+
+**Never branch on the close reason.** Each code carries exactly one verdict, and
+the same reason string is emitted for several distinct conditions.
+
+**A session end must drop the socket client, not just dispose it.** `dispose()`
+latches `disposed` inside graphql-ws with no reset, and a disposed client
+connects once and then refuses every retry — silently. `disposeWebSocket()`
+therefore clears the reference so the next `enableAutoReconnect()` builds a fresh
+one.
 
 ### Bundled Credentials Convention
 
@@ -994,7 +1035,7 @@ npm run lint       # Verify code quality
 npm test           # Run test suite
 ```
 
-Two checks are not part of those and fail independently:
+Two checks are not part of those, and nothing runs them for you:
 
 ```bash
 node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
@@ -1006,3 +1047,15 @@ node scripts/check-bundled-secrets.mjs --self-test
 bails in the files where a variant call was deliberately extracted into a leaf —
 moving it back into the composite keeps the count unchanged and would otherwise
 pass.
+
+`npm run check:version-sync` runs on **pre-push**, alongside `typecheck`,
+`i18n:check` and `check:codegen-orphans`. It compares `package.json`,
+`versionName`, and **each** `MARKETING_VERSION` in the pbxproj. A failure means
+the mismatched platform would ship reporting a version it is not: `getVersion()`
+is native, so the version-keyed Apollo cache purge
+(`ApolloCachePersistence.ts`) never fires there and `CLIENT_VERSION` reaches the
+server's minimum-version gate wrong — with nothing else failing to warn you,
+which is exactly why it is a hook and not a habit. iOS
+`CURRENT_PROJECT_VERSION` and Android `versionCode` are deliberately NOT
+compared: they are per-platform build counters on independent sequences, read by
+`getBuildNumber()`.

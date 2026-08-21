@@ -2,6 +2,7 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
+import { InMemoryCache } from '@apollo/client';
 import {
   renderWithApollo,
   type MockedResponse,
@@ -206,5 +207,27 @@ describe('PurchaseHistoryScreen', () => {
     // something the person may already have bought — wrong precisely when the
     // app doesn't know what the history holds.
     expect(screen.queryByText('No purchase history')).toBeNull();
+  });
+
+  // `purchasesConnection` is `PurchaseConnection!`, so a field error inside it
+  // nulls `shoppingListItem` all the way up — and that is the SAME root field
+  // `GetShoppingListItem` reads. Written to the cache, it tells the ItemDetail
+  // screen still mounted underneath that the item does not exist, and it
+  // persists to MMKV, so the item stays missing across a restart.
+  it('does not write its failure over the item every other screen reads', async () => {
+    const cache = new InMemoryCache();
+
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [failingMock],
+      cache,
+    });
+
+    expect(await screen.findByText("Couldn't load this")).toBeTruthy();
+
+    const rootQuery = cache.extract().ROOT_QUERY ?? {};
+    const itemFields = Object.keys(rootQuery).filter(field =>
+      field.startsWith('shoppingListItem'),
+    );
+    expect(itemFields).toEqual([]);
   });
 });

@@ -314,7 +314,73 @@ describe('useQuantityEditModal', () => {
 
     expect(result.current.visible).toBe(true);
     expect(result.current.selectedItem).not.toBeNull();
-    expect(mockAlert).toHaveBeenCalled();
+    // A refusal payload resolves with no `error`, so `onError` never fires and
+    // this hook is the only alerter — again exactly one.
+    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockAlert).toHaveBeenCalledWith(
+      'Error',
+      'Could not adjust the quantity.',
+    );
+  });
+
+  // The two failure routes must produce exactly ONE message between them.
+  // A resolved transport error already reaches the user through the mutation's
+  // `onError`, so this hook must stay quiet — `alertRejectedMutation` suppresses
+  // precisely the `result.error` case for callers that keep an `onError`.
+  it('does not add a second alert when the failure already went through onError', async () => {
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      error: new Error('network down'),
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('5', null, null);
+    });
+
+    // ONE alert, and it is `onError`'s — not a second one from this hook.
+    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockAlert).not.toHaveBeenCalledWith(
+      'Error',
+      'Could not adjust the quantity.',
+    );
+    // Still a failure: the sheet stays open with the typed value intact.
+    expect(result.current.visible).toBe(true);
+  });
+
+  // Offline, the mutation resolves with the field null — queueLink's shape for
+  // "queued for replay". That is an acceptance, not a failure: `SyncShoppingListItem`
+  // replays it later, so the sheet must close silently rather than alert.
+  it('closes without alerting when the write is queued offline', async () => {
+    const m = recordMock(UpdateShoppingListItemQuantityDocument, {
+      data: { updateShoppingListItemQuantity: null },
+    });
+    const items = [createItem()];
+
+    const { result } = renderHookWithApollo(
+      () => useQuantityEditModal({ items }),
+      { operationMocks: [m.mock] },
+    );
+
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+
+    await act(async () => {
+      await result.current.save('5', null, null);
+    });
+
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(result.current.visible).toBe(false);
+    expect(result.current.selectedItem).toBeNull();
   });
 
   it('closes modal after successful save', async () => {

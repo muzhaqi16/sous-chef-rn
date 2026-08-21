@@ -1,4 +1,4 @@
-import { useEffect, useDeferredValue, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 
 import { useUser } from '#store/useAppStore';
@@ -132,20 +132,17 @@ export function useShoppingListScreen() {
 
   // 4b. Wrap nodes into FlashList row items. Display data is no longer
   // pre-computed — each row reads its fields via `useFragment` internally.
-  const {
-    unpurchasedItems: transformedUnpurchasedItems,
-    purchasedItems: transformedPurchasedItems,
-  } = useShoppingListTransformMulti({
+  // These reach FlashList as-is — never through `useDeferredValue`. That
+  // deferral once cut pagination renders from 680ms to 220ms, but FlashList
+  // shrinks its layout table while *rendering* and re-indexes cells only at
+  // commit; a deferred (transition) render can be interrupted between the two,
+  // and a native `onLayout` landing in that gap throws "index out of bounds,
+  // not enough layouts" — fatal in release. A normal render cannot be
+  // interrupted. See docs/flashlist-layout-index-race.md.
+  const { unpurchasedItems, purchasedItems } = useShoppingListTransformMulti({
     rawUnpurchasedItems: filteredUnpurchasedItems,
     rawPurchasedItems: filteredPurchasedItems,
   });
-
-  // Defer data updates so pagination and subscription renders don't block scroll.
-  // Applied AFTER transform to avoid stale-data issues that caused FlashList blank cells.
-  // Always-on deferral (not just during search) — matches PantryContent pattern where
-  // useDeferredValue reduced pagination render times from 680ms to 220ms.
-  const unpurchasedItems = useDeferredValue(transformedUnpurchasedItems);
-  const purchasedItems = useDeferredValue(transformedPurchasedItems);
 
   // 5. Ownership: Enrich lists with ownership info
   const listDataWithOwnership = lists.map(list => ({
@@ -177,8 +174,11 @@ export function useShoppingListScreen() {
   const hasRawData =
     rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0;
 
-  // True until deferred UI items are ready for first display.
-  // Covers: queries in flight AND useDeferredValue gap (raw data arrived but UI lags a frame).
+  // True until UI items are ready for first display. `hasRawData` was added
+  // for the one-render gap while the (since removed) `useDeferredValue` lagged
+  // behind the store; the transform is now synchronous, so raw-but-no-UI only
+  // happens when a search filters everything out. Kept unchanged while the
+  // deferral removal is being measured — revisit on its own.
   const isLoadingInitial = !hasUIItems && (loading || hasRawData);
 
   return {

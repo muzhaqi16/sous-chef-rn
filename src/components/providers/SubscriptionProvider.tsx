@@ -64,10 +64,12 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({
   useEffect(() => {
     const initializeWebSocket = () => {
       if (isAuthenticated) {
-        // No blocking refresh is needed here. The socket exchanges an
-        // already-expired access token itself, inside connectionParams, before
-        // the handshake presents it — so enabling reconnects is safe even when
-        // the stored token is stale.
+        // No blocking refresh is needed here. `connectionParams` sends the
+        // refresh token alongside the access token, and the SERVER rotates an
+        // expired one during the handshake, returning the new pair in the ack —
+        // so enabling reconnects is safe even when the stored token is stale.
+        // This also restores the socket client if the previous session's
+        // teardown disposed one.
         enableAutoReconnect();
         setIsTokenReady(true);
       } else {

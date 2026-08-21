@@ -78,10 +78,18 @@ export function BottomSheetAutocompleteInput<T>({
   title,
   searchPlaceholder,
   minSearchLength = 2,
-  // Taller than the sheets this picker is usually presented over (they sit at
-  // 70%), so a stacked picker reads as a separate surface instead of the host
-  // redrawing itself. gorhom supports stacking — its own reference is the Apple
-  // Maps clone — and there the stacked sheets are told apart by their heights.
+  // Taller than the hosts this picker is usually presented over — most sit at
+  // 70% — so it reads as a separate surface stacked over one, rather than the
+  // host redrawing itself. gorhom supports stacking (its own reference is the
+  // Apple Maps clone), where the sheets are told apart by their heights.
+  //
+  // It cannot be taller than EVERY host: several reach 85-95%
+  // (`CorrectWeightModal` expands to 85%, `MoveToPantryModal` and
+  // `ManageRecipeSheet` to 95%). Over those, what distinguishes the picker is
+  // the push animation and the backdrop dimming the host, not its height. Pass
+  // `snapPoint` explicitly at such a call site if the stack needs to read more
+  // clearly there — it is a prop precisely because one number cannot be right
+  // for every host.
   snapPoint = '85%',
 
   // Data props

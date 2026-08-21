@@ -57,6 +57,7 @@ import { Telemetry } from '#/services/telemetry';
 import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 /**
  * Cached `itemsConnection` shape as seen inside a `cache.modify` field
@@ -475,8 +476,14 @@ export function useShoppingListSubscriptions(
       },
     });
 
-  useSubscription(MyShoppingListsEventsDocument, {
-    skip: !userId || rejected,
+  const myListsSkip = !userId || rejected;
+  const myListsEvents = useSubscription(MyShoppingListsEventsDocument, {
+    skip: myListsSkip,
     ...myListsEventsHandlers,
   });
+  useSubscriptionTransportRecovery(
+    'MyShoppingListsEvents',
+    myListsEvents,
+    myListsSkip,
+  );
 }

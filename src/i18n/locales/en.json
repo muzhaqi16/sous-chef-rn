@@ -5,6 +5,7 @@
       "sessionInvalid": "Your session is invalid. Please sign in again",
       "sessionExpired": "Your session has expired. Please sign in again",
       "sessionEnded": "Session expired. Please sign in again",
+      "sessionRetrying": "Reconnecting your session. Please try again.",
       "credentialsInvalid": "Invalid email or password",
       "accountLocked": "Your account has been temporarily locked for security",
       "accountSuspended": "This account is no longer active. Please contact support.",

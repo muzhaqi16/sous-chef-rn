@@ -45,6 +45,7 @@ import {
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
+import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
 type PantryEventsPayload = PantryEventsSubscription['pantryEvents'];
 
@@ -292,9 +293,11 @@ export function usePantrySubscriptions(userId?: string) {
     },
   });
 
-  useSubscription(PantryEventsDocument, {
+  const pantrySkip = !selectedPantryId || !isHomeSelectionReady || rejected;
+  const pantryEvents = useSubscription(PantryEventsDocument, {
     variables: { pantryId: selectedPantryId! },
-    skip: !selectedPantryId || !isHomeSelectionReady || rejected,
+    skip: pantrySkip,
     ...eventHandlers,
   });
+  useSubscriptionTransportRecovery('PantryEvents', pantryEvents, pantrySkip);
 }
