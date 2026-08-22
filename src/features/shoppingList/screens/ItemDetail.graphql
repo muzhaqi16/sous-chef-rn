@@ -24,6 +24,16 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       name
     }
   }
+  brand {
+    id
+    name
+  }
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
   purchaseInfo {
     isPurchased
     purchasedQuantity

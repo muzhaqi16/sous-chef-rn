@@ -16523,9 +16523,21 @@ export type UpdateShoppingListInput = {
 };
 
 export type UpdateShoppingListItemInput = {
+  /**
+   * Brand for this item, independent of the catalog item's own brands.
+   * brandId wins over brandName; a brandName with no matching brand creates one.
+   * Omit the sub-input to leave the brand alone; send brandId: null to remove it.
+   */
+  brand?: InputMaybe<BrandReferenceInput>;
   category?: InputMaybe<Scalars['String']['input']>;
   id: Scalars['ID']['input'];
   itemName?: InputMaybe<Scalars['String']['input']>;
+  /**
+   * Package size for this item. Omit to leave it alone; send netWeight: null to
+   * remove it, which clears netWeightUnitId with it. A netWeightUnitId with no
+   * netWeight is rejected.
+   */
+  netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;

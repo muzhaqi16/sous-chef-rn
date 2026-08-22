@@ -2267,9 +2267,10 @@
   "purchaseAmountSheet": {
     "title": "Segna come acquistato",
     "quantity": "Quantità",
-    "price": "Prezzo",
+    "totalPrice": "Prezzo totale",
     "currencySymbol": "$",
-    "pricePlaceholder": "0.00"
+    "pricePlaceholder": "0.00",
+    "perUnitHint": "{{price}} per unità"
   },
   "addStorageLocation": {
     "createFailed": "Impossibile creare la posizione",

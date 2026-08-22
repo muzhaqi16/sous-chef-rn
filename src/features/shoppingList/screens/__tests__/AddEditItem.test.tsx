@@ -173,6 +173,25 @@ jest.mock(
   }),
 );
 jest.mock(
+  '#components/molecules/AutocompleteField/BrandAutocompleteField',
+  () => ({
+    BrandAutocompleteField: ({
+      label,
+      testID,
+    }: {
+      label?: string;
+      testID?: string;
+    }) => {
+      const { View, Text } = require('react-native');
+      return (
+        <View testID={testID}>
+          <Text>{label}</Text>
+        </View>
+      );
+    },
+  }),
+);
+jest.mock(
   '#components/molecules/AutocompleteField/CategoryAutocompleteField',
   () => ({
     CategoryAutocompleteField: ({ label }: { label?: string }) => {
@@ -235,6 +254,9 @@ function buildShoppingListItem(id: string) {
       __typename: 'ShoppingListItemStoreInfo',
       preferredStore: null,
     },
+    brand: null,
+    netWeight: null,
+    netWeightUnit: null,
     createdAt: '2025-01-01T00:00:00.000Z',
     addedBy: null,
     purchasesConnection: {
@@ -367,6 +389,8 @@ const mockUseShoppingListItemForm = (
   setFromItem: jest.fn(),
   buildUnitInput: jest.fn(() => ({})),
   buildDirtyInput: jest.fn(() => ({})),
+  parseNetWeightInput: jest.fn(() => undefined),
+  netWeightNeedsUnit: false,
   hasDirtyFields: false,
   ...overrides,
   formState: {
@@ -376,6 +400,11 @@ const mockUseShoppingListItemForm = (
     notes: '',
     category: '',
     estimatedPrice: '',
+    brand: '',
+    brandId: null,
+    netWeight: '',
+    netWeightUnit: '',
+    netWeightUnitId: null,
     ...(overrides.formState ?? {}),
   },
 });
@@ -465,6 +494,49 @@ describe('AddEditItem', () => {
   it('shows unit field', () => {
     renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Unit')).toBeTruthy();
+  });
+
+  it('shows brand and net weight fields when adding', () => {
+    renderWithApollo(<AddEditItem route={addRoute} />);
+    expect(screen.getByTestId('add-item-brand-input')).toBeTruthy();
+    expect(screen.getByTestId('add-item-net-weight-input')).toBeTruthy();
+    expect(screen.getByTestId('add-item-net-weight-unit-picker')).toBeTruthy();
+  });
+
+  it('shows brand and net weight fields when editing', () => {
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [buildGetShoppingListItemMock('item1')],
+    });
+    expect(screen.getByTestId('edit-item-brand-input')).toBeTruthy();
+    expect(screen.getByTestId('edit-item-net-weight-input')).toBeTruthy();
+    expect(screen.getByTestId('edit-item-net-weight-unit-picker')).toBeTruthy();
+  });
+
+  it('refuses to save a net weight that has no unit', async () => {
+    // Restored at the end: `clearAllMocks` in beforeEach resets call records,
+    // not a spy's return value, and the validation tests after this one render
+    // with the module mock's own form state.
+    const formSpy = jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Oats', quantityInput: '1', netWeight: '500' },
+          netWeightNeedsUnit: true,
+        }),
+      );
+
+    const user = userEvent.setup();
+    renderWithApollo(<AddEditItem route={addRoute} />);
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Please select a unit for the net weight.',
+    );
+    formSpy.mockRestore();
   });
 
   it('shows correct submit button testID for adding', () => {
@@ -958,6 +1030,55 @@ describe('AddEditItem', () => {
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.stringContaining('Server error'),
+      ),
+    );
+  });
+
+  it("shows the server's own sentence when it refuses a named field", async () => {
+    const user = userEvent.setup();
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '1' },
+          buildDirtyInput: jest.fn(() => ({
+            netWeight: { netWeightUnitId: 'unit-g' },
+          })),
+          hasDirtyFields: true,
+        }),
+      );
+
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        {
+          request: {
+            query: UpdateShoppingListItemDocument,
+            variables: () => true,
+          },
+          result: {
+            data: {
+              updateShoppingListItem: {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_FAILED',
+                message:
+                  'Provide a netWeight value when specifying netWeightUnitId.',
+                field: 'netWeight',
+              },
+            },
+          },
+        },
+      ],
+    });
+    await user.press(screen.getByTestId('edit-item-submit-button'));
+
+    await waitFor(() =>
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Provide a netWeight value when specifying netWeightUnitId.',
       ),
     );
   });

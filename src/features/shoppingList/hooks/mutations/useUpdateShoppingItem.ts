@@ -20,8 +20,10 @@ import {
 } from '#/utils/errorHandlers';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { fieldValidationMessage } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
 import type { ShoppingListItemUpdate } from './types';
+import type { UpdateShoppingListItemInput } from '#/graphql/generated/schemaTypes';
 
 interface UseUpdateShoppingItemOptions {
   listId: string | null | undefined;
@@ -100,12 +102,34 @@ export function useUpdateShoppingItem({
       client.cache.modify({ id: cacheId, fields: revertFields });
     };
 
+    // The flat brand / net-weight keys on `ShoppingListItemUpdate` mirror the
+    // add path; the update input nests them (`BrandReferenceInput`,
+    // `NetWeightInput`), so translate before sending. Everything else keeps
+    // the name the input uses.
+    const { brandName, brandId, netWeight, netWeightUnitId, ...fields } =
+      updates;
+    const input: UpdateShoppingListItemInput = {
+      ...fields,
+      ...((brandId || brandName) && {
+        brand: {
+          ...(brandId && { brandId }),
+          ...(brandName && { brandName }),
+        },
+      }),
+      ...(netWeight !== undefined && {
+        netWeight: {
+          netWeight,
+          ...(netWeightUnitId && { netWeightUnitId }),
+        },
+      }),
+      id: itemId,
+      version: snapshot.version,
+    };
+
     let result;
     try {
       result = await updateItemMutation({
-        variables: {
-          input: { ...updates, id: itemId, version: snapshot.version },
-        },
+        variables: { input },
         // Local-first: queue on an API-down-while-online failure (idempotent
         // field update by real id → replays via SyncShoppingListItem).
         context: { localFirst: true },
@@ -123,7 +147,14 @@ export function useUpdateShoppingItem({
     if (outcome === 'rejected') {
       revertSnapshot();
       // Alerts only for a union-payload rejection; onError handles error cases.
-      alertRejectedMutation(result, t('errors.updateShoppingItemFailed'));
+      // A field-specific ValidationError (e.g. `netWeight` sent with a unit but
+      // no value) names the rule in `message`; an unattributed one gets the
+      // generic copy.
+      alertRejectedMutation(
+        result,
+        fieldValidationMessage(result.data) ??
+          t('errors.updateShoppingItemFailed'),
+      );
       return false;
     }
     return true;

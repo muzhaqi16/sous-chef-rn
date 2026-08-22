@@ -6,7 +6,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { FormInput } from '#components/molecules/FormInput';
 import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
-import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
 import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
@@ -14,7 +13,7 @@ import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
-import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
+import { CategoryType } from '#/graphql/generated/schemaTypes';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_VALUES,
@@ -27,7 +26,6 @@ import { alertService } from '#/services/alertService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { makeIdNameHandler } from '../makeIdNameHandler';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 
 interface ShoppingListDetailsStepProps {
@@ -49,6 +47,11 @@ interface ShoppingListDetailsStepProps {
  * morphing sheet — the same pattern the pantry flow uses. Reuses the shared
  * `useShoppingListItemForm` state and the bottom-sheet-aware autocomplete
  * fields; the offline-first create goes through the shared `useAddShoppingItem`.
+ *
+ * The item name is a plain field here, not a catalog picker: the user reached
+ * this step by choosing "Add manually" under the search step's own catalog
+ * matches, and the add never linked a catalog item from this form anyway
+ * (`useAddShoppingItem` posts `item: { itemName }`).
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
@@ -72,41 +75,37 @@ export const ShoppingListDetailsStep: React.FC<
       notes,
       category,
       estimatedPrice,
+      brand,
+      brandId,
+      netWeight,
+      netWeightUnit,
+      netWeightUnitId,
     },
     updateField,
     buildUnitInput,
+    parseNetWeightInput,
+    netWeightNeedsUnit,
   } = useShoppingListItemForm({ itemName: prefilledItemName });
 
   const { addItem } = useAddShoppingItem({ listId: shoppingListId, refetch });
   const [saving, setSaving] = useState(false);
 
   // Manual-add extras the API supports (all optional).
-  const [brand, setBrand] = useState('');
-  const [brandId, setBrandId] = useState<string | null>(null);
-  const [netWeight, setNetWeight] = useState('');
-  const [netWeightUnit, setNetWeightUnit] = useState('');
-  const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
   const [priority, setPriority] = useState(0);
   const [storeName, setStoreName] = useState('');
   const [storeId, setStoreId] = useState<string | null>(null);
-
-  // Autocomplete selection mirrors the AddEditItem screen.
-  const handleItemSelect = (item: ItemSuggestion) => {
-    updateField('itemName', item.name);
-    if (item.defaultUnit?.symbol) updateField('unit', item.defaultUnit.symbol);
-    if (item.defaultUnit?.id)
-      updateField('selectedUnitId', item.defaultUnit.id);
-    if (item.category?.name) updateField('category', item.category.name);
-  };
 
   const handleUnitSelect = (unitId: string | null) => {
     updateField('selectedUnitId', unitId);
   };
 
-  const handleBrandSelected = makeIdNameHandler(setBrandId, setBrand);
+  const handleBrandSelected = makeIdNameHandler(
+    id => updateField('brandId', id),
+    name => updateField('brand', name),
+  );
   const handleNetWeightUnitSelected = makeIdNameHandler(
-    setNetWeightUnitId,
-    setNetWeightUnit,
+    id => updateField('netWeightUnitId', id),
+    name => updateField('netWeightUnit', name),
   );
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
 
@@ -129,7 +128,7 @@ export const ShoppingListDetailsStep: React.FC<
     }
     // Net weight is all-or-nothing — a value without a unit is rejected by the
     // API, so prompt for a unit instead of silently dropping it.
-    if (netWeight.trim() && !netWeightUnitId) {
+    if (netWeightNeedsUnit) {
       alertService.alert(
         t('labels.error'),
         t('shoppingListScreens.netWeightUnitRequired'),
@@ -138,9 +137,7 @@ export const ShoppingListDetailsStep: React.FC<
     }
 
     const unitData = buildUnitInput();
-    const netWeightValue = netWeight.trim()
-      ? parseDecimalInput(netWeight)
-      : undefined;
+    const netWeightValue = parseNetWeightInput();
     executeWithLoadingState(
       async () => {
         await addItem({
@@ -154,14 +151,13 @@ export const ShoppingListDetailsStep: React.FC<
           estimatedPrice: estimatedPrice || undefined,
           brandName: brand.trim() || undefined,
           brandId: brandId ?? undefined,
+          // Both or neither — `netWeightNeedsUnit` was checked above.
           netWeight:
-            netWeightValue !== undefined &&
-            !isNaN(netWeightValue) &&
-            netWeightUnitId
+            netWeightValue !== undefined && netWeightUnitId
               ? netWeightValue
               : undefined,
           netWeightUnitId:
-            netWeightValue !== undefined && !isNaN(netWeightValue)
+            netWeightValue !== undefined
               ? netWeightUnitId ?? undefined
               : undefined,
           priority,
@@ -200,14 +196,16 @@ export const ShoppingListDetailsStep: React.FC<
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <ItemAutocompleteField
-          variant="modal"
+        {/* Plain field, as on the pantry details page: the search step
+            already showed catalog matches for this text, and a picker here
+            only ever pre-filled unit and category — it never linked the item. */}
+        <FormInput
           label={t('shoppingListScreens.itemName')}
+          required
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
-          onSelectItem={handleItemSelect}
           placeholder={t('shoppingListScreens.itemNamePlaceholder')}
-          required
+          useBottomSheetInput
           testID="add-shopping-item-name-input"
         />
 
@@ -215,7 +213,7 @@ export const ShoppingListDetailsStep: React.FC<
           variant="modal"
           label={t('shoppingListScreens.brand')}
           value={brand}
-          onChangeText={setBrand}
+          onChangeText={text => updateField('brand', text)}
           onBrandSelected={handleBrandSelected}
           placeholder={t('shoppingListScreens.brandPlaceholder')}
         />
@@ -253,7 +251,7 @@ export const ShoppingListDetailsStep: React.FC<
           <FormInput
             label={t('shoppingListScreens.netWeight')}
             value={netWeight}
-            onChangeText={setNetWeight}
+            onChangeText={text => updateField('netWeight', text)}
             placeholder={t('shoppingListScreens.netWeightPlaceholder')}
             keyboardType="decimal-pad"
             useBottomSheetInput
@@ -262,7 +260,7 @@ export const ShoppingListDetailsStep: React.FC<
             variant="modal"
             label={t('shoppingListScreens.netWeightUnit')}
             value={netWeightUnit}
-            onChangeText={setNetWeightUnit}
+            onChangeText={text => updateField('netWeightUnit', text)}
             onUnitSelected={handleNetWeightUnitSelected}
             placeholder={t('shoppingListScreens.unitPlaceholder')}
           />

@@ -216,6 +216,11 @@ export function useToggleShoppingItem({
    * offline persistence, but fires updateShoppingListItem with `purchaseTracking`
    * (the toggle input can't carry amounts). `purchasedPrice` is omitted when null
    * so the server falls back to its own auto-derivation.
+   *
+   * `purchasedPrice` is PER UNIT: the server records
+   * `Purchase.totalPrice = purchasedPrice × purchasedQuantity`, and move-to-pantry
+   * derives its per-unit cost from it. The Mark Purchased sheet collects the
+   * total paid; `usePurchaseAmountModal` divides before calling this.
    */
   const recordPurchase = async (
     itemId: string,

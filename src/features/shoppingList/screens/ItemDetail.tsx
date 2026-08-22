@@ -4,6 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
+import { formatQuantity } from '#/utils/formatQuantity';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -259,6 +260,22 @@ export const ShoppingListItemDetail: React.FC<
             <DetailRow label={t('shoppingListScreens.category')}>
               <Text size="sm" weight="medium">
                 {item.category}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.brand?.name && (
+            <DetailRow label={t('shoppingListScreens.brand')}>
+              <Text size="sm" weight="medium">
+                {item.brand.name}
+              </Text>
+            </DetailRow>
+          )}
+          {item.netWeight != null && (
+            <DetailRow label={t('shoppingListScreens.netWeight')}>
+              <Text size="sm" weight="medium">
+                {`${formatQuantity(item.netWeight)} ${
+                  item.netWeightUnit?.symbol ?? item.netWeightUnit?.name ?? ''
+                }`.trim()}
               </Text>
             </DetailRow>
           )}

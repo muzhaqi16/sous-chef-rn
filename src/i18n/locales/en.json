@@ -2267,9 +2267,10 @@
   "purchaseAmountSheet": {
     "title": "Mark Purchased",
     "quantity": "Quantity",
-    "price": "Price",
+    "totalPrice": "Total price",
     "currencySymbol": "$",
-    "pricePlaceholder": "0.00"
+    "pricePlaceholder": "0.00",
+    "perUnitHint": "{{price}} per unit"
   },
   "addStorageLocation": {
     "createFailed": "Failed to create location",

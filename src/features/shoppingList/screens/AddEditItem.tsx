@@ -19,6 +19,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
+import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
 import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
@@ -43,6 +44,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
+import { fieldValidationMessage } from '#/utils/errors/mutationPayload';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -79,11 +81,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       priority,
       storeId,
       storeName,
+      brand,
+      brandId,
+      netWeight,
+      netWeightUnit,
+      netWeightUnitId,
     },
     updateField,
     setFromItem,
     buildUnitInput,
     buildDirtyInput,
+    parseNetWeightInput,
+    netWeightNeedsUnit,
     hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
@@ -165,6 +174,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
+  // The autocomplete fields hand back (id, name); the name is kept only when a
+  // suggestion was actually picked, so free typing keeps the text as typed.
+  const handleBrandSelect = (id: string | null, name: string | null) => {
+    updateField('brandId', id);
+    if (name) updateField('brand', name);
+  };
+  const handleNetWeightUnitSelect = (
+    id: string | null,
+    name: string | null,
+  ) => {
+    updateField('netWeightUnitId', id);
+    if (name) updateField('netWeightUnit', name);
+  };
+
   const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   // Handle form submission
@@ -181,6 +204,16 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       alertService.alert(
         t('labels.error'),
         t('shoppingListScreens.pleaseEnterQuantity'),
+      );
+      return;
+    }
+
+    // Net weight is all-or-nothing — a value without a unit is rejected by the
+    // API on create, so prompt for a unit instead of silently dropping it.
+    if (netWeightNeedsUnit) {
+      alertService.alert(
+        t('labels.error'),
+        t('shoppingListScreens.netWeightUnitRequired'),
       );
       return;
     }
@@ -223,11 +256,15 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           if (updatePayload) {
             navigation.goBack();
           } else if (result.data) {
+            // A refusal that names a field carries the rule's own sentence —
+            // that is what the user can act on; the generic copy is for an
+            // unattributed one.
             alertService.alert(
               t('labels.error'),
-              t('shoppingListScreens.serverNotUpdated', {
-                action: t('shoppingListScreens.updated'),
-              }),
+              fieldValidationMessage(result.data) ??
+                t('shoppingListScreens.serverNotUpdated', {
+                  action: t('shoppingListScreens.updated'),
+                }),
             );
           } else {
             alertService.alert(
@@ -244,6 +281,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         // shows immediately and stays if the create is queued offline (the queue
         // replays it later, keyed by this id).
         const id = generateEntityId();
+        const netWeightValue = parseNetWeightInput();
+        const brandName = brand.trim();
         const optimisticItem = createOptimisticShoppingListItem(id, {
           itemName,
           quantity: parseDecimalInput(quantityInput) || 1,
@@ -285,6 +324,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                   ...(storeId && {
                     storePrefs: { preferredStoreId: storeId },
                   }),
+                  ...((brandId || brandName) && {
+                    brand: {
+                      ...(brandId && { brandId }),
+                      ...(brandName && { brandName }),
+                    },
+                  }),
+                  // Both or neither — `netWeightNeedsUnit` was checked above.
+                  ...(netWeightValue !== undefined &&
+                    netWeightUnitId && {
+                      netWeight: {
+                        netWeight: netWeightValue,
+                        netWeightUnitId,
+                      },
+                    }),
                 },
               ],
             },
@@ -371,6 +424,17 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       )}
 
+      {/* Brand */}
+      <BrandAutocompleteField
+        variant="modal"
+        label={t('shoppingListScreens.brand')}
+        value={brand}
+        onChangeText={text => updateField('brand', text)}
+        onBrandSelected={handleBrandSelect}
+        placeholder={t('shoppingListScreens.brandPlaceholder')}
+        testID={isEdit ? 'edit-item-brand-input' : 'add-item-brand-input'}
+      />
+
       {/* Category Field */}
       <CategoryAutocompleteField
         variant="modal"
@@ -401,6 +465,33 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           onUnitSelected={handleUnitSelect}
           placeholder={t('shoppingListScreens.unitPlaceholder')}
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
+        />
+      </FieldRow>
+
+      {/* Net weight + its unit (inline) */}
+      <FieldRow>
+        <FormInput
+          label={t('shoppingListScreens.netWeight')}
+          value={netWeight}
+          onChangeText={text => updateField('netWeight', text)}
+          placeholder={t('shoppingListScreens.netWeightPlaceholder')}
+          keyboardType="decimal-pad"
+          testID={
+            isEdit ? 'edit-item-net-weight-input' : 'add-item-net-weight-input'
+          }
+        />
+        <UnitAutocompleteField
+          variant="modal"
+          label={t('shoppingListScreens.netWeightUnit')}
+          value={netWeightUnit}
+          onChangeText={text => updateField('netWeightUnit', text)}
+          onUnitSelected={handleNetWeightUnitSelect}
+          placeholder={t('shoppingListScreens.unitPlaceholder')}
+          testID={
+            isEdit
+              ? 'edit-item-net-weight-unit-picker'
+              : 'add-item-net-weight-unit-picker'
+          }
         />
       </FieldRow>
 

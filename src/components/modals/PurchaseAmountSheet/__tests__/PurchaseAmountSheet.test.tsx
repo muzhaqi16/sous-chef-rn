@@ -102,10 +102,10 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByText('Milk')).toBeTruthy();
   });
 
-  it('renders Quantity and Price section labels', () => {
+  it('renders Quantity and Total price section labels', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     expect(screen.getByText('Quantity')).toBeTruthy();
-    expect(screen.getByText('Price')).toBeTruthy();
+    expect(screen.getByText('Total price')).toBeTruthy();
   });
 
   it('pre-fills the quantity input from requestedQuantity', () => {
@@ -113,9 +113,24 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByTestId('purchase-quantity-input').props.value).toBe('2');
   });
 
-  it('pre-fills the price input from estimatedPrice', () => {
+  it('pre-fills the price input with the estimated total (per-unit estimate × quantity)', () => {
     renderWithInit(buildProps());
-    expect(screen.getByTestId('purchase-price-input').props.value).toBe('4.99');
+    // 4.99 per unit × 2 requested
+    expect(screen.getByTestId('purchase-price-input').props.value).toBe('9.98');
+  });
+
+  it('shows how the total splits per unit when the quantity is not 1', () => {
+    renderWithInit(buildProps());
+    expect(screen.getByText(/4\.99 per unit/)).toBeTruthy();
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3');
+    expect(screen.getByText(/1\.50 per unit/)).toBeTruthy();
+  });
+
+  it('hides the per-unit hint at quantity 1, where it would repeat the total', () => {
+    renderWithInit(buildProps());
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '1');
+    expect(screen.queryByText(/per unit/)).toBeNull();
   });
 
   it('renders the unit suffix when unitName is present', () => {
@@ -132,10 +147,10 @@ describe('PurchaseAmountSheet', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
     fireEvent.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(2, 4.99);
+    expect(onConfirm).toHaveBeenCalledWith(2, 9.98);
   });
 
-  it('confirms with edited quantity and price', async () => {
+  it('hands the entered total to onConfirm as typed — no per-unit maths here', async () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
     fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '3');
@@ -157,7 +172,7 @@ describe('PurchaseAmountSheet', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));
     await user.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(2, 4.99);
+    expect(onConfirm).toHaveBeenCalledWith(2, 9.98);
   });
 
   it('cancels via the header close button', () => {
@@ -172,7 +187,7 @@ describe('PurchaseAmountSheet', () => {
     renderWithInit(buildProps({ onConfirm }));
     fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '');
     fireEvent.press(screen.getByTestId('header-action-0'));
-    expect(onConfirm).toHaveBeenCalledWith(0, 4.99);
+    expect(onConfirm).toHaveBeenCalledWith(0, 9.98);
   });
 
   it('re-seeds inputs when the item id changes', () => {
@@ -190,7 +205,8 @@ describe('PurchaseAmountSheet', () => {
       />,
     );
     expect(screen.getByTestId('purchase-quantity-input').props.value).toBe('5');
-    expect(screen.getByTestId('purchase-price-input').props.value).toBe('1.25');
+    // 1.25 per unit × 5 requested
+    expect(screen.getByTestId('purchase-price-input').props.value).toBe('6.25');
   });
 
   it('does not confirm via the header checkmark while loading', () => {

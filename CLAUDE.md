@@ -68,6 +68,30 @@
   already working in it; the rule above describes where this is going, not
   where it entirely is.
 
+- **Never wrap a scrollable (`FlashList` via `useBottomSheetScrollableCreator`,
+  `BottomSheetScrollView`, `BottomSheetFlatList`) in `BottomSheetView`.** It is
+  for static content the sheet sizes itself to. A list inside it is never
+  height-bounded, grows to every row, and cannot scroll — the
+  `BottomSheetAutocompleteInput` picker shipped that way. Put the list in a
+  plain `View style={{ flex: 1 }}` (or as a direct child of the modal), as
+  `IngredientSelectorSheet` / `AddMealSheet` do. `TagPicker` and `FolderPicker`
+  only get away with the wrapper because their lists carry `maxHeight: 250`.
+
+  > **Verified 2026-08 against `@gorhom/bottom-sheet@5.2.14`.** The component's
+  > container style is `position: 'absolute', left: 0, top: 0, right: 0` with no
+  > `bottom` or height, so `flex: 1` on it does nothing; the sheet's content
+  > region gets an explicit animated height from `BottomSheetContent.tsx`, which
+  > is what bounds a plain flex child. It also re-registers the sheet's scrollable
+  > as a plain view after a child list registers itself (parent effects run
+  > last). Re-check in one line:
+  >
+  > ```
+  > cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
+  > ```
+  >
+  > Guarded by `BottomSheetAutocompleteInput.test.tsx` ("keeps the list out of
+  > gorhom BottomSheetView").
+
 ### Pressable & Modal Convention
 
 - **Use `Pressable` from `#components/atoms/themedComponents`** as the default
@@ -514,6 +538,14 @@ Defaults:
 - `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
 - Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic.
 - Build optimistic responses from the existing cache via `cache.readFragment` + spread, never with hand-rolled placeholder shapes that can drift from the schema.
+- **A refusal that names a `field` carries the rule's own sentence in `message`.**
+  Since 2026-08-22 (`sous-chef-api/docs/api/breaking-changes.md`) every
+  field-specific `ValidationError` returns its rule's wording instead of the fixed
+  "Validation failed for field: …" — `field` routes, `message` displays. Surface it
+  with `fieldValidationMessage(result.data)` (`src/utils/errors/mutationPayload.ts`)
+  before falling back to generic copy, as `useUpdatePantryItem` and
+  `useUpdateShoppingItem` do; an unattributed refusal (no `field`) keeps the generic
+  copy. Never branch on `message` text.
 - **Never pair `optimisticResponse` with `context: { localFirst: true }`.** Apollo tears the optimistic layer down as soon as the mutation completes, and offline that completion is `queueLink`'s null result — so the change reverts on screen while it sits in the queue. Local-first writes to the cache permanently before firing instead.
 
 **Optimistic entities must be COMPLETE for every query that reads them.** Apollo has no

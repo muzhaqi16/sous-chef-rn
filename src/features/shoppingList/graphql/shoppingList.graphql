@@ -892,6 +892,20 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
             }
           }
         }
+        # Brand and package size are editable from AddEditItem now that the
+        # update input accepts them. Selected here so the saved values land in
+        # the cache for ItemDetail and the form without a refetch; kept out of
+        # the hook fragment, which mirrors the optimistic shape.
+        brand {
+          id
+          name
+        }
+        netWeight
+        netWeightUnit {
+          id
+          name
+          symbol
+        }
       }
       shoppingList {
         id

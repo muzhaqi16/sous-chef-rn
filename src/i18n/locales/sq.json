@@ -2267,9 +2267,10 @@
   "purchaseAmountSheet": {
     "title": "Shëno si të blerë",
     "quantity": "Sasia",
-    "price": "Çmimi",
+    "totalPrice": "Çmimi total",
     "currencySymbol": "$",
-    "pricePlaceholder": "0.00"
+    "pricePlaceholder": "0.00",
+    "perUnitHint": "{{price}} për njësi"
   },
   "addStorageLocation": {
     "createFailed": "Nuk u krijua dot vendndodhja",

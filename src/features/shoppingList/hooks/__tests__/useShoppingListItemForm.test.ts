@@ -30,6 +30,11 @@ describe('useShoppingListItemForm', () => {
         priority: 0,
         storeId: null,
         storeName: '',
+        brand: '',
+        brandId: null,
+        netWeight: '',
+        netWeightUnit: '',
+        netWeightUnitId: null,
       });
     });
 
@@ -94,6 +99,9 @@ describe('useShoppingListItemForm', () => {
           __typename: 'ShoppingListItemStoreInfo',
           preferredStore: null,
         },
+        brand: null,
+        netWeight: null,
+        netWeightUnit: null,
         ...overrides,
       };
     }
@@ -146,6 +154,36 @@ describe('useShoppingListItemForm', () => {
       expect(result.current.formState.selectedUnitId).toBeNull();
     });
 
+    it('populates brand and net weight from the item', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFromItem(
+          createFragment({
+            brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
+            netWeight: 500,
+            netWeightUnit: {
+              __typename: 'Unit',
+              id: 'unit-g',
+              name: 'gram',
+              symbol: 'g',
+            },
+          }),
+        );
+      });
+
+      expect(result.current.formState).toEqual(
+        expect.objectContaining({
+          brand: 'Oatly',
+          brandId: 'brand-1',
+          netWeight: '500',
+          netWeightUnit: 'g',
+          netWeightUnitId: 'unit-g',
+        }),
+      );
+      expect(result.current.netWeightNeedsUnit).toBe(false);
+    });
+
     it('handles missing priceEstimate', () => {
       const { result } = renderHook(() => useShoppingListItemForm());
 
@@ -190,6 +228,9 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
+          brand: null,
+          netWeight: null,
+          netWeightUnit: null,
         });
       });
 
@@ -261,6 +302,9 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
+          brand: null,
+          netWeight: null,
+          netWeightUnit: null,
         });
       });
 
@@ -288,6 +332,9 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
+          brand: null,
+          netWeight: null,
+          netWeightUnit: null,
         });
       });
 
@@ -323,6 +370,9 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
+          brand: null,
+          netWeight: null,
+          netWeightUnit: null,
         });
       });
 
@@ -355,6 +405,9 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
+          brand: null,
+          netWeight: null,
+          netWeightUnit: null,
         });
       });
 
@@ -364,6 +417,116 @@ describe('useShoppingListItemForm', () => {
 
       const dirty = result.current.buildDirtyInput();
       expect(dirty.pricing).toEqual({ estimatedPrice: 4.99 });
+    });
+  });
+
+  describe('buildDirtyInput — brand and net weight', () => {
+    const seed = (
+      overrides: Partial<UseShoppingListItemForm_ItemFragment> = {},
+    ) => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+      act(() => {
+        result.current.setFromItem({
+          __typename: 'ShoppingListItem',
+          id: 'sli-1',
+          version: 1,
+          itemName: 'Milk',
+          quantity: 1,
+          quantityInput: '1',
+          unitName: '',
+          notes: '',
+          category: '',
+          unit: null,
+          priceEstimate: { __typename: 'PriceEstimate', estimated: null },
+          priority: 0,
+          storeInfo: {
+            __typename: 'ShoppingListItemStoreInfo',
+            preferredStore: null,
+          },
+          brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
+          netWeight: 500,
+          netWeightUnit: {
+            __typename: 'Unit',
+            id: 'unit-g',
+            name: 'gram',
+            symbol: 'g',
+          },
+          ...overrides,
+        });
+      });
+      return result;
+    };
+
+    it('sends a picked brand by id', () => {
+      const result = seed();
+      act(() => {
+        result.current.updateField('brandId', 'brand-2');
+        result.current.updateField('brand', 'Chobani');
+      });
+      expect(result.current.buildDirtyInput().brand).toEqual({
+        brandId: 'brand-2',
+      });
+    });
+
+    it('sends a typed brand by name so the server can find-or-create it', () => {
+      const result = seed();
+      act(() => {
+        // Free typing clears the picked id, as BrandAutocompleteField does.
+        result.current.updateField('brandId', null);
+        result.current.updateField('brand', 'Chobani');
+      });
+      expect(result.current.buildDirtyInput().brand).toEqual({
+        brandName: 'Chobani',
+      });
+    });
+
+    it('removes the brand with an explicit null id when cleared', () => {
+      const result = seed();
+      act(() => {
+        result.current.updateField('brandId', null);
+        result.current.updateField('brand', '');
+      });
+      expect(result.current.buildDirtyInput().brand).toEqual({ brandId: null });
+    });
+
+    it('leaves brand and net weight out when they did not change', () => {
+      const result = seed();
+      act(() => {
+        result.current.updateField('notes', 'changed');
+      });
+      const dirty = result.current.buildDirtyInput();
+      expect(dirty).not.toHaveProperty('brand');
+      expect(dirty).not.toHaveProperty('netWeight');
+    });
+
+    it('sends the net weight with its unit when either changes', () => {
+      const result = seed();
+      act(() => {
+        result.current.updateField('netWeight', '750');
+      });
+      expect(result.current.buildDirtyInput().netWeight).toEqual({
+        netWeight: 750,
+        netWeightUnitId: 'unit-g',
+      });
+    });
+
+    it('clears the net weight with an explicit null when emptied', () => {
+      const result = seed();
+      act(() => {
+        result.current.updateField('netWeight', '');
+      });
+      expect(result.current.buildDirtyInput().netWeight).toEqual({
+        netWeight: null,
+      });
+    });
+
+    it('flags a net weight typed with no unit to choose from', () => {
+      const result = seed({ netWeight: null, netWeightUnit: null });
+      act(() => {
+        result.current.updateField('netWeight', '250');
+      });
+      expect(result.current.netWeightNeedsUnit).toBe(true);
+      expect(result.current.parseNetWeightInput()).toBe(250);
     });
   });
 

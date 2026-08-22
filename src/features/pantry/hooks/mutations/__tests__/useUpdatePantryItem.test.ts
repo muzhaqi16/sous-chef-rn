@@ -311,5 +311,92 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
     await waitFor(() => {
       expect(readItemName(cache)).toBe('Milk');
     });
+    // A refused union payload resolves as data, so the mutation's onError
+    // never fires — the hook has to tell the user itself. The refusal names a
+    // field, so its own sentence is what gets shown.
+    const { alertService } = require('#/services/alertService');
+    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Name is invalid');
+  });
+
+  it('falls back to the generic copy for an unattributed refusal', async () => {
+    const cache = seedItem();
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdatePantryItemDocument,
+            variables: () => true,
+          },
+          result: {
+            data: {
+              updatePantryItem: {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_FAILED',
+                message: 'Something was invalid',
+                field: null,
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await act(async () => {
+      fireRename(result, 'Bad Name');
+    });
+
+    await waitFor(() => {
+      expect(readItemName(cache)).toBe('Milk');
+    });
+    const { alertService } = require('#/services/alertService');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to update item',
+    );
+  });
+
+  it('tells the user why the server refused a unit change (batches still exist)', async () => {
+    // Since 2026-08-22 the API resolves a bare `unit.unitSymbol` to a real unit
+    // and refuses the change while batches exist — a ValidationError with
+    // `field: "unit"` and the rule's own sentence in `message`
+    // (docs/api/breaking-changes.md in the API repo). The edit must snap back
+    // AND say why, in the server's words.
+    const cache = seedItem();
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdatePantryItemDocument,
+            variables: () => true,
+          },
+          result: {
+            data: {
+              updatePantryItem: {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_FAILED',
+                message:
+                  'Cannot change tracking unit while batches exist. Deplete all batches first.',
+                field: 'unit',
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    await act(async () => {
+      fireRename(result, 'Milk (cans)');
+    });
+
+    await waitFor(() => {
+      expect(readItemName(cache)).toBe('Milk');
+    });
+    const { alertService } = require('#/services/alertService');
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Cannot change tracking unit while batches exist. Deplete all batches first.',
+    );
   });
 });

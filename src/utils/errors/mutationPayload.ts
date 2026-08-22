@@ -52,6 +52,31 @@ export function extractMutationPayload(
   return fields[0][1];
 }
 
+/**
+ * The sentence a refused union payload is worth showing the user, or `null`.
+ *
+ * A field-specific `ValidationError` carries its rule's own wording in
+ * `message` — "Cannot change tracking unit while batches exist. Deplete all
+ * batches first." — and names the input it was about in `field`
+ * (sous-chef-api `docs/api/breaking-changes.md`, 2026-08-22; before that the
+ * message was the fixed "Validation failed for field: …" and the sentence was
+ * stranded in an extension the union member does not expose). A mutation that
+ * takes several sub-inputs in one call — `updatePantryItem` carries `brand`,
+ * `netWeight`, `storage` and `unit` — has nothing else to say about WHICH one
+ * was refused, so when `field` is set the server's sentence beats the caller's
+ * generic "failed to update". Without a `field` the refusal is unattributed and
+ * the caller's own copy is the honest one. `field` routes; `message` displays.
+ */
+export function fieldValidationMessage(data: unknown): string | null {
+  const payload = extractMutationPayload(data);
+  if (!payload || payload.__typename !== 'ValidationError') return null;
+  const { field, message } = payload as {
+    field?: string | null;
+    message?: string | null;
+  };
+  return field && message ? message : null;
+}
+
 /** Narrows a GraphQL union-type mutation payload to the success variant.
  *  Throws GraphQLNetworkError when payload is null/undefined (transport failure),
  *  or GraphQLDomainError when the server returns an error union member. */
