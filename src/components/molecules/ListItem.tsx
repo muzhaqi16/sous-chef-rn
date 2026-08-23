@@ -5,7 +5,7 @@ import { ThemedIcon } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
-import { Badge } from '../base/Badge';
+import { Badge } from '#components/atoms/Badge';
 import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
 import { Text } from '#components/atoms/Text';
 

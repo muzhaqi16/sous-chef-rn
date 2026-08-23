@@ -80,7 +80,9 @@ async function requestCameraAndLaunch(
   } else if (result === RESULTS.DENIED) {
     alertService.alert(
       tGlobal('profile.cameraPermissionDeniedTitle'),
-      tGlobal('profile.cameraPermissionDeniedMessage'),
+      tGlobal(
+        'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
+      ),
     );
   } else if (result === RESULTS.BLOCKED) {
     alertService.alert(
@@ -89,8 +91,10 @@ async function requestCameraAndLaunch(
     );
   } else {
     alertService.alert(
-      tGlobal('profile.cameraPermissionTitle'),
-      tGlobal('profile.cameraPermissionMessage'),
+      tGlobal('labels.cameraPermission'),
+      tGlobal(
+        'labels.cameraPermissionIsRequiredToTakePhotosPleaseEnableItInYourDeviceSettings',
+      ),
     );
   }
 }
@@ -138,7 +142,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      alertService.alert(t('profile.invalidImage'), validationError.message);
+      alertService.alert(t('labels.invalidImage'), validationError.message);
     }
   };
 
@@ -300,7 +304,7 @@ export const ProfilePhotoUploadScreen: React.FC = () => {
                 weight="semibold"
                 style={styles.btnText}
               >
-                {t('profile.takePhoto')}
+                {t('labels.takePhoto')}
               </Text>
             </AppPressable>
 

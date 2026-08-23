@@ -40,9 +40,9 @@ const getExpiryText = (
   if (diffDays < 0)
     return { text: t('pantryItemDetail.batch.expired'), isExpired: true };
   if (diffDays === 0)
-    return { text: t('pantryItemDetail.batch.expiresToday'), isExpired: false };
+    return { text: t('labels.expiresToday'), isExpired: false };
   return {
-    text: t('pantryItemDetail.batch.daysLeft', { count: diffDays }),
+    text: t('expiration.daysLeft', { count: diffDays }),
     isExpired: false,
   };
 };

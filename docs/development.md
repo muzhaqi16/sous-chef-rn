@@ -182,7 +182,155 @@ Shared auto-mocks live in `__mocks__/` folders next to their modules
 (`Environment`, `logger`, MMKV storage, navigation hooks, token scheduler, …) —
 override per-suite with `mockReturnValue` rather than replacing the module.
 
-Patterns and gotchas: the "Apollo Test Patterns" section of `CLAUDE.md`.
+### Apollo testing patterns
+
+The rules are summarized in CLAUDE.md § Testing; this is the full pattern set.
+
+```ts
+// ✅ Correct — schema-backed cache, type-safe mocks
+//
+// Import `MockedResponse` from the helper, NOT from '@apollo/client/testing'
+// (the flat import there is deprecated; the helper re-exports the canonical
+// MockLink.MockedResponse type).
+import {
+  renderHookWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
+
+const operationMocks: MockedResponse[] = [
+  {
+    request: { query: GetItemDoc, variables: { id: '1' } },
+    result: { data: { item: { __typename: 'Item', id: '1', name: 'A' } } },
+  },
+];
+
+const { result } = renderHookWithApollo(() => useItem('1'), { operationMocks });
+```
+
+```ts
+// ❌ Anti-pattern — couples to operation names, no cache, refactor-broken
+jest.mock('@apollo/client/react', () => ({
+  useQuery: jest.fn((doc) => {
+    if (doc?.definitions?.[0]?.name?.value === 'GetItem') return { data: ... };
+  }),
+}));
+```
+
+The helper supports two modes:
+
+- **`operationMocks: MockedResponse[]`** — explicit per-operation
+  request/response pairs (preferred for assertions on exact data flow)
+- **`mocks` + `resolvers`** — schema-driven auto-mocks via
+  `@graphql-tools/mock` (preferred for setup-heavy tests where exact shapes
+  don't matter)
+
+For mutation tests: assert on the cache after the mutation, not on the mock
+function. The whole point is exercising the cache update path the production
+code relies on.
+
+**Gotchas:**
+
+1. **A failing mutation RESOLVES; it does not throw.** Both production
+   (`src/apollo/client.ts`) and the shared `apolloMockProvider` set
+   `mutate: { errorPolicy: 'all' }`, so a GraphQL or network failure arrives
+   as `{ data: undefined, error }`. A `catch` around a mutation therefore only
+   sees a link-level throw (e.g. `authLink` cancelling during logout).
+
+   Drive a failure with an operation mock that carries an `error` and assert
+   the hook's real behaviour:
+
+   ```ts
+   const failing = recordMock(SomeDocument, {
+     error: new Error('network down'),
+   });
+   renderHookWithApollo(() => useThing(), { operationMocks: [failing.mock] });
+   ```
+
+   Do NOT stub a helper to fake the throw — that tests a path the app barely
+   takes. This was previously documented as a workaround around
+   `executeMutation`; removing that wrapper surfaced five hooks that keyed
+   success off "the call returned" and so reported a failed write as a
+   success. **Put the failure handling where the failure arrives: on the
+   resolved result**, not only in the `catch`.
+
+2. **Use `variables: () => true` for complex transformed inputs.** When a
+   mutation's `input` is built from a non-trivial transform (Spoonacular →
+   CreateRecipeInput, device-info → register payload), don't mirror the
+   transform in the test — use Apollo's `VariableMatcher` shape:
+   `{ request: { query, variables: () => true }, result: { data: ... } }`.
+
+3. **`waitFor(() => expect(result.current.loading).toBe(false))` is the right
+   settling primitive.** A bare `await Promise.resolve()` doesn't flush
+   Apollo's microtask chain reliably.
+
+4. **Schema-driven `mocks` for deep selections.** Queries with 3-4 levels of
+   fragment spreads (`GetPantry`, etc.) are impractical to mock literally —
+   use `{ mocks: { Query: () => ({ pantry: { id: 'p1' } }) } }` and let
+   `@graphql-tools/mock` fill the rest.
+
+5. **The mock provider doesn't auto-flatten connections.** If a query selects
+   `pantriesConnection` but the hook reads `home.pantries` (a flat array via a
+   normalizer), the test must either (a) reshape inside the test's mock
+   `normalize*` helper, or (b) update the production hook to read the
+   connection edges directly.
+
+6. **Subscription hooks with `customOnData`.** When a hook delegates to
+   `subscriptionService.register({ customOnData })`, keep mocking
+   `subscriptionService.register` to capture and invoke `customOnData`
+   directly. Driving a real subscription event through `MockedProvider` is
+   brittle and not what the cache-update assertion is testing.
+
+7. **`__typename` on every entity in `operationMocks`.** Without it, Apollo
+   can't normalize/cache the entity. The schema-driven path adds it
+   automatically; literal `operationMocks` must include it explicitly. Use the
+   generated TypeScript types as a structural reference.
+
+**Helper shortcuts (`#/test-utils/apolloMockProvider`):**
+
+- **`recordMock(query, { data, error?, delay?, maxUsageCount? })`** — replaces
+  the legacy variables-spy pattern. Returns `{ mock, fired }`: `mock` goes
+  into `operationMocks`; `fired` is an array of every variables payload Apollo
+  observed for that operation, in order. Assert via
+  `expect(fired).toContainEqual({ … })`.
+- **`seedCache(entries)`** — pre-writes entities into a fresh `InMemoryCache`
+  so hooks that call `useApolloClient().cache.readFragment(…)` find them. Each
+  entry needs `__typename` + `id` and any fields the hook reads. Pass the
+  returned cache as `{ cache }` to `renderHookWithApollo`.
+
+### The `Environment` auto-mock
+
+`Environment` (`src/utils/environment.ts`) is auto-mocked globally for every
+test via `jest.setup.js` + `src/utils/__mocks__/environment.ts`: a complete
+`jest.fn()` surface with sensible defaults (dev mode, analytics off, loggers
+as no-op spies).
+
+```ts
+// ✅ Override per-suite via mockReturnValue — do not replace the whole module
+import { Environment } from '#/utils/environment';
+beforeEach(() => {
+  (Environment.isDevelopment as jest.Mock).mockReturnValue(false);
+  (Environment.getApiConfig as jest.Mock).mockReturnValue({
+    baseUrl: 'https://test.example.com/graphql',
+  });
+});
+```
+
+```ts
+// ✅ For the rare suite that tests the real Environment class itself
+jest.unmock('#/utils/environment');
+import { Environment } from '../environment';
+```
+
+```ts
+// ❌ Don't — a partial factory defeats the shared mock and reintroduces
+//    per-test "missing method" fragility:
+jest.mock('#/utils/environment', () => ({
+  Environment: { isDevelopment: jest.fn() }, // missing all other methods
+}));
+```
+
+The same pattern applies to `logger` (no-op `jest.fn()` per method) — assert
+on `logger.error` etc. directly without redefining the mock.
 
 ### End-to-end (Detox)
 
@@ -214,13 +362,36 @@ npm test
 
 `npm run lint:fix` and `npm run format` auto-fix what they can.
 
+Two checks are not part of those, and nothing runs them for you:
+
+```bash
+node scripts/check-compiler-bailouts.mjs   # no new React Compiler bailouts,
+                                           # and no extracted leaf re-absorbed
+node scripts/check-bundled-secrets.mjs --self-test
+```
+
+`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
+bails in the files where a variant call was deliberately extracted into a
+leaf — moving it back into the composite keeps the count unchanged and would
+otherwise pass.
+
+**Why `check:version-sync` is a pre-push hook and not a habit:** it compares
+`package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
+pbxproj. A mismatched platform would ship reporting a version it is not:
+`getVersion()` is native, so the version-keyed Apollo cache purge
+(`src/apollo/offline/ApolloCachePersistence.ts`) never fires there and
+`CLIENT_VERSION` reaches the server's minimum-version gate wrong — with
+nothing else failing to warn you. iOS `CURRENT_PROJECT_VERSION` and Android
+`versionCode` are deliberately NOT compared: they are per-platform build
+counters on independent sequences, read by `getBuildNumber()`.
+
 ### Git hooks (installed by husky on `npm install`)
 
 | Hook | Runs |
 | --- | --- |
 | **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required |
-| **pre-push** | `typecheck`, `i18n:check`, `check:codegen-orphans`, and a codegen drift check |
+| **pre-push** | `typecheck`, `i18n:check`, `check:codegen-orphans`, `check:version-sync`, and a codegen drift check |
 
 The codegen drift check is skipped when the working tree is dirty, so it never
 blocks a push mid-edit.

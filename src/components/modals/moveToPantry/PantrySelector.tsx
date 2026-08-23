@@ -28,7 +28,7 @@ export const PantrySelector: React.FC<PantrySelectorProps> = ({
   return (
     <View style={styles.section}>
       <Text size="md" weight="medium" style={styles.sectionLabel}>
-        {t('moveToPantry.selectPantry')}
+        {t('labels.selectPantry')}
         <Text tone="error">{t('moveToPantry.requiredAsterisk')}</Text>
       </Text>
       <View style={styles.pantryList}>

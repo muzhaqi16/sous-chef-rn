@@ -73,7 +73,7 @@ jest.mock('../PurchasedTab', () => ({
   },
 }));
 
-jest.mock('#components/base/EmptyState', () => ({
+jest.mock('#components/atoms/EmptyState', () => ({
   EmptyState: ({
     title,
     description,
@@ -91,14 +91,14 @@ jest.mock('#components/base/EmptyState', () => ({
   },
 }));
 
-jest.mock('#components/base/Skeleton/SkeletonList', () => ({
+jest.mock('#components/atoms/Skeleton/SkeletonList', () => ({
   SkeletonList: () => {
     const { View } = require('react-native');
     return <View testID="skeleton-list" />;
   },
 }));
 
-jest.mock('#components/base/Skeleton/ShoppingListItemSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/ShoppingListItemSkeleton', () => ({
   ShoppingListItemSkeleton: () => null,
 }));
 

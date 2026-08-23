@@ -80,9 +80,7 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
   const title = isEditing
     ? t('storageLocationSheet.editTitle')
     : t('storageLocationSheet.addTitle');
-  const saveText = isEditing
-    ? t('storageLocationSheet.update')
-    : t('storageLocationSheet.create');
+  const saveText = isEditing ? t('labels.update') : t('labels.create');
 
   return (
     <BottomSheetModal ref={ref} {...modalProps} index={0}>
@@ -97,11 +95,11 @@ export const StorageLocationSheet: React.FC<StorageLocationSheetProps> = ({
             onPress={onClose}
             style={styles.headerButton}
             accessibilityRole="button"
-            accessibilityLabel={t('storageLocationSheet.cancel')}
+            accessibilityLabel={t('labels.cancel')}
             disabled={isSubmitting}
           >
             <Text size="md" tone="secondary">
-              {t('storageLocationSheet.cancel')}
+              {t('labels.cancel')}
             </Text>
           </AppPressable>
 

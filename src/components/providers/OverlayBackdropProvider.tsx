@@ -90,7 +90,7 @@ export const useOverlayBackdropOptional = (): OverlayBackdropContextType => {
   useEffect(() => {
     if (__DEV__ && !context && !missingProviderWarned) {
       missingProviderWarned = true;
-      console.warn(
+      logger.warn(
         '[OverlayBackdropProvider] No <OverlayBackdropProvider> mounted above ' +
           'this consumer — backdrops will silently not appear. Expected only ' +
           'in unit-test trees; production must mount the provider at App root.',

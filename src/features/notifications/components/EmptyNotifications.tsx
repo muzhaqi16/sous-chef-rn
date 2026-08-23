@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { EmptyState } from '#components/base/EmptyState';
+import { EmptyState } from '#components/atoms/EmptyState';
 
 export const EmptyNotifications: React.FC = () => {
   const { t } = useTranslation();

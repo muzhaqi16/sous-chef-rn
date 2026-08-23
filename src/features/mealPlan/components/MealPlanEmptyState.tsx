@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
 
 interface MealPlanEmptyStateProps {

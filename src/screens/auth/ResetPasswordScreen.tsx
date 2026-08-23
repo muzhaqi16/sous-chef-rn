@@ -10,8 +10,8 @@ import { object, string, ref } from 'yup';
 import { Icon } from '#utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { PasswordInput } from '#components/atoms/PasswordInput';
-import { Button } from '#components/base/Button';
-import { Loading } from '#components/base/Loading';
+import { Button } from '#components/atoms/Button';
+import { Loading } from '#components/atoms/Loading';
 import { useAppStore } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import {

@@ -1,4 +1,5 @@
 import { ImagePerspective } from '#/graphql/generated/schemaTypes';
+import { logger } from '#/utils/environment';
 
 // =============================================================================
 // IMAGE SIZE SELECTION
@@ -110,7 +111,7 @@ export const getItemImageUrl = (
     // Only return valid URLs - filenames without full path are invalid
     // The API should be returning full CDN URLs, not just filenames
     if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
-      console.warn(
+      logger.warn(
         '[getItemImageUrl] Invalid imageUrl (not a full URL):',
         imageUrl,
       );

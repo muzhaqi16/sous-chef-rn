@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react-native';
 import { useSelectableItems, SelectableItem } from '../useSelectableItems';
+import { logger } from '#/utils/environment';
 
 interface TestItem extends SelectableItem {
   name: string;
@@ -96,7 +97,7 @@ describe('useSelectableItems', () => {
       // item-3 should remain unselected
       expect(result.current.items[2].selected).toBe(false);
       expect(result.current.selectedItems).toHaveLength(2);
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Maximum selection of 2 items reached',
       );
     });

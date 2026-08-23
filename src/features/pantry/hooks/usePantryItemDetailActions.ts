@@ -10,7 +10,7 @@ import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { removeFromPantryItemsCache } from '#hooks/home/pantry/utils';
+import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -164,7 +164,7 @@ export function usePantryItemDetailActions({
   const handleDelete = () => {
     alertService.alert(
       t('pantryItemDetail.deleteTitle'),
-      t('pantryItemDetail.deleteBody'),
+      t('labels.areYouSureYouWantToDeleteThisItem'),
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {

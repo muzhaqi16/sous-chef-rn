@@ -13,11 +13,11 @@ export function formatRole(role: string): string {
     case 'OWNER':
       return t('roles.owner');
     case 'ADMIN':
-      return t('roles.admin');
+      return t('labels.admin');
     case 'MEMBER':
       return t('roles.member');
     case 'GUEST':
-      return t('roles.guest');
+      return t('labels.guest');
     default:
       return role;
   }

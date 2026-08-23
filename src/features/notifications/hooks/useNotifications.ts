@@ -14,11 +14,11 @@ import {
   NotificationType,
   NotificationCategory,
   NotificationSubtype,
+  NotificationStatus,
   Priority,
 } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 import type { RootState } from '#store/index';
-import { useShallow } from 'zustand/react/shallow';
 import { showLocalNotification } from '#utils/notifications/localNotificationHelper';
 import { registerFcmTapHandlers } from '#/services/push/nativePushMessaging';
 import { registerIosPushTapHandlers } from '#/services/push/iosPushMessaging';
@@ -28,7 +28,6 @@ import {
   getNotificationTitle,
 } from '#utils/notifications/notificationHelpers';
 import {
-  NotificationPriority,
   isNotificationPayload,
   type NotificationPayload,
 } from '#store/slices/notificationSlice';
@@ -36,23 +35,20 @@ import {
   handleSubscriptionError,
   clearAllRetryStates,
 } from '#utils/subscriptionErrorHandler';
+import {
+  addNotificationToFeed,
+  evictNotification,
+  writeNotificationStatus,
+} from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
 import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubscriptionTransportRecovery';
+import { logger } from '#/utils/environment';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
-const selectListenerState = (state: RootState) => ({
-  user: state.user,
-  addNotification: state.addNotification,
-  markAsRead: state.markAsRead,
-  removeNotification: state.removeNotification,
-});
-
-const selectNotificationsState = (state: RootState) => ({
-  notifications: state.notifications,
-  clearAll: state.clearAll,
-  getNotificationsByCategory: state.getNotificationsByCategory,
-});
+// The listener needs the signed-in user and nothing else from the store; the
+// notifications themselves live in the Apollo cache.
+const selectListenerUser = (state: RootState) => state.user;
 
 interface NotificationConfig {
   skip?: boolean;
@@ -75,12 +71,36 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
   const { t } = useTranslation();
 
+  // Every server-delivered transition re-seeds the unread count instead of
+  // applying a delta.
+  //
+  // A delta cannot be made idempotent on this path. The guard that makes the
+  // local writes safe asks whether the row was unread BEFORE the change, and
+  // here it can no longer tell: Apollo normalizes the event's `node` into the
+  // cache before `onData` runs, so a READ event has already set the row to
+  // READ by the time the handler looks. The row would move and the badge would
+  // not — the exact disagreement `notificationCacheWrites` exists to prevent.
+  //
+  // Re-reading is also the more truthful answer: the badge counts every unread
+  // notification, including ones this device has never paged in, so a local ±1
+  // was only ever an approximation of it. An event arriving means the socket is
+  // up, so the read is available.
+  const reseedUnreadCount = () => {
+    client
+      .query({
+        query: GetUnreadNotificationsDocument,
+        fetchPolicy: 'network-only',
+      })
+      .catch(() => {
+        // Transient failure: the foreground / WS-reconnect re-query paths
+        // converge the feed later.
+      });
+  };
+
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
   const appStateRef = useRef(AppState.currentState);
 
-  const { user, addNotification, markAsRead, removeNotification } = useAppStore(
-    useShallow(selectListenerState),
-  );
+  const user = useAppStore(selectListenerUser);
 
   // Fetch user notification preferences (deferred when hook is skipped)
   const { settings: userPreferences, isQuietTime } = useNotificationSettings({
@@ -136,7 +156,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       type?: NotificationType;
       title?: string;
       message?: string;
-      priority?: NotificationPriority;
+      priority?: Priority;
       payload?: JsonValue | null;
       sentAt?: string;
       expiresAt?: string | null;
@@ -176,7 +196,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       title: notification.title || getNotificationTitle(resolvedType),
       message: notification.message || '',
       category,
-      priority: notification.priority ?? NotificationPriority.MEDIUM,
+      priority: notification.priority ?? Priority.Normal,
       payload,
       sentAt: notification.sentAt || new Date().toISOString(),
       expiresAt: notification.expiresAt,
@@ -190,7 +210,16 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       actionData: payload,
     };
 
-    addNotification(processedNotification);
+    // The entity is already normalized — the subscription delivered it. What
+    // is missing is the feed edge, scoped to the variants this notification
+    // belongs to. The count is re-seeded from the server by the caller.
+    addNotificationToFeed(
+      client.cache,
+      user?.id,
+      processedNotification.id,
+      category,
+    );
+    reseedUnreadCount();
 
     // Show push notification if enabled, app is not active, and not quiet time.
     // Android only: on iOS the OS already draws the APNs alert for the same
@@ -227,7 +256,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       return;
     }
 
-    console.warn(`${subscriptionName} subscription error:`, error.message);
+    logger.warn(`${subscriptionName} subscription error:`, error.message);
     handleSubscriptionError(subscriptionName, error);
   };
 
@@ -243,22 +272,14 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       // Aggregate transitions (mark-all-read / clear-read / bulk-expire, e.g.
       // performed on another device) arrive with a null `node` and only an
       // `affectedCount` — the affected rows are unknown client-side, so
-      // re-sync the unread feed and re-seed the badge from the server instead
-      // of guessing which local entries changed.
+      // re-sync the unread feed rather than guessing which local entries
+      // changed.
       if (
         event.subtype === NotificationSubtype.BulkRead ||
         event.subtype === NotificationSubtype.BulkCleared ||
         event.subtype === NotificationSubtype.BulkExpired
       ) {
-        client
-          .query({
-            query: GetUnreadNotificationsDocument,
-            fetchPolicy: 'network-only',
-          })
-          .catch(() => {
-            // Transient failure: the foreground / WS-reconnect re-query paths
-            // converge the feed later.
-          });
+        reseedUnreadCount();
         return;
       }
 
@@ -268,11 +289,21 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       // Dedicated read/dismiss transition subtypes only need the id — the
       // server routes these as READ / DISMISSED, never as UPDATED.
       if (event.subtype === NotificationSubtype.Read) {
-        markAsRead(maskedNotification.id);
+        // Apollo's own write of the payload already carries this, but stating
+        // it keeps the transition legible and covers a payload that omits it.
+        writeNotificationStatus(
+          client.cache,
+          maskedNotification.id,
+          NotificationStatus.Read,
+        );
+        reseedUnreadCount();
         return;
       }
       if (event.subtype === NotificationSubtype.Dismissed) {
-        removeNotification(maskedNotification.id);
+        // Evicting rather than `applyNotificationRemoved`: the badge delta
+        // that helper applies is the part that cannot be trusted here.
+        evictNotification(client.cache, maskedNotification.id);
+        reseedUnreadCount();
         return;
       }
 
@@ -285,17 +316,6 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
       if (!rawNotification) return;
 
       if (event.subtype === NotificationSubtype.Created) {
-        // New notification (RECEIVED equivalent)
-        const sp = rawNotification.priority;
-        const mappedPriority =
-          sp === Priority.High
-            ? NotificationPriority.HIGH
-            : sp === Priority.Urgent
-            ? NotificationPriority.URGENT
-            : sp === Priority.Low
-            ? NotificationPriority.LOW
-            : NotificationPriority.MEDIUM;
-
         processNotification(
           {
             id: rawNotification.id,
@@ -304,7 +324,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
               rawNotification.title ??
               getNotificationTitle(rawNotification.type),
             message: rawNotification.message ?? '',
-            priority: mappedPriority,
+            priority: rawNotification.priority ?? Priority.Normal,
             payload: rawNotification.payload,
             sentAt: rawNotification.sentAt,
             expiresAt: rawNotification.expiresAt,
@@ -320,9 +340,15 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         // only statuses still delivered as UPDATED are CLICKED and EXPIRED.
         const status = rawNotification.status;
         if (status === 'CLICKED') {
-          markAsRead(rawNotification.id);
+          writeNotificationStatus(
+            client.cache,
+            rawNotification.id,
+            NotificationStatus.Read,
+          );
+          reseedUnreadCount();
         } else if (status === 'EXPIRED') {
-          removeNotification(rawNotification.id);
+          evictNotification(client.cache, rawNotification.id);
+          reseedUnreadCount();
         }
       }
     },
@@ -377,20 +403,16 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
  * delivered by `useNotificationListener`, mounted once in NotificationProvider.
  */
 export const useNotifications = () => {
-  const { notifications, clearAll, getNotificationsByCategory } = useAppStore(
-    useShallow(selectNotificationsState),
-  );
-
-  // Server-synced notification actions
-  const { syncMarkAsRead, syncDelete, syncMarkAllAsRead } =
+  // Actions only. The feed itself comes from `useNotificationHistory`, which
+  // reads the Apollo cache — this hook used to return a Zustand copy of it, and
+  // a screen holding both had no rule for which one was current.
+  const { syncMarkAsRead, syncDelete, syncMarkAllAsRead, syncClearRead } =
     useNotificationSync();
 
   return {
-    notifications,
     handleMarkAsRead: syncMarkAsRead,
     handleMarkAllAsRead: syncMarkAllAsRead,
     handleRemoveNotification: syncDelete,
-    clearAll,
-    getNotificationsByCategory,
+    handleClearRead: syncClearRead,
   };
 };

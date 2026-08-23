@@ -100,7 +100,7 @@ jest.mock('#components/atoms/PasswordInput', () => {
   };
 });
 
-jest.mock('#components/base/Button', () => {
+jest.mock('#components/atoms/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
     Button: ({

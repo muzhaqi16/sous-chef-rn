@@ -23,16 +23,13 @@ export function validateDeductionQuantity(
       t('labels.error'),
       actionVerb === 'waste'
         ? t('deduction.invalidWaste')
-        : t('deduction.invalidQuantity'),
+        : t('errors.invalidQuantity'),
     );
     return null;
   }
 
   if (shared.isConvertedUnit && shared.availableLoading) {
-    alertService.alert(
-      t('deduction.pleaseWait'),
-      t('deduction.stillCalculating'),
-    );
+    alertService.alert(t('labels.pleaseWait'), t('deduction.stillCalculating'));
     return null;
   }
 

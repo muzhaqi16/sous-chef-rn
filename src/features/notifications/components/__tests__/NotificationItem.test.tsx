@@ -4,11 +4,10 @@ import { NotificationItem } from '../NotificationItem';
 import {
   NotificationCategory,
   NotificationType,
+  Priority,
 } from '#/graphql/generated/schemaTypes';
-import {
-  NotificationPriority,
-  type NotificationItem as NotificationItemData,
-} from '#store/slices/notificationSlice';
+import {} from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItemData } from '#features/notifications/utils/toDisplayNotification';
 
 jest.mock('#utils/iconUtils', () => {
   const R = require('react');
@@ -38,12 +37,14 @@ const makeNotification = (overrides?: Partial<NotificationItemData>) => ({
   id: 'notif-1',
   type: NotificationType.HomeInvitation,
   category: NotificationCategory.Shopping,
-  priority: NotificationPriority.MEDIUM,
+  priority: Priority.Normal,
   title: 'New Invitation',
   message: 'You have been invited to join a home.',
   payload: {},
   sentAt: '2026-03-01T12:00:00Z',
   isRead: false,
+  requiresAction: false,
+  actionData: {},
   ...overrides,
 });
 

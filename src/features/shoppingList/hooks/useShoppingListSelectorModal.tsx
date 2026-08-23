@@ -128,9 +128,9 @@ export function useShoppingListSelectorModal({
       t('shoppingListSelector.deleteAlertTitle', { count }),
       t('shoppingListSelector.deleteAlertMessage', { count }),
       [
-        { text: t('shoppingListSelector.cancel'), style: 'cancel' },
+        { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('shoppingListSelector.deleteAction'),
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: async () => {
             const idsToDelete = Array.from(selectedForDeletion);
@@ -198,7 +198,7 @@ export function useShoppingListSelectorModal({
         </Pressable>
         <Pressable onPress={exitDeleteMode}>
           <Text size="md" weight="semibold" tone="accent">
-            {t('shoppingListSelector.cancel')}
+            {t('labels.cancel')}
           </Text>
         </Pressable>
       </View>
@@ -233,8 +233,7 @@ export function useShoppingListSelectorModal({
       });
 
     homeGroups.forEach((lists, homeId) => {
-      const homeName =
-        lists[0]?.home?.name || t('shoppingListSelector.unknownHome');
+      const homeName = lists[0]?.home?.name || t('labels.unknownHome');
       result.push({
         _isHeader: true,
         id: `header-${homeId}`,
@@ -367,7 +366,7 @@ export function useShoppingListSelectorModal({
   const listActions = [
     {
       icon: 'add',
-      label: t('shoppingListSelector.createNewList'),
+      label: t('labels.create'),
       onPress: () => {
         setOverlayOpen(false);
         selectorRef.current?.close();

@@ -1,102 +1,146 @@
+/**
+ * The OS badge follows the cached unread count.
+ *
+ * Exercised against a real `InMemoryCache` rather than a mocked store
+ * subscription: the count is server state now, and the property that matters —
+ * "a not-yet-loaded count must not be applied as 0" — is a fact about reading
+ * an empty cache, which a mock would only restate.
+ */
 import notifee from '@notifee/react-native';
-import { useStore } from '#store';
+import type { InMemoryCache } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { logger } from '#/utils/environment';
-import { setupBadgeSync } from '../badgeSync';
+
+jest.mock('#/apollo/links/tokenScheduler');
+jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('@notifee/react-native', () => ({
   __esModule: true,
   default: { setBadgeCount: jest.fn().mockResolvedValue(undefined) },
 }));
 
-jest.mock('#store', () => ({
-  useStore: { subscribe: jest.fn(() => jest.fn()), getState: jest.fn() },
+// A getter, not a captured value: the module under test imports `client` at
+// load time, which is before `mockCache` is assigned. Reading it lazily is what
+// lets each test start from a fresh cache.
+let mockCache: InMemoryCache;
+jest.mock('#/apollo/client', () => ({
+  get client() {
+    return { cache: mockCache };
+  },
 }));
 
+import { setupBadgeSync } from '../badgeSync';
+
 const mockSetBadgeCount = notifee.setBadgeCount as jest.Mock;
-const mockSubscribe = useStore.subscribe as unknown as jest.Mock;
-const mockGetState = useStore.getState as unknown as jest.Mock;
 
-/** The unreadCount subscription (selector, listener, options) — call index 0. */
-const captureCount = () => {
-  const [selector, listener, options] = mockSubscribe.mock.calls[0];
-  return { selector, listener, options };
-};
-
-/** The isHydrated subscription (selector, listener) — call index 1. */
-const captureHydration = () => {
-  const [selector, listener] = mockSubscribe.mock.calls[1];
-  return { selector, listener };
-};
+const writeCount = (count: number) =>
+  mockCache.writeQuery({
+    query: GetUnreadNotificationsDocument,
+    data: {
+      __typename: 'Query' as const,
+      me: {
+        __typename: 'User',
+        id: 'me',
+        unreadNotificationCount: count,
+        hasUrgentNotifications: false,
+        notificationsConnection: {
+          __typename: 'NotificationConnection',
+          edges: [],
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
+      },
+    },
+  });
 
 describe('setupBadgeSync', () => {
+  let teardown: () => void = () => {};
+
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetState.mockReturnValue({ isHydrated: true, unreadCount: 0 });
+    mockCache = makeCache();
   });
 
-  it('subscribes to unreadCount (fireImmediately) and to isHydrated', () => {
-    setupBadgeSync();
-    const count = captureCount();
-    expect(count.selector({ unreadCount: 7 })).toBe(7);
-    expect(count.options).toEqual({ fireImmediately: true });
-    const hydration = captureHydration();
-    expect(hydration.selector({ isHydrated: true })).toBe(true);
-  });
+  afterEach(() => teardown());
 
-  it('does not apply a badge before hydration', () => {
-    mockGetState.mockReturnValue({ isHydrated: false, unreadCount: 0 });
-    setupBadgeSync();
-    // The fireImmediately(0) at a cold start must not stomp a server-set badge.
-    captureCount().listener(0);
+  // This replaces the old `isHydrated` gate. A cold start reads an empty cache,
+  // which is distinguishable from a real 0 — so there is no window where a
+  // default value could stomp a badge the server set on delivery.
+  it('applies nothing while the count is unknown', () => {
+    teardown = setupBadgeSync();
+
     expect(mockSetBadgeCount).not.toHaveBeenCalled();
   });
 
-  it('applies the unread count once the store is hydrated', () => {
-    setupBadgeSync();
-    captureCount().listener(3);
+  it('applies the count once it lands in the cache', async () => {
+    teardown = setupBadgeSync();
+
+    writeCount(3);
+    await Promise.resolve();
+
     expect(mockSetBadgeCount).toHaveBeenCalledWith(3);
   });
 
-  it('applies the hydrated count when the hydration flag flips true', () => {
-    mockGetState.mockReturnValue({ isHydrated: true, unreadCount: 4 });
-    setupBadgeSync();
-    captureHydration().listener(true);
-    expect(mockSetBadgeCount).toHaveBeenCalledWith(4);
+  it('applies a count already present when it starts', () => {
+    writeCount(5);
+
+    teardown = setupBadgeSync();
+
+    expect(mockSetBadgeCount).toHaveBeenCalledWith(5);
   });
 
-  it('does not apply when the hydration flag is still false', () => {
-    mockGetState.mockReturnValue({ isHydrated: false, unreadCount: 4 });
-    setupBadgeSync();
-    captureHydration().listener(false);
-    expect(mockSetBadgeCount).not.toHaveBeenCalled();
-  });
+  it('applies each change, including a clear to zero', async () => {
+    writeCount(2);
+    teardown = setupBadgeSync();
+    mockSetBadgeCount.mockClear();
 
-  it('never sends a negative badge count', () => {
-    setupBadgeSync();
-    captureCount().listener(-1);
+    writeCount(0);
+    await Promise.resolve();
+
     expect(mockSetBadgeCount).toHaveBeenCalledWith(0);
+  });
+
+  it('does not re-apply an unchanged count', async () => {
+    writeCount(4);
+    teardown = setupBadgeSync();
+    mockSetBadgeCount.mockClear();
+
+    writeCount(4);
+    await Promise.resolve();
+
+    expect(mockSetBadgeCount).not.toHaveBeenCalled();
   });
 
   it('logs and does not throw when setBadgeCount rejects', async () => {
     mockSetBadgeCount.mockRejectedValueOnce(new Error('no permission'));
-    setupBadgeSync();
-    expect(() => captureCount().listener(2)).not.toThrow();
+
+    expect(() => {
+      writeCount(2);
+      teardown = setupBadgeSync();
+    }).not.toThrow();
+
     await Promise.resolve();
+    await Promise.resolve();
+
     expect(logger.error).toHaveBeenCalledWith(
       'setBadgeCount failed:',
       expect.any(Error),
     );
   });
 
-  it('returns a function that unsubscribes both subscriptions', () => {
-    const unsubCount = jest.fn();
-    const unsubHydration = jest.fn();
-    mockSubscribe
-      .mockReturnValueOnce(unsubCount)
-      .mockReturnValueOnce(unsubHydration);
-    const teardown = setupBadgeSync();
-    teardown();
-    expect(unsubCount).toHaveBeenCalledTimes(1);
-    expect(unsubHydration).toHaveBeenCalledTimes(1);
+  it('stops applying after teardown', async () => {
+    writeCount(1);
+    const stop = setupBadgeSync();
+    mockSetBadgeCount.mockClear();
+
+    stop();
+    writeCount(9);
+    await Promise.resolve();
+
+    expect(mockSetBadgeCount).not.toHaveBeenCalled();
   });
 });

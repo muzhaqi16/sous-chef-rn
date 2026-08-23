@@ -49,8 +49,8 @@ export const PAGES: readonly PageName[] = [
 export const PAGE_LABEL_KEYS: Record<PageName, string> = {
   Basics: 'addItemForm.tabs.basics',
   Product: 'addItemForm.tabs.product',
-  Storage: 'addItemForm.tabs.storage',
-  Inventory: 'addItemForm.tabs.inventory',
+  Storage: 'labels.storage',
+  Inventory: 'labels.inventory',
 };
 
 // Helper function to detect if scanned value is barcode or SKU
@@ -111,7 +111,7 @@ export const buildTabFieldGroups = (
 ): Record<PageName, TabFieldGroups> => {
   const nameField: FieldDef<CreateItemFormData> = {
     name: 'name',
-    label: t('addItemForm.fields.name.label'),
+    label: t('labels.itemName'),
     placeholder: t('addItemForm.fields.name.placeholder'),
     component: FormInput,
     props: { autoCapitalize: 'words', required: true },
@@ -156,7 +156,7 @@ export const buildTabFieldGroups = (
   };
   const skuField: FieldDef<CreateItemFormData> = {
     name: 'sku',
-    label: t('addItemForm.fields.sku.label'),
+    label: t('labels.sku'),
     placeholder: t('addItemForm.fields.sku.placeholder'),
     component: FormInput,
   };
@@ -173,7 +173,7 @@ export const buildTabFieldGroups = (
 
   const storageStateField: FieldDef<CreateItemFormData> = {
     name: 'storageState',
-    label: t('addItemForm.fields.storageState.label'),
+    label: t('labels.storageState'),
     component: FormSelect,
     props: { componentType: 'select' },
     options: STORAGE_STATES.map(state => ({
@@ -330,19 +330,19 @@ export const MODE_CONFIG = {
       hasBarcode
         ? 'addItemForm.modes.create.subtitleScanned'
         : 'addItemForm.modes.create.subtitle',
-    buttonLabel: 'addItemForm.modes.create.button',
+    buttonLabel: 'labels.addItem',
   },
   edit: {
-    title: 'addItemForm.modes.edit.title',
+    title: 'labels.suggestEdit',
     subtitle: () => 'addItemForm.modes.edit.subtitle',
     buttonLabel: 'addItemForm.modes.edit.button',
   },
   // Same form as `edit`, but the caller resolved that this user may write
   // straight through, so the wording promises an immediate change.
   directEdit: {
-    title: 'addItemForm.modes.directEdit.title',
+    title: 'labels.editItem',
     subtitle: () => 'addItemForm.modes.directEdit.subtitle',
-    buttonLabel: 'addItemForm.modes.directEdit.button',
+    buttonLabel: 'labels.saveChanges',
   },
   variant: {
     title: 'addItemForm.modes.variant.title',

@@ -23,7 +23,7 @@ jest.mock('../../molecules/DynamicFormFields', () => {
   };
 });
 
-jest.mock('../../base/Button', () => {
+jest.mock('#components/atoms/Button', () => {
   const { Pressable, Text } = require('react-native');
   return {
     Button: ({

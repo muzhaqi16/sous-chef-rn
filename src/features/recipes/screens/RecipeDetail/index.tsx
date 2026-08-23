@@ -39,8 +39,8 @@ import { ShoppingListPickerSheet } from './components/ShoppingListPickerSheet';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useUser } from '#store/useAppStore';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
-import { EmptyState } from '#components/base/EmptyState';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
+import { EmptyState } from '#components/atoms/EmptyState';
 
 const IngredientSeparator = () => <View style={{ width: 12 }} />;
 
@@ -291,7 +291,7 @@ const RecipeDetailScreen: React.FC = () => {
         <EmptyState
           icon="alert-circle-outline"
           title={errorMessage}
-          description={t('errors.somethingWentWrong')}
+          description={t('errors.codes.genericRetry')}
           action={{ label: t('labels.goBack'), onPress: goBack }}
         />
       </View>
@@ -336,7 +336,7 @@ const RecipeDetailScreen: React.FC = () => {
           {!!displayData.readyInMinutes && (
             <Text style={styles.metadataText}>
               ⏱️{' '}
-              {t('recipes.minutesValue', {
+              {t('labels.min', {
                 count: displayData.readyInMinutes,
               })}
             </Text>
@@ -425,7 +425,9 @@ const RecipeDetailScreen: React.FC = () => {
             )}
             {!!displayData.glutenFree && (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>{t('recipes.glutenFree')}</Text>
+                <Text style={styles.tagText}>
+                  {t('recipes.diet.GLUTEN_FREE')}
+                </Text>
               </View>
             )}
             {!!displayData.dairyFree && (
@@ -453,7 +455,7 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.ingredientsSection}>
             <View style={styles.ingredientsSectionHeader}>
               <Text style={styles.sectionTitle}>
-                {t('recipes.ingredients')}
+                {t('itemPhotos.perspective.ingredient_list')}
               </Text>
               <Pressable
                 onPress={handleAddAll}
@@ -461,7 +463,7 @@ const RecipeDetailScreen: React.FC = () => {
                 style={({ pressed }) => pressed && { opacity: 0.7 }}
               >
                 <Text style={styles.addAllButton}>
-                  {addingToList ? t('recipes.adding') : t('recipes.addAll')}
+                  {addingToList ? t('labels.adding') : t('recipes.addAll')}
                 </Text>
               </Pressable>
             </View>

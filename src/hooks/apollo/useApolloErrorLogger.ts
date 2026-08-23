@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Telemetry } from '#/services/telemetry';
 import { storeApi } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { logger } from '#/utils/environment';
 
 const CACHE_ERROR_PATTERNS = [
   'Missing field',
@@ -21,7 +22,7 @@ export function useApolloErrorLogger(
   if (__DEV__ && error) {
     if (isCacheError(error.message)) {
       // A typePolicy bug, unrelated to reachability — always surface it.
-      console.warn(
+      logger.warn(
         `[${operationName}] Cache error — check typePolicies in cache.ts:`,
         error.message,
       );
@@ -29,7 +30,7 @@ export function useApolloErrorLogger(
       // Suppress the per-component network-error wall once the API is
       // known-unavailable — the breaker's verdict + networkStatusLink's
       // per-operation warning are the signal then.
-      console.warn(`[${operationName}] Query error:`, error.message);
+      logger.warn(`[${operationName}] Query error:`, error.message);
     }
   }
 

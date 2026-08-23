@@ -80,17 +80,14 @@ export const NutritionGoalProgress: React.FC<NutritionGoalProgressProps> = ({
 
       <View style={styles.barsContainer}>
         <MacroProgressBar
-          label={t('nutritionGoal.labelCalories')}
+          label={t('labels.calories')}
           progress={caloriesProgress}
         />
         <MacroProgressBar
-          label={t('nutritionGoal.labelProteinG')}
+          label={t('labels.proteinG')}
           progress={proteinProgress}
         />
-        <MacroProgressBar
-          label={t('nutritionGoal.labelCarbsG')}
-          progress={carbsProgress}
-        />
+        <MacroProgressBar label={t('labels.carbsG')} progress={carbsProgress} />
         <MacroProgressBar
           label={t('nutritionGoal.labelFatG')}
           progress={fatProgress}

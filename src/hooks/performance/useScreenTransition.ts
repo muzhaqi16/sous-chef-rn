@@ -4,6 +4,7 @@ import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
+import { logger } from '#/utils/environment';
 
 /**
  * Safely measures the duration between two performance marks.
@@ -149,7 +150,7 @@ export function useScreenTransition(
 
         // Warn if slow transition
         if (interactiveDuration > 500) {
-          console.warn(
+          logger.warn(
             `[ScreenTransition] Slow screen transition: ${screenName} took ${interactiveDuration.toFixed(
               2,
             )}ms`,

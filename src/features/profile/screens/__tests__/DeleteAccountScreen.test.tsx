@@ -9,7 +9,7 @@ import {
 import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
 import type { BaseInputProps } from '#components/atoms/BaseInput/BaseInput';
-import type { LoadingProps } from '#components/base/Loading';
+import type { LoadingProps } from '#components/atoms/Loading';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 const mockNav = (
@@ -55,7 +55,7 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
     );
   },
 }));
-jest.mock('#components/base/Loading', () => {
+jest.mock('#components/atoms/Loading', () => {
   const { Text } = require('react-native');
   return {
     LoadingInline: ({ message }: LoadingProps) => (

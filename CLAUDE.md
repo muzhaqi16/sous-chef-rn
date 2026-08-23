@@ -92,6 +92,20 @@
   > Guarded by `BottomSheetAutocompleteInput.test.tsx` ("keeps the list out of
   > gorhom BottomSheetView").
 
+### Component Taxonomy
+
+**Four buckets: `atoms/`, `molecules/`, `organisms/`, `templates/`.** There is no
+`base/` — it was a fifth name for the atoms bucket, with no rule separating the
+two, and it folded into `atoms/`. `DataStateView` went to `molecules/`: routing
+between Loading, Error and Empty is composition, not a primitive.
+`atoms/README.md` describes what belongs there; it had been naming `Button` as
+an atom while `Button.tsx` lived in `base/`, which is the kind of drift a second
+bucket produces.
+
+Feature-private UI stays in `src/features/<name>/components/`. `components/forms/`
+is gone for that reason — all nine files were pantry-only and now live in
+`features/pantry/components/form/`.
+
 ### Pressable & Modal Convention
 
 - **Use `Pressable` from `#components/atoms/themedComponents`** as the default
@@ -160,7 +174,7 @@ happen inside that factory.
   `OnPrimaryActivityIndicator` from there instead of recreating per-file
   `withUnistyles(...)` wrappers. The pattern is established — add new ones to
   this module when a third-party component needs to be theme-reactive.
-- **For Switches, use `BaseSwitch`** from `src/components/base/BaseSwitch.tsx`
+- **For Switches, use `BaseSwitch`** from `src/components/atoms/BaseSwitch.tsx`
   instead of RN's `<Switch trackColor=... thumbColor=...>` with theme reads.
   `BaseSwitch` is already wrapped with `withUnistyles` and has the standard
   on/off colors built in.
@@ -357,6 +371,36 @@ Two ESLint `no-restricted-syntax` rules enforce this at lint time:
 1. No inline functions as the first argument
 2. No more than 2 arguments (prevents passing function refs as extra args)
 
+### Notifications: the cache is the only copy
+
+The feed, each row's read-state and the unread count live in the Apollo cache
+and nowhere else. A Zustand slice used to hold the same rows from the same
+server events with no rule for which was current, so a mark-read on this device
+and a `READ` event from another could leave the row and the badge disagreeing.
+`src/features/notifications/utils/notificationCacheWrites.ts` is the one place
+those transitions are applied — by the user acting locally AND by the
+subscription handler. The slice keeps only `pendingExpirationLinks`, which the
+cache genuinely cannot hold: `expirationNotificationChanged` can arrive BEFORE
+the `notificationChanged` it enriches, when there is no row to attach it to.
+
+**A local write moves the badge by a delta; a server-delivered event re-reads
+it.** Not a style choice — Apollo normalizes a subscription's `node` into the
+cache BEFORE `onData` runs, so by the time a `READ` handler asks "was this
+unread?", the event's own payload has already answered "no". The guard that
+makes a re-delivered event safe is therefore useless on that path, and a delta
+would be wrong in both directions. `useNotificationListener` calls
+`reseedUnreadCount()` on every server event instead, which is also the truer
+number: the badge counts unread notifications this device has never paged in, so
+a local ±1 was only ever an approximation. Verify the ordering claim with a
+subscription whose `onData` reads `cache.extract()`.
+
+**`addNotificationToFeed` must scope its write.** `notificationsConnection` is
+keyed on `filters` and `cache.modify` runs for EVERY cached variant, so the
+`skipStoreField: skipUnmatchedFilterVariants({ category, unreadOnly: true })`
+guard is what keeps a pantry notification out of the recipes feed.
+`createAddToParentConnectionUpdater` accepted that option and ignored it until
+2026-08-23.
+
 ### Cache Persistence — Raw Apollo State
 
 The Apollo cache is persisted to MMKV as-is via `cache.extract()` / `cache.restore()`
@@ -400,9 +444,37 @@ and the `<feature>Fragments.generated.ts` types (when composing your own
 fragments). Anything deeper (`hooks/mutations/...`, `context/`, `utils/`) is an
 implementation detail and may change without notice.
 
-This is enforced via ESLint `no-restricted-imports` patterns in `.eslintrc.js`
-(see the `from feature internals` rule). Migrations of working code are not
-required — the rule only blocks NEW reach-across imports.
+**A hook owned by one feature lives in that feature. `src/hooks/` and
+`src/components/` hold only what more than one feature uses.** The pantry data
+layer used to live in `src/hooks/home/pantry/` while the rest of the feature
+lived in `src/features/pantry/` — and the two imported each other, so neither
+was the lower layer and no rule predicted which tree a new pantry hook belonged
+in. That split also hid a duplicate: both trees declared `addToPantryItemsCache`
+from the same factory with the same arguments.
+
+Enforced in **both directions** by `import/no-restricted-paths` zones in
+`.eslintrc.js`:
+
+- *feature → another feature's internals* — one zone per feature, as before.
+- *shared layer → any feature's internals* — one zone targeting
+  `components/ hooks/ screens/ apollo/ utils/ store/ services/ navigation/`.
+  This direction was unpoliced (every earlier zone targets
+  `./src/features/!(x)/**`), which is how 35 such imports accumulated.
+
+`graphql/` is deliberately absent from the shared-layer zone, which is a
+narrower line than the feature-to-feature zones draw. It follows from what the
+imports are: the offline queue replays every feature's `Sync*` mutations and the
+subscription layer mounts every feature's event subscription centrally, so
+neither can move into a feature — listing `graphql/` would need ~19 `except`
+entries and excuse more than it forbids. Generated operation documents are typed
+and side-effect-free; treating them as a feature's data contract is the honest
+reading. `context/`, `utils/` and `hooks/mutations/` carry behaviour and stay
+private, with four named exceptions that each say why.
+
+Tests are exempt: a cache test has to import the fragment it exercises.
+
+Migrations of working code are not required — the rules block NEW reach-across
+imports.
 
 ### Apollo Test Patterns
 
@@ -904,12 +976,40 @@ i18next's full options (`t('key', { count })`, `t('key', 'English fallback')`).
 > 15 files routed around it — which is what a helper that duplicates its
 > library costs.
 
-**Error and empty-state copy has one home.** `errors.*`, `empty.*` and
-`labels.*` are canonical. A feature namespace must not redeclare a string one of
-them already has — 33 did, which is why the same English rendered as different
-Albanian depending on the screen. Enforced by
-`__tests__/i18n/canonicalVocabulary.test.ts`, with an exemption list where each
-entry names its exact key set and must still describe a live duplicate.
+**Shared copy has one home.** `errors.*`, `empty.*` and `labels.*` are
+canonical. No namespace — feature or canonical — may redeclare a string another
+already has. Enforced by `__tests__/i18n/canonicalVocabulary.test.ts`, with an
+exemption list where each entry names its exact key set and must still describe
+a live duplicate.
+
+The guard used to ask whether a string LOOKED like error or empty-state copy,
+which meant 323 of 329 duplicate groups were never inspected: `Home`, `Item` and
+`Try Again` match none of those patterns, and all three had drifted into two
+translations by the time anyone looked. It now inspects every string that is
+more than one character and contains a letter.
+
+**Two duplicates that are not duplicates, and one that is:**
+
+- **Runtime-composed keys.** A key under `usagePurpose.*`, `errors.codes.*`,
+  `commonValidation.*`, `recipes.diet.*` or `${keyPrefix}.${suffix}` only exists
+  once the enum value or prefix is substituted in, so no call site names it and
+  nothing can be re-pointed at it. Two of them holding the same string is not
+  collapsible — both must exist for their own lookup to resolve. The guard
+  applies that as a rule; `enumKeyCoverage.test.ts` and
+  `composedKeyNamespaces.test.ts` are what keep those namespaces complete.
+  **Adding a suffix to `alertMutationFailure` means adding it to
+  `ALERT_SUFFIXES` in both places** — `rateLimitedTitle` was missing from one,
+  and a key sweep removed three live keys with nothing failing until a hook test
+  did.
+- **One English word, two grammatical roles.** `Default` is *Predeterminado* or
+  *Predeterminada* depending on the noun; `Invite` is *Invitación* (the thing)
+  or *Invitar* (the button); `Back` is *Atrás* (direction) or *Reverso* (of a
+  package). Collapsing those makes one context ungrammatical. They go in
+  `INTENTIONAL` with the variants named — same rule as the addressee-gender one
+  below: a fact about the language belongs in the key, never in a runtime
+  parameter.
+- **Everything else is drift and collapses.** If two keys hold the same English
+  for the same concept, they will eventually hold different Spanish.
 
 **Never concatenate a number with a translated noun.**
 

@@ -22,7 +22,7 @@ function asRecord(x: unknown): Record<string, unknown> | null {
 // values are the i18n keys whose label is resolved at render time so the macro
 // names follow the active language.
 const MACRO_LABEL_KEYS: Record<string, string> = {
-  Calories: 'recipes.macroCalories',
+  Calories: 'labels.calories',
   Protein: 'recipes.macroProtein',
   Carbohydrates: 'recipes.macroCarbohydrates',
   Fat: 'recipes.macroFat',
@@ -118,7 +118,7 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
       {!!tips && (
         <View style={styles.section}>
           <Text size="md" weight="semibold" style={styles.sectionTitle}>
-            {t('recipes.tipsTitle')}
+            {t('labels.tips')}
           </Text>
           <Text size="sm" tone="secondary">
             {tips}

@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { commonStyles } from '#/styles/commonStyles';
-import { Badge } from '#components/base/Badge';
+import { Badge } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
 import { STORAGE_TYPE_VALUES } from './storageLocationFormConfig';
 
@@ -122,7 +122,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                     <Text>
                       {' '}
                       / {location.capacity}{' '}
-                      {location.capacityUnit || t('storageLocationCard.units')}
+                      {location.capacityUnit || t('labels.units')}
                     </Text>
                   ) : null}
                   {!!location.parentLocation?.name && (
@@ -156,7 +156,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               >
                 <Icon name="star-outline" size={18} />
                 <Text size="sm" weight="medium">
-                  {t('storageLocationCard.setDefault')}
+                  {t('labels.setDefault')}
                 </Text>
               </AppPressable>
             )}

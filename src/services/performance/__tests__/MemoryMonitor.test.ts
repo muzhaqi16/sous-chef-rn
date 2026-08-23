@@ -1,6 +1,7 @@
 import { getUsedMemory, getTotalMemory } from 'react-native-device-info';
 import { Telemetry } from '#/services/telemetry';
 import { MemoryMonitor } from '../MemoryMonitor';
+import { logger } from '#/utils/environment';
 
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
@@ -140,7 +141,7 @@ describe('MemoryMonitor', () => {
         'app_memory_critical_total',
         1,
       );
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
       );
     });
@@ -155,7 +156,7 @@ describe('MemoryMonitor', () => {
 
       await MemoryMonitor.takeSnapshot('first_warning');
       expect(Telemetry.increment).toHaveBeenCalledTimes(1);
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
       );
 
@@ -174,7 +175,7 @@ describe('MemoryMonitor', () => {
         'app_memory_critical_total',
         1,
       );
-      expect(console.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         expect.stringContaining('[MemoryMonitor] Critical memory usage:'),
       );
     });

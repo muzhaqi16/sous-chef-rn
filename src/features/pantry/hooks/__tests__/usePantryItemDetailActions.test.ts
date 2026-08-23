@@ -35,7 +35,7 @@ jest.mock('#/services/errorService', () => ({
   },
 }));
 
-jest.mock('#hooks/home/pantry/utils', () => ({
+jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   removeFromPantryItemsCache: jest.fn(),
 }));
 

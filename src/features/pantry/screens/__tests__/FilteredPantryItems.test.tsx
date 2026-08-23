@@ -118,7 +118,7 @@ let mockLoading = false;
 let mockError: Error | undefined;
 let mockHasResult = true;
 
-jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
+jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   usePantryManagement: () => ({
     state: {
       items: mockAllItems,
@@ -168,7 +168,7 @@ jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => ({
     return <Pressable onPress={onPress}>{children}</Pressable>;
   },
 }));
-jest.mock('#components/base/Skeleton/PantryItemSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/PantryItemSkeleton', () => ({
   PantryItemSkeleton: () => null,
 }));
 jest.mock('#/styles/commonStyles', () => ({

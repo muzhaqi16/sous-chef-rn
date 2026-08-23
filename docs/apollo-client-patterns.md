@@ -14,7 +14,8 @@ This document defines the standardized patterns for using Apollo Client in this 
 6. [Query Data Preservation](#query-data-preservation)
 7. [Version Conflicts](#version-conflicts)
 8. [Decision Trees](#decision-trees)
-9. [Apollo Client 4.x Notes](#apollo-client-4x-notes)
+9. [Fragment Composition & Data Masking](#fragment-composition--data-masking)
+10. [Apollo Client 4.x Notes](#apollo-client-4x-notes)
 
 ---
 
@@ -562,8 +563,10 @@ if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
   throw), so an unguarded callback fires on a _refusal_. Move success side-effects
   into the imperative flow (after the `alertIfRejected` check) or guard the
   callback with `if (data?.field?.__typename !== 'XPayload') return;`.
-- **i18n:** the user-facing `message` is a `t('...')` key (the server's
-  `payload.message` is shown first; the key is the fallback when it's empty). The
+- **i18n:** user-facing copy always comes from `t('...')` — a refusal naming a
+  `field` resolves `errors.field.<field>` with the caller's string as fallback,
+  and the server's `message` is never displayed (see
+  [Localizing refusals](#localizing-refusals--field-routes-the-servers-message-never-displays)). The
   `operation` label is a **telemetry tag — a plain inline string, never
   translated** (matches the codebase-wide `trackEvent`/`operation:` convention;
   these flow to Loki/Telemetry, never to the user).
@@ -576,6 +579,34 @@ if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
 **Reference implementations:** `useUpdateShoppingItem.ts`,
 `useAdjustPantryItemQuantity.ts`, `useWastePantryItemBatch.ts`,
 `useOpenPantryItemBatch.ts`, `DeleteAccountScreen.tsx`.
+
+### Localizing refusals — `field` routes, the server's `message` never displays
+
+A refusal that names a `field` routes to LOCALIZED copy. `field` says which
+input was refused — the actionable part when one mutation carries four
+sub-inputs — and `alertRejectedMutation` / `alertIfRejected` already turn it
+into copy from `errors.field.*`, falling back to the caller's own string for an
+unmapped field or an unattributed refusal. Callers pass their generic copy and
+get the specific version for free; do not re-implement the rule at a call site.
+
+`message` is server-authored **English**: the client sends no `Accept-Language`
+and its token carries no locale, so there is nothing for the server to localize
+against, and the API says so itself — _"use error codes for programmatic
+handling, not message strings"_ and _"map error codes to localized messages in
+your client"_ (`sous-chef-api/docs/api/errors.md`, Best Practices). Displaying
+it puts English in front of every es / it / sq user and skips the
+plural-category, addressee-gender and canonical-vocabulary guards the app
+enforces on all its own copy. Never branch on `message` text either — route on
+`code` and `field` only.
+
+The cost is recorded rather than hidden: one field can carry several rules —
+`unit` refuses both "batches still exist" and "no conversion path" — so its
+string names both remedies. Adding a mapping to `errors.field.*` is opt-in; a
+field with none simply keeps the caller's copy.
+
+> **Known deviation:** `useCrudOperations`' `surfaceCrudDataError` still shows
+> the refused member's own `message` (English) when present. It predates this
+> rule; treat it as migration debt, not a pattern to copy.
 
 ### Standard Error Pattern
 
@@ -1435,6 +1466,36 @@ customOnData: (payload, client) => {
 - `src/hooks/subscriptions/usePantrySubscriptions.ts` (lines 80-126)
 - `src/hooks/subscriptions/useShoppingListSubscriptions.ts` (lines 80-239)
 
+### Server events, the unread badge, and write scoping
+
+The notification feed, each row's read-state and the unread count live in the
+Apollo cache and nowhere else ([architecture.md](architecture.md) § State).
+`src/features/notifications/utils/notificationCacheWrites.ts` is the one place
+those transitions are applied — by the user acting locally AND by the
+subscription handler. The Zustand slice keeps only `pendingExpirationLinks`,
+which the cache genuinely cannot hold: `expirationNotificationChanged` can
+arrive BEFORE the `notificationChanged` it enriches, when there is no row to
+attach it to.
+
+**A local write moves the badge by a delta; a server-delivered event re-reads
+it.** Not a style choice — Apollo normalizes a subscription's `node` into the
+cache BEFORE `onData` runs (the same ordering as the filtered-connections
+pattern above), so by the time a `READ` handler asks "was this unread?", the
+event's own payload has already answered "no". The guard that makes a
+re-delivered event safe is therefore useless on that path, and a delta would be
+wrong in both directions. `useNotificationListener` calls `reseedUnreadCount()`
+on every server event instead, which is also the truer number: the badge counts
+unread notifications this device has never paged in, so a local ±1 was only
+ever an approximation. Verify the ordering claim with a subscription whose
+`onData` reads `cache.extract()`.
+
+**`addNotificationToFeed` must scope its write.** `notificationsConnection` is
+keyed on `filters` and `cache.modify` runs for EVERY cached variant, so the
+`skipStoreField: skipUnmatchedFilterVariants({ category, unreadOnly: true })`
+guard is what keeps a pantry notification out of the recipes feed.
+`createAddToParentConnectionUpdater` accepted that option and ignored it until
+2026-08-23.
+
 ---
 
 ## Reusable Utilities Reference
@@ -1581,6 +1642,163 @@ This split is a **custom optimization** — it's not a recognized community patt
 
 Apollo Client 4 narrows `ApolloClient.cache` to the abstract `ApolloCache<TCacheShape>`, which doesn't expose `restore()` or `gc()`. Any call boundary that hits those methods has to cast. Keep the cast narrow — currently one production site: `src/apollo/logoutCleanup.ts` (`gc()` after `clearStore()`). The deferred restore path lives inside `apolloCachePersistence` and is no longer a cast boundary callers have to think about. Don't push the cast into application code.
 
+### Adding a new paginated connection
+
+- Use `itemsConnectionFieldPolicy()` or `mergeConnectionByNodeId()`
+  (`src/apollo/utils/cacheUpdaters.ts`) for merge logic.
+- Use the `extractNodes()` / `normalizeConnection()` helpers, which return `[]`
+  for missing edges.
+- Use a `cache-and-network` → `cache-first` fetch policy so the network fires
+  immediately on restore; stale persisted `pageInfo`/edges self-correct when
+  the response arrives (a brief flash of stale pagination state is acceptable).
+
+---
+
+## Fragment Composition & Data Masking
+
+`dataMasking: true` is enabled globally (`src/apollo/client.ts`). The project
+follows Apollo Client 4.x's recommended pattern: **per-component / per-hook
+colocated fragments**, masked at the type level, materialized through
+`useFragment` (for cache subscriptions) or `cache.readFragment` (for one-shot
+reads). The enforced rules are summarized in CLAUDE.md; this section carries
+the mechanism, the templates, and the reasoning.
+
+### Fragment locations
+
+- A component / hook owns its fragment in a sibling `<Name>.graphql` file
+  (e.g. `PantryDetailInfo.graphql` next to `PantryDetailInfo.tsx`,
+  `useUpdatePantryItem.graphql` next to `useUpdatePantryItem.ts`).
+- Naming: `<Consumer>_<entity>` (e.g. `PantryItemCard_pantryItem`,
+  `useToggleShoppingItem_item`).
+- Screen-level fragments compose children via spread:
+  `fragment ItemDetail_X on X { ...ChildA_X ...ChildB_X /* + screen fields */ }`
+  — the right shape when one screen needs the union of its children's data:
+  the screen owns one fragment, children own theirs, the screen spreads them.
+- Queries spread the screen-level fragment(s); mutations spread the hook-owned
+  fragment.
+- **Shared fragments** live in per-feature `*Fragments.graphql` files (find
+  them: `ls src/features/*/graphql/*Fragments.graphql src/graphql/operations/*/[a-z]*Fragments.graphql`),
+  and each carries a header naming the operations that spread it and the hooks
+  that read it — that header is the contract for keeping the fragment shared.
+  Don't add one without 2+ operations and 1+ hook needing the identical shape.
+- Generated catalog-fragment names (`ItemFragment*`, `PantryItemDisplay*`, …)
+  are banned imports; the authoritative list is the `no-restricted-imports`
+  patterns in `.eslintrc.js`. If you need those fields, create a colocated
+  `<Consumer>_<entity>` fragment instead.
+- Use the `#operations/<domain>/...` alias rather than long relative paths.
+
+### The two consumer shapes
+
+| Shape                  | Prop type                                | Cache miss                   | Use for                                                                                                   |
+| ---------------------- | ---------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Strict**             | `FragmentType<typeof XDoc>`              | `return null` on `!complete` | List cells (`MyRecipeCard`, `SavedRecipeCard`, `PantryItemCard`, `HomeMemberCard`) — brief blanking is OK |
+| **Resilient fallback** | `FragmentType<typeof XDoc> \| XFragment` | Fall back to the source prop | Detail panels, sheets (`PantryDetailInfo`, `MealPlanSettingsSheet`) — must render without blanking        |
+
+Pass the masked ref directly as `from`. Apollo's `useFragment` runs
+`cache.identify(from)` internally (which reads only `__typename` + the type's
+key fields), so the masked ref shape `{ __typename, id, $fragmentRefs }` and a
+bare `{ __typename, id }` produce the same cache lookup — no manual extraction
+needed.
+
+Resilient-fallback template (preferred for new sheets/detail components):
+
+```tsx
+import { useFragment } from '@apollo/client/react';
+import type { FragmentType } from '@apollo/client/masking';
+import { XFragmentDoc, type XFragment } from './X.generated';
+
+interface Props {
+  itemRef: FragmentType<typeof XFragmentDoc> | XFragment;
+  // …other props
+}
+
+export const Foo: React.FC<Props> = ({ itemRef, … }) => {
+  const fragmentResult = useFragment({
+    fragment: XFragmentDoc,
+    fragmentName: 'X',
+    from: itemRef,
+  });
+  const item: XFragment = fragmentResult.complete
+    ? fragmentResult.data
+    : (itemRef as XFragment);
+  // …direct field reads on `item`
+};
+```
+
+**Guard scalar reads** that would crash on undefined when the fallback fires
+(e.g. `parseISO(item.startDate)`, arithmetic on `item.qty`).
+`complete: false` means the cache doesn't have every field the fragment
+selects — the cast to `XFragment` lies in that case, and unguarded reads on
+the masked-ref fallback will throw. Either gate the dangerous read
+(`item.startDate && parseISO(item.startDate)`) or use the strict shape:
+
+```tsx
+const item: XFragment | null = fragmentResult.complete
+  ? fragmentResult.data
+  : null;
+if (!item) return null;
+```
+
+### `id` must stay visible under masking
+
+The masked ref only carries `id` if the operation selects `id` directly. Under
+`dataMasking`, a named fragment spread (`...Frag`) is hidden from its parent —
+the parent sees only the fields it selects itself plus `__typename`. So a
+field written as `shoppingListItem(id: $id) { ...ItemDetail_shoppingListItem }`
+masks to just `{ __typename }`: the `id` is inside the (masked) fragment. The
+moment that object reaches `useFragment` / `cache.readFragment` /
+`cache.identify` — or any code reads `.id` off it — key-field extraction
+throws `Missing field 'id' while extracting keyFields…`.
+
+**Rule: any selection set that spreads a fragment identifying its type must
+also select `id` directly** (e.g.
+`shoppingListItem(id: $id) { id ...ItemDetail_shoppingListItem }`). It's free —
+`id` is already fetched inside the fragment; selecting it at the parent level
+just keeps the key field visible after masking. Enforced for every operation
+and fragment by `__tests__/graphql/maskingIdentity.test.ts`.
+
+### Mutation optimistic responses and `Unmasked<>`
+
+Mutation optimistic responses materialize their fragment from cache and
+spread/inline into the response shape. Two cases:
+
+1. **Hook reads via `cache.readFragment` then calls `enhanceWithVersion`**
+   (when the fragment shape matches the mutation's payload shape) — annotate
+   the return type with `Unmasked<TData>`. This is the one and only
+   feature-code site where `Unmasked<>` is allowed and expected (Apollo's
+   `optimisticResponse?: Unmasked<NoInfer<TData>> | ...` signature requires
+   it). Example: `usePantryItemMutations.ts`.
+
+2. **Hook constructs the optimistic shape field-by-field** (when the mutation
+   selects narrower fields than the hook's read fragment) — the return type
+   annotation isn't required if every field is inlined explicitly, but
+   `Unmasked<TData>` is still preferred for clarity. Example:
+   `useToggleShoppingItem.ts`.
+
+`Unmasked<>` is reserved for `optimisticResponse` callbacks — nowhere else in
+feature code. Don't use `@unmask` (any mode): it's an Apollo migration tool,
+not a steady-state pattern. The HKT registration in
+`src/types/apollo-masking.d.ts` is required for `FragmentType<typeof Doc>` to
+resolve.
+
+### Testing masked components
+
+Tests must wrap with `renderWithApollo` from `#/test-utils/apolloMockProvider`
+(so `useFragment` has an Apollo context) and include `__typename` on the
+literal fixture. For hooks that read from cache via `cache.readFragment`, use
+`seedCache([...])` to pre-write the entity. Do not
+`jest.mock('@apollo/client/react', …)` directly — banned by lint
+(`no-restricted-syntax`).
+
+### Why not `client-preset`
+
+The client-preset bundles its own type-level fragment-masking helper
+(`@graphql-codegen/client-preset`'s `useFragment`) that **conflicts** with
+Apollo Client 4.x's runtime data masking. Apollo's docs explicitly advise
+against client-preset for AC4 projects. Our `near-operation-file` setup
+already emits `TypedDocumentNode`s, which is all Apollo's
+`FragmentType<typeof Doc>` and runtime masking need.
+
 ---
 
 ## Apollo Client 4.x Notes
@@ -1592,9 +1810,9 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 | `useSuspenseQuery`      | Suspense-compatible query hook (works with React `<Suspense>`)                                                         | Available, **not adopted** (see rationale below)                                                                                                  |
 | `useBackgroundQuery`    | Trigger queries in parent, read in child via `useReadQuery`                                                            | Available, **not adopted**                                                                                                                        |
 | `useReadQuery`          | Read data from a `useBackgroundQuery` queryRef in a child component                                                    | Available, **not adopted** (companion to `useBackgroundQuery`)                                                                                    |
-| `useFragment`           | Subscribe to a specific fragment in cache without a query                                                              | **Adopted.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the full pattern.                                        |
+| `useFragment`           | Subscribe to a specific fragment in cache without a query                                                              | **Adopted.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the full pattern.                                        |
 | `dataState`             | Discriminated union on query results (`{status: 'loading' \| 'error' \| 'complete', data?}`) for type-safe data access | Available, not adopted (would require widespread refactor)                                                                                        |
-| `dataMasking: true`     | Strips fragment fields from parent query results so children must use `useFragment`                                    | **Enabled.** See CLAUDE.md "Apollo: Fragment composition + `useFragment` convention" for the colocated-fragment convention.                       |
+| `dataMasking: true`     | Strips fragment fields from parent query results so children must use `useFragment`                                    | **Enabled.** See [Fragment Composition & Data Masking](#fragment-composition--data-masking) for the colocated-fragment convention.                       |
 | `apollo3-cache-persist` | Apollo's recommended cache persistence library                                                                         | **Not adopted** — see [Cache Persistence & Restoration](#cache-persistence--restoration) for the MMKV-based custom implementation and the reasons |
 
 #### AC 4.0 New Concepts
@@ -1628,7 +1846,8 @@ This project uses Apollo Client `~4.1.7`. AC 4.0 introduced several new hooks an
 
 #### `useFragment` — safe for offline-first
 
-Specifics of _how_ to use it live in CLAUDE.md. The reason it's safe to adopt
+Specifics of _how_ to use it live in
+[Fragment Composition & Data Masking](#fragment-composition--data-masking). The reason it's safe to adopt
 broadly (unlike `useSuspenseQuery`):
 
 - Reads from cache only, never triggers network requests — no offline conflict.
@@ -1640,6 +1859,9 @@ broadly (unlike `useSuspenseQuery`):
 
 - Apollo releases React Native-specific Suspense guidance with offline-first patterns.
 - React Native resolves Suspense stability issues ([RN#49129](https://github.com/facebook/react-native/issues/49129)).
+- A new screen genuinely has 2+ independent parallel queries whose waterfall
+  `useBackgroundQuery` would avoid — the one shape where re-measuring the
+  trade is worth it.
 
 ### Codegen Setup
 
@@ -1651,7 +1873,7 @@ types. Call sites do `useQuery(GetPantryItemDocument, options)` directly — the
 wrapper hooks like `useGetPantryItemQuery`.
 
 **Fragment file layout and naming, `@unmask` policy, `customDirectives` config:**
-see CLAUDE.md "Apollo: Fragment composition + `useFragment` convention".
+see [Fragment Composition & Data Masking](#fragment-composition--data-masking).
 `@graphql-codegen/client-preset` is not used in this project — its runtime
 fragment-masking helper conflicts with Apollo Client 4.x's own `dataMasking`.
 

@@ -57,7 +57,7 @@ export const SavedRecipeMetadataPanel: React.FC<
       </View>
 
       <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>{t('recipes.folder')}</Text>
+        <Text style={styles.detailLabel}>{t('labels.folder')}</Text>
         <View style={styles.detailValue}>
           <Icon
             name="folder"

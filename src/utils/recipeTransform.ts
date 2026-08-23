@@ -65,7 +65,7 @@ export function transformRecipeForDisplay(
 
     if (textRecipe.readyInMinutes) {
       subtitleParts.push(
-        `⏱ ${t('recipes.minutesValue', { count: textRecipe.readyInMinutes })}`,
+        `⏱ ${t('labels.min', { count: textRecipe.readyInMinutes })}`,
       );
     }
 

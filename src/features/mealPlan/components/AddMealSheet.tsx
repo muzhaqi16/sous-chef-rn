@@ -51,12 +51,12 @@ interface AddMealSheetProps {
 }
 
 const MEAL_TYPES: { type: MealType; labelKey: string }[] = [
-  { type: MealType.Breakfast, labelKey: 'addMealSheet.mealBreakfast' },
-  { type: MealType.Lunch, labelKey: 'addMealSheet.mealLunch' },
-  { type: MealType.Dinner, labelKey: 'addMealSheet.mealDinner' },
-  { type: MealType.Snack, labelKey: 'addMealSheet.mealSnack' },
-  { type: MealType.Brunch, labelKey: 'addMealSheet.mealBrunch' },
-  { type: MealType.Dessert, labelKey: 'addMealSheet.mealDessert' },
+  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
+  { type: MealType.Lunch, labelKey: 'labels.lunch' },
+  { type: MealType.Dinner, labelKey: 'labels.dinner' },
+  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
+  { type: MealType.Brunch, labelKey: 'labels.brunch' },
+  { type: MealType.Dessert, labelKey: 'labels.dessert' },
 ];
 
 const DIET_TAG_LABEL_KEYS: Record<DietTag, string> = {
@@ -188,7 +188,7 @@ const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
               ? t('addMealSheet.servings', { count: recipe.servings })
               : ''}
             {recipe.totalTimeMinutes
-              ? `${recipe.servings ? ' · ' : ''}${t('addMealSheet.minutes', {
+              ? `${recipe.servings ? ' · ' : ''}${t('labels.min', {
                   count: recipe.totalTimeMinutes,
                 })}`
               : ''}
@@ -361,7 +361,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     >
       <View style={[styles.content, contentContainerStyle]}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>{t('addMealSheet.title')}</Text>
+          <Text style={styles.headerTitle}>{t('labels.addAMeal')}</Text>
         </View>
 
         {/* Meal type selector */}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useUnreadNotificationCount } from '#features/notifications/hooks/useUnreadNotificationCount';
 import {
   View,
   type NativeSyntheticEvent,
@@ -39,7 +40,7 @@ import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { PantryScreenSkeleton } from '#components/atoms/Skeleton/PantryScreenSkeleton';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
@@ -58,7 +59,7 @@ function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
     },
     {
       featureId: 'pantry_tutorial_settings',
-      title: t('pantryScreen.tutorialPantrySettingsTitle'),
+      title: t('labels.pantrySettings'),
       subtitle: t('pantryScreen.tutorialPantrySettingsSubtitle'),
       rectKey: 'settingsIcon',
     },
@@ -308,6 +309,7 @@ function PantryMainContent({
   scrollEndDragHandler,
   momentumEndHandler,
 }: PantryMainContentProps) {
+  const unreadNotificationCount = useUnreadNotificationCount();
   const { t } = useTranslation();
   const {
     handleConsumeItem,
@@ -389,7 +391,7 @@ function PantryMainContent({
         userName={screen.userName}
         householdName={screen.householdName}
         avatarUrl={screen.authUser?.profilePicture}
-        notificationCount={screen.unreadCount}
+        notificationCount={unreadNotificationCount}
         stats={screen.stats}
         items={screen.pantryItems}
         locationFilter={screen.locationFilter}

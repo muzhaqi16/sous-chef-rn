@@ -58,8 +58,8 @@ import {
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { writeOptimisticRecipe } from '#features/recipes/screens/RecipeForm/recipeCacheWriters';
-import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
-import { addToPantryItemsCache } from '#features/pantry/hooks/mutations/utils';
+import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -421,6 +421,48 @@ describe('optimistic entity completeness', () => {
       });
       expect(describeMissing(diff.missing)).toBe('none');
       expect(diff.complete).toBe(true);
+    });
+  });
+
+  describe('notifications', () => {
+    // Notifications are never created locally, so there is no optimistic
+    // entity here. The same failure mode still reaches them by a different
+    // route: a live event writes the entity from the SUBSCRIPTION's fragment
+    // and then adds an edge for it to the feed connection. If that fragment
+    // selects less than the feed query reads off a node, the new edge points
+    // at an incomplete entity — and one incomplete node makes the WHOLE
+    // `GetNotifications` read incomplete, so the list goes blank on arrival
+    // rather than gaining a row.
+    //
+    // The two fragments are identical today; nothing but this holds them that
+    // way.
+    it('the subscription writes every field the feed reads off a node', () => {
+      const fieldsOf = (fragmentName: string, file: string): string[] => {
+        const source = fs.readFileSync(path.join(__dirname, '..', '..', file), 'utf8');
+        const body = source
+          .slice(source.indexOf(`fragment ${fragmentName} on Notification {`))
+          .split('}')[0];
+        return body
+          .split('\n')
+          .slice(1)
+          .map(line => line.replace(/#.*$/, '').trim())
+          .filter(Boolean)
+          .sort();
+      };
+
+      const feedFields = fieldsOf(
+        'useNotificationsOnLaunch_notification',
+        'src/features/notifications/hooks/useNotificationsOnLaunch.graphql',
+      );
+      const eventFields = fieldsOf(
+        'useNotifications_notification',
+        'src/features/notifications/hooks/useNotifications.graphql',
+      );
+
+      expect(feedFields.length).toBeGreaterThan(5);
+      expect(
+        feedFields.filter(field => !eventFields.includes(field)),
+      ).toEqual([]);
     });
   });
 });

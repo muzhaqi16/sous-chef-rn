@@ -69,7 +69,7 @@ export interface AddItemSheetConfig<
   T extends BaseSuggestionItem = BaseSuggestionItem,
 > {
   /**
-   * i18n key for the sheet title (e.g. `addItemSheet.addToShoppingList`).
+   * i18n key for the sheet title (e.g. `labels.addToShoppingList`).
    *
    * A key, not a resolved string: these configs are module-level constants, so
    * a `t()` call here would run at import — before the stored language is

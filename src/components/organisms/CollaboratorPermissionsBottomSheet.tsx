@@ -15,7 +15,7 @@ import {
   UpdateCollaboratorRoleDocument,
   UpdateCollaboratorPermissionsDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { useTranslation } from '#/i18n';
@@ -39,9 +39,9 @@ interface CollabPermissions {
 }
 
 const PERMISSION_ROWS: { key: keyof CollabPermissions; labelKey: string }[] = [
-  { key: 'canAddItems', labelKey: 'shoppingListScreens.permCanAddItems' },
+  { key: 'canAddItems', labelKey: 'labels.canAddItems' },
   { key: 'canEditItems', labelKey: 'shoppingListScreens.permCanEditItems' },
-  { key: 'canRemoveItems', labelKey: 'shoppingListScreens.permCanRemoveItems' },
+  { key: 'canRemoveItems', labelKey: 'labels.canRemoveItems' },
   {
     key: 'canMarkPurchased',
     labelKey: 'shoppingListScreens.permCanMarkPurchased',
@@ -168,7 +168,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
 
         // A resolved error member doesn't throw under errorPolicy:'all' — keep
         // the sheet open and surface it instead of reporting success.
-        if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+        if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
           return;
         }
 
@@ -179,7 +179,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       (error: unknown) => {
         alertService.alert(
           t('labels.error'),
-          errorMessageOr(error, t('errors.somethingWentWrong')),
+          errorMessageOr(error, t('errors.codes.genericRetry')),
         );
       },
     );
@@ -208,7 +208,7 @@ const CollaboratorPermissionsBottomSheet = forwardRef<
       setPermissions(previous);
       return;
     }
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+    if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
       setPermissions(previous);
     }
   };

@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '#utils/iconUtils';
 import { Header, HeaderVariant } from '../molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { Button } from '../base/Button';
+import { Button } from '#components/atoms/Button';
 import { DetailSection } from '../molecules/DetailSection';
 
 interface TemplateSection {

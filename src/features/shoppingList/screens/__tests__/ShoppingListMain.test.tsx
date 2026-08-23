@@ -71,7 +71,7 @@ jest.mock(
     FilterTabBar: () => null,
   }),
 );
-jest.mock('#components/base/Skeleton/ShoppingListSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/ShoppingListSkeleton', () => ({
   ShoppingListSkeleton: () => null,
 }));
 

@@ -17,11 +17,11 @@ import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { Header } from '#components/molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
-import { DataStateView } from '#components/base/DataStateView';
+import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
-import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
+import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
@@ -93,7 +93,7 @@ function formatExpirySubtitle(
   if (!expiresAt) return '';
   const days = differenceInCalendarDays(new Date(expiresAt), new Date());
   if (days < 0) return t('filteredPantry.expired');
-  if (days === 0) return t('filteredPantry.expiresToday');
+  if (days === 0) return t('labels.expiresToday');
   if (days === 1) return t('filteredPantry.expiresTomorrow');
   return t('filteredPantry.expiresInDays', { count: days });
 }

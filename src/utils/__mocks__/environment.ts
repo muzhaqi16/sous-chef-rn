@@ -78,14 +78,4 @@ export const logger = {
   production: jest.fn(),
 };
 
-export const FeatureFlags = {
-  enableBiometrics: true,
-  enableCrashReporting: false,
-  enableAnalytics: false,
-  enablePerformanceMonitoring: false,
-  enableDetailedLogging: true,
-  enableDevTools: true,
-  enableTestMode: true,
-};
-
 export type EnvironmentConfig = typeof config;

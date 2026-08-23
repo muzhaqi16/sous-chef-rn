@@ -117,8 +117,30 @@ export async function bootstrapFreshAuthenticatedSession() {
  * throw. A test that cannot reach its starting state has to say so — silently
  * continuing is what turned one failure into nine.
  */
+/**
+ * Clear the first-run coach marks if they are up.
+ *
+ * They are drawn over the whole screen with a dimmed backdrop, so the tab bar
+ * underneath fails Detox's visibility matcher — which requires 75% of the view
+ * to be visible — and every suite that starts by tapping a tab times out on a
+ * tab that is right there. `login.e2e.ts` dismisses them inline; anything
+ * reaching the tabs through this helper needs the same.
+ */
+async function dismissFeatureHints() {
+  const dismiss = element(by.id('feature-hint-overlay-dismiss'));
+  const present = await waitFor(dismiss)
+    .toBeVisible()
+    .withTimeout(1500)
+    .then(() => true)
+    .catch(() => false);
+  if (present) {
+    await dismiss.tap();
+  }
+}
+
 export async function relaunchToHomeTab() {
   const goToPantryTab = async () => {
+    await dismissFeatureHints();
     await waitFor(element(by.id('tab-pantry')))
       .toBeVisible()
       .withTimeout(3000);

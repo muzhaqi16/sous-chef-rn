@@ -7,7 +7,7 @@ import {
 } from '#components/atoms/themedComponents';
 import { BottomSheetLayout } from '#components/atoms/BottomSheetLayout';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { FormInput } from '#components/molecules/FormInput';
 import { useQuery } from '@apollo/client/react';

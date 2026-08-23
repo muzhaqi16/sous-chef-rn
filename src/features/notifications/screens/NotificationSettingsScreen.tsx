@@ -110,7 +110,7 @@ const RECIPE_SETTINGS: SettingDef[] = [
 const DIGEST_SETTINGS: SettingDef[] = [
   {
     key: 'weeklyDigest',
-    titleKey: 'notifications.weeklyDigest',
+    titleKey: 'labels.weeklyDigest',
     descriptionKey: 'notifications.weeklyDigestDesc',
   },
   {
@@ -142,11 +142,11 @@ const getFrequencyOptions = (t: Translate) => [
     value: ExpirationFrequency.DailyEvening,
   },
   {
-    label: t('notifications.frequencyWeeklyDigest'),
+    label: t('labels.weeklyDigest'),
     value: ExpirationFrequency.WeeklyDigest,
   },
   {
-    label: t('notifications.frequencyNever'),
+    label: t('labels.never'),
     value: ExpirationFrequency.Never,
   },
 ];
@@ -279,7 +279,7 @@ export const NotificationSettingsScreen: React.FC = () => {
               [
                 { text: t('labels.cancel'), style: 'cancel' },
                 {
-                  text: t('notifications.openSettings'),
+                  text: t('labels.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
                       Linking.openURL('app-settings:');
@@ -351,7 +351,7 @@ export const NotificationSettingsScreen: React.FC = () => {
                 const success = await resetToDefaults();
                 if (success) {
                   alertService.alert(
-                    t('settings.resetSuccessTitle'),
+                    t('labels.success'),
                     t('notifications.resetSuccess'),
                   );
                 } else {
@@ -405,7 +405,7 @@ export const NotificationSettingsScreen: React.FC = () => {
               [
                 { text: t('labels.cancel'), style: 'cancel' },
                 {
-                  text: t('notifications.openSettings'),
+                  text: t('labels.openSettings'),
                   onPress: () => {
                     if (Platform.OS === 'ios') {
                       Linking.openURL('app-settings:');
@@ -448,7 +448,7 @@ export const NotificationSettingsScreen: React.FC = () => {
               <Text size="sm" tone="accent" style={styles.pickerValue}>
                 {FREQUENCY_OPTIONS.find(
                   o => o.value === settings.expirationNotificationFrequency,
-                )?.label ?? t('notifications.select')}
+                )?.label ?? t('labels.select')}
               </Text>
             </AppPressable>
             <ModalPicker
@@ -474,7 +474,7 @@ export const NotificationSettingsScreen: React.FC = () => {
               <Text size="sm" tone="accent" style={styles.pickerValue}>
                 {THRESHOLD_OPTIONS.find(
                   o => o.value === String(settings.expirationDaysThreshold),
-                )?.label ?? t('notifications.select')}
+                )?.label ?? t('labels.select')}
               </Text>
             </AppPressable>
             <ModalPicker

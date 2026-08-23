@@ -170,9 +170,7 @@ export const ShareCodeSection: React.FC<ShareCodeSectionProps> = ({
             onPress={handleShareLink}
           >
             <Icon name="share-outline" size={18} tone="primary" />
-            <Text style={styles.shareLinkText}>
-              {t('shoppingListScreens.shareLink')}
-            </Text>
+            <Text style={styles.shareLinkText}>{t('labels.shareLink')}</Text>
           </AppPressable>
         </Animated.View>
       ) : null}

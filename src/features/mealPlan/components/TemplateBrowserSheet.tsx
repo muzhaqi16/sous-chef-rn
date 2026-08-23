@@ -29,7 +29,7 @@ import { TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 
 const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
@@ -42,10 +42,10 @@ const CATEGORY_KEYS: { key: TemplateCategory | undefined; labelKey: string }[] =
     },
     {
       key: TemplateCategory.Breakfast,
-      labelKey: 'saveAsTemplate.categoryBreakfast',
+      labelKey: 'labels.breakfast',
     },
-    { key: TemplateCategory.Lunch, labelKey: 'saveAsTemplate.categoryLunch' },
-    { key: TemplateCategory.Dinner, labelKey: 'saveAsTemplate.categoryDinner' },
+    { key: TemplateCategory.Lunch, labelKey: 'labels.lunch' },
+    { key: TemplateCategory.Dinner, labelKey: 'labels.dinner' },
     {
       key: TemplateCategory.Holiday,
       labelKey: 'saveAsTemplate.categoryHoliday',

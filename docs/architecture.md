@@ -77,7 +77,9 @@ export const pantryFeature: FeatureManifest = {
 };
 ```
 
-Features without a tab (`barcode`, `notifications`, `profile`) omit `tab` and
+There are eight: `pantry`, `shoppingList`, `recipes`, `mealPlan`, `home`,
+`barcode`, `notifications`, `profile`. Features without a tab (`barcode`,
+`home`, `notifications`, `profile`) omit `tab` and
 are reached from headers, buttons, or push taps. Removing a feature from a fork
 is deleting its folder and its registry entry.
 
@@ -100,8 +102,19 @@ imports:
 | `utils/`                          | 🔒      | Internal                                                                |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`.
+Those four are the whole taxonomy — there is no `base/`. It existed as a fifth
+name for the atoms bucket and folded into `atoms/` (`DataStateView` went to
+`molecules/`, since routing between Loading, Error and Empty is composition, not
+a primitive).
 Shared hooks live in `src/hooks/`. If two features need the same thing, it moves
-up — it doesn't get imported sideways.
+up — it doesn't get imported sideways, and it doesn't get imported *downwards*
+either: a hook owned by one feature lives in that feature, and `src/hooks/` holds
+only what more than one feature uses. Both directions are enforced by
+`import/no-restricted-paths` zones.
+
+`src/screens/` holds auth and onboarding only. Those are flows rather than
+domains — they have no feature-shaped data layer, and they run before a home
+exists. Every domain, `home` included, is a folder under `src/features/`.
 
 ---
 
@@ -111,9 +124,21 @@ up — it doesn't get imported sideways.
 
 |              | Apollo Client                                          | Zustand (`useAppStore`)                                                        |
 | ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Owns         | Pantry items, lists, recipes, meal plans, homes, users | Selected home/pantry/list, preferences, auth session, network status, UI flags |
+| Owns         | Pantry items, lists, recipes, meal plans, homes, users, notifications | Selected home/pantry/list, preferences, auth session, network status, UI flags |
 | Persisted to | MMKV via `cache.extract()` / `cache.restore()`         | MMKV via `zustandStorage` (tokens go to Keychain)                              |
 | Read with    | `useQuery` / `useFragment` / `cache.readFragment`      | Named hooks from `#store/useAppStore`                                          |
+
+Notifications are the worked example of that rule, because they used to break
+it. The feed, each row's read-state and the unread count lived in a Zustand
+slice AND in the Apollo cache, written from the same server events with no rule
+for which was current — so a mark-read from this device and a `READ` event from
+another could leave the row and the badge disagreeing. They now live only in the
+cache; `features/notifications/utils/notificationCacheWrites.ts` is the single
+place those transitions are applied, by both the user acting locally and the
+subscription handler. What stays in the slice is the one part the cache cannot
+hold: `pendingExpirationLinks`, a buffer for an `expirationNotificationChanged`
+event that can arrive BEFORE the notification it enriches, when there is nothing
+yet to attach it to.
 
 ### Reading from the store
 
@@ -146,8 +171,9 @@ components. Subscribing to it re-renders on every state change anywhere.
 ### Slices
 
 `src/store/slices/` — `appSlice`, `authSlice`, `barcodeScannerSlice`,
-`navigationSlice`, `networkSlice`, `notificationSlice`, `performanceSlice`,
-`preferencesSlice`, `telemetrySlice`, `uiSlice`. `resetManager.ts` coordinates
+`navigationSlice`, `networkSlice`, `notificationSlice` (the expiration buffer
+only — see above), `performanceSlice`, `preferencesSlice`, `telemetrySlice`,
+`uiSlice`. `resetManager.ts` coordinates
 clearing them on logout.
 
 Session tokens are written through to the **Keychain**, not MMKV — see the
@@ -385,18 +411,19 @@ src/
 ├── apollo/          Client, cache, links, offline queue, cache persistence
 ├── assets/          Bundled images and fonts
 ├── components/      Shared UI: atoms · molecules · organisms · templates
-│                    plus charts, forms, modals, navigation, providers, settings
+│                    plus charts, modals, navigation, providers, settings
 ├── config/          Generated env config
 ├── constants/
 ├── context/         App-level React context
 ├── features/        Feature modules (see above) + registry.ts
 ├── graphql/         Shared operations, generated schema + types
-├── hooks/           Shared hooks: apollo, offline, ui, search, auth, home,
-│                    performance, navigation, autocomplete, subscriptions, …
+├── hooks/           Shared hooks ONLY — what more than one feature uses:
+│                    apollo, offline, ui, search, auth, performance,
+│                    navigation, autocomplete, subscriptions, …
 ├── i18n/            i18next config + locale JSON
 ├── native/          Native module bindings
 ├── navigation/      RootNavigator, stacks, layouts
-├── screens/         Cross-cutting screens: auth, home management, onboarding
+├── screens/         Auth and onboarding flows only
 ├── services/        Push, subscriptions, telemetry, recipe API (Spoonacular),
 │                    haptics, permissions, performance, alerts, errors, toasts
 ├── storage/         MMKV wrappers

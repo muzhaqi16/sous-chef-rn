@@ -26,7 +26,7 @@ jest.mock('#features/mealPlan/hooks/useMealTemplateActions', () => ({
   })),
 }));
 
-jest.mock('#hooks/home/hooks/useHomeQuery', () => ({
+jest.mock('#features/home/hooks/useHomeQuery', () => ({
   useHomeQuery: jest.fn(() => ({
     homes: [{ id: 'home-1', name: 'My Home' }],
   })),

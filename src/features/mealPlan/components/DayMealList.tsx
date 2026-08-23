@@ -92,7 +92,7 @@ export const DayMealList: React.FC<DayMealListProps> = ({
                 tone="accent"
                 style={styles.addMealText}
               >
-                {t('emptyDay.addMeal')}
+                {t('labels.addAMeal')}
               </Text>
             </AppPressable>
           )}

@@ -15,7 +15,7 @@ import { FilterTabBar } from './FilterTabBar';
 import type { FilterTabActionButton } from '#components/molecules/FilterTabs/types';
 import { ShoppingTab } from './ShoppingTab';
 import { PurchasedTab } from './PurchasedTab';
-import { EmptyState, type EmptyStateProps } from '#components/base/EmptyState';
+import { EmptyState, type EmptyStateProps } from '#components/atoms/EmptyState';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import {

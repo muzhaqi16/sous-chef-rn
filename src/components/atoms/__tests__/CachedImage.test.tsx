@@ -58,7 +58,7 @@ jest.mock('#utils/iconUtils', () => {
 });
 
 // Mock SkeletonBase
-jest.mock('#components/base/Skeleton/SkeletonBase', () => {
+jest.mock('#components/atoms/Skeleton/SkeletonBase', () => {
   const R = require('react');
   const RN = require('react-native');
   return {

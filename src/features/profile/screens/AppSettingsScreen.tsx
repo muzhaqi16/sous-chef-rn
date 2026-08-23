@@ -136,7 +136,7 @@ export const AppSettingsScreen: React.FC = () => {
                 // surfaces its own failure with `errors.resetSettingsFailed`.
                 if (success) {
                   alertService.alert(
-                    t('settings.resetSuccessTitle'),
+                    t('labels.success'),
                     t('settings.resetSuccess'),
                   );
                 }
@@ -161,7 +161,7 @@ export const AppSettingsScreen: React.FC = () => {
 
   return (
     <ProfileScreenWrapper
-      title={t('settings.appSettings')}
+      title={t('labels.appSettings')}
       testID="settings-screen"
     >
       <SettingSection title={t('settings.unitsSection')}>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { Button } from '#/components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { t as tGlobal } from '#/i18n';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -25,7 +25,7 @@ import {
 } from '#/utils/errors/rateLimit';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 
 interface EmailVerificationRouteParams {

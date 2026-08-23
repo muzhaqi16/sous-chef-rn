@@ -72,19 +72,19 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
       </Text>
 
       <FormInput
-        label={t('addToPantry.alertWhenBelow')}
+        label={t('labels.alertWhenBelow')}
         value={minQuantity}
         onChangeText={setMinQuantity}
-        placeholder={t('addToPantry.alertPlaceholder')}
+        placeholder={t('labels.eG2')}
         keyboardType="decimal-pad"
         useBottomSheetInput
       />
 
       <FormInput
-        label={t('addToPantry.restockTo')}
+        label={t('labels.restockTo')}
         value={restockQuantity}
         onChangeText={setRestockQuantity}
-        placeholder={t('addToPantry.restockPlaceholder')}
+        placeholder={t('labels.eG6')}
         keyboardType="decimal-pad"
         useBottomSheetInput
       />
@@ -102,7 +102,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
         <View style={styles.section}>
           <StoreAutocompleteField
             variant="inline"
-            label={t('addToPantry.store')}
+            label={t('labels.store')}
             value={storeName}
             onChangeText={setStoreName}
             placeholder={t('addToPantry.storePlaceholder')}

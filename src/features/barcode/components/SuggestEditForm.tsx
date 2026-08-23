@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
-import { ErrorState } from '#components/base/ErrorState';
+import { ErrorState } from '#components/atoms/ErrorState';
 import AddItemForm, {
   type AddItemSubmitPayload,
 } from '#components/organisms/AddItemForm/AddItemForm';

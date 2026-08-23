@@ -260,7 +260,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               tone="secondary"
               style={styles.sectionLabel}
             >
-              {t('quantityEditSheet.quantity')}
+              {t('labels.quantity')}
             </Text>
             <View style={styles.counterContainer}>
               {/* Decrement Button */}
@@ -338,7 +338,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               tone="secondary"
               style={styles.sectionLabel}
             >
-              {t('quantityEditSheet.unit')}
+              {t('storageLocationForm.unit')}
             </Text>
 
             {/* Item-specific Units Chips - only show if available */}
@@ -379,7 +379,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               placeholder={
                 itemUnits.length > 0
                   ? t('quantityEditSheet.orTypeToSearch')
-                  : t('quantityEditSheet.typeToSearchUnits')
+                  : t('labels.typeToSearchUnits')
               }
             />
           </View>

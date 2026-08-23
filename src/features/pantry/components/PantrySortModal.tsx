@@ -44,7 +44,7 @@ const SORT_OPTIONS: Array<{
   },
   {
     key: PantrySortOption.QUANTITY,
-    labelKey: 'pantrySort.sortQuantity',
+    labelKey: 'labels.quantity',
     icon: 'bar-chart',
   },
   {

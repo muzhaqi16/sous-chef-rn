@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetAction } from '#components/templates/BottomSheetAction';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#utils/iconUtils';
 import { CachedImage } from '#components/atoms/CachedImage';

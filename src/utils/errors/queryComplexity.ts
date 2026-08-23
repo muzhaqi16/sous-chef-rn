@@ -7,6 +7,8 @@
  * - Pagination limits: 100 items maximum
  */
 
+import { logger } from '#/utils/environment';
+
 /**
  * Query complexity error types
  */
@@ -196,7 +198,7 @@ export function handleQueryComplexityError(
   const details = getQueryComplexityDetails(error);
   const message = getQueryComplexityMessage(error);
 
-  console.warn('⚠️ Query complexity error detected:', {
+  logger.warn('⚠️ Query complexity error detected:', {
     message,
     details,
     error,

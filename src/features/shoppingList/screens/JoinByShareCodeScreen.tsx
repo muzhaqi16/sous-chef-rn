@@ -6,9 +6,9 @@ import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Icon } from '#utils/iconUtils';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useMutation } from '@apollo/client/react';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -63,9 +63,8 @@ export const JoinByShareCodeScreen: React.FC<
         goBack();
         toShoppingListMain();
         toastService.success(
-          t('shoppingListScreens.joinedToast', {
-            name:
-              result.shoppingList.name || t('shoppingListScreens.listFallback'),
+          t('labels.joined', {
+            name: result.shoppingList.name || t('labels.shoppingList'),
           }),
         );
       },

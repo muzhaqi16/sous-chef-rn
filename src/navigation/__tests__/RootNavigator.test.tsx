@@ -128,7 +128,7 @@ jest.mock('#screens/auth/PostLoginBiometricScreen', () => ({
 }));
 
 // Mock SousChefLoader
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
 
@@ -206,7 +206,7 @@ jest.mock('#features/mealPlan/screens/registration', () => ({
 jest.mock('#features/profile/screens/registration', () => ({
   profileScreens: {},
 }));
-jest.mock('#screens/home/registration', () => ({
+jest.mock('#features/home/screens/registration', () => ({
   homeManagementScreens: {},
 }));
 

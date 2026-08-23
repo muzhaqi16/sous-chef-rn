@@ -392,6 +392,51 @@ describe('createRemoveFromQueryConnectionUpdater', () => {
 // ---------------------------------------------------------------------------
 
 describe('createAddToParentConnectionUpdater', () => {
+  // `cache.modify` runs the modifier once per cached variant of a keyed field
+  // (entityStore.js: `Object.keys(storeObject).forEach`). The Query-level
+  // updater has always honoured `skipStoreField`; this one accepted the option
+  // and ignored it, so any parent connection with keyArgs got the new ref
+  // written into every filtered variant.
+  it('skips variants the caller opts out of', () => {
+    const add = createAddToParentConnectionUpdater<{ id: string }>(
+      'User',
+      'notificationsConnection',
+      'Notification',
+    );
+    const seen: string[] = [];
+    const modifyMock = jest.fn(({ fields }) => {
+      // Two cached variants: unfiltered, and one filtered to RECIPES.
+      for (const storeFieldName of [
+        'notificationsConnection',
+        'notificationsConnection({"filters":{"category":"RECIPES"}})',
+      ]) {
+        const before = { edges: [], totalCount: 0 };
+        const after = fields.notificationsConnection(before, {
+          readField: () => undefined,
+          toReference: () => ({ __ref: 'Notification:n1' }),
+          storeFieldName,
+        });
+        if (after !== before) seen.push(storeFieldName);
+      }
+      return true;
+    });
+    const cache = {
+      identify: () => 'User:me',
+      modify: modifyMock,
+    } as unknown as Parameters<typeof add>[0];
+
+    add(
+      cache,
+      'me',
+      { id: 'n1' },
+      {
+        skipStoreField: name => name.includes('RECIPES'),
+      },
+    );
+
+    expect(seen).toEqual(['notificationsConnection']);
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });

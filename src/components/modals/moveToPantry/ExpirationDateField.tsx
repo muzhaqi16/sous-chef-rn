@@ -32,7 +32,7 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
   return (
     <View style={styles.section}>
       <Text size="md" weight="medium" style={styles.sectionLabel}>
-        {t('moveToPantry.expirationDate')}
+        {t('labels.expirationDate')}
       </Text>
       <View style={styles.dateRow}>
         <AppPressable style={styles.dateInput} onPress={onOpenPicker}>
@@ -40,7 +40,7 @@ export const ExpirationDateField: React.FC<ExpirationDateFieldProps> = ({
           <Text style={styles.dateText}>
             {expirationDate
               ? expirationDate.toLocaleDateString()
-              : t('moveToPantry.selectDate')}
+              : t('labels.selectDate')}
           </Text>
         </AppPressable>
         {!!expirationDate && (

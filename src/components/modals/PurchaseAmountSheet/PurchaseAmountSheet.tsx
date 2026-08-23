@@ -152,7 +152,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             tone="secondary"
             style={styles.sectionLabel}
           >
-            {t('purchaseAmountSheet.quantity')}
+            {t('labels.quantity')}
           </Text>
           <View style={styles.inputRow}>
             <ThemedBottomSheetTextInput
@@ -162,7 +162,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               keyboardType="decimal-pad"
               selectTextOnFocus
               maxLength={10}
-              accessibilityLabel={t('purchaseAmountSheet.quantity')}
+              accessibilityLabel={t('labels.quantity')}
               testID="purchase-quantity-input"
             />
             {item?.unitName ? (

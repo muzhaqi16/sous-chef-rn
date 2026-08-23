@@ -48,7 +48,7 @@ import { t } from '#/i18n';
 function surfaceCrudDataError(data: unknown, operationName: string): boolean {
   const member = findFirstErrorMember(data);
   if (!member) return false;
-  const message = member.message || t('errors.somethingWentWrong');
+  const message = member.message || t('errors.codes.genericRetry');
   alertService.alert(t('labels.error'), message);
   errorService.reportError(new Error(`${operationName}: ${message}`), {
     operation: operationName,
@@ -186,7 +186,7 @@ function createAddOperationImpl<TInput, TResult>(
     // Check errors FIRST because result.data may be { mutationName: null } even on error
     if (result.errors && result.errors.length > 0) {
       const errorMessage =
-        result.errors[0].message || t('errors.somethingWentWrong');
+        result.errors[0].message || t('errors.codes.genericRetry');
       alertService.alert(t('labels.error'), errorMessage);
       return false;
     }
@@ -201,7 +201,7 @@ function createAddOperationImpl<TInput, TResult>(
       return result.data;
     }
 
-    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+    alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
     return false;
   };
 }
@@ -321,7 +321,7 @@ function createUpdateOperationImpl<TInput, TResult>(
       return result.data;
     }
 
-    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+    alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
     return false;
   };
 }
@@ -354,7 +354,7 @@ async function executeRemoveImpl<TResult>(
     return result.data;
   }
 
-  alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+  alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
   return false;
 }
 
@@ -480,7 +480,7 @@ function createSimpleOperationImpl<TArgs extends unknown[], TResult>(config: {
       return result.data;
     }
 
-    alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+    alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
     return false;
   };
 }

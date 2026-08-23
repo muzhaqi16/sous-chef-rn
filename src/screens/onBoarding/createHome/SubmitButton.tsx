@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 
 export const SubmitButton = ({
   isCreating,

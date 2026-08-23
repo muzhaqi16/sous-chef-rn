@@ -20,10 +20,10 @@ const CATEGORY_OPTION_KEYS: { key: TemplateCategory; labelKey: string }[] = [
   { key: TemplateCategory.Monthly, labelKey: 'saveAsTemplate.categoryMonthly' },
   {
     key: TemplateCategory.Breakfast,
-    labelKey: 'saveAsTemplate.categoryBreakfast',
+    labelKey: 'labels.breakfast',
   },
-  { key: TemplateCategory.Lunch, labelKey: 'saveAsTemplate.categoryLunch' },
-  { key: TemplateCategory.Dinner, labelKey: 'saveAsTemplate.categoryDinner' },
+  { key: TemplateCategory.Lunch, labelKey: 'labels.lunch' },
+  { key: TemplateCategory.Dinner, labelKey: 'labels.dinner' },
   { key: TemplateCategory.Holiday, labelKey: 'saveAsTemplate.categoryHoliday' },
   {
     key: TemplateCategory.SpecialDiet,
@@ -117,12 +117,10 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         showsVerticalScrollIndicator={false}
       >
         <BottomSheetHeader
-          title={t('saveAsTemplate.title')}
+          title={t('labels.saveAsTemplate')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel={
-            saving ? t('saveAsTemplate.saving') : t('saveAsTemplate.save')
-          }
+          confirmLabel={saving ? t('labels.saving') : t('labels.save')}
           confirmDisabled={saving || disabled || !name.trim()}
           confirmColor="primary"
         />
@@ -136,7 +134,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         )}
 
         <FormInput
-          label={t('saveAsTemplate.templateName')}
+          label={t('labels.templateName')}
           value={name}
           onChangeText={setName}
           placeholder={t('saveAsTemplate.templateNamePlaceholder')}
@@ -153,7 +151,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
         {/* Category selector */}
         <View style={styles.section}>
           <Text size="sm" weight="medium" tone="secondary">
-            {t('saveAsTemplate.categoryLabel')}
+            {t('labels.category')}
           </Text>
           <ChipScrollRow
             options={categoryOptions}

@@ -67,7 +67,7 @@ export function ForgotPasswordScreen() {
     }
     // `false` means the mutation threw — already reported above.
     if (!response) {
-      toast({ message: t('errors.somethingWentWrong'), type: 'error' });
+      toast({ message: t('errors.codes.genericRetry'), type: 'error' });
       return false;
     }
 
@@ -92,7 +92,7 @@ export function ForgotPasswordScreen() {
       return false;
     }
 
-    toast({ message: t('errors.somethingWentWrong'), type: 'error' });
+    toast({ message: t('errors.codes.genericRetry'), type: 'error' });
     return false;
   };
 

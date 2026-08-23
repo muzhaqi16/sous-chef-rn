@@ -336,7 +336,7 @@ export const DietaryProfileScreen: React.FC = () => {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={commonStyles.subtitle}>
-              {t('dietary.cookingPreferences')}
+              {t('labels.cookingPreferences')}
             </Text>
             <AppPressable
               onPress={handleOpenCookingPrefs}
@@ -360,7 +360,7 @@ export const DietaryProfileScreen: React.FC = () => {
           )}
           {!!profile.maxCookTimeMinutes && (
             <InfoRow
-              label={t('dietary.maxCookTime')}
+              label={t('labels.maxCookTime')}
               value={profile.maxCookTimeMinutes}
               unit={t('dietary.minutes')}
             />
@@ -415,7 +415,7 @@ export const DietaryProfileScreen: React.FC = () => {
             )}
             {!!profile.carbsTarget && (
               <InfoRow
-                label={t('dietary.carbs')}
+                label={t('labels.carbs')}
                 value={profile.carbsTarget}
                 unit="g"
               />
@@ -450,7 +450,7 @@ export const DietaryProfileScreen: React.FC = () => {
         onClose={handleCloseSnacks}
         min={0}
         max={5}
-        placeholder={t('dietary.snacksPlaceholder')}
+        placeholder={t('labels.eG2')}
       />
       {/* Cooking Preferences Sheet */}
       <CookingPreferencesSheet

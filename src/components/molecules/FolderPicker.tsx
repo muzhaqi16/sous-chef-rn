@@ -313,7 +313,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               <View style={styles.newFolderContainer}>
                 <ThemedBottomSheetTextInput
                   style={styles.newFolderInput}
-                  placeholder={t('folderPicker.namePlaceholder')}
+                  placeholder={t('labels.enterFolderName')}
                   defaultValue={newFolderName}
                   onChangeText={setNewFolderName}
                   autoFocus
@@ -347,7 +347,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               >
                 <Icon name="add" size={20} tone="primary" />
                 <Text size="base" weight="medium" tone="accent">
-                  {t('folderPicker.createNew')}
+                  {t('labels.createNewFolder')}
                 </Text>
               </AppPressable>
             ))}

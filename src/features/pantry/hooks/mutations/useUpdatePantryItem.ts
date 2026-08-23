@@ -32,6 +32,7 @@ import { t } from '#/i18n';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { logger } from '#/utils/environment';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -101,7 +102,7 @@ export function useUpdatePantryItem({
       });
 
     if (!currentItem) {
-      console.warn('Item not found, cannot update:', itemId);
+      logger.warn('Item not found, cannot update:', itemId);
       return;
     }
 

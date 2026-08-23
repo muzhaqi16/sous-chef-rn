@@ -9,7 +9,7 @@ import { useTranslation } from '#/i18n';
 import { Icon } from '#/utils/iconUtils';
 import { Header } from '#components/molecules/Header';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { LoadingInline } from '#components/base/Loading';
+import { LoadingInline } from '#components/atoms/Loading';
 import { useMutation, useQuery } from '@apollo/client/react';
 import {
   DeleteAccountDocument,
@@ -121,7 +121,7 @@ export const DeleteAccountScreen: React.FC = () => {
         style={styles.retryButton}
         onPress={() => refetchEligibility()}
       >
-        <Text style={styles.retryButtonText}>{t('account.deleteRetry')}</Text>
+        <Text style={styles.retryButtonText}>{t('labels.retry')}</Text>
       </AppPressable>
     </View>
   );
@@ -169,7 +169,7 @@ export const DeleteAccountScreen: React.FC = () => {
       ))}
 
       <AppPressable style={styles.goBackButton} onPress={goBack}>
-        <Text style={styles.goBackButtonText}>{t('account.deleteGoBack')}</Text>
+        <Text style={styles.goBackButtonText}>{t('labels.goBack')}</Text>
       </AppPressable>
     </ScrollView>
   );

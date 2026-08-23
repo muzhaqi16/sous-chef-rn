@@ -64,7 +64,7 @@ jest.mock('#/utils/iconUtils', () => ({
   Icon: () => null,
 }));
 
-jest.mock('#components/base/BaseSwitch', () => ({
+jest.mock('#components/atoms/BaseSwitch', () => ({
   BaseSwitch: ({
     value,
     onValueChange,

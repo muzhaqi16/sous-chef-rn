@@ -151,7 +151,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         operation: 'CodeVerification.verifyEmail',
       });
       toast({
-        message: t('errors.somethingWentWrong'),
+        message: t('errors.codes.genericRetry'),
         type: 'error',
       });
     }
@@ -215,7 +215,7 @@ export function CodeVerificationScreen(): React.JSX.Element | null {
         operation: 'CodeVerification.resendEmail',
       });
       toast({
-        message: t('errors.somethingWentWrong'),
+        message: t('errors.codes.genericRetry'),
         type: 'error',
       });
     }

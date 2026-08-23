@@ -2,7 +2,7 @@
  * i18next configuration.
  *
  * Initializes the singleton `i18next` instance used throughout the app via
- * `t()` from `'#/i18n/t'` and the `useTranslation()` hook from `'react-i18next'`.
+ * `t()` from `'#/i18n'` and the `useTranslation()` hook from `'react-i18next'`.
  *
  * **Initialization order:** this module must be imported once at app startup
  * (see `index.js`) BEFORE any React component or service that calls `t()`.

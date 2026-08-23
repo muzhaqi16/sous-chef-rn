@@ -127,11 +127,13 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
     if (!mealPlan) return;
     alertService.alert(
       t('mealPlanSettings.deleteTitle'),
-      t('mealPlanSettings.deleteConfirm', { name: mealPlan.name }),
+      t('labels.areYouSureYouWantToDeleteThisCannotBeUndone', {
+        name: mealPlan.name,
+      }),
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('mealPlanSettings.delete'),
+          text: t('labels.delete'),
           style: 'destructive',
           onPress: () => {
             onDelete(mealPlan.id);
@@ -163,7 +165,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           title={t('mealPlanSettings.planSettings')}
           onCancel={onClose}
           onConfirm={onClose}
-          confirmLabel={t('mealPlanSettings.done')}
+          confirmLabel={t('labels.done')}
         />
 
         {/* Plan info */}
@@ -222,7 +224,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
           <View style={styles.actionsCard}>
             <ActionItem
               icon="cart-outline"
-              label={t('mealPlanSettings.generateShoppingList')}
+              label={t('labels.generateShoppingList')}
               description={t('mealPlanSettings.generateShoppingListDesc')}
               onPress={() => {
                 onClose();
@@ -234,7 +236,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                 <View style={styles.divider} />
                 <ActionItem
                   icon="copy-outline"
-                  label={t('mealPlanSettings.duplicatePlan')}
+                  label={t('labels.duplicatePlan')}
                   description={t('mealPlanSettings.duplicatePlanDesc')}
                   onPress={() => {
                     onClose();
@@ -262,7 +264,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
                   label={
                     isDietaryLinked
                       ? t('mealPlanSettings.nutritionTrackingOn')
-                      : t('mealPlanSettings.trackNutrition')
+                      : t('labels.trackNutritionGoals')
                   }
                   description={t('mealPlanSettings.trackNutritionDesc')}
                   onPress={handleToggleDietary}
@@ -316,7 +318,7 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
               tone="tertiary"
               style={styles.sectionTitle}
             >
-              {t('mealPlanSettings.dangerZone')}
+              {t('labels.dangerZone')}
             </Text>
             <View style={styles.actionsCard}>
               <ActionItem

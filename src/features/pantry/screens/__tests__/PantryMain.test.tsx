@@ -1,7 +1,12 @@
 'use no memo';
 
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
+// PantryMain reads the notification badge straight from the Apollo cache
+// (`useUnreadNotificationCount`, cache-only) rather than from a store mirror,
+// so it needs a client in context even though every other dependency here is
+// mocked out.
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { ErrorLike } from '@apollo/client';
 import { PantryMain } from '../PantryMain';
 import type {
@@ -260,7 +265,7 @@ jest.mock(
     SpotlightCoachMark: () => null,
   }),
 );
-jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/PantryScreenSkeleton', () => ({
   PantryScreenSkeleton: () => null,
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({
@@ -287,33 +292,33 @@ describe('PantryMain', () => {
   });
 
   it('renders the pantry screen container', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     expect(screen.getByTestId('pantry-screen')).toBeTruthy();
   });
 
   it('renders PantryContent with user name', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     expect(screen.getByText('Test')).toBeTruthy();
   });
 
   it('renders PantryContent with household name', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     expect(screen.getByText('My Home')).toBeTruthy();
   });
 
   it('renders the item selector', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     expect(screen.getByTestId('item-selector')).toBeTruthy();
   });
 
   it('does not render modals when not visible', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     // Modals are mocked to null, just confirm no crash
     expect(screen.getByTestId('pantry-screen')).toBeTruthy();
   });
 
   it('renders without crashing when no items', () => {
-    render(<PantryMain />);
+    renderWithApollo(<PantryMain />);
     expect(screen.getByTestId('pantry-content')).toBeTruthy();
   });
 
@@ -321,26 +326,26 @@ describe('PantryMain', () => {
     it('passes stats to PantryContent when stats exist', () => {
       const stats = { totalItems: 12, expiringCount: 3, lowStockCount: 2 };
       mockPantryScreen({ stats });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.stats).toEqual(stats);
     });
 
     it('passes null stats when hook returns null', () => {
       mockPantryScreen({ stats: null });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.stats).toBeNull();
     });
 
     it('passes totalCount to PantryContent', () => {
       mockPantryScreen({ totalCount: 42 });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.totalCount).toBe(42);
       expect(screen.getByTestId('prop-totalCount')).toHaveTextContent('42');
     });
 
     it('passes loading=true when isLoadingInitial is true', () => {
       mockPantryScreen({ isLoadingInitial: true });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.loading).toBe(true);
       expect(screen.getByTestId('prop-loading')).toHaveTextContent('true');
     });
@@ -351,7 +356,7 @@ describe('PantryMain', () => {
         { id: 'i2', itemName: 'Eggs', quantity: 12 },
       ];
       mockPantryScreen({ pantryItems: items, totalCount: 2 });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.items).toHaveLength(2);
       expect(screen.getByTestId('prop-itemCount')).toHaveTextContent('2');
     });
@@ -364,7 +369,7 @@ describe('PantryMain', () => {
         loadMore,
         pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.hasMore).toBe(true);
       expect(capturedPantryContentProps.isLoadingMore).toBe(true);
       expect(capturedPantryContentProps.onEndReached).toBe(loadMore);
@@ -384,7 +389,7 @@ describe('PantryMain', () => {
         noHomes: false,
         householdName: 'Tap to select a home',
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(true);
       expect(capturedPantryContentProps.noHomes).toBe(false);
       expect(capturedPantryContentProps.householdName).toBe(
@@ -404,7 +409,7 @@ describe('PantryMain', () => {
         noHomes: true,
         householdName: 'No homes yet',
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomes).toBe(true);
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.householdName).toBe('No homes yet');
@@ -421,12 +426,12 @@ describe('PantryMain', () => {
         noHomeSelected: true,
         noHomes: false,
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(typeof capturedPantryContentProps.onSelectHome).toBe('function');
     });
 
     it('passes noHomeSelected=false and noHomes=false when home is selected', () => {
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noHomeSelected).toBe(false);
       expect(capturedPantryContentProps.noHomes).toBe(false);
       expect(capturedPantryContentProps.householdName).toBe('My Home');
@@ -444,7 +449,7 @@ describe('PantryMain', () => {
         noHomes: false,
         noPantries: true,
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.noPantries).toBe(true);
       expect(typeof capturedPantryContentProps.onCreatePantry).toBe('function');
       // Add CTA must NOT appear when there's nowhere to add to
@@ -460,7 +465,7 @@ describe('PantryMain', () => {
         hasMore: true,
         totalCount: 55,
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.useServerSort).toBe(true);
     });
 
@@ -472,7 +477,7 @@ describe('PantryMain', () => {
         isLoadingMore: true,
         pantryItems: [{ id: 'i1', itemName: 'Milk', quantity: 1 }],
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       // PantryMainContent passes searchActive ? false : screen.isLoadingMore
       // onEndReached is gated on hasMore && items.length > 0
       expect(capturedPantryContentProps.hasMore).toBe(false);
@@ -488,7 +493,7 @@ describe('PantryMain', () => {
         { id: 'i2', itemName: 'Eggs', quantity: 12 },
       ];
       mockPantryScreen({ pantryItems: items, totalCount: 2 });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.items).toHaveLength(2);
     });
 
@@ -498,13 +503,13 @@ describe('PantryMain', () => {
         totalCount: 55,
         hasMore: false,
       });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.useServerSort).toBe(false);
     });
 
     it('passes searchQuery and setSearchQuery from hook to PantryContent', () => {
       mockPantryScreen({ searchQuery: 'test' });
-      render(<PantryMain />);
+      renderWithApollo(<PantryMain />);
       expect(capturedPantryContentProps.searchQuery).toBe('test');
       expect(typeof capturedPantryContentProps.onSearchChange).toBe('function');
     });

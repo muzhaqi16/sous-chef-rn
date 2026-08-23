@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useApolloClient, useFragment } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { useMutation } from '@apollo/client/react';
 import {

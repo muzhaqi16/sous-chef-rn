@@ -1,36 +1,10 @@
-jest.mock('#/apollo/utils/cacheUpdaters', () => ({
-  createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
-}));
-
-import {
-  buildOptimisticUnit,
-  buildDirtyUpdateInput,
-  addToPantryItemsCache,
-} from '../utils';
+import { buildOptimisticUnit, buildDirtyUpdateInput } from '../utils';
 import type { UnitSelection, FormDataInput } from '../types';
 import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 
 type CurrentUnit = NonNullable<Parameters<typeof buildOptimisticUnit>[1]>;
 
-const { createAddToParentConnectionUpdater } = jest.requireMock(
-  '#/apollo/utils/cacheUpdaters',
-) as { createAddToParentConnectionUpdater: jest.Mock };
-
 describe('pantry mutations utils', () => {
-  describe('addToPantryItemsCache', () => {
-    it('is created via createAddToParentConnectionUpdater with correct args', () => {
-      expect(createAddToParentConnectionUpdater).toHaveBeenCalledWith(
-        'Pantry',
-        'itemsConnection',
-        'PantryItem',
-      );
-    });
-
-    it('is a callable function', () => {
-      expect(typeof addToPantryItemsCache).toBe('function');
-    });
-  });
-
   describe('buildOptimisticUnit', () => {
     it('returns null when newUnit has no id', () => {
       const newUnit: UnitSelection = {

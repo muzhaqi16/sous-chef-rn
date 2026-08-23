@@ -118,10 +118,7 @@ export const ShoppingListDetailsStep: React.FC<
 
   const handleSave = () => {
     if (!itemName.trim()) {
-      alertService.alert(
-        t('labels.error'),
-        t('shoppingListScreens.pleaseEnterItemName'),
-      );
+      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
       return;
     }
     if (!quantityInput.trim()) {
@@ -136,7 +133,7 @@ export const ShoppingListDetailsStep: React.FC<
     if (netWeightNeedsUnit) {
       alertService.alert(
         t('labels.error'),
-        t('shoppingListScreens.netWeightUnitRequired'),
+        t('labels.pleaseSelectAUnitForTheNetWeight'),
       );
       return;
     }
@@ -179,7 +176,7 @@ export const ShoppingListDetailsStep: React.FC<
   return (
     <View style={styles.container} testID="add-shopping-item-details">
       <SheetFormHeader
-        title={t('shoppingListScreens.addItem')}
+        title={t('labels.addItem')}
         cancelLabel={t('labels.cancel')}
         saveLabel={t('labels.add')}
         onCancel={onClose}
@@ -205,7 +202,7 @@ export const ShoppingListDetailsStep: React.FC<
             already showed catalog matches for this text, and a picker here
             only ever pre-filled unit and category — it never linked the item. */}
         <FormInput
-          label={t('shoppingListScreens.itemName')}
+          label={t('labels.itemName')}
           required
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
@@ -216,7 +213,7 @@ export const ShoppingListDetailsStep: React.FC<
 
         <BrandAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.brand')}
+          label={t('labels.brand')}
           value={brand}
           onChangeText={text => updateField('brand', text)}
           onBrandSelected={handleBrandSelected}
@@ -225,16 +222,16 @@ export const ShoppingListDetailsStep: React.FC<
 
         <CategoryAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.category')}
+          label={t('labels.category')}
           value={category}
           onChangeText={text => updateField('category', text)}
-          placeholder={t('shoppingListScreens.categoryPlaceholder')}
+          placeholder={t('labels.eGDairyProduce')}
           categoryType={CategoryType.General}
         />
 
         <FieldRow>
           <EditableCounter
-            label={t('shoppingListScreens.quantity')}
+            label={t('labels.quantity')}
             required
             value={quantityInput}
             onChangeText={text => updateField('quantityInput', text)}
@@ -243,18 +240,18 @@ export const ShoppingListDetailsStep: React.FC<
           />
           <UnitAutocompleteField
             variant="modal"
-            label={t('shoppingListScreens.unit')}
+            label={t('storageLocationForm.unit')}
             value={unit}
             onChangeText={text => updateField('unit', text)}
             onUnitSelected={handleUnitSelect}
-            placeholder={t('shoppingListScreens.unitPlaceholder')}
+            placeholder={t('labels.pcsKgEtc')}
             testID="add-shopping-item-unit-picker"
           />
         </FieldRow>
 
         <FieldRow>
           <FormInput
-            label={t('shoppingListScreens.netWeight')}
+            label={t('labels.netWeight')}
             value={netWeight}
             onChangeText={text => updateField('netWeight', text)}
             placeholder={t('shoppingListScreens.netWeightPlaceholder')}
@@ -263,11 +260,11 @@ export const ShoppingListDetailsStep: React.FC<
           />
           <UnitAutocompleteField
             variant="modal"
-            label={t('shoppingListScreens.netWeightUnit')}
+            label={t('labels.weightUnit')}
             value={netWeightUnit}
             onChangeText={text => updateField('netWeightUnit', text)}
             onUnitSelected={handleNetWeightUnitSelected}
-            placeholder={t('shoppingListScreens.unitPlaceholder')}
+            placeholder={t('labels.pcsKgEtc')}
           />
         </FieldRow>
 

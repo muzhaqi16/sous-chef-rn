@@ -507,7 +507,7 @@ function handleAuthError(error: unknown, operation = 'Authentication'): void {
       useStore.getState().clearAuth();
     }
   } catch {
-    toastService.error(t('errors.somethingWentWrong'));
+    toastService.error(t('errors.codes.genericRetry'));
   }
   useStore.getState().setAuthIsLoading(false);
 }

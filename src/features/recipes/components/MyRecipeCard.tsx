@@ -65,7 +65,7 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
         <Text size="sm" tone="secondary" numberOfLines={1}>
           {t('recipes.servingsCount', { count: recipe.servings })}
           {totalTime != null
-            ? ` • ${t('recipes.minutesValue', { count: totalTime })}`
+            ? ` • ${t('labels.min', { count: totalTime })}`
             : ''}
         </Text>
       </View>

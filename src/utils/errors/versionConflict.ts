@@ -1,6 +1,7 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { isErrorTypename } from './mutationPayload';
 import { t } from '#/i18n';
+import { logger } from '#/utils/environment';
 
 /**
  * Codes that mark an optimistic-concurrency conflict, whether the error arrives
@@ -125,7 +126,7 @@ export function findConflictDataMember(
  * body; callers that have the member's message show that instead.
  */
 export function getVersionConflictMessage(): string {
-  return t('errors.entityUpdatedBody');
+  return t('errors.codes.versionConflict');
 }
 
 /**
@@ -152,7 +153,7 @@ export function handleVersionConflict(error: unknown): boolean {
     return false;
   }
 
-  console.warn('⚠️ Version conflict detected:', {
+  logger.warn('⚠️ Version conflict detected:', {
     message: getVersionConflictMessage(),
     error,
   });

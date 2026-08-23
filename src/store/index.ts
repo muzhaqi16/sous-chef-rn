@@ -200,7 +200,6 @@ export const handleStoreRehydration = (
   // thrown at this point aborts the rest of the callback — the persisted
   // home/pantry fast path and the offline-mode hydration below would never
   // run for that launch.
-  state?.cleanupOrphanedSubscriptions?.();
 
   // PERF: If persisted home+pantry IDs exist, mark ready immediately
   // so usePantryQuery fires on the FIRST render instead of waiting
@@ -323,9 +322,6 @@ const PERSISTED_KEYS = classifyKeys(
   'userNavigationStates',
 
   // Notification inbox
-  'notifications',
-  'unreadCount',
-  'urgentCount',
 
   // Scanner history (the live scan/search state is transient)
   'recentlyScanned',
@@ -339,7 +335,6 @@ const PERSISTED_KEYS = classifyKeys(
   // its fallback suggestions (no freshness stamp: it's a usage LRU, not a
   // fetched catalog slice).
   'cachedItemSuggestions',
-  'lastFetchedAt',
   'lastUnitsFetchedAt',
   'lastCategoriesFetchedAt',
   'lastBrandsFetchedAt',

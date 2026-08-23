@@ -12,9 +12,10 @@ import {
   InvitationData,
 } from './InvitationAcceptanceModal';
 import { ExpirationActionSheet } from './ExpirationActionSheet';
-import { NotificationItem } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAppStore } from '#store/useAppStore';
+import { applyNotificationRemoved } from '#features/notifications/utils/notificationCacheWrites';
 import { useExpirationNotificationSync } from '#features/notifications/hooks/useExpirationNotificationSync';
 import { useNotificationSync } from '#features/notifications/hooks/useNotificationSync';
 
@@ -48,7 +49,7 @@ export const NotificationActionHandler: React.FC<
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
-  const removeNotification = useAppStore(state => state.removeNotification);
+  const currentUserId = useAppStore(state => state.user?.id);
   const linkExpirationData = useAppStore(state => state.linkExpirationData);
   const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
@@ -195,7 +196,11 @@ export const NotificationActionHandler: React.FC<
   const handleInvitationAccept = async (invitation: InvitationData) => {
     // Remove the notification so the user can't re-open the modal
     if (currentNotificationId) {
-      removeNotification(currentNotificationId);
+      applyNotificationRemoved(
+        client.cache,
+        currentUserId,
+        currentNotificationId,
+      );
     }
 
     // Handle successful acceptance
@@ -227,7 +232,11 @@ export const NotificationActionHandler: React.FC<
 
   const handleInvitationReject = () => {
     if (currentNotificationId) {
-      removeNotification(currentNotificationId);
+      applyNotificationRemoved(
+        client.cache,
+        currentUserId,
+        currentNotificationId,
+      );
     }
   };
 

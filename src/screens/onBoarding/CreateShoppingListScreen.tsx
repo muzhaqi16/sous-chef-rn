@@ -8,7 +8,7 @@ import { useTranslation } from '#/i18n';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { useQuery } from '@apollo/client/react';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { extractNodes } from '#/utils/connectionUtils';
@@ -20,7 +20,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService, errorMessageOr } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/mutations/useCreateShoppingList';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 
 /** Module-level async function for shopping list creation.
@@ -168,7 +168,7 @@ export const CreateShoppingListScreen = () => {
   if (existingList) {
     return (
       <OnBoardingWrapper
-        title={t('onBoarding.allSet')}
+        title={t('labels.youReAllSet')}
         subtitle={t('onBoarding.shoppingListConfigured')}
         step={2}
         totalSteps={7}

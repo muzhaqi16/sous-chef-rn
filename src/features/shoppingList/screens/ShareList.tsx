@@ -6,7 +6,7 @@ import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useNavigation } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
-import { LoadingInline } from '#components/base/Loading';
+import { LoadingInline } from '#components/atoms/Loading';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMutation } from '@apollo/client/react';
@@ -21,7 +21,7 @@ import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
 } from '#/components/organisms/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -90,7 +90,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const handleRemoveMember = (memberId: string) => {
     alertService.alert(
       t('shoppingListScreens.removeMemberTitle'),
-      t('shoppingListScreens.removeMemberMessage'),
+      t('labels.areYouSureYouWantToRemoveThisMember'),
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
@@ -136,9 +136,9 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
     // Block owners from leaving
     if (isOwner) {
       alertService.alert(
-        t('shoppingListScreens.cannotLeaveTitle'),
+        t('labels.cannotLeave'),
         t('shoppingListScreens.cannotLeaveOwnerMessage'),
-        [{ text: t('storageLocations.ok') }],
+        [{ text: t('labels.ok') }],
       );
       return;
     }
@@ -151,7 +151,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('shoppingListScreens.leaveList'),
+          text: t('labels.leaveList'),
           style: 'destructive',
           onPress: () => {
             if (!currentUserCollaborator?.id) {
@@ -208,9 +208,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             <View style={styles.homeLinkedSection}>
               <AlertBanner
                 title={t('shoppingListScreens.shareHomeLinkedNotice', {
-                  name:
-                    shoppingList?.home?.name ??
-                    t('shoppingListScreens.ownerUnknown'),
+                  name: shoppingList?.home?.name ?? t('labels.unknown'),
                 })}
                 icon="home-outline"
                 iconLibrary="Ionicons"
@@ -269,14 +267,12 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
           {/* Leave List section - only show for non-owners who are collaborators on non-home-linked lists */}
           {!!currentUserCollaborator && !isOwner && !isHomeLinked && (
             <View style={styles.leaveSection}>
-              <Text style={styles.sectionTitle}>
-                {t('shoppingListScreens.dangerZone')}
-              </Text>
+              <Text style={styles.sectionTitle}>{t('labels.dangerZone')}</Text>
               <Text style={styles.leaveDescription}>
                 {t('shoppingListScreens.leaveDescription')}
               </Text>
               <Button
-                title={t('shoppingListScreens.leaveList')}
+                title={t('labels.leaveList')}
                 onPress={handleLeaveList}
                 variant="danger"
                 loading={leaving}

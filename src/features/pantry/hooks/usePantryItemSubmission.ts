@@ -11,8 +11,8 @@ import {
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
-import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
@@ -138,7 +138,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (pantryNetWeight.trim() && !pantryNetWeightUnitId) {
       alertService.alert(
         t('labels.error'),
-        t('addToPantry.netWeightUnitRequired'),
+        t('labels.pleaseSelectAUnitForTheNetWeight'),
       );
       handlePageChange(1);
       return;

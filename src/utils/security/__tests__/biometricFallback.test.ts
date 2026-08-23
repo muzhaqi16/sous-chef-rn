@@ -45,6 +45,7 @@ import {
 } from 'react-native-keychain';
 
 import { BiometricManager } from '../biometricFallback';
+import { logger } from '#/utils/environment';
 
 // The global keychain mock from jest.setup.js doesn't include BIOMETRY_TYPE or
 // BIOMETRY_ANY_OR_DEVICE_PASSCODE, so we add them via the module reference
@@ -294,7 +295,7 @@ describe('BiometricManager', () => {
       );
       expect(result.success).toBe(true);
       expect(result.method).toBe('passcode');
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Biometric save failed, trying fallback:'),
         expect.any(Error),
       );
@@ -318,11 +319,11 @@ describe('BiometricManager', () => {
       );
       expect(result.success).toBe(true);
       expect(result.method).toBe('basic');
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Biometric save failed'),
         expect.any(Error),
       );
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Passcode save failed'),
         expect.any(Error),
       );
@@ -341,11 +342,11 @@ describe('BiometricManager', () => {
       expect(result.success).toBe(false);
       expect(result.method).toBe('none');
       expect(result.error).toBeTruthy();
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Biometric save failed'),
         expect.any(Error),
       );
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         expect.stringContaining('Passcode save failed'),
         expect.any(Error),
       );

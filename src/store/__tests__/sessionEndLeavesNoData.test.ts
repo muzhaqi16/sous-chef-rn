@@ -140,9 +140,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
     // above so a regression reads as what it is, rather than as an unclassified
     // new key.
     useStore.setState({
-      notifications: [{ id: 'n1', title: 'Prescription expires today' }],
-      unreadCount: 3,
-      urgentCount: 1,
+      // The notification FEED is no longer store state — it lives in the
+      // Apollo cache, which this same reset clears (`clearApolloCache: true` on
+      // the logout path). What the store still holds for notifications is the
+      // expiration buffer, and it is just as personal: it names a pantry item.
+      pendingExpirationLinks: {
+        n1: {
+          expirationNotificationId: 'exp-1',
+          pantryItemName: 'Insulin pens',
+        },
+      },
       recentlyScanned: [{ id: 's1', name: 'Pregnancy test' }],
       cachedItemSuggestions: [{ id: 'i1', name: 'Insulin pens' }],
       selectedHomeId: 'home-1',
@@ -155,9 +162,7 @@ describe('a session end leaves no data belonging to the previous person', () => 
     await useStore.getState().resetStore('LOGOUT');
 
     const state = useStore.getState();
-    expect(state.notifications).toEqual([]);
-    expect(state.unreadCount).toBe(0);
-    expect(state.urgentCount).toBe(0);
+    expect(state.pendingExpirationLinks).toEqual({});
     expect(state.recentlyScanned).toEqual([]);
     expect(state.cachedItemSuggestions).toEqual([]);
     expect(state.selectedHomeId).toBeNull();

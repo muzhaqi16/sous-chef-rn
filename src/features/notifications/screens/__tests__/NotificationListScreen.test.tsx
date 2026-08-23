@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import type { NotificationItem } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationListScreen } from '../NotificationListScreen';
 
 jest.mock('#/apollo/links/tokenScheduler');
@@ -10,19 +10,22 @@ jest.mock('#/apollo/links/refreshToken');
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
+// `useNotifications` is the write side only — the rows come from the query
+// hook below, which is what the screen renders.
 jest.mock('#features/notifications/hooks/useNotifications', () => ({
   useNotifications: jest.fn(() => ({
-    notifications: [],
     handleMarkAsRead: jest.fn(),
     handleMarkAllAsRead: jest.fn(),
     handleRemoveNotification: jest.fn(),
-    clearAll: jest.fn(),
-    getNotificationsByCategory: jest.fn().mockReturnValue([]),
+    handleClearRead: jest.fn(),
   })),
 }));
 
 jest.mock('#features/notifications/hooks/useNotificationHistory', () => ({
   useNotificationHistory: jest.fn(() => ({
+    notifications: [],
+    unreadCount: 0,
+    hasUrgent: false,
     loadMore: jest.fn(),
     hasMore: false,
     loadingMore: false,
@@ -106,7 +109,7 @@ jest.mock(
   }),
 );
 
-jest.mock('#utils/notificationGrouping', () => ({
+jest.mock('#features/notifications/utils/notificationGrouping', () => ({
   groupNotificationsByDate: jest
     .fn()
     .mockReturnValue({ urgent: [], today: [], earlier: [] }),
@@ -114,9 +117,9 @@ jest.mock('#utils/notificationGrouping', () => ({
 }));
 
 jest.mock('#store/slices/notificationSlice', () => ({
-  // Spread the real slice so every export (NotificationPriority,
-  // isNotificationPayload, MAX_NOTIFICATIONS, NOTIFICATION_CATEGORIES) stays
-  // present — a partial factory would silently drop them.
+  // Spread the real slice so every export (isNotificationPayload,
+  // NOTIFICATION_CATEGORIES) stays present — a partial factory would silently
+  // drop them.
   ...jest.requireActual('#store/slices/notificationSlice'),
   // The footer loader pulls themedComponents → IconButton → the real store,
   // whose index calls createNotificationSlice; provide a no-op so it builds.
@@ -152,7 +155,7 @@ describe('NotificationListScreen', () => {
     const {
       groupNotificationsByDate,
       createSectionListData,
-    } = require('#utils/notificationGrouping');
+    } = require('#features/notifications/utils/notificationGrouping');
     groupNotificationsByDate.mockReturnValue({
       urgent: [],
       today: [
@@ -181,9 +184,9 @@ describe('NotificationListScreen', () => {
       },
     ]);
 
-    const { useNotifications } =
-      require('#features/notifications/hooks/useNotifications') as typeof import('#features/notifications/hooks/useNotifications');
-    type UseNotificationsReturn = ReturnType<typeof useNotifications>;
+    const { useNotificationHistory } =
+      require('#features/notifications/hooks/useNotificationHistory') as typeof import('#features/notifications/hooks/useNotificationHistory');
+    type UseHistoryReturn = ReturnType<typeof useNotificationHistory>;
     const notifications = [
       {
         id: 'n1',
@@ -193,14 +196,18 @@ describe('NotificationListScreen', () => {
         isRead: false,
       },
     ] as Partial<NotificationItem>[] as NotificationItem[];
-    jest.mocked(useNotifications).mockReturnValue({
+    jest.mocked(useNotificationHistory).mockReturnValue({
       notifications,
-      handleMarkAsRead: jest.fn(),
-      handleMarkAllAsRead: jest.fn(),
-      handleRemoveNotification: jest.fn(),
-      clearAll: jest.fn(),
-      getNotificationsByCategory: jest.fn().mockReturnValue([]),
-    } as Partial<UseNotificationsReturn> as UseNotificationsReturn);
+      unreadCount: 1,
+      hasUrgent: false,
+      loadMore: jest.fn(),
+      hasMore: false,
+      loadingMore: false,
+      loading: false,
+      error: undefined,
+      hasResult: true,
+      refetch: jest.fn(),
+    } as Partial<UseHistoryReturn> as UseHistoryReturn);
 
     const { getByText } = render(<NotificationListScreen />);
     expect(getByText('Today')).toBeTruthy();

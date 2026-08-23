@@ -10,11 +10,10 @@ import { GetExpirationNotificationsForPantryItemDocument } from '#features/notif
 import {
   NotificationCategory,
   NotificationType,
+  Priority,
 } from '#/graphql/generated/schemaTypes';
-import {
-  NotificationPriority,
-  type NotificationItem,
-} from '#store/slices/notificationSlice';
+import {} from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationActionHandler } from '../NotificationActionHandler';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -75,7 +74,7 @@ function buildNotification(
     id: 'n1',
     type: NotificationType.ExpiryReminder,
     category: NotificationCategory.Pantry,
-    priority: NotificationPriority.MEDIUM,
+    priority: Priority.Normal,
     title: 'Items Expiring Soon',
     message: 'Milk expires tomorrow',
     payload: { itemName: 'Milk', daysUntilExpiry: 1, pantryItemId: 'item-1' },
@@ -83,6 +82,7 @@ function buildNotification(
     isRead: false,
     requiresAction: true,
     actionType: 'VIEW_EXPIRING_ITEMS',
+    actionData: {},
     ...overrides,
   };
 }

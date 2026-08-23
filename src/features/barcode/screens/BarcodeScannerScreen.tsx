@@ -15,7 +15,7 @@ import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { useBarcodeOutput } from '../hooks/useBarcodeOutput';
 import { usePermission } from '#hooks/permissions/usePermission';
 import { ThemedBarcodeMask } from '../components/ThemedBarcodeMask';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
 import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';

@@ -35,13 +35,13 @@ function buildRoleOptions(t: Translate) {
     },
     {
       value: MembershipRole.Admin,
-      label: t('inviteUser.roleAdminLabel'),
+      label: t('labels.admin'),
       description: t('inviteUser.roleAdminDescription'),
       icon: 'settings-outline',
     },
     {
       value: MembershipRole.Guest,
-      label: t('inviteUser.roleGuestLabel'),
+      label: t('labels.guest'),
       description: t('inviteUser.roleGuestDescription'),
       icon: 'eye-outline',
     },
@@ -114,7 +114,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
   allowedRoles,
 }) => {
   const { t } = useTranslation();
-  const resolvedTitle = title ?? t('inviteUser.title');
+  const resolvedTitle = title ?? t('labels.inviteMemberToHome');
   const resolvedSubmitText = submitText ?? t('inviteUser.submit');
   const resolvedCancelText = cancelText ?? t('labels.cancel');
   const roleOptions = buildRoleOptions(t);
@@ -157,12 +157,12 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      setError(t('inviteUser.emailRequired'));
+      setError(t('labels.pleaseEnterAnEmailAddress'));
       return;
     }
 
     if (!validateEmail(trimmedEmail)) {
-      setError(t('inviteUser.emailInvalid'));
+      setError(t('commonValidation.emailInvalid'));
       return;
     }
 
@@ -228,7 +228,7 @@ export const InviteUserModal: React.FC<InviteUserModalProps> = ({
 
             {/* Role Selection */}
             <Text style={styles.roleSectionLabel}>
-              {t('inviteUser.selectRole')}
+              {t('labels.selectRole')}
             </Text>
             {availableRoleOptions.map(role => (
               <RoleOption

@@ -5,6 +5,7 @@ import {
   getInvalidUnitMessage,
   handleInvalidUnit,
 } from '../invalidUnit';
+import { logger } from '#/utils/environment';
 
 const makeApolloError = (
   code: string,
@@ -127,7 +128,7 @@ describe('invalidUnit', () => {
         validUnits: ['g', 'kg', 'oz'],
       });
       expect(handleInvalidUnit(error)).toBe(true);
-      expect(console.warn).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     it('returns false for non-INVALID_UNIT errors', () => {

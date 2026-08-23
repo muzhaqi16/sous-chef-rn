@@ -11,6 +11,7 @@ import {
 } from 'react-native-keychain';
 import { Platform } from 'react-native';
 import { t } from '#/i18n';
+import { logger } from '#/utils/environment';
 
 /** Read a human-readable message off an unknown thrown value. */
 const errorMessage = (error: unknown): string | undefined =>
@@ -124,7 +125,7 @@ export class BiometricManager {
       // Try secure hardware first
       return SECURITY_LEVEL.SECURE_HARDWARE;
     } catch (error) {
-      console.warn(
+      logger.warn(
         'Secure hardware not available, falling back to software:',
         error,
       );
@@ -189,7 +190,7 @@ export class BiometricManager {
           return { success: true, method: 'biometric' };
         }
       } catch (error: unknown) {
-        console.warn('Biometric save failed, trying fallback:', error);
+        logger.warn('Biometric save failed, trying fallback:', error);
       }
     }
 
@@ -213,7 +214,7 @@ export class BiometricManager {
           return { success: true, method: 'passcode' };
         }
       } catch (error: unknown) {
-        console.warn('Passcode save failed, trying basic:', error);
+        logger.warn('Passcode save failed, trying basic:', error);
       }
     }
 

@@ -23,7 +23,7 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 
 const SECTION_TITLE_KEYS: Record<string, string> = {
-  'Personal Information': 'personalInformation.sectionPersonalInformation',
+  'Personal Information': 'labels.personalInformation',
   'Privacy Settings': 'personalInformation.sectionPrivacySettings',
 };
 
@@ -45,7 +45,7 @@ const OPTION_LABEL_KEYS: Record<string, string> = {
   Male: 'personalInformation.genderMale',
   Female: 'personalInformation.genderFemale',
   'Non-binary': 'personalInformation.genderNonBinary',
-  Other: 'personalInformation.genderOther',
+  Other: 'itemType.OTHER',
   'Prefer not to say': 'personalInformation.genderPreferNotToSay',
   Public: 'personalInformation.visibilityPublic',
   'Friends Only': 'personalInformation.visibilityFriendsOnly',
@@ -218,7 +218,7 @@ export const PersonalInformationScreen: React.FC = () => {
 
   return (
     <ProfileScreenWrapper
-      title={t('personalInformation.screenTitle')}
+      title={t('labels.personalInformation')}
       refreshControl={
         <ThemedRefreshControl
           refreshing={refreshing}

@@ -142,7 +142,7 @@ export function generateHighlights(
   // High protein (>= 10g per serving)
   if (nutritions.protein && nutritions.protein.amount >= 10) {
     highlights.push({
-      labelKey: 'nutritionHighlights.highProtein',
+      labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
       type: 'positive',
     });
   }

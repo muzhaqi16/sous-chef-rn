@@ -10,6 +10,7 @@ import type {
   PantrySortDirection,
 } from './preferenceTypes';
 import { RootState } from '../index';
+import { logger } from '#/utils/environment';
 
 /**
  * Apply a `ThemePreference` to `UnistylesRuntime`. Shared between the in-app
@@ -30,7 +31,7 @@ export function applyThemePreferenceToRuntime(theme: ThemePreference): void {
       }
     }
   } catch (e) {
-    if (__DEV__) console.warn('[applyThemePreferenceToRuntime] error:', e);
+    if (__DEV__) logger.warn('[applyThemePreferenceToRuntime] error:', e);
   }
 }
 

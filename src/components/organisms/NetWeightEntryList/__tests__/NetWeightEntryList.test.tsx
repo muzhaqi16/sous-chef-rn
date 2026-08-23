@@ -82,7 +82,7 @@ jest.mock(
   }),
 );
 
-jest.mock('#/components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({
     children,
     onPress,

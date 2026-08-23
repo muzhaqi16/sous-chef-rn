@@ -185,7 +185,7 @@ export const PerformanceDashboard: React.FC = () => {
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('performance.clear'),
+          text: t('labels.clear'),
           style: 'destructive',
           onPress: () => {
             clearPerformanceData();
@@ -259,7 +259,7 @@ export const PerformanceDashboard: React.FC = () => {
 
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <ProfileScreenWrapper title={t('performance.title')}>
+      <ProfileScreenWrapper title={t('labels.performanceDashboard')}>
         <View style={styles.notAvailableContainer}>
           <Text size="md" tone="secondary" align="center">
             {t('performance.notAvailable')}
@@ -270,7 +270,10 @@ export const PerformanceDashboard: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title={t('performance.title')} scrollEnabled={false}>
+    <ProfileScreenWrapper
+      title={t('labels.performanceDashboard')}
+      scrollEnabled={false}
+    >
       <ScrollView
         style={styles.scrollView}
         refreshControl={
@@ -589,7 +592,7 @@ export const PerformanceDashboard: React.FC = () => {
                   </View>
                   <View style={styles.startupRow}>
                     <Text size="sm" tone="secondary">
-                      {t('performance.usage')}
+                      {t('labels.usage')}
                     </Text>
                     <ThresholdText
                       usagePercent={latestMemorySnapshot.usagePercent}

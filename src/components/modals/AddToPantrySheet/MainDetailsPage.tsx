@@ -69,7 +69,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
     >
       {/* Item Name */}
       <FormInput
-        label={t('addToPantry.itemName')}
+        label={t('labels.itemName')}
         required
         value={itemName}
         onChangeText={setItemName}
@@ -84,7 +84,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
         <View style={styles.section}>
           <BrandAutocompleteField
             variant="inline"
-            label={t('addToPantry.brand')}
+            label={t('labels.brand')}
             value={brand}
             onChangeText={setBrand}
             placeholder={t('addToPantry.brandPlaceholder')}
@@ -97,25 +97,25 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
         <View style={styles.section}>
           <CategoryAutocompleteField
             variant="inline"
-            label={t('addToPantry.category')}
+            label={t('labels.category')}
             value={category}
             onChangeText={setCategory}
-            placeholder={t('addToPantry.categoryPlaceholder')}
+            placeholder={t('labels.eGDairyProduce')}
           />
         </View>
 
         {/* Expiration Date */}
         <DatePickerField
-          label={t('addToPantry.expirationDate')}
+          label={t('labels.expirationDate')}
           value={expirationDate}
           onChange={setExpirationDate}
-          placeholder={t('addToPantry.expirationPlaceholder')}
+          placeholder={t('labels.selectDate')}
           minimumDate={new Date()}
         />
 
         {/* Storage State */}
         <SegmentedControl
-          label={t('addToPantry.storage')}
+          label={t('labels.storage')}
           options={STORAGE_STATES}
           value={storageState}
           onChange={setStorageState}

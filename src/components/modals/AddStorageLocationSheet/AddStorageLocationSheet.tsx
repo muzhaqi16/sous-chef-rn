@@ -86,7 +86,7 @@ export const AddStorageLocationSheet: React.FC<
     }
 
     if (trimmedName.length < 2) {
-      setError(t('addStorageLocation.nameTooShort'));
+      setError(t('commonValidation.nameMin'));
       return;
     }
 
@@ -125,22 +125,22 @@ export const AddStorageLocationSheet: React.FC<
             onPress={handleCancel}
             style={styles.headerButton}
             accessibilityRole="button"
-            accessibilityLabel={t('addStorageLocation.cancel')}
+            accessibilityLabel={t('labels.cancel')}
           >
             <Text size="md" tone="secondary">
-              {t('addStorageLocation.cancel')}
+              {t('labels.cancel')}
             </Text>
           </AppPressable>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
-            {t('addStorageLocation.addLocation')}
+            {t('labels.addLocation')}
           </Text>
 
           <AppPressable
             onPress={handleCreate}
             style={styles.headerButton}
             accessibilityRole="button"
-            accessibilityLabel={t('addStorageLocation.create')}
+            accessibilityLabel={t('labels.create')}
             disabled={isCreateDisabled}
           >
             {creating ? (
@@ -152,7 +152,7 @@ export const AddStorageLocationSheet: React.FC<
                 align="right"
                 tone={isCreateDisabled ? 'tertiary' : 'accent'}
               >
-                {t('addStorageLocation.create')}
+                {t('labels.create')}
               </Text>
             )}
           </AppPressable>

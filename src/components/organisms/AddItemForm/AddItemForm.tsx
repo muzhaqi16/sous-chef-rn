@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { Button } from '#/components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { useForm, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
@@ -443,7 +443,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
         {activeTab.advanced.length > 0 && (
           <CollapsibleSection
-            title={t('addItemForm.moreOptions')}
+            title={t('labels.moreOptions')}
             expanded={showAdvanced}
             onToggle={() => toggleAdvanced(activePage)}
           >

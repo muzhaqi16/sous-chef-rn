@@ -32,14 +32,14 @@ import { EmailVerificationDeepLinkScreen } from '#screens/auth/EmailVerification
 import { ResetPasswordScreen } from '#screens/auth/ResetPasswordScreen';
 import { AcceptInvite } from '#features/shoppingList/screens/AcceptInvite';
 import { JoinByShareCodeScreen } from '#features/shoppingList/screens/JoinByShareCodeScreen';
-import { JoinHomeByCodeScreen } from '#screens/home/JoinHomeByCodeScreen';
-import { JoinByLinkScreen } from '#screens/home/JoinByLinkScreen';
+import { JoinHomeByCodeScreen } from '#features/home/screens/JoinHomeByCodeScreen';
+import { JoinByLinkScreen } from '#features/home/screens/JoinByLinkScreen';
 import { pantryDetailScreens } from '#features/pantry/screens/registration';
 import { recipeDetailScreens } from '#features/recipes/screens/registration';
 import { shoppingListDetailScreens } from '#features/shoppingList/screens/registration';
 import { mealPlanDetailScreens } from '#features/mealPlan/screens/registration';
 import { profileScreens } from '#features/profile/screens/registration';
-import { homeManagementScreens } from '#screens/home/registration';
+import { homeManagementScreens } from '#features/home/screens/registration';
 
 import {
   NavigationErrorBoundary,
@@ -61,7 +61,7 @@ import {
 } from '#hooks/navigation/useNavigationGuards';
 import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
 
 const DEEP_LINK_PREFIXES = [

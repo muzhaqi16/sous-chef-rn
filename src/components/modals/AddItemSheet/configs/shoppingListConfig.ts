@@ -12,7 +12,7 @@ import type { AddItemSheetConfig } from '../types';
  */
 export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionItem> =
   {
-    titleKey: 'addItemSheet.addToShoppingList',
+    titleKey: 'labels.addToShoppingList',
     testIDPrefix: 'add-shopping-item',
     placeholderIcon: 'cart-outline',
     searchPlaceholderKey: 'addItemSheet.searchPlaceholder',

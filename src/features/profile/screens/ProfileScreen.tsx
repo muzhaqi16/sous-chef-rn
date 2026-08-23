@@ -23,7 +23,7 @@ import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { ProfileSkeleton } from '#components/base/Skeleton/ProfileSkeleton';
+import { ProfileSkeleton } from '#components/atoms/Skeleton/ProfileSkeleton';
 import {
   useCanAccessDevTools,
   useHasUnverifiedEmail,

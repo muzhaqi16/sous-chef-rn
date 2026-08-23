@@ -12,7 +12,7 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { EmptyState } from '../base/EmptyState';
+import { EmptyState } from '#components/atoms/EmptyState';
 import { ItemCard } from './ItemCard';
 import { IconName } from '#/utils/iconUtils';
 import { getTabBarBottomPadding } from '#constants/layout';

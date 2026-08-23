@@ -10,7 +10,7 @@
  * - Detailed logging for debugging
  */
 
-import { element, by, waitFor, system } from 'detox';
+import { element, by, waitFor, system, device } from 'detox';
 import {
   waitForScreen,
   waitForModalReady,
@@ -144,7 +144,13 @@ export async function dismissBiometricPromptIfPresent() {
   // a fresh install and never again, but this helper runs in every `beforeEach`
   // — so an unconditional 4s wait would add 4s per test for an alert that
   // cannot reappear.
-  if (!systemPasswordAlertHandled) {
+  // iOS-only, and not merely absent on Android: Detox's Android matcher
+  // factory THROWS on `by.system.label` ("System interactions are not
+  // supported on Android") the moment it is called. That throw happens while
+  // building the matcher, before any promise exists, so the `.catch()` below
+  // never attaches and the race never gets to run — it takes down the whole
+  // suite from `beforeEach`.
+  if (!systemPasswordAlertHandled && device.getPlatform() === 'ios') {
     // Polled rather than awaited through `waitFor`: Detox's `waitFor` is typed
     // for a NativeElement, and a system element is a separate type it does not
     // accept. The alert is also presented asynchronously after the login

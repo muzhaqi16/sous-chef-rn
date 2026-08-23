@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { useMutation } from '@apollo/client/react';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
@@ -112,7 +112,7 @@ export const OnboardingCompleteScreen = () => {
       </View>
 
       <Button
-        title={t('onBoarding.getStarted')}
+        title={t('labels.getStarted')}
         onPress={handleComplete}
         variant="primary"
         loading={isCompleting}

@@ -14,9 +14,9 @@ export interface RecipeFilterOption {
 export const DIET_OPTIONS: RecipeFilterOption[] = [
   { labelKey: 'recipeFilters.diets.vegetarian', value: 'vegetarian' },
   { labelKey: 'recipeFilters.diets.vegan', value: 'vegan' },
-  { labelKey: 'recipeFilters.diets.glutenFree', value: 'gluten free' },
+  { labelKey: 'recipes.diet.GLUTEN_FREE', value: 'gluten free' },
   { labelKey: 'recipeFilters.diets.ketogenic', value: 'ketogenic' },
-  { labelKey: 'recipeFilters.diets.paleo', value: 'paleo' },
+  { labelKey: 'recipes.diet.PALEO', value: 'paleo' },
   { labelKey: 'recipeFilters.diets.pescetarian', value: 'pescetarian' },
   {
     labelKey: 'recipeFilters.diets.lactoVegetarian',
@@ -24,24 +24,24 @@ export const DIET_OPTIONS: RecipeFilterOption[] = [
   },
   { labelKey: 'recipeFilters.diets.ovoVegetarian', value: 'ovo-vegetarian' },
   { labelKey: 'recipeFilters.diets.primal', value: 'primal' },
-  { labelKey: 'recipeFilters.diets.lowFodmap', value: 'low fodmap' },
-  { labelKey: 'recipeFilters.diets.whole30', value: 'whole30' },
+  { labelKey: 'labels.lowFodmap', value: 'low fodmap' },
+  { labelKey: 'recipes.diet.WHOLE30', value: 'whole30' },
 ];
 
 export const INTOLERANCE_OPTIONS: RecipeFilterOption[] = [
-  { labelKey: 'recipeFilters.intolerances.dairy', value: 'dairy' },
+  { labelKey: 'recipes.intolerance.DAIRY', value: 'dairy' },
   { labelKey: 'recipeFilters.intolerances.egg', value: 'egg' },
-  { labelKey: 'recipeFilters.intolerances.gluten', value: 'gluten' },
-  { labelKey: 'recipeFilters.intolerances.grain', value: 'grain' },
-  { labelKey: 'recipeFilters.intolerances.peanut', value: 'peanut' },
-  { labelKey: 'recipeFilters.intolerances.seafood', value: 'seafood' },
-  { labelKey: 'recipeFilters.intolerances.sesame', value: 'sesame' },
-  { labelKey: 'recipeFilters.intolerances.shellfish', value: 'shellfish' },
-  { labelKey: 'recipeFilters.intolerances.soy', value: 'soy' },
+  { labelKey: 'recipes.intolerance.GLUTEN', value: 'gluten' },
+  { labelKey: 'recipes.intolerance.GRAIN', value: 'grain' },
+  { labelKey: 'recipes.intolerance.PEANUT', value: 'peanut' },
+  { labelKey: 'recipes.intolerance.SEAFOOD', value: 'seafood' },
+  { labelKey: 'recipes.intolerance.SESAME', value: 'sesame' },
+  { labelKey: 'recipes.intolerance.SHELLFISH', value: 'shellfish' },
+  { labelKey: 'recipes.intolerance.SOY', value: 'soy' },
   { labelKey: 'recipeFilters.intolerances.sulfite', value: 'sulfite' },
-  { labelKey: 'recipeFilters.intolerances.treeNut', value: 'tree nut' },
-  { labelKey: 'recipeFilters.intolerances.wheat', value: 'wheat' },
-  { labelKey: 'recipeFilters.intolerances.fish', value: 'fish' },
+  { labelKey: 'recipes.intolerance.TREE_NUT', value: 'tree nut' },
+  { labelKey: 'recipes.intolerance.WHEAT', value: 'wheat' },
+  { labelKey: 'recipes.intolerance.FISH', value: 'fish' },
 ];
 
 // ── Lifestyle vs constraint split (derived from the shared classification) ──
@@ -64,11 +64,11 @@ export function isLifestyleDietValue(value: string): boolean {
 }
 
 export const MEAL_TYPES: RecipeFilterOption[] = [
-  { labelKey: 'recipeFilters.mealTypes.breakfast', value: 'breakfast' },
-  { labelKey: 'recipeFilters.mealTypes.lunch', value: 'lunch' },
-  { labelKey: 'recipeFilters.mealTypes.dinner', value: 'dinner' },
-  { labelKey: 'recipeFilters.mealTypes.snack', value: 'snack' },
-  { labelKey: 'recipeFilters.mealTypes.dessert', value: 'dessert' },
+  { labelKey: 'labels.breakfast', value: 'breakfast' },
+  { labelKey: 'labels.lunch', value: 'lunch' },
+  { labelKey: 'labels.dinner', value: 'dinner' },
+  { labelKey: 'usagePurpose.SNACK', value: 'snack' },
+  { labelKey: 'labels.dessert', value: 'dessert' },
 ];
 
 /** Find the i18n label key for a filter value; falls back to the raw value. */

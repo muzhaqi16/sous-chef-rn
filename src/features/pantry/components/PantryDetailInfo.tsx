@@ -70,7 +70,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
     <>
       {/* Quantity Row */}
       <InfoRow
-        label={t('pantryItemDetail.fields.quantity')}
+        label={t('labels.quantity')}
         value={`${item.quantity} ${getUnitDisplayText(item.unit)}`}
         icon="apps-outline"
         showColon={false}
@@ -81,7 +81,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Net Weight Row */}
       {!!netWeightText && (
         <InfoRow
-          label={t('pantryItemDetail.fields.netWeight')}
+          label={t('labels.netWeight')}
           value={netWeightText}
           icon="scale-outline"
           showColon={false}
@@ -110,7 +110,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Remaining Weight Row */}
       {!!remainingNetWeightText && (
         <InfoRow
-          label={t('pantryItemDetail.fields.remainingWeight')}
+          label={t('labels.remainingWeight')}
           value={remainingNetWeightText}
           icon="scale-outline"
           showColon={false}
@@ -122,7 +122,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Inventory Breakdown Row */}
       {!!quantityBreakdownText && (
         <InfoRow
-          label={t('pantryItemDetail.fields.inventory')}
+          label={t('labels.inventory')}
           value={quantityBreakdownText}
           icon="layers-outline"
           showColon={false}
@@ -164,7 +164,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Brand Row */}
       {!!brandName && (
         <InfoRow
-          label={t('pantryItemDetail.fields.brand')}
+          label={t('labels.brand')}
           value={brandName}
           icon="pricetag-outline"
           showColon={false}
@@ -176,7 +176,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Storage Location */}
       {!!item.storageLocation && (
         <InfoRow
-          label={t('pantryItemDetail.fields.storage')}
+          label={t('labels.storage')}
           value={
             typeof item.storageLocation === 'string'
               ? item.storageLocation
@@ -192,7 +192,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Store Row */}
       {!!item.store?.name && (
         <InfoRow
-          label={t('pantryItemDetail.fields.store')}
+          label={t('labels.store')}
           value={item.store.name}
           icon="storefront-outline"
           showColon={false}
@@ -204,7 +204,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Condition Row - only show if not GOOD */}
       {!!formatCondition(item.condition) && (
         <ThemedConditionInfoRow
-          label={t('pantryItemDetail.fields.condition')}
+          label={t('labels.condition')}
           value={formatCondition(item.condition)}
           icon="fitness-outline"
           uniProps={theme => ({
@@ -248,7 +248,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Total Cost Row */}
       {!!formatCurrency(item.totalCost) && (
         <InfoRow
-          label={t('pantryItemDetail.fields.totalCost')}
+          label={t('labels.totalCost')}
           value={formatCurrency(item.totalCost)}
           icon="wallet-outline"
           showColon={false}

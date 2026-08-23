@@ -125,7 +125,7 @@ export function MultiSelectChipSheet<T extends string = string>({
               style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="sm" tone="accent" weight="medium">
-                {t('multiSelectChipSheet.clearAll')}
+                {t('labels.clearAll')}
               </Text>
             </Pressable>
           )}

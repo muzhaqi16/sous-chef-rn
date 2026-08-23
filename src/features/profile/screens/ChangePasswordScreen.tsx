@@ -10,7 +10,7 @@ import { Icon } from '#utils/iconUtils';
 import { errorMessageOr } from '#/services/errorService';
 import { PasswordInput } from '#components/atoms/PasswordInput';
 import { Header } from '#components/molecules/Header';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { useMutation } from '@apollo/client/react';
 import {
   ChangePasswordDocument,
@@ -123,7 +123,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
   return (
     <ThemedSafeAreaView style={styles.container} edges={['left', 'right']}>
-      <Header title={t('changePassword.title')} onBack={goBack} centerTitle />
+      <Header title={t('labels.changePassword')} onBack={goBack} centerTitle />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -158,15 +158,13 @@ export const ChangePasswordScreen: React.FC = () => {
             </View>
 
             <View style={styles.field}>
-              <Text style={styles.label}>
-                {t('changePassword.newPassword')}
-              </Text>
+              <Text style={styles.label}>{t('auth.newPassword')}</Text>
               <PasswordInput
                 value={watchedValues.newPassword}
                 onChangeText={text =>
                   form.setValue('newPassword', text, { shouldValidate: true })
                 }
-                placeholder={t('changePassword.newPasswordPlaceholder')}
+                placeholder={t('auth.newPasswordPlaceholder')}
                 errorMessage={form.formState.errors.newPassword?.message}
                 editable={!isSubmitting}
               />
@@ -183,7 +181,7 @@ export const ChangePasswordScreen: React.FC = () => {
                     shouldValidate: true,
                   })
                 }
-                placeholder={t('changePassword.confirmPasswordPlaceholder')}
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 errorMessage={form.formState.errors.confirmPassword?.message}
                 editable={!isSubmitting}
               />
@@ -196,7 +194,7 @@ export const ChangePasswordScreen: React.FC = () => {
               loading={isSubmitting}
               style={styles.buttonSpacing}
             >
-              {t('changePassword.submit')}
+              {t('labels.changePassword')}
             </Button>
           </View>
         </ScrollView>

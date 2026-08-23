@@ -15,7 +15,7 @@ import { MonthCalendar } from '#features/mealPlan/components/MonthCalendar';
 import { DayMealList } from '#features/mealPlan/components/DayMealList';
 import { CalendarToggleBar } from '#features/mealPlan/components/CalendarToggleBar';
 import { MealPlanEmptyState } from '#features/mealPlan/components/MealPlanEmptyState';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import { SaveAsTemplateSheet } from '#features/mealPlan/components/SaveAsTemplateSheet';
@@ -49,7 +49,7 @@ import { useGenerateShoppingList } from '#features/mealPlan/hooks/useGenerateSho
 import { useDuplicateMealPlan } from '#features/mealPlan/hooks/useDuplicateMealPlan';
 import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPermissions';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { MealPlanSkeleton } from '#components/base/Skeleton/MealPlanSkeleton';
+import { MealPlanSkeleton } from '#components/atoms/Skeleton/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
 import {
   MealType,
@@ -90,7 +90,7 @@ export const MealPlanMain: React.FC = () => (
       <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader
           label={tGlobal('mealPlanMain.label')}
-          title={tGlobal('mealPlanMain.defaultTitle')}
+          title={tGlobal('labels.mealPlan')}
         />
         <MealPlanSkeleton />
       </TabMainScreen>
@@ -469,7 +469,7 @@ const MealPlanMainInner: React.FC = () => {
       <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader
           label={t('mealPlanMain.label')}
-          title={t('mealPlanMain.defaultTitle')}
+          title={t('labels.mealPlan')}
         />
         <MealPlanSkeleton />
       </TabMainScreen>
@@ -484,7 +484,7 @@ const MealPlanMainInner: React.FC = () => {
       <TabMainScreen testID="meal-plan-screen">
         <TabScreenHeader
           label={t('mealPlanMain.label')}
-          title={t('mealPlanMain.defaultTitle')}
+          title={t('labels.mealPlan')}
         />
         {plansState === 'error' || plansState === 'offline' ? (
           <DataStateView state={plansState} onRetry={handleRefresh} />
@@ -529,7 +529,7 @@ const MealPlanMainInner: React.FC = () => {
         <View style={styles.headerContent}>
           <TabScreenHeader
             label={t('mealPlanMain.label')}
-            title={activeMealPlan?.name ?? t('mealPlanMain.defaultTitle')}
+            title={activeMealPlan?.name ?? t('labels.mealPlan')}
             onTitlePress={handleOpenSelector}
             titleAccessory={
               <Icon name="chevron-down" size={20} tone="textPrimary" />

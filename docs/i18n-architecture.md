@@ -146,6 +146,83 @@ Found and *not* fixed, left as known issues:
 - **A home's name pushed into an option list beside translated labels**
   (`CreateMealPlanScreen`) — user content and copy in one array, indistinguishable.
 
+## Copy rules, and why each one exists
+
+The one-line versions live in CLAUDE.md; this is the mechanism and history.
+
+**Shared copy has one home.** `errors.*`, `empty.*` and `labels.*` are
+canonical; no namespace — feature or canonical — may redeclare a string another
+already has. The guard (`__tests__/i18n/canonicalVocabulary.test.ts`) used to
+ask whether a string LOOKED like error or empty-state copy, which meant 323 of
+329 duplicate groups were never inspected: `Home`, `Item` and `Try Again` match
+none of those patterns, and all three had drifted into two translations by the
+time anyone looked. It now inspects every string that is more than one
+character and contains a letter, with an exemption list where each entry names
+its exact key set and must still describe a live duplicate.
+
+Two duplicates are not duplicates, and one is:
+
+- **Runtime-composed keys.** A key under `usagePurpose.*`, `errors.codes.*`,
+  `commonValidation.*`, `recipes.diet.*` or `${keyPrefix}.${suffix}` only
+  exists once the enum value or prefix is substituted in, so no call site names
+  it and nothing can be re-pointed at it. Two of them holding the same string
+  is not collapsible — both must exist for their own lookup to resolve.
+  `enumKeyCoverage.test.ts` and `composedKeyNamespaces.test.ts` keep those
+  namespaces complete. **Adding a suffix to `alertMutationFailure` means adding
+  it to `ALERT_SUFFIXES` in both places** — `rateLimitedTitle` was missing from
+  one, and a key sweep removed three live keys with nothing failing until a
+  hook test did.
+- **One English word, two grammatical roles.** `Default` is *Predeterminado* or
+  *Predeterminada* depending on the noun; `Invite` is *Invitación* (the thing)
+  or *Invitar* (the button); `Back` is *Atrás* (direction) or *Reverso* (of a
+  package). Collapsing those makes one context ungrammatical. They go in
+  `INTENTIONAL` with the variants named — a fact about the language belongs in
+  the key, never in a runtime parameter.
+- **Everything else is drift and collapses.** If two keys hold the same English
+  for the same concept, they will eventually hold different Spanish.
+
+**Never concatenate a number with a translated noun.**
+
+```ts
+`${count} ${t('recipes.ingredientsSuffix')}`; // ✗ "1 ingredients"
+t('recipes.ingredientCount', { count }); // ✓
+```
+
+Concatenation loses plural agreement, bakes English word order into code, and
+skips locale number formatting. Give each plural form its own whole sentence.
+`__tests__/i18n/numberNounConcatenation.test.ts` enforces it, and also bans
+appending a literal `'s'` — that shape produced "2 lattinas" in Italian and
+"2 kgs" in English.
+
+**Plural categories are derived, not hand-written.** `completePluralCategories`
+in `src/i18n/config.ts` fills any CLDR category a locale needs but its JSON
+lacks, from `_other`, before `init`. A missing category is not graceful
+degradation: i18next falls through to `fallbackLng`, not to the locale's own
+`_other` — mechanism and probe in
+[verified-library-behaviour.md](verified-library-behaviour.md#i18next-plural-category-fallback).
+Spanish and Italian need `many`; nothing this app counts reaches it, so
+hand-written `_many` strings would never have rendered.
+`__tests__/i18n/pluralCategories.test.ts` asks `Intl.PluralRules` which
+categories each locale needs rather than hardcoding one/other, so a locale
+added later is checked for whatever IT needs.
+
+**Never inflect copy for the reader's gender.** The app does not know it, does
+not ask, and in a two-gender language there is no correct form for a non-binary
+person — so a `context` parameter cannot be right, only less often wrong. Use a
+construction with no gendered slot; every locale here has one:
+
+```
+it  "Sei sicuro di voler X?"   ->  "Vuoi davvero X?"
+sq  "Je i sigurt që do ta X?"  ->  "Vërtet dëshiron ta X?"
+es  "¡Bienvenido a X!"         ->  "¡Te damos la bienvenida a X!"
+```
+
+Enforced by `__tests__/i18n/addresseeGender.test.ts`. This is about the
+ADDRESSEE only — an adjective agreeing with a **noun** is correct and lives in
+per-context keys (`labels.default` → `Predeterminado`,
+`storageLocationCard.default` → `Predeterminada`); that is the
+grammatical-role case above.
+
 ## Guards that exist today
 
 | guard | catches |
@@ -156,6 +233,11 @@ Found and *not* fixed, left as known issues:
 | `__tests__/i18n/keysExist.test.ts` | keys that do not exist in `en.json` |
 | `__tests__/i18n/localeParity.test.ts` | keys missing from a locale |
 | `__tests__/i18n/moduleLevelCopyTables.test.ts` | copy held in module-level tables |
+| `__tests__/i18n/canonicalVocabulary.test.ts` | the same string declared in two namespaces (drift) |
+| `__tests__/i18n/numberNounConcatenation.test.ts` | `${count} ${t('noun')}` shapes and literal `'s'` appends |
+| `__tests__/i18n/pluralCategories.test.ts` | a locale missing a CLDR plural category it needs |
+| `__tests__/i18n/addresseeGender.test.ts` | copy inflected for the reader's gender |
+| `__tests__/i18n/enumKeyCoverage.test.ts` + `composedKeyNamespaces.test.ts` | runtime-composed key namespaces with holes |
 
 None of them proves completeness. A string reaching JSX through a variable is
 invisible to all of them — that is the gap pseudolocalization would close.

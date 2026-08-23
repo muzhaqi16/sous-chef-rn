@@ -92,7 +92,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
             <Pressable style={styles.actionLink} onPress={onEditItem}>
               <Icon name="create-outline" size={16} tone="primary" />
               <Text size="sm" weight="medium" tone="accent">
-                {editActionLabel ?? t('suggestItemEdit.suggestAction')}
+                {editActionLabel ?? t('labels.suggestEdit')}
               </Text>
             </Pressable>
           )}

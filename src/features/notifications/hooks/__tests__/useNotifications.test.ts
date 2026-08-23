@@ -18,16 +18,12 @@ import {
   Priority,
   MutationType,
 } from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
+import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
-
-const mockAddNotification = jest.fn();
-const mockMarkAsRead = jest.fn();
-const mockRemoveNotification = jest.fn();
-const mockClearAll = jest.fn();
-const mockGetNotificationsByCategory = jest.fn().mockReturnValue([]);
 
 // Mutable so a test can simulate a logged-out session. Prefixed `mock` so the
 // jest.mock factory below may reference it.
@@ -43,26 +39,24 @@ jest.mock('#/services/push/iosPushMessaging', () => ({
   registerIosPushTapHandlers: () => mockRegisterIosPushTapHandlers(),
 }));
 
+// The store no longer holds notifications — only the signed-in user (which
+// gates push-tap registration) and the expiration buffer.
 type MockNotificationsState = {
-  notifications: unknown[];
   user: { id: string } | null;
-  addNotification: jest.Mock;
-  markAsRead: jest.Mock;
-  removeNotification: jest.Mock;
-  clearAll: jest.Mock;
-  getNotificationsByCategory: jest.Mock;
+  pendingExpirationLinks: Record<string, unknown>;
+  linkExpirationData: jest.Mock;
+  setExpirationAction: jest.Mock;
+  clearExpirationLink: jest.Mock;
 };
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn((selector: (s: MockNotificationsState) => unknown) =>
     selector({
-      notifications: [],
       user: mockUser,
-      addNotification: mockAddNotification,
-      markAsRead: mockMarkAsRead,
-      removeNotification: mockRemoveNotification,
-      clearAll: mockClearAll,
-      getNotificationsByCategory: mockGetNotificationsByCategory,
+      pendingExpirationLinks: {},
+      linkExpirationData: jest.fn(),
+      setExpirationAction: jest.fn(),
+      clearExpirationLink: jest.fn(),
     }),
   ),
   // Transport recovery reads connectivity; a partial factory here would
@@ -76,12 +70,7 @@ jest.mock('zustand/react/shallow', () => ({
 
 jest.mock('#store', () => ({
   useStore: {
-    getState: () => ({
-      notifications: [
-        { id: 'n1', isRead: false },
-        { id: 'n2', isRead: true },
-      ],
-    }),
+    getState: () => ({ pendingExpirationLinks: {} }),
   },
 }));
 
@@ -90,12 +79,6 @@ jest.mock('#utils/notifications/localNotificationHelper', () => ({
 }));
 
 jest.mock('#store/slices/notificationSlice', () => ({
-  NotificationPriority: {
-    LOW: 'LOW',
-    MEDIUM: 'MEDIUM',
-    HIGH: 'HIGH',
-    URGENT: 'URGENT',
-  },
   isNotificationPayload: (value: unknown): boolean =>
     typeof value === 'object' && value !== null && !Array.isArray(value),
 }));
@@ -115,6 +98,7 @@ jest.mock('../useNotificationSync', () => ({
     syncMarkUnread: jest.fn(),
     syncDelete: mockSyncDelete,
     syncMarkAllAsRead: mockSyncMarkAllAsRead,
+    syncClearRead: jest.fn(),
   }),
 }));
 
@@ -252,21 +236,78 @@ beforeEach(() => {
   mockUser = { id: 'user-1' };
 });
 
-describe('useNotifications', () => {
-  it('returns notifications from store', () => {
-    const { result } = renderHookWithApollo(() => useNotifications());
-
-    expect(result.current.notifications).toEqual([]);
+// A cache the hook can write through. Seeded with the signed-in user so the
+// badge field exists to be adjusted, and with one notification so the
+// transition tests have a row to move.
+const seededCache = (
+  rows: Array<{ id: string; status: NotificationStatus }> = [],
+) => {
+  const cache = makeCache();
+  cache.writeQuery({
+    query: GetUnreadNotificationsDocument,
+    data: {
+      __typename: 'Query',
+      me: {
+        __typename: 'User',
+        id: 'user-1',
+        unreadNotificationCount: rows.filter(r =>
+          [NotificationStatus.Pending, NotificationStatus.Sent].includes(
+            r.status,
+          ),
+        ).length,
+        hasUrgentNotifications: false,
+        notificationsConnection: {
+          __typename: 'NotificationConnection',
+          edges: rows.map(r => ({
+            __typename: 'NotificationEdge' as const,
+            node: {
+              __typename: 'Notification' as const,
+              id: r.id,
+              type: NotificationType.LowStock,
+              status: r.status,
+              priority: Priority.Normal,
+              title: 'Low Stock Alert',
+              message: 'Milk is running low',
+              payload: null,
+              category: NotificationCategory.System,
+              sentAt: '2024-01-01T00:00:00Z',
+              expiresAt: null,
+              sourceId: null,
+              sourceType: null,
+              actionUrl: null,
+              readAt: null,
+            },
+          })),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
+      },
+    },
   });
+  return cache;
+};
 
-  it('returns expected functions', () => {
+const badgeCount = (cache: ReturnType<typeof makeCache>): number =>
+  (cache.extract() as Record<string, { unreadNotificationCount?: number }>)[
+    'User:user-1'
+  ]?.unreadNotificationCount ?? -1;
+
+describe('useNotifications', () => {
+  // The hook is now only the write side. Its read side — the feed, the unread
+  // count — is `useNotificationHistory` reading the Apollo cache, so there is
+  // nothing here that could disagree with what the list renders.
+  it('exposes the four write actions and no feed of its own', () => {
     const { result } = renderHookWithApollo(() => useNotifications());
 
     expect(typeof result.current.handleMarkAsRead).toBe('function');
     expect(typeof result.current.handleMarkAllAsRead).toBe('function');
     expect(typeof result.current.handleRemoveNotification).toBe('function');
-    expect(typeof result.current.clearAll).toBe('function');
-    expect(typeof result.current.getNotificationsByCategory).toBe('function');
+    expect(typeof result.current.handleClearRead).toBe('function');
+    expect(result.current).not.toHaveProperty('notifications');
+    expect(result.current).not.toHaveProperty('unreadCount');
   });
 
   it('handleMarkAllAsRead calls syncMarkAllAsRead', () => {
@@ -279,25 +320,13 @@ describe('useNotifications', () => {
     expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
   });
 
-  it('clearAll is passed through from store', () => {
-    const { result } = renderHookWithApollo(() => useNotifications());
-
-    expect(result.current.clearAll).toBe(mockClearAll);
-  });
-
-  it('getNotificationsByCategory is passed through from store', () => {
-    const { result } = renderHookWithApollo(() => useNotifications());
-
-    expect(result.current.getNotificationsByCategory).toBe(
-      mockGetNotificationsByCategory,
-    );
-  });
-
   it('does not open subscriptions (listener is provider-only)', async () => {
     // A created-event mock is available, but useNotifications must not
     // subscribe — only useNotificationListener (mounted once in
     // NotificationProvider) opens the server subscriptions.
+    const cache = seededCache();
     renderHookWithApollo(() => useNotifications(), {
+      cache,
       operationMocks: [
         buildNotificationSubscriptionMock({
           id: 'notif-1',
@@ -311,23 +340,39 @@ describe('useNotifications', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(mockAddNotification).not.toHaveBeenCalled();
+    expect(badgeCount(cache)).toBe(0);
   });
 });
 
 describe('useNotificationListener', () => {
   it('skips subscription when config.skip is true', async () => {
-    // No subscription should fire; the hook mounts without error.
-    renderHookWithApollo(() => useNotificationListener({ skip: true }));
+    const cache = seededCache();
+    renderHookWithApollo(() => useNotificationListener({ skip: true }), {
+      cache,
+      operationMocks: [
+        buildNotificationSubscriptionMock({
+          id: 'notif-1',
+          type: NotificationType.LowStock,
+          title: 'Low Stock Alert',
+          message: 'Milk is running low',
+        }),
+      ],
+    });
 
     await act(async () => {
       await Promise.resolve();
     });
-    expect(mockAddNotification).not.toHaveBeenCalled();
+    expect(badgeCount(cache)).toBe(0);
   });
 
-  it('subscription processes incoming notification data', async () => {
+  it('a CREATED event lands in the cache and re-reads the count', async () => {
+    const cache = seededCache();
+    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
+      data: unreadFeedData,
+    });
+
     renderHookWithApollo(() => useNotificationListener(), {
+      cache,
       operationMocks: [
         buildNotificationSubscriptionMock({
           id: 'notif-1',
@@ -336,45 +381,78 @@ describe('useNotificationListener', () => {
           message: 'Milk is running low',
           payload: { itemName: 'Milk' },
         }),
+        mock,
       ],
     });
 
     await waitFor(() => {
-      expect(mockAddNotification).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: NotificationType.LowStock,
-          title: 'Low Stock Alert',
-          message: 'Milk is running low',
-        }),
+      expect(readNotificationStatus(cache, 'notif-1')).toBe(
+        NotificationStatus.Pending,
       );
     });
+    // The count is the server's, not a local +1 — see the comment on
+    // `reseedUnreadCount`.
+    await waitFor(() => {
+      expect(fired.length).toBeGreaterThan(0);
+    });
   });
 
-  it('READ subtype marks the notification read locally', async () => {
+  // The regression this design exists to prevent: Apollo normalizes the
+  // event's `node` into the cache before `onData` runs, so a handler that
+  // asked the cache "was this unread?" would always be told "no" and would
+  // leave the badge stuck while the row moved.
+  it('READ subtype marks the row read AND re-reads the count', async () => {
+    const cache = seededCache([
+      { id: 'notif-1', status: NotificationStatus.Sent },
+    ]);
+    expect(badgeCount(cache)).toBe(1);
+    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
+      data: unreadFeedData,
+    });
+
     renderHookWithApollo(() => useNotificationListener(), {
+      cache,
       operationMocks: [
         buildTransitionEventMock(NotificationSubtype.Read, 'notif-1'),
+        mock,
       ],
     });
 
     await waitFor(() => {
-      expect(mockMarkAsRead).toHaveBeenCalledWith('notif-1');
+      expect(readNotificationStatus(cache, 'notif-1')).toBe(
+        NotificationStatus.Read,
+      );
     });
-    expect(mockRemoveNotification).not.toHaveBeenCalled();
-    expect(mockAddNotification).not.toHaveBeenCalled();
+    // The badge lands when the re-query resolves, not when it is issued.
+    await waitFor(() => {
+      expect(fired.length).toBeGreaterThan(0);
+      expect(badgeCount(cache)).toBe(0);
+    });
   });
 
-  it('DISMISSED subtype removes the notification locally', async () => {
+  it('DISMISSED subtype removes the row AND re-reads the count', async () => {
+    const cache = seededCache([
+      { id: 'notif-2', status: NotificationStatus.Sent },
+    ]);
+    const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
+      data: unreadFeedData,
+    });
+
     renderHookWithApollo(() => useNotificationListener(), {
+      cache,
       operationMocks: [
         buildTransitionEventMock(NotificationSubtype.Dismissed, 'notif-2'),
+        mock,
       ],
     });
 
     await waitFor(() => {
-      expect(mockRemoveNotification).toHaveBeenCalledWith('notif-2');
+      expect(readNotificationStatus(cache, 'notif-2')).toBeUndefined();
     });
-    expect(mockMarkAsRead).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(fired.length).toBeGreaterThan(0);
+      expect(badgeCount(cache)).toBe(0);
+    });
   });
 
   it.each([
@@ -385,18 +463,23 @@ describe('useNotificationListener', () => {
     const { mock, fired } = recordMock(GetUnreadNotificationsDocument, {
       data: unreadFeedData,
     });
+    const cache = seededCache([
+      { id: 'notif-1', status: NotificationStatus.Sent },
+    ]);
 
     renderHookWithApollo(() => useNotificationListener(), {
+      cache,
       operationMocks: [buildTransitionEventMock(subtype, null, 4), mock],
     });
 
     // The aggregate event's rows are unknown client-side — the handler must
-    // fall back to a server re-sync instead of touching the local store.
+    // fall back to a server re-sync instead of guessing at the local ones.
     await waitFor(() => {
       expect(fired.length).toBeGreaterThan(0);
     });
-    expect(mockMarkAsRead).not.toHaveBeenCalled();
-    expect(mockRemoveNotification).not.toHaveBeenCalled();
+    expect(readNotificationStatus(cache, 'notif-1')).toBe(
+      NotificationStatus.Sent,
+    );
   });
 
   it('registers push tap handlers when authenticated', async () => {

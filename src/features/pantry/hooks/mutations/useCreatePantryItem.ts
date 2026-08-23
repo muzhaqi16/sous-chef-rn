@@ -21,8 +21,8 @@ import {
   getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
-import { addToPantryItemsCache } from './utils';
-import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';

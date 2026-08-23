@@ -1,4 +1,5 @@
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import { logger } from '#/utils/environment';
 
 /**
  * Invalid Unit Error Details
@@ -133,7 +134,7 @@ export function handleInvalidUnit(error: unknown): boolean {
   const message = getInvalidUnitMessage(error);
   const validUnits = getValidUnits(error);
 
-  console.warn('⚠️ Invalid unit detected:', {
+  logger.warn('⚠️ Invalid unit detected:', {
     message,
     validUnits,
     error,

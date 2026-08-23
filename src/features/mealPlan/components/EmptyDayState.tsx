@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format } from 'date-fns';
-import { EmptyState } from '#components/base/EmptyState';
+import { EmptyState } from '#components/atoms/EmptyState';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { type MealType } from '#/graphql/generated/schemaTypes';
 
@@ -25,7 +25,7 @@ export const EmptyDayState: React.FC<EmptyDayStateProps> = ({
       action={
         onAddMeal
           ? {
-              label: t('emptyDay.addMeal'),
+              label: t('labels.addAMeal'),
               onPress: () => onAddMeal(),
               icon: 'add',
             }

@@ -31,7 +31,7 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
       <AppPressable style={styles.button} onPress={onClearAll}>
         <Icon name="list-outline" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
-          {t('notifications.clearAll')}
+          {t('labels.clearAll')}
         </Text>
       </AppPressable>
     </View>

@@ -39,12 +39,12 @@ export interface MealTypeGroup {
 // i18n keys for meal-type section headers (reuses the AddMealSheet set, which
 // is complete and present in every locale).
 const MEAL_TYPE_LABEL_KEYS: Partial<Record<MealType, string>> = {
-  [MealType.Breakfast]: 'addMealSheet.mealBreakfast',
-  [MealType.Brunch]: 'addMealSheet.mealBrunch',
-  [MealType.Lunch]: 'addMealSheet.mealLunch',
-  [MealType.Snack]: 'addMealSheet.mealSnack',
-  [MealType.Dinner]: 'addMealSheet.mealDinner',
-  [MealType.Dessert]: 'addMealSheet.mealDessert',
+  [MealType.Breakfast]: 'labels.breakfast',
+  [MealType.Brunch]: 'labels.brunch',
+  [MealType.Lunch]: 'labels.lunch',
+  [MealType.Snack]: 'usagePurpose.SNACK',
+  [MealType.Dinner]: 'labels.dinner',
+  [MealType.Dessert]: 'labels.dessert',
 };
 
 export function useDailyMeals(items: DailyMealsItem[], selectedDate: Date) {

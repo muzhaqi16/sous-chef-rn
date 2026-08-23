@@ -77,7 +77,7 @@ export const ShoppingListPickerSheet: React.FC<
   return (
     <BottomSheetAction
       visible={visible}
-      sheetTitle={t('recipes.addToShoppingList')}
+      sheetTitle={t('labels.addToShoppingList')}
       snapPoints={['60%']}
       scrollable={false}
       onDismiss={() => {

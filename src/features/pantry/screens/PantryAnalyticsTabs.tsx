@@ -7,7 +7,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
 import { ChartSection } from '#components/analytics/ChartSection';
-import { EmptyState } from '#components/base/EmptyState';
+import { EmptyState } from '#components/atoms/EmptyState';
 import { TrendLineChart as BaseTrendLineChart } from '#components/charts/TrendLineChart';
 import { BreakdownPieChart } from '#components/charts/BreakdownPieChart';
 import { TopItemsBarChart as BaseTopItemsBarChart } from '#components/charts/TopItemsBarChart';
@@ -36,11 +36,11 @@ function formatPurpose(purpose: string, t: Translate): string {
   const map: Record<string, string> = {
     ADJUSTMENT: 'pantryAnalytics.purposeAdjustment',
     COOKING: 'pantryAnalytics.purposeCooking',
-    GENERAL: 'pantryAnalytics.purposeGeneral',
-    GIFT: 'pantryAnalytics.purposeGift',
-    MEAL_PREP: 'pantryAnalytics.purposeMealPrep',
+    GENERAL: 'labels.general',
+    GIFT: 'usagePurpose.GIFT',
+    MEAL_PREP: 'labels.mealPrep',
     RESTOCK: 'pantryAnalytics.purposeRestock',
-    SNACK: 'pantryAnalytics.purposeSnack',
+    SNACK: 'usagePurpose.SNACK',
     TRANSFER: 'pantryAnalytics.purposeTransfer',
     WASTE: 'pantryAnalytics.purposeWaste',
   };
@@ -61,17 +61,17 @@ function formatSource(source: string, t: Translate): string {
 function formatReason(reason: string, t: Translate): string {
   const map: Record<string, string> = {
     BURNT: 'pantryAnalytics.reasonBurnt',
-    COOKING_FAIL: 'pantryAnalytics.reasonCookingFail',
+    COOKING_FAIL: 'labels.cookingFail',
     EXPIRED: 'pantryAnalytics.reasonExpired',
-    GAVE_AWAY: 'pantryAnalytics.reasonGaveAway',
-    MOLD: 'pantryAnalytics.reasonMold',
-    OTHER: 'pantryAnalytics.reasonOther',
-    OVERSTOCK: 'pantryAnalytics.reasonOverstock',
-    PEST: 'pantryAnalytics.reasonPest',
+    GAVE_AWAY: 'labels.gaveAway',
+    MOLD: 'labels.mold',
+    OTHER: 'itemType.OTHER',
+    OVERSTOCK: 'labels.overstock',
+    PEST: 'labels.pest',
     SPILLED: 'pantryAnalytics.reasonSpilled',
     SPOILED: 'pantryAnalytics.reasonSpoiled',
     TASTE: 'pantryAnalytics.reasonTaste',
-    UNKNOWN_LOSS: 'pantryAnalytics.reasonUnknownLoss',
+    UNKNOWN_LOSS: 'labels.unknownLoss',
   };
   return map[reason] ? t(map[reason]) : reason;
 }
@@ -333,14 +333,14 @@ export const WasteTab: React.FC<
           value={(wasteData?.composted ?? 0).toFixed(1)}
           icon="leaf-outline"
           uniProps={theme => ({ color: theme.colors.success })}
-          subtitle={t('pantryAnalytics.units')}
+          subtitle={t('labels.units')}
         />
         <AnalyticsSummaryCard
           title={t('pantryAnalytics.recycled')}
           value={(wasteData?.recycled ?? 0).toFixed(1)}
           icon="refresh-outline"
           uniProps={theme => ({ color: theme.colors.info })}
-          subtitle={t('pantryAnalytics.units')}
+          subtitle={t('labels.units')}
         />
       </View>
 
@@ -530,7 +530,7 @@ export const LedgerTab: React.FC<
       {!!ledgerData?.costAnalytics && (
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
-            title={t('pantryAnalytics.totalSpent')}
+            title={t('labels.totalSpent')}
             value={formatCurrency(
               ledgerData.costAnalytics.totalSpent ?? 0,
               DEFAULT_CURRENCY,

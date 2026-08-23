@@ -69,7 +69,7 @@ export const RecipeCategoryFields: React.FC<RecipeCategoryFieldsProps> = ({
       />
 
       <SegmentedControl
-        label={t('recipes.status')}
+        label={t('labels.status')}
         options={STATUSES}
         value={state.status}
         onChange={v => updateField('status', v)}

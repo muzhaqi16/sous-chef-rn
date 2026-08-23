@@ -8,7 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 
 import { LoadingState } from '../components/LoadingState';
-import { ErrorState } from '#components/base/ErrorState';
+import { ErrorState } from '#components/atoms/ErrorState';
 import { ItemNotFound } from '../components/ItemNotFound';
 import { SearchResults } from '../components/SearchResults';
 import { Header } from '#components/molecules/Header';
@@ -135,8 +135,8 @@ export const SearchResultsScreen: React.FC<
   // snapshot. It is absent on a cached scan, and the suggestion wording is the
   // safe default.
   const editActionLabel = currentItem?.canEdit
-    ? t('suggestItemEdit.editAction')
-    : t('suggestItemEdit.suggestAction');
+    ? t('labels.edit')
+    : t('labels.suggestEdit');
 
   // A scan can surface an item this user may not touch — a PRIVATE one they
   // don't own — and neither write path accepts it. Withholding onEditItem drops

@@ -1,5 +1,6 @@
 import type { ToastOptions } from '#/components/atoms/Toast';
 import { HapticService } from '#services/haptic/HapticService';
+import { logger } from '#/utils/environment';
 
 /**
  * Imperative toast API for use outside the React tree (API error handlers,
@@ -11,7 +12,7 @@ import { HapticService } from '#services/haptic/HapticService';
 type Dispatch = (opts: ToastOptions) => void;
 
 let dispatch: Dispatch = opts => {
-  console.warn('[toast] called before provider mounted:', opts.message);
+  logger.warn('[toast] called before provider mounted:', opts.message);
 };
 
 export const _setToastDispatch = (fn: Dispatch) => {

@@ -212,7 +212,7 @@ export function LoginScreen(): React.JSX.Element {
 
   // Get biometric button text
   const getBiometricButtonText = () => {
-    if (isBiometricLoading) return t('loading.authenticating');
+    if (isBiometricLoading) return t('labels.authenticating');
     if (isLoggingIn) return t('auth.loggingIn');
 
     if (biometricInfo.biometryType) {

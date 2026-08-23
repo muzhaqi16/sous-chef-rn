@@ -13,7 +13,7 @@
  *
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   MarkExpirationActionDocument,
@@ -21,11 +21,16 @@ import {
 } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import {
+  applyNotificationRead,
+  applyNotificationUnread,
+} from '#features/notifications/utils/notificationCacheWrites';
 import { errorService } from '#/services/errorService';
-import { isNetworkError } from '#/utils/isNetworkError';
 import { toastService } from '#/services/toastService';
 
 export function useExpirationNotificationSync() {
+  const client = useApolloClient();
   const { t } = useTranslation();
   const [markActionMutation] = useMutation(MarkExpirationActionDocument);
   // The server merged the former dismiss mutation into
@@ -39,30 +44,43 @@ export function useExpirationNotificationSync() {
     expirationNotificationId: string,
     action: ExpirationAction,
   ) => {
-    // Optimistic: update the notification in Zustand immediately
+    // The action is client-side enrichment and stays in the store; the row's
+    // read-state is server state and goes to the cache.
     useStore.getState().setExpirationAction(notificationId, action);
-    // Also mark the generic notification as read
-    useStore.getState().markAsRead(notificationId);
+    const markedRead = applyNotificationRead(
+      client.cache,
+      useStore.getState().user?.id,
+      notificationId,
+    );
 
     toastService.success(t(`expirationAction.toast.${action}`));
 
+    let result;
     try {
-      await markActionMutation({
+      result = await markActionMutation({
         variables: {
           input: { notificationId: expirationNotificationId, action },
         },
         context: { localFirst: true },
       });
     } catch (error: unknown) {
+      // Only a link-level throw lands here; a refusal resolves (errorPolicy
+      // 'all'), which is why the rollback below reads the RESULT.
       errorService.reportError(error, {
         operation: 'syncMarkExpirationAction',
         notificationId: expirationNotificationId,
         action,
       });
-      // Rollback on server error
-      if (!isNetworkError(error)) {
-        useStore.getState().setExpirationAction(notificationId, '');
-        useStore.getState().markAsUnread(notificationId);
+    }
+
+    if (classifyCreateResult(result) === 'rejected') {
+      useStore.getState().setExpirationAction(notificationId, '');
+      if (markedRead) {
+        applyNotificationUnread(
+          client.cache,
+          useStore.getState().user?.id,
+          notificationId,
+        );
       }
     }
   };

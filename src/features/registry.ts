@@ -6,6 +6,7 @@ import { mealPlanFeature } from './mealPlan/manifest';
 import { barcodeFeature } from './barcode/manifest';
 import { notificationsFeature } from './notifications/manifest';
 import { profileFeature } from './profile/manifest';
+import { homeFeature } from './home/manifest';
 
 /**
  * Canonical list of all features in the app.
@@ -24,6 +25,7 @@ export const FEATURE_REGISTRY: FeatureManifest[] = [
   barcodeFeature,
   notificationsFeature,
   profileFeature,
+  homeFeature,
 ];
 
 /** Features that have a tab in the bottom tab navigator, sorted by order. */

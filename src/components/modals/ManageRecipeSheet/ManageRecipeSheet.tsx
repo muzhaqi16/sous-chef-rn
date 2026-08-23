@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetKeyboardAwareScrollView } from '#components/atoms/BottomSheetKeyboardAwareScrollView';
 import { StyleSheet } from 'react-native-unistyles';
@@ -14,6 +13,7 @@ import { Icon } from '#utils/iconUtils';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { TagInput } from '#components/molecules/TagInput';
 import { Text } from '#components/atoms/Text';
+import { InlineFolderChooser } from '#components/molecules/InlineFolderChooser';
 
 export interface ManageRecipeSheetProps {
   visible: boolean;
@@ -64,8 +64,6 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
   const [tags, setTags] = useState<string[]>(currentTags);
   const [notes, setNotes] = useState(currentNotes ?? '');
   const [rating, setRating] = useState<number | null>(currentRating ?? null);
-  const [showNewFolder, setShowNewFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
   const [localFolders, setLocalFolders] = useState<string[]>([]);
 
   // Sync local state when props change (render-time conditional state update)
@@ -91,31 +89,21 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
       setTags(currentTags);
       setNotes(currentNotes ?? '');
       setRating(currentRating ?? null);
-      setShowNewFolder(false);
-      setNewFolderName('');
       setLocalFolders([]);
     }
   }
 
   const handleSelectFolder = async (folder: string | null) => {
     setSelectedFolder(folder);
-    setShowNewFolder(false);
-    setNewFolderName('');
     await onUpdateFolder(folder);
   };
 
-  const handleCreateFolder = async () => {
-    const trimmedName = newFolderName.trim();
-    if (trimmedName) {
-      // Add to local folders list so it appears in the UI
-      setLocalFolders(prev =>
-        prev.includes(trimmedName) ? prev : [...prev, trimmedName],
-      );
-      setSelectedFolder(trimmedName);
-      setShowNewFolder(false);
-      setNewFolderName('');
-      await onUpdateFolder(trimmedName);
-    }
+  const handleCreateFolder = async (name: string) => {
+    // Held locally so the new folder shows up in the list right away; the
+    // mutation below is what makes it real.
+    setLocalFolders(prev => (prev.includes(name) ? prev : [...prev, name]));
+    setSelectedFolder(name);
+    await onUpdateFolder(name);
   };
 
   const handleTagsChange = async (newTags: string[]) => {
@@ -244,93 +232,12 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
           )}
         </View>
 
-        {/* Folder Selection */}
-        <Text
-          size="sm"
-          weight="semibold"
-          tone="secondary"
-          style={styles.sectionLabel}
-        >
-          {t('manageRecipe.folder')}
-        </Text>
-        <View style={styles.folderList}>
-          {[null, ...displayFolders].map(folder => {
-            const isSelected =
-              folder === null ? !selectedFolder : selectedFolder === folder;
-            const isNoFolder = folder === null;
-            return (
-              <AppPressable
-                key={folder ?? 'no-folder'}
-                style={[
-                  styles.folderOption,
-                  isSelected && styles.folderOptionSelected,
-                ]}
-                onPress={() => handleSelectFolder(folder)}
-                disabled={updating}
-              >
-                <Icon
-                  name={isNoFolder ? 'folder-outline' : 'folder'}
-                  size={18}
-                  tone={isSelected ? 'primary' : 'textSecondary'}
-                />
-                <Text
-                  style={[
-                    styles.folderOptionText,
-                    isSelected && styles.folderOptionTextSelected,
-                  ]}
-                >
-                  {isNoFolder ? t('labels.noFolder') : folder}
-                </Text>
-                {!!isSelected && (
-                  <Icon name="checkmark" size={18} tone="primary" />
-                )}
-              </AppPressable>
-            );
-          })}
-        </View>
-
-        {/* Create New Folder */}
-        {showNewFolder ? (
-          <View style={styles.newFolderContainer}>
-            <ThemedBottomSheetTextInput
-              style={styles.newFolderInput}
-              placeholder={t('manageRecipe.enterFolderName')}
-              value={newFolderName}
-              onChangeText={setNewFolderName}
-              autoFocus
-              autoCapitalize="words"
-              onSubmitEditing={handleCreateFolder}
-            />
-            <AppPressable
-              style={[
-                styles.createButton,
-                !newFolderName.trim() && styles.createButtonDisabled,
-              ]}
-              onPress={handleCreateFolder}
-              disabled={!newFolderName.trim() || updating}
-            >
-              <Text
-                style={[
-                  styles.createButtonText,
-                  !newFolderName.trim() && styles.createButtonTextDisabled,
-                ]}
-              >
-                {t('manageRecipe.create')}
-              </Text>
-            </AppPressable>
-          </View>
-        ) : (
-          <AppPressable
-            style={styles.newFolderButton}
-            onPress={() => setShowNewFolder(true)}
-            disabled={updating}
-          >
-            <Icon name="add" size={18} tone="primary" />
-            <Text size="base" weight="medium" tone="accent">
-              {t('manageRecipe.createNewFolder')}
-            </Text>
-          </AppPressable>
-        )}
+        <InlineFolderChooser
+          folders={displayFolders}
+          selectedFolder={selectedFolder}
+          onSelect={handleSelectFolder}
+          onCreateFolder={handleCreateFolder}
+        />
 
         {/* Tags */}
         <Text
@@ -361,7 +268,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         </Text>
         <ThemedBottomSheetTextInput
           style={styles.notesInput}
-          placeholder={t('manageRecipe.notesPlaceholder')}
+          placeholder={t('labels.addAnyNotesAboutThisRecipe')}
           value={notes}
           onChangeText={setNotes}
           onBlur={handleNotesBlur}
@@ -423,73 +330,6 @@ const styles = StyleSheet.create(theme => ({
   },
   ratingText: {
     marginLeft: theme.spacing.sm,
-  },
-  folderList: {},
-  folderOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.xs,
-  },
-  folderOptionSelected: {
-    backgroundColor: theme.colors.primaryLight,
-  },
-  folderOptionText: {
-    flex: 1,
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-  },
-  folderOptionTextSelected: {
-    color: theme.colors.primary,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  newFolderButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  newFolderContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.lg,
-  },
-  newFolderInput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.textPrimary,
-    backgroundColor: theme.colors.surface,
-  },
-  createButton: {
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-  },
-  createButtonDisabled: {
-    backgroundColor: theme.colors.border,
-  },
-  createButtonText: {
-    fontSize: theme.fonts.size.base,
-    color: theme.colors.white,
-    fontWeight: theme.fonts.weight.semibold,
-  },
-  createButtonTextDisabled: {
-    color: theme.colors.textSecondary,
   },
   notesInput: {
     borderWidth: 1,

@@ -32,7 +32,17 @@ describe('Sign Up', () => {
   });
 
   beforeEach(async () => {
-    // Navigate to signup screen
+    // Nothing here navigates back, so from the second test on the app is
+    // already sitting on the signup screen and waiting for the landing screen
+    // can only time out. Get back to a known state first, then navigate.
+    const alreadyOnSignUp = await signUpScreen
+      .waitForScreen(1000)
+      .then(() => true)
+      .catch(() => false);
+    if (alreadyOnSignUp) {
+      await signUpScreen.goBack();
+    }
+
     await landingScreen.waitForScreen(5000);
     await landingScreen.tapSignUp();
     await signUpScreen.waitForScreen();

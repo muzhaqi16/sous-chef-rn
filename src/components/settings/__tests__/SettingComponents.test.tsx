@@ -13,7 +13,7 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
-jest.mock('#components/base/BaseSwitch', () => {
+jest.mock('#components/atoms/BaseSwitch', () => {
   const RN = require('react-native');
   const R = require('react');
   return {

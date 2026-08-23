@@ -91,7 +91,7 @@ jest.mock('#components/molecules/DynamicFormFields', () => ({
 jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
   BaseInput: () => null,
 }));
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({
     title,
     onPress,
@@ -109,7 +109,7 @@ jest.mock('#components/base/Button', () => ({
     );
   },
 }));
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => {
     const { Text } = require('react-native');
     return <Text>Loading...</Text>;

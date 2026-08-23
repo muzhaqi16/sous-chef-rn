@@ -135,14 +135,14 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             placeholder={template.name}
           />
           <DatePickerField
-            label={t('templatePreview.startDateLabel')}
+            label={t('labels.startDate')}
             value={startDate}
             onChange={setStartDate}
             minimumDate={new Date()}
             required
           />
           <EditableCounter
-            label={t('templatePreview.servingsLabel')}
+            label={t('labels.servings')}
             value={servings}
             onChangeText={setServings}
             min={1}
@@ -216,7 +216,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
             <>
               <Icon name="calendar-outline" size={20} tone="white" />
               <Text size="base" weight="semibold" style={styles.confirmText}>
-                {t('templatePreview.createMealPlan')}
+                {t('labels.createMealPlan')}
               </Text>
             </>
           )}
@@ -237,7 +237,7 @@ export const TemplatePreviewSheet: React.FC<TemplatePreviewSheetProps> = ({
               tone="accent"
               style={styles.editText}
             >
-              {t('templatePreview.editTemplate')}
+              {t('labels.editTemplate')}
             </Text>
           </Pressable>
         )}

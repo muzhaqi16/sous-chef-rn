@@ -88,7 +88,7 @@ export const TUTORIAL_STEP_CONFIG: Record<
     stepIndex: 3,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]: {
-    titleKey: 'shoppingListTutorial.checkbox.title',
+    titleKey: 'labels.markAsPurchased',
     subtitleKey: 'shoppingListTutorial.checkbox.subtitle',
     rectKey: 'checkbox',
     stepIndex: 4,

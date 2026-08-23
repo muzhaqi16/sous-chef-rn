@@ -32,7 +32,7 @@ export const IngredientCard: React.FC<IngredientCardProps> = ({
 }) => {
   const { t } = useTranslation();
   const isBackend = isBackendIngredient(ingredient);
-  const ingredientName = ingredient.name || t('recipes.unknownIngredient');
+  const ingredientName = ingredient.name || t('labels.unknown');
   const quantity = (isBackend ? ingredient.quantity : ingredient.amount) || '';
   const unit = isBackend
     ? ingredient.unit?.symbol || ''

@@ -64,7 +64,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'CreateShoppingList',
-    titleKey: 'onboardingSteps.CreateShoppingList.title',
+    titleKey: 'labels.shoppingList',
     subtitleKey: 'onboardingSteps.CreateShoppingList.subtitle',
   },
   {
@@ -74,23 +74,23 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
   {
     id: 'ProfilePictureUpload',
-    titleKey: 'onboardingSteps.ProfilePictureUpload.title',
+    titleKey: 'labels.profilePicture',
     subtitleKey: 'onboardingSteps.ProfilePictureUpload.subtitle',
   },
   {
     id: 'InviteMembers',
-    titleKey: 'onboardingSteps.InviteMembers.title',
+    titleKey: 'labels.inviteMembers',
     subtitleKey: 'onboardingSteps.InviteMembers.subtitle',
   },
   {
     id: 'BiometricSetup',
-    titleKey: 'onboardingSteps.BiometricSetup.title',
+    titleKey: 'labels.security',
     subtitleKey: 'onboardingSteps.BiometricSetup.subtitle',
   },
   {
     id: 'OnboardingComplete',
     titleKey: 'onboardingSteps.OnboardingComplete.title',
-    subtitleKey: 'onboardingSteps.OnboardingComplete.subtitle',
+    subtitleKey: 'labels.youReAllSet',
   },
 ];
 

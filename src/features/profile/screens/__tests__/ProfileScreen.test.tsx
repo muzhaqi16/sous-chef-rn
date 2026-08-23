@@ -203,7 +203,7 @@ jest.mock('#/components/templates/ActionTray/ActionTray', () => {
   return { ActionTray };
 });
 
-jest.mock('#components/base/Skeleton/ProfileSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/ProfileSkeleton', () => ({
   ProfileSkeleton: () => 'ProfileSkeleton',
 }));
 

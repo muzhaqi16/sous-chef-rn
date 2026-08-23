@@ -108,17 +108,17 @@ export const IngredientMatchingSheet: React.FC<
         {/* Summary bar */}
         <View style={styles.summaryBar}>
           <SummaryPill
-            label={t('ingredientMatching.available')}
+            label={t('labels.available')}
             count={matchSummary.available}
             tone="success"
           />
           <SummaryPill
-            label={t('ingredientMatching.partial')}
+            label={t('labels.partial')}
             count={matchSummary.partial}
             tone="warning"
           />
           <SummaryPill
-            label={t('ingredientMatching.missing')}
+            label={t('labels.missing')}
             count={matchSummary.missing}
             tone="error"
           />

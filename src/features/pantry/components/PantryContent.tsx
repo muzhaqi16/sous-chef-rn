@@ -27,7 +27,7 @@ import {
 } from './PantryContent.generated';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
-import { PantryItemSkeleton } from '#components/base/Skeleton/PantryItemSkeleton';
+import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
@@ -485,9 +485,7 @@ export const PantryContent = React.forwardRef<
                             onPress={onSettingsPress}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={t(
-                              'pantryScreen.settingsAccessibility',
-                            )}
+                            accessibilityLabel={t('labels.pantrySettings')}
                           >
                             <Icon
                               name="settings-outline"

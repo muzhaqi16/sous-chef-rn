@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View, TextInput } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 
 import {
   type EditableMatch,
@@ -25,9 +25,9 @@ type BadgeColor = 'success' | 'warning' | 'error';
 
 /** Key paths — module-level table, resolved by the row that renders it. */
 const BADGE_CONFIG: Record<string, { labelKey: string; color: BadgeColor }> = {
-  available: { labelKey: 'ingredientMatch.available', color: 'success' },
-  partial: { labelKey: 'ingredientMatch.partial', color: 'warning' },
-  missing: { labelKey: 'ingredientMatch.missing', color: 'error' },
+  available: { labelKey: 'labels.available', color: 'success' },
+  partial: { labelKey: 'labels.partial', color: 'warning' },
+  missing: { labelKey: 'labels.missing', color: 'error' },
 };
 
 /**

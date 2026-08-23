@@ -195,10 +195,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Handle form submission
   const handleSave = () => {
     if (!itemName.trim()) {
-      alertService.alert(
-        t('labels.error'),
-        t('shoppingListScreens.pleaseEnterItemName'),
-      );
+      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
       return;
     }
 
@@ -215,7 +212,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     if (netWeightNeedsUnit) {
       alertService.alert(
         t('labels.error'),
-        t('shoppingListScreens.netWeightUnitRequired'),
+        t('labels.pleaseSelectAUnitForTheNetWeight'),
       );
       return;
     }
@@ -393,11 +390,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   return (
     <FormModal
-      title={
-        isEdit
-          ? t('shoppingListScreens.editItem')
-          : t('shoppingListScreens.addItem')
-      }
+      title={isEdit ? t('labels.editItem') : t('labels.addItem')}
       onClose={() => navigation.goBack()}
       onSave={handleSave}
       loading={saving}
@@ -409,7 +402,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
         <FormInput
-          label={t('shoppingListScreens.itemName')}
+          label={t('labels.itemName')}
           required
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
@@ -420,7 +413,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       ) : (
         <ItemAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.itemName')}
+          label={t('labels.itemName')}
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
           onSelectItem={handleItemSelect}
@@ -434,7 +427,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Brand */}
       <BrandAutocompleteField
         variant="modal"
-        label={t('shoppingListScreens.brand')}
+        label={t('labels.brand')}
         value={brand}
         onChangeText={text => updateField('brand', text)}
         onBrandSelected={handleBrandSelect}
@@ -445,17 +438,17 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Category Field */}
       <CategoryAutocompleteField
         variant="modal"
-        label={t('shoppingListScreens.category')}
+        label={t('labels.category')}
         value={category}
         onChangeText={text => updateField('category', text)}
-        placeholder={t('shoppingListScreens.categoryPlaceholder')}
+        placeholder={t('labels.eGDairyProduce')}
         categoryType={CategoryType.General}
       />
 
       {/* Quantity + Unit (inline) */}
       <FieldRow>
         <EditableCounter
-          label={t('shoppingListScreens.quantity')}
+          label={t('labels.quantity')}
           required
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
@@ -466,11 +459,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
         <UnitAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.unit')}
+          label={t('storageLocationForm.unit')}
           value={unit}
           onChangeText={text => updateField('unit', text)}
           onUnitSelected={handleUnitSelect}
-          placeholder={t('shoppingListScreens.unitPlaceholder')}
+          placeholder={t('labels.pcsKgEtc')}
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
         />
       </FieldRow>
@@ -478,7 +471,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Net weight + its unit (inline) */}
       <FieldRow>
         <FormInput
-          label={t('shoppingListScreens.netWeight')}
+          label={t('labels.netWeight')}
           value={netWeight}
           onChangeText={text => updateField('netWeight', text)}
           placeholder={t('shoppingListScreens.netWeightPlaceholder')}
@@ -489,11 +482,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
         <UnitAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.netWeightUnit')}
+          label={t('labels.weightUnit')}
           value={netWeightUnit}
           onChangeText={text => updateField('netWeightUnit', text)}
           onUnitSelected={handleNetWeightUnitSelect}
-          placeholder={t('shoppingListScreens.unitPlaceholder')}
+          placeholder={t('labels.pcsKgEtc')}
           testID={
             isEdit
               ? 'edit-item-net-weight-unit-picker'

@@ -51,7 +51,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { Telemetry } from '#/services/telemetry';
 import { getShoppingListPermissionsWithOwner } from '#/utils/permissions/shoppingListPermissions';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 
 /**
@@ -427,7 +427,7 @@ export const ShoppingListMainContent: React.FC<
       <TabMainScreen testID="shopping-list-screen">
         <TabScreenHeader
           label={t('shoppingListScreen.label')}
-          title={t('shoppingListScreen.title')}
+          title={t('labels.shoppingList')}
         />
         <DataStateView
           state={listsState}
@@ -451,7 +451,7 @@ export const ShoppingListMainContent: React.FC<
     title: t('shoppingListScreen.emptyTitle'),
     description: t('shoppingListScreen.emptyDescription'),
     action: {
-      label: t('shoppingListScreen.emptyAction'),
+      label: t('labels.addItem'),
       onPress: addItemSheet.open,
     },
   };
@@ -460,7 +460,7 @@ export const ShoppingListMainContent: React.FC<
     <TabMainScreen testID="shopping-list-screen">
       <TabScreenHeader
         label={t('shoppingListScreen.label')}
-        title={currentList?.name || t('shoppingListScreen.title')}
+        title={currentList?.name || t('labels.shoppingList')}
         headerRight={headerRight}
       />
       {searchBarHeader}

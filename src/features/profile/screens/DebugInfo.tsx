@@ -70,7 +70,7 @@ export const DebugInfo: React.FC = () => {
       .join('\n\n');
 
     Clipboard.setString(allDebugInfo);
-    alertService.alert(t('debugInfo.copiedTitle'), t('debugInfo.copiedAll'));
+    alertService.alert(t('labels.copied'), t('debugInfo.copiedAll'));
   };
 
   const handleCopySection = (
@@ -83,7 +83,7 @@ export const DebugInfo: React.FC = () => {
 
     Clipboard.setString(sectionInfo);
     alertService.alert(
-      t('debugInfo.copiedTitle'),
+      t('labels.copied'),
       t('debugInfo.copiedSection', { section: sectionName }),
     );
   };
@@ -91,7 +91,7 @@ export const DebugInfo: React.FC = () => {
   // Only show in development, local, or staging builds — or for users with dev tools access
   if (!Environment.shouldEnableDebugFeatures() && !canAccessDevTools) {
     return (
-      <ProfileScreenWrapper title={t('debugInfo.title')}>
+      <ProfileScreenWrapper title={t('labels.debugInfo')}>
         <View style={styles.notAvailableContainer}>
           <Text size="md" tone="secondary" align="center">
             {t('debugInfo.notAvailable')}
@@ -102,7 +102,7 @@ export const DebugInfo: React.FC = () => {
   }
 
   return (
-    <ProfileScreenWrapper title={t('debugInfo.title')}>
+    <ProfileScreenWrapper title={t('labels.debugInfo')}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text
@@ -131,7 +131,7 @@ export const DebugInfo: React.FC = () => {
                 onPress={() => handleCopySection(sectionName, sectionData)}
               >
                 <Text size="xs" weight="semibold" tone="accent">
-                  {t('debugInfo.copy')}
+                  {t('labels.copy')}
                 </Text>
               </AppPressable>
             </View>

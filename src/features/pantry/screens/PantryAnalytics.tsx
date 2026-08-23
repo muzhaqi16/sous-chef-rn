@@ -51,7 +51,7 @@ export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
   };
 
   const routes: TabRoute[] = [
-    { key: 'usage', title: t('pantryAnalytics.tabUsage') },
+    { key: 'usage', title: t('labels.usage') },
     { key: 'waste', title: t('pantryAnalytics.tabWaste') },
     { key: 'ledger', title: t('pantryAnalytics.tabLedger') },
   ];

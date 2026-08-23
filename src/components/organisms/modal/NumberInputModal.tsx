@@ -195,7 +195,7 @@ export const NumberInputModal: React.FC<NumberInputModalProps> = ({
   const validateInput = (numValue: number): string | null => {
     // Check required
     if (required && (isNaN(numValue) || inputValue.trim() === '')) {
-      return t('numberInputModal.required');
+      return t('labels.thisFieldIsRequired');
     }
 
     // Check min

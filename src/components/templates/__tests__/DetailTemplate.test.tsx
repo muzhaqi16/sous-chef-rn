@@ -36,7 +36,7 @@ jest.mock('../../molecules/Header', () => {
   };
 });
 
-jest.mock('../../base/Button', () => {
+jest.mock('#components/atoms/Button', () => {
   const { Pressable, Text: RNText } = require('react-native');
   return {
     Button: ({

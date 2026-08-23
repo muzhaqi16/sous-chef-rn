@@ -59,7 +59,7 @@ export const AuthLoadingOverlay: React.FC<{ visible: boolean }> = ({
   return (
     <LoadingOverlay
       visible={visible}
-      message={t('loadingOverlay.authenticating')}
+      message={t('labels.authenticating')}
       transparent={false}
     />
   );
@@ -85,7 +85,7 @@ export const BiometricLoadingOverlay: React.FC<{ visible: boolean }> = ({
   return (
     <LoadingOverlay
       visible={visible}
-      message={t('loadingOverlay.waitingForAuth')}
+      message={t('labels.waitingForAuthentication')}
       transparent={false}
     />
   );

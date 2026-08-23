@@ -85,7 +85,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={t('a11y.counterValue', {
-          label: label || t('a11y.quantityLabel'),
+          label: label || t('labels.quantity'),
           value,
         })}
         accessibilityValue={{

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { EmptyState } from '#components/base/EmptyState';
-import { PantryScreenSkeleton } from '#components/base/Skeleton/PantryScreenSkeleton';
+import { EmptyState } from '#components/atoms/EmptyState';
+import { PantryScreenSkeleton } from '#components/atoms/Skeleton/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
 import type { PantryEmptyStateProps } from './pantryDisplay/types';
 
@@ -34,7 +34,7 @@ export function PantryEmptyState({
         action={
           onSelectHome
             ? {
-                label: t('pantryScreen.noHomeAction'),
+                label: t('labels.getStarted'),
                 onPress: onSelectHome,
               }
             : undefined
@@ -96,7 +96,7 @@ export function PantryEmptyState({
         action={
           onAddItem
             ? {
-                label: t('pantryScreen.searchNoResultsAction'),
+                label: t('labels.addItem'),
                 onPress: onAddItem,
               }
             : undefined
@@ -128,7 +128,7 @@ export function PantryEmptyState({
       style={{ minHeight: EMPTY_STATE_MIN_HEIGHT }}
       action={
         onAddItem
-          ? { label: t('pantryScreen.emptyAction'), onPress: onAddItem }
+          ? { label: t('labels.addItems'), onPress: onAddItem }
           : undefined
       }
     />
