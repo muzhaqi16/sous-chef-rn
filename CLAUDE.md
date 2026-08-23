@@ -538,14 +538,26 @@ Defaults:
 - `errorPolicy: 'all'` so partial-data errors are surfaced to the hook, not swallowed.
 - Avoid `refetchQueries` unless `cache.modify` would require duplicating server logic.
 - Build optimistic responses from the existing cache via `cache.readFragment` + spread, never with hand-rolled placeholder shapes that can drift from the schema.
-- **A refusal that names a `field` carries the rule's own sentence in `message`.**
-  Since 2026-08-22 (`sous-chef-api/docs/api/breaking-changes.md`) every
-  field-specific `ValidationError` returns its rule's wording instead of the fixed
-  "Validation failed for field: …" — `field` routes, `message` displays. Surface it
-  with `fieldValidationMessage(result.data)` (`src/utils/errors/mutationPayload.ts`)
-  before falling back to generic copy, as `useUpdatePantryItem` and
-  `useUpdateShoppingItem` do; an unattributed refusal (no `field`) keeps the generic
-  copy. Never branch on `message` text.
+- **A refusal that names a `field` routes to LOCALIZED copy. Never display the
+  server's `message`.** `field` says which input was refused — the actionable part
+  when one mutation carries four sub-inputs — and `alertRejectedMutation` /
+  `alertIfRejected` already turn it into copy from `errors.field.*`, falling back to
+  the caller's own string for an unmapped field or an unattributed refusal. Callers
+  pass their generic copy and get the specific version for free; do not re-implement
+  the rule at a call site.
+
+  `message` is server-authored **English**: the client sends no `Accept-Language`
+  and its token carries no locale, so there is nothing for the server to localize
+  against, and the API says so itself — *"use error codes for programmatic handling,
+  not message strings"* and *"map error codes to localized messages in your client"*
+  (`sous-chef-api/docs/api/errors.md`, Best Practices). Displaying it puts English in
+  front of every es / it / sq user and skips the plural-category, addressee-gender
+  and canonical-vocabulary guards the app enforces on all its own copy.
+
+  The cost is recorded rather than hidden: one field can carry several rules —
+  `unit` refuses both "batches still exist" and "no conversion path" — so its string
+  names both remedies. Adding a mapping to `errors.field.*` is opt-in; a field with
+  none simply keeps the caller's copy. Never branch on `message` text.
 - **Never pair `optimisticResponse` with `context: { localFirst: true }`.** Apollo tears the optimistic layer down as soon as the mutation completes, and offline that completion is `queueLink`'s null result — so the change reverts on screen while it sits in the queue. Local-first writes to the cache permanently before firing instead.
 
 **Optimistic entities must be COMPLETE for every query that reads them.** Apollo has no
@@ -659,6 +671,7 @@ reads).
   That header is the contract for keeping the fragment shared. Current set:
   `PantryItemBatchFragment`, `ShoppingListItemDisplayFragment`,
   `ShoppingListOwnershipFragment`, `ShoppingListCollaboratorFragment`,
+  `ShoppingListItemPurchaseInfoFragment`,
   `MealPlanDisplay`, `MealTemplateDisplay`, `MealTemplateItemFragment`,
   `BasicRecipeFragment`, `RecipeIngredientFragment`, `RecipeReviewFragment`,
   `LoginUser`, `PartialUser`.

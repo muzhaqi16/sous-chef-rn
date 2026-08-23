@@ -317,9 +317,11 @@ describe('useQuantityEditModal', () => {
     // A refusal payload resolves with no `error`, so `onError` never fires and
     // this hook is the only alerter — again exactly one.
     expect(mockAlert).toHaveBeenCalledTimes(1);
+    // Copy for the field the refusal named, in the app's own words — the
+    // server's "Invalid fraction format" is English and is never shown.
     expect(mockAlert).toHaveBeenCalledWith(
       'Error',
-      'Could not adjust the quantity.',
+      "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
     );
   });
 

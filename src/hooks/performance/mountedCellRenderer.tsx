@@ -22,19 +22,48 @@ export class MountedCellRegistry {
 
   private onChange: () => void = () => {};
 
-  /** Called after every registration change. */
+  private pendingFlush: number | null = null;
+
+  /** Called once per frame in which registrations changed. */
   setOnChange(listener: () => void): void {
     this.onChange = listener;
   }
 
+  /**
+   * Coalesce the listener to one call per frame.
+   *
+   * A commit registers every cell it mounted, moved or unmounted, and the
+   * listener is a whole visible-range computation — a layout-table lookup plus
+   * a scan of this map. Calling it inline made that cost quadratic in the cells
+   * a commit touched, on every scroll, in release builds as well as dev.
+   *
+   * A frame rather than a microtask: a microtask still runs inside the commit,
+   * before layout has settled, and the listener reads the layout table. It is
+   * also the granularity the metric it feeds is recorded at.
+   */
+  private scheduleFlush(): void {
+    if (this.pendingFlush !== null) return;
+    this.pendingFlush = requestAnimationFrame(() => {
+      this.pendingFlush = null;
+      this.onChange();
+    });
+  }
+
   set(cellId: number, index: number): void {
     this.cells.set(cellId, index);
-    this.onChange();
+    this.scheduleFlush();
   }
 
   delete(cellId: number): void {
     this.cells.delete(cellId);
-    this.onChange();
+    this.scheduleFlush();
+  }
+
+  /** Drop a pending frame, so a flush cannot land after the list unmounts. */
+  dispose(): void {
+    if (this.pendingFlush === null) return;
+    cancelAnimationFrame(this.pendingFlush);
+    this.pendingFlush = null;
   }
 
   get size(): number {

@@ -195,34 +195,31 @@ export function BottomSheetAutocompleteInput<T>({
     onSearchChange?.(text);
   };
 
-  const handleSelectItem = (item: T) => {
+  // Every exit closes the picker the same way; only what happens BEFORE differs.
+  const dismissPicker = () => {
     setUserDismissed(true);
     setHasInteracted(false);
     setShowAutocomplete(false);
-    onSelectItem(item);
     onModalClose?.();
+  };
+
+  const handleSelectItem = (item: T) => {
+    onSelectItem(item);
+    dismissPicker();
   };
 
   const handleSubmitCustomValue = () => {
     if (searchTerm.trim()) {
       onChangeText(searchTerm.trim());
     }
-    setUserDismissed(true);
-    setHasInteracted(false);
-    setShowAutocomplete(false);
-    onModalClose?.();
+    dismissPicker();
   };
 
   // The header's close button. Nothing to commit: `handleBottomSheetTextChange`
   // already wrote every keystroke back through `onChangeText`, so the field
   // holds whatever was typed. Content panning is disabled on this sheet, so
   // without this button the only ways out are the backdrop and the return key.
-  const handleClose = () => {
-    setUserDismissed(true);
-    setHasInteracted(false);
-    setShowAutocomplete(false);
-    onModalClose?.();
-  };
+  const handleClose = dismissPicker;
 
   const defaultEmptyComponent = () => {
     // Show offline-specific message when not online

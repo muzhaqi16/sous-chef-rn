@@ -5,7 +5,7 @@
       "sessionInvalid": "Sesioni juaj nuk është i vlefshëm. Hyni sërish",
       "sessionExpired": "Sesioni juaj ka skaduar. Hyni sërish",
       "sessionEnded": "Sesioni skadoi. Hyni sërish",
-      "sessionRetrying": "Sesioni po rilidhet. Provo përsëri.",
+      "sessionRetrying": "Sesioni po rilidhet. Provoni përsëri.",
       "credentialsInvalid": "Email ose fjalëkalim i pasaktë",
       "accountLocked": "Llogaria juaj është bllokuar përkohësisht për siguri",
       "accountSuspended": "Kjo llogari nuk është më aktive. Kontaktoni mbështetjen.",
@@ -154,7 +154,15 @@
     "saveFailed": "Ruajtja dështoi",
     "generic": "Ndodhi një gabim",
     "noActiveMealPlan": "Asnjë plan vaktesh aktiv. Krijo një së pari.",
-    "somethingWentWrongTitle": "Diçka shkoi keq"
+    "somethingWentWrongTitle": "Diçka shkoi keq",
+    "field": {
+      "unit": "Njësia e këtij artikulli nuk mund të ndryshohet tani. Zbraz së pari grupet e tij ose zgjidh një njësi të përshtatshme.",
+      "netWeight": "Vendos si madhësinë e paketimit ashtu edhe njësinë e saj, ose lëri të dyja bosh.",
+      "quantity": "Ajo sasi nuk është e vlefshme. Provo një numër si 2, 0.5 ose 1 1/2.",
+      "newQuantity": "Ajo sasi nuk është e vlefshme. Provo një numër si 2, 0.5 ose 1 1/2.",
+      "itemName": "Vendos një emër për këtë artikull.",
+      "batchId": "Ai grup nuk është më i disponueshëm. Rifresko dhe provo përsëri."
+    }
   },
   "success": {
     "itemAdded": "Artikulli u shtua",

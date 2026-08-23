@@ -80,6 +80,9 @@ export const ShoppingListDetailsStep: React.FC<
       netWeight,
       netWeightUnit,
       netWeightUnitId,
+      priority,
+      storeId,
+      storeName,
     },
     updateField,
     buildUnitInput,
@@ -90,11 +93,6 @@ export const ShoppingListDetailsStep: React.FC<
   const { addItem } = useAddShoppingItem({ listId: shoppingListId, refetch });
   const [saving, setSaving] = useState(false);
 
-  // Manual-add extras the API supports (all optional).
-  const [priority, setPriority] = useState(0);
-  const [storeName, setStoreName] = useState('');
-  const [storeId, setStoreId] = useState<string | null>(null);
-
   const handleUnitSelect = (unitId: string | null) => {
     updateField('selectedUnitId', unitId);
   };
@@ -103,11 +101,18 @@ export const ShoppingListDetailsStep: React.FC<
     id => updateField('brandId', id),
     name => updateField('brand', name),
   );
-  const handleNetWeightUnitSelected = makeIdNameHandler(
-    id => updateField('netWeightUnitId', id),
-    name => updateField('netWeightUnit', name),
+  // Not `makeIdNameHandler`: that writes the display NAME, and
+  // `UnitAutocompleteField` has already written the symbol through
+  // `onChangeText`. Writing the name back turns "g" into "gram". The handler is
+  // still the right one for brand and store, where the name IS the display
+  // value.
+  const handleNetWeightUnitSelected = (id: string | null) => {
+    updateField('netWeightUnitId', id);
+  };
+  const handleStoreSelected = makeIdNameHandler(
+    id => updateField('storeId', id),
+    name => updateField('storeName', name),
   );
-  const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
 
   const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
@@ -281,7 +286,9 @@ export const ShoppingListDetailsStep: React.FC<
           label={t('shoppingListScreens.priority')}
           options={PRIORITY_OPTIONS}
           value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
-          onChange={option => setPriority(PRIORITY_VALUES[option] ?? 0)}
+          onChange={option =>
+            updateField('priority', PRIORITY_VALUES[option] ?? 0)
+          }
           formatLabel={formatPriorityLabel}
         />
 
@@ -289,7 +296,7 @@ export const ShoppingListDetailsStep: React.FC<
           variant="modal"
           label={t('shoppingListScreens.store')}
           value={storeName}
-          onChangeText={setStoreName}
+          onChangeText={text => updateField('storeName', text)}
           onStoreSelected={handleStoreSelected}
           placeholder={t('shoppingListScreens.storePlaceholder')}
           helperText={t('labels.storeSelectHint')}

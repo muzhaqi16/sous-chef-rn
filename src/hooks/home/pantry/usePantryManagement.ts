@@ -21,12 +21,23 @@ import { usePantryQuery, type PantryQueryOptions } from './usePantryQuery';
 import { usePantryStats } from './usePantryStats';
 import { usePantryItemMutations } from './usePantryItemMutations';
 
+/**
+ * Everything a caller can vary, in one bag.
+ *
+ * These were four positional parameters, which meant a caller that wanted only
+ * the last of them wrote `(id, null, null, undefined, { … })` — three
+ * placeholders whose meaning is invisible at the call site.
+ */
+export interface PantryManagementOptions extends PantryQueryOptions {
+  filters?: PantryItemFilters | null;
+  orderBy?: PantryItemOrderBy | null;
+  /** Page size; defaults to the whole page (see `usePantryQuery`). */
+  first?: number;
+}
+
 export function usePantryManagement(
   pantryId: string | undefined,
-  itemsFilter?: PantryItemFilters | null,
-  itemsOrderBy?: PantryItemOrderBy | null,
-  itemsFirst?: number,
-  options?: PantryQueryOptions,
+  options?: PantryManagementOptions,
 ) {
   // Query hook - fetches pantry data
   const {
@@ -44,7 +55,13 @@ export function usePantryManagement(
       isLoadingMore,
     },
     actions: { refetch, loadMore },
-  } = usePantryQuery(pantryId, itemsFilter, itemsOrderBy, itemsFirst, options);
+  } = usePantryQuery(
+    pantryId,
+    options?.filters,
+    options?.orderBy,
+    options?.first,
+    options,
+  );
 
   // Stats hook - computes location counts
   // Use stats.totalItems for the "all" tab (always full count, not filtered)

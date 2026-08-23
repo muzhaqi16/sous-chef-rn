@@ -12,11 +12,7 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { useStore } from '#store';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
-import {
-  reconnectWebSocket,
-  isWebSocketReconnecting,
-  registerTokenRefresh,
-} from './wsLink';
+import { reconnectWebSocket, registerTokenRefresh } from './wsLink';
 
 // The Apollo client singleton is injected after creation rather than imported
 // directly, which would form a circular dependency:
@@ -283,14 +279,15 @@ const performTokenRefresh = async (): Promise<string | null> => {
     // Update tokens in store
     state.setTokens({ accessToken: newToken, refreshToken: newRefreshToken });
 
-    // Reconnect WebSocket if needed
-    if (!isWebSocketReconnecting()) {
-      try {
-        reconnectWebSocket();
-      } catch (wsError) {
-        logger.warn('WebSocket reconnection failed:', wsError);
-        // Don't fail the entire refresh for WebSocket issues
-      }
+    // Force the socket to re-dial so it presents the token just stored.
+    // `reconnectWebSocket` debounces on its own; the guard that used to stand
+    // here read a flag that was set and cleared inside one synchronous block,
+    // so it was never anything but true.
+    try {
+      reconnectWebSocket();
+    } catch (wsError) {
+      logger.warn('WebSocket reconnection failed:', wsError);
+      // Don't fail the entire refresh for WebSocket issues
     }
 
     // Reset retry count on successful refresh

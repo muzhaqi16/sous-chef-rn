@@ -44,7 +44,7 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
-import { fieldValidationMessage } from '#/utils/errors/mutationPayload';
+import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -174,18 +174,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
-  // The autocomplete fields hand back (id, name); the name is kept only when a
+  // The brand field hands back (id, name); the name is kept only when a
   // suggestion was actually picked, so free typing keeps the text as typed.
   const handleBrandSelect = (id: string | null, name: string | null) => {
     updateField('brandId', id);
     if (name) updateField('brand', name);
   };
-  const handleNetWeightUnitSelect = (
-    id: string | null,
-    name: string | null,
-  ) => {
+
+  // Only the id. `UnitAutocompleteField` writes the SYMBOL through
+  // `onChangeText` before it calls this, so writing the unit's `name` back here
+  // would replace "g" with "gram" — which is neither what `setFromItem`
+  // repopulates the field with nor what the item detail renders. Same shape as
+  // `handleUnitSelect` above.
+  const handleNetWeightUnitSelect = (id: string | null) => {
     updateField('netWeightUnitId', id);
-    if (name) updateField('netWeightUnit', name);
   };
 
   const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
@@ -256,15 +258,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
           if (updatePayload) {
             navigation.goBack();
           } else if (result.data) {
-            // A refusal that names a field carries the rule's own sentence —
-            // that is what the user can act on; the generic copy is for an
-            // unattributed one.
+            // A refusal that names a field gets copy for that field — this
+            // mutation carries `brand`, `netWeight`, `unit` and `storage` in
+            // one call, so "couldn't update" alone does not say which was
+            // refused. Localized, keyed off `field`; the server's own message
+            // is English and is not shown (see `validationFieldName`).
+            const refusedField = validationFieldName(result.data);
+            const generic = t('shoppingListScreens.serverNotUpdated', {
+              action: t('shoppingListScreens.updated'),
+            });
             alertService.alert(
               t('labels.error'),
-              fieldValidationMessage(result.data) ??
-                t('shoppingListScreens.serverNotUpdated', {
-                  action: t('shoppingListScreens.updated'),
-                }),
+              refusedField
+                ? t(`errors.field.${refusedField}`, { defaultValue: generic })
+                : generic,
             );
           } else {
             alertService.alert(

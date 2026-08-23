@@ -41,13 +41,26 @@ import {
  */
 
 /**
- * Attempts before this gives up and reports. A restart that keeps failing is
- * failing for a reason a seventh will not fix. Giving up is not permanent: a
- * socket that connects afterwards re-arms the count from zero.
+ * Attempts before this gives up and reports, counted within ONE episode. A
+ * restart that keeps failing is failing for a reason a seventh will not fix.
+ * Giving up is not permanent: a socket that connects afterwards re-arms the
+ * count from zero.
  */
-const MAX_RESTART_ATTEMPTS = 6;
+export const MAX_RESTART_ATTEMPTS = 6;
 const BASE_RESTART_DELAY_MS = 1000;
 const MAX_RESTART_DELAY_MS = 30_000;
+
+/**
+ * How long a restarted subscription has to stay error-free before the count is
+ * considered spent on a finished episode and returns to zero.
+ *
+ * The counterpart of `CONNECTION_STABLE_MS` in `wsLink.ts`, which re-arms the
+ * socket's dial counter the same way and for the same reason: a counter that
+ * only ever goes up stops measuring "consecutive failures" and starts measuring
+ * "faults this session", so an accumulation of separately-recovered faults
+ * exhausts it and leaves the subscription dark.
+ */
+export const RESTART_STABLE_MS = 10_000;
 
 const getRestartDelay = (attempt: number): number => {
   const delay = Math.min(
@@ -60,7 +73,6 @@ const getRestartDelay = (attempt: number): number => {
 
 /** The part of `useSubscription`'s result this needs. */
 export interface RecoverableSubscription {
-  data?: unknown;
   error?: ErrorLike;
   restart: () => void;
 }
@@ -71,19 +83,10 @@ export function useSubscriptionTransportRecovery(
   /** The same `skip` passed to `useSubscription`. */
   skip: boolean,
 ): void {
-  const { data, error, restart } = subscription;
+  const { error, restart } = subscription;
   const isOnline = useIsOnline();
 
   const [attempt, setAttempt] = useState(0);
-
-  // Any delivery proves the transport is carrying this subscription again, so
-  // the escalation resets. Adjusting state during render rather than in an
-  // effect keeps the reset in the same commit as the data that justified it.
-  const [lastData, setLastData] = useState(data);
-  if (data !== lastData) {
-    setLastData(data);
-    if (attempt !== 0) setAttempt(0);
-  }
 
   // `restart()` throws when the subscription is skipped, so `skip` gates every
   // path that can reach it. It is read at render, so flipping it cancels a
@@ -115,11 +118,31 @@ export function useSubscriptionTransportRecovery(
     return () => clearTimeout(timeoutId);
   }, [shouldRecover, exhausted, isOnline, attempt, restart, subscriptionName]);
 
+  // The count is spent on an EPISODE, not on the session. Apollo clears `error`
+  // the moment `restart()` swaps in a fresh observable, so a restart that works
+  // ends the episode here; if nothing errors again within the window, the next
+  // fault gets the full number of attempts.
+  //
+  // Delivery is deliberately NOT the signal. It was, and it cannot be: a healthy
+  // subscription can sit idle for hours, so "no events yet" is indistinguishable
+  // from "the restart failed" — which is how six separately-recovered faults
+  // used to exhaust the count and disable recovery for the rest of the session.
+  useEffect(() => {
+    if (shouldRecover || attempt === 0) return;
+
+    const timeoutId = setTimeout(() => setAttempt(0), RESTART_STABLE_MS);
+    return () => clearTimeout(timeoutId);
+  }, [shouldRecover, attempt]);
+
   // A socket that connected is evidence this can work now, whoever revived it.
   // Restart at once instead of sitting out the rest of a backoff, and re-arm
   // the counter — including past the cap, so a long outage does not leave a
   // subscription dark for the session. The socket's own stability window is
   // what stops a connect/close loop from turning this into a hot restart cycle.
+  //
+  // This is also the ONLY way out of exhaustion, and it stays reachable: while
+  // exhausted the error persists, so `shouldRecover` is still true and this
+  // listener is still registered.
   useEffect(() => {
     if (!shouldRecover) return;
 
@@ -129,13 +152,29 @@ export function useSubscriptionTransportRecovery(
     });
   }, [shouldRecover, restart]);
 
-  // Reported once per exhaustion, without a latch to keep in sync: `exhausted`
-  // only becomes true once, and nothing increments `attempt` past the cap. A
-  // socket reconnect resets the count, which is exactly when a later failure
-  // deserves reporting again.
+  // Reported once per exhaustion, and it needs a latch. `exhausted` is not a
+  // one-way door: `restart()` clears Apollo's `error`, so while the count sits
+  // at the cap every clear-and-return of the error would re-run the effect with
+  // `exhausted` still true and file the report again — one incident, several
+  // "did not recover" reports.
+  //
+  // The latch is the payload itself, captured during render and cleared by the
+  // count returning to zero — the same event that re-arms recovery, so the two
+  // cannot drift: a subscription that recovers and later exhausts itself again
+  // does report again. Holding the message rather than a boolean keeps the
+  // effect's dependencies to values that change once per episode, which is what
+  // makes "fires exactly once" a property of the deps rather than of a guard.
   const errorMessage = error?.message;
+  const [exhaustionReport, setExhaustionReport] = useState<string | null>(null);
+
+  if (attempt === 0 && exhaustionReport !== null) {
+    setExhaustionReport(null);
+  } else if (shouldRecover && exhausted && exhaustionReport === null) {
+    setExhaustionReport(errorMessage ?? '');
+  }
+
   useEffect(() => {
-    if (!shouldRecover || !exhausted) return;
+    if (exhaustionReport === null) return;
 
     errorService.reportError(
       new Error(
@@ -144,8 +183,8 @@ export function useSubscriptionTransportRecovery(
       {
         operation: 'subscriptionTransportRecoveryExhausted',
         subscription: subscriptionName,
-        error: errorMessage,
+        error: exhaustionReport || undefined,
       },
     );
-  }, [shouldRecover, exhausted, subscriptionName, errorMessage]);
+  }, [exhaustionReport, subscriptionName]);
 }

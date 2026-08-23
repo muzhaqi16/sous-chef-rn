@@ -4,7 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { formatQuantity } from '#/utils/formatQuantity';
+import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -110,6 +110,13 @@ export const ShoppingListItemDetail: React.FC<
 
   // Images and nutrition from catalog item
   // Must be called before early return to follow rules of hooks
+  // The shared formatter, not a local template: it upscales g→kg and ml→L, so a
+  // 1500 g package reads the same here as it does in the pantry.
+  const netWeightDisplay = formatNetWeightDisplay(
+    item?.netWeight,
+    item?.netWeightUnit,
+  );
+
   const itemPhotos = galleryPhotos(item?.item?.photos);
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = itemPhotos.length > 0;
@@ -270,12 +277,10 @@ export const ShoppingListItemDetail: React.FC<
               </Text>
             </DetailRow>
           )}
-          {item.netWeight != null && (
+          {!!netWeightDisplay && (
             <DetailRow label={t('shoppingListScreens.netWeight')}>
               <Text size="sm" weight="medium">
-                {`${formatQuantity(item.netWeight)} ${
-                  item.netWeightUnit?.symbol ?? item.netWeightUnit?.name ?? ''
-                }`.trim()}
+                {netWeightDisplay}
               </Text>
             </DetailRow>
           )}

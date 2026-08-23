@@ -9,27 +9,13 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
   quantity
   quantityInput
   displayFormat
-  # Selected in full, not just `isPurchased`. This fragment is how another
-  # user's change reaches this device, and the five purchase fields are one
-  # fact: a write carrying only the flag makes the cache CLEAR the amounts and
-  # the purchaser (see the ShoppingListItemPurchaseInfo policy in
-  # apollo/cache.ts), so the detail screen would show a purchase with nobody
-  # attached to it. This is a read-back QUERY over HTTP — the subscription
-  # itself carries only the envelope plus an id — so the depth-5 subscription
-  # budget does not apply here.
+  # This fragment is how another user's change reaches this device, so it
+  # carries the whole purchase record. Worth recording that it can: this is a
+  # read-back QUERY over HTTP — the subscription itself carries only the
+  # envelope plus an id — so the depth-5 subscription budget does not apply,
+  # which it would at `purchaseInfo > purchasedBy > profile > displayName`.
   purchaseInfo {
-    isPurchased
-    purchasedQuantity
-    purchasedPrice
-    purchaseDate
-    purchasedBy {
-      id
-      profile {
-        id
-        displayName
-        avatar
-      }
-    }
+    ...ShoppingListItemPurchaseInfoFragment
   }
   version
   updatedAt

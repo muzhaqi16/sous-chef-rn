@@ -193,8 +193,12 @@ const readPurchased = (cache: ReturnType<typeof seedCache>) =>
 
 // The sentence the API returns when a purchase has no name to record against
 // (the row's catalog item was hard-deleted and it carries no name of its own).
+// Server-authored English — the fixture carries it, and the app never shows it.
 const NAMELESS_ROW_MESSAGE =
   'This item has no name to record a purchase against. Add a name first.';
+
+// What the user actually sees: the app's own copy for `field: 'itemName'`.
+const ITEM_NAME_COPY = 'Enter a name for this item.';
 
 // Toggle twin of updatePurchaseMock's 'fieldRefusal' outcome.
 function toggleFieldRefusalMock(): MockedResponse {
@@ -397,7 +401,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(mockAlert).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the server's sentence when the refusal names a field", async () => {
+  it('shows copy for the field the refusal names', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
@@ -413,7 +417,9 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     });
 
     expect(readPurchased(cache)).toBe(false);
-    expect(mockAlert).toHaveBeenCalledWith(
+    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
+    // Never the server's English, however specific it is.
+    expect(mockAlert).not.toHaveBeenCalledWith(
       expect.anything(),
       NAMELESS_ROW_MESSAGE,
     );
@@ -433,9 +439,6 @@ describe('useToggleShoppingItem — recordPurchase', () => {
 
     expect(toggled).toBe(false);
     expect(readPurchased(cache)).toBe(false);
-    expect(mockAlert).toHaveBeenCalledWith(
-      expect.anything(),
-      NAMELESS_ROW_MESSAGE,
-    );
+    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
   });
 });

@@ -33,7 +33,6 @@ const WS_URL = env.WEB_SOCKET_URL || Environment.getApiConfig().wsUrl;
 // retry silently gives up. A session that ends must therefore drop the client
 // rather than keep a poisoned one for the next sign-in.
 let currentClient: Client | null = null;
-let isReconnecting = false;
 let lastReconnectTime = 0;
 const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 
@@ -155,10 +154,34 @@ const waitUntilOnline = (): Promise<void> => {
   });
 };
 
+/** Let every parked retry proceed. The dial is the point here. */
 const releaseOnlineWaiters = () => {
   const waiters = onlineWaiters;
   onlineWaiters = [];
   waiters.forEach(resolve => resolve());
+};
+
+/**
+ * Drop every parked retry WITHOUT letting it dial.
+ *
+ * Resolving a waiter is the dial: graphql-ws constructs the socket on the line
+ * after `await url()` (`dist/client.js`, inside the `connecting` promise) with
+ * no `disposed` check in between, so a session end that released its waiters
+ * opened one connection against credentials the server has already refused.
+ *
+ * Rejecting instead is worse, not better: that `await` sits in an async IIFE
+ * inside a `new Promise` executor, so a rejection there is unhandled AND leaves
+ * `connecting` permanently unsettled.
+ *
+ * So the promise is simply abandoned along with the client that owns it —
+ * `disposeWebSocket` drops that reference, and the next sign-in builds a fresh
+ * client. The cost is that a `dispose()` awaiting such a `connecting` never
+ * settles; it is called un-awaited and immediately dereferenced, so nothing
+ * observes it. Re-check on a graphql-ws upgrade: a `disposed` check between
+ * `await url()` and the socket construction would make releasing correct again.
+ */
+const abandonOnlineWaiters = () => {
+  onlineWaiters = [];
 };
 
 /**
@@ -338,7 +361,6 @@ const createWsClient = () => {
     },
     on: {
       connected: (_socket: unknown, payload: unknown) => {
-        isReconnecting = false;
         persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — backfill
@@ -374,7 +396,6 @@ const createWsClient = () => {
         }
       },
       closed: (event: unknown) => {
-        isReconnecting = false;
         // A close before the stability window must NOT reset the backoff
         // counter — clear the pending reset so rapid connect→close cycles
         // (e.g. subscription-cap rejections) escalate the backoff.
@@ -499,7 +520,6 @@ const createWsClient = () => {
         // re-subscribe brings delivery back.
       },
       error: (error: unknown) => {
-        isReconnecting = false;
         const message =
           error &&
           typeof error === 'object' &&
@@ -582,13 +602,11 @@ export const wsLink = new GraphQLWsLink(wsClientFacade);
 export const reconnectWebSocket = () => {
   const now = Date.now();
 
-  // Debounce reconnection attempts
-  if (isReconnecting || now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
-    logger.info('🔌 WebSocket reconnection debounced or already in progress');
+  if (now - lastReconnectTime < RECONNECT_DEBOUNCE_MS) {
+    logger.info('🔌 WebSocket reconnection debounced');
     return;
   }
 
-  isReconnecting = true;
   lastReconnectTime = now;
 
   try {
@@ -599,8 +617,6 @@ export const reconnectWebSocket = () => {
       error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString(),
     });
-  } finally {
-    isReconnecting = false;
   }
 };
 
@@ -615,9 +631,6 @@ export const resumeWebSocketAfterOnline = () => {
   releaseOnlineWaiters();
 };
 
-// Export state checkers for other modules
-export const isWebSocketReconnecting = () => isReconnecting;
-
 /**
  * Disable automatic WebSocket reconnection.
  * Call this during logout to prevent reconnection attempts.
@@ -630,9 +643,8 @@ export const disableAutoReconnect = () => {
   clearConnectionStableTimer();
   dialAttempts = 0;
   sessionAuthRefreshAttempted = false;
-  // Let parked retries proceed so they reach `shouldRetry` and stop there,
-  // instead of holding a promise that never settles.
-  releaseOnlineWaiters();
+  // Not `releaseOnlineWaiters` — that would dial. See abandonOnlineWaiters.
+  abandonOnlineWaiters();
 };
 
 /**
@@ -665,7 +677,6 @@ export const disposeWebSocket = () => {
   // Next session's first connect is a fresh connection, not a reconnect:
   // without this reset it would fire the reconnect listeners and trigger a
   // spurious notifications backfill.
-  isReconnecting = false;
   lastReconnectTime = 0;
   hasConnectedBefore = false;
 
@@ -682,7 +693,6 @@ export const disposeWebSocket = () => {
 // Export function to get WebSocket connection state
 export const getWebSocketState = () => {
   return {
-    isReconnecting,
     lastReconnectTime,
     hasClient: !!currentClient,
     // Dials since the last connection that proved stable — what the backoff

@@ -317,7 +317,7 @@ export function useRecipeDiscovery(
       isLoadingMore: pantryLoadingMore,
     },
     actions: { loadMore: loadMorePantryItems },
-  } = usePantryManagement(defaultPantry?.id, null, null, undefined, {
+  } = usePantryManagement(defaultPantry?.id, {
     skip: !isFocused,
     fetchPolicy: 'cache-first',
   });

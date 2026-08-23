@@ -154,7 +154,15 @@
     "saveFailed": "Salvataggio non riuscito",
     "generic": "Si è verificato un errore",
     "noActiveMealPlan": "Nessun piano pasti attivo. Creane uno prima.",
-    "somethingWentWrongTitle": "Qualcosa è andato storto"
+    "somethingWentWrongTitle": "Qualcosa è andato storto",
+    "field": {
+      "unit": "L'unità di questo articolo non può essere cambiata ora. Svuota prima i suoi lotti o scegli un'unità compatibile.",
+      "netWeight": "Inserisci sia la dimensione della confezione sia la sua unità, oppure lascia entrambi vuoti.",
+      "quantity": "Quella quantità non è valida. Prova un numero come 2, 0,5 o 1 1/2.",
+      "newQuantity": "Quella quantità non è valida. Prova un numero come 2, 0,5 o 1 1/2.",
+      "itemName": "Inserisci un nome per questo articolo.",
+      "batchId": "Quel lotto non è più disponibile. Aggiorna e riprova."
+    }
   },
   "success": {
     "itemAdded": "Articolo aggiunto",

@@ -315,7 +315,12 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
     // never fires — the hook has to tell the user itself. The refusal names a
     // field, so its own sentence is what gets shown.
     const { alertService } = require('#/services/alertService');
-    expect(alertService.alert).toHaveBeenCalledWith('Error', 'Name is invalid');
+    // The app's copy for `field: 'itemName'`, not the server's "Name is
+    // invalid" — the server has no locale to render that in.
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Enter a name for this item.',
+    );
   });
 
   it('falls back to the generic copy for an unattributed refusal', async () => {
@@ -356,12 +361,12 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
     );
   });
 
-  it('tells the user why the server refused a unit change (batches still exist)', async () => {
+  it('tells the user which input the server refused (the unit)', async () => {
     // Since 2026-08-22 the API resolves a bare `unit.unitSymbol` to a real unit
     // and refuses the change while batches exist — a ValidationError with
-    // `field: "unit"` and the rule's own sentence in `message`
-    // (docs/api/breaking-changes.md in the API repo). The edit must snap back
-    // AND say why, in the server's words.
+    // `field: "unit"` (docs/api/breaking-changes.md in the API repo). The edit
+    // must snap back AND say which of the four sub-inputs this call carries was
+    // refused — in the app's own words, because `message` is English only.
     const cache = seedItem();
     const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
       cache,
@@ -394,9 +399,12 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       expect(readItemName(cache)).toBe('Milk');
     });
     const { alertService } = require('#/services/alertService');
+    // One string covers both `unit` refusals — "batches exist" and "no
+    // conversion path" — because the server distinguishes them only in the
+    // message, which is not shown. Naming both remedies is the honest cost.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Cannot change tracking unit while batches exist. Deplete all batches first.',
+      "This item's unit can't be changed right now. Deplete its batches first, or choose a unit it converts to.",
     );
   });
 });

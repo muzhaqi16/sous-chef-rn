@@ -31,10 +31,7 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
-import {
-  fieldValidationMessage,
-  isSuccessPayload,
-} from '#/utils/errors/mutationPayload';
+import { isSuccessPayload } from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { PAGINATION } from '#/constants/shoppingList';
 import { errorService } from '#/services/errorService';
@@ -203,13 +200,9 @@ export function useToggleShoppingItem({
     // 'queued' (null payload, offline) keeps the optimistic flip.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
-      // Recording a purchase refuses with a field-specific ValidationError
-      // when the row has no name to record against — that sentence names the
-      // fix, so it beats the generic copy. An unattributed refusal keeps it.
-      alertRejectedMutation(
-        result,
-        fieldValidationMessage(result.data) ?? t('errors.updateItemFailed'),
-      );
+      // A field-attributed ValidationError shows the server's own sentence —
+      // `alertRejectedMutation` picks that over the copy below.
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
 
@@ -343,10 +336,7 @@ export function useToggleShoppingItem({
     // and a field-specific ValidationError displays its own sentence.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
-      alertRejectedMutation(
-        result,
-        fieldValidationMessage(result.data) ?? t('errors.updateItemFailed'),
-      );
+      alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
     return true;

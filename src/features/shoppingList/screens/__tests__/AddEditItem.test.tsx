@@ -2,7 +2,12 @@
 
 import React from 'react';
 import type { TextInputProps } from 'react-native';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import {
+  fireEvent,
+  screen,
+  userEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
@@ -25,23 +30,55 @@ const mockNav = (
   }
 ).useAppNavigation();
 
+// A STATEFUL stub. It was a frozen object with a no-op `updateField`, which
+// made every field on the screen permanently empty — so no test here could
+// observe what a control actually writes, and one asserting it would pass
+// whatever the screen did. `updateField` is still the same spy, so existing
+// call assertions are unaffected; it now also updates the state it reports.
 const mockUpdateField = jest.fn();
 jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
-  useShoppingListItemForm: () => ({
-    formState: {
+  useShoppingListItemForm: () => {
+    const RN = require('react');
+    const [formState, setFormState] = RN.useState({
       itemName: '',
       quantityInput: '1',
       unit: '',
+      selectedUnitId: null,
       notes: '',
       category: '',
       estimatedPrice: '',
-    },
-    updateField: mockUpdateField,
-    setFromItem: jest.fn(),
-    buildUnitInput: jest.fn(() => ({})),
-    buildDirtyInput: jest.fn(() => ({})),
-    hasDirtyFields: false,
-  }),
+      priority: 0,
+      storeId: null,
+      storeName: '',
+      brand: '',
+      brandId: null,
+      netWeight: '',
+      netWeightUnit: '',
+      netWeightUnitId: null,
+    });
+
+    // Stable identity: AddEditItem lists `updateField` in an effect's deps, and
+    // a fresh function each render turns that effect into a render loop. The
+    // real hook is stable because the React Compiler memoizes it.
+    const updateField = RN.useCallback((field: string, value: unknown) => {
+      mockUpdateField(field, value);
+      setFormState((prev: Record<string, unknown>) => ({
+        ...prev,
+        [field]: value,
+      }));
+    }, []);
+
+    return {
+      formState,
+      updateField,
+      setFromItem: jest.fn(),
+      buildUnitInput: jest.fn(() => ({})),
+      buildDirtyInput: jest.fn(() => ({})),
+      parseNetWeightInput: jest.fn(() => undefined),
+      netWeightNeedsUnit: false,
+      hasDirtyFields: false,
+    };
+  },
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
@@ -156,17 +193,43 @@ jest.mock(
 jest.mock(
   '#components/molecules/AutocompleteField/UnitAutocompleteField',
   () => ({
+    // Renders the current `value` and offers a "pick" button that reproduces
+    // the real component's call ORDER: it writes the SYMBOL through
+    // `onChangeText` first, then reports the selection. A handler that writes
+    // the unit's `name` back in `onUnitSelected` therefore overwrites the
+    // symbol, which is the bug this stub exists to expose.
     UnitAutocompleteField: ({
       label,
       testID,
+      value,
+      onChangeText,
+      onUnitSelected,
     }: {
       label?: string;
       testID?: string;
+      value?: string;
+      onChangeText?: (text: string) => void;
+      onUnitSelected?: (
+        id: string | null,
+        name: string | null,
+        type?: string | null,
+        symbol?: string | null,
+      ) => void;
     }) => {
       const { View, Text } = require('react-native');
       return (
         <View testID={testID}>
           <Text>{label}</Text>
+          <Text testID={`${testID}-value`}>{value}</Text>
+          <Text
+            testID={`${testID}-pick`}
+            onPress={() => {
+              onChangeText?.('g');
+              onUnitSelected?.('unit-g', 'gram', 'WEIGHT', 'g');
+            }}
+          >
+            pick
+          </Text>
         </View>
       );
     },
@@ -501,6 +564,20 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('add-item-brand-input')).toBeTruthy();
     expect(screen.getByTestId('add-item-net-weight-input')).toBeTruthy();
     expect(screen.getByTestId('add-item-net-weight-unit-picker')).toBeTruthy();
+  });
+
+  // The unit's SYMBOL is what `setFromItem` repopulates the field with and what
+  // ItemDetail renders, so a pick must leave the symbol in the field. It used
+  // to leave the unit's full name, because the selection handler wrote `name`
+  // over the symbol `onChangeText` had just written.
+  it('keeps the unit symbol in the net-weight unit field after a pick', () => {
+    renderWithApollo(<AddEditItem route={addRoute} />);
+
+    fireEvent.press(screen.getByTestId('add-item-net-weight-unit-picker-pick'));
+
+    expect(
+      screen.getByTestId('add-item-net-weight-unit-picker-value'),
+    ).toHaveTextContent('g');
   });
 
   it('shows brand and net weight fields when editing', () => {
@@ -1034,7 +1111,7 @@ describe('AddEditItem', () => {
     );
   });
 
-  it("shows the server's own sentence when it refuses a named field", async () => {
+  it("names the input the server refused, in the app's own words", async () => {
     const user = userEvent.setup();
     jest
       .spyOn(
@@ -1075,10 +1152,13 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
+    // The update carries brand, netWeight, unit and storage in one call, so the
+    // generic "couldn't update" does not say which was refused — `field` does.
+    // Localized copy for that field, never the server's English message.
     await waitFor(() =>
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Provide a netWeight value when specifying netWeightUnitId.',
+        'Enter both a package size and its unit, or leave both empty.',
       ),
     );
   });

@@ -270,9 +270,6 @@ describe('useRecipeDiscovery', () => {
 describe('useRecipeDiscovery: focus gate on the pantry watch', () => {
   const pantryWatchArgs = (skip: boolean) => [
     'pantry-1',
-    null,
-    null,
-    undefined,
     { skip, fetchPolicy: 'cache-first' },
   ];
 

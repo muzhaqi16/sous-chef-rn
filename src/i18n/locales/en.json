@@ -154,7 +154,15 @@
     "saveFailed": "Failed to save",
     "generic": "An error occurred",
     "noActiveMealPlan": "No active meal plan. Create one first.",
-    "somethingWentWrongTitle": "Something went wrong"
+    "somethingWentWrongTitle": "Something went wrong",
+    "field": {
+      "unit": "This item's unit can't be changed right now. Deplete its batches first, or choose a unit it converts to.",
+      "netWeight": "Enter both a package size and its unit, or leave both empty.",
+      "quantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
+      "newQuantity": "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
+      "itemName": "Enter a name for this item.",
+      "batchId": "That batch is no longer available. Refresh and try again."
+    }
   },
   "success": {
     "itemAdded": "Item added successfully",

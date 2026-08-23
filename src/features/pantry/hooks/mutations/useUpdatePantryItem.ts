@@ -28,7 +28,6 @@ import {
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
-import { fieldValidationMessage } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
@@ -214,10 +213,7 @@ export function useUpdatePantryItem({
               operation: 'Revert rejected Pantry Item update',
             });
           }
-          alertRejectedMutation(
-            result,
-            fieldValidationMessage(result.data) ?? t('errors.updateItemFailed'),
-          );
+          alertRejectedMutation(result, t('errors.updateItemFailed'));
         }
       })
       .catch(error => {

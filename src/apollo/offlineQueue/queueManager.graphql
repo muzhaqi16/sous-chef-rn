@@ -12,23 +12,9 @@ fragment queueManager_syncItem on ShoppingListItem {
   displayFormat
   # A replayed purchase (an offline checkbox tap or a recorded qty/price, both
   # of which reach the server as `purchaseTracking`) records the purchase and
-  # moves these two the same way an online write does. Selected in full so the
-  # replay's response leaves the entity in the state the server is in — and,
-  # per the ShoppingListItemPurchaseInfo note in apollo/cache.ts, so this write
-  # cannot strip the amounts off an item the detail screen is reading.
+  # moves the whole record the same way an online write does.
   purchaseInfo {
-    isPurchased
-    purchasedQuantity
-    purchasedPrice
-    purchaseDate
-    purchasedBy {
-      id
-      profile {
-        id
-        displayName
-        avatar
-      }
-    }
+    ...ShoppingListItemPurchaseInfoFragment
   }
   purchaseHistory {
     previouslyPurchased

@@ -125,7 +125,10 @@ export function usePantryScreen() {
       locationCounts,
     },
     actions: { removeItem, refetch, loadMore },
-  } = usePantryManagement(pantry?.id, mainFilter, mainOrderBy);
+  } = usePantryManagement(pantry?.id, {
+    filters: mainFilter,
+    orderBy: mainOrderBy,
+  });
 
   // Adjusting state during render: flip mode once the true total is known.
   const nextServerMode = isOnline && (stats?.totalItems ?? 0) > PAGE_SIZE.MAX;

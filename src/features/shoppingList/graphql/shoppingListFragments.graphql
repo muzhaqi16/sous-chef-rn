@@ -79,3 +79,35 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
     }
   }
 }
+
+# The whole purchase record on a shopping-list item.
+# Spread by: shoppingList.graphql (UpdateShoppingListItem,
+#   ToggleShoppingListItemPurchased), queueManager.graphql
+#   (queueManager_syncItem), useShoppingListSubscriptions.graphql
+#   (useShoppingListSubscriptions_item)
+# Read via the cache by: ItemDetail.tsx (which selects these fields inline
+#   rather than spreading this, because a named spread would mask them from
+#   its direct field reads under `dataMasking`)
+#
+# Shared because the five fields are ONE FACT, not five. The
+# `ShoppingListItemPurchaseInfo` merge in `apollo/cache.ts` clears whatever a
+# write omits whenever `isPurchased` changes — so a writer that selects the
+# flag alone does not merely fail to update the amounts, it erases them. Every
+# request that can change the purchased state therefore has to carry the whole
+# record, and one definition is what makes that impossible to get wrong.
+# `__tests__/graphql/purchaseInfoCompleteness.test.ts` enforces it for any
+# selection that does not spread this.
+fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
+  isPurchased
+  purchasedQuantity
+  purchasedPrice
+  purchaseDate
+  purchasedBy {
+    id
+    profile {
+      id
+      displayName
+      avatar
+    }
+  }
+}

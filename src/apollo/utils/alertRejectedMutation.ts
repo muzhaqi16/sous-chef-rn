@@ -1,6 +1,39 @@
 import { alertService } from '#/services/alertService';
 import { classifyCreateResult } from './classifyCreateResult';
+import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
+
+/**
+ * What to show for a refusal: copy for the input it named, or the caller's own.
+ *
+ * A field-specific `ValidationError` says WHICH input was refused, and that is
+ * the actionable part — a caller alerting "Failed to update item" for four
+ * different sub-inputs in one mutation tells the user nothing. So `field`
+ * selects a string from `errors.field.*`, and an unmapped field falls back to
+ * the caller's copy, which means adding a mapping is opt-in and never breaks a
+ * site that has not got one.
+ *
+ * The server's `message` is deliberately not used, however specific it is. It
+ * is English — the client sends no `Accept-Language` and the token carries no
+ * locale, so the server has nothing to localize against — and the API's own
+ * guidance is to map codes to localized copy client-side rather than display
+ * its strings. Showing it would put English in front of every es / it / sq
+ * user and skip every i18n guard the app applies to its own copy.
+ *
+ * The cost, recorded honestly: one field can carry more than one rule. `unit`
+ * refuses both "batches still exist" and "no conversion path", so its string
+ * has to name both remedies rather than the one that applies.
+ *
+ * Derived here rather than at each call site because both helpers already hold
+ * the result, and every rejected mutation passes through one of them.
+ */
+const rejectionMessage = (result: { data?: unknown }, fallback: string) => {
+  const field = validationFieldName(result.data);
+  if (!field) return fallback;
+  // i18next resolves the fallback itself, so an unmapped field is not an error
+  // and never renders a raw key.
+  return t(`errors.field.${field}`, { defaultValue: fallback });
+};
 
 /**
  * Surface a user-facing alert when a local-first mutation is classified as
@@ -20,11 +53,14 @@ import { t } from '#/i18n';
  * `result.error` case too. Mixing the wrong one either double-alerts or goes silent.
  */
 export function alertRejectedMutation(
-  result: { error?: unknown } | null | undefined,
+  result: { data?: unknown; error?: unknown } | null | undefined,
   message: string,
 ): void {
   if (!result?.error) {
-    alertService.alert(t('labels.error'), message);
+    alertService.alert(
+      t('labels.error'),
+      rejectionMessage(result ?? {}, message),
+    );
   }
 }
 
@@ -70,6 +106,6 @@ export function alertIfRejected(
   if (classifyCreateResult(result) !== 'rejected') {
     return false;
   }
-  alertService.alert(t('labels.error'), message);
+  alertService.alert(t('labels.error'), rejectionMessage(result, message));
   return true;
 }
