@@ -11536,8 +11536,16 @@ export type Purchase = {
   discountAmount: Maybe<Scalars['Float']['output']>;
   expirationDate: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
-  item: Item;
-  itemId: Scalars['ID']['output'];
+  /**
+   * The catalog item, when the catalog still holds it. Null once that item is
+   * hard-deleted — read itemName, which is always present.
+   */
+  item: Maybe<Item>;
+  /**
+   * Catalog item bought, when the catalog still holds it. Null once that item is
+   * hard-deleted; itemName is the snapshot of what was bought and is always set.
+   */
+  itemId: Maybe<Scalars['ID']['output']>;
   itemName: Scalars['String']['output'];
   itemUpc: Maybe<Scalars['String']['output']>;
   originalPrice: Maybe<Scalars['Float']['output']>;
@@ -16533,9 +16541,9 @@ export type UpdateShoppingListItemInput = {
   id: Scalars['ID']['input'];
   itemName?: InputMaybe<Scalars['String']['input']>;
   /**
-   * Package size for this item. Omit to leave it alone; send netWeight: null to
-   * remove it, which clears netWeightUnitId with it. A netWeightUnitId with no
-   * netWeight is rejected.
+   * Package size for this item. Omit to leave it alone; send netWeight: null (or
+   * a value of 0 or less) to remove it, which clears netWeightUnitId with it. A
+   * netWeightUnitId with no netWeight is rejected.
    */
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;

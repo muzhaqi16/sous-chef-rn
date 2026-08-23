@@ -861,7 +861,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
     ... on UpdateShoppingListItemPayload {
       shoppingListItem {
         id
-        ...useUpdateShoppingItem_item
+        ...UpdateShoppingListItem_item
         # Marking an item purchased records a purchase server-side, so this
         # summary moves with the write. Selected here (not in the fragment,
         # which mirrors the optimistic shape) so ItemDetail's count and last

@@ -1,0 +1,33 @@
+# The shape the UpdateShoppingListItem mutation writes back on
+# `shoppingListItem`. Spread by that operation in shoppingList.graphql; read
+# through Apollo's normalization by everything that fires it — AddEditItem's
+# save and useToggleShoppingItem's recordPurchase.
+fragment UpdateShoppingListItem_item on ShoppingListItem {
+  id
+  itemName
+  quantity
+  quantityInput
+  displayFormat
+  purchaseInfo {
+    isPurchased
+  }
+  version
+  updatedAt
+  category
+  notes
+  unitName
+  unit {
+    id
+    name
+    symbol
+  }
+  sortOrder
+  item {
+    id
+    imageUrl
+    images {
+      url
+      kind
+    }
+  }
+}

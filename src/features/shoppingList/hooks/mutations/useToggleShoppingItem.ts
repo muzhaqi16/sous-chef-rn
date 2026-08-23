@@ -31,7 +31,10 @@ import {
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
-import { isSuccessPayload } from '#/utils/errors/mutationPayload';
+import {
+  fieldValidationMessage,
+  isSuccessPayload,
+} from '#/utils/errors/mutationPayload';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { PAGINATION } from '#/constants/shoppingList';
 import { errorService } from '#/services/errorService';
@@ -200,7 +203,13 @@ export function useToggleShoppingItem({
     // 'queued' (null payload, offline) keeps the optimistic flip.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
-      alertRejectedMutation(result, t('errors.updateItemFailed'));
+      // Recording a purchase refuses with a field-specific ValidationError
+      // when the row has no name to record against — that sentence names the
+      // fix, so it beats the generic copy. An unattributed refusal keeps it.
+      alertRejectedMutation(
+        result,
+        fieldValidationMessage(result.data) ?? t('errors.updateItemFailed'),
+      );
       return false;
     }
 
@@ -330,10 +339,14 @@ export function useToggleShoppingItem({
     if (!result) return false;
 
     // Same contract as toggleItem's guard: only handle the resolved
-    // error-union case here; `result.error` was already routed by `onError`.
+    // error-union case here; `result.error` was already routed by `onError`,
+    // and a field-specific ValidationError displays its own sentence.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
-      alertRejectedMutation(result, t('errors.updateItemFailed'));
+      alertRejectedMutation(
+        result,
+        fieldValidationMessage(result.data) ?? t('errors.updateItemFailed'),
+      );
       return false;
     }
     return true;
