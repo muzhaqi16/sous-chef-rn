@@ -49,7 +49,7 @@ jest.mock('../queueStore', () => ({
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
     markMutationFailed: jest.fn(() => true),
-    cleanupSuccessful: jest.fn(() => 0),
+    cleanupTerminal: jest.fn(() => 0),
     clearQueueForUser: jest.fn(() => 0),
     setCurrentUserId: jest.fn(),
     clearCurrentUserId: jest.fn(),
@@ -210,7 +210,7 @@ describe('QueueManager', () => {
       expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledWith(
         'user-1',
       );
-      expect(queueStore.cleanupSuccessful).not.toHaveBeenCalled();
+      expect(queueStore.cleanupTerminal).not.toHaveBeenCalled();
     });
 
     it('recovers stranded PROCESSING entries before collecting pending work', async () => {
@@ -1611,7 +1611,7 @@ describe('QueueManager', () => {
       await manager.processQueue();
       jest.useFakeTimers();
 
-      expect(queueStore.cleanupSuccessful).toHaveBeenCalled();
+      expect(queueStore.cleanupTerminal).toHaveBeenCalled();
     });
 
     it('breaks processing when going offline mid-drain', async () => {

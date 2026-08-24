@@ -17,6 +17,24 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
 const MAX_QUEUE_SIZE = 100;
 
+/**
+ * Terminal = the queue is done with it. SUCCESS replayed; FAILED and AUTH_ERROR
+ * were given up on and their local change already withdrawn by the failure
+ * handler.
+ *
+ * AUTH_ERROR belongs here. It used to be neither evictable at capacity nor aged
+ * out, so 100 accumulated auth failures wedged the queue permanently: every
+ * later enqueue threw QueueCapacityError and offline writes stopped working with
+ * no way back.
+ */
+function isTerminal(status: QueueStatus): boolean {
+  return (
+    status === QueueStatus.SUCCESS ||
+    status === QueueStatus.FAILED ||
+    status === QueueStatus.AUTH_ERROR
+  );
+}
+
 // The server prunes its idempotency-dedup records after 90 days
 // (docs/api/offline-sync.md "Sync queued cumulative ops within 90 days").
 // Replaying an idempotency-keyed op past that horizon would double-apply —
@@ -222,10 +240,7 @@ export class QueueStore {
     // never happened). If nothing terminal exists, the queue is full of
     // un-synced work: reject the enqueue honestly.
     if (queue.length >= MAX_QUEUE_SIZE) {
-      const evictIndex = queue.findIndex(
-        m =>
-          m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED,
-      );
+      const evictIndex = queue.findIndex(m => isTerminal(m.status));
       if (evictIndex === -1) {
         logger.warn(
           'Queue at capacity with no terminal entries — rejecting enqueue',
@@ -500,6 +515,9 @@ export class QueueStore {
       status:
         error?.type === 'auth' ? QueueStatus.AUTH_ERROR : QueueStatus.FAILED,
       lastError: error,
+      // Stamped so `cleanupTerminal` can age these out. Without it a terminal
+      // failure had no timestamp and lived in the queue forever.
+      processedAt: Date.now(),
     });
   }
 
@@ -519,13 +537,13 @@ export class QueueStore {
   /**
    * Clean up old successful mutations (keep last 24 hours for reconciliation)
    */
-  cleanupSuccessful(): number {
+  cleanupTerminal(): number {
     const queue = this.loadQueue();
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     const initialLength = queue.length;
 
     const filtered = queue.filter(m => {
-      if (m.status !== QueueStatus.SUCCESS) return true;
+      if (!isTerminal(m.status)) return true;
       if (!m.processedAt) return true;
       return m.processedAt > oneDayAgo;
     });
@@ -535,7 +553,7 @@ export class QueueStore {
       logger.debug(
         `🧹 Queue: Cleaned up ${
           initialLength - filtered.length
-        } old successful mutations`,
+        } old terminal mutations`,
       );
     }
 

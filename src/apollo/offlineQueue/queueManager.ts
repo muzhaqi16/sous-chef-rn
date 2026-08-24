@@ -222,7 +222,7 @@ export class QueueManager {
     );
 
     // Cleanup old successful mutations
-    queueStore.cleanupSuccessful();
+    queueStore.cleanupTerminal();
   }
 
   /**

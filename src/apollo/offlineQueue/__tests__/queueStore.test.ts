@@ -117,6 +117,27 @@ describe('QueueStore', () => {
       expect(all.find(m => m.id === 'overflow')).toBeDefined();
     });
 
+    it('evicts an AUTH_ERROR at capacity rather than wedging the queue', () => {
+      // AUTH_ERROR used to be excluded from the terminal set: it was neither
+      // aged out nor evictable, so 100 accumulated auth failures wedged the
+      // queue permanently — every later offline write threw QueueCapacityError
+      // with no way back short of a reinstall.
+      for (let i = 0; i < 100; i++) {
+        store.addMutation(
+          makeMutation({ id: `auth-${i}`, status: QueueStatus.AUTH_ERROR }),
+        );
+      }
+
+      expect(() =>
+        store.addMutation(makeMutation({ id: 'new-write' })),
+      ).not.toThrow();
+
+      const all = store.getMutationsForUser('user-1');
+      expect(all).toHaveLength(100);
+      expect(all.find(m => m.id === 'new-write')).toBeDefined();
+      expect(all.find(m => m.id === 'auth-0')).toBeUndefined();
+    });
+
     it('rejects the enqueue when the queue is full of un-synced PENDING work', () => {
       for (let i = 0; i < 100; i++) {
         store.addMutation(makeMutation({ id: `fill-${i}` }));
@@ -495,9 +516,9 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
-  // cleanupSuccessful
+  // cleanupTerminal
   // -------------------------------------------------------------------------
-  describe('cleanupSuccessful', () => {
+  describe('cleanupTerminal', () => {
     it('removes successful mutations older than 24 hours', () => {
       const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
       store.addMutation(
@@ -523,7 +544,7 @@ describe('QueueStore', () => {
         }),
       );
 
-      const removed = store.cleanupSuccessful();
+      const removed = store.cleanupTerminal();
       expect(removed).toBe(1);
 
       const remaining = store.getMutationsForUser('user-1');
@@ -542,14 +563,54 @@ describe('QueueStore', () => {
         }),
       );
 
-      const removed = store.cleanupSuccessful();
+      const removed = store.cleanupTerminal();
       expect(removed).toBe(0);
       expect(store.getMutation('no-processed-at')).toBeDefined();
     });
 
     it('returns 0 when nothing to clean', () => {
       store.addMutation(makeMutation({ status: QueueStatus.PENDING }));
-      expect(store.cleanupSuccessful()).toBe(0);
+      expect(store.cleanupTerminal()).toBe(0);
+    });
+
+    it('ages out FAILED and AUTH_ERROR, not only SUCCESS', () => {
+      // These used to be kept forever: the filter matched SUCCESS only, so a
+      // terminal failure occupied queue capacity for the life of the install.
+      const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
+      store.addMutation(
+        makeMutation({
+          id: 'old-failed',
+          status: QueueStatus.FAILED,
+          processedAt: twoDaysAgo,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'old-auth-error',
+          status: QueueStatus.AUTH_ERROR,
+          processedAt: twoDaysAgo,
+        }),
+      );
+
+      expect(store.cleanupTerminal()).toBe(2);
+      expect(store.getMutation('old-failed')).toBeNull();
+      expect(store.getMutation('old-auth-error')).toBeNull();
+    });
+
+    it('stamps processedAt when marking a mutation failed', () => {
+      // Without the stamp a terminal failure has no age and can never be
+      // cleaned, whatever the retention rule says.
+      store.addMutation(makeMutation({ id: 'to-fail' }));
+      store.markMutationFailed('to-fail', {
+        type: 'server',
+        message: 'nope',
+        retryable: false,
+        timestamp: Date.now(),
+      });
+
+      expect(store.getMutation('to-fail')?.processedAt).toEqual(
+        expect.any(Number),
+      );
     });
   });
 
