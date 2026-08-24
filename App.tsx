@@ -9,7 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { ApolloProvider } from '@apollo/client/react';
 import { useIsHydrated } from '#store/useAppStore';
-import { client } from '#/apollo/client';
+import { client, restorePersistedCache } from '#/apollo/client';
 import { Navigation } from '#navigation/RootNavigator';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/atoms/Toast';
@@ -84,13 +84,17 @@ const App = () => {
   const isHydrated = useIsHydrated();
   useAppLifecycle();
 
-  // Cache is fully restored synchronously during initializeClient() in client.ts
-  // (both critical and deferred partitions merged into one cache.restore() call).
-  // No deferred restore needed here.
-
   if (!isHydrated) {
     return <SplashScreen />;
   }
+
+  // Restore the persisted Apollo cache here, not in initializeClient(): that
+  // runs at module import, before the async keychain-backed storage init has
+  // resolved, so it always found storage unready and restored nothing. This is
+  // the first point where storage is guaranteed ready AND ApolloProvider has
+  // not mounted yet — `cache.restore()` replaces cache contents wholesale, so
+  // it must land before any query runs. Idempotent; safe on every render.
+  restorePersistedCache();
 
   return (
     <AppErrorBoundary>

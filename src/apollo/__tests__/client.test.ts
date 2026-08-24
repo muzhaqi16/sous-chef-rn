@@ -63,6 +63,10 @@ describe('Apollo client', () => {
     expect(client.cache).toBeDefined();
   });
 
+  // NOTE: these mock `makeCache`, so they verify the restore CALL, not that the
+  // cache ends up populated — and they passed throughout the period when the
+  // restore never actually ran (storage was not ready at module load). The
+  // timing guard lives in __tests__/apollo/cacheRestoreTiming.test.ts.
   describe('cache hydration', () => {
     it('restores the persisted cache in a single cache.restore() call', () => {
       // One read, one parse, one restore. `cache.restore()` is destructive

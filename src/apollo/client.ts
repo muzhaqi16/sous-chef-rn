@@ -10,6 +10,7 @@ import { createLink } from './links/index';
 import { registerApolloClient } from './links/refreshToken';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import { isStorageReady } from '#storage/mmkv';
 import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 
 // Lazy histogram emit — defers loading of the telemetry singleton (which
@@ -40,18 +41,31 @@ if (__DEV__) {
     });
 }
 
+let cacheInstance: ReturnType<typeof makeCache> | null = null;
+let cacheRestored = false;
+
 /**
- * Initialize Apollo Client with cache persistence
+ * Restore the persisted Apollo cache into the live cache instance.
+ *
+ * Idempotent, and deliberately callable more than once — the first call that
+ * finds storage ready performs the restore.
+ *
+ * This cannot be done once at module load. `initializeSecureStorage()` is async
+ * (keychain-backed) and `index.js` does not await it, while this module is
+ * imported inside that window: `isStorageReady()` is false, `load()` returns
+ * null, and the cache is written every session but never restored — so offline
+ * reads did not survive a relaunch.
+ *
+ * It must also run BEFORE `ApolloProvider` mounts. `cache.restore()` replaces
+ * cache contents wholesale, so restoring after the first queries have run would
+ * discard their results and any optimistic writes.
  */
-function initializeClient() {
-  logger.info('🚀 Apollo: Initializing client with cache persistence');
+export function restorePersistedCache(): void {
+  if (cacheRestored || !cacheInstance || !isStorageReady()) {
+    return;
+  }
+  cacheRestored = true;
 
-  // Create cache instance
-  const cache = makeCache();
-
-  // Restore the persisted cache. One synchronous MMKV read + parse during the
-  // native splash (~5-20ms); `load()` migrates an install still holding data
-  // under the retired split-blob keys.
   const restoreT0 = performance.now();
   const persistedCache = apolloCachePersistence.load();
 
@@ -61,16 +75,32 @@ function initializeClient() {
         Object.keys(persistedCache).length
       } entities from storage`,
     );
-    cache.restore(persistedCache);
+    cacheInstance.restore(persistedCache);
   }
 
   // Reported on BOTH paths, carrying the outcome. `logger` is console-only and
   // console is stripped in release, so this histogram is the only evidence on a
-  // real device of whether the persisted cache is restored at all — an empty
-  // restore means every cold start refetches.
+  // real device of whether the persisted cache is restored at all — an `empty`
+  // majority means every cold start refetches.
   emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0, {
     outcome: persistedCache ? 'restored' : 'empty',
   });
+}
+
+/**
+ * Initialize Apollo Client with cache persistence
+ */
+function initializeClient() {
+  logger.info('🚀 Apollo: Initializing client with cache persistence');
+
+  // Create cache instance
+  const cache = makeCache();
+
+  cacheInstance = cache;
+
+  // Fast path only: storage is usually still initializing at this point, so
+  // this is normally a no-op and App retries at the hydration boundary.
+  restorePersistedCache();
 
   // Create link chain
   const link = createLink();
