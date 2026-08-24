@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -24,6 +24,11 @@ import { toastService } from '#/services/toastService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import {
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { logger } from '#/utils/environment';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 import { errorService } from '#/services/errorService';
@@ -178,6 +183,8 @@ export function useRecipeShoppingList({
 
   const getShoppingListById = (listId: string) =>
     shoppingLists.find(list => list.id === listId) || null;
+
+  const client = useApolloClient();
 
   // State
   const [addingToList, setAddingToList] = useState(false);
@@ -421,6 +428,45 @@ export function useRecipeShoppingList({
                 : undefined,
             }));
 
+          // Write the rows before firing. The `update` callback only runs with
+          // a server payload, so offline it never fires: the recipe reported
+          // success and marked its checkmarks while the shopping list stayed
+          // empty. The client mints each `id`, so when the batch does replay the
+          // server response merges onto these same entities rather than
+          // duplicating them.
+          items.forEach(batchItem => {
+            const rowId = batchItem.id;
+            if (!rowId) return;
+            // Value blocks (`?.`, `??`, ternary) must stay OUT of the try —
+            // inside one they bail this whole hook out of the React Compiler.
+            const unitName = batchItem.unit?.unitName ?? null;
+            const quantity =
+              typeof batchItem.quantity === 'number'
+                ? batchItem.quantity
+                : null;
+            const itemName = batchItem.item.itemName ?? '';
+            const optimisticRow = createOptimisticShoppingListItem(rowId, {
+              itemName,
+              quantity,
+              quantityInput: null,
+              unitName,
+              category: null,
+              itemId: undefined,
+              unitId: undefined,
+            });
+            try {
+              addOptimisticShoppingListItem(
+                client.cache,
+                listId,
+                optimisticRow,
+              );
+            } catch (cacheError) {
+              errorService.reportError(cacheError, {
+                operation: 'Add recipe ingredients (optimistic)',
+              });
+            }
+          });
+
           const result = await addItemsToShoppingListMutation({
             variables: {
               input: {
@@ -430,6 +476,22 @@ export function useRecipeShoppingList({
             },
             context: { localFirst: true },
           });
+
+          // A refusal resolves under errorPolicy:'all' with no thrown error, so
+          // the rows have to be taken back explicitly or they linger until the
+          // next refetch. A QUEUED batch (no data, no error) is not a refusal —
+          // it keeps its rows and replays.
+          if (classifyCreateResult(result) === 'rejected') {
+            items.forEach(batchItem => {
+              if (batchItem.id) {
+                revertOptimisticShoppingListItem(
+                  client.cache,
+                  listId,
+                  batchItem.id,
+                );
+              }
+            });
+          }
 
           const payload = result.data?.addItemsToShoppingList;
           if (payload?.__typename === 'AddItemsToShoppingListPayload') {
