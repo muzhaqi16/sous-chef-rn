@@ -26,9 +26,14 @@ jest.mock('#/services/errorService', () => ({
 // notification is unread is read from the cache, which is also what renders
 // it, so the two can no longer disagree.
 let mockUser: { id: string } | null = { id: 'user-1' };
+const mockClearExpirationLink = jest.fn();
+
 jest.mock('#store', () => ({
   useStore: {
-    getState: () => ({ user: mockUser }),
+    getState: () => ({
+      user: mockUser,
+      clearExpirationLink: mockClearExpirationLink,
+    }),
   },
 }));
 
@@ -128,6 +133,21 @@ const deleteMock = (): MockedResponse => ({
       deleteNotification: {
         __typename: 'DeleteNotificationPayload',
         notification: { __typename: 'Notification', id: 'n1' },
+      },
+    },
+  },
+});
+
+const deleteRejectedMock = (): MockedResponse => ({
+  request: { query: DeleteNotificationDocument, variables: () => true },
+  result: {
+    data: {
+      deleteNotification: {
+        __typename: 'NotFoundError',
+        code: 'NOT_FOUND',
+        message: 'gone',
+        resource: 'Notification',
+        resourceId: 'n1',
       },
     },
   },
@@ -263,6 +283,35 @@ describe('useNotificationSync — cached badge aggregates', () => {
       expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD),
     );
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
+  });
+
+  // The rollback used to be `cache.restore(cache.extract())`, which replaced the
+  // whole store — discarding anything written while the mutation was in flight.
+  it('a refused delete restores the row and the badge, leaving other entities alone', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    const { result } = renderSync(cache, [deleteRejectedMock()]);
+
+    await act(async () => {
+      result.current.syncDelete('n1');
+      // Lands between the eviction and the refusal, exactly as an in-flight
+      // query result or a subscription push would.
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Notification', id: 'n2' })!,
+        fragment: gql`
+          fragment _TestOther on Notification {
+            id
+            status
+          }
+        `,
+        data: { __typename: 'Notification', id: 'n2', status: UNREAD },
+      });
+    });
+
+    await waitFor(() =>
+      expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD),
+    );
+    expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
+    expect(readNotificationStatus(cache, 'n2')).toBe(UNREAD);
   });
 
   it('clamps at zero when the cached count is already stale-low', async () => {

@@ -202,9 +202,9 @@ export function useUpdatePantryItem({
         // server resolves a bare `unit.unitSymbol` to a real unit and refuses
         // the change while the item still has batches, or when no conversion
         // exists (docs/api/breaking-changes.md). Those arrive as a
-        // ValidationError with `field: "unit"` and the rule's own sentence in
-        // `message`, which is what the user can act on — the generic copy is
-        // only for an unattributed refusal.
+        // ValidationError with `field: "unit"`, which routes to localized
+        // `errors.field.unit` copy — the generic copy is only for an
+        // unattributed refusal. The server's `message` is English and unused.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
           try {

@@ -20,7 +20,8 @@ import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 
 /** Data passed from the expirationNotificationChanged subscription to enrich a generic notification. */
 export interface ExpirationLinkData {
-  expirationNotificationId: string;
+  /** Absent until the enrichment event resolves the backing row. */
+  expirationNotificationId?: string;
   expirationAction?: string | null;
   daysUntilExpiry?: number | null;
   pantryItemName?: string | null;
@@ -95,9 +96,10 @@ export const createNotificationSlice: StateCreator<
         existing.expirationAction = action;
       } else {
         // The action can be taken before the enrichment event lands; hold it so
-        // the merge below still sees it.
+        // the merge below still sees it. No `expirationNotificationId` — the
+        // generic id is not the expiration row's, and consumers read a truthy
+        // one as "already linked".
         state.pendingExpirationLinks[notificationId] = {
-          expirationNotificationId: notificationId,
           expirationAction: action,
         };
       }

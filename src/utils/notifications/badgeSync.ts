@@ -11,8 +11,10 @@
  * watch a Zustand mirror of it, and needed an `isHydrated` gate so a
  * pre-hydration `0` could not stomp a server-set badge at every JS start.
  * That gate is gone and not replaced: "the count has not loaded yet" is
- * directly observable here as a cache read with no data, so there is no window
- * in which a default value looks like a real one.
+ * directly observable here as a cache read with no data BEFORE any count has
+ * been applied, so there is no window in which a default value looks like a
+ * real one. Once a count has been applied, the same empty read means the store
+ * was cleared — sign-out — and the badge is zeroed.
  *
  * Notifee's `setBadgeCount` is cross-platform — the iOS app-icon badge and,
  * best-effort, Android launchers that support badging. Call once at app entry
@@ -41,11 +43,15 @@ export const setupBadgeSync = (): (() => void) => {
     }) as { me?: { unreadNotificationCount?: number } | null } | null;
 
     const count = data?.me?.unreadNotificationCount;
-    if (typeof count !== 'number') return;
-    if (count === lastApplied) return;
+    // A miss before anything has been applied is "not loaded yet" — the case
+    // the hydration gate used to cover. A miss AFTER a count was applied is
+    // `clearStore()` on sign-out, and the badge has to come off the icon.
+    const next =
+      typeof count === 'number' ? count : lastApplied === null ? null : 0;
+    if (next === null || next === lastApplied) return;
 
-    lastApplied = count;
-    applyBadgeCount(count);
+    lastApplied = next;
+    applyBadgeCount(next);
   };
 
   const watcher = client.cache.watch({

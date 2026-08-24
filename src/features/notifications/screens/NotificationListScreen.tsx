@@ -172,7 +172,7 @@ export const NotificationListScreen: React.FC = () => {
 
             <NotificationHeader
               onMarkAllRead={handleMarkAllAsRead}
-              onClearAll={() =>
+              onClearRead={() =>
                 handleClearRead(
                   notifications.filter(n => n.isRead).map(n => n.id),
                 )

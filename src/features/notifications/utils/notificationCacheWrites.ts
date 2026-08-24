@@ -26,6 +26,10 @@ import {
   adjustUnreadNotificationCount,
   clearUnreadNotificationCount,
 } from './notificationBadgeCacheUpdaters';
+import {
+  UseNotificationsOnLaunch_NotificationFragmentDoc,
+  type UseNotificationsOnLaunch_NotificationFragment,
+} from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /** A notification is awaiting the user only while PENDING or SENT. */
 export const isUnreadStatus = (s: NotificationStatus | undefined): boolean =>
@@ -105,12 +109,68 @@ export function applyNotificationUnread(
  * same path the other delete flows rely on, and cheaper than editing each
  * cached variant's edge list.
  */
-export function evictNotification(cache: ApolloCache, id: string): boolean {
+export function evictNotification(
+  cache: ApolloCache,
+  id: string,
+  /** False in a multi-delete; call `cache.gc()` once at the end instead. */
+  collectGarbage = true,
+): boolean {
   const cacheId = cache.identify({ __typename: 'Notification', id });
   if (!cacheId) return false;
   cache.evict({ id: cacheId });
-  cache.gc();
+  if (collectGarbage) cache.gc();
   return true;
+}
+
+/** A notification's fields plus whether it counted toward the badge. */
+export interface CapturedNotification {
+  data: UseNotificationsOnLaunch_NotificationFragment;
+  wasUnread: boolean;
+}
+
+/**
+ * Read a notification out before eviction; the feed selects this same shape.
+ *
+ * `returnPartialData`, because a complete read is not the thing being checked:
+ * a row that never loaded every field still has to come back exactly as it was
+ * if the delete is refused, and a strict read would return null for it and
+ * restore nothing.
+ */
+export function captureNotification(
+  cache: ApolloCache,
+  id: string,
+): CapturedNotification | null {
+  const data =
+    cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>({
+      fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+      fragmentName: 'useNotificationsOnLaunch_notification',
+      from: { __typename: 'Notification', id },
+      returnPartialData: true,
+    });
+  if (!data?.id) return null;
+  return { data, wasUnread: isUnreadStatus(data.status) };
+}
+
+/**
+ * Put captured notifications back, badge included. Only the entity is written:
+ * `mergeConnectionByNodeId`'s `read` filters dangling edges without altering
+ * what is stored, so the edges revive with the record.
+ */
+export function restoreNotifications(
+  cache: ApolloCache,
+  userId: string | null | undefined,
+  captured: CapturedNotification[],
+): void {
+  let unreadRestored = 0;
+  captured.forEach(({ data, wasUnread }) => {
+    cache.writeFragment({
+      fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+      fragmentName: 'useNotificationsOnLaunch_notification',
+      data,
+    });
+    if (wasUnread) unreadRestored += 1;
+  });
+  adjustUnreadNotificationCount(cache, userId, unreadRestored);
 }
 
 export function applyNotificationRemoved(

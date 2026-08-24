@@ -200,8 +200,8 @@ export function useToggleShoppingItem({
     // 'queued' (null payload, offline) keeps the optimistic flip.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
-      // A field-attributed ValidationError shows the server's own sentence —
-      // `alertRejectedMutation` picks that over the copy below.
+      // A field-attributed ValidationError routes to LOCALIZED `errors.field.*`
+      // copy; the copy below is the fallback. The server's `message` is never shown.
       alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
@@ -333,7 +333,7 @@ export function useToggleShoppingItem({
 
     // Same contract as toggleItem's guard: only handle the resolved
     // error-union case here; `result.error` was already routed by `onError`,
-    // and a field-specific ValidationError displays its own sentence.
+    // and a field-specific ValidationError routes to localized `errors.field.*`.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
       alertRejectedMutation(result, t('errors.updateItemFailed'));

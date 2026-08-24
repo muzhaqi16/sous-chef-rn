@@ -284,6 +284,7 @@
     "adding": "Aggiunta in corso...",
     "selected": "{{count}} selezionati",
     "clearAll": "Cancella tutto",
+    "clearRead": "Cancella lette",
     "unknown": "Sconosciuto",
     "calories": "Calorie",
     "min": "{{count}} min",

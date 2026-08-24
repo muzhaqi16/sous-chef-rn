@@ -31,22 +31,30 @@ type FormState = {
   netWeightUnitId: string | null;
 };
 
-type DirtyFields = {
-  itemName: boolean;
-  quantityInput: boolean;
-  unit: boolean;
-  selectedUnitId: boolean;
-  notes: boolean;
-  category: boolean;
-  estimatedPrice: boolean;
-  priority: boolean;
-  storeId: boolean;
-  brand: boolean;
-  brandId: boolean;
-  netWeight: boolean;
-  netWeightUnit: boolean;
-  netWeightUnitId: boolean;
-};
+/**
+ * `storeName` is deliberately absent: it is the display label for `storeId`,
+ * never sent on its own.
+ */
+type DirtyField = Exclude<keyof FormState, 'storeName'>;
+type DirtyFields = Record<DirtyField, boolean>;
+
+/** The one list — the dirty map and its default are derived from it. */
+const DIRTY_FIELDS: readonly DirtyField[] = [
+  'itemName',
+  'quantityInput',
+  'unit',
+  'selectedUnitId',
+  'notes',
+  'category',
+  'estimatedPrice',
+  'priority',
+  'storeId',
+  'brand',
+  'brandId',
+  'netWeight',
+  'netWeightUnit',
+  'netWeightUnitId',
+];
 
 const DEFAULT_FORM_STATE: FormState = {
   itemName: '',
@@ -66,22 +74,14 @@ const DEFAULT_FORM_STATE: FormState = {
   netWeightUnitId: null,
 };
 
-const DEFAULT_DIRTY_FIELDS: DirtyFields = {
-  itemName: false,
-  quantityInput: false,
-  unit: false,
-  selectedUnitId: false,
-  notes: false,
-  category: false,
-  estimatedPrice: false,
-  priority: false,
-  storeId: false,
-  brand: false,
-  brandId: false,
-  netWeight: false,
-  netWeightUnit: false,
-  netWeightUnitId: false,
-};
+const buildDirtyFields = (
+  isDirty: (field: DirtyField) => boolean,
+): DirtyFields =>
+  Object.fromEntries(
+    DIRTY_FIELDS.map(field => [field, isDirty(field)]),
+  ) as DirtyFields;
+
+const DEFAULT_DIRTY_FIELDS: DirtyFields = buildDirtyFields(() => false);
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const [formState, setFormState] = useState<FormState>({
@@ -95,30 +95,9 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   );
 
   // Compute dirty fields by comparing current state with initial state
-  const dirtyFields: DirtyFields = (() => {
-    if (!savedInitialState) return DEFAULT_DIRTY_FIELDS;
-    return {
-      itemName: formState.itemName !== savedInitialState.itemName,
-      quantityInput:
-        formState.quantityInput !== savedInitialState.quantityInput,
-      unit: formState.unit !== savedInitialState.unit,
-      selectedUnitId:
-        formState.selectedUnitId !== savedInitialState.selectedUnitId,
-      notes: formState.notes !== savedInitialState.notes,
-      category: formState.category !== savedInitialState.category,
-      estimatedPrice:
-        formState.estimatedPrice !== savedInitialState.estimatedPrice,
-      priority: formState.priority !== savedInitialState.priority,
-      storeId: formState.storeId !== savedInitialState.storeId,
-      brand: formState.brand !== savedInitialState.brand,
-      brandId: formState.brandId !== savedInitialState.brandId,
-      netWeight: formState.netWeight !== savedInitialState.netWeight,
-      netWeightUnit:
-        formState.netWeightUnit !== savedInitialState.netWeightUnit,
-      netWeightUnitId:
-        formState.netWeightUnitId !== savedInitialState.netWeightUnitId,
-    };
-  })();
+  const dirtyFields: DirtyFields = savedInitialState
+    ? buildDirtyFields(field => formState[field] !== savedInitialState[field])
+    : DEFAULT_DIRTY_FIELDS;
 
   const hasDirtyFields = Object.values(dirtyFields).some(Boolean);
 

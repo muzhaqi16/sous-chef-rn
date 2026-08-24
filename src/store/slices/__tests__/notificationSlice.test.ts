@@ -83,8 +83,9 @@ describe('notificationSlice', () => {
 
       store.getState().setExpirationAction('notif-2', 'CONSUMED');
 
+      // No `expirationNotificationId`: the generic id is not the expiration
+      // row's, and a truthy one reads as "already linked" downstream.
       expect(store.getState().pendingExpirationLinks['notif-2']).toEqual({
-        expirationNotificationId: 'notif-2',
         expirationAction: 'CONSUMED',
       });
     });

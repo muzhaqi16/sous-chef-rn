@@ -418,6 +418,15 @@ function buildUpdateItemNullMock(): MockedResponse {
   };
 }
 
+/** What `queueLink` emits for a queued mutation: the field present but null. */
+function buildUpdateItemQueuedMock(): MockedResponse {
+  return {
+    request: { query: UpdateShoppingListItemDocument, variables: () => true },
+    result: { data: { updateShoppingListItem: null } },
+    maxUsageCount: 10,
+  };
+}
+
 function buildUpdateItemErrorMock(): MockedResponse {
   return {
     request: { query: UpdateShoppingListItemDocument, variables: () => true },
@@ -780,6 +789,36 @@ describe('AddEditItem', () => {
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
     await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+  });
+
+  it('navigates back when the edit is queued offline (null payload, no error)', async () => {
+    // `UpdateShoppingListItem` is on the queue's replay allowlist, so an offline
+    // edit IS saved. A payload check alone reads its null field as a refusal,
+    // which alerted and stranded the user on the form.
+    const user = userEvent.setup();
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockReturnValue(
+        mockUseShoppingListItemForm({
+          formState: { itemName: 'Milk', quantityInput: '3' },
+          buildDirtyInput: jest.fn(() => ({ quantity: '3' })),
+          hasDirtyFields: true,
+        }),
+      );
+
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [
+        buildGetShoppingListItemMock('item1'),
+        buildUpdateItemQueuedMock(),
+      ],
+    });
+    await user.press(screen.getByTestId('edit-item-submit-button'));
+
+    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('navigates back when the add is queued offline (null data, no error)', async () => {

@@ -45,6 +45,10 @@ import {
   applyNotificationRead,
   applyNotificationUnread,
   applyNotificationRemoved,
+  evictNotification,
+  captureNotification,
+  restoreNotifications,
+  type CapturedNotification,
 } from '#features/notifications/utils/notificationCacheWrites';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useStore } from '#store';
@@ -112,9 +116,8 @@ export function useNotificationSync() {
 
   const syncDelete = async (id: string) => {
     const cache = client.cache;
-    // Snapshot BEFORE the eviction so a refusal can put the entity, its edges
-    // and the badge back in one restore.
-    const snapshot = cache.extract();
+    // Read the row before evicting it; a refusal writes it back.
+    const restore = captureNotification(cache, id);
     if (!applyNotificationRemoved(cache, userId(), id)) return;
 
     let result;
@@ -130,19 +133,20 @@ export function useNotificationSync() {
       });
     }
 
-    if (classifyCreateResult(result) === 'rejected' && snapshot) {
-      cache.restore(snapshot);
+    if (classifyCreateResult(result) === 'rejected') {
+      restoreNotifications(cache, userId(), restore ? [restore] : []);
+    } else {
+      // The row is gone for good; drop its client-side enrichment with it.
+      useStore.getState().clearExpirationLink(id);
     }
   };
 
   const syncMarkAllAsRead = async () => {
     const cache = client.cache;
-    const snapshot = cache.extract();
 
-    // Flips every cached unread row AND zeroes the badge. The mutation returns
-    // a summary count and no ids, so the rows have to be found locally or the
-    // feed would keep showing them unread until the next fetch.
-    if (applyAllNotificationsRead(cache, userId()).length === 0) return;
+    // Returns the ids it flipped — a refusal marks exactly those unread again.
+    const flipped = applyAllNotificationsRead(cache, userId());
+    if (flipped.length === 0) return;
 
     let result;
     try {
@@ -152,7 +156,7 @@ export function useNotificationSync() {
     }
 
     if (classifyCreateResult(result) === 'rejected') {
-      cache.restore(snapshot);
+      flipped.forEach(id => applyNotificationUnread(cache, userId(), id));
     }
   };
 
@@ -163,12 +167,12 @@ export function useNotificationSync() {
   const syncClearRead = async (ids: string[]) => {
     if (ids.length === 0) return;
     const cache = client.cache;
-    const snapshot = cache.extract();
+    // Capture before evicting; a refusal writes each row back.
+    const captured = ids
+      .map(id => captureNotification(cache, id))
+      .filter((entry): entry is CapturedNotification => entry !== null);
 
-    ids.forEach(id => {
-      const cacheId = cache.identify({ __typename: 'Notification', id });
-      if (cacheId) cache.evict({ id: cacheId });
-    });
+    ids.forEach(id => evictNotification(cache, id, false));
     cache.gc();
 
     let result;
@@ -184,7 +188,9 @@ export function useNotificationSync() {
     }
 
     if (classifyCreateResult(result) === 'rejected') {
-      cache.restore(snapshot);
+      restoreNotifications(cache, userId(), captured);
+    } else {
+      ids.forEach(id => useStore.getState().clearExpirationLink(id));
     }
   };
 

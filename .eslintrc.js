@@ -650,7 +650,11 @@ module.exports = {
           },
           {
             target: './src/features/!(shoppingList)/**',
-            from: [],
+            from: [
+              './src/features/shoppingList/context',
+              './src/features/shoppingList/hooks/mutations',
+              './src/features/shoppingList/utils',
+            ],
             message:
               'Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/shoppingList/hooks/.',
           },

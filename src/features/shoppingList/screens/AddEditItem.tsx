@@ -45,6 +45,7 @@ import {
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
 import { validationFieldName } from '#/utils/errors/mutationPayload';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -246,13 +247,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             },
           });
 
-          // Only navigate back if the update succeeded.
-          const updatePayload =
-            result.data?.updateShoppingListItem?.__typename ===
-            'UpdateShoppingListItemPayload'
-              ? result.data.updateShoppingListItem.shoppingListItem
-              : null;
-          if (updatePayload) {
+          // 'queued' carries `updateShoppingListItem: null` — a payload check
+          // alone reads that offline save as a refusal.
+          if (classifyCreateResult(result) !== 'rejected') {
             navigation.goBack();
           } else if (result.data) {
             // A refusal that names a field gets copy for that field — this

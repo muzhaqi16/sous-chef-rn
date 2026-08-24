@@ -104,6 +104,20 @@ describe('setupBadgeSync', () => {
     expect(mockSetBadgeCount).toHaveBeenCalledWith(0);
   });
 
+  // Sign-out runs `client.clearStore()`, after which the read misses again.
+  // Before, that read returned early and left the previous user's count on the
+  // app icon for whoever signed in next.
+  it('clears the badge when the store is cleared after a count was applied', async () => {
+    writeCount(7);
+    teardown = setupBadgeSync();
+    mockSetBadgeCount.mockClear();
+
+    await mockCache.reset();
+    await Promise.resolve();
+
+    expect(mockSetBadgeCount).toHaveBeenCalledWith(0);
+  });
+
   it('does not re-apply an unchanged count', async () => {
     writeCount(4);
     teardown = setupBadgeSync();

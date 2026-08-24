@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useSubscription } from '@apollo/client/react';
+import type { ApolloClient } from '@apollo/client';
 import {
   NotificationEventsDocument,
   GetUnreadNotificationsDocument,
@@ -44,6 +45,7 @@ import { useNotificationSettings } from './useNotificationSettings';
 import { useNotificationSync } from './useNotificationSync';
 import { useSubscriptionTransportRecovery } from '#/hooks/subscriptions/useSubscriptionTransportRecovery';
 import { logger } from '#/utils/environment';
+import { registerSessionTeardown } from '#store/sessionTeardown';
 
 // PERFORMANCE: Grouped selectors with useShallow keep store subscriptions low
 // The listener needs the signed-in user and nothing else from the store; the
@@ -67,6 +69,43 @@ interface NotificationConfig {
  * double-processes every event. Screens that need notification state should
  * use `useNotifications` instead — it reads the store without subscribing.
  */
+/**
+ * Re-seed the unread count, coalesced.
+ *
+ * `GetUnreadNotifications` selects the connection's first 50 with the full
+ * notification fragment, and a burst — a reconnect backfill, a collaborator
+ * acting in bulk — would otherwise fire one full round trip per event.
+ */
+const RESEED_DEBOUNCE_MS = 300;
+let reseedTimer: ReturnType<typeof setTimeout> | null = null;
+
+const scheduleUnreadReseed = (client: ApolloClient): void => {
+  if (reseedTimer !== null) clearTimeout(reseedTimer);
+  reseedTimer = setTimeout(() => {
+    reseedTimer = null;
+    client
+      .query({
+        query: GetUnreadNotificationsDocument,
+        fetchPolicy: 'network-only',
+      })
+      .catch(() => {
+        // Transient failure: the foreground / WS-reconnect re-query paths
+        // converge the feed later.
+      });
+  }, RESEED_DEBOUNCE_MS);
+};
+
+/** Test seam, and what stops a pending reseed outliving the session. */
+export const cancelPendingUnreadReseed = (): void => {
+  if (reseedTimer === null) return;
+  clearTimeout(reseedTimer);
+  reseedTimer = null;
+};
+
+// A reseed parked in the debounce would otherwise fire after `clearStore()` and
+// re-populate the cache for a session that has ended.
+registerSessionTeardown('notification-reseed', cancelPendingUnreadReseed);
+
 export const useNotificationListener = (config: NotificationConfig = {}) => {
   const client = useApolloClient();
   const { t } = useTranslation();
@@ -85,17 +124,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
   // notification, including ones this device has never paged in, so a local ±1
   // was only ever an approximation of it. An event arriving means the socket is
   // up, so the read is available.
-  const reseedUnreadCount = () => {
-    client
-      .query({
-        query: GetUnreadNotificationsDocument,
-        fetchPolicy: 'network-only',
-      })
-      .catch(() => {
-        // Transient failure: the foreground / WS-reconnect re-query paths
-        // converge the feed later.
-      });
-  };
+  const reseedUnreadCount = () => scheduleUnreadReseed(client);
 
   // PERFORMANCE: Use ref instead of state for AppState to avoid re-renders
   const appStateRef = useRef(AppState.currentState);
