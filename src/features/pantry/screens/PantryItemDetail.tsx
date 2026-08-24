@@ -8,6 +8,8 @@ import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import Animated from 'react-native-reanimated';
 import { useApolloClient, useFragment, useQuery } from '@apollo/client/react';
+import { DataStateView } from '#components/molecules/DataStateView';
+import { useDataState } from '#hooks/data/useDataState';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
@@ -53,7 +55,6 @@ import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
@@ -95,7 +96,12 @@ export const PantryItemDetail: React.FC<
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
-  const { data, refetch } = useQuery(GetPantryItemDocument, {
+  const {
+    data,
+    refetch,
+    loading: itemLoading,
+    error: itemError,
+  } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
   });
   const client = useApolloClient();
@@ -233,15 +239,21 @@ export const PantryItemDetail: React.FC<
     item?.quantityBreakdown,
   );
 
+  // Without this the screen rendered a bare loader whenever `item` was falsy,
+  // so an offline cache miss span forever with no error, no explanation and no
+  // retry — the query's `loading` and `error` were never read at all.
+  const itemState = useDataState({
+    loading: itemLoading,
+    error: itemError,
+    hasResult: !!data,
+    isEmpty: !item,
+  });
+
   if (!item) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
         <View style={styles.loadingContainer}>
-          <SousChefLoader
-            size="small"
-            showBrand={false}
-            message={t('labels.loading')}
-          />
+          <DataStateView state={itemState} onRetry={handleRefresh} />
         </View>
       </CollapsingHeroDetail>
     );

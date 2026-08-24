@@ -60,6 +60,12 @@ jest.mock('#hooks/performance/useScreenTransition', () => ({
 jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
+  // The screen classifies its own data state via useDataState ->
+  // useOfflineAwareError -> useBlocksCacheMissQueries, which calls
+  // useAppStore(selector). Online by default; individual tests override.
+  useAppStore: jest.fn((selector: (s: unknown) => unknown) =>
+    selector({ isOnline: true, isApiUnavailable: false }),
+  ),
 }));
 
 jest.mock('#components/molecules/Header', () => ({
@@ -93,6 +99,13 @@ jest.mock('#components/modals/CorrectWeightModal', () => ({
 
 jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
+}));
+
+// The offline predicate `useDataState` consults. Mocked at the hook rather than
+// the slice so the test does not depend on networkSlice internals.
+const mockBlocksCacheMissQueries = jest.fn(() => false);
+jest.mock('#hooks/app/useBlocksCacheMissQueries', () => ({
+  useBlocksCacheMissQueries: () => mockBlocksCacheMissQueries(),
 }));
 
 beforeEach(() => {
@@ -171,6 +184,24 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.getByTestId('pantry-item-edit-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-delete-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
+  });
+
+  it('shows the offline state, not a spinner, on an offline cache miss', async () => {
+    // The screen read only `data` from useQuery and rendered a bare loader
+    // whenever `item` was falsy, so offline it span forever with no error and
+    // no retry. `loading` and `error` were never consulted.
+    mockBlocksCacheMissQueries.mockReturnValue(true);
+
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        recordMock(GetPantryItemDocument, {
+          error: new Error('offline: no cached data'),
+        }).mock,
+      ],
+    });
+
+    expect(await screen.findByTestId('state-offline')).toBeTruthy();
+    expect(screen.queryByTestId('state-loading')).toBeNull();
   });
 
   it('renders loader before the query resolves', () => {
