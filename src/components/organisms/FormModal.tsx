@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { Header } from '../molecules/Header';
 
@@ -45,14 +45,13 @@ export const FormModal: React.FC<FormModalProps> = ({
           },
         ]}
       />
-      <KeyboardAwareScrollView
+      <ThemedKeyboardAwareScrollView
         style={styles.form}
-        bottomOffset={16}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {children}
-      </KeyboardAwareScrollView>
+      </ThemedKeyboardAwareScrollView>
     </View>
   );
 };

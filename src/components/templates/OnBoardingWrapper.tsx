@@ -2,7 +2,7 @@ import { BackButton } from '#components/atoms/BackButton';
 import { useTranslation } from '#/i18n';
 import React, { ReactNode } from 'react';
 import { View } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
 import { ThemedSafeAreaView } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
@@ -97,16 +97,15 @@ export const OnBoardingWrapper = ({
           />
         </View>
       )}
-      <KeyboardAwareScrollView
+      <ThemedKeyboardAwareScrollView
         contentContainerStyle={styles.scrollContainer}
-        bottomOffset={16}
         keyboardShouldPersistTaps="handled"
       >
         {!!displaySubtitle && (
           <Text style={styles.subtitle}>{displaySubtitle}</Text>
         )}
         <View style={styles.content}>{children}</View>
-      </KeyboardAwareScrollView>
+      </ThemedKeyboardAwareScrollView>
       {/* Enhanced Navigation or Legacy Bottom Navigation */}
       {showNavigation && !isLegacyMode && onboardingContext ? (
         <ThemedOnboardingNavigation

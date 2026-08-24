@@ -65,7 +65,6 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       {/* Item Name */}
       <FormInput

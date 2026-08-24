@@ -571,8 +571,8 @@ if (alertIfRejected(result, t('errors.updateMemberRoleFailed'))) {
   translated** (matches the codebase-wide `trackEvent`/`operation:` convention;
   these flow to Loki/Telemetry, never to the user).
 - **`useCrudOperations`** uses `findFirstErrorMember` (via `surfaceCrudDataError`)
-  rather than `classifyCreateResult`, because it needs the refused member's own
-  `message` to show the user and the classifier only returns an outcome. Both
+  rather than `classifyCreateResult`, because it needs the member's `field` and
+  `code` to pick localized copy and the classifier only returns an outcome. Both
   apply the same shared `isErrorTypename` rule, so they agree on which member is
   the refusal.
 
@@ -603,10 +603,6 @@ The cost is recorded rather than hidden: one field can carry several rules —
 `unit` refuses both "batches still exist" and "no conversion path" — so its
 string names both remedies. Adding a mapping to `errors.field.*` is opt-in; a
 field with none simply keeps the caller's copy.
-
-> **Known deviation:** `useCrudOperations`' `surfaceCrudDataError` still shows
-> the refused member's own `message` (English) when present. It predates this
-> rule; treat it as migration debt, not a pattern to copy.
 
 ### Standard Error Pattern
 
@@ -859,7 +855,7 @@ const { data } = useQuery(QUERY, {
 
 **Important:** Uses the "adjusting state during render" pattern (`useState` + conditional `setState`) to stay compatible with the React Compiler. Do not use `useRef` for this — reading `ref.current` during render causes compiler bailout.
 
-**Reference implementation:** `src/hooks/home/pantry/usePantryQuery.ts`
+**Reference implementation:** `src/features/pantry/hooks/usePantryQuery.ts`
 
 ### Avoid Redundant `refetch()` on Variable Changes
 

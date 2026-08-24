@@ -2,6 +2,7 @@
 
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService, type AlertButton } from '#/services/alertService';
+import { errorService } from '#/services/errorService';
 import { alertVersionConflict } from '#/utils/errorHandlers';
 import { useCrudOperations } from '../useCrudOperations';
 
@@ -10,7 +11,10 @@ jest.mock('#/services/alertService', () => ({
 }));
 
 jest.mock('#/services/errorService', () => ({
-  errorService: { reportError: jest.fn() },
+  errorService: {
+    reportError: jest.fn(),
+    getUserFriendlyMessage: jest.fn((code: string) => `mapped:${code}`),
+  },
   getErrorMessage: jest.fn((e: unknown) =>
     e instanceof Error ? e.message : 'An error occurred',
   ),
@@ -169,7 +173,7 @@ describe('useCrudOperations', () => {
       expect(data).toEqual({ id: '1' });
     });
 
-    it('handles GraphQL errors returned in result.errors', async () => {
+    it('never shows a top-level GraphQL error message — codeless gets the generic line', async () => {
       const mockMutation = jest.fn().mockResolvedValue({
         data: null,
         errors: [{ message: 'Duplicate entry' }],
@@ -184,9 +188,116 @@ describe('useCrudOperations', () => {
       const data = await addOp({ name: 'test' });
 
       expect(data).toBe(false);
+      // 'Duplicate entry' is server-authored English; the user sees copy from
+      // the app's own locale files instead.
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
-        'Duplicate entry',
+        'Something went wrong. Please try again.',
+      );
+    });
+
+    it('maps a top-level GraphQL error extensions.code to localized copy', async () => {
+      const mockMutation = jest.fn().mockResolvedValue({
+        data: null,
+        errors: [{ message: 'Forbidden', extensions: { code: 'FORBIDDEN' } }],
+      });
+
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const addOp = result.current.createAddOperation({
+        mutation: mockMutation,
+      });
+
+      await addOp({ name: 'test' });
+
+      expect(errorService.getUserFriendlyMessage).toHaveBeenCalledWith(
+        'FORBIDDEN',
+      );
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'mapped:FORBIDDEN',
+      );
+    });
+
+    it('routes an errors-as-data ValidationError with a field to errors.field copy', async () => {
+      const mockMutation = jest.fn().mockResolvedValue({
+        data: {
+          createItem: {
+            __typename: 'ValidationError',
+            code: 'VALIDATION_FIELD_INVALID',
+            message: 'unit is locked',
+            field: 'input.unit',
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const addOp = result.current.createAddOperation({
+        mutation: mockMutation,
+      });
+
+      const data = await addOp({ name: 'test' });
+
+      expect(data).toBe(false);
+      // The real en.json errors.field.unit string — field wins over code.
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        "This item's unit can't be changed right now. Deplete its batches first, or choose a unit it converts to.",
+      );
+    });
+
+    it('routes an errors-as-data member without a field through its code', async () => {
+      const mockMutation = jest.fn().mockResolvedValue({
+        data: {
+          createItem: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'nope',
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const addOp = result.current.createAddOperation({
+        mutation: mockMutation,
+        operationName: 'Create Item',
+      });
+
+      await addOp({ name: 'test' });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'mapped:FORBIDDEN',
+      );
+      // Telemetry keeps the server's raw wording; the user never sees it.
+      const reported = (errorService.reportError as jest.Mock).mock
+        .calls[0][0] as Error;
+      expect(reported.message).toBe('Create Item: nope');
+    });
+
+    it('falls back to the generic line for a member with no code', async () => {
+      const mockMutation = jest.fn().mockResolvedValue({
+        data: {
+          createItem: {
+            __typename: 'PlainError',
+            message: 'raw server words',
+          },
+        },
+      });
+
+      const { result } = renderHookWithApollo(() => useCrudOperations());
+
+      const addOp = result.current.createAddOperation({
+        mutation: mockMutation,
+      });
+
+      await addOp({ name: 'test' });
+
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Something went wrong. Please try again.',
       );
     });
 

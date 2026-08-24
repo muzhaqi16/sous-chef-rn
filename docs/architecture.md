@@ -112,6 +112,18 @@ either: a hook owned by one feature lives in that feature, and `src/hooks/` hold
 only what more than one feature uses. Both directions are enforced by
 `import/no-restricted-paths` zones.
 
+One asymmetry in those zones is deliberate: `graphql/` is absent from the
+shared-layer zone (while feature-to-feature zones do block it). The offline
+queue replays every feature's `Sync*` mutations and the subscription layer
+mounts every feature's event subscription centrally, so neither can move into
+a feature — listing `graphql/` would need ~19 `except` entries and excuse more
+than it forbids. Generated operation documents are typed and side-effect-free;
+treating them as a feature's data contract is the honest reading. `context/`,
+`utils/` and `hooks/mutations/` carry behaviour and stay private, with four
+named exceptions that each say why. Tests are exempt — a cache test has to
+import the fragment it exercises. The rules block NEW reach-across imports;
+migrating working code is not required.
+
 `src/screens/` holds auth and onboarding only. Those are flows rather than
 domains — they have no feature-shaped data layer, and they run before a home
 exists. Every domain, `home` included, is a folder under `src/features/`.
@@ -213,8 +225,10 @@ fragment's fields from the parent, including the key field — without an explic
 `id`, `cache.identify` throws. `__tests__/graphql/maskingIdentity.test.ts`
 enforces this for every operation.
 
-Full guidance — cache update patterns, optimistic responses, fetch policy
-decision trees, subscription handling, test patterns — is in
+Full guidance — fragment composition and masking templates
+([§ Fragment Composition & Data Masking](apollo-client-patterns.md#fragment-composition--data-masking)),
+cache update patterns, optimistic responses, fetch policy decision trees,
+subscription handling — is in
 **[`apollo-client-patterns.md`](apollo-client-patterns.md)**.
 
 ### Client defaults
@@ -232,7 +246,9 @@ Set in `src/apollo/client.ts`:
 `src/apollo/links/` composes the request pipeline: auth and token refresh,
 persisted queries, retry, offline-mode gating, API reachability probing and
 circuit breaking, network status, telemetry, error handling, and the WebSocket
-link for subscriptions.
+link for subscriptions. Session end, token rotation, and the WebSocket
+close-code verdicts are covered in
+[`session-and-transport.md`](session-and-transport.md).
 
 ### Pagination
 
@@ -330,8 +346,32 @@ Two structural decisions worth knowing:
   root `Home` screen, which use `'none'`.** `'pause'` (React 19 `Activity`)
   destroys every layout effect in a hidden subtree and re-runs them
   synchronously on resume — for a tab subtree of four FlashLists plus every
-  mounted cell's animations, that's a multi-second JS freeze. The trade is
-  higher idle memory for the tabs.
+  mounted cell's animations, that's a multi-second JS freeze. `Home` needs it
+  too because native-stack only treats the screen directly under the focused
+  one as active, so a deep push (`Home > Profile > HomeManagement >
+  HomeDetail`) pauses the tabs from the second push down.
+
+  **The trade is not idle memory — it's one resume freeze against continuous
+  background work.** `'none'` keeps the blurred subtree mounted and
+  subscribed: every Apollo `useQuery` in the hidden tabs keeps watching the
+  cache and re-renders on any write touching its fields; subscriptions,
+  `AppState`/`NetInfo` listeners and polling intervals keep firing; Reanimated
+  and gesture effects keep running on every commit. Right for four FlashLists,
+  wrong almost everywhere else — every other navigator stays on `'pause'`, and
+  adding a fifth tab or a heavy subscription should prompt re-measuring.
+  `HomeTabs.test.tsx` and `RootNavigator.test.tsx` assert these are the ONLY
+  two opt-outs.
+
+  **A secondary consumer of another tab's query must stand its watcher down
+  while blurred.** `'none'` does not make watchers free: `useRecipeDiscovery`
+  held a live `GetPantry` watcher, so every pantry delete re-rendered the
+  hidden Recipes tab and — its discovery cache being keyed by the ingredient
+  list — called the recipe API from a hidden tab. It now passes
+  `{ skip: !isFocused, fetchPolicy: 'cache-first' }` driven by
+  `useFocusEffect`. `cache-first` is load-bearing: Apollo resets a re-enabled
+  query to its initial policy, so `skip` alone costs a `cache-and-network`
+  round-trip per focus. `usePreservedConnection` holds the last result across
+  the skip, so nothing downstream moves while blurred.
 
 ---
 
@@ -341,12 +381,26 @@ Two structural decisions worth knowing:
 
 `babel-plugin-react-compiler` handles memoization. Consequences:
 
-- **No `useMemo` / `useCallback` / `React.memo`.** They're redundant, and
-  `React.memo` on list cells is counterproductive — FlashList v2's `ViewHolder`
-  already does reference equality on `item`.
-- **No `try`/`catch` or `try`/`finally` inside hook or component bodies.** The
-  compiler bails out on the entire hook, silently losing all auto-memoization.
-  Use the shared helpers in `src/utils/finallyHelpers.ts`.
+- **Default to no `useMemo` / `useCallback` / `React.memo` — a default, not an
+  absolute.** The compiler memoizes for you in the ordinary case, and
+  `React.memo` on list cells is usually redundant — FlashList v2's `ViewHolder`
+  already does reference equality on `item`. Manual memoization is legitimate
+  in exactly three places: a value that feeds a **dependency array**, a prop
+  read by something the compiler did not compile (a third-party `===` check),
+  and any file in the bailout baseline
+  (`scripts/check-compiler-bailouts.baseline.json`). The lint rule is an error
+  so the exception is written down: add
+  `// eslint-disable-next-line no-restricted-imports` with the reason.
+- **Two `try` shapes bail the compiler out of the whole function** (silently
+  losing all its auto-memoization): a **finalizer** (`finally` with or without
+  `catch`, and a catch-less `try`), and a **value block inside the `try` body**
+  (`?.`, `??`, `&&`, `||`, or a ternary). A `try/catch` whose body is plain
+  statements compiles fine — move the conditional part out of the `try`.
+  Mechanism and probe:
+  [`verified-library-behaviour.md`](verified-library-behaviour.md#react-compiler-try-shapes).
+  For `finally` cases use the shared helpers in `src/utils/finallyHelpers.ts`;
+  `node scripts/check-compiler-bailouts.mjs` is the backstop that actually
+  compiles every file.
 - **Never read or write `ref.current` during render.** Use the adjusting-state-
   during-render pattern instead.
 
@@ -375,7 +429,7 @@ The Unistyles babel plugin must run **before** the React Compiler plugin.
 `SortableShoppingList` handles drag-and-drop. Never `.map()` an unbounded list
 inside a `ScrollView`.
 
-`estimatedItemSize` is deprecated in FlashList v2 and must not be used. List
+`estimatedItemSize` is **removed** in FlashList v2 — the prop no longer exists. List
 `data` must never come through `useDeferredValue` / `startTransition` —
 [`flashlist-layout-index-race.md`](flashlist-layout-index-race.md). How the two
 big lists are fed and what an append costs:
@@ -388,7 +442,11 @@ hook, driven by a `visible` boolean rather than imperative `present()`/
 `dismiss()`. The app has a global backdrop system
 (`OverlayBackdropProvider` + `GlobalBackdrop`); inline `BottomSheet` backdrops
 conflict with it. See
-[`backdrop-lifecycle-design.md`](backdrop-lifecycle-design.md).
+[`backdrop-lifecycle-design.md`](backdrop-lifecycle-design.md). The two
+verified gorhom mechanics behind the sheet rules — why a scrollable must never
+sit inside `BottomSheetView`, and why sheet inputs must resolve to
+`BottomSheetTextInput` — are recorded in
+[`verified-library-behaviour.md`](verified-library-behaviour.md).
 
 ### Theming and design tokens
 
@@ -445,5 +503,7 @@ tagging), `infra/`, `docs/`.
 - [`development.md`](development.md) — setup, commands, build variants, testing
 - [`apollo-client-patterns.md`](apollo-client-patterns.md) — the Apollo deep dive
 - [`local-first-architecture.md`](local-first-architecture.md) — offline queue and sync
+- [`session-and-transport.md`](session-and-transport.md) — session end, token rotation, WS close codes
+- [`verified-library-behaviour.md`](verified-library-behaviour.md) — the probe record behind the verified rules
 - [`performance-monitoring.md`](performance-monitoring.md) — instrumentation
 - `CLAUDE.md` (repo root) — the enforced day-to-day conventions

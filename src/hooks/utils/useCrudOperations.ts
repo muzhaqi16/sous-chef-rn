@@ -32,27 +32,44 @@ import {
   findConflictDataMember,
   findFirstErrorMember,
 } from '#/utils/errors/versionConflict';
+import { validationFieldName } from '#/utils/errors/mutationPayload';
 import { t } from '#/i18n';
 
 /**
  * Surface a resolved errors-as-data member from a mutation `data` payload.
  *
  * Uses `findFirstErrorMember` rather than `classifyCreateResult` because this
- * needs the refused member's own `message` to put in front of the user, which
- * the classifier doesn't return — both apply the same `isErrorTypename` rule, so
- * they agree on WHICH member is the refusal and differ only in what they hand
- * back. Under `errorPolicy:'all'` that member resolves as truthy `data` and
- * would otherwise be treated as success. Returns true (and alerts + reports)
- * when an error was surfaced.
+ * needs the member's `code` (and, via the payload, a `ValidationError`'s
+ * `field`) to pick localized copy, which the classifier doesn't return — both
+ * apply the same `isErrorTypename` rule, so they agree on WHICH member is the
+ * refusal and differ only in what they hand back. Under `errorPolicy:'all'`
+ * that member resolves as truthy `data` and would otherwise be treated as
+ * success. Returns true (and alerts + reports) when an error was surfaced.
+ *
+ * Copy resolution mirrors `alertRejectedMutation`: a refusal naming a `field`
+ * resolves `errors.field.<field>`; otherwise the member's `code` maps through
+ * `errorService.getUserFriendlyMessage` (`errors.codes.*`); otherwise the
+ * generic retry line. The server's `message` is English by construction and is
+ * never displayed — it goes to telemetry below, where raw server wording
+ * belongs.
  */
 function surfaceCrudDataError(data: unknown, operationName: string): boolean {
   const member = findFirstErrorMember(data);
   if (!member) return false;
-  const message = member.message || t('errors.codes.genericRetry');
+  const codeMessage = member.code
+    ? errorService.getUserFriendlyMessage(member.code)
+    : t('errors.codes.genericRetry');
+  const field = validationFieldName(data);
+  const message = field
+    ? t(`errors.field.${field}`, { defaultValue: codeMessage })
+    : codeMessage;
   alertService.alert(t('labels.error'), message);
-  errorService.reportError(new Error(`${operationName}: ${message}`), {
-    operation: operationName,
-  });
+  errorService.reportError(
+    new Error(
+      `${operationName}: ${member.message || member.code || member.typename}`,
+    ),
+    { operation: operationName },
+  );
   return true;
 }
 
@@ -62,7 +79,10 @@ function surfaceCrudDataError(data: unknown, operationName: string): boolean {
  */
 type MutateResultLike<TResult> = {
   data?: TResult | null;
-  errors?: readonly { message: string }[];
+  errors?: readonly {
+    message: string;
+    extensions?: Record<string, unknown>;
+  }[];
 };
 
 /**
@@ -185,9 +205,16 @@ function createAddOperationImpl<TInput, TResult>(
     // Handle GraphQL errors returned with errorPolicy: 'all'
     // Check errors FIRST because result.data may be { mutationName: null } even on error
     if (result.errors && result.errors.length > 0) {
-      const errorMessage =
-        result.errors[0].message || t('errors.codes.genericRetry');
-      alertService.alert(t('labels.error'), errorMessage);
+      // A top-level GraphQL error carries `extensions.code`; its `message` is
+      // server-authored English and is never displayed — map the code to
+      // localized copy (an absent or unmapped code gets a generic line).
+      const code = result.errors[0].extensions?.code;
+      alertService.alert(
+        t('labels.error'),
+        typeof code === 'string'
+          ? errorService.getUserFriendlyMessage(code)
+          : t('errors.codes.genericRetry'),
+      );
       return false;
     }
 

@@ -65,9 +65,12 @@ library default is `0`.
 `KeyboardAwareScrollView/index.tsx` computes
 `point = absoluteY + inputHeight` and scrolls when
 `visibleRect - point <= bottomOffset`; the prop defaults to `0` in the same
-file. The app-level default of `16` lives in
-`src/components/atoms/BottomSheetFormScrollView.tsx` and
-`src/components/atoms/BottomSheetLayout.tsx`, not in the library.
+file. The app-level default is the density-scaled `theme.spacing.md`, applied
+as a `withUnistyles` mapping in
+`src/components/atoms/BottomSheetKeyboardAwareScrollView.tsx` (sheets) and by
+`ThemedKeyboardAwareScrollView` in
+`src/components/atoms/themedComponents.tsx` (full-screen forms) — not in the
+library, and never hardcoded at call sites.
 
 Re-check:
 
@@ -82,7 +85,7 @@ silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
 **Verified against `react-native-unistyles@3.3.0`.**
-`src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
+`node_modules/react-native-unistyles/src/core/withUnistyles/withUnistyles.native.tsx` builds the forwarded style
 with `Object.assign({}, uni__getStyles())`, and for a function-valued `style`
 prop `uni__getStyles()` returns the function itself. `Object.assign({}, fn)`
 copies a function's own enumerable properties — an arrow function has none.

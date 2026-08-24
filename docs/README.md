@@ -12,7 +12,8 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | **[Architecture](architecture.md)** | How the app is built and organized — feature modules, state ownership, the data layer, offline-first, navigation, and the UI layer. Read this first. |
 | **[Development](development.md)** | Setup, environment files, build variants, codegen, testing, quality gates, and the full command reference. |
 | **[Contributing](../CONTRIBUTING.md)** | Contribution terms, PR guidelines, git hooks. |
-| **[CLAUDE.md](../CLAUDE.md)** | The enforced day-to-day conventions — Apollo cache patterns, Unistyles rules, React Compiler constraints, bottom sheets, worklets, testing. Much of it is backed by lint rules and tests. |
+| **[CLAUDE.md](../CLAUDE.md)** | The enforced day-to-day conventions, one rule per line — commands, structure, Apollo, UI, React Compiler, i18n, testing. Backed by lint rules and tests; verified rules link into the probe record below. |
+| **[Verified library behaviour](verified-library-behaviour.md)** | The probe record CLAUDE.md's one-line verification stamps link into — each entry pins a rule to the installed package's source, with a re-check command. |
 
 ---
 
@@ -22,6 +23,7 @@ Developer documentation for the Sous Chef React Native app. For what the app
 | --- | --- |
 | [Apollo client patterns](apollo-client-patterns.md) | The comprehensive Apollo guide: cache update patterns, optimistic responses, fragment composition and masking, error handling and version conflicts, subscriptions, fetch-policy decision trees. |
 | [Local-first architecture](local-first-architecture.md) | How writes apply instantly and offline — the mutation queue, replay on reconnect, conflict handling, and what "complete optimistic entity" means in practice. |
+| [Session & transport](session-and-transport.md) | How a session ends, how tokens rotate on both transports, and how WebSocket close codes are read — the verdict table and the mechanisms behind it. |
 
 ## Features
 

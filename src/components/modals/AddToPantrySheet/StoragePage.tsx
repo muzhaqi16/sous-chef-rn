@@ -62,7 +62,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       <DropdownStack>
         {/* Storage Location */}

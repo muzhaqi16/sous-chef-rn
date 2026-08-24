@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, type TextInput } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { ThemedKeyboardAwareScrollView } from '#components/atoms/themedComponents';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -301,9 +301,8 @@ export const ResetPasswordScreen: React.FC = () => {
     <View style={styles.container} testID="reset-password-screen">
       <Header onClose={handleGoBack} />
 
-      <KeyboardAwareScrollView
+      <ThemedKeyboardAwareScrollView
         contentContainerStyle={styles.scrollContent}
-        bottomOffset={16}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -378,7 +377,7 @@ export const ResetPasswordScreen: React.FC = () => {
             {t('auth.resetPasswordButton')}
           </Button>
         </View>
-      </KeyboardAwareScrollView>
+      </ThemedKeyboardAwareScrollView>
     </View>
   );
 };

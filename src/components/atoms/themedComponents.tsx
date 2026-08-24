@@ -5,6 +5,7 @@ import {
   TextInput,
 } from 'react-native';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { withUnistyles } from 'react-native-unistyles';
 
@@ -40,6 +41,18 @@ export const ThemedBottomSheetTextInput = withUnistyles(
   BottomSheetTextInput,
   theme => ({
     placeholderTextColor: theme.colors.inputPlaceholder,
+  }),
+);
+
+/** Keyboard-aware scroller for full-screen forms, with `bottomOffset`
+ *  defaulting to the density-scaled `theme.spacing.md` (the library default is
+ *  0, which lands a focused input flush against the keyboard). Sheets use
+ *  `BottomSheetFormScrollView` instead, which carries the same default. An
+ *  explicitly passed `bottomOffset` overrides the mapping. */
+export const ThemedKeyboardAwareScrollView = withUnistyles(
+  KeyboardAwareScrollView,
+  theme => ({
+    bottomOffset: theme.spacing.md,
   }),
 );
 

@@ -62,7 +62,6 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
         {t('addToPantry.lowStockSettings')}

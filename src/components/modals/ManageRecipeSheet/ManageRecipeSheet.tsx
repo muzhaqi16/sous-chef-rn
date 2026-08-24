@@ -143,7 +143,6 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
         contentContainerStyle={[styles.contentContainer, contentContainerStyle]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        bottomOffset={16}
       >
         {/* Header */}
         <View style={styles.header}>

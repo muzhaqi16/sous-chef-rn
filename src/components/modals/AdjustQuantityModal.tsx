@@ -102,7 +102,6 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={t('adjustQuantity.title')}

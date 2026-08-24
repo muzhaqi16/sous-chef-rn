@@ -213,7 +213,6 @@ export const SearchResultsScreen: React.FC<
         <BottomSheetKeyboardAwareScrollView
           style={styles.bottomSheetContent}
           keyboardShouldPersistTaps="handled"
-          bottomOffset={16}
         >
           {sheetMode === 'edit' && currentItem ? (
             <SuggestEditForm

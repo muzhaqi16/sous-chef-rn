@@ -77,7 +77,6 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       {/* Quantity + Unit */}
       <View style={{ zIndex: 10 }}>
