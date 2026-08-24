@@ -35,7 +35,10 @@ import {
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  removeFromPantryItemsCache,
+  adjustPantryItemCount,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import type { PantryItemUpdate } from '../pantryDataTypes';
 import { errorService } from '#/services/errorService';
 
@@ -132,6 +135,7 @@ export function usePantryItemMutations({
 
       const itemId = variables.input.id;
       removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
+      adjustPantryItemCount(cache, pantryId, -1);
     },
   });
 
@@ -164,6 +168,7 @@ export function usePantryItemMutations({
       removeFromPantryItemsCache(client.cache, pantryId, itemId, {
         evictItem: true,
       });
+      adjustPantryItemCount(client.cache, pantryId, -1);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Remove Pantry Item (optimistic evict)',

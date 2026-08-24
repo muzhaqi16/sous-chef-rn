@@ -10,7 +10,10 @@ import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  removeFromPantryItemsCache,
+  adjustPantryItemCount,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -115,21 +118,7 @@ export function usePantryItemDetailActions({
       removeFromPantryItemsCache(cache, selectedPantryId, variables.input.id, {
         evictItem: true,
       });
-      cache.modify({
-        id: cache.identify({ __typename: 'Pantry', id: selectedPantryId }),
-        fields: {
-          stats(existingStats?: {
-            totalItems?: number;
-            readonly __ref?: string;
-          }) {
-            if (!existingStats) return existingStats;
-            return {
-              ...existingStats,
-              totalItems: Math.max(0, (existingStats.totalItems || 0) - 1),
-            };
-          },
-        },
-      });
+      adjustPantryItemCount(cache, selectedPantryId, -1);
     },
   });
 

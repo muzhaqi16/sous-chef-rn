@@ -1,4 +1,5 @@
-'use no memo';
+import { InMemoryCache } from '@apollo/client';
+('use no memo');
 
 // Break the circular dependency chain these modules sit in.
 jest.mock('../../links/tokenScheduler');
@@ -11,6 +12,7 @@ jest.mock('../cacheUpdaters', () => ({
 
 import {
   addToPantryItemsCache,
+  adjustPantryItemCount,
   removeFromPantryItemsCache,
 } from '../pantryCacheUpdaters';
 import {
@@ -42,5 +44,53 @@ describe('pantryCacheUpdaters', () => {
       'PantryItem',
     );
     expect(typeof removeFromPantryItemsCache).toBe('function');
+  });
+});
+
+const PANTRY_ID = 'pantry-1';
+
+function cacheWithStats(totalItems: number) {
+  const cache = new InMemoryCache();
+  cache.restore({
+    [`Pantry:${PANTRY_ID}`]: {
+      __typename: 'Pantry',
+      id: PANTRY_ID,
+      stats: { __typename: 'PantryStats', totalItems },
+    },
+  });
+  return cache;
+}
+
+function readTotal(cache: InMemoryCache): number | undefined {
+  const extracted = cache.extract() as Record<
+    string,
+    { stats?: { totalItems?: number } }
+  >;
+  return extracted[`Pantry:${PANTRY_ID}`]?.stats?.totalItems;
+}
+
+describe('adjustPantryItemCount', () => {
+  it('increments on a local add', () => {
+    const cache = cacheWithStats(63);
+    adjustPantryItemCount(cache, PANTRY_ID, 1);
+    expect(readTotal(cache)).toBe(64);
+  });
+
+  it('decrements on a local remove', () => {
+    const cache = cacheWithStats(64);
+    adjustPantryItemCount(cache, PANTRY_ID, -1);
+    expect(readTotal(cache)).toBe(63);
+  });
+
+  it('never goes below zero', () => {
+    const cache = cacheWithStats(0);
+    adjustPantryItemCount(cache, PANTRY_ID, -1);
+    expect(readTotal(cache)).toBe(0);
+  });
+
+  it('leaves an uncached pantry alone rather than inventing stats', () => {
+    const cache = new InMemoryCache();
+    expect(() => adjustPantryItemCount(cache, PANTRY_ID, 1)).not.toThrow();
+    expect(readTotal(cache)).toBeUndefined();
   });
 });

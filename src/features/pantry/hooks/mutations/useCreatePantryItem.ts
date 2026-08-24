@@ -21,7 +21,10 @@ import {
   getPantryItemDuplicateFromResult,
   promptPantryDuplicate,
 } from '#/utils/errors/pantryItemDuplicate';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  addToPantryItemsCache,
+  adjustPantryItemCount,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -69,6 +72,7 @@ export function useCreatePantryItem({
 
       try {
         addToPantryItemsCache(cache, pantryId, pantryItem);
+        adjustPantryItemCount(cache, pantryId, 1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Cache update failed:',
