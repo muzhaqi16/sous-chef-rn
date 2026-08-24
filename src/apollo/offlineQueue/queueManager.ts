@@ -108,9 +108,18 @@ export class QueueManager {
    * Process the queue for the current user
    */
   async processQueue(): Promise<void> {
+    // Logged unconditionally so "never called again" is distinguishable from
+    // "called and returned at a branch" — the `isProcessing` early return had
+    // only a counter, and counters carry no session id.
+    Telemetry.warn('Queue drain invoked');
+
     // Prevent concurrent processing
     if (this.isProcessing) {
       logger.debug('⏳ Queue: Already processing, waiting...');
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'already_processing',
+      });
+      Telemetry.warn('Queue drain skipped: already processing');
       return this.processingPromise || Promise.resolve();
     }
 
@@ -119,6 +128,14 @@ export class QueueManager {
     // Check if user is authenticated
     if (!state.user || !state.accessToken) {
       logger.info('⚠️ Queue: No authenticated user, skipping processing');
+      // Counted, not just logged: `logger` is console-only and console is
+      // stripped from release builds, so on a real device these two branches
+      // were invisible — and they decide whether queued writes ever replay.
+      // `reason` is a fixed small set, so the cardinality is bounded.
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'no_authenticated_user',
+      });
+      Telemetry.warn('Queue drain skipped: no authenticated user');
       return;
     }
 
@@ -126,11 +143,21 @@ export class QueueManager {
     // reachability breaker is open) — replays would just fail and re-trip it.
     if (isApiUnavailable(state)) {
       logger.debug('📴 Queue: Server unreachable, skipping processing');
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'api_unavailable',
+      });
+      Telemetry.warn('Queue drain skipped: API unavailable', {
+        is_online: state.isOnline,
+      });
       return;
     }
 
     const userId = state.user.id;
     logger.info(`🔄 Queue: Starting processing for user ${userId}`);
+
+    Telemetry.increment('offline_queue_drain_started_total', 1);
+
+    Telemetry.warn('Queue drain started');
 
     this.isProcessing = true;
     this.processingPromise = this._processQueueInternal(userId);
@@ -177,6 +204,7 @@ export class QueueManager {
     Telemetry.gauge('offline_queue_depth', mutations.length);
     if (mutations.length === 0) {
       logger.info('✅ Queue: No pending mutations');
+      Telemetry.warn('Queue drain found no pending mutations');
       return;
     }
     Telemetry.gauge(

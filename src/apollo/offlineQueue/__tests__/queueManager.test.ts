@@ -75,6 +75,7 @@ jest.mock('#/services/telemetry', () => ({
     gauge: jest.fn(),
     increment: jest.fn(),
     trackEvent: jest.fn(),
+    warn: jest.fn(),
   },
 }));
 
