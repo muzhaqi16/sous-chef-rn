@@ -19,7 +19,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
 import { useMealTemplateActions } from '#features/mealPlan/hooks/useMealTemplateActions';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
-import { useHomeQuery } from '#hooks/home/hooks/useHomeQuery';
+import { useHomeQuery } from '#features/home/hooks/useHomeQuery';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { addDays, addWeeks, addMonths } from 'date-fns';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
@@ -175,7 +175,7 @@ export const CreateMealPlanScreen: React.FC = () => {
 
   return (
     <FormModal
-      title={t('mealPlan.createTitle')}
+      title={t('labels.createMealPlan')}
       onClose={goBack}
       onSave={handleSave}
       loading={creating}
@@ -208,7 +208,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       />
 
       <DatePickerField
-        label={t('mealPlan.startDate')}
+        label={t('labels.startDate')}
         value={startDate}
         onChange={setStartDate}
         minimumDate={new Date()}
@@ -216,7 +216,7 @@ export const CreateMealPlanScreen: React.FC = () => {
       />
 
       <EditableCounter
-        label={t('mealPlan.defaultServings')}
+        label={t('labels.defaultServings')}
         value={servings}
         onChangeText={setServings}
         min={1}
@@ -234,7 +234,7 @@ export const CreateMealPlanScreen: React.FC = () => {
 
       {!!dietaryProfile && (
         <FormCheckbox
-          label={t('mealPlan.trackNutrition')}
+          label={t('labels.trackNutritionGoals')}
           checked={trackNutrition}
           onPress={() => setTrackNutrition(prev => !prev)}
         />

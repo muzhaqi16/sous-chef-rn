@@ -64,7 +64,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       : parseInt(inputValue);
 
     if (isNaN(numValue) || inputValue.trim() === '') {
-      setError(t('numberInputSheet.required'));
+      setError(t('labels.thisFieldIsRequired'));
       return;
     }
     if (min !== undefined && numValue < min) {

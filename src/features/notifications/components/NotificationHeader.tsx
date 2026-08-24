@@ -8,13 +8,14 @@ import { Text } from '#components/atoms/Text';
 
 interface NotificationHeaderProps {
   onMarkAllRead: () => void;
-  onClearAll: () => void;
+  /** Clears the READ notifications; unread ones are left alone. */
+  onClearRead: () => void;
   hasNotifications: boolean;
 }
 
 export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
   onMarkAllRead,
-  onClearAll,
+  onClearRead,
   hasNotifications,
 }) => {
   const { t } = useTranslation();
@@ -28,10 +29,10 @@ export const NotificationHeader: React.FC<NotificationHeaderProps> = ({
           {t('notifications.markAllRead')}
         </Text>
       </AppPressable>
-      <AppPressable style={styles.button} onPress={onClearAll}>
+      <AppPressable style={styles.button} onPress={onClearRead}>
         <Icon name="list-outline" size={20} tone="primary" />
         <Text size="sm" weight="medium" style={styles.buttonText}>
-          {t('notifications.clearAll')}
+          {t('labels.clearRead')}
         </Text>
       </AppPressable>
     </View>

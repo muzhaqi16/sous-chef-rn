@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigation } from '@react-navigation/native';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { PantryItemForm } from '#components/forms/PantryItemForm';
+import { PantryItemForm } from '#features/pantry/components/form/PantryItemForm';
 
 type PantryItemScreenParams = {
   itemId?: string;

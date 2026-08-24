@@ -56,7 +56,7 @@ jest.mock('#/utils/connectionUtils', () => ({
       c?.edges?.map(e => e.node) || [],
   ),
 }));
-jest.mock('#/hooks/home/pantry/utils', () => ({
+jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   removeFromPantryItemsCache: jest.fn(),
 }));
 jest.mock('#hooks/useSelectableItems', () => ({
@@ -101,7 +101,7 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({
     title,
     children,
@@ -138,7 +138,7 @@ jest.mock('#components/atoms/AnimatedChip', () => ({
     );
   },
 }));
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => {
     const { Text } = require('react-native');
     return <Text>Loading...</Text>;

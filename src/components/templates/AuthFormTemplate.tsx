@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import { DynamicFormFields, FieldDef } from '../molecules/DynamicFormFields';
-import { Button } from '../base/Button';
+import { Button } from '#components/atoms/Button';
 import { BackButton } from '../atoms/BackButton';
 import { Link } from '../atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';

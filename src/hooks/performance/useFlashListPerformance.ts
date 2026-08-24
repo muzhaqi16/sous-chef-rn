@@ -158,6 +158,9 @@ export function useFlashListPerformance<T>(
         frameGapStarted.current = false;
       }
 
+      // Shared: a coalesced blank check must not land after the list is gone.
+      cellRegistry.dispose();
+
       // Production: report session duration on unmount
       const duration = performance.now() - sessionStart;
       Telemetry.histogram(
@@ -168,6 +171,7 @@ export function useFlashListPerformance<T>(
       );
     };
   }, [
+    cellRegistry,
     diagnostics,
     options.componentName,
     options.reportInterval,
@@ -227,8 +231,10 @@ export function useFlashListPerformance<T>(
     }
 
     // DEV: rAF-deduplicated diagnostics — only record one metric per animation
-    // frame (last check wins). A commit registers every cell it touched, and
-    // each registration calls back here; this collapses them into one frame.
+    // frame (last check wins). Still needed even though the registry now
+    // coalesces its own flushes: `onViewableItemsChanged` calls this evaluation
+    // directly rather than through the registry, so one frame can still carry a
+    // viewability call and a registry flush.
     if (__DEV__ && diagnostics) {
       const frameGap = diagnostics.getLastFrameGap();
       const coverageRatio = mountedCount / expectedCount;

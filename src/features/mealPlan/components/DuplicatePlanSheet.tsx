@@ -88,7 +88,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
       contentContainerStyle={styles.contentContainer}
     >
       <BottomSheetHeader
-        title={t('duplicatePlan.title')}
+        title={t('labels.duplicatePlan')}
         onCancel={onClose}
         onConfirm={handleDuplicate}
         confirmLabel={
@@ -123,7 +123,7 @@ export const DuplicatePlanSheet: React.FC<DuplicatePlanSheetProps> = ({
       {/* Date adjustment */}
       <View style={styles.section}>
         <Text size="sm" weight="medium" tone="secondary">
-          {t('duplicatePlan.startDateLabel')}
+          {t('labels.startDate')}
         </Text>
         <View style={styles.dateAdjust}>
           <Pressable

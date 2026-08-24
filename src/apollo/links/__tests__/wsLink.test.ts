@@ -71,7 +71,6 @@ jest.mock('#/utils/deviceId', () => ({
 import { isLibraryFatalCloseCode } from '../wsCloseCodes';
 import {
   reconnectWebSocket,
-  isWebSocketReconnecting,
   disableAutoReconnect,
   enableAutoReconnect,
   disposeWebSocket,
@@ -108,16 +107,9 @@ describe('wsLink', () => {
     });
   });
 
-  describe('isWebSocketReconnecting', () => {
-    it('returns false initially', () => {
-      expect(isWebSocketReconnecting()).toBe(false);
-    });
-  });
-
   describe('getWebSocketState', () => {
     it('returns current state object', () => {
       const state = getWebSocketState();
-      expect(state).toHaveProperty('isReconnecting');
       expect(state).toHaveProperty('lastReconnectTime');
       expect(state).toHaveProperty('hasClient');
       expect(state.hasClient).toBe(true);
@@ -135,11 +127,28 @@ describe('wsLink', () => {
       }
     });
 
+    // Asserted on `lastReconnectTime`, which only moves for a call that was not
+    // dropped. This used to read `isWebSocketReconnecting()` — a flag set and
+    // cleared inside one synchronous block, so it was `false` whether or not
+    // the debounce worked and the assertion could not fail.
     it('debounces rapid reconnection attempts', () => {
-      reconnectWebSocket();
-      reconnectWebSocket(); // Should be debounced
-      // Second call should be a no-op due to debounce
-      expect(isWebSocketReconnecting()).toBe(false);
+      jest.useFakeTimers();
+      try {
+        // Past any window a previous test left open.
+        jest.advanceTimersByTime(5_000);
+
+        reconnectWebSocket();
+        const accepted = getWebSocketState().lastReconnectTime;
+
+        reconnectWebSocket(); // Inside the window — dropped.
+        expect(getWebSocketState().lastReconnectTime).toBe(accepted);
+
+        jest.advanceTimersByTime(5_000);
+        reconnectWebSocket(); // Outside it — accepted.
+        expect(getWebSocketState().lastReconnectTime).toBeGreaterThan(accepted);
+      } finally {
+        jest.useRealTimers();
+      }
     });
   });
 
@@ -180,8 +189,7 @@ describe('wsLink', () => {
   describe('disposeWebSocket', () => {
     it('disposes the websocket client gracefully', () => {
       disposeWebSocket();
-      const state = getWebSocketState();
-      expect(state.isReconnecting).toBe(false);
+      expect(getWebSocketState().hasClient).toBe(false);
     });
 
     it('handles disposal errors gracefully', () => {
@@ -274,7 +282,6 @@ describe('wsLink', () => {
     it('returns correct hasClient state', () => {
       const state = getWebSocketState();
       expect(state.hasClient).toBe(true);
-      expect(typeof state.isReconnecting).toBe('boolean');
       expect(typeof state.lastReconnectTime).toBe('number');
     });
   });
@@ -441,7 +448,13 @@ describe('wsLink', () => {
       expect(opened).toBe(true);
     });
 
-    it('releases a held dial on logout so it stops at shouldRetry instead of hanging', async () => {
+    // A held dial is ABANDONED on logout, not released. Releasing it resolves
+    // `url()`, and graphql-ws constructs the socket on the next line with no
+    // `disposed` check — so releasing is dialling, against credentials the
+    // server has already refused. Rejecting is worse: that `await` sits in an
+    // async IIFE inside a Promise executor, so a rejection is unhandled and
+    // leaves `connecting` unsettled forever.
+    it('abandons a held dial on logout rather than opening a socket', async () => {
       const { useStore } = require('#store');
       useStore.getState.mockReturnValue({
         accessToken: 'mock-token',
@@ -449,17 +462,19 @@ describe('wsLink', () => {
       });
 
       let opened = false;
-      const pending = dialGate().then(() => {
+      void dialGate().then(() => {
         opened = true;
       });
       await jest.advanceTimersByTimeAsync(60_000);
       expect(opened).toBe(false);
 
       disableAutoReconnect();
-      await pending;
 
-      expect(opened).toBe(true);
-      // Opened only so the library asks shouldRetry, which now refuses.
+      // Still parked, and it stays parked: nothing dials on the way out.
+      await jest.advanceTimersByTimeAsync(60_000);
+      expect(opened).toBe(false);
+
+      // And the library's own loop is stopped at the only hook that can stop it.
       expect(shouldRetry({ code: 1006, reason: '' })).toBe(false);
       enableAutoReconnect();
     });

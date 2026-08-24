@@ -133,6 +133,8 @@ describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
     ['malformed frame', 4400],
     ['subscribed before the ack', 4401],
     ['duplicate operation id', 4409],
+    ['a response the client rejected', 4004],
+    ['an internal client error', 4005],
   ])(
     'refuses to retry %s (%i) even when shouldRetry says yes',
     async (_label, code) => {

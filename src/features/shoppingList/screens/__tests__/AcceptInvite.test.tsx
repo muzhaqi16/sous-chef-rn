@@ -60,7 +60,7 @@ jest.mock('#components/molecules/Header', () => ({
   Header: () => null,
 }));
 
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
 

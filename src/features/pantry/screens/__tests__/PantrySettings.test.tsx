@@ -70,7 +70,7 @@ jest.mock('#components/molecules/ScreenHeader', () => ({
     );
   },
 }));
-jest.mock('#components/base/Loading', () => ({
+jest.mock('#components/atoms/Loading', () => ({
   LoadingInline: () => null,
 }));
 jest.mock('#components/molecules/InfoRow', () => ({

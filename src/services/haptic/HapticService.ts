@@ -4,6 +4,7 @@ import {
   HapticFeedbackTypes,
 } from 'react-native-haptic-feedback';
 import { useStore } from '#store';
+import { logger } from '#/utils/environment';
 
 /**
  * Haptic Feedback Types
@@ -88,7 +89,7 @@ class HapticFeedbackService {
     try {
       triggerHaptic(NATIVE_TYPE[type], TRIGGER_OPTIONS);
     } catch (error) {
-      console.warn('[HapticService] Failed to trigger haptic feedback:', error);
+      logger.warn('[HapticService] Failed to trigger haptic feedback:', error);
     }
   }
 

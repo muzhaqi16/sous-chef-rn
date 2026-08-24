@@ -4,10 +4,10 @@ import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
-import { SkeletonList } from '#components/base/Skeleton/SkeletonList';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
-import { EmptyState } from '#components/base/EmptyState';
-import { ShoppingEmptyIllustration } from '#components/base/ShoppingEmptyIllustration';
+import { SkeletonList } from '#components/atoms/Skeleton/SkeletonList';
+import { ShoppingListItemSkeleton } from '#components/atoms/Skeleton/ShoppingListItemSkeleton';
+import { EmptyState } from '#components/atoms/EmptyState';
+import { ShoppingEmptyIllustration } from '#components/atoms/ShoppingEmptyIllustration';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
@@ -80,7 +80,7 @@ const ShoppingTabComponent: React.FC = () => {
       })}
       description={t('shoppingListScreens.searchAddPrompt')}
       action={{
-        label: t('shoppingListScreens.addItem'),
+        label: t('labels.addItem'),
         onPress: addItemSheet.open,
       }}
     />

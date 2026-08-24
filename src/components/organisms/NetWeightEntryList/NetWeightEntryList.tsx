@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
-import { Button } from '#/components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 
@@ -109,7 +109,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
             <View style={styles.unitField}>
               <UnitAutocompleteField
                 variant="inline"
-                label={t('netWeightEntry.unitLabel')}
+                label={t('storageLocationForm.unit')}
                 value={entry.unitName || ''}
                 onChangeText={(text: string) =>
                   handleUnitTextChange(index, text)

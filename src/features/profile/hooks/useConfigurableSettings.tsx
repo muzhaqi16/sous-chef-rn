@@ -38,27 +38,27 @@ import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 // Map PROFILE_SETTINGS_CONFIG section titles (the config's canonical English
 // keys) → translation keys under the `profile.sections` namespace.
 const SECTION_TITLE_KEYS: Record<string, string> = {
-  'Personal Information': 'profile.sections.personalInformation',
+  'Personal Information': 'labels.personalInformation',
   'Appearance & Language': 'profile.sections.appearanceAndLanguage',
-  Notifications: 'profile.sections.notifications',
+  Notifications: 'labels.notifications',
   'Dietary Profile': 'profile.sections.dietaryProfile',
-  'App Settings': 'profile.sections.appSettings',
-  Security: 'profile.sections.security',
+  'App Settings': 'labels.appSettings',
+  Security: 'labels.security',
   Developer: 'profile.sections.developer',
 };
 
 // Map PROFILE_SETTINGS_CONFIG item.key → translation key under `profile.labels`.
 const ITEM_LABEL_KEYS: Record<string, string> = {
-  personalInformation: 'profile.labels.personalInformation',
-  appearance: 'profile.labels.appearance',
-  language: 'profile.labels.language',
-  notifications: 'profile.labels.notifications',
+  personalInformation: 'labels.personalInformation',
+  appearance: 'labels.appearance',
+  language: 'labels.language',
+  notifications: 'labels.notifications',
   dietaryProfile: 'profile.labels.dietaryProfile',
-  appSettings: 'profile.labels.appSettings',
+  appSettings: 'labels.appSettings',
   biometricAuthentication: 'profile.labels.biometricAuthentication',
-  changePassword: 'profile.labels.changePassword',
-  debugInfo: 'profile.labels.debugInfo',
-  performanceDashboard: 'profile.labels.performanceDashboard',
+  changePassword: 'labels.changePassword',
+  debugInfo: 'labels.debugInfo',
+  performanceDashboard: 'labels.performanceDashboard',
   logout: 'profile.labels.logout',
 };
 
@@ -192,7 +192,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
 
     // Rejection (resolved non-success payload) → surface + restore the snapshot.
     // Queued (null payload, no error) keeps the write; the replay is idempotent.
-    if (alertIfRejected(result, t('errors.somethingWentWrong'))) {
+    if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
       revert();
     }
   };
@@ -213,7 +213,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     } catch (error) {
       handleMutationError(error, { operation: 'Update Preferences' });
     }
-    alertIfRejected(result, t('errors.somethingWentWrong'));
+    alertIfRejected(result, t('errors.codes.genericRetry'));
   };
 
   const createSettingItem = (config: SettingConfig): SettingItem => {
@@ -473,7 +473,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
         };
 
       default:
-        console.warn(`Unhandled setting key: ${config.key}`);
+        logger.warn(`Unhandled setting key: ${config.key}`);
     }
 
     return baseItem;

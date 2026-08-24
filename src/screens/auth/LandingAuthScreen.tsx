@@ -5,7 +5,7 @@ import { View, Image, Linking } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { AuthWrapper } from '#components/templates/AuthWrapper';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Link } from '#components/atoms/Link';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { getWebAppUrl } from '#utils/environment';

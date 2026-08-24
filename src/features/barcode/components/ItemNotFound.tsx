@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
 
 interface ItemNotFoundProps {
@@ -35,7 +35,7 @@ export const ItemNotFound: React.FC<ItemNotFoundProps> = ({
       </Text>
       {!!onAddItem && (
         <Button onPress={onAddItem} variant="primary" size="medium">
-          {t('barcode.addItem')}
+          {t('labels.addItem')}
         </Button>
       )}
     </View>

@@ -24,7 +24,7 @@ export const FormContent = ({
 
   const homeField: FieldDef<FormValues> = {
     name: 'homeName',
-    label: t('onBoarding.homeNameLabel'),
+    label: t('labels.homeName'),
     placeholder: t('onBoarding.homeNamePlaceholder'),
     component: BaseInput,
   };
@@ -35,7 +35,7 @@ export const FormContent = ({
       name: 'pantryName',
       label: needsHome
         ? t('onBoarding.defaultPantryNameLabel')
-        : t('onBoarding.pantryNameLabel'),
+        : t('labels.pantryName'),
       placeholder: t('onBoarding.pantryNamePlaceholder'),
       component: BaseInput,
     },

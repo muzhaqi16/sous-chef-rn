@@ -11,14 +11,10 @@ import {
   type InventoryThresholdsInput,
   type NetWeightInput,
 } from '#/graphql/generated/schemaTypes';
-import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import type { UnitSelection, FormDataInput } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
 // Cache updater for adding items to Pantry.itemsConnection
-export const addToPantryItemsCache = createAddToParentConnectionUpdater<{
-  id: string;
-}>('Pantry', 'itemsConnection', 'PantryItem');
 
 /**
  * Build optimistic Unit object for cache updates.

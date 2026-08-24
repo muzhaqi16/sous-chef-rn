@@ -8790,8 +8790,16 @@ type Purchase {
   discountAmount: Float
   expirationDate: DateTime
   id: ID!
-  item: Item!
-  itemId: ID!
+  """
+  The catalog item, when the catalog still holds it. Null once that item is
+  hard-deleted — read itemName, which is always present.
+  """
+  item: Item
+  """
+  Catalog item bought, when the catalog still holds it. Null once that item is
+  hard-deleted; itemName is the snapshot of what was bought and is always set.
+  """
+  itemId: ID
   itemName: String!
   itemUpc: String
   originalPrice: Float
@@ -13001,9 +13009,21 @@ input UpdateShoppingListInput {
 }
 
 input UpdateShoppingListItemInput {
+  """
+  Brand for this item, independent of the catalog item's own brands.
+  brandId wins over brandName; a brandName with no matching brand creates one.
+  Omit the sub-input to leave the brand alone; send brandId: null to remove it.
+  """
+  brand: BrandReferenceInput
   category: String
   id: ID!
   itemName: String
+  """
+  Package size for this item. Omit to leave it alone; send netWeight: null (or
+  a value of 0 or less) to remove it, which clears netWeightUnitId with it. A
+  netWeightUnitId with no netWeight is rejected.
+  """
+  netWeight: NetWeightInput
   notes: String
   pricing: PricingEstimatesInput
   priority: Int

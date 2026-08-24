@@ -25,7 +25,7 @@ const MOCK_DATA = {
   shopping: {
     emoji: '🥛',
     titleKey: 'swipeHint.milk',
-    subtitleKey: 'swipeHint.milkSubtitle',
+    subtitleKey: 'recipes.intolerance.DAIRY',
     meta: '2L',
   },
 };

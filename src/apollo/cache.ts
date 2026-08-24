@@ -1,4 +1,4 @@
-import { InMemoryCache } from '@apollo/client';
+import { InMemoryCache, isReference } from '@apollo/client';
 import type {
   FieldFunctionOptions,
   Reference,
@@ -661,6 +661,11 @@ export function makeCache(): InMemoryCache {
           options: FieldFunctionOptions,
         ) {
           if (!existing) return incoming;
+          // A value object with no key fields is never stored as a reference,
+          // but the parameter type admits one and `Object.keys` on a Reference
+          // would build `{ __ref: null }` and write it over the object. Cheaper
+          // to refuse the shape than to rely on it not occurring.
+          if (isReference(existing)) return incoming;
 
           const wasPurchased = options.readField('isPurchased', existing);
           const isPurchased = options.readField('isPurchased', incoming);

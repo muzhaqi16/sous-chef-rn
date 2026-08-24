@@ -13,6 +13,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { setCachedFields } from '#/apollo/utils/cacheUpdaters';
 import { useHaptic } from '#hooks/haptic/useHaptic';
 import { Telemetry } from '#/services/telemetry';
+import { logger } from '#/utils/environment';
 import { useClearShoppingListItems } from './mutations/useClearShoppingListItems';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
 import { t } from '#/i18n';
@@ -181,15 +182,26 @@ export function useShoppingListActions({
     {},
   );
 
-  // Quantity increment handler - uses cache.modify for instant UI without warnings
-  const handleIncrementQuantity = async (itemId: string) => {
+  /**
+   * Move an item's quantity by a delta, optimistically.
+   *
+   * Increment and decrement were two copies of this, identical but for the
+   * arithmetic and the word in the warning — which is how they came to
+   * disagree on what an absent quantity means (`|| 0` on one side, `?? 1` on
+   * the other). Neither reading was visible in behaviour, because both landed
+   * on 1 for every input.
+   *
+   * It reads as 0 here because that is what the row shows: `SortableItem`
+   * renders `quantity ?? 0`. Reading an absent quantity as 1 would make "+"
+   * jump from the 0 on screen straight to 2.
+   */
+  const adjustQuantity = async (itemId: string, delta: number) => {
     const cacheId = client.cache.identify({
       __typename: 'ShoppingListItem',
       id: itemId,
     });
-
     if (!cacheId) {
-      console.warn('Item not in cache, cannot increment:', itemId);
+      logger.warn('Item not in cache, cannot adjust quantity:', itemId);
       return;
     }
 
@@ -200,13 +212,14 @@ export function useShoppingListActions({
         fragmentName: 'useShoppingListActions_item',
       },
     );
-
     if (!cachedItem) {
-      console.warn('Item not in cache, cannot increment:', itemId);
+      logger.warn('Item not in cache, cannot adjust quantity:', itemId);
       return;
     }
 
-    const newQuantity = (cachedItem.quantity || 0) + 1;
+    // A row on a shopping list is never worth less than one of the thing, so
+    // the floor is 1 in both directions rather than only on the way down.
+    const newQuantity = Math.max(1, (cachedItem.quantity ?? 0) + delta);
 
     setCachedFields(client.cache, 'ShoppingListItem', itemId, {
       quantity: newQuantity,
@@ -257,81 +270,9 @@ export function useShoppingListActions({
     );
   };
 
-  // Quantity decrement handler - uses cache.modify for instant UI without warnings
-  const handleDecrementQuantity = async (itemId: string) => {
-    const cacheId = client.cache.identify({
-      __typename: 'ShoppingListItem',
-      id: itemId,
-    });
-
-    if (!cacheId) {
-      console.warn('Item not in cache, cannot decrement:', itemId);
-      return;
-    }
-
-    const cachedItem = client.readFragment<UseShoppingListActions_ItemFragment>(
-      {
-        id: cacheId,
-        fragment: UseShoppingListActions_ItemFragmentDoc,
-        fragmentName: 'useShoppingListActions_item',
-      },
-    );
-
-    if (!cachedItem) {
-      console.warn('Item not in cache, cannot decrement:', itemId);
-      return;
-    }
-
-    const newQuantity = Math.max(1, (cachedItem.quantity ?? 1) - 1);
-
-    setCachedFields(client.cache, 'ShoppingListItem', itemId, {
-      quantity: newQuantity,
-    });
-
-    optimisticDataPersistence.save(
-      'ShoppingListItem',
-      itemId,
-      'quantity',
-      newQuantity,
-    );
-
-    await executeQuantityUpdate(
-      async () => {
-        return await updateQuantity({
-          variables: {
-            input: {
-              itemId,
-              quantity: newQuantity.toString(),
-              version: cachedItem.version,
-            },
-          },
-          // Local-first: queue on an API-down-while-online failure (absolute
-          // quantity → idempotent on replay via SyncShoppingListItem).
-          context: { localFirst: true },
-          onCompleted: data => {
-            const payload = data?.updateShoppingListItemQuantity;
-            if (
-              payload?.__typename === 'UpdateShoppingListItemQuantityPayload'
-            ) {
-              optimisticDataPersistence.clear(
-                'ShoppingListItem',
-                payload.shoppingListItem.id,
-                'quantity',
-              );
-            }
-          },
-        });
-      },
-      () => {
-        setCachedFields(client.cache, 'ShoppingListItem', itemId, {
-          quantity: cachedItem.quantity,
-        });
-      },
-      () =>
-        optimisticDataPersistence.clear('ShoppingListItem', itemId, 'quantity'),
-      refetchItems,
-    );
-  };
+  const handleIncrementQuantity = (itemId: string) => adjustQuantity(itemId, 1);
+  const handleDecrementQuantity = (itemId: string) =>
+    adjustQuantity(itemId, -1);
 
   // Toggle purchase handler
   const handleTogglePurchase = async (itemId: string) => {

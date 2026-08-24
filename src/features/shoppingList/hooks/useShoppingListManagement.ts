@@ -18,7 +18,7 @@ import { useShoppingListItemMutations } from './mutations/useShoppingListItemMut
  * - unpurchasedItems: Paginated unpurchased items for Shopping tab
  * - purchasedItems: Paginated purchased items for Purchased tab
  * - shoppingList: Full shopping list details (for permissions, collaborators)
- * - mutations: addItem, updateItem, removeItem, toggleItem
+ * - mutations: addItem, removeItem, toggleItem
  * - search: query, setQuery, filtered items
  * - pagination: loadMore, hasMore, isLoadingMore (per tab)
  *
@@ -68,7 +68,7 @@ export function useShoppingListManagement(currentListId: string | undefined) {
   const error = listError || itemsError;
 
   // 3. Mutations: CRUD operations
-  const { addItem, updateItem, removeItem, toggleItem, recordPurchase } =
+  const { addItem, removeItem, toggleItem, recordPurchase } =
     useShoppingListItemMutations(currentListId, refetch);
 
   // 4. Search: Client-side filtering (only using query/setQuery for debounced state)
@@ -122,7 +122,6 @@ export function useShoppingListManagement(currentListId: string | undefined) {
 
     // Actions
     addItem,
-    updateItem,
     removeItem,
     toggleItem,
     recordPurchase,

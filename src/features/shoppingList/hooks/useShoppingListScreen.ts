@@ -78,7 +78,6 @@ export function useShoppingListScreen() {
     searchQuery,
     setSearchQuery,
     addItem,
-    updateItem,
     removeItem,
     toggleItem,
     recordPurchase,
@@ -171,15 +170,17 @@ export function useShoppingListScreen() {
   // Derived loading states — single source of truth for all downstream components
   const loading = listsLoading || itemsLoading;
   const hasUIItems = unpurchasedItems.length > 0 || purchasedItems.length > 0;
-  const hasRawData =
-    rawUnpurchasedItems.length > 0 || rawPurchasedItems.length > 0;
 
-  // True until UI items are ready for first display. `hasRawData` was added
-  // for the one-render gap while the (since removed) `useDeferredValue` lagged
-  // behind the store; the transform is now synchronous, so raw-but-no-UI only
-  // happens when a search filters everything out. Kept unchanged while the
-  // deferral removal is being measured — revisit on its own.
-  const isLoadingInitial = !hasUIItems && (loading || hasRawData);
+  // Measured on the rows the list would actually RENDER, which is why the
+  // second term is gone. It used to be `|| hasRawData`, counting the unfiltered
+  // rows — so a search matching none of them read as "still loading" and the
+  // tab showed skeletons for a result that had already arrived, instead of the
+  // "nothing matched" state it renders for exactly this case.
+  //
+  // That term was there for the one-render gap while the (since removed)
+  // `useDeferredValue` lagged behind the store. The transform is synchronous
+  // now, so there is no gap left for it to cover.
+  const isLoadingInitial = !hasUIItems && loading;
 
   return {
     state: {
@@ -227,7 +228,6 @@ export function useShoppingListScreen() {
       setSelectedShoppingListId,
       setSearchQuery,
       addItem,
-      updateItem,
       removeItem,
       toggleItem,
       recordPurchase,

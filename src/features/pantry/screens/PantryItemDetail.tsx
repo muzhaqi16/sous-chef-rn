@@ -53,7 +53,7 @@ import { BatchSection } from '#features/pantry/components/BatchSection';
 import { AdjustQuantityModal } from '#components/modals/AdjustQuantityModal';
 import { CorrectWeightModal } from '#components/modals/CorrectWeightModal';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { useRecipeSuggestionsForItem } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import { usePantryItemDetailActions } from '#features/pantry/hooks/usePantryItemDetailActions';
@@ -240,7 +240,7 @@ export const PantryItemDetail: React.FC<
           <SousChefLoader
             size="small"
             showBrand={false}
-            message={t('pantryItemDetail.loading')}
+            message={t('labels.loading')}
           />
         </View>
       </CollapsingHeroDetail>
@@ -344,7 +344,7 @@ export const PantryItemDetail: React.FC<
           <View style={styles.categoryBadge}>
             <Icon name="restaurant-outline" size={16} tone="primary" />
             <Text style={styles.categoryText}>
-              {categoryName || t('pantryItemDetail.item')}
+              {categoryName || t('labels.item')}
               {storageStateDisplay
                 ? t('pantryItemDetail.inLocation', {
                     location: storageStateDisplay,

@@ -52,6 +52,37 @@ export function extractMutationPayload(
   return fields[0][1];
 }
 
+/**
+ * Which input a refusal was about, as a bare field name — or `null`.
+ *
+ * A field-specific `ValidationError` names the offending input in `field`
+ * (`sous-chef-api docs/api/errors.md`), sometimes as a dotted path
+ * (`input.quantity`), so only the last segment is returned and callers can key
+ * off one name either way.
+ *
+ * `message` is deliberately NOT returned. It is server-authored English: the
+ * client sends no `Accept-Language` and carries no locale in its token, so
+ * there is nothing for the server to localize against, and the API's own
+ * guidance is to "use error codes for programmatic handling, not message
+ * strings" and to "map error codes to localized messages in your client".
+ * Displaying it puts English in front of every es / it / sq user and routes
+ * around the plural-category, addressee-gender and canonical-vocabulary rules
+ * the app enforces on all its own copy.
+ *
+ * So `field` ROUTES to localized copy — see `alertRejectedMutation`. What is
+ * lost is that one field can carry several rules: `unit` refuses both "batches
+ * still exist" and "no conversion path", and one string has to cover both.
+ * That is the price of not shipping English.
+ */
+export function validationFieldName(data: unknown): string | null {
+  const payload = extractMutationPayload(data);
+  if (!payload || payload.__typename !== 'ValidationError') return null;
+  const { field } = payload as { field?: string | null };
+  if (!field) return null;
+  const segments = field.split('.');
+  return segments[segments.length - 1] || null;
+}
+
 /** Narrows a GraphQL union-type mutation payload to the success variant.
  *  Throws GraphQLNetworkError when payload is null/undefined (transport failure),
  *  or GraphQLDomainError when the server returns an error union member. */

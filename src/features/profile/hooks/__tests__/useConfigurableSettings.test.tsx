@@ -16,6 +16,7 @@ import {
 } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
 import { useConfigurableSettings } from '../useConfigurableSettings';
+import { logger } from '#/utils/environment';
 
 // Shape of a single section entry in PROFILE_SETTINGS_CONFIG.
 interface ConfigSection {
@@ -950,7 +951,7 @@ describe('useConfigurableSettings', () => {
       renderHookWithApollo(() => useConfigurableSettings(mockProfile), {
         operationMocks: [profile.mock, settings.mock],
       });
-      expect(console.warn).toHaveBeenCalledWith(
+      expect(logger.warn).toHaveBeenCalledWith(
         'Unhandled setting key: unknownKey',
       );
 

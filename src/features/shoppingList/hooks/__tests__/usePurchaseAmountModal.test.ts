@@ -73,7 +73,7 @@ describe('usePurchaseAmountModal', () => {
     expect(result.current.selectedItem).toBeNull();
   });
 
-  it('confirm records the entered amounts, then closes', async () => {
+  it('confirm records the quantity and the per-unit price derived from the total, then closes', async () => {
     const recordPurchase = jest.fn().mockResolvedValue(true);
     const { result } = setup([makeItem()], recordPurchase);
 
@@ -81,12 +81,13 @@ describe('usePurchaseAmountModal', () => {
       result.current.openForItem('item-1');
     });
     await act(async () => {
-      await result.current.confirm(3, 5.5);
+      // 3 units for a total of 7.50 — the API stores the per-unit 2.50.
+      await result.current.confirm(3, 7.5);
     });
 
     expect(recordPurchase).toHaveBeenCalledWith('item-1', {
       purchasedQuantity: 3,
-      purchasedPrice: 5.5,
+      purchasedPrice: 2.5,
     });
     expect(result.current.visible).toBe(false);
     expect(result.current.selectedItem).toBeNull();

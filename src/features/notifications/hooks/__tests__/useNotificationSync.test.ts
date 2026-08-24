@@ -12,6 +12,8 @@ import {
   DeleteNotificationDocument,
 } from '#features/notifications/graphql/notificationMutations.generated';
 import { MarkAllNotificationsAsReadDocument } from '#features/notifications/graphql/bulkNotificationMutations.generated';
+import { NotificationStatus } from '#/graphql/generated/schemaTypes';
+import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotificationSync } from '../useNotificationSync';
 
 jest.mock('#/utils/finallyHelpers');
@@ -20,31 +22,23 @@ jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
 
-// The hook reads notifications/user/actions via useStore.getState(). Mutable
-// so each test controls the pre-mutation local state the deltas derive from.
-let mockNotifications: Array<{ id: string; isRead: boolean }> = [];
+// The hook reads only the signed-in user from the store now — whether a
+// notification is unread is read from the cache, which is also what renders
+// it, so the two can no longer disagree.
 let mockUser: { id: string } | null = { id: 'user-1' };
-const mockStoreActions = {
-  markAsRead: jest.fn(),
-  markAsUnread: jest.fn(),
-  removeNotification: jest.fn(),
-  addNotification: jest.fn(),
-  markAllAsRead: jest.fn(),
-  updateUnreadCount: jest.fn(),
-};
+const mockClearExpirationLink = jest.fn();
+
 jest.mock('#store', () => ({
   useStore: {
     getState: () => ({
-      notifications: mockNotifications,
       user: mockUser,
-      ...mockStoreActions,
+      clearExpirationLink: mockClearExpirationLink,
     }),
   },
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockNotifications = [];
   mockUser = { id: 'user-1' };
 });
 
@@ -55,8 +49,15 @@ const BADGE_FRAGMENT = gql`
   }
 `;
 
-const seedBadge = (
+/**
+ * A cache holding the badge and the rows it counts.
+ *
+ * The rows are what changed: the hook used to ask a Zustand mirror whether a
+ * notification was unread, and now asks the cache the list renders from.
+ */
+const seedFeed = (
   unreadNotificationCount: number,
+  rows: Array<{ id: string; status: NotificationStatus }> = [],
   hasUrgentNotifications = true,
 ) =>
   seedCache([
@@ -66,7 +67,15 @@ const seedBadge = (
       unreadNotificationCount,
       hasUrgentNotifications,
     },
+    ...rows.map(r => ({
+      __typename: 'Notification',
+      id: r.id,
+      status: r.status,
+    })),
   ]);
+
+const UNREAD = NotificationStatus.Sent;
+const READ = NotificationStatus.Read;
 
 const readBadge = (cache: InMemoryCache) =>
   cache.readFragment<{
@@ -129,6 +138,21 @@ const deleteMock = (): MockedResponse => ({
   },
 });
 
+const deleteRejectedMock = (): MockedResponse => ({
+  request: { query: DeleteNotificationDocument, variables: () => true },
+  result: {
+    data: {
+      deleteNotification: {
+        __typename: 'NotFoundError',
+        code: 'NOT_FOUND',
+        message: 'gone',
+        resource: 'Notification',
+        resourceId: 'n1',
+      },
+    },
+  },
+});
+
 const markAllMock = (): MockedResponse => ({
   request: { query: MarkAllNotificationsAsReadDocument, variables: () => true },
   result: {
@@ -145,14 +169,8 @@ const renderSync = (cache: InMemoryCache, operationMocks: MockedResponse[]) =>
   renderHookWithApollo(() => useNotificationSync(), { cache, operationMocks });
 
 describe('useNotificationSync — cached badge aggregates', () => {
-  it('mark-read of an unread notification decrements the cached count (seed-effect regression)', async () => {
-    // The clobber this guards against: the mutation response writes
-    // Notification.status, re-broadcasting the watched notification queries;
-    // the badge seed in useNotificationHistory then re-applies the CACHED
-    // Me.unreadNotificationCount. This asserts that cached value is already
-    // N−1 by then, so the re-seed can never bounce the badge back to N.
-    mockNotifications = [{ id: 'n1', isRead: false }];
-    const cache = seedBadge(5);
+  it('mark-read of an unread notification moves the row and the badge', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
@@ -162,13 +180,12 @@ describe('useNotificationSync — cached badge aggregates', () => {
     await waitFor(() =>
       expect(readBadge(cache)?.unreadNotificationCount).toBe(4),
     );
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
     expect(readBadge(cache)?.hasUrgentNotifications).toBe(true);
-    expect(mockStoreActions.markAsRead).toHaveBeenCalledWith('n1');
   });
 
   it('mark-read of an already-read notification fires nothing and adjusts nothing', async () => {
-    mockNotifications = [{ id: 'n1', isRead: true }];
-    const cache = seedBadge(5);
+    const cache = seedFeed(5, [{ id: 'n1', status: READ }]);
     const { result } = renderSync(cache, []);
 
     await act(async () => {
@@ -176,12 +193,10 @@ describe('useNotificationSync — cached badge aggregates', () => {
     });
 
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
-    expect(mockStoreActions.markAsRead).not.toHaveBeenCalled();
   });
 
   it('mark-unread of a read notification increments the cached count', async () => {
-    mockNotifications = [{ id: 'n1', isRead: true }];
-    const cache = seedBadge(5);
+    const cache = seedFeed(5, [{ id: 'n1', status: READ }]);
     const { result } = renderSync(cache, [markUnreadMock()]);
 
     await act(async () => {
@@ -191,11 +206,11 @@ describe('useNotificationSync — cached badge aggregates', () => {
     await waitFor(() =>
       expect(readBadge(cache)?.unreadNotificationCount).toBe(6),
     );
+    expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD);
   });
 
   it('mark-unread of an already-unread notification fires nothing', async () => {
-    mockNotifications = [{ id: 'n1', isRead: false }];
-    const cache = seedBadge(5);
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, []);
 
     await act(async () => {
@@ -206,11 +221,10 @@ describe('useNotificationSync — cached badge aggregates', () => {
   });
 
   it('deleting an unread notification decrements; deleting a read one does not', async () => {
-    mockNotifications = [
-      { id: 'n1', isRead: false },
-      { id: 'n2', isRead: true },
-    ];
-    const cache = seedBadge(5);
+    const cache = seedFeed(5, [
+      { id: 'n1', status: UNREAD },
+      { id: 'n2', status: READ },
+    ]);
     const { result } = renderSync(cache, [deleteMock(), deleteMock()]);
 
     await act(async () => {
@@ -223,17 +237,19 @@ describe('useNotificationSync — cached badge aggregates', () => {
     await act(async () => {
       result.current.syncDelete('n2');
     });
+    await waitFor(() =>
+      expect(readNotificationStatus(cache, 'n2')).toBeUndefined(),
+    );
     // Second delete resolved too — the count must still reflect only the
     // unread removal.
-    await waitFor(() =>
-      expect(mockStoreActions.removeNotification).toHaveBeenCalledWith('n2'),
-    );
     expect(readBadge(cache)?.unreadNotificationCount).toBe(4);
   });
 
-  it('mark-all-read zeroes the count and clears the urgent flag', async () => {
-    mockNotifications = [{ id: 'n1', isRead: false }];
-    const cache = seedBadge(5, true);
+  it('mark-all-read zeroes the count, clears the urgent flag and flips the rows', async () => {
+    const cache = seedFeed(5, [
+      { id: 'n1', status: UNREAD },
+      { id: 'n2', status: READ },
+    ]);
     const { result } = renderSync(cache, [markAllMock()]);
 
     await act(async () => {
@@ -247,45 +263,81 @@ describe('useNotificationSync — cached badge aggregates', () => {
         hasUrgentNotifications: false,
       }),
     );
+    // The mutation returns a summary count and no ids, so the rows have to be
+    // found locally or the list would not move at all.
+    expect(readNotificationStatus(cache, 'n1')).toBe(READ);
   });
 
-  it('an error-union payload adjusts nothing', async () => {
-    mockNotifications = [{ id: 'n1', isRead: false }];
-    const cache = seedBadge(5);
+  // The refusal arrives as a RESOLVED result carrying an error-union member,
+  // not as a throw — so the rollback has to read the result, not sit in a
+  // catch that never runs.
+  it('an error-union payload puts the row and the badge back', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, [markReadMock('not-found')]);
 
     await act(async () => {
       result.current.syncMarkAsRead('n1');
     });
 
-    await waitFor(() => expect(mockStoreActions.markAsRead).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD),
+    );
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
   });
 
+  // The rollback used to be `cache.restore(cache.extract())`, which replaced the
+  // whole store — discarding anything written while the mutation was in flight.
+  it('a refused delete restores the row and the badge, leaving other entities alone', async () => {
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
+    const { result } = renderSync(cache, [deleteRejectedMock()]);
+
+    await act(async () => {
+      result.current.syncDelete('n1');
+      // Lands between the eviction and the refusal, exactly as an in-flight
+      // query result or a subscription push would.
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Notification', id: 'n2' })!,
+        fragment: gql`
+          fragment _TestOther on Notification {
+            id
+            status
+          }
+        `,
+        data: { __typename: 'Notification', id: 'n2', status: UNREAD },
+      });
+    });
+
+    await waitFor(() =>
+      expect(readNotificationStatus(cache, 'n1')).toBe(UNREAD),
+    );
+    expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
+    expect(readNotificationStatus(cache, 'n2')).toBe(UNREAD);
+  });
+
   it('clamps at zero when the cached count is already stale-low', async () => {
-    mockNotifications = [{ id: 'n1', isRead: false }];
-    const cache = seedBadge(0);
+    const cache = seedFeed(0, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
       result.current.syncMarkAsRead('n1');
     });
 
-    await waitFor(() => expect(mockStoreActions.markAsRead).toHaveBeenCalled());
+    await waitFor(() => expect(readNotificationStatus(cache, 'n1')).toBe(READ));
     expect(readBadge(cache)?.unreadNotificationCount).toBe(0);
   });
 
   it('no-ops without throwing when no user id is in scope', async () => {
-    mockNotifications = [{ id: 'n1', isRead: false }];
     mockUser = null;
-    const cache = seedBadge(5);
+    const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, [markReadMock()]);
 
     await act(async () => {
       result.current.syncMarkAsRead('n1');
     });
 
-    await waitFor(() => expect(mockStoreActions.markAsRead).toHaveBeenCalled());
+    // The row still moves — it is identified by its own id. Only the badge,
+    // which hangs off the User entity, has nowhere to be written.
+    await waitFor(() => expect(readNotificationStatus(cache, 'n1')).toBe(READ));
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
   });
 });

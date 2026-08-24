@@ -8,7 +8,7 @@ import {
   BottomSheetModal,
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { FormInput } from '#components/molecules/FormInput';
@@ -171,7 +171,7 @@ export const RecipeIngredientEditor = forwardRef<
 
           <FieldRow>
             <EditableCounter
-              label={t('recipes.quantity')}
+              label={t('labels.quantity')}
               value={quantity}
               onChangeText={setQuantity}
               min={0}
@@ -179,11 +179,11 @@ export const RecipeIngredientEditor = forwardRef<
             />
             <UnitAutocompleteField
               variant="modal"
-              label={t('recipes.unit')}
+              label={t('storageLocationForm.unit')}
               value={unit}
               onChangeText={setUnit}
               onUnitSelected={handleUnitSelect}
-              placeholder={t('recipes.unitPlaceholder')}
+              placeholder={t('labels.pcsKgEtc')}
             />
           </FieldRow>
 
@@ -207,7 +207,7 @@ export const RecipeIngredientEditor = forwardRef<
             label={t('recipes.notes')}
             value={notes}
             onChangeText={setNotes}
-            placeholder={t('recipes.notesPlaceholder')}
+            placeholder={t('labels.anyAdditionalNotes')}
             useBottomSheetInput
           />
 

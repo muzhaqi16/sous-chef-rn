@@ -35,6 +35,9 @@ const ITEM_CACHE_ID = 'ShoppingListItem:si1';
 
 const fullItem: Unmasked<ItemDetail_ShoppingListItemFragment> = {
   __typename: 'ShoppingListItem',
+  brand: null,
+  netWeight: null,
+  netWeightUnit: null,
   id: 'si1',
   itemName: 'Lemon juice',
   quantity: 1,

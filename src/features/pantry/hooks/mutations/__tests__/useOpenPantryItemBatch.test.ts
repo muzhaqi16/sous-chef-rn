@@ -100,9 +100,11 @@ describe('useOpenPantryItemBatch (local-first)', () => {
     expect(readIsOpened(cache)).toBe(false);
     // A union-error payload carries no transport error, so onError never fires —
     // the hook must surface its own alert rather than reverting silently.
+    // Localized copy for the field the refusal named (`batchId`), not the
+    // server's English "bad batch".
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Could not open this batch.',
+      'That batch is no longer available. Refresh and try again.',
     );
   });
 });

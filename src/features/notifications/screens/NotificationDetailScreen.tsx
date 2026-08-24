@@ -11,7 +11,7 @@ import { getDateFnsLocale } from '#utils/dateLocale';
 
 import { format } from 'date-fns/format';
 import type { StaticScreenProps } from '@react-navigation/native';
-import type { NotificationItem } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 
 export const NotificationDetailScreen: React.FC<
   StaticScreenProps<{
@@ -72,7 +72,7 @@ export const NotificationDetailScreen: React.FC<
                   weight="bold"
                   style={styles.detailsTitle}
                 >
-                  {t('notifications.detailsSection')}
+                  {t('labels.details')}
                 </Text>
                 <Text variant="caption" tone="primary">
                   {payload.details}

@@ -41,7 +41,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
   const { t } = useTranslation();
   const resolvedTitle = title ?? t('textInputModal.title');
   const resolvedPlaceholder = placeholder ?? t('textInputModal.placeholder');
-  const resolvedSubmitText = submitText ?? t('textInputModal.submit');
+  const resolvedSubmitText = submitText ?? t('labels.submit');
   const resolvedCancelText = cancelText ?? t('labels.cancel');
   const [text, setText] = useState(initialValue);
   const [error, setError] = useState('');
@@ -66,7 +66,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
 
     // Check if empty
     if (!trimmedValue) {
-      return t('textInputModal.required');
+      return t('labels.thisFieldIsRequired');
     }
 
     // Run custom validation rules

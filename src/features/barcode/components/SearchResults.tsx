@@ -27,8 +27,8 @@ import {
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { addToPantryItemsCache } from '#hooks/home/pantry/utils';
-import { buildOptimisticPantryItem } from '#hooks/home/pantry/buildOptimisticPantryItem';
+import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
   getPantryItemDuplicateFromResult,
@@ -401,7 +401,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
     return source === 'pantry'
       ? t('addItemSheet.addToPantry')
-      : t('addItemSheet.addToShoppingList');
+      : t('labels.addToShoppingList');
   };
 
   return (
@@ -437,7 +437,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             : undefined
         }
         secondaryAction={{
-          label: t('barcode.scanAnother'),
+          label: t('labels.scanAnother'),
           onPress: onScanAnother,
         }}
       />

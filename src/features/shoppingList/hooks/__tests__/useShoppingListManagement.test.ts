@@ -4,7 +4,6 @@ import { useShoppingListManagement } from '../useShoppingListManagement';
 // --- Mocks ---
 
 const mockAddItem = jest.fn();
-const mockUpdateItem = jest.fn();
 const mockRemoveItem = jest.fn();
 const mockToggleItem = jest.fn();
 const mockRefetch = jest.fn().mockResolvedValue(undefined);
@@ -100,7 +99,6 @@ jest.mock('../usePaginatedShoppingItems', () => ({
 jest.mock('../mutations/useShoppingListItemMutations', () => ({
   useShoppingListItemMutations: () => ({
     addItem: mockAddItem,
-    updateItem: mockUpdateItem,
     removeItem: mockRemoveItem,
     toggleItem: mockToggleItem,
   }),
@@ -146,7 +144,6 @@ describe('useShoppingListManagement', () => {
 
     // Actions
     expect(result.current.addItem).toBe(mockAddItem);
-    expect(result.current.updateItem).toBe(mockUpdateItem);
     expect(result.current.removeItem).toBe(mockRemoveItem);
     expect(result.current.toggleItem).toBe(mockToggleItem);
     expect(result.current.refetch).toBe(mockRefetch);

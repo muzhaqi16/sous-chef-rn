@@ -4,7 +4,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { Icon } from '#utils/iconUtils';
 import { useTranslation } from '#/i18n';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BaseInput } from '#components/atoms/BaseInput/BaseInput';
 import { StyleSheet } from 'react-native-unistyles';
 import { commonStyles } from '#/styles/commonStyles';
@@ -15,7 +15,7 @@ import { useShoppingListDetails } from '#features/shoppingList/hooks/useShopping
 import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
 import { OfflineGate } from '#components/atoms/OfflineGate';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { useLazyHomeData } from '#/hooks/home/useLazyHomeData';
+import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { useLeaveShoppingList } from '#features/shoppingList/hooks/useLeaveShoppingList';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
@@ -194,7 +194,7 @@ export const ListSettings: React.FC<
       : t('shoppingListScreens.listStatusActive');
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return t('shoppingListScreens.never');
+    if (!dateString) return t('labels.never');
     return new Date(dateString).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -350,7 +350,7 @@ export const ListSettings: React.FC<
   const handleDelete = () => {
     if (!listId) return; // Should never happen as delete button is hidden
     alertService.alert(
-      t('shoppingListScreens.deleteListConfirmTitle'),
+      t('labels.deleteList'),
       t('shoppingListScreens.deleteListConfirmMessage'),
       [
         { text: t('labels.cancel'), style: 'cancel' },
@@ -413,12 +413,12 @@ export const ListSettings: React.FC<
     }
     // Archiving hides the list from the active view — confirm first.
     alertService.alert(
-      t('shoppingListScreens.archiveListConfirmTitle'),
+      t('labels.archiveList'),
       t('shoppingListScreens.archiveListConfirmMessage'),
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('shoppingListScreens.archiveList'),
+          text: t('labels.archiveList'),
           onPress: archiveList,
         },
       ],
@@ -535,7 +535,7 @@ export const ListSettings: React.FC<
       [
         { text: t('labels.cancel'), style: 'cancel' },
         {
-          text: t('shoppingListScreens.leaveList'),
+          text: t('labels.leaveList'),
           style: 'destructive',
           onPress: () => {
             if (!currentUserCollaborator?.id) {
@@ -579,10 +579,10 @@ export const ListSettings: React.FC<
             >
               <Text size="md" weight="semibold" tone="accent">
                 {saving
-                  ? t('pantrySettings.saving')
+                  ? t('labels.saving')
                   : !listId
-                  ? t('pantrySettings.create')
-                  : t('pantrySettings.save')}
+                  ? t('labels.create')
+                  : t('labels.save')}
               </Text>
             </Pressable>
           ) : undefined
@@ -611,7 +611,7 @@ export const ListSettings: React.FC<
                   value={
                     ownerInfo.displayName ||
                     ownerInfo.email ||
-                    t('shoppingListScreens.ownerUnknown')
+                    t('labels.unknown')
                   }
                 />
               )}
@@ -629,7 +629,7 @@ export const ListSettings: React.FC<
             {/* Leave List section for non-owner collaborators */}
             <View style={commonStyles.settingsSection}>
               <Text style={commonStyles.settingsSectionTitle}>
-                {t('shoppingListScreens.leaveListSection')}
+                {t('labels.leaveList')}
               </Text>
 
               {isHomeMember ? (
@@ -646,7 +646,7 @@ export const ListSettings: React.FC<
                       tone="secondary"
                       style={styles.disabledButtonText}
                     >
-                      {t('shoppingListScreens.leaveList')}
+                      {t('labels.leaveList')}
                     </Text>
                   </View>
                   <Text
@@ -697,7 +697,7 @@ export const ListSettings: React.FC<
                     >
                       {leaving
                         ? t('shoppingListScreens.leaving')
-                        : t('shoppingListScreens.leaveList')}
+                        : t('labels.leaveList')}
                     </Text>
                   </Pressable>
                   <Text
@@ -715,7 +715,7 @@ export const ListSettings: React.FC<
           // Editable view for owners
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
-              {t('shoppingListScreens.general')}
+              {t('labels.general')}
             </Text>
 
             <BaseInput
@@ -823,10 +823,7 @@ export const ListSettings: React.FC<
               {t('shoppingListScreens.listStatusSection')}
             </Text>
 
-            <InfoRow
-              label={t('shoppingListScreens.statusLabel')}
-              value={statusDisplay}
-            />
+            <InfoRow label={t('labels.status')} value={statusDisplay} />
             {!!isCompleted && !!completedShopDate && (
               <InfoRow
                 label={t('shoppingListScreens.completedOn')}
@@ -873,7 +870,7 @@ export const ListSettings: React.FC<
               <Text size="md" tone="accent" style={styles.actionText}>
                 {isArchived
                   ? t('shoppingListScreens.restoreList')
-                  : t('shoppingListScreens.archiveList')}
+                  : t('labels.archiveList')}
               </Text>
             </Pressable>
           </View>
@@ -958,7 +955,7 @@ export const ListSettings: React.FC<
             {isTemplate ? (
               <>
                 <InfoRow
-                  label={t('shoppingListScreens.templateNameLabel')}
+                  label={t('labels.templateName')}
                   value={templateName ?? name}
                 />
                 <Pressable
@@ -986,7 +983,7 @@ export const ListSettings: React.FC<
               >
                 <Icon name="bookmark-outline" size={20} tone="primary" />
                 <Text size="md" tone="accent" style={styles.actionText}>
-                  {t('shoppingListScreens.saveAsTemplate')}
+                  {t('labels.saveAsTemplate')}
                 </Text>
               </Pressable>
             )}
@@ -1001,7 +998,7 @@ export const ListSettings: React.FC<
             </Text>
 
             <InfoRow
-              label={t('shoppingListScreens.totalSpent')}
+              label={t('labels.totalSpent')}
               value={formatCurrency(totalCost, currency)}
             />
             <InfoRow
@@ -1105,7 +1102,7 @@ export const ListSettings: React.FC<
         {!!listId && !!isOwner && (
           <View style={commonStyles.settingsSection}>
             <Text style={commonStyles.settingsSectionTitle}>
-              {t('shoppingListScreens.dangerZone')}
+              {t('labels.dangerZone')}
             </Text>
 
             <Pressable
@@ -1122,7 +1119,7 @@ export const ListSettings: React.FC<
                 tone="error"
                 style={styles.deleteButtonText}
               >
-                {t('shoppingListScreens.deleteList')}
+                {t('labels.deleteList')}
               </Text>
             </Pressable>
           </View>

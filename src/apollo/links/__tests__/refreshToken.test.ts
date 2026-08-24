@@ -29,7 +29,6 @@ jest.mock('#/utils/isNetworkError', () => ({
 // Mock wsLink
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),
-  isWebSocketReconnecting: jest.fn(() => false),
   registerTokenRefresh: jest.fn(),
 }));
 
@@ -52,7 +51,7 @@ import {
 import { useStore } from '#store';
 import { client } from '../../client';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { reconnectWebSocket, isWebSocketReconnecting } from '../wsLink';
+import { reconnectWebSocket } from '../wsLink';
 
 const mockedJwtDecode = jwtDecode as jest.MockedFunction<typeof jwtDecode>;
 const mockedClient = client as jest.Mocked<typeof client>;
@@ -63,11 +62,6 @@ const mockedIsNetworkError = isNetworkError as jest.MockedFunction<
 const mockedReconnectWebSocket = reconnectWebSocket as jest.MockedFunction<
   typeof reconnectWebSocket
 >;
-const mockedIsWebSocketReconnecting =
-  isWebSocketReconnecting as jest.MockedFunction<
-    typeof isWebSocketReconnecting
-  >;
-
 describe('refreshToken', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -347,7 +341,6 @@ describe('refreshToken', () => {
           },
         },
       });
-      mockedIsWebSocketReconnecting.mockReturnValue(false);
       const mockForward = createMockForward();
 
       const observable = attemptTokenRefresh(mockOperation, mockForward);
@@ -360,35 +353,11 @@ describe('refreshToken', () => {
       });
     });
 
-    it('skips websocket reconnect if already reconnecting', done => {
-      const mockSetTokens = jest.fn();
-      (mockedUseStore.getState as jest.Mock).mockReturnValue({
-        refreshToken: 'mock-refresh-token',
-        tokenRefreshFailed: jest.fn(),
-        setTokens: mockSetTokens,
-        setNeedsTokenRefresh: jest.fn(),
-      });
-      (mockedClient.mutate as jest.Mock).mockResolvedValue({
-        data: {
-          refresh: {
-            __typename: 'RefreshTokenPayload',
-            accessToken: 'new-access-token',
-            refreshToken: 'new-refresh-token',
-          },
-        },
-      });
-      mockedIsWebSocketReconnecting.mockReturnValue(true);
-      const mockForward = createMockForward();
-
-      const observable = attemptTokenRefresh(mockOperation, mockForward);
-      observable.subscribe({
-        next: () => {
-          expect(mockedReconnectWebSocket).not.toHaveBeenCalled();
-          done();
-        },
-        error: done,
-      });
-    });
+    // The test that used to sit here asserted the socket reconnect was SKIPPED
+    // while `isWebSocketReconnecting()` was true. That guard is gone, and with
+    // it the flag: it was set and cleared inside one synchronous try/finally in
+    // `wsLink`, so it was never observably true and the guard never skipped
+    // anything. The debounce that does the job lives in `reconnectWebSocket`.
 
     it('handles token expired error by triggering logout with auth_rejected', done => {
       const mockTokenRefreshFailed = jest.fn();

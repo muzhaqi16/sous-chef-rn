@@ -20,7 +20,7 @@ import type { StyleProp, ImageStyle, ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRecyclingState } from '@shopify/flash-list';
 import { Icon } from '#utils/iconUtils';
-import { SkeletonBase } from '#components/base/Skeleton/SkeletonBase';
+import { SkeletonBase } from '#components/atoms/Skeleton/SkeletonBase';
 
 export interface CachedImageProps
   extends Omit<TurboImageProps, 'source' | 'style'> {

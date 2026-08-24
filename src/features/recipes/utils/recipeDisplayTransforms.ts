@@ -76,9 +76,7 @@ export function toLocalDisplayItems(
     const totalTime = node.totalTimeMinutes ?? matchTime;
     const subtitleParts: string[] = [];
     if (totalTime) {
-      subtitleParts.push(
-        `⏱ ${tGlobal('recipes.minutesValue', { count: totalTime })}`,
-      );
+      subtitleParts.push(`⏱ ${tGlobal('labels.min', { count: totalTime })}`);
     }
     if (node.servings) {
       subtitleParts.push(

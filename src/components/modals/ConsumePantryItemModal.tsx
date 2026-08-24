@@ -40,10 +40,10 @@ interface ConsumePantryItemModalProps {
 
 const PURPOSE_OPTIONS: Array<{ labelKey: string; value: UsagePurpose }> = [
   { labelKey: 'consumeItem.purposeCooking', value: UsagePurpose.Cooking },
-  { labelKey: 'consumeItem.purposeMealPrep', value: UsagePurpose.MealPrep },
-  { labelKey: 'consumeItem.purposeSnack', value: UsagePurpose.Snack },
-  { labelKey: 'consumeItem.purposeGeneral', value: UsagePurpose.General },
-  { labelKey: 'consumeItem.purposeGift', value: UsagePurpose.Gift },
+  { labelKey: 'labels.mealPrep', value: UsagePurpose.MealPrep },
+  { labelKey: 'usagePurpose.SNACK', value: UsagePurpose.Snack },
+  { labelKey: 'labels.general', value: UsagePurpose.General },
+  { labelKey: 'usagePurpose.GIFT', value: UsagePurpose.Gift },
   { labelKey: 'consumeItem.purposeTransfer', value: UsagePurpose.Transfer },
 ];
 
@@ -97,7 +97,7 @@ export const ConsumePantryItemModal: React.FC<ConsumePantryItemModalProps> = ({
       pantryItemId={pantryItemId}
       onClose={onClose}
       title={t('consumeItem.title')}
-      confirmLabel={t('consumeItem.confirm')}
+      confirmLabel={t('labels.confirm')}
       snapPoints={['75%', '95%']}
       unitToggleLabel={t('consumeItem.consumeBy')}
       operation={PantryOperation.Consume}
@@ -150,9 +150,7 @@ const ConsumeActionFields: React.FC<{
           required
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder={localizeNumericHint(
-            t('consumeItem.quantityPlaceholder'),
-          )}
+          placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           keyboardType="numeric"
           useBottomSheetInput
         />

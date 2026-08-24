@@ -136,8 +136,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const insets = useSafeAreaInsets();
   const pages = [
     t('addToPantry.pageMain'),
-    t('addToPantry.pageDetails'),
-    t('addToPantry.pageStorage'),
+    t('labels.details'),
+    t('labels.storage'),
     t('addToPantry.pageStock'),
   ];
   const pagerRef = useRef<PagerView>(null);
@@ -277,8 +277,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     <View style={styles.container} testID="add-pantry-item-details-modal">
       <SheetFormHeader
         title={t('addToPantry.addItemDetails')}
-        cancelLabel={t('addToPantry.cancel')}
-        saveLabel={loading ? t('addToPantry.adding') : t('addToPantry.add')}
+        cancelLabel={t('labels.cancel')}
+        saveLabel={loading ? t('labels.adding') : t('labels.add')}
         onCancel={onClose}
         onSave={handleConfirm}
         saving={loading}

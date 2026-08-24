@@ -6,6 +6,7 @@ import {
   findFirstErrorMember,
   findConflictDataMember,
 } from '../versionConflict';
+import { logger } from '#/utils/environment';
 
 const makeApolloError = (
   code: string,
@@ -75,7 +76,7 @@ describe('versionConflict', () => {
   describe('handleVersionConflict', () => {
     it('returns true for version conflict errors', () => {
       expect(handleVersionConflict(makeApolloError('CONFLICT'))).toBe(true);
-      expect(console.warn).toHaveBeenCalled();
+      expect(logger.warn).toHaveBeenCalled();
     });
 
     it('returns true for VERSION_CONFLICT errors', () => {

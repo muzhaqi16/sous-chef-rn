@@ -16,7 +16,7 @@ import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Link } from '#components/atoms/Link';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
@@ -148,10 +148,7 @@ export const ProfilePictureUploadScreen = () => {
       setCroppedImage(null); // Reset cropped image when new image is selected
     } catch (error) {
       const validationError = error as ImageValidationError;
-      alertService.alert(
-        t('onBoarding.invalidImageTitle'),
-        validationError.message,
-      );
+      alertService.alert(t('labels.invalidImage'), validationError.message);
     }
   };
 
@@ -174,7 +171,7 @@ export const ProfilePictureUploadScreen = () => {
       launchCamera(DEFAULT_OPTIONS, handleImageResponse);
     } else {
       alertService.alert(
-        t('onBoarding.cameraPermissionTitle'),
+        t('labels.cameraPermission'),
         t('onBoarding.cameraPermissionTakePhotoMessage'),
       );
     }
@@ -234,7 +231,7 @@ export const ProfilePictureUploadScreen = () => {
 
   return (
     <OnBoardingWrapper
-      title={t('onBoarding.profilePictureTitle')}
+      title={t('labels.profilePicture')}
       subtitle={t('onBoarding.profilePictureSubtitle')}
       step={4}
       totalSteps={7}

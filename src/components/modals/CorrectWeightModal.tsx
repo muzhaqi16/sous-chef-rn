@@ -149,7 +149,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
               {!!remainingWeightText && (
                 <View style={commonStyles.bottomSheetItemRow}>
                   <Text style={commonStyles.bottomSheetItemLabel}>
-                    {t('correctWeight.remainingPrefix')}
+                    {t('labels.remaining')}
                     {remainingWeightText}
                   </Text>
                 </View>
@@ -172,9 +172,7 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
                 required
                 value={weightInput}
                 onChangeText={setWeightInput}
-                placeholder={localizeNumericHint(
-                  t('correctWeight.newNetWeightPlaceholder'),
-                )}
+                placeholder={localizeNumericHint(t('labels.eG145'))}
                 keyboardType="decimal-pad"
                 useBottomSheetInput
               />
@@ -183,17 +181,17 @@ export const CorrectWeightModal: React.FC<CorrectWeightModalProps> = ({
             <View style={commonStyles.bottomSheetSection}>
               <UnitAutocompleteField
                 variant="modal"
-                label={t('correctWeight.unit')}
+                label={t('storageLocationForm.unit')}
                 value={unitDisplay}
                 onChangeText={setUnitDisplay}
                 onUnitSelected={handleUnitSelected}
-                placeholder={t('correctWeight.unitPlaceholder')}
+                placeholder={t('labels.ozGMl')}
               />
             </View>
 
             <View style={commonStyles.bottomSheetSection}>
               <FormInput
-                label={t('correctWeight.reason')}
+                label={t('labels.reason')}
                 required
                 value={reason}
                 onChangeText={setReason}

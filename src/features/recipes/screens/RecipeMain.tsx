@@ -25,7 +25,7 @@ import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useRenderTime } from '#hooks/performance/useRenderTime';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { RecipeSkeleton } from '#components/base/Skeleton/RecipeSkeleton';
+import { RecipeSkeleton } from '#components/atoms/Skeleton/RecipeSkeleton';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {
@@ -456,7 +456,7 @@ const RecipeMainInner: React.FC = () => {
     <>
       <TabScreenHeader
         label={t('recipes.mainSubtitle')}
-        title={t('recipes.mainTitle')}
+        title={t('labels.recipes')}
         headerRight={headerRight}
       />
       <RecipeSearchInput
@@ -587,7 +587,7 @@ const RecipeMainFallback: React.FC = () => {
     <TabMainScreen testID="recipes-screen">
       <TabScreenHeader
         label={t('recipes.mainSubtitle')}
-        title={t('recipes.mainTitle')}
+        title={t('labels.recipes')}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar

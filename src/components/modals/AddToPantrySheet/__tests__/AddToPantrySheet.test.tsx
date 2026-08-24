@@ -45,7 +45,7 @@ jest.mock('#/utils/errors/pantryItemDuplicate', () => {
   };
 });
 
-jest.mock('#hooks/home/pantry/utils', () => ({
+jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   addToPantryItemsCache: jest.fn(),
 }));
 

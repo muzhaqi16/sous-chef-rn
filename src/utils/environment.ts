@@ -245,18 +245,3 @@ export const logger = {
     }
   },
 };
-
-/**
- * Feature flags based on environment
- */
-export const FeatureFlags = {
-  enableBiometrics:
-    Environment.shouldEnableDebugFeatures() || Environment.isProduction(),
-  enableCrashReporting: Environment.shouldEnableCrashReporting(),
-  enableAnalytics: Environment.shouldEnableAnalytics(),
-  enablePerformanceMonitoring:
-    Environment.isProduction() || Environment.isStaging(),
-  enableDetailedLogging: Environment.isDevelopment(),
-  enableDevTools: Environment.isDevelopment(),
-  enableTestMode: Environment.isTesting(),
-};

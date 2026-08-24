@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { formatDistanceToNow } from 'date-fns/formatDistanceToNow';
-import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import {
   getNotificationDisplayMessage,
   getNotificationIcon,

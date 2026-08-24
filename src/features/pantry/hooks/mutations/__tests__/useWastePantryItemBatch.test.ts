@@ -99,9 +99,11 @@ describe('useWastePantryItemBatch (local-first)', () => {
     expect(readStatus(cache)).toBe(BatchStatus.Active);
     // A union-error payload carries no transport error, so onError never fires —
     // the hook must surface its own alert rather than reverting silently.
+    // Localized copy for the field the refusal named (`batchId`), not the
+    // server's English "bad batch".
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Could not mark this as wasted.',
+      'That batch is no longer available. Refresh and try again.',
     );
   });
 });

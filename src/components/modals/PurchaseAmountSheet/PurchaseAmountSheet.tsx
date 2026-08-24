@@ -13,15 +13,19 @@ import { Text } from '#components/atoms/Text';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
+  DEFAULT_CURRENCY,
+  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
+import { totalFromUnitPrice, unitPriceFromTotal } from '#/utils/purchasePrice';
 
 interface PurchaseAmountSheetItem {
   id: string;
   itemName: string;
   requestedQuantity: number;
   unitName: string | null;
+  /** Per unit; the sheet seeds its total from it × `requestedQuantity`. */
   estimatedPrice: number | null;
 }
 
@@ -29,7 +33,11 @@ interface PurchaseAmountSheetProps {
   visible: boolean;
   item: PurchaseAmountSheetItem | null;
   onClose: () => void;
-  onConfirm: (quantity: number, price: number | null) => void;
+  /**
+   * `totalPrice` is what the shopper paid for the whole quantity — the receipt
+   * line — not a per-unit price. The caller converts for the API.
+   */
+  onConfirm: (quantity: number, totalPrice: number | null) => void;
   loading?: boolean;
 }
 
@@ -55,9 +63,11 @@ const formatPrice = (price: number | null): string =>
 /**
  * PurchaseAmountSheet - Bottom sheet to record the actual purchased amounts.
  *
- * Opens pre-filled with the requested quantity and estimated price when the
- * user marks an unpurchased item as purchased. Confirm records the amounts;
- * Cancel dismisses without purchasing.
+ * Opens pre-filled with the requested quantity and the estimated TOTAL
+ * (per-unit estimate × quantity) when the user marks an unpurchased item as
+ * purchased. The price asked for is the total paid, because that is what a
+ * shopper reads off the receipt; a per-unit hint shows how it will be split.
+ * Confirm records the amounts; Cancel dismisses without purchasing.
  */
 export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   visible,
@@ -86,14 +96,25 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     setPrevItemId(item?.id);
     if (visible && item) {
       setQuantityInput(formatQuantity(item.requestedQuantity));
-      setPriceInput(formatPrice(item.estimatedPrice));
+      setPriceInput(
+        formatPrice(
+          totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity),
+        ),
+      );
     }
   }
 
+  const parsedQty = parseNumberInput(quantityInput);
+  const parsedTotal = parseNumberInput(priceInput);
+  // Shown only when the split is not trivial — at quantity 1 the per-unit
+  // price IS the total.
+  const perUnitPrice =
+    parsedQty != null && parsedQty > 0 && parsedQty !== 1 && parsedTotal != null
+      ? unitPriceFromTotal(parsedTotal, parsedQty)
+      : null;
+
   const handleConfirm = () => {
-    const parsedQty = parseNumberInput(quantityInput) ?? 0;
-    const parsedPrice = parseNumberInput(priceInput);
-    onConfirm(parsedQty, parsedPrice);
+    onConfirm(parsedQty ?? 0, parsedTotal);
   };
 
   return (
@@ -131,7 +152,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             tone="secondary"
             style={styles.sectionLabel}
           >
-            {t('purchaseAmountSheet.quantity')}
+            {t('labels.quantity')}
           </Text>
           <View style={styles.inputRow}>
             <ThemedBottomSheetTextInput
@@ -141,7 +162,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               keyboardType="decimal-pad"
               selectTextOnFocus
               maxLength={10}
-              accessibilityLabel={t('purchaseAmountSheet.quantity')}
+              accessibilityLabel={t('labels.quantity')}
               testID="purchase-quantity-input"
             />
             {item?.unitName ? (
@@ -160,7 +181,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             tone="secondary"
             style={styles.sectionLabel}
           >
-            {t('purchaseAmountSheet.price')}
+            {t('purchaseAmountSheet.totalPrice')}
           </Text>
           <View style={styles.inputRow}>
             <Text size="base" tone="secondary" style={styles.prefix}>
@@ -176,10 +197,17 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               placeholder={localizeNumericHint(
                 t('purchaseAmountSheet.pricePlaceholder'),
               )}
-              accessibilityLabel={t('purchaseAmountSheet.price')}
+              accessibilityLabel={t('purchaseAmountSheet.totalPrice')}
               testID="purchase-price-input"
             />
           </View>
+          {perUnitPrice != null ? (
+            <Text size="xs" tone="secondary" style={styles.perUnitHint}>
+              {t('purchaseAmountSheet.perUnitHint', {
+                price: formatCurrency(perUnitPrice, DEFAULT_CURRENCY),
+              })}
+            </Text>
+          ) : null}
         </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
@@ -226,6 +254,9 @@ const styles = StyleSheet.create(theme => ({
   },
   affix: {
     marginLeft: theme.spacing.sm,
+  },
+  perUnitHint: {
+    marginTop: theme.spacing.xs,
   },
   prefix: {
     marginRight: theme.spacing.sm,

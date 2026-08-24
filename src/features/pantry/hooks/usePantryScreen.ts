@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 
 import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
-import { usePantryManagement } from '#/hooks/home/pantry/usePantryManagement';
+import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
 import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
@@ -67,7 +67,6 @@ export function usePantryScreen() {
   // 3. Zustand store — consolidated selector
   // -------------------------------------------------------------------------
   const {
-    unreadCount,
     pantrySortOption,
     pantrySortDirection,
     setPantrySortOption,
@@ -76,7 +75,6 @@ export function usePantryScreen() {
     setPendingPantryScrollToTop,
   } = useAppStore(
     useShallow(s => ({
-      unreadCount: s.unreadCount,
       pantrySortOption:
         s.pantrySortOption ?? PREFERENCE_DEFAULTS.pantrySortOption,
       pantrySortDirection:
@@ -125,7 +123,10 @@ export function usePantryScreen() {
       locationCounts,
     },
     actions: { removeItem, refetch, loadMore },
-  } = usePantryManagement(pantry?.id, mainFilter, mainOrderBy);
+  } = usePantryManagement(pantry?.id, {
+    filters: mainFilter,
+    orderBy: mainOrderBy,
+  });
 
   // Adjusting state during render: flip mode once the true total is known.
   const nextServerMode = isOnline && (stats?.totalItems ?? 0) > PAGE_SIZE.MAX;
@@ -336,7 +337,6 @@ export function usePantryScreen() {
     noPantries,
 
     // Store state
-    unreadCount,
     pantrySortOption,
     pantrySortDirection,
     pendingPantryScrollToTop,

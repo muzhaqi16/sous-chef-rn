@@ -7,7 +7,7 @@ import { alertService } from '#/services/alertService';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { FractionInput } from '#components/molecules/FractionInput';
@@ -136,7 +136,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     const quantityValue = parseFractionalInput(quantityInput);
 
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert(t('labels.error'), t('moveToPantry.invalidQuantity'));
+      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
       return;
     }
 
@@ -230,10 +230,10 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                 <View style={styles.quantityUnitRow}>
                   <View style={styles.quantityField}>
                     <FractionInput
-                      label={t('moveToPantry.quantity')}
+                      label={t('labels.quantity')}
                       value={quantityInput}
                       onChangeText={setQuantityInput}
-                      placeholder={t('moveToPantry.quantityPlaceholder')}
+                      placeholder={t('labels.eG1114')}
                       keyboardType="numeric"
                       required
                     />
@@ -241,7 +241,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                   <View style={styles.unitField}>
                     <UnitAutocompleteField
                       variant="inline"
-                      label={t('moveToPantry.unit')}
+                      label={t('storageLocationForm.unit')}
                       value={unitValue}
                       onChangeText={setUnitValue}
                       placeholder={t('moveToPantry.unitPlaceholder')}
@@ -283,7 +283,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
               {/* Notes (Optional) */}
               <View style={styles.section}>
                 <FormInput
-                  label={t('moveToPantry.notesOptional')}
+                  label={t('labels.notesOptional')}
                   value={notes}
                   onChangeText={setNotes}
                   placeholder={t('moveToPantry.notesPlaceholder')}

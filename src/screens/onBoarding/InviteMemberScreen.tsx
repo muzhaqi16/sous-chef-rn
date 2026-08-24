@@ -5,7 +5,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { EmailInput } from '#components/atoms/EmailInput';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
@@ -74,7 +74,7 @@ export const InviteMemberScreen = () => {
     if (!validateEmail(trimmedEmail)) {
       alertService.alert(
         t('inviteMembers.invalidEmailTitle'),
-        t('inviteMembers.invalidEmailMessage'),
+        t('commonValidation.emailInvalid'),
       );
       return;
     }
@@ -227,7 +227,7 @@ export const InviteMemberScreen = () => {
             onSubmitEditing={addInvite}
           />
           <Button
-            title={t('inviteMembers.addButton')}
+            title={t('labels.add')}
             onPress={addInvite}
             disabled={!currentEmail.trim()}
             size="medium"

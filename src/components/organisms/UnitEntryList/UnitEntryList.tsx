@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { FormInput } from '#/components/molecules/FormInput';
 import { UnitAutocompleteField } from '#/components/molecules/AutocompleteField/UnitAutocompleteField';
-import { Button } from '#/components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { Text } from '#components/atoms/Text';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 
@@ -137,7 +137,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     onChangeText={(text: string) =>
                       handleEntryChange(index, 'packageSize', text)
                     }
-                    placeholder={t('unitEntryList.sizePlaceholder')}
+                    placeholder={t('labels.eG12')}
                     keyboardType="decimal-pad"
                   />
                 </View>
@@ -147,7 +147,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     label={
                       index === 0
                         ? t('unitEntryList.unitDefaultLabel')
-                        : t('unitEntryList.unitLabel')
+                        : t('storageLocationForm.unit')
                     }
                     value={entry.unitName || ''}
                     onChangeText={(text: string) =>
@@ -177,7 +177,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                       onChangeText={(text: string) =>
                         handleUnitTextChange(index, 'contentUnitName', text)
                       }
-                      placeholder={t('unitEntryList.containsPlaceholder')}
+                      placeholder={t('labels.eGCanBottle')}
                       onUnitSelected={(unitId, unitName) =>
                         handleContentUnitSelected(index, unitId, unitName)
                       }

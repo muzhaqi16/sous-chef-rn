@@ -22,4 +22,16 @@ fragment useShoppingListItemForm_item on ShoppingListItem {
       name
     }
   }
+  # Editable since the API accepted them on update (2026-08); the add paths
+  # already wrote them.
+  brand {
+    id
+    name
+  }
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
 }

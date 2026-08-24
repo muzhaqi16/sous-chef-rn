@@ -136,15 +136,14 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   // users can discover swipe actions without swiping
   const accessibilityActions = (() => {
     const actions: AccessibilityActionInfo[] = [];
-    if (onEdit) actions.push({ name: 'edit', label: t('swipeActions.edit') });
-    if (onDelete)
-      actions.push({ name: 'delete', label: t('swipeActions.delete') });
+    if (onEdit) actions.push({ name: 'edit', label: t('labels.edit') });
+    if (onDelete) actions.push({ name: 'delete', label: t('labels.delete') });
     if (onTogglePurchase)
       actions.push({
         name: 'togglePurchase',
         label: isPurchased
           ? t('swipeActions.markUnpurchased')
-          : t('swipeActions.markPurchased'),
+          : t('labels.markAsPurchased'),
       });
     if (onConsume)
       actions.push({ name: 'consume', label: t('swipeActions.consume') });

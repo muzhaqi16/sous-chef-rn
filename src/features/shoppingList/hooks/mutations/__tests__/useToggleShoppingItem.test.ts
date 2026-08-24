@@ -191,9 +191,39 @@ const readPurchased = (cache: ReturnType<typeof seedCache>) =>
     fragment: PURCHASE_INFO_FRAGMENT,
   })?.purchaseInfo?.isPurchased;
 
+// The sentence the API returns when a purchase has no name to record against
+// (the row's catalog item was hard-deleted and it carries no name of its own).
+// Server-authored English — the fixture carries it, and the app never shows it.
+const NAMELESS_ROW_MESSAGE =
+  'This item has no name to record a purchase against. Add a name first.';
+
+// What the user actually sees: the app's own copy for `field: 'itemName'`.
+const ITEM_NAME_COPY = 'Enter a name for this item.';
+
+// Toggle twin of updatePurchaseMock's 'fieldRefusal' outcome.
+function toggleFieldRefusalMock(): MockedResponse {
+  return {
+    request: {
+      query: ToggleShoppingListItemPurchasedDocument,
+      variables: () => true,
+    },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    result: {
+      data: {
+        toggleShoppingListItemPurchased: {
+          __typename: 'ValidationError',
+          code: 'VALIDATION_ERROR',
+          message: NAMELESS_ROW_MESSAGE,
+          field: 'itemName',
+        },
+      },
+    },
+  };
+}
+
 function updatePurchaseMock(
   recorded: Array<Record<string, unknown>>,
-  outcome: 'success' | 'reject',
+  outcome: 'success' | 'reject' | 'fieldRefusal',
 ): MockedResponse {
   return {
     request: {
@@ -241,6 +271,13 @@ function updatePurchaseMock(
                     },
                   },
                 },
+              }
+            : outcome === 'fieldRefusal'
+            ? {
+                __typename: 'ValidationError',
+                code: 'VALIDATION_ERROR',
+                message: NAMELESS_ROW_MESSAGE,
+                field: 'itemName',
               }
             : {
                 __typename: 'ConflictError',
@@ -362,5 +399,46 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     );
     expect(readPurchased(cache)).toBe(false);
     expect(mockAlert).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows copy for the field the refusal names', async () => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const cache = seedShoppingItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { cache, operationMocks: [updatePurchaseMock(recorded, 'fieldRefusal')] },
+    );
+
+    await act(async () => {
+      await result.current.recordPurchase('item-1', {
+        purchasedQuantity: 2,
+        purchasedPrice: null,
+      });
+    });
+
+    expect(readPurchased(cache)).toBe(false);
+    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
+    // Never the server's English, however specific it is.
+    expect(mockAlert).not.toHaveBeenCalledWith(
+      expect.anything(),
+      NAMELESS_ROW_MESSAGE,
+    );
+  });
+
+  it('shows it on the plain toggle too', async () => {
+    const cache = seedShoppingItem();
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { cache, operationMocks: [toggleFieldRefusalMock()] },
+    );
+
+    let toggled!: Awaited<ReturnType<typeof result.current.toggleItem>>;
+    await act(async () => {
+      toggled = await result.current.toggleItem('item-1');
+    });
+
+    expect(toggled).toBe(false);
+    expect(readPurchased(cache)).toBe(false);
+    expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
   });
 });

@@ -29,7 +29,7 @@ function toastResolvedError(
   const message =
     payload && typeof payload.message === 'string' && payload.message
       ? payload.message
-      : t('errors.somethingWentWrong');
+      : t('errors.codes.genericRetry');
   toastService.error(message);
 }
 
@@ -195,7 +195,7 @@ export function useStorageLocationManagement(
     try {
       result = await updateMutation({ variables: { input: { ...input, id } } });
     } catch {
-      toastService.error(t('errors.somethingWentWrong'));
+      toastService.error(t('errors.codes.genericRetry'));
     }
     if (!result) return false;
     const payload = result.data?.updateStorageLocation;
@@ -211,7 +211,7 @@ export function useStorageLocationManagement(
     try {
       result = await deleteMutation({ variables: { input: { id } } });
     } catch {
-      toastService.error(t('errors.somethingWentWrong'));
+      toastService.error(t('errors.codes.genericRetry'));
     }
     if (!result) return false;
     const payload = result.data?.deleteStorageLocation;
@@ -228,7 +228,7 @@ export function useStorageLocationManagement(
     try {
       result = await setDefaultMutation({ variables: { input: { id } } });
     } catch {
-      toastService.error(t('errors.somethingWentWrong'));
+      toastService.error(t('errors.codes.genericRetry'));
     }
     if (!result) return false;
     const payload = result.data?.markStorageLocationAsDefault;

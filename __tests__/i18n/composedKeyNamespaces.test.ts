@@ -73,6 +73,7 @@ const ALERT_SUFFIXES = [
   'notFoundTitle',
   'notFoundBody',
   'rejectedTitle',
+  'rateLimitedTitle',
   'failedTitle',
   'failedBody',
 ];

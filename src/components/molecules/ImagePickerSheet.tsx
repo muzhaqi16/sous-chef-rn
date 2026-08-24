@@ -66,7 +66,7 @@ export const ImagePickerSheet: React.FC<ImagePickerSheetProps> = ({
               <Icon name="camera" size={24} tone="primary" />
             </View>
             <Text size="md" weight="medium">
-              {t('imagePicker.takePhoto')}
+              {t('labels.takePhoto')}
             </Text>
           </AppPressable>
           <AppPressable style={styles.option} onPress={handleLibrary}>

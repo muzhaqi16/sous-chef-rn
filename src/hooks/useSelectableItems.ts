@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { logger } from '#/utils/environment';
 
 export interface SelectableItem {
   id: string;
@@ -72,7 +73,7 @@ export function useSelectableItems<T extends SelectableItem>({
 
     // If trying to select but max is reached, prevent selection
     if (!target.selected && isMaxReached) {
-      console.warn(`Maximum selection of ${maxSelection} items reached`);
+      logger.warn(`Maximum selection of ${maxSelection} items reached`);
       return;
     }
 

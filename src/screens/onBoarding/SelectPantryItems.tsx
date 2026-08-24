@@ -27,9 +27,9 @@ import {
   ItemType,
 } from '#/graphql/generated/schemaTypes';
 import { extractNodes } from '#/utils/connectionUtils';
-import { removeFromPantryItemsCache } from '#/hooks/home/pantry/utils';
+import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { AnimatedChip } from '#components/atoms/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
@@ -37,7 +37,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { getPantryItemDuplicateFromResult } from '#/utils/errors/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 
 type PantryItemsConnection = NonNullable<
   GetPantryQuery['pantry']
@@ -199,7 +199,7 @@ export const SelectPantryItems = () => {
             {t('errors.loadItemsFailed')}
           </Text>
           <Button onPress={() => refetch()} variant="primary">
-            {t('onBoarding.tryAgain')}
+            {t('auth.tryAgain')}
           </Button>
         </View>
       </OnBoardingWrapper>
@@ -310,7 +310,7 @@ export const SelectPantryItems = () => {
           align="center"
           style={styles.helperText}
         >
-          {t('onBoarding.itemsSelected', { count: selectedItems.length })}
+          {t('labels.selected', { count: selectedItems.length })}
         </Text>
         <View style={styles.chipContainer}>
           {items.map(item => (
@@ -329,10 +329,10 @@ export const SelectPantryItems = () => {
       <Button
         title={
           isSaving
-            ? t('onBoarding.saving')
+            ? t('labels.saving')
             : isFirstVisit
             ? selectedItems.length === 0
-              ? t('onBoarding.addItemsZero')
+              ? t('labels.addItems')
               : t(
                   selectedItems.length === 1
                     ? 'onBoarding.addItemSingular'
@@ -340,7 +340,7 @@ export const SelectPantryItems = () => {
                   { count: selectedItems.length },
                 )
             : hasChanges
-            ? t('onBoarding.saveChanges')
+            ? t('labels.saveChanges')
             : t('labels.continue')
         }
         onPress={onNext}

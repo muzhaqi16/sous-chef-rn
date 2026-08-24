@@ -111,7 +111,7 @@ jest.mock('#/components/providers/ScreenErrorBoundary', () => ({
     children,
 }));
 
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => 'SousChefLoader',
 }));
 

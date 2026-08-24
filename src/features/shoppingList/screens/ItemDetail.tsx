@@ -4,6 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
+import { formatNetWeightDisplay } from '#features/pantry/hooks/usePantryItemTransformation';
 import { GetShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -98,7 +99,7 @@ export const ShoppingListItemDetail: React.FC<
   };
 
   const formatDate = (dateString?: string | null) => {
-    if (!dateString) return t('shoppingListScreens.never');
+    if (!dateString) return t('labels.never');
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
       month: 'short',
@@ -109,6 +110,13 @@ export const ShoppingListItemDetail: React.FC<
 
   // Images and nutrition from catalog item
   // Must be called before early return to follow rules of hooks
+  // The shared formatter, not a local template: it upscales g→kg and ml→L, so a
+  // 1500 g package reads the same here as it does in the pantry.
+  const netWeightDisplay = formatNetWeightDisplay(
+    item?.netWeight,
+    item?.netWeightUnit,
+  );
+
   const itemPhotos = galleryPhotos(item?.item?.photos);
   const itemNutritions = parseNutritions(item?.item?.nutritions);
   const showImages = itemPhotos.length > 0;
@@ -125,7 +133,7 @@ export const ShoppingListItemDetail: React.FC<
           <Text style={styles.centerMessageText}>
             {data === undefined
               ? t('shoppingListScreens.loading')
-              : t('shoppingListScreens.itemNotFound')}
+              : t('errors.itemNotFound')}
           </Text>
         </View>
       </CollapsingHeroDetail>
@@ -246,8 +254,8 @@ export const ShoppingListItemDetail: React.FC<
           </View>
         )}
 
-        <DetailSection title={t('shoppingListScreens.information')}>
-          <DetailRow label={t('shoppingListScreens.quantity')}>
+        <DetailSection title={t('labels.information')}>
+          <DetailRow label={t('labels.quantity')}>
             <FormattedItemSubtitle
               quantity={item.quantity}
               quantityInput={item.quantityInput}
@@ -256,9 +264,23 @@ export const ShoppingListItemDetail: React.FC<
             />
           </DetailRow>
           {!!item.category && (
-            <DetailRow label={t('shoppingListScreens.category')}>
+            <DetailRow label={t('labels.category')}>
               <Text size="sm" weight="medium">
                 {item.category}
+              </Text>
+            </DetailRow>
+          )}
+          {!!item.brand?.name && (
+            <DetailRow label={t('labels.brand')}>
+              <Text size="sm" weight="medium">
+                {item.brand.name}
+              </Text>
+            </DetailRow>
+          )}
+          {!!netWeightDisplay && (
+            <DetailRow label={t('labels.netWeight')}>
+              <Text size="sm" weight="medium">
+                {netWeightDisplay}
               </Text>
             </DetailRow>
           )}
@@ -331,7 +353,7 @@ export const ShoppingListItemDetail: React.FC<
 
         <DetailSection>
           <ClickableInfoPanel
-            title={t('shoppingListScreens.purchaseHistoryTitle')}
+            title={t('labels.purchaseHistory')}
             items={purchaseHistoryItems}
             onPress={handleViewHistory}
             emptyMessage={t('shoppingListScreens.noPurchaseHistory')}
@@ -371,14 +393,14 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.source?.isAutoAdded && (
             <DetailRow label={t('shoppingListScreens.autoAdded')}>
               <Text size="sm" weight="medium">
-                {item.source?.autoAddReason || t('shoppingListScreens.yes')}
+                {item.source?.autoAddReason || t('labels.yes')}
               </Text>
             </DetailRow>
           )}
           {!!item.source?.isFromMealPlan && (
             <DetailRow label={t('shoppingListScreens.fromMealPlan')}>
               <Text size="sm" weight="medium">
-                {t('shoppingListScreens.yes')}
+                {t('labels.yes')}
               </Text>
             </DetailRow>
           )}

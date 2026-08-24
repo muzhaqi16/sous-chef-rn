@@ -158,7 +158,7 @@ const mockDeferredScreen = jest.fn(
 jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
-jest.mock('#components/base/Skeleton/RecipeSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/RecipeSkeleton', () => ({
   RecipeSkeleton: () => 'RecipeSkeleton',
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({

@@ -63,10 +63,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
 
     const quantityValue = parseFractionalInput(quantityInput);
     if (quantityValue === null || isNaN(quantityValue) || quantityValue <= 0) {
-      alertService.alert(
-        t('labels.error'),
-        t('adjustQuantity.invalidQuantity'),
-      );
+      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
       return;
     }
 
@@ -195,9 +192,7 @@ const RestockActionFields: React.FC<{
           label={t('restockItem.quantityToAdd')}
           value={quantityInput}
           onChangeText={setQuantityInput}
-          placeholder={localizeNumericHint(
-            t('restockItem.quantityPlaceholder'),
-          )}
+          placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           keyboardType="numeric"
           useBottomSheetInput
           required
@@ -252,7 +247,7 @@ const RestockActionFields: React.FC<{
           </View>
           <View style={styles.costField}>
             <FormInput
-              label={t('restockItem.totalCost')}
+              label={t('labels.totalCost')}
               value={totalCostInput}
               onChangeText={setTotalCostInput}
               placeholder={localizeNumericHint('0.00')}
@@ -279,7 +274,7 @@ const RestockActionFields: React.FC<{
       {/* Expiration Date */}
       <View style={commonStyles.bottomSheetSection}>
         <DatePickerField
-          label={t('restockItem.expirationDate')}
+          label={t('labels.expirationDate')}
           value={expiresAt}
           onChange={setExpiresAt}
           placeholder={t('restockItem.expirationPlaceholder')}

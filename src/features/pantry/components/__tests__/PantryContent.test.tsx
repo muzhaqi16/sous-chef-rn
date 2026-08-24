@@ -5,7 +5,7 @@ import { screen, act, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
-import type { EmptyStateProps } from '#components/base/EmptyState';
+import type { EmptyStateProps } from '#components/atoms/EmptyState';
 import type { SectionHeaderProps } from '#components/molecules/SectionHeader';
 import type {
   FilterTabConfig,
@@ -169,14 +169,14 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-jest.mock('#components/base/Skeleton/PantryScreenSkeleton', () => ({
+jest.mock('#components/atoms/Skeleton/PantryScreenSkeleton', () => ({
   PantryScreenSkeleton: () => {
     const { View } = require('react-native');
     return <View testID="pantry-skeleton" />;
   },
 }));
 
-jest.mock('#components/base/EmptyState', () => ({
+jest.mock('#components/atoms/EmptyState', () => ({
   EmptyState: ({
     title,
     description,

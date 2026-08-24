@@ -9,7 +9,7 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Controller, useForm, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { logValidationErrors } from '#utils/validation/common';
 import { Text } from '#components/atoms/Text';
 
@@ -100,9 +100,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             variant="ghost"
             size="small"
             onPress={handleCancel}
-            accessibilityLabel={t('textEditBottomSheet.cancel')}
+            accessibilityLabel={t('labels.cancel')}
           >
-            {t('textEditBottomSheet.cancel')}
+            {t('labels.cancel')}
           </Button>
 
           <Text size="lg" weight="semibold" align="center" style={styles.title}>
@@ -113,9 +113,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
             variant="ghost"
             size="small"
             onPress={form.handleSubmit(handleSave, logValidationErrors)}
-            accessibilityLabel={t('textEditBottomSheet.save')}
+            accessibilityLabel={t('labels.save')}
           >
-            {t('textEditBottomSheet.save')}
+            {t('labels.save')}
           </Button>
         </View>
 

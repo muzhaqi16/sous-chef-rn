@@ -39,7 +39,13 @@ jest.mock('@gorhom/bottom-sheet', () => {
     BottomSheetModalProvider: ({ children }: { children: React.ReactNode }) =>
       children,
     BottomSheetBackdrop: (props: ViewProps) => R.createElement(RN.View, props),
-    BottomSheetView: (props: ViewProps) => R.createElement(RN.View, props),
+    // Tagged so a test can assert the picker does NOT render one — see
+    // 'keeps the list out of gorhom BottomSheetView'.
+    BottomSheetView: (props: ViewProps) =>
+      R.createElement(RN.View, {
+        ...props,
+        testID: 'gorhom-bottom-sheet-view',
+      }),
     BottomSheetScrollView: (props: ViewProps) =>
       R.createElement(RN.View, props),
     BottomSheetFlatList: RN.FlatList,
@@ -207,6 +213,35 @@ describe('BottomSheetAutocompleteInput', () => {
     render(<BottomSheetAutocompleteInput {...defaultProps} data={testItems} />);
     // The title is inside BottomSheetModal which renders via @gorhom mock as View
     expect(screen.getByText('Search Ingredients')).toBeTruthy();
+  });
+
+  it('keeps the list out of gorhom BottomSheetView', () => {
+    // gorhom 5.2.14 styles `BottomSheetView` `position: 'absolute'` with no
+    // `bottom`, so anything inside it is never height-bounded: a FlashList
+    // wrapped in one grows to every row and cannot scroll. The picker must
+    // wrap its list in a plain flex View.
+    render(<BottomSheetAutocompleteInput {...defaultProps} data={testItems} />);
+    expect(screen.queryByTestId('gorhom-bottom-sheet-view')).toBeNull();
+  });
+
+  it('closes via the header close button without rewriting the field', () => {
+    const onModalClose = jest.fn();
+    const onChangeText = jest.fn();
+    render(
+      <BottomSheetAutocompleteInput
+        {...defaultProps}
+        data={testItems}
+        onChangeText={onChangeText}
+        onModalClose={onModalClose}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('header-close-button'));
+
+    expect(onModalClose).toHaveBeenCalledTimes(1);
+    // Every keystroke in the picker already went through onChangeText, so
+    // closing has nothing to commit.
+    expect(onChangeText).not.toHaveBeenCalled();
   });
 
   it('renders empty state text when no data', () => {

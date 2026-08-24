@@ -20,21 +20,23 @@ import { renderHook } from '@testing-library/react-native';
 import { useApolloErrorLogger } from '../useApolloErrorLogger';
 import { Telemetry } from '#/services/telemetry';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { logger } from '#/utils/environment';
 
 const mockedIsApiUnavailable = isApiUnavailable as jest.Mock;
 
 describe('useApolloErrorLogger', () => {
-  let warnSpy: jest.SpyInstance;
+  // The hook logs through `logger`, which is auto-mocked for every test, so the
+  // assertions read its calls rather than the console's. Spying on the console
+  // would miss them — and would have to look past the '[WARN]' prefix `logger`
+  // prepends, which is what made this test brittle before.
+  const warnSpy = logger.warn as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockedIsApiUnavailable.mockReturnValue(false);
-    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
-  afterEach(() => {
-    warnSpy.mockRestore();
-  });
+  afterEach(() => {});
 
   it('does nothing when error is undefined', () => {
     renderHook(() => useApolloErrorLogger('GetItems', undefined));

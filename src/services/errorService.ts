@@ -441,7 +441,7 @@ export class ErrorService {
         success: false,
         error: {
           code: 'ERROR_HANDLER_FAILED',
-          message: t('errors.somethingWentWrong'),
+          message: t('errors.codes.genericRetry'),
           category: 'Unknown',
           shouldRetry: false,
           isAuthError: false,
@@ -462,7 +462,7 @@ export class ErrorService {
     return (
       result.error || {
         code: 'UNKNOWN_ERROR',
-        message: t('errors.unexpected'),
+        message: t('errors.codes.unexpected'),
         category: 'Unknown',
         shouldRetry: false,
         isAuthError: false,

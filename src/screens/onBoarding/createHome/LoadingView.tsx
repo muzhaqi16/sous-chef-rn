@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 
 export const LoadingView = ({ onSkip }: { onSkip: () => void }) => {
   const { t } = useTranslation();

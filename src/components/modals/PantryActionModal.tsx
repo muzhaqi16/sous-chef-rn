@@ -283,7 +283,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           contentContainerStyle,
         ]}
         showsVerticalScrollIndicator={false}
-        bottomOffset={16}
       >
         <BottomSheetHeader
           title={title}

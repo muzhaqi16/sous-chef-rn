@@ -340,7 +340,7 @@ export function AddItemSheet<
               <View style={styles.actionButtons}>
                 <ActionCard
                   icon="barcode-outline"
-                  label={t('addItemSheet.scanBarcode')}
+                  label={t('labels.scanBarcode')}
                   onPress={onScanPress}
                 />
                 <ActionCard

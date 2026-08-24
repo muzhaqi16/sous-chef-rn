@@ -1,5 +1,9 @@
 import { act, renderHook } from '@testing-library/react-native';
-import { useSubscriptionTransportRecovery } from '../useSubscriptionTransportRecovery';
+import {
+  MAX_RESTART_ATTEMPTS,
+  RESTART_STABLE_MS,
+  useSubscriptionTransportRecovery,
+} from '../useSubscriptionTransportRecovery';
 import { errorService } from '#/services/errorService';
 
 // Typed through the module mock rather than the factory, so the listener
@@ -37,21 +41,15 @@ const socketClosed = (code?: number, reason = '') =>
   );
 
 const renderRecovery = (initial: {
-  data?: unknown;
   error?: Error;
   restart: () => void;
   skip?: boolean;
 }) =>
   renderHook(
-    (props: {
-      data?: unknown;
-      error?: Error;
-      restart: () => void;
-      skip?: boolean;
-    }) =>
+    (props: { error?: Error; restart: () => void; skip?: boolean }) =>
       useSubscriptionTransportRecovery(
         'TestEvents',
-        { data: props.data, error: props.error, restart: props.restart },
+        { error: props.error, restart: props.restart },
         props.skip ?? false,
       ),
     { initialProps: initial },
@@ -72,7 +70,7 @@ describe('useSubscriptionTransportRecovery', () => {
 
   it('does nothing while the subscription is healthy', () => {
     const restart = jest.fn();
-    renderRecovery({ data: { a: 1 }, restart });
+    renderRecovery({ restart });
 
     act(() => {
       jest.advanceTimersByTime(60_000);
@@ -225,7 +223,10 @@ describe('useSubscriptionTransportRecovery', () => {
     expect(restart).toHaveBeenCalledTimes(7);
   });
 
-  it('resets the escalation once data flows again', () => {
+  // Apollo clears `error` when `restart()` swaps in a fresh observable, so an
+  // error-free window is what says the restart took. Delivery is NOT the
+  // signal: a healthy subscription can sit idle indefinitely.
+  it('resets the escalation once a restart has held for the stability window', () => {
     const restart = jest.fn();
     const error = socketClosed(4500);
     const { rerender } = renderRecovery({ error, restart });
@@ -235,13 +236,74 @@ describe('useSubscriptionTransportRecovery', () => {
     });
     expect(restart).toHaveBeenCalledTimes(1);
 
-    // Delivery resumed: the next failure starts from the base delay again.
-    rerender({ data: { a: 1 }, restart });
-    rerender({ data: { a: 1 }, error, restart });
+    // The restart took: the error clears and nothing errors again.
+    rerender({ restart });
+    act(() => {
+      jest.advanceTimersByTime(10_000);
+    });
 
+    // So the next failure starts from the base delay rather than an escalated
+    // one, and no event ever had to arrive to prove it.
+    rerender({ error, restart });
     act(() => {
       jest.advanceTimersByTime(1500);
     });
     expect(restart).toHaveBeenCalledTimes(2);
+  });
+
+  // The regression this window exists for: the budget used to count faults for
+  // the life of the session, so six separately-recovered faults exhausted it and
+  // left the subscription dark with a report saying it had not recovered.
+  it('never exhausts the budget across faults that each recover', () => {
+    const restart = jest.fn();
+    const error = socketClosed(4500);
+    const { rerender } = renderRecovery({ restart });
+
+    for (let fault = 0; fault < MAX_RESTART_ATTEMPTS + 2; fault++) {
+      rerender({ error, restart });
+      act(() => {
+        jest.advanceTimersByTime(1500);
+      });
+
+      rerender({ restart });
+      act(() => {
+        jest.advanceTimersByTime(10_000);
+      });
+    }
+
+    // Every fault was recovered from the base delay, and none was the last.
+    expect(restart).toHaveBeenCalledTimes(MAX_RESTART_ATTEMPTS + 2);
+    expect(errorService.reportError).not.toHaveBeenCalled();
+  });
+
+  // The other half of the same rule. A restart whose subscription errors again
+  // BEFORE the window elapses did not take, so the two faults are one episode
+  // and the escalation continues — a clear shorter than the window must not
+  // hand back the full budget, or nothing would ever reach the cap.
+  it('treats a clear shorter than the window as the same episode', () => {
+    const restart = jest.fn();
+    const error = socketClosed(4500);
+    const { rerender } = renderRecovery({ error, restart });
+
+    for (let i = 0; i < MAX_RESTART_ATTEMPTS; i++) {
+      act(() => {
+        jest.advanceTimersByTime(40_000);
+      });
+      // The error clears briefly on each restart and comes straight back.
+      rerender({ restart });
+      act(() => {
+        jest.advanceTimersByTime(RESTART_STABLE_MS - 1_000);
+      });
+      rerender({ error, restart });
+    }
+
+    expect(restart).toHaveBeenCalledTimes(MAX_RESTART_ATTEMPTS);
+    expect(errorService.reportError).toHaveBeenCalledTimes(1);
+
+    // And it stops there rather than restarting forever.
+    act(() => {
+      jest.advanceTimersByTime(120_000);
+    });
+    expect(restart).toHaveBeenCalledTimes(MAX_RESTART_ATTEMPTS);
   });
 });

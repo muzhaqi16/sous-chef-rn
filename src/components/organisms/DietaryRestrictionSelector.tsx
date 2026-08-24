@@ -19,9 +19,9 @@ import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 const DIETS: { labelKey: string; value: Diet }[] = [
   { labelKey: 'dietaryProfile.diets.vegetarian', value: Diet.Vegetarian },
   { labelKey: 'dietaryProfile.diets.vegan', value: Diet.Vegan },
-  { labelKey: 'dietaryProfile.diets.glutenFree', value: Diet.GlutenFree },
-  { labelKey: 'dietaryProfile.diets.keto', value: Diet.Keto },
-  { labelKey: 'dietaryProfile.diets.paleo', value: Diet.Paleo },
+  { labelKey: 'recipes.diet.GLUTEN_FREE', value: Diet.GlutenFree },
+  { labelKey: 'recipes.diet.KETO', value: Diet.Keto },
+  { labelKey: 'recipes.diet.PALEO', value: Diet.Paleo },
   { labelKey: 'dietaryProfile.diets.pescetarian', value: Diet.Pescetarian },
   {
     labelKey: 'dietaryProfile.diets.lactoVegetarian',
@@ -29,8 +29,8 @@ const DIETS: { labelKey: string; value: Diet }[] = [
   },
   { labelKey: 'dietaryProfile.diets.ovoVegetarian', value: Diet.OvoVegetarian },
   { labelKey: 'dietaryProfile.diets.primal', value: Diet.Primal },
-  { labelKey: 'dietaryProfile.diets.lowFodmap', value: Diet.LowFodmap },
-  { labelKey: 'dietaryProfile.diets.whole30', value: Diet.Whole30 },
+  { labelKey: 'labels.lowFodmap', value: Diet.LowFodmap },
+  { labelKey: 'recipes.diet.WHOLE30', value: Diet.Whole30 },
 ];
 
 // Mutually-exclusive lifestyle diets (single-select) vs stackable constraints
@@ -40,48 +40,48 @@ const CONSTRAINT_DIETS = DIETS.filter(d => !isLifestyleDiet(d.value));
 
 // Allergies and intolerances
 const INTOLERANCES: { labelKey: string; value: Intolerance }[] = [
-  { labelKey: 'dietaryProfile.intolerances.dairy', value: Intolerance.Dairy },
+  { labelKey: 'recipes.intolerance.DAIRY', value: Intolerance.Dairy },
   { labelKey: 'dietaryProfile.intolerances.egg', value: Intolerance.Egg },
-  { labelKey: 'dietaryProfile.intolerances.gluten', value: Intolerance.Gluten },
-  { labelKey: 'dietaryProfile.intolerances.grain', value: Intolerance.Grain },
-  { labelKey: 'dietaryProfile.intolerances.peanut', value: Intolerance.Peanut },
+  { labelKey: 'recipes.intolerance.GLUTEN', value: Intolerance.Gluten },
+  { labelKey: 'recipes.intolerance.GRAIN', value: Intolerance.Grain },
+  { labelKey: 'recipes.intolerance.PEANUT', value: Intolerance.Peanut },
   {
-    labelKey: 'dietaryProfile.intolerances.seafood',
+    labelKey: 'recipes.intolerance.SEAFOOD',
     value: Intolerance.Seafood,
   },
-  { labelKey: 'dietaryProfile.intolerances.sesame', value: Intolerance.Sesame },
+  { labelKey: 'recipes.intolerance.SESAME', value: Intolerance.Sesame },
   {
-    labelKey: 'dietaryProfile.intolerances.shellfish',
+    labelKey: 'recipes.intolerance.SHELLFISH',
     value: Intolerance.Shellfish,
   },
-  { labelKey: 'dietaryProfile.intolerances.soy', value: Intolerance.Soy },
+  { labelKey: 'recipes.intolerance.SOY', value: Intolerance.Soy },
   {
     labelKey: 'dietaryProfile.intolerances.sulfite',
     value: Intolerance.Sulfite,
   },
   {
-    labelKey: 'dietaryProfile.intolerances.treeNut',
+    labelKey: 'recipes.intolerance.TREE_NUT',
     value: Intolerance.TreeNut,
   },
-  { labelKey: 'dietaryProfile.intolerances.wheat', value: Intolerance.Wheat },
-  { labelKey: 'dietaryProfile.intolerances.fish', value: Intolerance.Fish },
+  { labelKey: 'recipes.intolerance.WHEAT', value: Intolerance.Wheat },
+  { labelKey: 'recipes.intolerance.FISH', value: Intolerance.Fish },
 ];
 
 // Nutritional objectives
 const HEALTH_GOALS: { labelKey: string; value: HealthGoal }[] = [
-  { labelKey: 'dietaryProfile.goals.lowCarb', value: HealthGoal.LowCarb },
+  { labelKey: 'recipes.healthGoal.LOW_CARB', value: HealthGoal.LowCarb },
   {
-    labelKey: 'dietaryProfile.goals.highProtein',
+    labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
     value: HealthGoal.HighProtein,
   },
-  { labelKey: 'dietaryProfile.goals.lowSodium', value: HealthGoal.LowSodium },
-  { labelKey: 'dietaryProfile.goals.sugarFree', value: HealthGoal.SugarFree },
+  { labelKey: 'recipes.healthGoal.LOW_SODIUM', value: HealthGoal.LowSodium },
+  { labelKey: 'recipes.healthGoal.SUGAR_FREE', value: HealthGoal.SugarFree },
   {
-    labelKey: 'dietaryProfile.goals.diabeticFriendly',
+    labelKey: 'recipes.healthGoal.DIABETIC_FRIENDLY',
     value: HealthGoal.DiabeticFriendly,
   },
   {
-    labelKey: 'dietaryProfile.goals.heartHealthy',
+    labelKey: 'recipes.healthGoal.HEART_HEALTHY',
     value: HealthGoal.HeartHealthy,
   },
 ];
@@ -349,7 +349,7 @@ export const DietaryRestrictionSelector: React.FC<
     <View style={styles.container}>
       {/* Diet Section (single lifestyle diet) */}
       <RestrictionSection
-        title={t('dietaryProfile.dietTitle')}
+        title={t('labels.diet')}
         existingItems={existingLifestyleItems}
         onRemove={onRemove}
         onAddPress={handleOpenDietSheet}
@@ -367,7 +367,7 @@ export const DietaryRestrictionSelector: React.FC<
 
       {/* Intolerances Section */}
       <RestrictionSection
-        title={t('dietaryProfile.intolerancesTitle')}
+        title={t('labels.allergiesIntolerances')}
         existingItems={existingIntoleranceItems}
         onRemove={onRemove}
         onAddPress={handleOpenIntoleranceSheet}

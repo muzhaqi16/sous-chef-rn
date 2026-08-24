@@ -3,6 +3,7 @@ import { useFragment } from '@apollo/client/react';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal.generated';
 import { t } from '#/i18n';
+import { unitPriceFromTotal } from '#/utils/purchasePrice';
 
 /**
  * Transformed item for PurchaseAmountSheet
@@ -14,7 +15,10 @@ export interface PurchaseAmountItem {
   requestedQuantity: number;
   /** Unit symbol/name shown as a suffix on the quantity input */
   unitName: string | null;
-  /** Estimated price to pre-fill the price input (null when unknown) */
+  /**
+   * Per-unit estimate (null when unknown). The sheet multiplies it by the
+   * requested quantity to seed its total-price input.
+   */
   estimatedPrice: number | null;
 }
 
@@ -23,6 +27,11 @@ export interface PurchaseAmountItem {
  */
 export interface RecordPurchaseAmounts {
   purchasedQuantity: number;
+  /**
+   * PER UNIT — the API multiplies it by `purchasedQuantity` to record
+   * `Purchase.totalPrice`, and move-to-pantry derives its per-unit cost from
+   * it. See `unitPriceFromTotal`.
+   */
   purchasedPrice: number | null;
 }
 
@@ -57,8 +66,8 @@ export interface UsePurchaseAmountModalResult {
   openForItem: (itemId: string) => void;
   /** Close the modal */
   close: () => void;
-  /** Record the confirmed purchase amounts, then close */
-  confirm: (quantity: number, price: number | null) => Promise<void>;
+  /** Record the confirmed quantity and the TOTAL paid, then close */
+  confirm: (quantity: number, totalPrice: number | null) => Promise<void>;
 }
 
 /**
@@ -128,13 +137,14 @@ export function usePurchaseAmountModal(
     setSelectedItemId(null);
   };
 
-  const confirm = async (quantity: number, price: number | null) => {
+  const confirm = async (quantity: number, totalPrice: number | null) => {
     if (!selectedItem) return;
 
     setIsLoading(true);
     await recordPurchase(selectedItem.id, {
       purchasedQuantity: quantity,
-      purchasedPrice: price,
+      // The sheet collects what the receipt says; the API stores per unit.
+      purchasedPrice: unitPriceFromTotal(totalPrice, quantity),
     });
     setIsLoading(false);
 

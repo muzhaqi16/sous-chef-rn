@@ -93,7 +93,7 @@ export function useMealPlanSelectorConfig(
     actions: [
       {
         icon: 'add',
-        label: t('mealPlanSelector.createNewPlan'),
+        label: t('labels.create'),
         onPress: () => {
           selectorRef.current?.close();
           toCreateMealPlan();
@@ -109,7 +109,7 @@ export function useMealPlanSelectorConfig(
       },
       {
         icon: 'construct-outline',
-        label: t('mealPlanSelector.createTemplate'),
+        label: t('labels.newTemplate'),
         onPress: () => {
           selectorRef.current?.close();
           onCreateTemplate();

@@ -1,21 +1,29 @@
 /**
- * Keeps the OS app-icon badge in sync with the notification store's unread
- * count.
+ * Keeps the OS app-icon badge in sync with the server's unread count.
  *
  * The server sets the badge on each alert push (`aps.badge` on iOS,
- * `notification_count` on Android), but it can only update the badge *on
- * delivery* — it can't clear it when the user reads notifications in-app. This
- * subscription closes that gap: whenever `unreadCount` changes (including to 0
- * on read or logout), the OS badge is set to match.
+ * `notification_count` on Android), but only *on delivery* — it cannot clear it
+ * when the user reads notifications in-app. This closes that gap: whenever the
+ * cached `User.unreadNotificationCount` changes (including to 0 on read or
+ * logout), the OS badge is set to match.
+ *
+ * It watches the Apollo cache, which is where that count lives. It used to
+ * watch a Zustand mirror of it, and needed an `isHydrated` gate so a
+ * pre-hydration `0` could not stomp a server-set badge at every JS start.
+ * That gate is gone and not replaced: "the count has not loaded yet" is
+ * directly observable here as a cache read with no data BEFORE any count has
+ * been applied, so there is no window in which a default value looks like a
+ * real one. Once a count has been applied, the same empty read means the store
+ * was cleared — sign-out — and the badge is zeroed.
  *
  * Notifee's `setBadgeCount` is cross-platform — the iOS app-icon badge and,
- * best-effort, Android launchers that support badging (matching the server's
- * Android contract). Call once at app entry (`index.js`); returns an
- * unsubscribe.
+ * best-effort, Android launchers that support badging. Call once at app entry
+ * (`index.js`); returns an unsubscribe.
  */
 
 import notifee from '@notifee/react-native';
-import { useStore } from '#store';
+import { client } from '#/apollo/client';
+import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { logger } from '#/utils/environment';
 
 const applyBadgeCount = (count: number): void => {
@@ -25,33 +33,37 @@ const applyBadgeCount = (count: number): void => {
 };
 
 export const setupBadgeSync = (): (() => void) => {
-  // Never apply a badge before hydration: the pre-hydration `unreadCount` is 0,
-  // so a `fireImmediately` apply at every JS start (including headless launches)
-  // would stomp a server-set badge to 0. Gate the count sync on `isHydrated`,
-  // and apply the real count once when hydration completes.
-  const syncIfHydrated = (count: number): void => {
-    if (useStore.getState().isHydrated) applyBadgeCount(count);
+  let lastApplied: number | null = null;
+
+  const readAndApply = (): void => {
+    // `cache-only`, and a miss reads as null rather than 0 — that distinction
+    // is the whole reason the hydration gate is unnecessary.
+    const data = client.cache.readQuery({
+      query: GetUnreadNotificationsDocument,
+    }) as { me?: { unreadNotificationCount?: number } | null } | null;
+
+    const count = data?.me?.unreadNotificationCount;
+    // A miss before anything has been applied is "not loaded yet" — the case
+    // the hydration gate used to cover. A miss AFTER a count was applied is
+    // `clearStore()` on sign-out, and the badge has to come off the icon.
+    const next =
+      typeof count === 'number' ? count : lastApplied === null ? null : 0;
+    if (next === null || next === lastApplied) return;
+
+    lastApplied = next;
+    applyBadgeCount(next);
   };
 
-  // Warm re-subscribe (already hydrated) applies immediately via fireImmediately;
-  // a cold start no-ops here until hydration.
-  const unsubscribeCount = useStore.subscribe(
-    state => state.unreadCount,
-    syncIfHydrated,
-    { fireImmediately: true },
-  );
+  const watcher = client.cache.watch({
+    query: GetUnreadNotificationsDocument,
+    optimistic: false,
+    // Fires on the persisted-cache restore too, which is what covers cold start.
+    callback: () => readAndApply(),
+  });
 
-  // Cold start: apply the hydrated count once the flag flips, covering the case
-  // where `unreadCount` doesn't change during hydration (e.g. persisted 0).
-  const unsubscribeHydration = useStore.subscribe(
-    state => state.isHydrated,
-    hydrated => {
-      if (hydrated) applyBadgeCount(useStore.getState().unreadCount);
-    },
-  );
+  readAndApply();
 
   return () => {
-    unsubscribeCount();
-    unsubscribeHydration();
+    watcher();
   };
 };

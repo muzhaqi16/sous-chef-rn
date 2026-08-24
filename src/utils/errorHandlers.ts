@@ -118,7 +118,7 @@ export const alertVersionConflict = (
   // Parameterized so the entity + word order localize per language (some read
   // "Updated {entity}", not "{entity} Updated"). Callers pass an already-
   // translated entity label; the default is the generic localized "item".
-  const entity = itemName ?? t('errors.entityItem');
+  const entity = itemName ?? t('labels.item');
 
   alertService.alert(
     getI18n().t('errors.entityUpdatedTitle', { entity }),

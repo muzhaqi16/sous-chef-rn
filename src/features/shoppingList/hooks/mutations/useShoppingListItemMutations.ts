@@ -4,14 +4,13 @@
  * This maintains backward compatibility with the original hook.
  * For new code, prefer using individual hooks directly:
  * - useAddShoppingItem
- * - useUpdateShoppingItem
  * - useRemoveShoppingItem
  * - useToggleShoppingItem
  *
  * @example
  * ```tsx
  * // Backward compatible usage
- * const { addItem, updateItem, removeItem, toggleItem } = useShoppingListItemMutations(
+ * const { addItem, removeItem, toggleItem } = useShoppingListItemMutations(
  *   listId,
  *   items,
  *   refetch,
@@ -24,7 +23,6 @@
  */
 
 import { useAddShoppingItem } from './useAddShoppingItem';
-import { useUpdateShoppingItem } from './useUpdateShoppingItem';
 import { useRemoveShoppingItem } from './useRemoveShoppingItem';
 import { useToggleShoppingItem } from './useToggleShoppingItem';
 
@@ -33,7 +31,6 @@ export function useShoppingListItemMutations(
   refetch: () => Promise<unknown>,
 ) {
   const { addItem } = useAddShoppingItem({ listId, refetch });
-  const { updateItem } = useUpdateShoppingItem({ listId, refetch });
   const { removeItem } = useRemoveShoppingItem({ listId, refetch });
   const { toggleItem, recordPurchase } = useToggleShoppingItem({
     listId,
@@ -42,7 +39,6 @@ export function useShoppingListItemMutations(
 
   return {
     addItem,
-    updateItem,
     removeItem,
     toggleItem,
     recordPurchase,

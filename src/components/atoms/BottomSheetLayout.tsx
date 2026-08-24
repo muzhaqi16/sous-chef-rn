@@ -29,7 +29,8 @@ export interface BottomSheetLayoutProps extends UseStandardBottomSheetOptions {
   style?: StyleProp<ViewStyle>;
   /** `form` mode only. Default `false`. */
   showsVerticalScrollIndicator?: boolean;
-  /** `form` mode only — keyboard bottom offset. Default `16`. */
+  /** `form` mode only — keyboard bottom offset override. Defaults to the
+   *  density-scaled `theme.spacing.md` inside the scroll view. */
   bottomOffset?: number;
 }
 
@@ -60,7 +61,7 @@ export const BottomSheetLayout: React.FC<BottomSheetLayoutProps> = ({
   contentContainerStyle,
   style,
   showsVerticalScrollIndicator = false,
-  bottomOffset = 16,
+  bottomOffset,
   ...sheetOptions
 }) => {
   const {
@@ -79,7 +80,9 @@ export const BottomSheetLayout: React.FC<BottomSheetLayoutProps> = ({
         style={style}
         contentContainerStyle={[contentContainerStyle, insetStyle]}
         showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-        bottomOffset={bottomOffset}
+        // Forwarded only when set: spreading `bottomOffset: undefined` would
+        // override the scroll view's theme-mapped default with undefined.
+        {...(bottomOffset !== undefined ? { bottomOffset } : {})}
       >
         {children}
       </BottomSheetFormScrollView>

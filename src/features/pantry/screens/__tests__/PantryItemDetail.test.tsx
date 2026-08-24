@@ -91,7 +91,7 @@ jest.mock('#components/modals/CorrectWeightModal', () => ({
   CorrectWeightModal: () => null,
 }));
 
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
 

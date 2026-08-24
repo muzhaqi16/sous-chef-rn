@@ -563,9 +563,11 @@ describe('useCreatePantryItem', () => {
 
     expect(success).toBe(false);
     expect(onSuccess).not.toHaveBeenCalled();
+    // Localized copy for the field the refusal named (`quantity`), not the
+    // server's English "Invalid quantity".
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Failed to restock item. Please try again.',
+      "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
     );
   });
 

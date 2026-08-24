@@ -77,13 +77,12 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       {/* Quantity + Unit */}
       <View style={{ zIndex: 10 }}>
         <FieldRow>
           <EditableCounter
-            label={t('addToPantry.quantity')}
+            label={t('labels.quantity')}
             required
             value={quantityInput}
             onChangeText={setQuantityInput}
@@ -92,11 +91,11 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           />
           <UnitAutocompleteField
             variant="inline"
-            label={t('addToPantry.unit')}
+            label={t('storageLocationForm.unit')}
             value={unit}
             onChangeText={setUnit}
             onUnitSelected={handleUnitSelected}
-            placeholder={t('addToPantry.unitPlaceholder')}
+            placeholder={t('labels.pcsDozen')}
             testID="add-pantry-item-unit-picker"
           />
         </FieldRow>
@@ -105,27 +104,25 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
       <View style={{ zIndex: 5 }}>
         <FieldRow containerStyle={{ marginBottom: 4 }}>
           <FormInput
-            label={t('addToPantry.netWeight')}
+            label={t('labels.netWeight')}
             value={pantryNetWeight}
             onChangeText={setPantryNetWeight}
-            placeholder={localizeNumericHint(
-              t('addToPantry.netWeightPlaceholder'),
-            )}
+            placeholder={localizeNumericHint(t('labels.eG145'))}
             keyboardType="decimal-pad"
             useBottomSheetInput
             inputStyle={{ height: 44 }}
           />
           <UnitAutocompleteField
             variant="inline"
-            label={t('addToPantry.weightUnit')}
+            label={t('storageLocationForm.unit')}
             value={pantryNetWeightUnit}
             onChangeText={setPantryNetWeightUnit}
             onUnitSelected={handlePantryNetWeightUnitSelected}
-            placeholder={t('addToPantry.weightUnitPlaceholder')}
+            placeholder={t('labels.ozGMl')}
           />
         </FieldRow>
         <Text size="sm" tone="secondary" style={styles.netWeightHint}>
-          {t('addToPantry.netWeightHint')}
+          {t('labels.netWeightIsUsedForConsumptionTrackingAndIsOptional')}
         </Text>
       </View>
       {/* Package Details - Progressive Disclosure */}
@@ -152,7 +149,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
               label={t('addToPantry.qtyPerPackage')}
               value={packageSize}
               onChangeText={setPackageSize}
-              placeholder={t('addToPantry.qtyPerPackagePlaceholder')}
+              placeholder={t('labels.eG12')}
               keyboardType="decimal-pad"
               useBottomSheetInput
             />
@@ -165,7 +162,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                 value={contentUnit}
                 onChangeText={setContentUnit}
                 onUnitSelected={handleContentUnitSelected}
-                placeholder={t('addToPantry.contentUnitPlaceholder')}
+                placeholder={t('labels.eGCanBottle')}
               />
             </View>
 
@@ -182,7 +179,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
                 />
                 <UnitAutocompleteField
                   variant="inline"
-                  label={t('addToPantry.contentWeightUnit')}
+                  label={t('labels.weightUnit')}
                   value={weightUnit}
                   onChangeText={setWeightUnit}
                   onUnitSelected={handleWeightUnitSelected}

@@ -28,7 +28,7 @@ import {
 } from './AcceptInvite.generated';
 import { errorService, getErrorMessage } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#/components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 
@@ -131,7 +131,7 @@ export const AcceptInvite: React.FC = () => {
             variables: { input: { token: inviteToken } },
           });
           alertService.alert(
-            t('invitationAcceptance.successTitle'),
+            t('labels.success'),
             t('invitationAcceptance.shoppingListAccepted'),
             [{ text: t('labels.ok'), onPress: () => goBack() }],
           );
@@ -140,7 +140,7 @@ export const AcceptInvite: React.FC = () => {
             variables: { input: { token: inviteToken } },
           });
           alertService.alert(
-            t('invitationAcceptance.successTitle'),
+            t('labels.success'),
             t('invitationAcceptance.homeAccepted'),
             [{ text: t('labels.ok'), onPress: () => goBack() }],
           );
@@ -215,7 +215,7 @@ export const AcceptInvite: React.FC = () => {
         <SousChefLoader
           size="small"
           showBrand={false}
-          message={t('invitationAcceptance.loadingMessage')}
+          message={t('labels.loading')}
         />
       </View>
     );
@@ -272,13 +272,13 @@ export const AcceptInvite: React.FC = () => {
                 inviter:
                   homeInviteDisplay?.inviter?.profile?.displayName ||
                   homeInviteDisplay?.inviter?.email ||
-                  t('invitationAcceptance.someone'),
+                  t('labels.someone'),
               })
             : t('invitationAcceptance.listInviteText', {
                 inviter:
                   shoppingListInviteData?.invitedBy?.profile?.displayName ||
                   shoppingListInviteData?.invitedBy?.email ||
-                  t('invitationAcceptance.someone'),
+                  t('labels.someone'),
               })}
         </Text>
 
@@ -288,12 +288,12 @@ export const AcceptInvite: React.FC = () => {
               ? homeInviteDisplay?.home?.name ||
                 t('invitationAcceptance.resourceHome')
               : shoppingListInviteData?.shoppingList?.name ||
-                t('invitationAcceptance.resourceList')}
+                t('labels.shoppingList')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.inviteType}>
             {invitationType === 'home'
               ? t('invitationAcceptance.resourceHome')
-              : t('invitationAcceptance.resourceList')}
+              : t('labels.shoppingList')}
           </Text>
           <Text
             size="xs"

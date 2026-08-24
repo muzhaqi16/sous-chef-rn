@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { Header } from '#components/molecules/Header';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import {
@@ -31,11 +31,31 @@ const APP_COLORS: {
     value: null,
     hex: appConfig.branding.primaryColor,
   },
-  { labelKey: 'appearance.colorBlue', value: '#2563EB', hex: '#2563EB' },
-  { labelKey: 'appearance.colorGreen', value: '#16A34A', hex: '#16A34A' },
-  { labelKey: 'appearance.colorPurple', value: '#7C3AED', hex: '#7C3AED' },
-  { labelKey: 'appearance.colorRed', value: '#DC2626', hex: '#DC2626' },
-  { labelKey: 'appearance.colorTeal', value: '#0D9488', hex: '#0D9488' },
+  {
+    labelKey: 'storageLocationForm.colorBlue',
+    value: '#2563EB',
+    hex: '#2563EB',
+  },
+  {
+    labelKey: 'storageLocationForm.colorGreen',
+    value: '#16A34A',
+    hex: '#16A34A',
+  },
+  {
+    labelKey: 'storageLocationForm.colorPurple',
+    value: '#7C3AED',
+    hex: '#7C3AED',
+  },
+  {
+    labelKey: 'storageLocationForm.colorRed',
+    value: '#DC2626',
+    hex: '#DC2626',
+  },
+  {
+    labelKey: 'storageLocationForm.colorTeal',
+    value: '#0D9488',
+    hex: '#0D9488',
+  },
   {
     labelKey: 'storageLocationForm.colorPink',
     value: '#f51aff',
@@ -70,7 +90,7 @@ export default function AppearanceScreen() {
   return (
     <View style={styles.container}>
       <Header
-        title={t('appearance.title')}
+        title={t('labels.appearance')}
         onBack={() => navigation.goBack()}
       />
       <ScrollView contentContainerStyle={styles.content}>
@@ -90,7 +110,7 @@ export default function AppearanceScreen() {
               ? t('appearance.themeLight')
               : v === ThemePreference.DARK
               ? t('appearance.themeDark')
-              : t('appearance.themeSystem')
+              : t('labels.system')
           }
           onChange={v => {
             if (v === ThemePreference.LIGHT) setLightTheme();

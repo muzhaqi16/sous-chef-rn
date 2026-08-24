@@ -68,7 +68,7 @@ const CLOSED_MODAL: ActiveModal = { type: null };
  */
 const entityUpdatedTitle = (
   t: (key: string, options?: Record<string, unknown>) => string,
-): string => t('errors.entityUpdatedTitle', { entity: t('errors.entityItem') });
+): string => t('errors.entityUpdatedTitle', { entity: t('labels.item') });
 
 export function usePantryItemActions({
   removeItem,
@@ -182,7 +182,7 @@ export function usePantryItemActions({
     const message =
       typeof payload.message === 'string'
         ? (payload.message as string)
-        : t('errors.somethingWentWrong');
+        : t('errors.codes.genericRetry');
 
     if (isNotFoundErrorPayload(payload)) {
       const resource =
@@ -305,7 +305,7 @@ export function usePantryItemActions({
         errorService.reportError(consumeResult.error, {
           operation: 'consumePantryItem',
         });
-        alertService.alert(t('labels.error'), t('errors.somethingWentWrong'));
+        alertService.alert(t('labels.error'), t('errors.codes.genericRetry'));
       }
       return;
     }

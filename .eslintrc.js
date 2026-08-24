@@ -74,6 +74,11 @@ module.exports = {
         '**/*.test.tsx',
       ],
       rules: {
+        // The shared-layer boundary zone is about PRODUCTION dependency
+        // direction. A cache test living in src/apollo/__tests__/ has to import
+        // the very fragment it exercises; that is the test doing its job, not
+        // shared code depending on a feature.
+        'import/no-restricted-paths': 'off',
         'no-restricted-syntax': [
           'error',
           {
@@ -214,7 +219,7 @@ module.exports = {
             selector:
               "ImportDeclaration[source.value='#/i18n'] > ImportSpecifier[imported.name='t'][local.name='t']",
             message:
-              "Use `const { t } = useTranslation()` in a file that renders — the module-level `t` does not subscribe to language changes. If this file genuinely needs the module-level helper (a class component, or module-scope code), import it aliased: `import { t as tGlobal } from '#/i18n/t'`, so a bare `t(...)` in JSX is unambiguously the hook's.",
+              "Use `const { t } = useTranslation()` in a file that renders — the module-level `t` does not subscribe to language changes. If this file genuinely needs the module-level helper (a class component, or module-scope code), import it aliased: `import { t as tGlobal } from '#/i18n'`, so a bare `t(...)` in JSX is unambiguously the hook's.",
           },
         ],
         'i18next/no-literal-string': [
@@ -725,6 +730,141 @@ module.exports = {
             message:
               'Cross-feature import into profile internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/profile/hooks/, or compose your own GraphQL operation.',
           },
+          // home
+          {
+            target: './src/features/!(home)/**',
+            from: [
+              './src/features/home/context',
+              './src/features/home/hooks/mutations',
+              './src/features/home/utils',
+              './src/features/home/graphql',
+            ],
+            message:
+              'Cross-feature import into home internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/home/hooks/, or compose your own GraphQL operation.',
+          },
+
+          // ── The other direction: the SHARED layer reaching into a feature ──
+          //
+          // Every zone above targets `./src/features/!(x)/**`, so nothing
+          // outside src/features/ was covered by any of them — and 35 imports
+          // from components/, hooks/, screens/, apollo/ and utils/ reached into
+          // feature internals unchallenged. That is the inverted dependency:
+          // the shared layer depending on the leaf it is supposed to serve.
+          //
+          // `graphql/` is deliberately NOT listed here, and that is a narrower
+          // line than the feature-to-feature zones draw. It is drawn from what
+          // the imports actually are: 19 of the remaining crossings are
+          // operation documents needed by modules that are cross-cutting by
+          // construction — the offline queue replays every feature's Sync
+          // mutations, and the subscription layer mounts every feature's event
+          // subscription centrally. Neither can move into a feature. Listing
+          // graphql/ would mean ~19 `except` entries, which is a rule that
+          // excuses more than it forbids. Generated operation documents are
+          // typed and side-effect-free; treating them as a feature's data
+          // contract is the honest reading.
+          //
+          // context/, utils/ and hooks/mutations/ ARE private: they carry
+          // behaviour, and a shared module reaching for them is the case this
+          // zone exists to stop.
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: [
+              './src/features/pantry/context',
+              './src/features/pantry/hooks/mutations',
+              './src/features/pantry/utils',
+              './src/features/recipes/context',
+              './src/features/recipes/hooks/mutations',
+              './src/features/recipes/utils',
+              './src/features/mealPlan/context',
+              './src/features/mealPlan/hooks/mutations',
+              './src/features/mealPlan/utils',
+              './src/features/barcode/context',
+              './src/features/barcode/hooks/mutations',
+              './src/features/barcode/utils',
+              './src/features/notifications/context',
+              './src/features/notifications/hooks/mutations',
+              './src/features/notifications/utils',
+              './src/features/profile/context',
+              './src/features/profile/hooks/mutations',
+              './src/features/profile/utils',
+              './src/features/home/context',
+              './src/features/home/hooks/mutations',
+              './src/features/home/utils',
+            ],
+            message:
+              "Shared code must not import a feature's internals (context/, hooks/mutations/, utils/). A hook owned by one feature belongs in that feature; src/hooks/ and src/components/ hold only what more than one feature uses. Either move the consumer into the feature, or move the thing it needs up to src/hooks/ or src/utils/.",
+          },
+          // shoppingList's share of the same rule, split out to carry the four
+          // exceptions below. Each is a shared surface that genuinely cannot
+          // move into the feature, and whose dependency genuinely cannot move
+          // out of it — so the exception is named rather than the rule relaxed.
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: './src/features/shoppingList/hooks/mutations',
+            // AddToShoppingListSheet is mounted by the shared AddItemSheet
+            // framework, not by the shopping-list feature, so it cannot live
+            // inside it; and these two hooks own the shopping-list documents,
+            // so they cannot live outside it. CreateShoppingListScreen is
+            // onboarding — it runs before any feature tab exists.
+            except: ['./useAddShoppingItem.ts', './useCreateShoppingList.ts'],
+            message:
+              'Shared code must not import shoppingList/hooks/mutations/. Move the consumer into the feature, or the dependency up to src/hooks/.',
+          },
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: './src/features/shoppingList/utils',
+            // `priority` serves four files inside the feature and one shared
+            // modal. Promoting it to src/utils/ for the single outside caller
+            // would move it away from the four that own it.
+            except: ['./priority.ts'],
+            message:
+              'Shared code must not import shoppingList/utils/. Move the consumer into the feature, or the dependency up to src/utils/.',
+          },
+          {
+            target: [
+              './src/components/**',
+              './src/hooks/**',
+              './src/screens/**',
+              './src/apollo/**',
+              './src/utils/**',
+              './src/store/**',
+              './src/services/**',
+              './src/navigation/**',
+            ],
+            from: './src/features/shoppingList/context',
+            // The tutorial context is read by the shared sheet so the hint can
+            // follow the user into it; the provider stays with the feature.
+            except: ['./ShoppingListTutorialContext.tsx'],
+            message:
+              'Shared code must not import shoppingList/context/. Move the consumer into the feature.',
+          },
         ],
       },
     ],
@@ -845,7 +985,7 @@ module.exports = {
         selector:
           'CallExpression[callee.object.name=/^(toastService|alertService)$/] > Literal[value=/[A-Za-z]{3}/]',
         message:
-          'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n/t works outside components.',
+          'Untranslated string passed to a user-facing toast/alert. Add a key to src/i18n/locales/en.json and pass t(...) — the module-level `t` from #/i18n works outside components.',
       },
       {
         selector:

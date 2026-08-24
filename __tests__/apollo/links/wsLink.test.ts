@@ -102,14 +102,6 @@ describe('wsLink.ts', () => {
     });
   });
 
-  // ─── isWebSocketReconnecting ──────────────────────────────────
-
-  describe('isWebSocketReconnecting', () => {
-    it('returns false initially', () => {
-      expect(wsLinkModule.isWebSocketReconnecting()).toBe(false);
-    });
-  });
-
   // ─── disableAutoReconnect / enableAutoReconnect ───────────────
 
   describe('disableAutoReconnect', () => {
@@ -155,7 +147,6 @@ describe('wsLink.ts', () => {
   describe('getWebSocketState', () => {
     it('returns the current WebSocket state', () => {
       const state = wsLinkModule.getWebSocketState();
-      expect(state).toHaveProperty('isReconnecting');
       expect(state).toHaveProperty('lastReconnectTime');
       expect(state).toHaveProperty('hasClient');
       expect(state.hasClient).toBe(true);

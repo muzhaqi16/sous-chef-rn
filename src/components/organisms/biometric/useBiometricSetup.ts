@@ -206,14 +206,12 @@ export const useBiometricSetup = ({
 
   const fallbackType =
     info.biometryType ||
-    (mode === 'postLogin'
-      ? t('postLoginBiometric.biometricFallback')
-      : t('biometricSetup.biometricFallback'));
+    (mode === 'postLogin' ? t('labels.biometric') : t('labels.biometric'));
   const authTypeLabel =
     info.biometryType ||
     (mode === 'postLogin'
-      ? t('postLoginBiometric.biometricAuthLabel')
-      : t('biometricSetup.biometricAuthLabel'));
+      ? t('labels.biometricAuthentication')
+      : t('labels.biometricAuthentication'));
 
   return {
     checking: !checked,
@@ -243,9 +241,7 @@ export const useBiometricSetup = ({
         : t('biometricSetup.passwordPromptInitial'),
     passwordPlaceholder: t('biometricSetup.passwordPlaceholder'),
     isEnabling,
-    enableLabel: isEnabling
-      ? t('biometricSetup.settingUp')
-      : t('labels.enableNow'),
+    enableLabel: isEnabling ? t('labels.settingUp') : t('labels.enableNow'),
     skipLabel:
       mode === 'postLogin'
         ? t('labels.notNow')

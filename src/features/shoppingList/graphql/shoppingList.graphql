@@ -861,7 +861,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
     ... on UpdateShoppingListItemPayload {
       shoppingListItem {
         id
-        ...useUpdateShoppingItem_item
+        ...UpdateShoppingListItem_item
         # Marking an item purchased records a purchase server-side, so this
         # summary moves with the write. Selected here (not in the fragment,
         # which mirrors the optimistic shape) so ItemDetail's count and last
@@ -871,26 +871,22 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
           purchaseCount
           lastPurchaseDate
         }
-        # The purchase amounts and the purchaser move with this write, and
-        # ItemDetail reads all five fields. Selected in full — not just
-        # `isPurchased`, which the hook fragment mirrors for its optimistic
-        # `cache.modify` — so the response carries the server's whole answer.
-        # The type policy in apollo/cache.ts keeps a partial write from dropping
-        # the siblings; selecting them here is what keeps the survivors from
-        # being the PREVIOUS purchase's amounts sitting beside the new flag.
         purchaseInfo {
-          isPurchased
-          purchasedQuantity
-          purchasedPrice
-          purchaseDate
-          purchasedBy {
-            id
-            profile {
-              id
-              displayName
-              avatar
-            }
-          }
+          ...ShoppingListItemPurchaseInfoFragment
+        }
+        # Brand and package size are editable from AddEditItem now that the
+        # update input accepts them. Selected here so the saved values land in
+        # the cache for ItemDetail and the form without a refetch; kept out of
+        # the hook fragment, which mirrors the optimistic shape.
+        brand {
+          id
+          name
+        }
+        netWeight
+        netWeightUnit {
+          id
+          name
+          symbol
         }
       }
       shoppingList {
@@ -988,26 +984,8 @@ mutation ToggleShoppingListItemPurchased(
           purchaseCount
           lastPurchaseDate
         }
-        # The purchase amounts and the purchaser move with this write, and
-        # ItemDetail reads all five fields. Selected in full — not just
-        # `isPurchased`, which the hook fragment mirrors for its optimistic
-        # `cache.modify` — so the response carries the server's whole answer.
-        # The type policy in apollo/cache.ts keeps a partial write from dropping
-        # the siblings; selecting them here is what keeps the survivors from
-        # being the PREVIOUS purchase's amounts sitting beside the new flag.
         purchaseInfo {
-          isPurchased
-          purchasedQuantity
-          purchasedPrice
-          purchaseDate
-          purchasedBy {
-            id
-            profile {
-              id
-              displayName
-              avatar
-            }
-          }
+          ...ShoppingListItemPurchaseInfoFragment
         }
         shoppingList {
           id

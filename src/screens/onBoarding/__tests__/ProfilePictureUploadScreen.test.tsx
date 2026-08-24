@@ -3,7 +3,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import type { OnBoardingWrapper as OnBoardingWrapperComponent } from '#components/templates/OnBoardingWrapper';
-import type { Button as ButtonComponent } from '#components/base/Button';
+import type { Button as ButtonComponent } from '#components/atoms/Button';
 import { ProfilePictureUploadScreen } from '../ProfilePictureUploadScreen';
 
 type OnBoardingWrapperProps = React.ComponentProps<
@@ -62,7 +62,7 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({ title, onPress, disabled }: ButtonProps) => {
     const { Pressable, Text } = require('react-native');
     return (

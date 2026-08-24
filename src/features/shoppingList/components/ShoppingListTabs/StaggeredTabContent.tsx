@@ -10,7 +10,7 @@ import { SortableShoppingList } from '../SortableShoppingList/SortableList';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
-import { ShoppingListItemSkeleton } from '#components/base/Skeleton/ShoppingListItemSkeleton';
+import { ShoppingListItemSkeleton } from '#components/atoms/Skeleton/ShoppingListItemSkeleton';
 
 interface StaggeredTabContentProps {
   items: ShoppingListRowItem[];

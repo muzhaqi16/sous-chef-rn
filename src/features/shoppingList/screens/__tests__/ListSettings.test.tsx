@@ -47,7 +47,7 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   }),
 }));
 
-jest.mock('#/hooks/home/useLazyHomeData', () => ({
+jest.mock('#features/home/hooks/useLazyHomeData', () => ({
   useLazyHomeData: () => ({
     homes: [],
     fetchHomeData: jest.fn(),

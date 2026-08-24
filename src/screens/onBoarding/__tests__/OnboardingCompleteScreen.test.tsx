@@ -54,7 +54,7 @@ jest.mock('#components/templates/OnBoardingWrapper', () => ({
     );
   },
 }));
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({
     title,
     onPress,

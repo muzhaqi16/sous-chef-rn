@@ -137,7 +137,7 @@ export const TagPicker: React.FC<TagPickerProps> = ({
               style={({ pressed }) => pressed && styles.pressed}
             >
               <Text size="sm" weight="medium" tone="accent">
-                {t('tagPicker.clearAll')}
+                {t('labels.clearAll')}
               </Text>
             </Pressable>
           )}

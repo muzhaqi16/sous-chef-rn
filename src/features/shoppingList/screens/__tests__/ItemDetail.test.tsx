@@ -118,6 +118,9 @@ function buildShoppingListItem(overrides: Record<string, unknown> = {}) {
         name: 'Costco',
       },
     },
+    brand: null,
+    netWeight: null,
+    netWeightUnit: null,
     purchaseInfo: {
       __typename: 'ShoppingListItemPurchaseInfo',
       isPurchased: false,
@@ -195,6 +198,28 @@ describe('ShoppingListItemDetail', () => {
     });
     await waitFor(() => expect(screen.getByText('High')).toBeTruthy());
     expect(screen.queryByText('2')).toBeNull();
+  });
+
+  it('shows the brand and package size', async () => {
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
+            netWeight: 500,
+            netWeightUnit: {
+              __typename: 'Unit',
+              id: 'unit-g',
+              name: 'gram',
+              symbol: 'g',
+            },
+          }),
+        ),
+      ],
+    });
+    await waitFor(() => expect(screen.getByText('Oatly')).toBeTruthy());
+    expect(screen.getByText('500 g')).toBeTruthy();
   });
 
   it('shows the estimated price', async () => {

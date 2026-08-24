@@ -1,5 +1,6 @@
 import type { ShoppingListRowItem } from '#features/shoppingList/components/SortableShoppingList/types';
 import type { ShoppingListItemNode } from './usePaginatedShoppingItems';
+import { logger } from '#/utils/environment';
 
 const EMPTY_ROW_ITEMS: ShoppingListRowItem[] = [];
 
@@ -49,7 +50,7 @@ function wrapItems(
   for (const node of items) {
     if (!node.id || !node.itemName) {
       if (__DEV__) {
-        console.warn(
+        logger.warn(
           '⚠️ Skipping invalid shopping list item:',
           (node as { id?: string }).id,
         );

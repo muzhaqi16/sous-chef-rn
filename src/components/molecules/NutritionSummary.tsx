@@ -134,7 +134,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
       {/* Macro circles row */}
       <View style={styles.macrosRow}>
         <MacroCircle
-          label={t('nutritionSummary.macroCalories')}
+          label={t('labels.calories')}
           value={formatCalories(macros.calories)}
           tone="calories"
         />
@@ -145,7 +145,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
           tone="protein"
         />
         <MacroCircle
-          label={t('nutritionSummary.macroCarbs')}
+          label={t('labels.carbs')}
           value={formatNutritionValue(macros.carbs, '')}
           unit="g"
           tone="carbs"

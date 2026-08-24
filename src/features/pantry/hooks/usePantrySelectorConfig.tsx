@@ -59,7 +59,7 @@ export function usePantrySelectorConfig(
   };
 
   return {
-    title: t('pantrySelector.title'),
+    title: t('labels.selectPantry'),
     data: pantries,
     selectedId: selectedPantryId,
     onSelect: (id: string) => {
@@ -73,7 +73,7 @@ export function usePantrySelectorConfig(
     actions: [
       {
         icon: 'add',
-        label: t('pantrySelector.createNewPantry'),
+        label: t('labels.create'),
         onPress: () => {
           selectorRef.current?.close();
           toPantrySettings();
@@ -81,7 +81,7 @@ export function usePantrySelectorConfig(
       },
       {
         icon: 'settings-outline',
-        label: t('pantrySelector.editSelectedPantry'),
+        label: t('labels.edit'),
         onPress: () => {
           selectorRef.current?.close();
           if (selectedPantryId) {

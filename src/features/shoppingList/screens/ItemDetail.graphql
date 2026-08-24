@@ -24,6 +24,20 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       name
     }
   }
+  brand {
+    id
+    name
+  }
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+  }
+  # Selected inline rather than spreading ShoppingListItemPurchaseInfoFragment:
+  # this is the READER, and under `dataMasking` a named spread hides these
+  # fields from ItemDetail.tsx's direct reads. Kept in step with that fragment
+  # by __tests__/graphql/purchaseInfoCompleteness.test.ts.
   purchaseInfo {
     isPurchased
     purchasedQuantity

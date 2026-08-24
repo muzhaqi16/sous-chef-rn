@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { useLazyHomeData } from '#hooks/home/useLazyHomeData';
+import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { useMoveToPantry, type MoveToPantryInput } from './useMoveToPantry';
 
 /**

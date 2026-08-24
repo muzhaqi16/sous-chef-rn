@@ -64,7 +64,7 @@ const DefaultErrorFallback: React.FC<{
           {__DEV__
             ? error.message
             : tGlobal(
-                'errors.boundary.message',
+                'errors.codes.unexpected',
                 'An unexpected error occurred',
               )}
         </Text>
@@ -76,7 +76,7 @@ const DefaultErrorFallback: React.FC<{
         )}
         <AppPressable style={styles.retryButton} onPress={retry}>
           <Text size="md" weight="semibold" style={styles.retryButtonText}>
-            {tGlobal('errors.boundary.retry', 'Try Again')}
+            {tGlobal('auth.tryAgain', 'Try Again')}
           </Text>
         </AppPressable>
       </View>

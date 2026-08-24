@@ -19,6 +19,7 @@ import { FormInput } from '#components/molecules/FormInput';
 import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
 import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
+import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
 import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
@@ -43,6 +44,8 @@ import {
   versionConflictCheck,
 } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
+import { validationFieldName } from '#/utils/errors/mutationPayload';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
@@ -79,11 +82,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       priority,
       storeId,
       storeName,
+      brand,
+      brandId,
+      netWeight,
+      netWeightUnit,
+      netWeightUnitId,
     },
     updateField,
     setFromItem,
     buildUnitInput,
     buildDirtyInput,
+    parseNetWeightInput,
+    netWeightNeedsUnit,
     hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
@@ -165,15 +175,28 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     updateField('selectedUnitId', unitId);
   };
 
+  // The brand field hands back (id, name); the name is kept only when a
+  // suggestion was actually picked, so free typing keeps the text as typed.
+  const handleBrandSelect = (id: string | null, name: string | null) => {
+    updateField('brandId', id);
+    if (name) updateField('brand', name);
+  };
+
+  // Only the id. `UnitAutocompleteField` writes the SYMBOL through
+  // `onChangeText` before it calls this, so writing the unit's `name` back here
+  // would replace "g" with "gram" — which is neither what `setFromItem`
+  // repopulates the field with nor what the item detail renders. Same shape as
+  // `handleUnitSelect` above.
+  const handleNetWeightUnitSelect = (id: string | null) => {
+    updateField('netWeightUnitId', id);
+  };
+
   const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
   // Handle form submission
   const handleSave = () => {
     if (!itemName.trim()) {
-      alertService.alert(
-        t('labels.error'),
-        t('shoppingListScreens.pleaseEnterItemName'),
-      );
+      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
       return;
     }
 
@@ -181,6 +204,16 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       alertService.alert(
         t('labels.error'),
         t('shoppingListScreens.pleaseEnterQuantity'),
+      );
+      return;
+    }
+
+    // Net weight is all-or-nothing — a value without a unit is rejected by the
+    // API on create, so prompt for a unit instead of silently dropping it.
+    if (netWeightNeedsUnit) {
+      alertService.alert(
+        t('labels.error'),
+        t('labels.pleaseSelectAUnitForTheNetWeight'),
       );
       return;
     }
@@ -214,20 +247,25 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             },
           });
 
-          // Only navigate back if the update succeeded.
-          const updatePayload =
-            result.data?.updateShoppingListItem?.__typename ===
-            'UpdateShoppingListItemPayload'
-              ? result.data.updateShoppingListItem.shoppingListItem
-              : null;
-          if (updatePayload) {
+          // 'queued' carries `updateShoppingListItem: null` — a payload check
+          // alone reads that offline save as a refusal.
+          if (classifyCreateResult(result) !== 'rejected') {
             navigation.goBack();
           } else if (result.data) {
+            // A refusal that names a field gets copy for that field — this
+            // mutation carries `brand`, `netWeight`, `unit` and `storage` in
+            // one call, so "couldn't update" alone does not say which was
+            // refused. Localized, keyed off `field`; the server's own message
+            // is English and is not shown (see `validationFieldName`).
+            const refusedField = validationFieldName(result.data);
+            const generic = t('shoppingListScreens.serverNotUpdated', {
+              action: t('shoppingListScreens.updated'),
+            });
             alertService.alert(
               t('labels.error'),
-              t('shoppingListScreens.serverNotUpdated', {
-                action: t('shoppingListScreens.updated'),
-              }),
+              refusedField
+                ? t(`errors.field.${refusedField}`, { defaultValue: generic })
+                : generic,
             );
           } else {
             alertService.alert(
@@ -244,6 +282,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         // shows immediately and stays if the create is queued offline (the queue
         // replays it later, keyed by this id).
         const id = generateEntityId();
+        const netWeightValue = parseNetWeightInput();
+        const brandName = brand.trim();
         const optimisticItem = createOptimisticShoppingListItem(id, {
           itemName,
           quantity: parseDecimalInput(quantityInput) || 1,
@@ -285,6 +325,20 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                   ...(storeId && {
                     storePrefs: { preferredStoreId: storeId },
                   }),
+                  ...((brandId || brandName) && {
+                    brand: {
+                      ...(brandId && { brandId }),
+                      ...(brandName && { brandName }),
+                    },
+                  }),
+                  // Both or neither — `netWeightNeedsUnit` was checked above.
+                  ...(netWeightValue !== undefined &&
+                    netWeightUnitId && {
+                      netWeight: {
+                        netWeight: netWeightValue,
+                        netWeightUnitId,
+                      },
+                    }),
                 },
               ],
             },
@@ -333,11 +387,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
   return (
     <FormModal
-      title={
-        isEdit
-          ? t('shoppingListScreens.editItem')
-          : t('shoppingListScreens.addItem')
-      }
+      title={isEdit ? t('labels.editItem') : t('labels.addItem')}
       onClose={() => navigation.goBack()}
       onSave={handleSave}
       loading={saving}
@@ -349,7 +399,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       {/* Item Name Field - Use autocomplete for new items only */}
       {isEdit ? (
         <FormInput
-          label={t('shoppingListScreens.itemName')}
+          label={t('labels.itemName')}
           required
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
@@ -360,7 +410,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       ) : (
         <ItemAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.itemName')}
+          label={t('labels.itemName')}
           value={itemName}
           onChangeText={text => updateField('itemName', text)}
           onSelectItem={handleItemSelect}
@@ -371,20 +421,31 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       )}
 
+      {/* Brand */}
+      <BrandAutocompleteField
+        variant="modal"
+        label={t('labels.brand')}
+        value={brand}
+        onChangeText={text => updateField('brand', text)}
+        onBrandSelected={handleBrandSelect}
+        placeholder={t('shoppingListScreens.brandPlaceholder')}
+        testID={isEdit ? 'edit-item-brand-input' : 'add-item-brand-input'}
+      />
+
       {/* Category Field */}
       <CategoryAutocompleteField
         variant="modal"
-        label={t('shoppingListScreens.category')}
+        label={t('labels.category')}
         value={category}
         onChangeText={text => updateField('category', text)}
-        placeholder={t('shoppingListScreens.categoryPlaceholder')}
+        placeholder={t('labels.eGDairyProduce')}
         categoryType={CategoryType.General}
       />
 
       {/* Quantity + Unit (inline) */}
       <FieldRow>
         <EditableCounter
-          label={t('shoppingListScreens.quantity')}
+          label={t('labels.quantity')}
           required
           value={quantityInput}
           onChangeText={text => updateField('quantityInput', text)}
@@ -395,12 +456,39 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
         <UnitAutocompleteField
           variant="modal"
-          label={t('shoppingListScreens.unit')}
+          label={t('storageLocationForm.unit')}
           value={unit}
           onChangeText={text => updateField('unit', text)}
           onUnitSelected={handleUnitSelect}
-          placeholder={t('shoppingListScreens.unitPlaceholder')}
+          placeholder={t('labels.pcsKgEtc')}
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
+        />
+      </FieldRow>
+
+      {/* Net weight + its unit (inline) */}
+      <FieldRow>
+        <FormInput
+          label={t('labels.netWeight')}
+          value={netWeight}
+          onChangeText={text => updateField('netWeight', text)}
+          placeholder={t('shoppingListScreens.netWeightPlaceholder')}
+          keyboardType="decimal-pad"
+          testID={
+            isEdit ? 'edit-item-net-weight-input' : 'add-item-net-weight-input'
+          }
+        />
+        <UnitAutocompleteField
+          variant="modal"
+          label={t('labels.weightUnit')}
+          value={netWeightUnit}
+          onChangeText={text => updateField('netWeightUnit', text)}
+          onUnitSelected={handleNetWeightUnitSelect}
+          placeholder={t('labels.pcsKgEtc')}
+          testID={
+            isEdit
+              ? 'edit-item-net-weight-unit-picker'
+              : 'add-item-net-weight-unit-picker'
+          }
         />
       </FieldRow>
 

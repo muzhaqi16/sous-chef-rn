@@ -212,7 +212,9 @@ describe('resetManager', () => {
         });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.onBoardingStep).toBeNull();
-        expect(firstCall.notifications).toEqual([]);
+        // The feed moved to the Apollo cache; what the reset clears here is
+        // the expiration buffer that stayed behind.
+        expect(firstCall.pendingExpirationLinks).toEqual({});
         expect(firstCall.scannedBarcode).toBeNull();
       });
 

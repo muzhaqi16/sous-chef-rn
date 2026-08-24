@@ -119,10 +119,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
         onImageSelected(imageFile);
       } else {
         onError?.(result.error);
-        alertService.alert(
-          t('imagePicker.invalidImageTitle'),
-          result.error.message,
-        );
+        alertService.alert(t('labels.invalidImage'), result.error.message);
       }
     }
   };
@@ -130,7 +127,7 @@ export const ImagePicker: React.FC<ImagePickerProps> = ({
   const handleCameraPress = async () => {
     if (isBlocked) {
       alertService.alert(
-        t('imagePicker.cameraPermissionTitle'),
+        t('labels.cameraPermission'),
         t('imagePicker.cameraPermissionBody'),
         [
           { text: t('labels.cancel'), style: 'cancel' },

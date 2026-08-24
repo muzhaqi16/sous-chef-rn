@@ -92,7 +92,7 @@ export const CookingPreferencesSheet: React.FC<
         prepTimeValue > DIETARY_LIMITS.prepTime.max
       ) {
         alertService.alert(
-          t('cookingPreferences.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('cookingPreferences.prepTimeRange', {
             min: DIETARY_LIMITS.prepTime.min,
             max: DIETARY_LIMITS.prepTime.max,
@@ -112,7 +112,7 @@ export const CookingPreferencesSheet: React.FC<
         cookTimeValue > DIETARY_LIMITS.cookTime.max
       ) {
         alertService.alert(
-          t('cookingPreferences.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('cookingPreferences.cookTimeRange', {
             min: DIETARY_LIMITS.cookTime.min,
             max: DIETARY_LIMITS.cookTime.max,
@@ -132,7 +132,7 @@ export const CookingPreferencesSheet: React.FC<
         budgetValue > DIETARY_LIMITS.budget.max
       ) {
         alertService.alert(
-          t('cookingPreferences.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('cookingPreferences.budgetRange', {
             min: DIETARY_LIMITS.budget.min,
             max: DIETARY_LIMITS.budget.max,
@@ -167,10 +167,10 @@ export const CookingPreferencesSheet: React.FC<
       >
         {/* Header */}
         <BottomSheetHeader
-          title={t('cookingPreferences.title')}
+          title={t('labels.cookingPreferences')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel={t('cookingPreferences.save')}
+          confirmLabel={t('labels.save')}
           confirmDisabled={saving}
         />
 

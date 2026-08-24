@@ -376,6 +376,7 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
       position = 'start',
       checkDuplicates = true,
       updateTotalCount = true,
+      skipStoreField,
     } = options;
 
     try {
@@ -397,8 +398,14 @@ export function createAddToParentConnectionUpdater<T extends { id: string }>(
         fields: {
           [connectionField](
             existingConnection: ConnectionData = {},
-            { readField, toReference },
+            { readField, toReference, storeFieldName },
           ) {
+            // `cache.modify` runs this for EVERY cached variant of a keyed
+            // field, so a filtered variant the item does not belong to opts out
+            // here. Without it a PANTRY notification lands in the RECIPES feed
+            // and stays there until that variant is refetched.
+            if (skipStoreField?.(storeFieldName)) return existingConnection;
+
             const newItemRef = toReference(newItem, true);
 
             if (!newItemRef) return existingConnection;

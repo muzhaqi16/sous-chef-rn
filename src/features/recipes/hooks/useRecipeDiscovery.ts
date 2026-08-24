@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { errorService } from '#/services/errorService';
 
-import { useDefaultHome } from '#hooks/home/useDefaultHome';
-import { usePantryManagement } from '#hooks/home/pantry/usePantryManagement';
-import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
+import { useDefaultHome } from '#features/home/hooks/useDefaultHome';
+import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
+import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type {
   RecipeSearchResult,
@@ -79,7 +79,7 @@ function transformRandomRecipe(recipe: RecipeInformation): DiscoveryItem {
   const totalTime =
     recipe.readyInMinutes || recipe.preparationMinutes || recipe.cookingMinutes;
   if (totalTime) {
-    subtitleParts.push(t('recipes.minutesValue', { count: totalTime }));
+    subtitleParts.push(t('labels.min', { count: totalTime }));
   }
 
   return {
@@ -110,7 +110,7 @@ function transformPantryResult(
   const totalTime =
     info?.readyInMinutes || info?.preparationMinutes || info?.cookingMinutes;
   if (totalTime) {
-    subtitleParts.push(t('recipes.minutesValue', { count: totalTime }));
+    subtitleParts.push(t('labels.min', { count: totalTime }));
   }
 
   return {
@@ -317,7 +317,7 @@ export function useRecipeDiscovery(
       isLoadingMore: pantryLoadingMore,
     },
     actions: { loadMore: loadMorePantryItems },
-  } = usePantryManagement(defaultPantry?.id, null, null, undefined, {
+  } = usePantryManagement(defaultPantry?.id, {
     skip: !isFocused,
     fetchPolicy: 'cache-first',
   });

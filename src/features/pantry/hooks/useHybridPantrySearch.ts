@@ -10,7 +10,7 @@ import {
   type UseHybridSearchConfig,
   type UseHybridSearchReturn,
 } from '#hooks/search/useHybridSearch';
-import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
+import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 
 // Connection nodes carry direct fields (id, itemName, expiresAt, …) plus an
 // opaque `PantryItemCard_pantryItem` fragment ref. The leaf cell unmasks the

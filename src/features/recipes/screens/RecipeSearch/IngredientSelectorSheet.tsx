@@ -107,13 +107,13 @@ export const IngredientSelectorSheet: React.FC<
         {screen.selectedIngredients.size > 0 && (
           <View style={styles.selectionRow}>
             <Text size="sm" tone="secondary">
-              {t('recipes.selectedCount', {
+              {t('labels.selected', {
                 count: screen.selectedIngredients.size,
               })}
             </Text>
             <Pressable onPress={screen.clearSelectedIngredients} hitSlop={8}>
               <Text size="sm" weight="medium" tone="accent">
-                {t('recipes.clearAll')}
+                {t('labels.clearAll')}
               </Text>
             </Pressable>
           </View>

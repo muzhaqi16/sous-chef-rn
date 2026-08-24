@@ -99,7 +99,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     ],
   },
   [CollaboratorRole.Admin]: {
-    labelKey: 'collaboratorRoles.admin',
+    labelKey: 'labels.admin',
     descriptionKey: 'collaboratorRoles.descriptions.admin',
     icon: 'settings-outline',
     permissions: [

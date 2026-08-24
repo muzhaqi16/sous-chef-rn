@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
+import { logger } from '#/utils/environment';
 
 /**
  * Maximum valid render duration in ms. Any measurement above this is treated
@@ -160,7 +161,7 @@ export function useRenderTime(
         duration: renderDuration.toFixed(2),
       });
 
-      console.warn(
+      logger.warn(
         `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(
           2,
         )}ms`,

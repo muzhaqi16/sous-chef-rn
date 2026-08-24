@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { SousChefLoader } from '#components/base/SousChefLoader';
+import { SousChefLoader } from '#components/atoms/SousChefLoader';
 
 export const SplashScreen = () => {
   const { t } = useTranslation();
@@ -10,7 +10,7 @@ export const SplashScreen = () => {
     <View style={styles.container} testID="splash-screen">
       <SousChefLoader
         size="large"
-        message={t('loader.loading')}
+        message={t('labels.loading')}
         showBrand={true}
       />
     </View>

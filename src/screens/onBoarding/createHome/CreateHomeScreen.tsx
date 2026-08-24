@@ -24,7 +24,7 @@ import { LoadingView } from './LoadingView';
 import { OnBoardingWrapper } from '#components/templates/OnBoardingWrapper';
 import { SubmitButton } from './SubmitButton';
 import { ErrorMessage } from './ErrorMessage';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 
 // GraphQL
 import { useFragment, useMutation, useQuery } from '@apollo/client/react';
@@ -42,7 +42,7 @@ import {
   type CreateHomeMutationVariables,
 } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { addToHomesCache } from '#hooks/home/hooks/utils';
+import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
 
 // Store & Navigation
 import {
@@ -68,6 +68,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { unwrapPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
+import { logger } from '#/utils/environment';
 
 /** Module-level cache update closure for `useAcceptHomeInviteMutation`.
  *  Extracted from the component body to keep the surrounding try/catch outside
@@ -112,7 +113,7 @@ function buildAcceptHomeInviteUpdater(userId: string | undefined) {
         },
       });
     } catch (error) {
-      console.warn('Cache update failed for acceptHomeInvite:', error);
+      logger.warn('Cache update failed for acceptHomeInvite:', error);
       // UI will still work via optimistic/onCompleted handlers
     }
   };
@@ -566,7 +567,7 @@ const CreateHomeScreenComponent = () => {
   const getTitle = () => {
     if (!existingHome) return t('onBoarding.welcomeTitle');
     if (!existingPantry) return t('onBoarding.almostThere');
-    return t('onBoarding.allSet');
+    return t('labels.youReAllSet');
   };
 
   const getSubtitle = () => {
@@ -590,7 +591,7 @@ const CreateHomeScreenComponent = () => {
       >
         <View style={styles.invitesContainer}>
           <Text size="md" weight="semibold" style={styles.invitesSectionTitle}>
-            {t('onBoarding.pendingInvitations')}
+            {t('labels.pendingInvitations')}
           </Text>
           <InviteActionsProvider
             handleAcceptInvite={handleAcceptInvite}

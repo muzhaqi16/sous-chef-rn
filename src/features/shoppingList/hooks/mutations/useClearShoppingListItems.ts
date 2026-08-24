@@ -24,6 +24,7 @@ import {
   clearAllPurchasedItemsFromCache,
   clearAllUnpurchasedItemsFromCache,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { logger } from '#/utils/environment';
 
 // The mutate function returned by useMutation for the clear operation. The
 // hook only ever passes `variables` (the operation's `input`), a no-op
@@ -79,7 +80,7 @@ async function executeClearItems(
       context: { localFirst: true },
     });
   } catch (error) {
-    console.warn(
+    logger.warn(
       `Failed to clear ${purchased ? 'purchased' : 'shopping'} items:`,
       error,
     );

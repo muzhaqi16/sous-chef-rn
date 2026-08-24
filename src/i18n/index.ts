@@ -5,7 +5,7 @@
  * depending on whether the string had a variable in it:
  *
  *     const { t } = useTranslation()        // react-i18next, in components
- *     t('key')            from '#/i18n/t'   // module scope, no options
+ *     t('key')            from '#/i18n/t'   // module scope, no options (module since deleted)
  *     getI18n().t('key', { count })         // module scope, when options needed
  *     import { t as tGlobal }               // components needing module scope
  *

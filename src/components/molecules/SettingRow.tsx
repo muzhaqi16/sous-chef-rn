@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
@@ -131,7 +131,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
     } else if (item.type === 'modal') {
       return t('settingRow.tapToSelect');
     } else if (item.type === 'text') {
-      return t('settingRow.tapToEdit');
+      return t('labels.tapToEdit');
     } else if (item.type === 'navigation' || item.type === 'action') {
       return t('settingRow.tapToOpen');
     }

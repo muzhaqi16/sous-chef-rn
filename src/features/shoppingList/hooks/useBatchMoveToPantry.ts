@@ -150,7 +150,7 @@ export function useBatchMoveToPantry({
       // so the mutation `onError` never fired for it. Surface it here — guarded
       // to skip the transport-error case (`result.error`), which onError already
       // alerted, so the two never double-alert.
-      alertRejectedMutation(result, t('errors.somethingWentWrong'));
+      alertRejectedMutation(result, t('errors.codes.genericRetry'));
       return;
     }
 

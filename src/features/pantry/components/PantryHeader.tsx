@@ -151,7 +151,7 @@ export const PantryHeader: React.FC<PantryHeaderProps> = ({
           style={styles.notificationButton}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel={t('pantryHeader.notificationsLabel')}
+          accessibilityLabel={t('labels.notifications')}
         >
           <Icon name="notifications-outline" size={24} tone="textSecondary" />
           {notificationCount > 0 && <View style={styles.notificationDot} />}

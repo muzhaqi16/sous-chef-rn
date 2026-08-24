@@ -6,6 +6,7 @@
  */
 
 import { Telemetry } from '#/services/telemetry';
+import { logger } from '#/utils/environment';
 
 /**
  * Install global handlers for:
@@ -27,7 +28,7 @@ export function setupGlobalErrorHandler(): void {
     });
 
     if (__DEV__) {
-      console.error('[GlobalErrorHandler] Unhandled exception:', error);
+      logger.error('[GlobalErrorHandler] Unhandled exception:', error);
     }
 
     // Forward to the previous handler so React Native's LogBox / red screen still works
@@ -58,7 +59,7 @@ export function setupGlobalErrorHandler(): void {
       Telemetry.increment('unhandled_promise_rejections_total', 1);
 
       if (__DEV__) {
-        console.error(
+        logger.error(
           '[GlobalErrorHandler] Unhandled promise rejection:',
           reason,
         );

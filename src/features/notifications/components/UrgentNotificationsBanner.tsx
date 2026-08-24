@@ -3,7 +3,7 @@ import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
-import { NotificationItem } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Text } from '#components/atoms/Text';
 
 interface UrgentNotificationsBannerProps {

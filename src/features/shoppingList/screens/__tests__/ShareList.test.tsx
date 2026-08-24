@@ -150,10 +150,10 @@ jest.mock('#components/molecules/Header', () => ({
     );
   },
 }));
-jest.mock('#components/base/Loading', () => ({
+jest.mock('#components/atoms/Loading', () => ({
   LoadingInline: () => null,
 }));
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({ title, onPress }: { title?: string; onPress: () => void }) => {
     const { Pressable, Text } = require('react-native');
     return (

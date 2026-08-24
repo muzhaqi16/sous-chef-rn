@@ -62,7 +62,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
     if (!email.trim()) {
       alertService.alert(
         t('labels.error'),
-        t('shoppingListScreens.pleaseEnterEmail'),
+        t('labels.pleaseEnterAnEmailAddress'),
       );
       return;
     }
@@ -112,9 +112,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
 
   return (
     <View style={styles.inviteSection}>
-      <Text style={styles.sectionTitle}>
-        {t('shoppingListScreens.inviteMembers')}
-      </Text>
+      <Text style={styles.sectionTitle}>{t('labels.inviteMembers')}</Text>
       <View style={styles.inputRow}>
         <EmailInput
           containerStyle={styles.emailInputContainer}
@@ -133,7 +131,7 @@ export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
           )}
         </AppPressable>
       </View>
-      <Text style={styles.roleLabel}>{t('shoppingListScreens.role')}</Text>
+      <Text style={styles.roleLabel}>{t('labels.role')}</Text>
       <ChipScrollRow
         options={roleOptions}
         selected={selectedRole}

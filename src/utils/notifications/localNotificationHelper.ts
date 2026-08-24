@@ -50,7 +50,7 @@ const ensureDefaultChannel = async (): Promise<void> => {
 
   await notifee.createChannel({
     id: 'default',
-    name: t('notifications.channelGeneral'),
+    name: t('labels.general'),
     importance: AndroidImportance.HIGH,
     vibration: true,
     lights: true,

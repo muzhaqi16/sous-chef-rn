@@ -248,10 +248,12 @@ describe('useAdjustPantryItemQuantity', () => {
 
     expect(success).toBe(false);
     // A union-error payload carries no transport error, so onError never fires —
-    // the hook must surface its own alert rather than reverting silently.
+    // the hook must surface its own alert rather than reverting silently. The
+    // refusal names `newQuantity`, so the alert is this app's localized copy
+    // for that field, not the server's English "Invalid quantity".
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
-      'Could not adjust the quantity.',
+      "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
     );
   });
 });

@@ -21,6 +21,7 @@
  */
 
 import { Alert } from 'react-native';
+import { logger } from '#/utils/environment';
 
 export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
 
@@ -65,7 +66,7 @@ class AlertService {
 
     if (!this.showAlertFn) {
       // Fallback to native alert before provider mounts
-      console.warn(
+      logger.warn(
         '[AlertService] Not initialized, falling back to native Alert.',
       );
       Alert.alert(

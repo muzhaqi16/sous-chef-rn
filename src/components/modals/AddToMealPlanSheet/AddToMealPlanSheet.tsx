@@ -22,12 +22,12 @@ interface AddToMealPlanSheetProps {
 }
 
 const MEAL_TYPE_KEYS: { type: MealType; labelKey: string }[] = [
-  { type: MealType.Breakfast, labelKey: 'addToMealPlan.mealBreakfast' },
-  { type: MealType.Brunch, labelKey: 'addToMealPlan.mealBrunch' },
-  { type: MealType.Lunch, labelKey: 'addToMealPlan.mealLunch' },
-  { type: MealType.Snack, labelKey: 'addToMealPlan.mealSnack' },
-  { type: MealType.Dinner, labelKey: 'addToMealPlan.mealDinner' },
-  { type: MealType.Dessert, labelKey: 'addToMealPlan.mealDessert' },
+  { type: MealType.Breakfast, labelKey: 'labels.breakfast' },
+  { type: MealType.Brunch, labelKey: 'labels.brunch' },
+  { type: MealType.Lunch, labelKey: 'labels.lunch' },
+  { type: MealType.Snack, labelKey: 'usagePurpose.SNACK' },
+  { type: MealType.Dinner, labelKey: 'labels.dinner' },
+  { type: MealType.Dessert, labelKey: 'labels.dessert' },
 ];
 
 export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
@@ -95,7 +95,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           title={t('addToMealPlan.title')}
           onCancel={onClose}
           onConfirm={handleConfirm}
-          confirmLabel={t('addToMealPlan.add')}
+          confirmLabel={t('labels.add')}
           confirmDisabled={adding || !hasPlan}
           confirmColor="primary"
         />
@@ -119,7 +119,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
               tone="secondary"
               style={styles.sectionLabel}
             >
-              {t('addToMealPlan.mealPlanLabel')}
+              {t('labels.mealPlan')}
             </Text>
             <ScrollView
               horizontal
@@ -205,7 +205,7 @@ export const AddToMealPlanSheet: React.FC<AddToMealPlanSheetProps> = ({
           tone="secondary"
           style={styles.sectionLabel}
         >
-          {t('addToMealPlan.mealTypeLabel')}
+          {t('labels.mealType')}
         </Text>
 
         <View style={styles.mealTypeRow}>

@@ -83,7 +83,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         caloriesValue > DIETARY_LIMITS.calories.max
       ) {
         alertService.alert(
-          t('macroTargets.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('macroTargets.caloriesRange', {
             min: DIETARY_LIMITS.calories.min,
             max: DIETARY_LIMITS.calories.max,
@@ -103,7 +103,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         proteinValue > DIETARY_LIMITS.protein.max
       ) {
         alertService.alert(
-          t('macroTargets.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('macroTargets.proteinRange', {
             min: DIETARY_LIMITS.protein.min,
             max: DIETARY_LIMITS.protein.max,
@@ -123,7 +123,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         carbsValue > DIETARY_LIMITS.carbs.max
       ) {
         alertService.alert(
-          t('macroTargets.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('macroTargets.carbsRange', {
             min: DIETARY_LIMITS.carbs.min,
             max: DIETARY_LIMITS.carbs.max,
@@ -143,7 +143,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         fatValue > DIETARY_LIMITS.fat.max
       ) {
         alertService.alert(
-          t('macroTargets.invalidInputTitle'),
+          t('labels.invalidInput'),
           t('macroTargets.fatRange', {
             min: DIETARY_LIMITS.fat.min,
             max: DIETARY_LIMITS.fat.max,
@@ -178,7 +178,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
           title={t('macroTargets.title')}
           onCancel={onClose}
           onConfirm={handleSave}
-          confirmLabel={t('macroTargets.save')}
+          confirmLabel={t('labels.save')}
           confirmDisabled={saving}
         />
 
@@ -202,7 +202,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         {/* Protein */}
         <View style={styles.section}>
           <FormInput
-            label={t('macroTargets.protein')}
+            label={t('labels.proteinG')}
             value={protein}
             onChangeText={setProtein}
             keyboardType="number-pad"
@@ -214,7 +214,7 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
         {/* Carbs */}
         <View style={styles.section}>
           <FormInput
-            label={t('macroTargets.carbs')}
+            label={t('labels.carbsG')}
             value={carbs}
             onChangeText={setCarbs}
             keyboardType="number-pad"

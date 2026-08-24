@@ -62,7 +62,6 @@ export const StoragePage: React.FC<StoragePageProps> = ({
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
-      bottomOffset={16}
     >
       <DropdownStack>
         {/* Storage Location */}
@@ -81,7 +80,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
 
         {/* Condition */}
         <SegmentedControl
-          label={t('addToPantry.condition')}
+          label={t('labels.condition')}
           options={ITEM_CONDITION_OPTIONS}
           value={condition}
           onChange={setCondition}

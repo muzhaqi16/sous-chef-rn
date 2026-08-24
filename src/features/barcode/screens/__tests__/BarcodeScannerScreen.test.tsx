@@ -58,7 +58,7 @@ jest.mock('../../hooks/useBarcodeOutput', () => ({
 
 jest.mock('#components/organisms/BarcodeMask', () => 'BarcodeMask');
 
-jest.mock('#components/base/Button', () => ({
+jest.mock('#components/atoms/Button', () => ({
   Button: ({
     children,
     onPress,

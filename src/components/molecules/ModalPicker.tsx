@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#/utils/iconUtils';
-import { Button } from '#components/base/Button';
+import { Button } from '#components/atoms/Button';
 import { ActionTray } from '#components/templates/ActionTray/ActionTray';
 import type { ActionTrayRef } from '#components/templates/ActionTray/types';
 import { AppPressable } from '#components/atoms/AppPressable';

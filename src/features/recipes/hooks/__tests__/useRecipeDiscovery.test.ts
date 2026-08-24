@@ -17,12 +17,12 @@ jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');
 
 const mockUseDefaultHome = jest.fn();
-jest.mock('#hooks/home/useDefaultHome', () => ({
+jest.mock('#features/home/hooks/useDefaultHome', () => ({
   useDefaultHome: () => mockUseDefaultHome(),
 }));
 
 const mockUsePantryManagement = jest.fn();
-jest.mock('#hooks/home/pantry/usePantryManagement', () => ({
+jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
   usePantryManagement: (...args: unknown[]) => mockUsePantryManagement(...args),
 }));
 
@@ -270,9 +270,6 @@ describe('useRecipeDiscovery', () => {
 describe('useRecipeDiscovery: focus gate on the pantry watch', () => {
   const pantryWatchArgs = (skip: boolean) => [
     'pantry-1',
-    null,
-    null,
-    undefined,
     { skip, fetchPolicy: 'cache-first' },
   ];
 

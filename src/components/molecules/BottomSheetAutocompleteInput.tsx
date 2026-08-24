@@ -2,11 +2,9 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
-import {
-  BottomSheetView,
-  useBottomSheetScrollableCreator,
-} from '@gorhom/bottom-sheet';
+import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
+import { Header } from '#/components/molecules/Header';
 import { FlashList } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -197,29 +195,37 @@ export function BottomSheetAutocompleteInput<T>({
     onSearchChange?.(text);
   };
 
-  const handleSelectItem = (item: T) => {
+  // Every exit closes the picker the same way; only what happens BEFORE differs.
+  const dismissPicker = () => {
     setUserDismissed(true);
     setHasInteracted(false);
     setShowAutocomplete(false);
-    onSelectItem(item);
     onModalClose?.();
+  };
+
+  const handleSelectItem = (item: T) => {
+    onSelectItem(item);
+    dismissPicker();
   };
 
   const handleSubmitCustomValue = () => {
     if (searchTerm.trim()) {
       onChangeText(searchTerm.trim());
     }
-    setUserDismissed(true);
-    setHasInteracted(false);
-    setShowAutocomplete(false);
-    onModalClose?.();
+    dismissPicker();
   };
+
+  // The header's close button. Nothing to commit: `handleBottomSheetTextChange`
+  // already wrote every keystroke back through `onChangeText`, so the field
+  // holds whatever was typed. Content panning is disabled on this sheet, so
+  // without this button the only ways out are the backdrop and the return key.
+  const handleClose = dismissPicker;
 
   const defaultEmptyComponent = () => {
     // Show offline-specific message when not online
     if (!isOnline) {
       return (
-        <BottomSheetView style={styles.messageContainer}>
+        <View style={styles.messageContainer}>
           <Icon name="cloud-offline-outline" size={48} />
           <Text
             size="base"
@@ -232,12 +238,12 @@ export function BottomSheetAutocompleteInput<T>({
           <Text size="sm" tone="secondary" align="center">
             {t('autocomplete.offlineSubtitle')}
           </Text>
-        </BottomSheetView>
+        </View>
       );
     }
 
     return (
-      <BottomSheetView style={styles.messageContainer}>
+      <View style={styles.messageContainer}>
         <Text
           size="base"
           weight="semibold"
@@ -251,7 +257,7 @@ export function BottomSheetAutocompleteInput<T>({
             {emptySubtext}
           </Text>
         ) : null}
-      </BottomSheetView>
+      </View>
     );
   };
 
@@ -280,11 +286,11 @@ export function BottomSheetAutocompleteInput<T>({
   );
 
   const defaultLoadingComponent = () => (
-    <BottomSheetView style={styles.messageContainer}>
+    <View style={styles.messageContainer}>
       <Text size="base" tone="secondary">
         {t('loading.loading')}
       </Text>
-    </BottomSheetView>
+    </View>
   );
 
   return (
@@ -308,17 +314,20 @@ export function BottomSheetAutocompleteInput<T>({
         keyboardBlurBehavior="none"
         enableContentPanningGesture={false}
       >
-        <BottomSheetView style={{ flex: 1 }}>
+        {/* A plain View, deliberately not gorhom's `BottomSheetView`. That
+            component is styled `position: 'absolute'` with `top/left/right`
+            but no `bottom` (bottomSheetView/styles.ts in 5.2.14), so its
+            height is its content's and a `flex: 1` on it does nothing — the
+            FlashList below was never bounded, grew to every row, and could
+            not scroll. The sheet's content region has an explicit animated
+            height (BottomSheetContent.tsx), so a flex child IS bounded.
+            `BottomSheetView` also re-registers the sheet's scrollable as a
+            plain view after the FlashList registers itself, since a parent's
+            effects run after its children's. It is meant for static content
+            that the sheet sizes itself to, not as a wrapper around a list. */}
+        <View style={styles.sheetBody}>
+          <Header title={title} centerTitle onClose={handleClose} borderless />
           <View style={styles.headerSection}>
-            <Text
-              size="base"
-              weight="semibold"
-              align="center"
-              style={styles.autocompleteTitle}
-            >
-              {title}
-            </Text>
-
             <ThemedBottomSheetTextInput
               style={styles.bottomSheetInput}
               defaultValue={searchTerm}
@@ -348,7 +357,7 @@ export function BottomSheetAutocompleteInput<T>({
                 : renderEmptyComponent?.() || defaultEmptyComponent()
             }
           />
-        </BottomSheetView>
+        </View>
       </BottomSheetModal>
     </FormFieldWrapper>
   );
@@ -369,6 +378,9 @@ const styles = StyleSheet.create(theme => ({
   fieldInputError: {
     borderColor: theme.colors.error,
   },
+  sheetBody: {
+    flex: 1,
+  },
   headerSection: {
     paddingHorizontal: theme.spacing.md,
     paddingTop: theme.spacing.sm,
@@ -376,9 +388,6 @@ const styles = StyleSheet.create(theme => ({
   listContent: {
     paddingBottom: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
-  },
-  autocompleteTitle: {
-    marginBottom: theme.spacing.sm,
   },
   bottomSheetInput: {
     marginBottom: theme.spacing.md,

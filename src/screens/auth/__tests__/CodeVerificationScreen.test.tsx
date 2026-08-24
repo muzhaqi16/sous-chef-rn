@@ -153,7 +153,7 @@ jest.mock('#components/molecules/CodeInputAdapter', () => ({
   CodeInputAdapter: 'CodeInputAdapter',
 }));
 
-jest.mock('#/components/base/SousChefLoader', () => ({
+jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: 'SousChefLoader',
 }));
 

@@ -5,7 +5,7 @@ import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
-import { BaseSwitch } from '#components/base/BaseSwitch';
+import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/molecules/FormInput';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
@@ -152,7 +152,7 @@ export const MarkCookedModal: React.FC<MarkCookedModalProps> = ({
         {/* Notes (Optional) */}
         <View style={styles.section}>
           <FormInput
-            label={t('markCookedModal.notesOptional')}
+            label={t('labels.notesOptional')}
             value={notes}
             onChangeText={setNotes}
             placeholder={t('markCookedModal.notesPlaceholder')}

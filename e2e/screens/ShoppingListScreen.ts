@@ -107,13 +107,14 @@ export class ShoppingListScreen extends BaseScreen {
    * Type a value into one of the details sheet's `variant="modal"` autocompletes.
    *
    * These do NOT behave like text inputs. `ShoppingListDetailsStep` renders the
-   * item-name and unit fields as `variant="modal"`, and
+   * unit (and brand / category / store) fields as `variant="modal"`, and
    * `BottomSheetAutocompleteInput` responds to typing by presenting its own
    * `BottomSheetModal` with `stackBehavior="push"` — a second sheet ON TOP of
-   * the details sheet.
+   * the details sheet. (The item name used to be one too; it is a plain field
+   * now, typed directly in `addItem`.)
    *
-   * That is what made every add test fail. Typing the name opened the picker,
-   * the picker covered the header, and the run then timed out on
+   * That is what made every add test fail. Typing into the picker field opened
+   * the picker, the picker covered the header, and the run then timed out on
    * `add-shopping-item-submit-button` — with Detox's own artifact log showing
    * the button present, at a valid frame, `visible: false` / `hittable: false`.
    * It reads like a missing testID and is actually a sheet in front of it.
@@ -123,9 +124,6 @@ export class ShoppingListScreen extends BaseScreen {
    * the term back and sets `showAutocomplete(false)`, which is what closes the
    * picker. Tapping the details sheet to "dismiss the keyboard" cannot work —
    * the details sheet is behind the picker.
-   *
-   * Test names are generated, so they never match a suggestion; the custom-value
-   * path is the only one that applies.
    */
   /**
    * Blur whatever holds the keyboard, by tapping the DETAILS SHEET's top-left
@@ -393,10 +391,11 @@ export class ShoppingListScreen extends BaseScreen {
   async addItem(name: string, quantity?: string | number, unit?: string) {
     await this.openAddDetailsForm();
 
-    // Name and unit are `variant="modal"` autocompletes, so typing into the
-    // field opens a SECOND BottomSheetModal stacked over this sheet — see
-    // `fillModalAutocomplete` for why that matters and how it is closed.
-    await this.fillModalAutocomplete('add-shopping-item-name-input', name);
+    // The name is a plain field — no picker opens for it. The unit below IS
+    // a `variant="modal"` autocomplete, so typing into it opens a SECOND
+    // BottomSheetModal stacked over this sheet — see `fillModalAutocomplete`
+    // for why that matters and how it is closed.
+    await element(by.id('add-shopping-item-name-input')).replaceText(name);
 
     if (quantity !== undefined) {
       // `EditableCounter` is a plain input — no picker. But `replaceText`

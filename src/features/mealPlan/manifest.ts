@@ -5,7 +5,7 @@ export const mealPlanFeature: FeatureManifest = {
   id: 'mealPlan',
   tab: {
     screenName: 'MealPlan',
-    title: 'navigation.tabs.mealPlan',
+    title: 'labels.mealPlan',
     order: 40,
     stack: MealPlanStack,
   },

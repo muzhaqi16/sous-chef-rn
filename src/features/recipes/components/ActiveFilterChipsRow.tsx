@@ -143,7 +143,7 @@ export const ActiveFilterChipsRow: React.FC<ActiveFilterChipsRowProps> = ({
             accessibilityLabel={t('recipeFilters.clearAllA11y')}
           >
             <Text size="sm" weight="semibold" tone="secondary">
-              {t('recipeFilters.clear')}
+              {t('labels.clear')}
             </Text>
           </Pressable>
         </ScrollView>

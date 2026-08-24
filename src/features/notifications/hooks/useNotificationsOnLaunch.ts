@@ -11,38 +11,29 @@
  * Now all unread notifications arrive with real server CUIDs so
  * markNotificationAsRead works correctly for every type.
  *
- * Re-queries when the app returns to foreground to catch missed
- * events that arrived while the subscription was disconnected.
- * Store deduplication in addMultipleNotifications prevents duplicates.
+ * Re-queries when the app returns to foreground, and when the WebSocket
+ * reconnects, to catch events that arrived while the subscription was down.
+ *
+ * The query is the whole hook: Apollo normalizes the notifications and the
+ * `User.unreadNotificationCount` / `hasUrgentNotifications` aggregates into the
+ * cache on its own. This used to map every edge and push it into a Zustand
+ * slice, then re-seed the badge from the same response — a second copy of what
+ * the cache already held, and the reason a live event and a refetch could leave
+ * two different answers on screen.
  */
 
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
-import { useApolloClient, useLazyQuery } from '@apollo/client/react';
+import { useLazyQuery } from '@apollo/client/react';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
-import {
-  UseNotificationsOnLaunch_NotificationFragmentDoc,
-  type UseNotificationsOnLaunch_NotificationFragment,
-} from './useNotificationsOnLaunch.generated';
-import { useAppStore } from '#store/useAppStore';
-import { type NotificationItem } from '#store/slices/notificationSlice';
 import { useDeferredCallback } from '#hooks/performance/useDeferredCallback';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { mapNotificationToStore } from '#features/notifications/utils/mapNotificationToStore';
 import { onWebSocketReconnected } from '#/apollo/links/wsLink';
 
 export function useNotificationsOnLaunch(userId?: string) {
-  const client = useApolloClient();
-  const addMultipleNotifications = useAppStore(
-    state => state.addMultipleNotifications,
-  );
-  const setServerNotificationCounts = useAppStore(
-    state => state.setServerNotificationCounts,
-  );
-
   const hasFetchedRef = useRef(false);
 
-  const [fetchUnreadNotifications, { data, error }] = useLazyQuery(
+  const [fetchUnreadNotifications, { error }] = useLazyQuery(
     GetUnreadNotificationsDocument,
     {},
   );
@@ -82,41 +73,4 @@ export function useNotificationsOnLaunch(userId?: string) {
   }, [fetchUnreadNotifications]);
 
   useApolloErrorLogger('GetUnreadNotifications', error);
-
-  useEffect(() => {
-    const me = data?.me;
-    if (!me) return;
-
-    // Materialize each masked node ref via cache.readFragment so the hook can
-    // read the fields it pushes into the Zustand store.
-    const edges = me.notificationsConnection?.edges ?? [];
-    const notifications: Omit<NotificationItem, 'isRead'>[] = edges
-      .map(edge =>
-        client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
-          {
-            fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-            fragmentName: 'useNotificationsOnLaunch_notification',
-            from: { __typename: 'Notification', id: edge.node.id },
-          },
-        ),
-      )
-      .filter(
-        (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
-      )
-      .map(mapNotificationToStore);
-
-    if (notifications.length > 0) {
-      addMultipleNotifications(notifications);
-    }
-
-    // Seed the badge from the server's authoritative totals AFTER the list
-    // materializes: addMultipleNotifications ends by recomputing the counts
-    // from the local list, which would clobber a seed written first. Runs even
-    // with zero unread so the badge clears correctly, and covers unread beyond
-    // this page (or dropped by the store's category safety filters).
-    setServerNotificationCounts(
-      me.unreadNotificationCount,
-      me.hasUrgentNotifications,
-    );
-  }, [data, addMultipleNotifications, setServerNotificationCounts, client]);
 }

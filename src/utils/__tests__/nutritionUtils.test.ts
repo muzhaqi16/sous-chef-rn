@@ -124,7 +124,7 @@ describe('generateHighlights', () => {
   it('detects High Protein (>= 10g)', () => {
     const highlights = generateHighlights(mockNutritions);
     expect(highlights).toContainEqual({
-      labelKey: 'nutritionHighlights.highProtein',
+      labelKey: 'recipes.healthGoal.HIGH_PROTEIN',
       type: 'positive',
     });
   });

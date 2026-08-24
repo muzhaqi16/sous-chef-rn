@@ -1,6 +1,7 @@
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useUser, useNavigationUtils } from '#store/useAppStore';
 import { OnBoardingSteps } from '#store/slices/navigationSlice';
+import { logger } from '#/utils/environment';
 
 const ONBOARDING_STEPS = [
   'CreateHome',
@@ -89,7 +90,7 @@ export function useOnboardingNavigation() {
 
   const completeOnboarding = () => {
     if (!user) {
-      console.warn('Cannot complete onboarding without user');
+      logger.warn('Cannot complete onboarding without user');
       return false;
     }
 

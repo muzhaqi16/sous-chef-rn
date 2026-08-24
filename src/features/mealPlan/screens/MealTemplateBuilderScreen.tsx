@@ -250,18 +250,14 @@ export const MealTemplateBuilderScreen: React.FC<
 
   return (
     <FormModal
-      title={
-        isEdit
-          ? t('mealTemplateBuilder.editTitle')
-          : t('mealTemplateBuilder.createTitle')
-      }
+      title={isEdit ? t('labels.editTemplate') : t('labels.newTemplate')}
       onClose={goBack}
       onSave={handleSave}
       loading={creating || updating}
       testID="meal-template-builder-screen"
     >
       <FormInput
-        label={t('mealTemplateBuilder.name')}
+        label={t('labels.templateName')}
         value={name}
         onChangeText={setName}
         placeholder={t('mealTemplateBuilder.namePlaceholder')}
@@ -270,7 +266,7 @@ export const MealTemplateBuilderScreen: React.FC<
       />
 
       <FormSelect
-        label={t('mealTemplateBuilder.category')}
+        label={t('labels.category')}
         value={category}
         onValueChange={value => setCategory(value as TemplateCategory)}
         options={CATEGORY_OPTIONS.map(value => ({
@@ -280,7 +276,7 @@ export const MealTemplateBuilderScreen: React.FC<
       />
 
       <EditableCounter
-        label={t('mealTemplateBuilder.defaultServings')}
+        label={t('labels.defaultServings')}
         value={defaultServings}
         onChangeText={setDefaultServings}
         min={1}
@@ -298,7 +294,7 @@ export const MealTemplateBuilderScreen: React.FC<
         label={t('mealTemplateBuilder.tags')}
         value={tags}
         onChangeText={setTags}
-        placeholder={t('mealTemplateBuilder.tagsPlaceholder')}
+        placeholder={t('labels.commaSeparated')}
       />
 
       {/* Meals */}
@@ -349,7 +345,7 @@ export const MealTemplateBuilderScreen: React.FC<
           testID="item-name-input"
         />
         <FormSelect
-          label={t('mealTemplateBuilder.mealType')}
+          label={t('labels.mealType')}
           value={itemMealType}
           onValueChange={value => setItemMealType(value as MealType)}
           options={MEAL_TYPE_OPTIONS.map(value => ({
@@ -367,7 +363,7 @@ export const MealTemplateBuilderScreen: React.FC<
           step={1}
         />
         <EditableCounter
-          label={t('mealTemplateBuilder.servings')}
+          label={t('labels.servings')}
           value={itemServings}
           onChangeText={setItemServings}
           min={1}

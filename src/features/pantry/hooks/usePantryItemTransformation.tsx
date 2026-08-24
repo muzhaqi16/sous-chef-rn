@@ -258,7 +258,7 @@ export const getExpiryInfo = (expiresAt: string | null | undefined) => {
     };
   if (diffDays === 0)
     return {
-      text: tGlobal('expiration.expiresTodayShort'),
+      text: tGlobal('labels.expiresToday'),
       isExpired: false,
       isUrgent: true,
     };

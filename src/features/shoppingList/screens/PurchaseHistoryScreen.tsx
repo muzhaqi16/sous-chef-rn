@@ -17,7 +17,7 @@ import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import {
   PurchaseHistoryProvider,
@@ -310,7 +310,7 @@ export const PurchaseHistoryScreen: React.FC<
         <ThemedBackButton onPress={goBack} style={styles.backButton} />
         <View style={styles.headerContent}>
           <Text size="lg" weight="semibold">
-            {t('purchaseHistory.title')}
+            {t('labels.purchaseHistory')}
           </Text>
           <Text size="sm" tone="secondary" style={styles.headerSubtitle}>
             {itemName}

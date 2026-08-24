@@ -1,5 +1,5 @@
 import React from 'react';
-import { useDefaultHome } from '#hooks/home/useDefaultHome';
+import { useDefaultHome } from '#features/home/hooks/useDefaultHome';
 
 interface AuthenticatedDataProviderProps {
   userId: string;

@@ -104,7 +104,7 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
             </Text>
             <View style={styles.macroRow}>
               <MacroStat
-                label={t('nutritionSummary.macroCalories')}
+                label={t('labels.calories')}
                 value={nutritionSummary.avgDailyCalories}
                 unit={t('nutritionSummary.unitKcal')}
               />
@@ -114,7 +114,7 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
                 unit={t('nutritionSummary.unitGrams')}
               />
               <MacroStat
-                label={t('nutritionSummary.macroCarbs')}
+                label={t('labels.carbs')}
                 value={nutritionSummary.avgDailyCarbs}
                 unit={t('nutritionSummary.unitGrams')}
               />

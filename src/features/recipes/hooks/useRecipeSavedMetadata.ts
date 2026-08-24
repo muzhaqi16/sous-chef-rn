@@ -87,7 +87,7 @@ export function useRecipeSavedMetadata({
       },
       onError: err => {
         errorService.reportError(err, { operation: 'updateFavoriteRecipe' });
-        toastService.error(err.message || t('recipes.updateRecipeMetaFailed'));
+        toastService.error(err.message || t('labels.failedToUpdateRecipe'));
       },
     },
   );

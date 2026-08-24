@@ -27,9 +27,12 @@ import {
 } from '#/utils/errorHandlers';
 import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t } from '#/i18n';
 import { buildDirtyUpdateInput, buildOptimisticUnit } from './utils';
 import type { FormDataInput, UnitSelection } from './types';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
+import { logger } from '#/utils/environment';
 
 interface UseUpdatePantryItemOptions {
   onSuccess?: () => void;
@@ -99,7 +102,7 @@ export function useUpdatePantryItem({
       });
 
     if (!currentItem) {
-      console.warn('Item not found, cannot update:', itemId);
+      logger.warn('Item not found, cannot update:', itemId);
       return;
     }
 
@@ -189,9 +192,19 @@ export function useUpdatePantryItem({
     })
       .then(result => {
         // 'queued' (null payload, no error) keeps the permanent write — the
-        // change replays later. A rejection (ValidationError / version
-        // conflict / surfaced error) restores the pre-edit snapshot; the
-        // user-facing alert comes from the mutation's onError.
+        // change replays later. A rejection restores the pre-edit snapshot.
+        //
+        // A transport/GraphQL error reaches the user through `onError` above.
+        // A refused union payload (`ValidationError`, a version conflict)
+        // resolves as DATA with no error, so `onError` never fires for it —
+        // without the alert below the edit just snaps back unexplained. One
+        // such refusal is reachable from the edit form: since 2026-08-22 the
+        // server resolves a bare `unit.unitSymbol` to a real unit and refuses
+        // the change while the item still has batches, or when no conversion
+        // exists (docs/api/breaking-changes.md). Those arrive as a
+        // ValidationError with `field: "unit"`, which routes to localized
+        // `errors.field.unit` copy — the generic copy is only for an
+        // unattributed refusal. The server's `message` is English and unused.
         const outcome = classifyCreateResult(result);
         if (outcome === 'rejected') {
           try {
@@ -201,6 +214,7 @@ export function useUpdatePantryItem({
               operation: 'Revert rejected Pantry Item update',
             });
           }
+          alertRejectedMutation(result, t('errors.updateItemFailed'));
         }
       })
       .catch(error => {

@@ -200,6 +200,8 @@ export function useToggleShoppingItem({
     // 'queued' (null payload, offline) keeps the optimistic flip.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
+      // A field-attributed ValidationError routes to LOCALIZED `errors.field.*`
+      // copy; the copy below is the fallback. The server's `message` is never shown.
       alertRejectedMutation(result, t('errors.updateItemFailed'));
       return false;
     }
@@ -216,6 +218,11 @@ export function useToggleShoppingItem({
    * offline persistence, but fires updateShoppingListItem with `purchaseTracking`
    * (the toggle input can't carry amounts). `purchasedPrice` is omitted when null
    * so the server falls back to its own auto-derivation.
+   *
+   * `purchasedPrice` is PER UNIT: the server records
+   * `Purchase.totalPrice = purchasedPrice × purchasedQuantity`, and move-to-pantry
+   * derives its per-unit cost from it. The Mark Purchased sheet collects the
+   * total paid; `usePurchaseAmountModal` divides before calling this.
    */
   const recordPurchase = async (
     itemId: string,
@@ -325,7 +332,8 @@ export function useToggleShoppingItem({
     if (!result) return false;
 
     // Same contract as toggleItem's guard: only handle the resolved
-    // error-union case here; `result.error` was already routed by `onError`.
+    // error-union case here; `result.error` was already routed by `onError`,
+    // and a field-specific ValidationError routes to localized `errors.field.*`.
     if (!result.error && classifyCreateResult(result) === 'rejected') {
       revert();
       alertRejectedMutation(result, t('errors.updateItemFailed'));

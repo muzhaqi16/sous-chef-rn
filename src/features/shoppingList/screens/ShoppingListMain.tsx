@@ -8,7 +8,7 @@ import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabBar } from '#features/shoppingList/components/ShoppingListTabs/FilterTabBar';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { ShoppingListSkeleton } from '#components/base/Skeleton/ShoppingListSkeleton';
+import { ShoppingListSkeleton } from '#components/atoms/Skeleton/ShoppingListSkeleton';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -88,7 +88,7 @@ const ShoppingListMainFallback: React.FC = () => {
     <TabMainScreen testID="shopping-list-screen">
       <TabScreenHeader
         label={t('shoppingListScreen.label')}
-        title={t('shoppingListScreen.title')}
+        title={t('labels.shoppingList')}
       />
       <View style={styles.searchBarContainer}>
         <SearchBar

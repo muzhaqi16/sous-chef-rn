@@ -32,7 +32,7 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
         style={styles.barcodeLabel}
       >
         {scannedValue && detectScanType(scannedValue) === 'sku'
-          ? t('barcode.sku')
+          ? t('labels.sku')
           : t('barcode.upc')}
       </Text>
       <Text size="md" weight="medium" style={styles.barcodeValue}>

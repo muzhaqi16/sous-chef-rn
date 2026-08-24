@@ -19,7 +19,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { StyleSheet } from 'react-native-unistyles';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
-import { NotificationItem } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { Icon } from '#utils/iconUtils';
 import { Title } from '#components/atoms/Title';
 import { Text } from '#components/atoms/Text';

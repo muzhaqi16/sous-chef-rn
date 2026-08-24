@@ -49,7 +49,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       <View style={styles.row}>
         <View style={styles.halfField}>
           <EditableCounter
-            label={t('recipes.servings')}
+            label={t('labels.servings')}
             value={state.servings}
             onChangeText={v => updateField('servings', v)}
             min={1}
@@ -89,7 +89,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       </View>
 
       <FormTextArea
-        label={t('recipes.tips')}
+        label={t('labels.tips')}
         value={state.tips}
         onChangeText={v => updateField('tips', v)}
         placeholder={t('recipes.tipsPlaceholder')}
@@ -99,7 +99,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
         label={t('recipes.recipeTags')}
         value={state.tags}
         onChangeText={v => updateField('tags', v)}
-        placeholder={t('recipes.recipeTagsPlaceholder')}
+        placeholder={t('labels.commaSeparated')}
         autoCapitalize="none"
       />
 

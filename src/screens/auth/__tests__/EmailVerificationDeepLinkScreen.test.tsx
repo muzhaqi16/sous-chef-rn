@@ -86,7 +86,7 @@ jest.mock('#components/molecules/Header', () => {
   };
 });
 
-jest.mock('#/components/base/SousChefLoader', () => {
+jest.mock('#components/atoms/SousChefLoader', () => {
   const { Text } = require('react-native');
   return {
     SousChefLoader: ({ message }: { message?: string }) => (

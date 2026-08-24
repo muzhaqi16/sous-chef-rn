@@ -5,7 +5,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
 import { EmptyNotifications } from '#features/notifications/components/EmptyNotifications';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { NotificationHeader } from '#features/notifications/components/NotificationHeader';
 import { NotificationGroupHeader } from '#features/notifications/components/NotificationGroupHeader';
@@ -13,7 +13,7 @@ import { NotificationFilters } from '#features/notifications/components/Notifica
 import { UrgentNotificationsBanner } from '#features/notifications/components/UrgentNotificationsBanner';
 import { useNotifications } from '#features/notifications/hooks/useNotifications';
 import { useNotificationHistory } from '#features/notifications/hooks/useNotificationHistory';
-import { NotificationItem as NotificationType } from '#store/slices/notificationSlice';
+import type { DisplayNotification as NotificationType } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { Header } from '#components/molecules/Header';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -21,7 +21,7 @@ import { NotificationActionHandler } from '#features/notifications/components/No
 import {
   groupNotificationsByDate,
   createSectionListData,
-} from '#utils/notificationGrouping';
+} from '#features/notifications/utils/notificationGrouping';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const NotificationListScreen: React.FC = () => {
@@ -33,17 +33,18 @@ export const NotificationListScreen: React.FC = () => {
     useState<NotificationCategory | null>(null);
 
   const {
-    notifications,
     handleMarkAsRead,
     handleMarkAllAsRead,
     handleRemoveNotification,
-    clearAll,
-    getNotificationsByCategory,
+    handleClearRead,
   } = useNotifications();
 
-  // Load the paginated read + unread history (server-side category filter) into
-  // the store so the feed shows history and can page past the startup batch.
+  // The feed. The category filter is applied SERVER-side by this query, so
+  // there is no second client-side filter here — there used to be one, over a
+  // Zustand copy of the same rows, which could disagree with the query that
+  // produced them.
   const {
+    notifications,
     loadMore,
     loadingMore,
     loading: historyLoading,
@@ -52,16 +53,7 @@ export const NotificationListScreen: React.FC = () => {
     refetch: refetchHistory,
   } = useNotificationHistory(filterCategory, true);
 
-  // Filter notifications based on selected category
-  const filteredNotifications = (() => {
-    if (!filterCategory) return notifications;
-    return getNotificationsByCategory(filterCategory);
-  })();
-
-  // Group filtered notifications using utility
-  const filteredGroups = (() => {
-    return groupNotificationsByDate(filteredNotifications);
-  })();
+  const filteredGroups = groupNotificationsByDate(notifications);
 
   const historyState = useDataState({
     loading: historyLoading,
@@ -128,7 +120,7 @@ export const NotificationListScreen: React.FC = () => {
 
   const renderHeader = () => (
     <Header
-      title={t('notifications.listTitle')}
+      title={t('labels.notifications')}
       centerTitle={true}
       onBack={goBack}
       rightActions={[
@@ -180,7 +172,11 @@ export const NotificationListScreen: React.FC = () => {
 
             <NotificationHeader
               onMarkAllRead={handleMarkAllAsRead}
-              onClearAll={clearAll}
+              onClearRead={() =>
+                handleClearRead(
+                  notifications.filter(n => n.isRead).map(n => n.id),
+                )
+              }
               hasNotifications={hasNotifications}
             />
 

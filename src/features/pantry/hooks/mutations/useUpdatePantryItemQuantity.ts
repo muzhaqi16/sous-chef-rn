@@ -29,6 +29,7 @@ import { buildOptimisticUnit } from './utils';
 import type { UnitSelection } from './types';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { logger } from '#/utils/environment';
 
 interface UseUpdatePantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -83,7 +84,7 @@ export function useUpdatePantryItemQuantity({
       );
 
     if (!currentItem) {
-      console.warn('Item not found, cannot update quantity:', itemId);
+      logger.warn('Item not found, cannot update quantity:', itemId);
       return;
     }
 

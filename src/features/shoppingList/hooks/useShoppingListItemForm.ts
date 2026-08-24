@@ -22,19 +22,39 @@ type FormState = {
   /** Preferred store (storePrefs.preferredStoreId). */
   storeId: string | null;
   storeName: string;
+  /** Brand as typed; `brandId` is set only by picking a suggestion. */
+  brand: string;
+  brandId: string | null;
+  /** Package size (net weight) as typed, plus its unit. */
+  netWeight: string;
+  netWeightUnit: string;
+  netWeightUnitId: string | null;
 };
 
-type DirtyFields = {
-  itemName: boolean;
-  quantityInput: boolean;
-  unit: boolean;
-  selectedUnitId: boolean;
-  notes: boolean;
-  category: boolean;
-  estimatedPrice: boolean;
-  priority: boolean;
-  storeId: boolean;
-};
+/**
+ * `storeName` is deliberately absent: it is the display label for `storeId`,
+ * never sent on its own.
+ */
+type DirtyField = Exclude<keyof FormState, 'storeName'>;
+type DirtyFields = Record<DirtyField, boolean>;
+
+/** The one list — the dirty map and its default are derived from it. */
+const DIRTY_FIELDS: readonly DirtyField[] = [
+  'itemName',
+  'quantityInput',
+  'unit',
+  'selectedUnitId',
+  'notes',
+  'category',
+  'estimatedPrice',
+  'priority',
+  'storeId',
+  'brand',
+  'brandId',
+  'netWeight',
+  'netWeightUnit',
+  'netWeightUnitId',
+];
 
 const DEFAULT_FORM_STATE: FormState = {
   itemName: '',
@@ -47,19 +67,21 @@ const DEFAULT_FORM_STATE: FormState = {
   priority: 0,
   storeId: null,
   storeName: '',
+  brand: '',
+  brandId: null,
+  netWeight: '',
+  netWeightUnit: '',
+  netWeightUnitId: null,
 };
 
-const DEFAULT_DIRTY_FIELDS: DirtyFields = {
-  itemName: false,
-  quantityInput: false,
-  unit: false,
-  selectedUnitId: false,
-  notes: false,
-  category: false,
-  estimatedPrice: false,
-  priority: false,
-  storeId: false,
-};
+const buildDirtyFields = (
+  isDirty: (field: DirtyField) => boolean,
+): DirtyFields =>
+  Object.fromEntries(
+    DIRTY_FIELDS.map(field => [field, isDirty(field)]),
+  ) as DirtyFields;
+
+const DEFAULT_DIRTY_FIELDS: DirtyFields = buildDirtyFields(() => false);
 
 export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   const [formState, setFormState] = useState<FormState>({
@@ -73,23 +95,9 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   );
 
   // Compute dirty fields by comparing current state with initial state
-  const dirtyFields: DirtyFields = (() => {
-    if (!savedInitialState) return DEFAULT_DIRTY_FIELDS;
-    return {
-      itemName: formState.itemName !== savedInitialState.itemName,
-      quantityInput:
-        formState.quantityInput !== savedInitialState.quantityInput,
-      unit: formState.unit !== savedInitialState.unit,
-      selectedUnitId:
-        formState.selectedUnitId !== savedInitialState.selectedUnitId,
-      notes: formState.notes !== savedInitialState.notes,
-      category: formState.category !== savedInitialState.category,
-      estimatedPrice:
-        formState.estimatedPrice !== savedInitialState.estimatedPrice,
-      priority: formState.priority !== savedInitialState.priority,
-      storeId: formState.storeId !== savedInitialState.storeId,
-    };
-  })();
+  const dirtyFields: DirtyFields = savedInitialState
+    ? buildDirtyFields(field => formState[field] !== savedInitialState[field])
+    : DEFAULT_DIRTY_FIELDS;
 
   const hasDirtyFields = Object.values(dirtyFields).some(Boolean);
 
@@ -113,9 +121,30 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       priority: item.priority ?? 0,
       storeId: item.storeInfo?.preferredStore?.id || null,
       storeName: item.storeInfo?.preferredStore?.name || '',
+      brand: item.brand?.name || '',
+      brandId: item.brand?.id || null,
+      netWeight: formatNumberForInput(item.netWeight),
+      netWeightUnit:
+        item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
+      netWeightUnitId: item.netWeightUnit?.id || null,
     };
     setFormState(state);
     setSavedInitialState(state); // Save initial state for dirty comparison
+  };
+
+  /**
+   * A net weight with no unit is a number without a meaning, and the create
+   * path rejects it outright. Screens alert on this before saving; in edit
+   * mode the item's own unit satisfies it.
+   */
+  const netWeightNeedsUnit =
+    !!formState.netWeight.trim() && !formState.netWeightUnitId;
+
+  /** Parsed net weight, or undefined when the field is empty or not a number. */
+  const parseNetWeightInput = (): number | undefined => {
+    if (!formState.netWeight.trim()) return undefined;
+    const value = parseDecimalInput(formState.netWeight);
+    return Number.isFinite(value) ? value : undefined;
   };
 
   const buildUnitInput = (): { unit: UnitSpecInput } | {} => {
@@ -174,6 +203,39 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       input.storePrefs = { preferredStoreId: formState.storeId };
     }
 
+    // Brand — BrandReferenceInput. The server lets brandId win over brandName
+    // and find-or-creates a name it does not know; an explicit `brandId: null`
+    // is the only way to remove one (omitting the sub-input leaves it alone).
+    if (dirtyFields.brand || dirtyFields.brandId) {
+      const brandName = formState.brand.trim();
+      input.brand = formState.brandId
+        ? { brandId: formState.brandId }
+        : brandName
+        ? { brandName }
+        : { brandId: null };
+    }
+
+    // Net weight — NetWeightInput. `netWeight: null` clears the value and its
+    // unit together on the server; a unit is only ever sent beside a value,
+    // because a unit with no value is rejected. A value with no unit keeps the
+    // row's existing unit.
+    if (
+      dirtyFields.netWeight ||
+      dirtyFields.netWeightUnit ||
+      dirtyFields.netWeightUnitId
+    ) {
+      const value = parseNetWeightInput();
+      input.netWeight =
+        value === undefined
+          ? { netWeight: null }
+          : {
+              netWeight: value,
+              ...(formState.netWeightUnitId && {
+                netWeightUnitId: formState.netWeightUnitId,
+              }),
+            };
+    }
+
     return input;
   };
 
@@ -192,6 +254,8 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
     updateField,
     setFromItem,
     parseQuantityInput,
+    parseNetWeightInput,
+    netWeightNeedsUnit,
     buildUnitInput,
     buildDirtyInput,
   };

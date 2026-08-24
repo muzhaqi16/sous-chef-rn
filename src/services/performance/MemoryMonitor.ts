@@ -7,6 +7,7 @@ import {
   DEFAULT_PERFORMANCE_CONFIG,
 } from './types';
 import { usePerformanceStore } from '#/store/performanceStore';
+import { logger } from '#/utils/environment';
 
 /**
  * Memory Monitor Service
@@ -192,8 +193,8 @@ class MemoryMonitorService {
     if (__DEV__) {
       const logFn =
         warning.level === MemoryWarningLevel.CRITICAL
-          ? console.error
-          : console.warn;
+          ? logger.error
+          : logger.warn;
       logFn(`[MemoryMonitor] ${warning.message}`);
     }
   }

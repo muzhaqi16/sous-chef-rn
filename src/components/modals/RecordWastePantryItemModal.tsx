@@ -41,16 +41,16 @@ interface RecordWastePantryItemModalProps {
 const WASTE_REASON_OPTIONS: Array<{ labelKey: string; value: WasteReason }> = [
   { labelKey: 'recordWaste.reasonExpired', value: WasteReason.Expired },
   { labelKey: 'recordWaste.reasonSpoiled', value: WasteReason.Spoiled },
-  { labelKey: 'recordWaste.reasonMold', value: WasteReason.Mold },
-  { labelKey: 'recordWaste.reasonPest', value: WasteReason.Pest },
-  { labelKey: 'recordWaste.reasonCookingFail', value: WasteReason.CookingFail },
+  { labelKey: 'labels.mold', value: WasteReason.Mold },
+  { labelKey: 'labels.pest', value: WasteReason.Pest },
+  { labelKey: 'labels.cookingFail', value: WasteReason.CookingFail },
   { labelKey: 'recordWaste.reasonSpilled', value: WasteReason.Spilled },
   { labelKey: 'recordWaste.reasonBurnt', value: WasteReason.Burnt },
-  { labelKey: 'recordWaste.reasonOverstock', value: WasteReason.Overstock },
+  { labelKey: 'labels.overstock', value: WasteReason.Overstock },
   { labelKey: 'recordWaste.reasonBadTaste', value: WasteReason.Taste },
-  { labelKey: 'recordWaste.reasonGaveAway', value: WasteReason.GaveAway },
-  { labelKey: 'recordWaste.reasonUnknownLoss', value: WasteReason.UnknownLoss },
-  { labelKey: 'recordWaste.reasonOther', value: WasteReason.Other },
+  { labelKey: 'labels.gaveAway', value: WasteReason.GaveAway },
+  { labelKey: 'labels.unknownLoss', value: WasteReason.UnknownLoss },
+  { labelKey: 'itemType.OTHER', value: WasteReason.Other },
 ];
 
 export const RecordWastePantryItemModal: React.FC<
@@ -104,8 +104,8 @@ export const RecordWastePantryItemModal: React.FC<
       visible={visible}
       pantryItemId={pantryItemId}
       onClose={onClose}
-      title={t('recordWaste.title')}
-      confirmLabel={t('recordWaste.recordWaste')}
+      title={t('labels.recordWaste')}
+      confirmLabel={t('labels.recordWaste')}
       confirmColor="warning"
       snapPoints={['80%', '95%']}
       unitToggleLabel={t('recordWaste.wasteBy')}
@@ -167,9 +167,7 @@ const WasteActionFields: React.FC<{
           required
           value={wasteAmountInput}
           onChangeText={setWasteAmountInput}
-          placeholder={localizeNumericHint(
-            t('recordWaste.wasteAmountPlaceholder'),
-          )}
+          placeholder={localizeNumericHint(t('labels.eG1114Or15'))}
           keyboardType="numeric"
           useBottomSheetInput
         />

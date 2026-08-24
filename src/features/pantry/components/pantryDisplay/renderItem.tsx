@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ListRenderItemInfo } from '@shopify/flash-list';
 import { PantryItemCard } from '../PantryItemCard';
-import type { PantryListItemNode } from '#hooks/home/pantry/usePantryQuery';
+import type { PantryListItemNode } from '#features/pantry/hooks/usePantryQuery';
 import {
   isStickyHeaderSentinel,
   type StickyHeaderSentinel,

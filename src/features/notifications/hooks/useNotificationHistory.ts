@@ -1,17 +1,23 @@
 /**
- * useNotificationHistory
+ * The notification feed: the paginated history (read + unread), its unread and
+ * urgent counts, and `loadMore`.
  *
- * Loads the paginated notification *history* (read + unread) for the feed and
- * feeds it into the Zustand store. Complements useNotificationsOnLaunch (which
- * only loads unread for the badge/startup): this powers the full feed, so read
- * history is present after a cache clear and can be paged with `loadMore`.
+ * This is the ONLY source of the feed. It used to copy every page into a
+ * Zustand slice that the screen then read from, which meant a live event, an
+ * optimistic read and a refetch each had two places to land and no rule about
+ * which won. The notifications live in the Apollo cache; this hook projects
+ * them for rendering and holds nothing.
  *
  * The category filter is applied server-side (via the query's `filter` var), so
  * switching category re-queries that slice rather than filtering a partial
- * local list.
+ * local list — which is also why the screen no longer filters again on top.
+ *
+ * `readFragment` per edge is not indirection: `dataMasking` hides the spread
+ * fragment's fields from the query result, so the edge's `node` is
+ * `{ __typename, id }` until it is read back through the fragment that declared
+ * them.
  */
 
-import { useEffect } from 'react';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -20,10 +26,11 @@ import {
 } from './useNotificationsOnLaunch.generated';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
-import { useStore } from '#store';
-import { MAX_NOTIFICATIONS } from '#store/slices/notificationSlice';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { mapNotificationToStore } from '#features/notifications/utils/mapNotificationToStore';
+import {
+  toDisplayNotification,
+  type DisplayNotification,
+} from '#features/notifications/utils/toDisplayNotification';
 
 const PAGE_SIZE = 30;
 
@@ -32,11 +39,8 @@ export function useNotificationHistory(
   enabled: boolean,
 ) {
   const client = useApolloClient();
-  const addMultipleNotifications = useAppStore(
-    state => state.addMultipleNotifications,
-  );
-  const setServerNotificationCounts = useAppStore(
-    state => state.setServerNotificationCounts,
+  const pendingExpirationLinks = useAppStore(
+    state => state.pendingExpirationLinks,
   );
 
   const { data, error, loading, fetchMore, networkStatus, refetch } = useQuery(
@@ -56,54 +60,27 @@ export function useNotificationHistory(
   const me = data?.me;
   const connection = me?.notificationsConnection;
 
-  useEffect(() => {
-    if (!me) return;
-    const edges = connection?.edges;
-    if (edges && edges.length > 0) {
-      const items = edges
-        .map(edge =>
-          client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>(
-            {
-              fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-              fragmentName: 'useNotificationsOnLaunch_notification',
-              from: { __typename: 'Notification', id: edge.node.id },
-            },
-          ),
-        )
-        .filter(
-          (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
-        )
-        .map(mapNotificationToStore);
-      if (items.length > 0) addMultipleNotifications(items);
-    }
-
-    // Seed the badge from the server's authoritative totals AFTER the list
-    // materializes — addMultipleNotifications recomputes counts from the local
-    // list, which would clobber a seed written first. Mirrors
-    // useNotificationsOnLaunch so history and launch agree on the count.
-    setServerNotificationCounts(
-      me.unreadNotificationCount,
-      me.hasUrgentNotifications,
-    );
-  }, [
-    me,
-    connection,
-    client,
-    addMultipleNotifications,
-    setServerNotificationCounts,
-  ]);
+  const notifications: DisplayNotification[] = (connection?.edges ?? [])
+    .map(edge =>
+      client.cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>({
+        fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
+        fragmentName: 'useNotificationsOnLaunch_notification',
+        from: { __typename: 'Notification', id: edge.node.id },
+      }),
+    )
+    .filter(
+      (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
+    )
+    .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]));
 
   const hasMore = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor ?? null;
 
   const loadMore = () => {
     if (!hasMore || !endCursor || loading) return;
-    // The feed renders from the store, which caps at MAX_NOTIFICATIONS and
-    // evicts the oldest entries — pages fetched past the cap can never become
-    // visible, so stop paging instead of fetching into eviction.
-    if (useStore.getState().notifications.length >= MAX_NOTIFICATIONS) {
-      return;
-    }
+    // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
+    // oldest, so paging past it fetched rows that could never become visible;
+    // the cache has no such ceiling and the connection merges by node id.
     fetchMore({
       variables: {
         filter: category ? { category } : undefined,
@@ -114,6 +91,9 @@ export function useNotificationHistory(
   };
 
   return {
+    notifications,
+    unreadCount: me?.unreadNotificationCount ?? 0,
+    hasUrgent: me?.hasUrgentNotifications ?? false,
     loadMore,
     hasMore,
     // networkStatus 3 = fetchMore in flight.

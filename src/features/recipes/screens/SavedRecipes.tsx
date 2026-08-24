@@ -10,7 +10,7 @@ import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { TagPicker } from '#components/molecules/TagPicker';
-import { DataStateView } from '#components/base/DataStateView';
+import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';

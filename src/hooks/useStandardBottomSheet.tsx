@@ -41,12 +41,6 @@ export interface UseStandardBottomSheetOptions {
   snapPoints: (string | number)[];
   keyboardBehavior?: 'extend' | 'fillParent' | 'interactive';
   enableDynamicSizing?: boolean;
-  /**
-   * Caps the height a dynamically-sized sheet can reach. Only meaningful with
-   * `enableDynamicSizing`; gorhom defaults it to the container height, which
-   * `topInset` has already reduced to the safe area.
-   */
-  maxDynamicContentSize?: number;
   /** Optional user-supplied onChange — wrapped so the hook can drive the
    *  global backdrop slot off gorhom's authoritative index transitions. */
   onChange?: (index: number, position: number, type: number) => void;
@@ -114,7 +108,6 @@ export function useStandardBottomSheet({
   snapPoints,
   keyboardBehavior,
   enableDynamicSizing = false,
-  maxDynamicContentSize,
   onChange: userOnChange,
   onAnimate: userOnAnimate,
 }: UseStandardBottomSheetOptions) {
@@ -290,7 +283,6 @@ export function useStandardBottomSheet({
     snapPoints,
     enablePanDownToClose: true,
     enableDynamicSizing,
-    maxDynamicContentSize,
     topInset: insets.top,
     onDismiss: safeOnDismiss,
     onChange: handleChange,

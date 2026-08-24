@@ -114,7 +114,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             accessibilityLabel={t('recipeFilters.clearAllA11y')}
           >
             <Text size="sm" weight="semibold" tone="secondary">
-              {t('recipeFilters.clear')}
+              {t('labels.clear')}
             </Text>
           </Pressable>
           <Pressable
@@ -152,7 +152,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Diet Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                {t('recipeFilters.dietTitle')}
+                {t('labels.diet')}
               </Text>
 
               {/* Lifestyle diet — single select (mutually exclusive) */}
@@ -227,7 +227,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Intolerances Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                {t('recipeFilters.intolerancesTitle')}
+                {t('labels.allergiesIntolerances')}
               </Text>
               <Text
                 size="sm"
@@ -273,7 +273,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Meal Type Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                {t('recipeFilters.mealTypeTitle')}
+                {t('labels.mealType')}
               </Text>
               <Text
                 size="sm"
@@ -318,7 +318,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
             {/* Max Cook Time Filter */}
             <View style={styles.filterSection}>
               <Text size="lg" weight="bold" style={styles.filterSectionTitle}>
-                {t('recipeFilters.maxCookTimeTitle')}
+                {t('labels.maxCookTime')}
               </Text>
               <Text
                 size="sm"

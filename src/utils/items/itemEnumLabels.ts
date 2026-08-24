@@ -47,7 +47,7 @@ const ACQUISITION_METHOD_LABEL_KEYS: Partial<
   [AcquisitionMethod.Purchased]: 'addToPantry.methodPurchased',
   [AcquisitionMethod.Homegrown]: 'addToPantry.methodHomegrown',
   [AcquisitionMethod.Gifted]: 'addToPantry.methodGifted',
-  [AcquisitionMethod.Other]: 'addToPantry.methodOther',
+  [AcquisitionMethod.Other]: 'itemType.OTHER',
 };
 
 /** i18n key for an `AcquisitionMethod` (falls back to the raw value if unmapped). */

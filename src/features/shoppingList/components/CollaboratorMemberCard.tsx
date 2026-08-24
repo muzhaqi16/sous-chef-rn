@@ -39,7 +39,7 @@ const getFormatStatus = (t: Translate) => (status: string) => {
     case 'EXPIRED':
       return t('shoppingListScreens.statusExpired');
     default:
-      return status || t('shoppingListScreens.statusUnknown');
+      return status || t('labels.unknown');
   }
 };
 
