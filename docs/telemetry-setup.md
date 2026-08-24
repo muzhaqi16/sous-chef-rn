@@ -215,6 +215,13 @@ in release, so the series exists and is permanently empty - which reads as
 `logger.debug`; gate reporting volume with `enabled` / `sampleRate` instead.
 Enforced by `__tests__/telemetry/noDevGatedMetrics.test.ts`.
 
+**Every log carries `device_id` and `session_id`** as BODY fields, not Loki
+stream labels — query them with `| json | device_id="..."`. A label per device or
+per run would multiply the stream count. Metrics deliberately carry NEITHER: a
+per-device metric label is unbounded cardinality, the same defect as putting a
+duration in a label. Attribute a metric by correlating it with logs from the same
+`session_id`, not by labelling the metric.
+
 **Do not instrument with `logger.*` when the answer must be visible in
 release.** `logger` (`src/utils/environment.ts`) writes to `console` only and
 never reaches Loki, and console output is stripped from release builds. Use
