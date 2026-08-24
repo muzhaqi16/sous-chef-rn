@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
 import { HeaderActionIcon } from '#components/atoms/HeaderActionIcon';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
 
@@ -178,8 +179,15 @@ export const Header: React.FC<HeaderProps> = ({
       ) : (
         <View style={styles.titleSpacer} />
       )}
-      {/* Right side */}
-      <View style={styles.actions}>{rightActions.map(renderAction)}</View>
+      {/* Right side. The offline pill leads the action group so every screen
+          using this header carries the signal — previously only the four tab
+          headers did, so pushing into any detail screen silently dropped it and
+          the app looked online while it was not. Renders null when online, so
+          screens with no actions are unaffected. */}
+      <View style={styles.actions}>
+        <OfflineStatusPill size={22} />
+        {rightActions.map(renderAction)}
+      </View>
     </View>
   );
 };

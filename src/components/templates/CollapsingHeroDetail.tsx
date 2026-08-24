@@ -17,6 +17,7 @@ import Animated, {
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
+import { OfflineStatusPill } from '#components/atoms/OfflineStatusPill';
 import {
   HeaderActionIcon,
   type HeaderAction,
@@ -272,6 +273,11 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
             ) : null}
           </Animated.View>
           <View style={styles.actionsRow}>
+            {/* Leads the chips so a pushed detail screen carries the offline
+                signal too — it used to live only on the four tab headers, so
+                navigating into a detail silently dropped it. Renders null when
+                online, leaving the chip row untouched. */}
+            <OfflineStatusPill size={22} />
             {actions.map((action, index) => (
               <HeroChip
                 key={action.testID ?? `${action.icon}-${index}`}
