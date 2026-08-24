@@ -5,6 +5,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import type { errorService } from '#/services/errorService';
+import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
@@ -37,6 +38,7 @@ jest.mock('#/services/errorService', () => ({
 
 jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   removeFromPantryItemsCache: jest.fn(),
+  adjustPantryItemCount: jest.fn(),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
@@ -199,6 +201,33 @@ describe('usePantryItemDetailActions', () => {
         expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    });
+
+    it('withdraws the row even when the delete is only queued', async () => {
+      // This screen used to own a second DeletePantryItem whose only cache work
+      // was an `update:` callback. That never runs when the delete is queued
+      // offline, so the screen navigated back and the row was still in the
+      // list. The shared `removeItem` withdraws it before firing, which is why
+      // this holds with a queued (no data, no error) result.
+      const queuedDelete = recordMock(DeletePantryItemDocument, {});
+
+      const { result } = setup({}, { operationMocks: [queuedDelete.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      const deleteButton = alertCalls[alertCalls.length - 1][2][1];
+      await act(async () => {
+        deleteButton.onPress();
+      });
+
+      await waitFor(() =>
+        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'pantry-1',
+          'item-1',
+          { evictItem: true },
+        ),
+      );
     });
   });
 

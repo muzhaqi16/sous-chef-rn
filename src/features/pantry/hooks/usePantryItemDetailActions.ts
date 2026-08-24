@@ -9,11 +9,6 @@ import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
-import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  removeFromPantryItemsCache,
-  adjustPantryItemCount,
-} from '#/apollo/utils/pantryCacheUpdaters';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -24,6 +19,7 @@ import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useCo
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
+import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 
 type PantryItemForActions =
   | {
@@ -105,21 +101,18 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  const [deleteItem] = useMutation(DeletePantryItemDocument, {
-    update: (cache, { data: mutationData }, { variables }) => {
-      const payload = mutationData?.deletePantryItem;
-      if (
-        payload?.__typename !== 'DeletePantryItemPayload' ||
-        !selectedPantryId ||
-        !variables
-      ) {
-        return;
-      }
-      removeFromPantryItemsCache(cache, selectedPantryId, variables.input.id, {
-        evictItem: true,
-      });
-      adjustPantryItemCount(cache, selectedPantryId, -1);
-    },
+  // The shared delete rather than a second one here. This screen used to own a
+  // `DeletePantryItem` mutation whose only cache work was an `update:` callback,
+  // which never runs when the delete is queued offline: the screen navigated
+  // back and the row was still in the list. `removeItem` evicts before firing,
+  // adjusts the count, and registers the pending-delete that keeps a
+  // subscription echo from resurrecting the row.
+  const { removeItem } = usePantryItemMutations({
+    pantryId: selectedPantryId ?? '',
+    // `refetch` backs the shared hook's UPDATE path (version-conflict refresh);
+    // `removeItem` never consults it, and this screen navigates back on delete,
+    // so there is no view left to refresh.
+    refetch: () => {},
   });
 
   const [addToShoppingList] = useMutation(
@@ -161,7 +154,7 @@ export function usePantryItemDetailActions({
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteItem({ variables: { input: { id: itemId } } });
+              await removeItem(itemId);
               goBack();
             } catch (error) {
               errorService.reportError(error, {

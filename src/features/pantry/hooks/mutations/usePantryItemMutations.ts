@@ -134,8 +134,10 @@ export function usePantryItemMutations({
       }
 
       const itemId = variables.input.id;
+      // Connection removal only. The count is adjusted beside the pre-fire
+      // evict below, which runs whether or not the delete reaches the server —
+      // doing it here as well double-counted online, where both paths run.
       removeFromPantryItemsCache(cache, pantryId, itemId, { evictItem: true });
-      adjustPantryItemCount(cache, pantryId, -1);
     },
   });
 

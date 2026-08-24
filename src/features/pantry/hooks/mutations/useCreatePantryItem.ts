@@ -72,7 +72,6 @@ export function useCreatePantryItem({
 
       try {
         addToPantryItemsCache(cache, pantryId, pantryItem);
-        adjustPantryItemCount(cache, pantryId, 1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Cache update failed:',
@@ -198,6 +197,10 @@ export function useCreatePantryItem({
     );
     try {
       addToPantryItemsCache(client.cache, targetPantryId, optimisticItem);
+      // Bumped HERE, beside the optimistic row, not in the mutation's `update:`
+      // callback — that callback only runs with a server payload, so offline
+      // the row appeared while the header kept the old count.
+      adjustPantryItemCount(client.cache, targetPantryId, 1);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -228,6 +231,7 @@ export function useCreatePantryItem({
       // Already in the pantry → the server keeps the existing row, not our
       // optimistic cuid. Evict the phantom optimistic item.
       safeEvict(client.cache, 'PantryItem', id);
+      adjustPantryItemCount(client.cache, targetPantryId, -1);
       return new Promise<boolean>(resolve => {
         promptPantryDuplicate({
           onCancel: () => resolve(false),
@@ -332,6 +336,7 @@ export function useCreatePantryItem({
       // The server refused the create — discard the item we showed. Surface a
       // real (non-network) error; a non-success payload has none.
       safeEvict(client.cache, 'PantryItem', id);
+      adjustPantryItemCount(client.cache, targetPantryId, -1);
       if (result.error) {
         handleMutationError(result.error, { operation: 'Create Pantry Item' });
       }
