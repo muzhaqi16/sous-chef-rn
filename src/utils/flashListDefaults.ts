@@ -13,7 +13,7 @@ type FlashListPerformanceProps = Pick<
 // benefits from earlier prefetch.
 export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
   fullScreen: {
-    drawDistance: Math.round(Dimensions.get('window').height * 2),
+    drawDistance: Math.round(Dimensions.get('window').height),
     maxItemsInRecyclePool: 15,
     onEndReachedThreshold: 0.5,
   },
@@ -23,7 +23,7 @@ export const FLASHLIST_DEFAULTS: Record<string, FlashListPerformanceProps> = {
     onEndReachedThreshold: 0.5,
   },
   analyticsHeavyFullScreen: {
-    drawDistance: Math.round(Dimensions.get('window').height * 2),
+    drawDistance: Math.round(Dimensions.get('window').height),
     maxItemsInRecyclePool: 15,
     onEndReachedThreshold: 0.8,
   },

@@ -201,7 +201,6 @@ export const OverlayBackdropProvider: React.FC<
     next => {
       opacity.set(next);
     },
-    [slots],
   );
 
   // Zero-floor: an empty slot set has no contributor SV left to drive the

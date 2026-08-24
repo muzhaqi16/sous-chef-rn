@@ -41,7 +41,7 @@ export const OnboardingSteps: React.FC<OnboardingStepsProps> = ({
         { translateX: withSpring(activeWidth - fullWidth, SPRING.DEFAULT) },
       ],
     };
-  }, [stepSize, stepSpacing, externalSpacing, fullWidth]);
+  });
 
   return (
     <View

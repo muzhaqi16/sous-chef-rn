@@ -1,6 +1,6 @@
 # Sous Chef RN — project instructions
 
-React Native 0.85 (New Architecture) · React 19.2 + React Compiler · Apollo
+React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
 Client 4.1 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
@@ -253,8 +253,13 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `RootNavigator.Navigation` (React Navigation `Theme`), `TrendLineChart`
   (Skia draw calls), `RecipeMain`/`SortableShoppingList` (theme colors into
   data structures).
-- The Unistyles babel plugin runs **before** `babel-plugin-react-compiler`
-  (`babel.config.js`); reversing the order produces compile errors.
+- `babel-plugin-react-compiler` runs **before** the Unistyles babel plugin
+  (`babel.config.js`) — the reverse of the Unistyles docs, deliberately.
+  Unistyles' transform of `styles.useVariants(...)` emits an assignment the
+  compiler cannot lower, which fails the whole file and silently drops its
+  memoization. Verified vs `react-native-unistyles@3.3.0` +
+  `babel-plugin-react-compiler@1.0.0`. If theme updates ever go stale, suspect
+  this ordering first.
 
 ### Pressable & gestures
 
@@ -297,8 +302,8 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   Find the unconverted set:
   `grep -rl BottomSheetKeyboardAwareScrollView src` (the production files
   besides the component and its wrapper). `bottomOffset` measures from the
-  input's **bottom edge** — Verified 2026-08-23 vs
-  `react-native-keyboard-controller@1.20.7`:
+  input's **bottom edge** — Verified 2026-08-24 vs
+  `react-native-keyboard-controller@1.22.4`:
   `docs/verified-library-behaviour.md#keyboard-controller-bottomoffset-measures-input-bottom`.
 - **Never wrap a scrollable (`FlashList` via
   `useBottomSheetScrollableCreator`, `BottomSheetScrollView`,
@@ -325,9 +330,9 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `perfCallbacks.CellRendererComponent`** — that renderer is how blank cells
   are counted; FlashList's own viewability is geometric and 250 ms-lagged.
   `docs/flashlist-performance-analysis.md` § Reading the instrumentation.
-- **Never use `InteractionManager`** — in the installed RN 0.85.3 it is a
+- **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
-  `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-23:
+  `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
   `docs/verified-library-behaviour.md#interactionmanager-is-a-no-op-stub`.
 
 ### Autocomplete & dropdowns
@@ -372,9 +377,10 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
 
 - **Default to NOT writing `useMemo` / `useCallback` / `React.memo`** — the
   compiler memoizes. A default, not an absolute; manual memoization is right
-  for: a value feeding a **dependency array**, a prop read by something the
-  compiler did not compile (a third-party `===` check), and any file in the
-  bailout baseline (`scripts/check-compiler-bailouts.baseline.json`). The
+  for: a value feeding a **dependency array**, and a prop read by something the
+  compiler did not compile (a third-party `===` check). The bailout baseline
+  (`scripts/check-compiler-bailouts.baseline.json`) is empty — a file appearing
+  there is a regression to fix, not a licence to memoize. The
   lint rule is an error so the exception is written down:
   `// eslint-disable-next-line no-restricted-imports` + the reason.
 - **Two `try` shapes bail the compiler out of the whole function**: a
@@ -401,10 +407,13 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `docs/verified-library-behaviour.md#react-compiler-try-shapes`.
 - **Never read or write `ref.current` during render** — use the
   adjusting-state-during-render pattern for previous/current comparisons.
-- Hook return objects and inline `renderItem`s are auto-memoized only in files
-  the compiler actually compiled. If a profile points at a component whose
-  parent is in the bailout baseline, `React.memo` there is a legitimate fix —
-  say so in a comment.
+- Hook return objects and inline `renderItem`s are auto-memoized in every file
+  the compiler reaches. Reach for `React.memo` only once a profile shows a
+  specific component re-rendering on unchanged props, and say so in a comment.
+- Memoization only skips **re-renders**; it never makes a **mount** cheaper.
+  A profile dominated by `(mount)` rows — a list paginating, a screen opening —
+  will not improve from `React.memo` or the compiler. Reduce elements per row
+  or mount fewer of them instead.
 
 ## Worklets — `scheduleOnRN`
 

@@ -92,7 +92,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         },
       ],
     };
-  }, [visuallyChecked]);
+  });
 
   const handlePressIn = () => {
     if (!disabled) {

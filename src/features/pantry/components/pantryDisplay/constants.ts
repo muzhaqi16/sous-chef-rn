@@ -3,15 +3,13 @@ import { t } from '#/i18n';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
-// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
-// ~95px/item. Previous testing showed 1.5× had too few pre-rendered cells
-// (12.2% sustained blanks) while 3×+ was excessive. Two caveats on that
-// number: it was taken with the FlashList data behind `useDeferredValue`,
-// since removed (docs/flashlist-layout-index-race.md), and the blank-cell
-// metric it came from mostly measures scroll velocity
-// (docs/flashlist-performance-analysis.md, "Reading the instrumentation").
-// If pagination ever feels heavier, judge by long frames, not blank %.
-export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
+// Screen-relative draw distance: 1× viewport. At 2× the render window spans more
+// rows than a whole page, so a pagination append mounts the entire page in one
+// commit — on a physical device that stall reached 3.3s. One viewport keeps the
+// burst under a page and still pre-renders a full screen ahead, with no blank
+// cells. Tune this only against a physical device: an emulator understates the
+// stall several-fold because its jank is dominated by GPU-transport wait.
+export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height);
 
 // Minimum height for structural empty states (no home / no home selected)
 // so EmptyState's justifyContent:'center' works inside FlashList footer

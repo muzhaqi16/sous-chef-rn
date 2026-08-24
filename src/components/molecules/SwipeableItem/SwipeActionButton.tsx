@@ -75,7 +75,7 @@ const SwipeActionButtonComponent: React.FC<SwipeActionButtonProps> = ({
       opacity,
       transform: [{ scale }],
     };
-  }, [progress, startThreshold, endThreshold]);
+  });
 
   const handlePress = () => {
     onPress();

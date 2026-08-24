@@ -22,15 +22,16 @@ import {
   type ShoppingListRowOptions,
 } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
-import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
-// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
-// ~95px/item. Provides better scroll coverage while keeping pagination cost
-// manageable.
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
+// Screen-relative draw distance: 1× viewport, so the window stays narrower than a
+// whole ITEMS_PAGE_SIZE page and an append cannot mount the entire page in one
+// commit — the dominant stall on this screen. See pantryDisplay/constants.ts
+// DRAW_DISTANCE before changing it.
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };
@@ -76,7 +77,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onMomentumScrollEnd,
   scrollEventThrottle,
 }) => {
-  useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
+  useCommitTracking('SortableShoppingList');
   const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
 
   const perfCallbacks = useFlashListPerformance(flashListRef, {

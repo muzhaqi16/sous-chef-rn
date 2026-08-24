@@ -29,7 +29,7 @@ export const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
         duration: TIMING.STANDARD,
       }),
     };
-  }, [showBackButton]);
+  });
 
   return (
     <View style={styles.container}>

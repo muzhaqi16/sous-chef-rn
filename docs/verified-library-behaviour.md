@@ -61,7 +61,7 @@ implementation from `useIsBottomSheetInput()` context rather than hardcoding.
 focused input's **bottom edge**, not the caret its docstring mentions; the
 library default is `0`.
 
-**Verified against `react-native-keyboard-controller@1.20.7`.**
+**Verified against `react-native-keyboard-controller@1.22.4`.**
 `KeyboardAwareScrollView/index.tsx` computes
 `point = absoluteY + inputHeight` and scrolls when
 `visibleRect - point <= bottomOffset`; the prop defaults to `0` in the same
@@ -151,7 +151,7 @@ not merely deprecated, it is a no-op stub. `runAfterInteractions` is just
 `setImmediate`; `createInteractionHandle()` returns `-1`;
 `clearInteractionHandle`/`addListener`/`setDeadline` do nothing.
 
-**Verified against `react-native@0.85.3`.**
+**Verified against `react-native@0.86.3`.**
 `node_modules/react-native/Libraries/Interaction/InteractionManager.js`
 exports `InteractionManagerStub` with `@deprecated` tags on the module doc and
 every method. Use `requestIdleCallback` for deferring non-urgent work.
