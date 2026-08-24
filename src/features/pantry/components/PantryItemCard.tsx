@@ -23,6 +23,7 @@ import { SLIDE_PRESETS } from '#/constants/animations';
 import { usePantryActions } from './PantryActionsContext';
 import { Text } from '#components/atoms/Text';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import {
   getExpirationStatus,
   formatPackageBreakdown,
@@ -180,6 +181,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
 
   const { actions, swipeable } = usePantryActions();
 
+  // A row created or edited offline was visually identical to a synced one, so
+  // there was no way to tell what had actually reached the server. Called
+  // BEFORE the `!complete` early return — a hook after it is conditional, which
+  // bails the whole component out of the React Compiler. The snapshot is a
+  // boolean, so this re-renders the row only when its own state flips.
+  const isPendingSync = useIsPendingSync(pantryItem?.id);
+
   if (!complete) return null;
 
   const id = pantryItem.id;
@@ -282,6 +290,13 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const expirationBold = !!expirationVariant && expirationVariant !== 'normal';
 
   const getSubtitle = () => {
+    if (isPendingSync) {
+      return (
+        <Text weight="medium" tone="secondary" style={styles.pendingSync}>
+          {t('status.syncing')}
+        </Text>
+      );
+    }
     if (isOutOfStock) {
       return (
         <Text weight="medium" tone="warning" style={styles.outOfStock}>
@@ -362,6 +377,9 @@ const styles = StyleSheet.create(theme => ({
         normal: { color: theme.colors.textSecondary },
       },
     },
+  },
+  pendingSync: {
+    fontStyle: 'italic',
   },
   outOfStock: {
     fontSize: theme.typography.fontSize.sm - 1,
