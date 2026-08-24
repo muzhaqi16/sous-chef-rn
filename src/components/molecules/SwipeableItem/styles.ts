@@ -16,10 +16,6 @@ export const styles = StyleSheet.create(theme => {
   const SWIPEABLE_RADIUS = theme.radii.lg;
 
   return {
-    gestureContainer: {
-      overflow: 'visible', // Allow shadow to show and actions to extend
-    },
-
     // Container style for Swipeable component (shadow shape only, no visible background)
     swipeableContainer: {
       overflow: 'visible',
@@ -31,7 +27,7 @@ export const styles = StyleSheet.create(theme => {
 
     // Children container style for Swipeable component.
     // No borderRadius here — the card inside handles its own rounding.
-    // overflow must stay `visible` (like gestureContainer/swipeableContainer) so
+    // overflow must stay `visible` (like swipeableContainer) so
     // the card child's soft drop shadow fades to transparent instead of being
     // clipped to a hard rectangular edge at the card bounds. The card sets its
     // own borderRadius, so nothing here needs clipping.

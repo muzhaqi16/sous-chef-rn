@@ -54,8 +54,6 @@ type LoadState = 'idle' | 'loading' | 'success' | 'error';
 const loadedUris = new Set<string>();
 const MAX_LOADED_URIS = 500;
 
-const HIDDEN: { display: 'none' } = { display: 'none' };
-
 // Cross-fade duration for a freshly-decoded image. Applied only on first load;
 // images already in `loadedUris` (e.g. scrolled back into view) render instantly
 // so the list doesn't flicker on recycle.
@@ -143,33 +141,27 @@ export const CachedImage = ({
         onFailure={handleFailure}
         {...rest}
       />
-      {/* Loading overlay — fully declarative, resets via useRecyclingState */}
-      <View
-        style={[
-          styles.overlay,
-          radiusOverride,
-          loadState !== 'loading' && HIDDEN,
-        ]}
-      >
-        {loadState === 'loading' && (
+      {/* Overlays mount only in their own state. Both are absolutely
+          positioned, so dropping them is layout-neutral, and a settled image is
+          the steady state for every row in a list — leaving them mounted cost
+          two views and an icon per row for nothing. `useRecyclingState` still
+          resets loadState on recycle, so a reused cell re-enters 'loading' and
+          the skeleton comes back. */}
+      {loadState === 'loading' && (
+        <View style={[styles.overlay, radiusOverride]}>
           <SkeletonBase
             width="100%"
             height={9999}
             borderRadius={0}
             style={styles.skeleton}
           />
-        )}
-      </View>
-      {/* Error overlay — fully declarative */}
-      <View
-        style={[
-          styles.errorOverlay,
-          radiusOverride,
-          loadState !== 'error' && HIDDEN,
-        ]}
-      >
-        <Icon name="image-outline" size={24} tone="textTertiary" />
-      </View>
+        </View>
+      )}
+      {loadState === 'error' && (
+        <View style={[styles.errorOverlay, radiusOverride]}>
+          <Icon name="image-outline" size={24} tone="textTertiary" />
+        </View>
+      )}
     </View>
   );
 };

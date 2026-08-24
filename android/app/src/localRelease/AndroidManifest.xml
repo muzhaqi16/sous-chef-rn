@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  localRelease is a real release build (release JS, no dev support) but signed
+  with the debug key so it can be installed and profiled locally.
+
+  `release` leaves android:debuggable false, which also denies Perfetto's
+  callstack sampling — its frame timeline still works, but CPU attribution comes
+  back empty. `profileable` grants shell profiling without re-enabling debug.
+
+  Scoped to this variant on purpose: merged into the main manifest it would ship
+  profiling access in real release and staging builds.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <profileable
+            android:shell="true"
+            tools:targetApi="29" />
+    </application>
+</manifest>

@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import {
   useDeferredSearch,
   useDeferredSearchWithSort,
@@ -110,25 +110,43 @@ describe('useDeferredSearch', () => {
     expect(result.current.results).toEqual([{ id: 1, name: 'Apple' }]);
   });
 
-  it('updates results when searchQuery changes via rerender', () => {
-    const { result, rerender } = renderHook(
-      (props: { query: string }) =>
-        useDeferredSearch({
-          items,
-          searchQuery: props.query,
-          searchFn,
-        }),
-      { initialProps: { query: 'apple' } },
-    );
+  it('updates results when searchQuery changes, after the debounce', () => {
+    jest.useFakeTimers();
+    try {
+      const { result, rerender } = renderHook(
+        (props: { query: string }) =>
+          useDeferredSearch({
+            items,
+            searchQuery: props.query,
+            searchFn,
+          }),
+        { initialProps: { query: 'apple' } },
+      );
 
-    expect(result.current.results).toEqual([{ id: 1, name: 'Apple' }]);
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+      expect(result.current.results).toEqual([{ id: 1, name: 'Apple' }]);
 
-    rerender({ query: 'b' });
+      rerender({ query: 'b' });
 
-    expect(result.current.results).toEqual([
-      { id: 2, name: 'Banana' },
-      { id: 4, name: 'Blueberry' },
-    ]);
+      // Results lag the query on purpose: the array feeds a FlashList `data`
+      // prop, so it must not change during an interruptible render.
+      expect(result.current.isStale).toBe(true);
+      expect(result.current.results).toEqual([{ id: 1, name: 'Apple' }]);
+
+      act(() => {
+        jest.advanceTimersByTime(200);
+      });
+
+      expect(result.current.isStale).toBe(false);
+      expect(result.current.results).toEqual([
+        { id: 2, name: 'Banana' },
+        { id: 4, name: 'Blueberry' },
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
 

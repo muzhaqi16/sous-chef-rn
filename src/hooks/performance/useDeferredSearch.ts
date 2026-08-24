@@ -1,4 +1,7 @@
-import { useDeferredValue } from 'react';
+import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
+
+/** Keeps typing responsive without a low-priority render. See the note below. */
+const DEFAULT_SEARCH_DEBOUNCE_MS = 150;
 
 interface UseDeferredSearchOptions<T> {
   /** Items to search through */
@@ -9,6 +12,8 @@ interface UseDeferredSearchOptions<T> {
   searchFn: (item: T, query: string) => boolean;
   /** Minimum query length before searching (default: 0) */
   minQueryLength?: number;
+  /** Delay before the query is applied (default: 150ms) */
+  debounceMs?: number;
 }
 
 interface UseDeferredSearchResult<T> {
@@ -21,11 +26,14 @@ interface UseDeferredSearchResult<T> {
 }
 
 /**
- * useDeferredSearch - Hook for responsive search with deferred value
+ * useDeferredSearch - Hook for responsive search without blocking the input
  *
- * Uses React 18's useDeferredValue to keep the search input responsive
- * while deferring expensive search operations. The UI shows immediate
- * feedback for typing while search results update without blocking.
+ * Debounces the query and filters synchronously from it. It deliberately does
+ * NOT use `useDeferredValue`: the results array becomes a FlashList `data`
+ * prop, and a deferred render is interruptible, which is the exact window that
+ * produces `index out of bounds, not enough layouts`
+ * (docs/flashlist-layout-index-race.md). Debouncing gives the same "don't
+ * filter on every keystroke" benefit from an ordinary, uninterruptible render.
  *
  * PERFORMANCE: Ideal for:
  * - Search-as-you-type functionality
@@ -56,10 +64,16 @@ interface UseDeferredSearchResult<T> {
 export function useDeferredSearch<T>(
   options: UseDeferredSearchOptions<T>,
 ): UseDeferredSearchResult<T> {
-  const { items, searchQuery, searchFn, minQueryLength = 0 } = options;
+  const {
+    items,
+    searchQuery,
+    searchFn,
+    minQueryLength = 0,
+    debounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
+  } = options;
 
-  // Defer the search query to avoid blocking the input
-  const deferredQuery = useDeferredValue(searchQuery);
+  // Debounced, not deferred — see the note on this hook.
+  const deferredQuery = useDebouncedValue(searchQuery, debounceMs);
 
   // Compute results using deferred query
   const results = (() => {
@@ -105,10 +119,17 @@ export function useDeferredSearchWithSort<T>(
     sortFn?: (a: T, b: T) => number;
   },
 ): UseDeferredSearchResult<T> {
-  const { items, searchQuery, searchFn, sortFn, minQueryLength = 0 } = options;
+  const {
+    items,
+    searchQuery,
+    searchFn,
+    sortFn,
+    minQueryLength = 0,
+    debounceMs = DEFAULT_SEARCH_DEBOUNCE_MS,
+  } = options;
 
-  // Defer the search query to avoid blocking the input
-  const deferredQuery = useDeferredValue(searchQuery);
+  // Debounced, not deferred — same FlashList reason as useDeferredSearch.
+  const deferredQuery = useDebouncedValue(searchQuery, debounceMs);
 
   // Compute results using deferred query with optional sorting
   const results = (() => {

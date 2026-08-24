@@ -3,13 +3,14 @@ import { t } from '#/i18n';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
-// Screen-relative draw distance: 1× viewport. At 2× the render window spans more
-// rows than a whole page, so a pagination append mounts the entire page in one
-// commit — on a physical device that stall reached 3.3s. One viewport keeps the
-// burst under a page and still pre-renders a full screen ahead, with no blank
-// cells. Tune this only against a physical device: an emulator understates the
-// stall several-fold because its jank is dominated by GPU-transport wait.
-export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height);
+// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
+// ~95px/item. 1× narrows the per-append mount burst but is indistinguishable on
+// dropped-frame time in a release build, and noisier — the frame cost on device
+// is sustained Yoga layout and RenderThread draw work proportional to the number
+// of mounted views, not the size of any single append. Judge a change to this
+// number on a release build; a debug build overstates the append and an emulator
+// hides it behind GPU-transport wait.
+export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Minimum height for structural empty states (no home / no home selected)
 // so EmptyState's justifyContent:'center' works inside FlashList footer

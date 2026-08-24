@@ -27,11 +27,11 @@ import { useFlashListPerformance } from '#hooks/performance/useFlashListPerforma
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
-// Screen-relative draw distance: 1× viewport, so the window stays narrower than a
-// whole ITEMS_PAGE_SIZE page and an append cannot mount the entire page in one
-// commit — the dominant stall on this screen. See pantryDisplay/constants.ts
-// DRAW_DISTANCE before changing it.
-const DRAW_DISTANCE = Math.round(Dimensions.get('window').height);
+// Screen-relative draw distance: 2× viewport. This window spans more rows than a
+// whole ITEMS_PAGE_SIZE page, so an append can mount a full page in one commit —
+// costly in a debug build, but not what drops frames in release. See
+// pantryDisplay/constants.ts DRAW_DISTANCE before changing it.
+const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
 const MVCP_DISABLED = { disabled: true };

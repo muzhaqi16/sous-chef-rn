@@ -6,6 +6,14 @@ device the same day (see "Validation"). No library patch is carried or needed: t
 unguarded accessor inside `@shopify/flash-list@2.3.2` is unreachable from our code once
 the list's data updates render synchronously.
 
+**Nothing enforces this automatically, and it re-entered twice through indirection** — not
+through a `useDeferredValue` call next to a `<FlashList>`, but through a *hook* that
+deferred internally while its result was passed to `data` several layers up
+(`useDeferredSearch`, `useItemAutocomplete`). Both now debounce or pass through instead.
+When auditing, follow the `data` prop back to its origin rather than grepping for
+`useDeferredValue` near the list. `useDeferredRender` is fine: it defers a boolean that
+gates a skeleton, never the array.
+
 Upstream still has the underlying gap — [#2291](https://github.com/Shopify/flash-list/issues/2291)
 (P1, open since May 2026; PR #2293 proposes a guard, unmerged) and
 [#2440](https://github.com/Shopify/flash-list/issues/2440). That is context for anyone who
