@@ -23,7 +23,7 @@ import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
-import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#components/atoms/Skeleton/RecipeSkeleton';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
@@ -133,7 +133,7 @@ const RecipeSearchInput = forwardRef<
 
 const RecipeMainInner: React.FC = () => {
   const { t } = useTranslation();
-  useRenderTime('RecipeMain');
+  useCommitTracking('RecipeMain');
   const { toRecipeCreate, toRecipeDetail, toSavedRecipes, toMyRecipes } =
     useAppNavigation();
   // `useUnistyles()` is intentional: same `SearchBarAction[]` construction

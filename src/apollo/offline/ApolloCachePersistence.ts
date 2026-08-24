@@ -265,6 +265,16 @@ class ApolloCachePersistence {
           this.removeLegacySplitCache();
           this.lastPersistedSnapshot = cache;
 
+          // Persisted-cache size and serialize cost are release signals — they
+          // bear on cold start — so they report from every build. Only the
+          // human-readable breadcrumb stays dev-gated.
+          Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
+          Telemetry.histogram(
+            'cache_persist_stringify_ms',
+            tStringify - tExtract,
+          );
+          Telemetry.gauge('cache_persist_size_kb', sizeKB);
+
           if (__DEV__) {
             const extractMs = (tExtract - t0).toFixed(2);
             const stringifyMs = (tStringify - tExtract).toFixed(2);
@@ -274,12 +284,6 @@ class ApolloCachePersistence {
                 Object.keys(cache).length
               }`,
             );
-            Telemetry.histogram('cache_persist_extract_ms', tExtract - t0);
-            Telemetry.histogram(
-              'cache_persist_stringify_ms',
-              tStringify - tExtract,
-            );
-            Telemetry.gauge('cache_persist_size_kb', sizeKB);
           }
         } catch (error) {
           logger.error('💾 Cache: Failed to persist cache:', error);

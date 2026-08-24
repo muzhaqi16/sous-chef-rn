@@ -152,8 +152,8 @@ jest.mock('#hooks/performance/useDeferredRender', () => ({
   useDeferredRender: jest.fn(() => true),
 }));
 
-jest.mock('#hooks/performance/useRenderTime', () => ({
-  useRenderTime: jest.fn(),
+jest.mock('#hooks/performance/useCommitTracking', () => ({
+  useCommitTracking: jest.fn(),
 }));
 
 jest.mock('#/utils/iconUtils', () => ({

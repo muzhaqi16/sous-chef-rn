@@ -219,8 +219,14 @@ if (count > baseline.maxFilesWithBailouts) {
   console.error(
     `\nThe compiler skipped these, so they are not memoized — and the project's\n` +
       `rules against useMemo/useCallback/React.memo assume it did not skip them.\n` +
-      `Extract the variant call into a leaf component, or lower the baseline if\n` +
-      `this is a deliberate regression.`,
+      `If MANY files bail at once, check the plugin order in babel.config.js —\n` +
+      `babel-plugin-react-compiler must run BEFORE react-native-unistyles/plugin.\n` +
+      `The reverse order makes Unistyles' useVariants transform unlowerable and\n` +
+      `fails ~63 files at once.\n\n` +
+      `For a single file, rewrite the construct the compiler named above — the\n` +
+      `usual causes are a try/finally or a catch-less try, and value blocks\n` +
+      `(?., ??, &&, ||, ternary) inside a try body. See src/utils/finallyHelpers.ts\n` +
+      `and CLAUDE.md § React Compiler.`,
   );
   process.exit(1);
 }

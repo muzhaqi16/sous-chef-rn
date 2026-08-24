@@ -128,7 +128,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Total slow component renders (>16ms)",
+      "description": "Commits per component per hour. A component committing repeatedly without user input is churning. Replaces \"Slow Component Renders\", whose 16ms threshold was applied to a commit-to-commit gap and so fired on nearly every re-render.",
       "gridPos": {
         "h": 4,
         "w": 6,
@@ -156,20 +156,20 @@
             "mode": "absolute",
             "steps": [
               { "color": "green", "value": null },
-              { "color": "yellow", "value": 10 },
-              { "color": "red", "value": 50 }
+              { "color": "yellow", "value": 1000 },
+              { "color": "red", "value": 5000 }
             ]
           }
         }
       },
       "targets": [
         {
-          "expr": "sum(increase(slow_component_renders_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "expr": "sum(increase(component_render_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
           "refId": "A",
-          "legendFormat": "Slow Renders"
+          "legendFormat": "Re-renders"
         }
       ],
-      "title": "Slow Component Renders (1h)",
+      "title": "Component Re-renders (1h)",
       "type": "stat"
     },
     {
@@ -437,12 +437,13 @@
           "legendFormat": "Screen: {{screen}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(component_render_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(component_commit_gap_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component, le))",
           "refId": "B",
-          "legendFormat": "Component: {{component}}"
+          "legendFormat": "Commit gap: {{component}}"
         }
       ],
-      "title": "Performance Timing (P95)",
+      "description": "Commit gap is elapsed wall time between two commits of the same component - NOT render cost, since it includes idle time. React <Profiler onRender> would give true actualDuration, but ReactFabric-prod strips onRender so it cannot report from a release build.",
+      "title": "Screen Transition / Component Commit Gap (P95)",
       "type": "timeseries"
     },
     {
@@ -1940,14 +1941,14 @@
           "legendFormat": "Apollo restore P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_deferred_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_extract_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "B",
-          "legendFormat": "Apollo deferred restore P95"
+          "legendFormat": "Cache extract P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_legacy_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_stringify_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "C",
-          "legendFormat": "Apollo legacy restore P95"
+          "legendFormat": "Cache stringify P95"
         },
         {
           "expr": "histogram_quantile(0.95, sum(rate(app_zustand_hydration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
@@ -1955,7 +1956,113 @@
           "legendFormat": "Zustand hydration P95"
         }
       ],
+      "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",
       "title": "Cache & Store Restore (P95)",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 82 },
+      "id": 68,
+      "panels": [],
+      "title": "Offline Queue",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Writes waiting to replay. A depth that never returns to zero means the queue is not draining - see docs/local-first-architecture.md.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 83 },
+      "id": 69,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "max(offline_queue_depth{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "refId": "A",
+          "legendFormat": "queue depth"
+        }
+      ],
+      "title": "Offline Queue Depth",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Writes the queue gave up on. Each one is user work accepted locally that never reached the server.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 83 },
+      "id": 70,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(increase(offline_queue_permanent_failures_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[1h]))",
+          "refId": "A",
+          "legendFormat": "permanent failures"
+        }
+      ],
+      "title": "Offline Queue Permanent Failures (1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Cold starts that restored a persisted cache vs found none. A rising 'empty' share means every launch refetches everything.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 91 },
+      "id": 71,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "sum(rate(app_apollo_restore_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (outcome)",
+          "refId": "A",
+          "legendFormat": "{{outcome}}"
+        }
+      ],
+      "title": "Apollo Cache Restore Outcome",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "description": "Size of the serialized Apollo cache written to MMKV. Drives restore cost at cold start and the idle-time serialize cost.",
+      "fieldConfig": { "defaults": { "unit": "deckbytes" }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 91 },
+      "id": 72,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": { "mode": "multi" }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "max(cache_persist_size_kb{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "refId": "A",
+          "legendFormat": "cache size"
+        }
+      ],
+      "title": "Persisted Cache Size",
       "type": "timeseries"
     }
   ],

@@ -30,7 +30,7 @@ import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
@@ -134,7 +134,7 @@ export const PantryContent = React.forwardRef<
     },
     ref,
   ) => {
-    useRenderTime('PantryContent', { slowThreshold: 1000 });
+    useCommitTracking('PantryContent');
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
     // Apollo cache reads run inside the image-preload effect; each leaf

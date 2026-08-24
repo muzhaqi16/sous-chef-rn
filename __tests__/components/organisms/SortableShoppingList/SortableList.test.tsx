@@ -11,8 +11,8 @@ import { SortableItem_ItemFragmentDoc } from '../../../../src/features/shoppingL
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../../src/hooks/performance/useRenderTime', () => ({
-  useRenderTime: jest.fn(),
+jest.mock('../../../../src/hooks/performance/useCommitTracking', () => ({
+  useCommitTracking: jest.fn(),
 }));
 jest.mock('../../../../src/hooks/ui/useSwipeableCoordinator', () => ({
   useSwipeableCoordinator: () => ({

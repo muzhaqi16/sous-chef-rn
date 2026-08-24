@@ -83,7 +83,6 @@ export interface PerformanceConfig {
   /** Sample rate (0-1, percentage of events to track) */
   sampleRate: number;
   /** Threshold for "slow" renders in milliseconds */
-  slowRenderThreshold: number;
   /** Threshold for memory warnings (percentage 0-100) */
   memoryWarningThreshold: number;
   /** Maximum number of memory snapshots to keep */
@@ -174,7 +173,6 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
   trackMemory: false, // Disable - RN APIs are unreliable
   trackScreens: true, // Track screen transitions in all environments
   sampleRate: 1.0, // 100% — first release, small user base, capture everything
-  slowRenderThreshold: __DEV__ ? 500 : 16, // Android emulator adds 5-10x overhead; 16ms = 60fps for production
   memoryWarningThreshold: 80, // Warn at 80% memory usage
   maxMemorySnapshots: 100, // Keep last 100 snapshots
 };

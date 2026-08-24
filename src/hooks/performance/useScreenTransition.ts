@@ -156,9 +156,10 @@ export function useScreenTransition(
             )}ms`,
           );
 
+          // `duration` is deliberately NOT a label — see useCommitTracking. The
+          // magnitude lives in screen_interactive_duration_ms.
           Telemetry.increment('slow_screen_transitions_total', 1, {
             screen: screenName,
-            duration: interactiveDuration.toFixed(2),
           });
         }
       });

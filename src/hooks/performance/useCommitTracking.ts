@@ -3,7 +3,6 @@ import { AppState } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { DEFAULT_PERFORMANCE_CONFIG } from '#/services/performance/types';
 import { usePerformanceStore } from '#/store/performanceStore';
-import { logger } from '#/utils/environment';
 
 /**
  * Maximum valid render duration in ms. Any measurement above this is treated
@@ -20,13 +19,11 @@ const MAX_VALID_RENDER_MS = 1000;
  */
 let lastBackgroundedAt = 0;
 
-if (__DEV__) {
-  AppState.addEventListener('change', nextAppState => {
-    if (nextAppState !== 'active') {
-      lastBackgroundedAt = Date.now();
-    }
-  });
-}
+AppState.addEventListener('change', nextAppState => {
+  if (nextAppState !== 'active') {
+    lastBackgroundedAt = Date.now();
+  }
+});
 
 /** @internal Test-only: reset module-level background tracking state */
 export function _resetForTesting() {
@@ -39,13 +36,19 @@ export function _simulateBackground(timestamp: number) {
 }
 
 /**
- * Hook to track component render time and count
+ * Tracks how often a component commits, and how much wall time elapsed since
+ * its previous commit.
  *
- * Measures commit-to-commit duration via `useLayoutEffect`. Each layout effect
- * captures `Date.now()` and compares to the previous commit's timestamp.
- * The first render establishes a baseline; subsequent renders report the gap.
+ * This is NOT render cost. `useLayoutEffect` captures `Date.now()` per commit
+ * and reports the gap to the previous one, so the value is dominated by idle
+ * time between commits. React's `<Profiler onRender>` would give true
+ * `actualDuration`, but `ReactFabric-prod.js` strips `onRender` entirely, so it
+ * cannot report from a release build — hence the commit-gap approach, named for
+ * what it actually measures.
  *
- * Gated behind __DEV__ so it's completely inert in production builds.
+ * The useful signal here is `component_render_count`: a component committing
+ * many times without user input is churning. Reports in production as well as
+ * dev, gated by `enabled` and `sampleRate`; console output stays dev-only.
  *
  * @param componentName - Name of the component being tracked
  * @param options - Configuration options
@@ -53,21 +56,18 @@ export function _simulateBackground(timestamp: number) {
  * @example
  * ```typescript
  * function MyComponent() {
- *   useRenderTime('MyComponent');
+ *   useCommitTracking('MyComponent');
  *   return <View>...</View>;
  * }
  * ```
  */
-export function useRenderTime(
+export function useCommitTracking(
   componentName: string,
   options?: {
     enabled?: boolean;
     sampleRate?: number;
-    slowThreshold?: number;
   },
 ) {
-  // In production, this hook is a no-op — all refs and effects are skipped.
-  // The __DEV__ guard is a compile-time constant so the branch is dead-code-eliminated.
   const renderDurationRef = useRef<number>(0);
   const renderCount = useRef<number>(0);
   const totalRenderTime = useRef<number>(0);
@@ -76,14 +76,10 @@ export function useRenderTime(
   const enabled = options?.enabled ?? DEFAULT_PERFORMANCE_CONFIG.enabled;
   const sampleRate =
     options?.sampleRate ?? DEFAULT_PERFORMANCE_CONFIG.sampleRate;
-  const slowThreshold =
-    options?.slowThreshold ?? DEFAULT_PERFORMANCE_CONFIG.slowRenderThreshold;
 
   // Measure commit-to-commit duration synchronously after commit.
   // All timing captured inside useLayoutEffect — no impure calls during render.
   useLayoutEffect(() => {
-    if (!__DEV__) return;
-
     const commitTime = Date.now();
     const prevCommitTime = lastCommitTimeRef.current;
     lastCommitTimeRef.current = commitTime;
@@ -101,13 +97,15 @@ export function useRenderTime(
     const wasBackgrounded = lastBackgroundedAt >= prevCommitTime;
     if (wasBackgrounded || duration > MAX_VALID_RENDER_MS) {
       renderDurationRef.current = -1;
-      console.debug(
-        `[Performance] ${componentName} render discarded: ${
-          wasBackgrounded
-            ? 'app backgrounded'
-            : `exceeded ${MAX_VALID_RENDER_MS}ms cap (${duration}ms)`
-        }`,
-      );
+      if (__DEV__) {
+        console.debug(
+          `[Performance] ${componentName} render discarded: ${
+            wasBackgrounded
+              ? 'app backgrounded'
+              : `exceeded ${MAX_VALID_RENDER_MS}ms cap (${duration}ms)`
+          }`,
+        );
+      }
     } else {
       renderDurationRef.current = duration;
       renderCount.current += 1;
@@ -117,8 +115,6 @@ export function useRenderTime(
   // Report metrics after paint.
   // Intentionally omitting deps — this effect must run after every render to capture timing.
   useEffect(() => {
-    if (!__DEV__) return;
-
     // Skip discarded renders (first render, backgrounded, or exceeded max duration cap)
     if (renderDurationRef.current < 0) return;
 
@@ -145,7 +141,7 @@ export function useRenderTime(
       component: componentName,
     });
 
-    Telemetry.histogram('component_render_duration_ms', renderDuration, {
+    Telemetry.histogram('component_commit_gap_ms', renderDuration, {
       component: componentName,
     });
 
@@ -154,21 +150,10 @@ export function useRenderTime(
       .getState()
       .recordComponentRender(componentName, renderDuration);
 
-    // Track slow renders
-    if (renderDuration > slowThreshold) {
-      Telemetry.increment('slow_component_renders_total', 1, {
-        component: componentName,
-        duration: renderDuration.toFixed(2),
-      });
-
-      logger.warn(
-        `[Performance] Slow render detected: ${componentName} took ${renderDuration.toFixed(
-          2,
-        )}ms`,
-      );
+    if (!__DEV__) {
+      return;
     }
 
-    // Log render metrics in dev
     if (renderCount.current === 1) {
       console.log(
         `[Performance] ${componentName} first render: ${renderDuration.toFixed(
@@ -184,22 +169,4 @@ export function useRenderTime(
       );
     }
   });
-}
-
-/**
- * Hook to track render time with automatic component name detection
- *
- * @param displayName - Optional display name (falls back to 'Component')
- *
- * @example
- * ```typescript
- * function MyComponent() {
- *   useRenderTime('MyComponent');
- *   // ... component code
- * }
- * ```
- */
-export function useAutoRenderTime(displayName?: string) {
-  const componentName = displayName || 'Component';
-  useRenderTime(componentName);
 }

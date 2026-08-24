@@ -8,6 +8,10 @@ This document describes the performance monitoring infrastructure added to the S
 
 ### 1. Component Render Tracking
 - **Hook**: `useRenderTime(componentName, options?)`
+- **Availability**: All builds. Reporting is gated by `enabled` and
+  `sampleRate`, not by `__DEV__` — the production `slowRenderThreshold` of 16ms
+  only means something if the hook runs there. Console output stays dev-only.
+  Guarded by `useRenderTime.test.ts` ("reports in production builds").
 - **Metrics Tracked**:
   - Render count
   - Average render time
@@ -326,7 +330,7 @@ All performance data is reported to the Telemetry system:
 
 **Counters:**
 - `component_render_count` - Total renders per component
-- `slow_component_renders_total` - Count of slow renders
+- `component_render_count` - Commits per component (re-render churn)
 - `slow_screen_transitions_total` - Count of slow transitions
 - `app_memory_warnings_total` - Memory warning events
 - `app_memory_critical_total` - Critical memory events
@@ -336,7 +340,11 @@ All performance data is reported to the Telemetry system:
 - `app_js_bundle_load_ms` - JS bundle load time
 - `app_content_appeared_ms` - Time to first content visible
 - `http_request_duration_ms` - HTTP request duration by host
-- `component_render_duration_ms` - Render time distribution
+- `component_commit_gap_ms` - Distribution of wall time between a component's
+  consecutive commits. NOT render cost (includes idle time): React's
+  `<Profiler onRender>` would give true `actualDuration`, but
+  `ReactFabric-prod.js` strips `onRender`, so it cannot report from a release
+  build. Use `component_render_count` for re-render churn.
 - `screen_mount_duration_ms` - Screen mount time distribution
 - `screen_interactive_duration_ms` - Time to interactive distribution
 - `screen_transition_duration_ms` - Total transition time distribution

@@ -15,9 +15,13 @@ import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
 // Lazy histogram emit — defers loading of the telemetry singleton (which
 // touches Environment + device ID at module init) so this module remains
 // cheap to import in tests + cold start. Fire-and-forget.
-const emitHistogram = (name: string, value: number): void => {
+const emitHistogram = (
+  name: string,
+  value: number,
+  labels?: Record<string, string>,
+): void => {
   import('#services/telemetry')
-    .then(({ Telemetry }) => Telemetry.histogram(name, value))
+    .then(({ Telemetry }) => Telemetry.histogram(name, value, labels))
     .catch(() => {
       // Telemetry is best-effort; never block startup on failures.
     });
@@ -58,8 +62,15 @@ function initializeClient() {
       } entities from storage`,
     );
     cache.restore(persistedCache);
-    emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0);
   }
+
+  // Reported on BOTH paths, carrying the outcome. `logger` is console-only and
+  // console is stripped in release, so this histogram is the only evidence on a
+  // real device of whether the persisted cache is restored at all — an empty
+  // restore means every cold start refetches.
+  emitHistogram('app_apollo_restore_ms', performance.now() - restoreT0, {
+    outcome: persistedCache ? 'restored' : 'empty',
+  });
 
   // Create link chain
   const link = createLink();
