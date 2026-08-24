@@ -204,7 +204,9 @@
     "deleteHome": "Are you sure you want to delete this home?",
     "deleteAccount": "Are you sure you want to delete your account? This action cannot be undone.",
     "logout": "Are you sure you want to log out?",
-    "discardChanges": "Are you sure you want to discard your changes?"
+    "discardChanges": "Are you sure you want to discard your changes?",
+    "logoutWithPending_one": "You have {{count}} change that hasn't synced yet. Signing out will discard it.",
+    "logoutWithPending_other": "You have {{count}} changes that haven't synced yet. Signing out will discard them."
   },
   "labels": {
     "storeSelectHint": "Pick a store from the list to save it.",

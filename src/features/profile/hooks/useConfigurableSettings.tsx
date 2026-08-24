@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
 import { handleMutationError } from '#/utils/errorHandlers';
 import {
@@ -467,8 +468,33 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
             // the persisted queue/navigation keys. Two sign-out paths that
             // each clear a different subset is how the shared-device residue
             // got there; this is the only one.
-            void authService.logout();
-            logger.debug('User logged out');
+            const signOut = () => {
+              void authService.logout();
+              logger.debug('User logged out');
+            };
+
+            // Deliberate sign-out DELETES the queue (`queueManager.onLogout`),
+            // so anything still waiting to replay is destroyed. Nothing on this
+            // path used to say so. Only prompt when there is something to lose —
+            // with an empty queue this stays a one-tap sign-out.
+            const pendingCount = queueStore.getPendingCount();
+            if (pendingCount === 0) {
+              signOut();
+              return;
+            }
+
+            alertService.alert(
+              t('profile.labels.logout'),
+              t('confirmations.logoutWithPending', { count: pendingCount }),
+              [
+                { text: t('labels.cancel'), style: 'cancel' },
+                {
+                  text: t('profile.labels.logout'),
+                  style: 'destructive',
+                  onPress: signOut,
+                },
+              ],
+            );
           },
         };
 

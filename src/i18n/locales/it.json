@@ -204,7 +204,9 @@
     "deleteHome": "Vuoi davvero eliminare questa casa?",
     "deleteAccount": "Vuoi davvero eliminare il tuo account? Questa azione non può essere annullata.",
     "logout": "Vuoi davvero uscire?",
-    "discardChanges": "Vuoi davvero annullare le modifiche?"
+    "discardChanges": "Vuoi davvero annullare le modifiche?",
+    "logoutWithPending_one": "Hai {{count}} modifica non sincronizzata. Uscendo verrà eliminata.",
+    "logoutWithPending_other": "Hai {{count}} modifiche non sincronizzate. Uscendo verranno eliminate."
   },
   "labels": {
     "storeSelectHint": "Scegli un negozio dall'elenco per salvarlo.",

@@ -135,6 +135,11 @@ jest.mock('#components/organisms/BiometricSetupModal', () => ({
 
 jest.mock('#/utils/finallyHelpers');
 
+const mockPendingCount = jest.fn(() => 0);
+jest.mock('#/apollo/offlineQueue/queueStore', () => ({
+  queueStore: { getPendingCount: () => mockPendingCount() },
+}));
+
 jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
@@ -309,6 +314,37 @@ describe('useConfigurableSettings', () => {
     });
 
     expect(mockLogout).toHaveBeenCalled();
+  });
+
+  it('warns before signing out while writes are still queued', async () => {
+    // Deliberate sign-out deletes the queue, so anything waiting to replay is
+    // destroyed. This path used to do it silently.
+    mockPendingCount.mockReturnValue(3);
+    const { profile, settings } = buildMocks();
+    const { result } = renderHookWithApollo(
+      () => useConfigurableSettings(mockProfile),
+      { operationMocks: [profile.mock, settings.mock] },
+    );
+
+    const logoutItem = findByKey(result.current.sections[3].items, 'logout');
+
+    act(() => {
+      logoutItem.onPress?.();
+    });
+
+    expect(mockLogout).not.toHaveBeenCalled();
+    expect(alertService.alert).toHaveBeenCalled();
+
+    const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+    const buttons = alertCalls[alertCalls.length - 1][2] as AlertButton[];
+    const confirm = buttons.find(b => b.style === 'destructive');
+
+    await act(async () => {
+      await confirm?.onPress?.();
+    });
+
+    expect(mockLogout).toHaveBeenCalled();
+    mockPendingCount.mockReturnValue(0);
   });
 
   it('biometric setting shows not available when device lacks biometrics', () => {

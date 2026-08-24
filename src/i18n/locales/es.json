@@ -204,7 +204,9 @@
     "deleteHome": "¿Seguro que quieres eliminar este hogar?",
     "deleteAccount": "¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
     "logout": "¿Seguro que quieres cerrar sesión?",
-    "discardChanges": "¿Seguro que quieres descartar los cambios?"
+    "discardChanges": "¿Seguro que quieres descartar los cambios?",
+    "logoutWithPending_one": "Tienes {{count}} cambio sin sincronizar. Al cerrar sesión se descartará.",
+    "logoutWithPending_other": "Tienes {{count}} cambios sin sincronizar. Al cerrar sesión se descartarán."
   },
   "labels": {
     "storeSelectHint": "Elige una tienda de la lista para guardarla.",
