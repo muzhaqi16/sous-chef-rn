@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/useDataPreloading';
+import { useOfflineTabPreloading } from '#/hooks/useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useIsLoggingOut, useUpdateUser, useUser } from '#store/useAppStore';
 import { useQuery } from '@apollo/client/react';
@@ -37,6 +38,11 @@ export const DataProvider: React.FC<DataProviderProps> = ({ children }) => {
   // Preload units and other reference data when authenticated
   // The hook handles authentication checking internally
   useDataPreloading();
+
+  // Warm the sibling tabs' first-screen queries so a tab the user has not
+  // opened is still usable offline. `lazy: true` keeps them unmounted; only
+  // their data is fetched, on the idle queue.
+  useOfflineTabPreloading();
 
   // Load all unread notifications on startup via notificationsConnection
   // Re-queries on foreground to catch missed events (reconnect proxy)
