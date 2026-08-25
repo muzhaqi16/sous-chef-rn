@@ -17,6 +17,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 // Keys the app consumes. Anything not listed here is ignored (and stripped from
 // the bundle), which keeps unrelated shell vars out of the generated output.
@@ -43,7 +44,58 @@ const KEYS = [
   'PROD_WS_URL',
   'ENABLE_DEBUG_LOGS',
   'ENABLE_PRODUCTION_LOGS',
+  // Build identity. Without these a measurement cannot be traced to the code
+  // that produced it, which is what made a whole performance investigation
+  // unattributable (see docs/audits/perf-offline-baseline-2026-08-24.md).
+  // GIT_SHA falls back to the working tree's HEAD, so local builds are
+  // attributable too; CI overrides both via `process.env`.
+  'GIT_SHA',
+  'BUILD_ID',
+  // Opt-in Hermes startup CPU profiling. Off unless explicitly set, because a
+  // profiled run's timings are NOT comparable to an unprofiled one's.
+  'HERMES_PROFILE_STARTUP',
+  // Whether this build will accept an auth state handed to it through launch
+  // arguments. Off unless a build explicitly asks for it. Read the block above
+  // `allowsLaunchArgAuth` in src/utils/environment.ts before setting it.
+  'ALLOW_LAUNCH_ARG_AUTH',
 ];
+
+/**
+ * HEAD's short SHA, with `-dirty` when the tree has uncommitted changes — a
+ * number measured against a dirty tree is not reproducible and should say so.
+ * Returns undefined outside a git checkout rather than failing the build.
+ */
+let cachedGitSha;
+function gitSha() {
+  // Memoized: `resolve()` runs twice per key by design (once to build the
+  // output, once for the "N/M keys" count), and `generateEnv()` itself runs on
+  // every Metro start and every build step. Unmemoized that is four git
+  // subprocesses per invocation, one of them a full-worktree `git status`.
+  if (cachedGitSha !== undefined) return cachedGitSha || undefined;
+  const run = args =>
+    execFileSync('git', args, {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  let sha;
+  try {
+    sha = run(['rev-parse', '--short', 'HEAD']);
+  } catch {
+    // Cache the miss too, so a non-checkout build does not retry per call.
+    cachedGitSha = '';
+    return undefined;
+  }
+  let dirty = '';
+  try {
+    if (run(['status', '--porcelain'])) dirty = '-dirty';
+  } catch {
+    // A status failure says nothing about the SHA; report it unqualified.
+  }
+  cachedGitSha = `${sha}${dirty}`;
+  return cachedGitSha;
+}
 
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -87,12 +139,86 @@ function parseEnvFile(filePath) {
   return result;
 }
 
+/** A full 40-character commit sha — what CI records, never what `gitSha()` derives. */
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * Build identity recorded in a previously generated `env.generated.ts`, kept
+ * only where re-deriving it now would be a DOWNGRADE.
+ *
+ * Metro calls `generateEnv()` at module scope, so the file is rewritten on
+ * every Metro start and every bundling step — often from a process that has
+ * neither variable. Two downgrades are possible and both shipped:
+ *
+ *   - BUILD_ID has no derivation at all, so it simply became `undefined`.
+ *   - GIT_SHA fell back to `gitSha()`, replacing CI's full sha with a short,
+ *     `-dirty`-suffixed one.
+ *
+ * Deliberately NOT a blanket "keep whatever was there": that would freeze a
+ * local checkout's sha at its first value and stop `-dirty` from ever tracking
+ * the tree again. Only these two keys, and GIT_SHA only when the recorded value
+ * is strictly more precise than what this run can derive.
+ */
+function readExistingBuildIdentity() {
+  const generatedPath = path.join(
+    repoRoot,
+    'src',
+    'config',
+    'env.generated.ts',
+  );
+  if (!fs.existsSync(generatedPath)) return {};
+  let source;
+  try {
+    source = fs.readFileSync(generatedPath, 'utf8');
+  } catch {
+    return {};
+  }
+
+  const read = key => {
+    const match = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
+    return match ? match[1] : undefined;
+  };
+
+  const identity = {};
+  // Never derived, so a recorded value can only have come from an explicit
+  // source. Losing it is always a downgrade.
+  const buildId = read('BUILD_ID');
+  if (buildId) identity.BUILD_ID = buildId;
+
+  // Kept only against a less precise derivation — a local run re-deriving its
+  // own short sha must still see the tree's current state.
+  const recordedSha = read('GIT_SHA');
+  if (
+    recordedSha &&
+    FULL_SHA.test(recordedSha) &&
+    !FULL_SHA.test(gitSha() ?? '')
+  ) {
+    identity.GIT_SHA = recordedSha;
+  }
+
+  return identity;
+}
+
 function generateEnv() {
   const envFileName = resolveEnvFileName();
   const envFilePath = path.join(repoRoot, envFileName);
   const fileValues = parseEnvFile(envFilePath);
   // process.env wins over the file so CI `env:` overrides take precedence.
-  const resolve = key => process.env[key] ?? fileValues[key];
+  // Build identity already written by an earlier run of this script. Metro
+  // calls generateEnv() at module scope on every start and every bundling
+  // step, often in a process that has neither variable — so without this, the
+  // second run replaced a 40-char CI sha with `gitSha()`'s short `-dirty` one
+  // and BUILD_ID with `undefined`, minutes after CI set them correctly.
+  const existing = readExistingBuildIdentity();
+
+  const resolve = key => {
+    const value = process.env[key] ?? fileValues[key];
+    if (value !== undefined) return value;
+    // Never downgrade a recorded identity to a weaker derived one.
+    if (existing[key] !== undefined) return existing[key];
+    // Derived last, so an explicit CI value always wins.
+    return key === 'GIT_SHA' ? gitSha() : undefined;
+  };
 
   const entries = KEYS.map(key => {
     const value = resolve(key);
@@ -128,7 +254,11 @@ ${entries}
   );
 }
 
-module.exports = { generateEnv };
+// `KEYS` is exported for `check-bundled-secrets.mjs`, which derives its
+// candidate set from it. Exporting the array — rather than having the checker
+// parse this file — keeps one source of truth without making the gate's
+// coverage depend on the punctuation of the comments above.
+module.exports = { generateEnv, KEYS };
 
 // Run when invoked directly (npm scripts, CI), not when required by metro.config.
 if (require.main === module) {

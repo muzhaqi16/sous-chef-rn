@@ -157,6 +157,37 @@ In Grafana Explore, query:
 
 ## Metric Reference
 
+### Labels every metric carries
+
+`TelemetryService` attaches these to EVERY counter, gauge and histogram, on top
+of whatever the call site passes. A call-site label of the same name wins.
+
+(Deliberately not a table — the metric-contract test scrapes backticked first
+columns as metric names, and these are labels, not metrics.)
+
+- **platform** — `ios` / `android`. Two values.
+- **env** — the configured environment. A handful of values.
+- **version** — the build's version string, bounded by release cadence. Without
+  it NOTHING on a metric said which build produced it: the only version-bearing
+  dimension was `service.instance.id`, and every startup panel collapsed it with
+  `sum(...) by (le)`, so a regression could not be attributed to a release even
+  in principle.
+- **device_type** — `emulator` / `physical`. Exactly two values. Measured
+  2026-08-25 the two disagree by 1.4-2x on startup marks and by **10-20x** on
+  `flashlist_initial_load_ms`; without this label they are the SAME series,
+  because `instance` is only `android_<version>`. The dashboard exposes it as
+  the `$device_type` variable and splits the startup panels by it — **a label
+  nothing filters on is not a separation**, which is how it shipped the first
+  time.
+
+**The commit SHA is deliberately NOT a metric label.** Every unique label
+combination is a Prometheus series, multiplied again by histogram buckets, and a
+SHA is unbounded — the textbook cardinality bomb. It travels on LOGS instead, as
+the `git_sha` body field (searchable with `| json | git_sha="..."`), which is
+where per-run identity already lives.
+`src/services/telemetry/__tests__/TelemetryService.test.ts` holds that line from
+both sides.
+
 ### Counters
 
 | Metric | Labels | Description |
@@ -217,6 +248,8 @@ In Grafana Explore, query:
 | `component_commit_gap_ms` | `component` | Wall time since the component's previous commit. NOT render cost - it includes idle time. |
 | `http_request_duration_ms` | `host` | HTTP request duration |
 | `graphql_request_duration_ms` | `name` | GraphQL operation duration |
+| `app_content_appeared_ms` | | **First frame.** `nativeLaunchStart` to React Native's own content-appeared signal (`RCTContentDidAppearNotification` on iOS, `ReactMarker.CONTENT_APPEARED` on Android), so it means the same thing on both. This is TTID-shaped: RN's root view is mounted, which says nothing about whether the screen's data has loaded - use `app_fully_drawn_ms` for that. **Origin caveat, BOTH platforms:** `nativeLaunchStart` is derived from elapsed CPU time, not wall clock - `clock_gettime(CLOCK_THREAD_CPUTIME_ID)` on iOS, `endTime - Process.getElapsedCpuTime()` in Android's `StartTimeProvider`. Time the process spent descheduled or blocked is therefore NOT in it, so the origin sits later than true process start and this number understates real time-to-first-frame. Do not reconcile it against wall-clock figures such as logcat's `ActivityTaskManager: Fully drawn` - measured on the Pixel_9a emulator the two differ by roughly a second. Compare each platform against itself, across builds, and nothing else. **iOS also:** prewarming (15+) can start the launch long before the user taps, and nothing segments those launches, so treat iOS outliers as suspect rather than signal. |
+| `app_fully_drawn_ms` | | **First meaningful paint.** JS-bundle entry to the first instrumented list finishing layout **with real content in it** - not just RN's first frame (`app_content_appeared_ms`). On a real device those are ~500 ms apart on the pantry, and that gap is the part users notice. Emitted at most once per process. **Content, not chrome:** FlashList reports `onLoad` as soon as every VISIBLE index is measured, which a one-row sticky-header sentinel satisfies while the body is still skeletons - so each instrumented list passes an explicit `hasRealContent` predicate and the latch waits for the first commit where both are true. A settled EMPTY result counts as content; "still waiting" does not. **SCOPE, three ways it does not emit:** (1) the launch stopped for user input - sign-in, email verification, onboarding, biometric setup - because that window contains however long the person took, not how long the app took; (2) the launch never rendered one of the three instrumented lists (PantryContent, SortableShoppingList, ItemList), e.g. straight into a detail screen; (3) the Hermes startup profiler actually ARMED, since sampling inflates the very interval being measured and one poisoned point in a build-over-build series is worse than a gap. Case (3) applies on **both platforms** - `startProfiling` is exported by the iOS native module as well, so a flagged iOS build suppresses this metric and produces a trace instead. Setting `HERMES_PROFILE_STARTUP` is still not by itself enough: suppression keys off whether sampling actually started. On Android the same moment is also reported to the OS via `Activity.reportFullyDrawn()` (Play Console vitals, Macrobenchmark `timeToFullDisplayMs`), which fires in every case above - it is the marker, not the measurement. |
 | `app_apollo_restore_ms` | `outcome` | Persisted-cache restore at cold start. `outcome` is `restored` or `empty` - an `empty` majority means every launch refetches. |
 | `app_js_entry_to_store_ready_ms` | | JS-bundle entry to the Zustand rehydrate callback. NOT hydration cost - the window is dominated by module evaluation; the blob read + parse + rehydrate is ~5 ms of it. Renamed from `app_zustand_hydration_ms`, whose name implied the opposite. |
 | `cache_persist_extract_ms` | | `cache.extract()` cost |
@@ -228,7 +261,21 @@ In Grafana Explore, query:
 | `offline_queue_oldest_age_ms` | | Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. |
 | `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. |
 
-All metrics automatically include `env` (environment) and `platform` (ios/android) labels.
+All metrics automatically include `env` (environment), `platform` (ios/android)
+and `version` (the app version) labels.
+
+**`version` is the attribution dimension, and it is deliberately the only one.**
+Every unique label combination is a Prometheus series, multiplied again by
+histogram buckets, so the commit SHA must never become a metric label - it is
+unbounded. The SHA travels on LOGS instead, as the `git_sha` body field
+alongside `device_id` and `session_id` (searchable with
+`| json | git_sha="..."`). `TelemetryService.test.ts` asserts both halves: that
+metrics carry `version`, and that they do NOT carry `git_sha`.
+
+Before this existed, nothing on a metric said which build produced it: the only
+version-bearing dimension was `service.instance.id`, and every Grafana startup
+panel collapsed it with `sum(...) by (le)`. A regression could not be attributed
+to a release even in principle.
 
 **Never emit a metric from inside `if (__DEV__)`.** It is dead-code-eliminated
 in release, so the series exists and is permanently empty - which reads as
@@ -254,11 +301,16 @@ Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 1000
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| No metrics after changing env vars | `react-native-config` needs native rebuild | Run `npx react-native run-android/ios` |
+| No metrics after changing env vars | Env is baked into the bundle at build time by `scripts/generate-env.js` | Rebuild: `npm run android` / `npm run ios` (or `npm run ios:release`) |
 | HTTP 401 on metrics | Wrong instance ID or expired token | Check OTLP instance ID (not Prometheus ID) and regenerate token |
 | HTTP 400 "invalid temporality" | Backend expects CUMULATIVE | Ensure `aggregationTemporality: 2` in HttpTransport |
 | Dashboards show "No data" | Metrics not ingested or wrong `service_name` label | Query `{service_name="sous-chef-app"}` in Explore to verify |
 | Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and `OTLP_LOGS_AUTH_*` token has the correct scopes |
+| A whole run emits nothing, with no error | No `.env`, so `OTLP_METRICS_ENDPOINT` is `undefined` and `transports.http` resolves false | Create `.env`; verify with `npm run genenv && grep OTLP src/config/env.generated.ts` — the values must be strings |
+| A Detox run emits nothing, but a hand-run build works | `e2e/init.ts` sets `detoxDisableBackgroundServices`, which switches telemetry off | Prefix the run with `E2E_TELEMETRY=1`, which adds `detoxEnableTelemetry` |
+| A Detox **release** run ignores `E2E_TELEMETRY` and the injected auth tokens | `useStartupInit` reads launch args only when `Environment.allowsLaunchArgAuth()`, which is a named, default-off build flag | Build through `scripts/run-ios.sh` / `scripts/run-android.sh`, which export `ALLOW_LAUNCH_ARG_AUTH=true` for `debug`/`release`/`localRelease`. Never set it in a committed env file: `scripts/check-launch-arg-auth.mjs` fails any CI or production/staging build that has it |
+| 404 on `/v1/metrics/v1/metrics` | `OTLP_*_ENDPOINT` was given a full path | The transport appends `/v1/metrics` and `/v1/logs` itself, so configure the BASE path only |
+| iOS emits nothing against a plaintext collector | App Transport Security | `NSAllowsLocalNetworking` permits plaintext to private-range and `.local` hosts; any other plaintext host is blocked on iOS and needs TLS |
 
 ## Code Structure
 

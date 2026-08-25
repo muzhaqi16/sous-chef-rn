@@ -85,6 +85,11 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SortableShoppingList',
     reportInterval: 10000,
+    // This list has no loading or placeholder mode — it renders whatever rows
+    // it is given — so having rows is the only content signal it can honestly
+    // offer. Deliberately conservative: a launch landing here on an empty list
+    // emits no `app_fully_drawn_ms` rather than timing an empty frame.
+    hasRealContent: items.length > 0,
   });
   useDataReferenceTracker(
     items,

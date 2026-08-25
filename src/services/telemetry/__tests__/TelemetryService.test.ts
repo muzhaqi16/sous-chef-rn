@@ -207,6 +207,25 @@ describe('TelemetryService', () => {
       expect(mockSendLogs).not.toHaveBeenCalled();
     });
 
+    it('carries the commit SHA so a log is traceable to code', async () => {
+      // The counterpart to keeping the SHA off metric labels: on logs it is a
+      // body field, searchable with `| json | git_sha="..."`, and it is what
+      // ties a run to the build that produced it.
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+      });
+      service.log('info', 'hello');
+      await service.flush();
+      expect(mockSendLogs).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            extra: expect.objectContaining({ git_sha: expect.any(String) }),
+          }),
+        ]),
+      );
+    });
+
     it('buffers log entries when enabled', async () => {
       const service = new TelemetryService({
         enabled: true,
@@ -363,6 +382,46 @@ describe('TelemetryService', () => {
           }),
         ]),
       );
+    });
+
+    it('labels metrics with the app version, so a build is attributable', async () => {
+      // Nothing on a metric used to say which build produced it. The only
+      // version-bearing dimension was `service.instance.id`, and every Grafana
+      // startup panel collapsed it with `sum(...) by (le)`.
+      const service = new TelemetryService({
+        enabled: true,
+        enableMetrics: true,
+        environment: 'production',
+      });
+      service.incrementCounter('test', 1);
+      await service.flush();
+      expect(mockSendMetrics).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({
+            labels: expect.objectContaining({ version: expect.any(String) }),
+          }),
+        ]),
+      );
+    });
+
+    it('keeps the commit SHA OFF metric labels', async () => {
+      // Every unique label combination is a Prometheus series, multiplied again
+      // by histogram buckets. A commit SHA is unbounded — the textbook
+      // cardinality bomb. It belongs on logs, where per-run identity already
+      // lives as a body field, and this test is what stops it drifting back.
+      const service = new TelemetryService({
+        enabled: true,
+        enableMetrics: true,
+        environment: 'production',
+      });
+      service.incrementCounter('test', 1);
+      await service.flush();
+      const [metrics] = mockSendMetrics.mock.calls.at(-1) as [
+        Array<{ labels: Record<string, string> }>,
+      ];
+      for (const metric of metrics) {
+        expect(Object.keys(metric.labels)).not.toContain('git_sha');
+      }
     });
   });
 

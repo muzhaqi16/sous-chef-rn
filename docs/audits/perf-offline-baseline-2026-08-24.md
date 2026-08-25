@@ -646,3 +646,593 @@ What occupies the window between `PantryMain` mounting and its first frame. Four
 hypotheses are now excluded. The audit's original recommendation stands: a Hermes
 CPU profile armed BEFORE the mount, which the current tooling cannot do. Do not
 propose a fifth hypothesis without it.
+
+---
+
+# Addendum — 2026-08-25: attribution, and the first regression signal
+
+## Runner stability (the gate before any of this means anything)
+
+Reassure's `check-stability` runs the same code twice. Its guidance: under 5% is
+fine, "10% and more considered too high."
+
+| Scenario | Measured | Stability |
+|---|---|---|
+| single `Text` | **0.1 ms** | **29.5% → 34.1%**, then **4.0% → 4.7%** for identical code |
+| `Text` x40 rows | **1.7 ms** | **2.0% → 3.4%** |
+| weighted average (both) | | **2.1% → 3.5%** |
+
+**The machine is stable; the first reading was not measuring the machine.** At
+0.1 ms the sample sits below the timer's resolution, so the "instability" is
+granularity — which the same scenario reporting 29.5% and then 4.0% for
+unchanged code demonstrates directly.
+
+**Rule that falls out of this: size a perf scenario above ~1 ms.** Under that, it
+is not measuring anything, and the honest response is to make the scenario do
+more work rather than to trust or tune the number.
+
+## Detector validated in both directions
+
+Same harness, same machine, back to back:
+
+- identical code → `1.7 ms → 1.7 ms (+1.4%)`, reported as **"Meaningless changes
+  to duration"** — correctly suppressed, because Reassure requires both p < 0.02
+  and a ≥5% effect size before it will call something a regression;
+- 40 → 60 rows → `1.7 ms → 2.5 ms (+0.8 ms, +49.4%) 🔴🔴`, reported under
+  **"Significant changes to duration"**.
+
+A detector that has only been shown to stay quiet has not been shown to work.
+
+## Attribution now exists
+
+`GIT_SHA` (with a `-dirty` suffix when the tree is unclean) and `BUILD_ID` reach
+the app through `generate-env.js`; CI passes `github.sha` because it builds from
+a detached HEAD. `version` is a metric label; `git_sha` is a **log body field**,
+not a label, because a SHA is unbounded and every label combination is a series
+multiplied by histogram buckets. Tests assert both halves.
+
+The Grafana startup panels no longer collapse the version: `by (le)` became
+`by (le, version)`, an "App version" variable was added, and each legend names
+its version, so two releases render as two series.
+
+## What this still cannot see
+
+Reassure measures React render duration and count in Jest. It sees **no** native
+time, bundle load, startup, frame timing or list-scroll cost. It would not have
+caught any of the four hypotheses rejected above. It is a narrow, trustworthy
+signal — not a cold-start baseline. The cold-start question remains open and
+still needs a device-side benchmark (Macrobenchmark `StartupTimingMetric`,
+deliberately deferred).
+
+---
+
+## Addendum — two silent metric failures found by running the new metric (2026-08-25)
+
+Wiring `app_content_appeared_ms` / `app_fully_drawn_ms` and then actually
+looking in Mimir found that **two already-shipped startup metrics had been
+emitting nothing**, and that the new ones inherited the same failure. Both are
+fixed; both were invisible to typecheck, lint and 7,672 tests.
+
+### 1. `useStartupInit` destroyed a shared global to get an HMR guard
+
+`useStartupInit` reported `app_startup_duration_ms` at hydration and then set
+`global.__APP_START_TIMESTAMP = undefined` — commented "Prevent re-reporting on
+HMR". But that global is the **shared JS-entry origin**: `store/index.ts:191`
+reads it, and `NativePerformanceService.markFullyDrawn()` measures from it when
+the first list finishes loading, seconds later. So `app_fully_drawn_ms` read
+`undefined` and silently returned on every launch.
+
+Fixed with a module-scope `reportedStartupDuration` latch — same one-shot
+guarantee, without destroying a value other consumers need. `store/index.ts`
+only ever worked by ordering luck. Guarded by a new test in
+`useStartupInit.test.ts`, verified to fail when the clear is reintroduced.
+
+### 2. `inlineRequires` deferred the native-mark listener past the one flush
+
+`app_native_launch_ms` and `app_js_bundle_load_ms` — both shipped, both
+documented — returned **NO DATA**, while `Date.now()`-based metrics
+(`app_apollo_restore_ms`, `app_js_entry_to_store_ready_ms`) were present. That
+split localised the fault to the `react-native-mark` path.
+
+Mechanism, read out of the installed package rather than guessed:
+
+- `react-native-performance` attaches its native `mark` listener at **module
+  evaluation** (`src/index.ts:27`).
+- Android's `PerformanceModule` buffers every startup ReactMarker and flushes
+  the buffer **once**, at `CONTENT_APPEARED` (`PerformanceModule.java:71-76`).
+  Nothing listening at that instant means the marks are gone for good.
+- `metro.config.js:49` sets `inlineRequires: true`, so every
+  `import performance from 'react-native-performance'` is deferred to first
+  USE — and the earliest real use is `NativePerformanceService.initialize()`
+  inside a `requestIdleCallback`, well after `CONTENT_APPEARED`.
+- The observer's `buffered: true` cannot rescue it: it replays from the JS
+  entry store (`performance-observer.ts:140`), which was never populated.
+
+Fixed with a bare side-effect `import 'react-native-performance'` at the top of
+`index.js` — a side-effect import has no binding for Metro to inline, so it
+stays eager. `PerformancePackage` self-registers `setupListener()` (its
+constructor, `PerformancePackage.java:19`), so no native change was needed.
+
+**Prediction stated before the change:** all three mark-derived metrics go NO
+DATA → present. **Result:** they did.
+
+### Emulator numbers, `localRelease`, Pixel_9a (`emulator-5554`), n=2, warm cache
+
+| Metric | Value | Origin |
+|---|---|---|
+| `app_native_launch_ms` | 18 ms | `nativeLaunchStart`→`End` |
+| `app_js_bundle_load_ms` | 93 ms | `runJsBundleStart`→`End` |
+| `app_content_appeared_ms` | 215 ms | `nativeLaunchStart` → RN content appeared |
+| `app_startup_duration_ms` | 121 ms | JS entry → hydrated |
+| `app_fully_drawn_ms` | **835 ms** | JS entry → first list painted |
+| logcat `Fully drawn` | **+1317 / +1268 ms** | OS, from activity start |
+
+Emulator only — the device figures in the earlier addendum (~2.2 s) stand as
+the real baseline.
+
+### `nativeLaunchStart` is CPU-time-derived on BOTH platforms, not just iOS
+
+The plan recorded the CPU-time caveat as iOS-only. It is not:
+`StartTimeProvider.java:29` computes `startTime = endTime -
+Process.getElapsedCpuTime()`, the same shape as iOS's
+`clock_gettime(CLOCK_THREAD_CPUTIME_ID)`. Time spent descheduled is excluded on
+both, so the origin sits later than true process start and every
+`nativeLaunchStart`-based number **understates** real elapsed time.
+
+That is why the table above does not reconcile: `app_content_appeared_ms`
+(215 ms) and logcat's wall-clock `Fully drawn` (+1317 ms) do not share an
+origin and never will. `docs/telemetry-setup.md`'s contract row now says so.
+**These metrics are for comparing a platform against itself across builds, and
+for nothing else.**
+
+### What this run did NOT verify
+
+The plan's real check — `app_fully_drawn_ms` agreeing with the ~2.2 s
+frame-capture figure from two independent methods — **needs the physical
+device** and was not done here; only the emulator was attached. What the
+emulator run does establish is that the pipeline works end-to-end and that the
+call site fires: logcat's `ActivityTaskManager: Fully drawn` line can only
+appear if `markFullyDrawn()` ran, which is also independent proof that fix #1
+works. iOS (verification step 6) is still outstanding.
+
+### Two-method agreement check — DONE on the emulator (2026-08-25)
+
+The earlier note said this check needed the physical device. That was wrong: it
+needs *one* device measured *two* ways, not a phone. The ~2.2 s figure it was
+going to be compared against is an SM-S908U1 number, and comparing an emulator
+metric to it would only have re-proven that emulators are faster. Running both
+methods on the emulator answers the actual question — **is the marker in the
+right place?**
+
+Method A: `Activity.reportFullyDrawn()`, logged by the OS as
+`ActivityTaskManager: Fully drawn` — driven by our JS `markFullyDrawn()`.
+Method B: `adb exec-out screencap` sampled in a loop from `am start`, frames
+classified by PNG byte size after visually establishing the signature
+(<25 KB blank · ~123 KB skeletons · ~247 KB real rows, placeholder thumbnails ·
+~403 KB settled).
+
+Pixel_9a emulator, `localRelease`, warm cache, all times from `am start`:
+
+| run | first real rows | settled frame | OS fully-drawn | settled ↔ OS |
+|---|---|---|---|---|
+| 1 | 1325 ms | 1480 ms | 1470 ms | −10 ms |
+| 2 | 1241 ms | 1552 ms | 1516 ms | −36 ms |
+| 4 | 1257 ms | 1428 ms | 1442 ms | +14 ms |
+
+A fourth run was **discarded**: its 2 ms frame already exceeded the threshold
+because the previous screen was still displayed at relaunch, so the classifier
+locked onto a stale frame. Recorded rather than quietly dropped.
+
+**Resolution:** sampling interval 130–160 ms, and each frame's timestamp is
+taken *before* `screencap` executes, so labels are biased early — which is why
+run 4's OS value sits 14 ms *after* its recorded settle.
+
+**Verdict: the marker is in the right place.** It tracks the settled frame to
+within ±36 ms — well inside one sample — and fires 145–275 ms *after* the first
+frame containing real rows. So `app_fully_drawn_ms` is a deliberately
+conservative definition of first meaningful paint: it can lag slightly, and it
+**never fires before content is on screen**, which is the failure mode that
+would have mattered.
+
+`app_fully_drawn_ms` read 946 ms (JS-entry origin) for the last flushed run
+against an OS figure of 1442 ms (activity-start origin) — a ~496 ms
+activity-start→JS-entry gap, consistent with the 93 ms bundle load plus RN init.
+
+**Note on reading this metric:** `_count` came back as **n=1**, not n=6. Each
+cold start is a new process, so the cumulative counter resets every launch and
+only the last flushed process is visible. Read `app_fully_drawn_ms` **per
+session**; a `_sum / _count` average across launches is meaningless here, as
+already warned for `slow_*` counters.
+
+**Emulator vs device sequence.** The emulator shows blank → skeletons (1195 ms)
+→ populated (1325 ms). The SM-S908U1 showed a **header-only frame with no
+skeletons and no rows** at 1.6–1.8 s. The emulator does not reproduce that
+state, so it cannot be used to investigate it — only to detect regressions
+against itself.
+
+### Physical device, signed in, with a `device_type` label (2026-08-25)
+
+Two problems blocked device-vs-emulator comparison and are now fixed.
+
+**1. The phone was signed out**, so it never rendered a list and
+`app_fully_drawn_ms` correctly never fired — the documented SCOPE limitation
+behaving exactly as written. Signed back in (63 pantry items).
+
+**2. Both devices wrote to the SAME series.** `instance` is only
+`android_<version>`; nothing distinguished a phone run from an emulator run, so
+each silently overwrote the other's history. `TelemetryService` now emits
+`device_type` = `emulator` | `physical` (`isEmulatorSync()`), on all three emit
+paths. **Two values, deliberately** — `device_model` is the same cardinality
+bomb as a commit SHA (thousands of Android models × histogram buckets), and is
+rejected for the same reason.
+
+SM-S908U1 vs Pixel_9a emulator, `localRelease`, warm cache, signed in:
+
+| metric | emulator | physical | ratio |
+|---|---|---|---|
+| `app_native_launch_ms` | 31 ms | 55 ms | 1.77× |
+| `app_js_bundle_load_ms` | 176 ms | 319 ms | 1.81× |
+| `app_content_appeared_ms` | 336 ms | 583 ms | 1.74× |
+| **`app_startup_duration_ms`** | **202 ms** | **670 ms** | **3.32×** |
+| `app_fully_drawn_ms` | 966 ms | 1443 ms | 1.49× |
+
+OS `Fully drawn` (wall clock, activity-start origin): phone 1766 / 1684 /
+1850 ms; emulator 1496 / 1499 / 1444 ms. Phone frame capture put the settled
+frame at 1676 / 1844 / 1864 ms — agreeing with the OS marker within one sample
+(phone `screencap` interval is ~450 ms, much coarser than the emulator's ~140 ms).
+
+**The device is healthy — the gap is not a fault.** Checked before measuring:
+thermal status `0` (no throttling, AP 34.7 °C), battery saver off
+(`low_power=0`), governor `walt` with cpu4 pinned at its 2496000 max. An
+emulator runs x86_64 natively on a desktop CPU with host RAM and SSD; beating a
+2022 phone SoC on startup is the expected result.
+
+### The lead: one phase is disproportionately slow on device
+
+Every metric sits at ~1.75× — the flat hardware gap — **except
+`app_startup_duration_ms` at ~3.3×.** Sampled repeatedly rather than trusted at
+n=1 (each cold start is a new process, so only the last flush is visible):
+
+| trial | physical | emulator |
+|---|---|---|
+| 1 | 799 ms | 194 ms |
+| 2 | 560 ms | 190 ms |
+| 3 | 560 ms | 190 ms |
+| earlier | 670 ms | 202 ms |
+
+Reproducible, and the emulator side is remarkably stable (190–202 ms). So this
+phase costs roughly **1.7× more than the flat hardware gap explains**.
+
+That window is JS entry → store hydrated, and it is **dominated by module
+evaluation, not hydration** — the actual rehydrate in it measured ~5 ms, which
+is why the metric was renamed `app_js_entry_to_store_ready_ms`.
+
+**This is a LEAD, not a cause.** It says *where* to point the Hermes CPU profile
+(§4 of the plan) first; it does not name a function. Candidate explanations —
+module evaluation, or the ~57 ms keychain read that could be far more expensive
+against a hardware-backed keystore — are hypotheses to be tested by the profile,
+not conclusions. The four rejected hypotheses in this document were all born
+from stopping at exactly this point.
+
+**Not controlled for:** the phone's OS-marker figure (~1.77 s) is below the
+~2.1–2.3 s frame-capture baseline recorded earlier in this document, but the
+builds differ by several fixes and the methods differ, so that is not claimed as
+an improvement.
+
+---
+
+## §4 Hermes CPU profile — attribution, and a correction (2026-08-25)
+
+The lead recorded above said the disproportionately slow phase "is dominated by
+module evaluation". **A sampled profile says that is wrong.** Module evaluation
+is real and is the largest single item early on, but it scales *better* than the
+hardware gap; the disproportionate cost is elsewhere.
+
+### How it was captured — no new dependency
+
+React Native 0.86 already ships `HermesSamplingProfiler`
+(`com.facebook.hermes.instrumentation`, three static JNI methods), so
+`react-native-release-profiler` was **not** adopted. Two facts made the built-in
+route viable in a RELEASE build, both verified rather than assumed:
+
+- `libjsijniprofiler.so` is NOT in the APK — CMake merges it into
+  `libhermestooling.so` (`.../hermes/tooling/CMakeLists.txt:12`: "hermestooling
+  is a shared library where we merge all the hermes* related libraries"), which
+  does ship. SoLoader resolves it via `@SoLoaderLibrary("jsijniprofiler")`.
+- Call order is `enable()` to start, then `dumpSampledTraceToFile()` **before**
+  `disable()` — taken from RN's own `HermesExecutorFactory.stopSamplingProfiler`.
+  Disabling first discards the samples.
+
+`StartupMarkModule` gained `startProfiling` / `stopProfiling`; the trace is
+written to the app's EXTERNAL files dir, because a `localRelease` build is not
+debuggable and `adb shell run-as` cannot reach internal storage. Armed in
+`index.js`, stopped in `markFullyDrawn()` — so the profile's window IS
+`app_fully_drawn_ms`'s window. Build-gated by `HERMES_PROFILE_STARTUP`, off by
+default, and a profiled run **deliberately emits no histogram** (sampling
+inflates the interval being measured; one poisoned point is worse than a gap).
+
+**Build gotcha:** the flag must be set on the **gradle** command, not just on
+`npm run genenv`. `metro.config.js:5` calls `generateEnv()` during bundling, so
+the build regenerates `env.generated.ts` from its own environment and silently
+overwrote a pre-set flag. The first profiled run produced no trace because of
+this, and the give-away was that `app_fully_drawn_ms` got a fresh sample — i.e.
+the non-profiling branch had run.
+
+**Second build gotcha, same class:** gradle does NOT treat `env.generated.ts` as
+an input to its bundle task, so changing the flag and rebuilding leaves the task
+UP-TO-DATE and ships the PREVIOUS bundle. Turning profiling back off appeared to
+succeed, installed fine, and still wrote a trace. `rm -rf
+android/app/build/generated/assets/react/<variant>` forces the re-bundle; the
+tell is whether `LOG:Done writing bundle output` appears in the gradle output.
+Verify a flag flip by BEHAVIOUR (does a trace appear?), never by the build
+succeeding.
+
+### Result — n=3 per device, whole-profile inclusive time
+
+`localRelease`, signed in, warm cache. Sampling is ~10 ms, so treat these as
+coarse. Boundary-free: an earlier fixed 600 ms split was discarded because at
+600 ms the two devices are in **different phases**, so it compared unlike things.
+
+| bucket | PHYSICAL (median) | EMULATOR (median) | ratio |
+|---|---|---|---|
+| module eval (`metroRequire`) | 292 ms | 206 ms | 1.42× — **below** the gap |
+| React render (`performWorkOnRoot`) | 703 ms | 402 ms | 1.75× — **is** the gap |
+| **UIManager view-manager constants** | **173 ms** | **52 ms** | **3.29×** |
+| GC | 31 ms | 42 ms | 0.75× |
+
+Per-run, non-overlapping ranges: phone 173/231/121 ms, emulator 52/72/42 ms.
+
+The flat hardware gap is ~1.75×, and React render sits exactly on it. **Only
+UIManager constants runs at nearly double the gap.**
+
+### What triggers it
+
+Every sampled path reaching it is inside module evaluation:
+
+```
+getConstantsForViewManager <- get <- getValue
+  <- loadModuleImplementation <- guardedLoadModule <- metroRequire
+```
+
+That is the signature of a module querying a native view-manager config at
+IMPORT time — each query is a synchronous hop to native, and native round-trips
+are what the phone is disproportionately slow at. Statically, the installed
+libraries that make such calls are **`react-native-screens`** (pulled in by
+React Navigation during startup) and **`react-native-turbo-image`**.
+
+### Status: attribution, not a fix
+
+That last paragraph is a **candidate list from a static grep**, not a measured
+attribution to a specific library — the profile proves *when* these calls happen
+and *that* they are disproportionately expensive, not *which* component issues
+them. Naming the component is the next measurement, and no code should change
+before it. Raw traces: `scratchpad/prof/*.cpuprofile`.
+
+### Naming the component — the view-manager probe (2026-08-25)
+
+The profile proved *when* `getConstantsForViewManager` runs and *that* it is
+disproportionately expensive, but a Hermes sample carries no arguments, so it
+could not say WHICH component. `src/services/performance/viewManagerProbe.ts`
+closes that: it wraps
+`global.RN$LegacyInterop_UIManager_getConstantsForViewManager` from `index.js`
+— which must happen before anything pulls in `BridgelessUIManager`, since that
+module captures the global into a module-scope const at evaluation (`:44`) —
+and times every call by name. The result is written next to the trace via a
+native `writeTextFile`, because a release build strips `console`.
+
+**48 view managers, each queried exactly once.** No single component dominates;
+the cost is the COUNT.
+
+| library | managers | phone | emulator | ratio |
+|---|---|---|---|---|
+| **react-native-svg** | **29** | **33.4 ms** | 12.1 ms | 2.77× |
+| React Native core | 14 | 19.1 ms | 8.0 ms | 2.39× |
+| react-native-gesture-handler | 3 | 3.0 ms | 1.2 ms | 2.53× |
+| other | 2 | 1.5 ms | 0.6 ms | 2.48× |
+| **TOTAL** | **48** | **57.0 ms** | **21.8 ms** | **2.61×** |
+
+Slowest single manager is `AndroidTextInput` at 4.0 ms; everything else is
+1–2 ms. Every ratio is above the ~1.75× hardware gap.
+
+**`react-native-svg` is 60% of the managers**, and the list includes the entire
+SVG filter surface — `RNSVGFeBlend`, `FeColorMatrix`, `FeComposite`, `FeFlood`,
+`FeGaussianBlur`, `FeMerge`, `FeOffset`, `Filter`, `ForeignObject`, `Marker`,
+`Mask`, `Pattern`, `Symbol`, `TextPath`, `Use` — none of which this app plausibly
+renders during a pantry cold start.
+
+The chain is: pantry chrome renders `EdgeFade` / `AnimatedChip` →
+`import Svg, { … } from 'react-native-svg'` → the package barrel evaluates every
+component module → each calls `requireNativeComponent` → 29 native round-trips.
+
+**Scope caveat:** the probe's 57 ms is only about a third of the profile's
+173 ms UIManager bucket. The probe times the wrapped native call alone; the
+remainder is the JS around it (`get UIManager`, `getValue`, module loading on
+that path). So this names the biggest nameable slice, not the whole bucket.
+
+### Next experiment, NOT yet run
+
+Deep-import the handful of SVG primitives actually used
+(`EdgeFade` needs `Svg/Defs/LinearGradient/Rect/Stop`; `AnimatedChip` needs
+`Svg/Path`; `BarcodeMask` needs `Svg/Defs/Rect/Mask`) instead of going through
+the package barrel, and re-measure. **Prediction to test:** the queried-manager
+count drops well below 48 and the phone's total falls proportionally. If the
+count does NOT drop, the barrel is not what pulls them and this direction is
+dead — record that rather than trying variations. No code changes until that
+measurement exists.
+
+### Deep-import experiment — RUN, and the direction is dead (2026-08-25)
+
+Changed `EdgeFade`, `AnimatedChip` and `BarcodeMask` from the `react-native-svg`
+barrel to deep imports of the 7 primitives they actually use, plus a tsconfig
+`paths` entry mapping `lib/commonjs/elements/*` to `lib/typescript/elements/*`
+(the package has no `typesVersions`, so a deep import is otherwise `any`).
+Typecheck, lint and 7,673 tests all passed. On device it **crashed**:
+
+```
+FATAL EXCEPTION: mqt_v_native
+Invariant Violation: Tried to register two views with the same name RNSVGDefs
+  requireNativeComponent -> codegenNativeComponent -> loadModuleImplementation
+```
+
+**Why the premise was wrong — verified independently of the crash.** The barrel
+is loaded no matter what these three files do: `metro.config.js` registers
+`react-native-svg-transformer`, and the app imports **13 `.svg` assets**, each
+transformed into a component that imports `react-native-svg`. One of them is
+`StorageLocationIcon.tsx`, squarely on the pantry startup path. So the deep
+imports could never have reduced the 48-manager count — they only added a
+SECOND module instance of each element, and each instance ran its own
+module-scope `requireNativeComponent`, hence the duplicate registration.
+
+That reasoning stands on `metro.config.js` and the import list, not on the
+crashed run, so **the "deep-import the component files" direction is dead**
+exactly as the pre-registered prediction said it would be if the count did not
+drop. Reverted.
+
+**MEASUREMENT CONTAMINATION — the run itself is not trustworthy.** A parallel
+session upgraded `react-native-svg` 15.15.4 -> 15.15.5 in the shared checkout at
+14:34:04, while this build was running; the crash logged at 14:37. The package
+layout was read at .4 and the APK built against .5, so the crash has two
+candidate causes and this run cannot separate them. It does not change the
+conclusion above (which does not depend on the run), but it does mean:
+
+- **The 48-manager / 29-SVG baseline was measured on 15.15.4.** Any re-measure
+  must re-baseline on 15.15.5 before comparing.
+- `node_modules` can change underneath a running measurement in this checkout.
+  Record the installed version of the package under test alongside the numbers.
+
+### Where the lever actually is — untested
+
+Not the three component files: the **13 `.svg` asset imports** and the
+transformer's generated barrel import. Whether that can be avoided at all
+(transformer output, or deferring the icon components off the startup path) is
+unknown and unmeasured. No code changes before that measurement exists.
+
+### Render-phase analysis (2026-08-25) — and a confound that invalidates part of the earlier comparison
+
+Analysed from the six traces already captured; no new device runs. Components
+were identified structurally — a frame whose PARENT is `renderWithHooks` is a
+component's render function — rather than by guessing at names.
+
+**Phone, per run (~1320 ms profiled window):**
+
+| | ms |
+|---|---|
+| React render (component fns) | 389 |
+| React commit (host tree mutation) | 311 |
+| — of which `PantryMainInner` render | **164** |
+
+**100% of `PantryMainInner`'s 164 ms is inside `useQuery`** — the chain is
+`usePantryScreen -> usePantryQuery -> useQuery -> useQuery_ -> createState ->
+diffQueryAgainstStore / execSelectionSetImpl / recomputeNewValue`. That is
+Apollo materialising the pantry query's result out of the normalized cache, once,
+synchronously, during mount. "Apollo cache read anywhere in the profile" is also
+164 ms — i.e. this single read IS all of the phone's Apollo cache work.
+
+At 164 ms it is comparable to the entire UIManager bucket (173 ms), and it is
+~12% of the profiled window.
+
+**THE CONFOUND: the two devices do not hold the same data.** The phone has **63
+pantry items**; the emulator has **18** (both read directly off the captured
+frames). Apollo's `diffQueryAgainstStore` cost scales with the number of
+normalized entities the selection set walks, so:
+
+- `PantryMainInner` 164 ms vs 14 ms (11.7x) conflates hardware with a 3.5x
+  dataset difference. It is NOT a device pathology.
+- The React-render bucket 703 ms vs 402 ms is confounded the same way, so the
+  earlier reading that it "sits exactly on the 1.75x hardware gap" was
+  **coincidence** and is withdrawn.
+
+**What is NOT confounded** — and still stands: the view-manager work (48
+managers on BOTH devices, dataset-independent) and module evaluation (identical
+bundle). The 3.29x / 2.61x UIManager ratios are unaffected.
+
+**Rule going forward:** equalise the datasets before comparing anything
+component- or data-shaped across devices, and record the item count next to the
+numbers, exactly as the package version now is.
+
+### Next hypothesis — revisits a reverted change, for a DIFFERENT reason
+
+`usePantryQuery.ts:85` defaults `itemsFirst` to `PAGE_SIZE.MAX`
+(`pantry.graphql:22` defaults the variable to 50). Earlier in this investigation
+`itemsFirst` 100 -> 25 was tried and reverted, correctly, because
+`INITIAL_RENDER_WINDOW = 24` means the same 24 rows mount either way — that was
+a RENDER-count argument.
+
+The cache read is a different mechanism: `diffQueryAgainstStore` walks **every
+item in the connection**, not the ones that render. So page size should drive
+this 164 ms even though it does not drive mount count.
+
+**Prediction to test:** reducing `itemsFirst` cuts `PantryMainInner`'s render
+time roughly in proportion to the item count, while `flashlist_initial_load_ms`
+stays flat (same 24 rows). If BOTH move, the mechanism is not what this says it
+is. Requires the two devices to hold the same data first.
+
+---
+
+## Matched-dataset re-measurement (2026-08-25) — RETRACTS the UIManager finding
+
+Both devices signed into the same account, **63 pantry items each** (confirmed
+on screen), `react-native-svg` re-baselined at 15.15.5, n=3 per device.
+
+### Headline: with equal data the devices are nearly equal end-to-end
+
+OS `Fully drawn`: phone 1907 / 1728 / 1661 ms (median **1728**), emulator
+1703 / 1639 / 1689 ms (median **1689**) — **1.02x**. The earlier 1.20x
+device-is-slower gap was mostly the 63-vs-18 item difference, not hardware.
+
+### Profile buckets, matched data
+
+| bucket | physical | emulator | ratio |
+|---|---|---|---|
+| module eval (`metroRequire`) | 238 ms | 162 ms | 1.47x |
+| **UIManager constants** | **77 ms** | **51 ms** | **1.53x** |
+| React render+commit | 706 ms | 445 ms | 1.58x |
+| **Apollo cache read** | **155 ms** | **71 ms** | **2.18x** |
+| **`PantryMainInner`** | **144 ms** | **46 ms** | **3.15x** |
+| GC | 53 ms | 51 ms | 1.06x |
+
+The JS-CPU baseline gap is **~1.5x** (module eval, UIManager, React and GC all
+cluster there).
+
+### RETRACTED: "UIManager view-manager constants is the device outlier"
+
+It is not. Matched, it runs at **1.53x** in the profile and **1.64x** by the
+probe (37.4 ms phone / 22.8 ms emulator) — i.e. on the baseline, not above it.
+
+The probe also shows the SVG version bump changed nothing structural: still
+**48 managers, 29 of them `react-native-svg`**, on both devices. What moved was
+the phone's timing: 57.0 ms before vs 37.4 ms now, against an emulator that
+barely moved (21.8 -> 22.8 ms). Per-run phone values across both sessions span
+**36.8-63.9 ms**, so the earlier 3.29x / 2.61x sat inside this metric's own
+run-to-run noise and my n=2/n=3 samples were too thin to see it. The
+"disproportionately expensive on device" claim does not replicate and is
+withdrawn.
+
+The structural facts about SVG survive (48 managers, 29 from the barrel, pulled
+in by 13 `.svg` asset imports) — that is a *count* observation, not a timing
+one. It is simply not a device-specific problem, and at ~37 ms it is small.
+
+### The replicated outlier: Apollo's normalized-cache read
+
+`PantryMainInner` 3.15x and Apollo cache read 2.18x, against a 1.5x baseline,
+with **non-overlapping per-run ranges**: phone [144, 139, 181] vs emulator
+[46, 61, 42]; phone [155, 139, 162] vs emulator [57, 71, 83]. Same dataset on
+both, so this is genuine device sensitivity, not data volume.
+
+`PantryMainInner`'s render is still 100% inside `useQuery` ->
+`diffQueryAgainstStore` / `execSelectionSetImpl`. At ~150 ms it is ~9% of the
+1728 ms fully-drawn window and the most device-sensitive thing measured.
+
+### A caveat on what any of this can buy
+
+The buckets do not sum to the wall clock: the phone's whole JS profile spans
+~1272 ms against a 1728 ms fully-drawn. A meaningful part of startup is not
+JS-CPU-bound, so cutting JS CPU does not convert 1:1 into startup time. Measure
+`app_fully_drawn_ms` after any change rather than assuming the saving lands.
+
+### Standing methodology additions
+
+- Equalise datasets before ANY cross-device comparison, and record the item
+  count with the numbers (this section exists because that was not done).
+- n=3 was not enough for the UIManager metric. Before calling a ratio anomalous,
+  check that the per-run ranges do not overlap — as they do not for Apollo.

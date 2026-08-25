@@ -101,6 +101,11 @@ module.exports = {
           shutdownDevice: false,
         },
       },
+      // Artifacts are kept on a PASS here because the UI-tour workflow reads
+      // those screenshots. Detox has no retention setting, so nothing ever
+      // deleted them and `e2e/artifacts/` reached 17 GB — the bound is
+      // `scripts/prune-e2e-artifacts.mjs` (keep the 5 most recent runs per
+      // configuration), which every `test:e2e*` script runs first.
       artifacts: {
         rootDir: 'e2e/artifacts/ios-simulator',
         plugins: {
@@ -145,9 +150,15 @@ module.exports = {
       artifacts: {
         rootDir: 'e2e/artifacts/ios-simulator-release',
         plugins: {
+          // Kept on a PASS, unlike a normal release run. This configuration is
+          // the measuring one (`E2E_TELEMETRY=1 npm run test:e2e:release`), and
+          // a measuring run that succeeds is exactly the run whose log and
+          // screenshots are wanted — the log is where the token-injection vs
+          // UI-login fallback is visible, which decides whether the sample is
+          // a clean signed-in cold start or has a login flow inside it.
           log: {
             enabled: true,
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
           },
           screenshot: {
             enabled: true,
@@ -156,7 +167,7 @@ module.exports = {
               testStart: false,
               testDone: true,
             },
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
           },
           video: {
             enabled: false,

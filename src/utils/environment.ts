@@ -91,6 +91,28 @@ export class Environment {
   }
 
   /**
+   * Whether this build accepts an auth state handed to it through launch
+   * arguments (`simctl launch --args`, `am start --es`).
+   *
+   * A NAMED capability with its own build flag, default off, rather than
+   * something inherited from an environment designation. The property "a build
+   * people receive does not accept an injected session" previously held by
+   * three unrelated mechanisms agreeing — CI writing `NODE_ENV=production` for
+   * prod, `NODE_ENV=staging` for stg, and the `dev` branch writing no NODE_ENV
+   * and being saved only by `__DEV__` being false in a release bundle. None of
+   * them is about this capability, so a build path added later inherits it
+   * silently. `.env` carries `NODE_ENV=development`, which every LOCAL release
+   * variant falls through to, so `isDevelopment()` is not the gate either.
+   *
+   * Set it only for a local measuring build (`MODE=release npm run ios`,
+   * Android `localRelease`). `scripts/check-launch-arg-auth.mjs` fails the
+   * build if it is ever on alongside a production or staging NODE_ENV.
+   */
+  static allowsLaunchArgAuth(): boolean {
+    return env.ALLOW_LAUNCH_ARG_AUTH === 'true';
+  }
+
+  /**
    * Get current platform
    */
   static getPlatform(): 'ios' | 'android' | 'web' {

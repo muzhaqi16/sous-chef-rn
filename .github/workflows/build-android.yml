@@ -186,6 +186,14 @@ jobs:
           echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
           echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
 
+          # Build identity goes in the FILE, not a step `env:` block. Metro
+          # calls generateEnv() again at module scope when gradle bundles, in a
+          # process that never saw a step-scoped variable — which rewrote
+          # env.generated.ts with BUILD_ID undefined and GIT_SHA downgraded to
+          # a short, `-dirty` sha. The file is read by every later run.
+          echo "GIT_SHA=${{ github.sha }}" >> "$ENV_FILE"
+          echo "BUILD_ID=${{ github.run_number }}" >> "$ENV_FILE"
+
           # Environment-specific variables
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
             echo "NODE_ENV=staging" >> "$ENV_FILE"
@@ -224,6 +232,19 @@ jobs:
           else
             ./gradlew assembleRelease
           fi
+
+      # Both run AFTER the build, not before it. `metro.config.js` calls
+      # generateEnv() at module scope, so gradle's bundling step rewrites
+      # env.generated.ts in a process of its own — the very overwrite these
+      # guard against happens after any pre-build check would have passed.
+      - name: Verify build identity survived into the bundle
+        run: node scripts/check-build-provenance.mjs
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_number }}
+
+      - name: Refuse launch-argument authentication in a shipped build
+        run: node scripts/check-launch-arg-auth.mjs
 
       # A third-party credential inside the shipped bundle is readable by
       # anyone who obtains the app; rotating it does not change that. Runs
@@ -459,6 +480,14 @@ jobs:
           echo "OTLP_LOGS_ENDPOINT=${{ vars.OTLP_LOGS_ENDPOINT }}" >> "$ENV_FILE"
           echo "SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}" >> "$ENV_FILE"
 
+          # Build identity goes in the FILE, not a step `env:` block. Metro
+          # calls generateEnv() again at module scope when gradle bundles, in a
+          # process that never saw a step-scoped variable — which rewrote
+          # env.generated.ts with BUILD_ID undefined and GIT_SHA downgraded to
+          # a short, `-dirty` sha. The file is read by every later run.
+          echo "GIT_SHA=${{ github.sha }}" >> "$ENV_FILE"
+          echo "BUILD_ID=${{ github.run_number }}" >> "$ENV_FILE"
+
           # Environment-specific variables
           if [ "${{ env.BUILD_ENV }}" = "stg" ]; then
             echo "NODE_ENV=staging" >> "$ENV_FILE"
@@ -497,6 +526,19 @@ jobs:
           else
             ./gradlew assembleRelease
           fi
+
+      # Both run AFTER the build, not before it. `metro.config.js` calls
+      # generateEnv() at module scope, so gradle's bundling step rewrites
+      # env.generated.ts in a process of its own — the very overwrite these
+      # guard against happens after any pre-build check would have passed.
+      - name: Verify build identity survived into the bundle
+        run: node scripts/check-build-provenance.mjs
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_number }}
+
+      - name: Refuse launch-argument authentication in a shipped build
+        run: node scripts/check-launch-arg-auth.mjs
 
       # A third-party credential inside the shipped bundle is readable by
       # anyone who obtains the app; rotating it does not change that. Runs

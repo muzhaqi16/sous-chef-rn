@@ -7,6 +7,15 @@ npm run check:codegen-orphans || exit 1
 # wrong. Nothing else fails to warn you, which is why it runs here.
 npm run check:version-sync || exit 1
 
+# Metro hoists every require above all top-level statements, so the startup
+# origin's position is a property of the TRANSFORM, not of index.js. Nothing
+# else notices when it drifts and every startup metric silently shortens.
+npm run check:startup-origin || exit 1
+
+# A build that accepts an injected session must never be one anyone else
+# receives. Cheap to check, and impossible to notice by reading the diff.
+npm run check:launch-arg-auth || exit 1
+
 if ! git diff --quiet HEAD || ! git diff --cached --quiet HEAD; then
   echo "Working tree has uncommitted changes; skipping codegen drift check." >&2
   exit 0

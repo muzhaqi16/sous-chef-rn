@@ -186,6 +186,10 @@ export const ItemList: React.FC<ItemListProps> = ({
   // ── Performance instrumentation (matches PantryContent & SortableList) ──
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'ItemList',
+    // No loading or placeholder mode here either — see SortableList. An empty
+    // `items` reaching this point means the caller supplied no `emptyState`,
+    // not that the data has settled, so it does not count as content.
+    hasRealContent: items.length > 0,
   });
   useDataReferenceTracker(
     items,

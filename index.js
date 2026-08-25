@@ -1,10 +1,38 @@
+// The origin every startup metric is measured from. MUST stay the first
+// import: Metro's `experimentalImportSupport` hoists every `require` above all
+// top-level statements, so a bare `global.__APP_START_TIMESTAMP = Date.now()`
+// here would run after every module below it — i18n, Apollo and unistyles
+// included — and silently exclude them from the number. The module has no
+// imports of its own, so as the first require it is the first thing evaluated.
+// `scripts/check-startup-origin.mjs` asserts that against the transformed
+// output.
+import './src/services/performance/startupClock';
+
+// Arms the opt-in Hermes profiler and the view-manager probe. Second, so it
+// still precedes the imports below; the probe must wrap its global before
+// anything pulls in BridgelessUIManager.
+import './src/services/performance/armStartupProfiling';
+
 // Install crypto.getRandomValues polyfill before any module that uses uuid.
-// Must be the very first import — generateId() runs during app startup
-// (deviceKey, deviceId) and uuid v4 reads globalThis.crypto.getRandomValues.
+// generateId() runs during app startup (deviceKey, deviceId) and uuid v4 reads
+// globalThis.crypto.getRandomValues.
 import 'react-native-get-random-values';
 
-// Record JS entry timestamp before any imports for startup time measurement
-global.__APP_START_TIMESTAMP = Date.now();
+// Side-effect import, and it MUST stay eager and near the top.
+//
+// `react-native-performance` attaches its native `mark` listener at module
+// evaluation (its `index.ts:27`). Android's PerformanceModule buffers every
+// startup ReactMarker and flushes the whole buffer once, at CONTENT_APPEARED
+// — if nothing is listening at that instant the marks are gone, and the JS
+// entry store stays empty, so a later observer's `buffered: true` has nothing
+// to replay. Metro runs with `inlineRequires: true` (metro.config.js:49), so
+// every `import performance from 'react-native-performance'` elsewhere is
+// deferred to first USE, and the earliest real use is
+// `NativePerformanceService.initialize()` inside a `requestIdleCallback` —
+// well after CONTENT_APPEARED. That is why app_native_launch_ms and
+// app_js_bundle_load_ms silently returned no data. A bare side-effect import
+// has no binding for Metro to inline, so this one stays put.
+import 'react-native-performance';
 
 /**
  * Configure Reanimated logger BEFORE any Reanimated code runs

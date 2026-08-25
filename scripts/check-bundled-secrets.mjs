@@ -25,6 +25,7 @@
  */
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, extname } from 'node:path';
+import { createRequire } from 'node:module';
 
 /**
  * Env vars whose VALUE must never reach a bundle.
@@ -90,21 +91,73 @@ const ACCEPTED_FINDINGS = {
     'same decision as OTLP_METRICS_AUTH_PASSWORD above.',
 };
 
-/** Read `generate-env.js`'s KEYS array — the vars the bundler inlines. */
+/** A well-formed environment variable name. */
+const ENV_NAME = /^[A-Z][A-Z0-9_]*$/;
+
+/**
+ * Read `generate-env.js`'s KEYS array — the vars the bundler inlines.
+ *
+ * Imported, not parsed. A text scrape of that file was silently emptied by an
+ * apostrophe inside one of its comments: quote pairing shifted mid-array and
+ * every key declared after it — `GIT_SHA`, `BUILD_ID`,
+ * `HERMES_PROFILE_STARTUP` — became invisible, so the gate had nothing left to
+ * classify and passed. Requiring the module removes that failure mode entirely.
+ *
+ * The shape checks below exist because this gate's own silence is the danger:
+ * "nothing unclassified was found" and "nothing was looked at" must not produce
+ * the same exit code.
+ */
 function bundledEnvKeys() {
-  const source = readFileSync(
-    new URL('./generate-env.js', import.meta.url),
-    'utf8',
-  );
-  const block = source.match(/const KEYS = \[([\s\S]*?)\]/);
-  if (!block) {
+  const require = createRequire(import.meta.url);
+  let keys;
+  try {
+    keys = require('./generate-env.js').KEYS;
+  } catch (error) {
     console.error(
-      `✗ Could not read the KEYS list from scripts/generate-env.js.\n` +
-        `  Without it this check has no candidate set and would pass vacuously.`,
+      `✗ Could not load the KEYS list from scripts/generate-env.js.\n` +
+        `  Without it this check has no candidate set and would pass vacuously.\n` +
+        `  ${error instanceof Error ? error.message : String(error)}`,
     );
     process.exit(2);
   }
-  return [...block[1].matchAll(/'([^']+)'/g)].map(m => m[1]);
+
+  if (!Array.isArray(keys) || keys.length === 0) {
+    console.error(
+      `✗ scripts/generate-env.js exported no KEYS array.\n` +
+        `  An empty candidate set is a failure of this check, not a pass.`,
+    );
+    process.exit(2);
+  }
+
+  const malformed = keys.filter(
+    key => typeof key !== 'string' || !ENV_NAME.test(key),
+  );
+  if (malformed.length > 0) {
+    console.error(
+      `✗ scripts/generate-env.js exported entries that are not env var names:\n\n` +
+        malformed.map(k => `  ${JSON.stringify(k)}`).join('\n') +
+        `\n\nThe candidate set is malformed, so this check cannot say what is or\n` +
+        `is not classified. Fix the KEYS array rather than this script.`,
+    );
+    process.exit(2);
+  }
+
+  return keys;
+}
+
+/**
+ * Credential-shaped keys carrying no recorded decision.
+ *
+ * A function so `--self-test` can push a planted key through the same
+ * classification the real check uses, rather than through a copy of it.
+ */
+function unclassifiedCredentials(keys) {
+  return keys.filter(
+    key =>
+      CREDENTIAL_NAME.test(key) &&
+      !(key in PUBLIC_BY_DESIGN) &&
+      !(key in ACCEPTED_FINDINGS),
+  );
 }
 
 const SECRET_ENV_KEYS = bundledEnvKeys().filter(
@@ -114,7 +167,7 @@ const SECRET_ENV_KEYS = bundledEnvKeys().filter(
 // A credential-shaped var that nobody has classified. Blocking here is the
 // point: the decision about what a leaked copy grants has to be made by a
 // person, once, in writing — not inferred from silence.
-const unclassified = SECRET_ENV_KEYS.filter(key => !(key in ACCEPTED_FINDINGS));
+const unclassified = unclassifiedCredentials(bundledEnvKeys());
 if (unclassified.length > 0) {
   console.error(
     `\n✗ Credential-shaped build vars with no decision recorded:\n\n` +
@@ -218,8 +271,34 @@ if (process.argv.includes('--self-test')) {
     );
     process.exit(2);
   }
+  // The candidate set is the other half of this gate, and the half that failed
+  // silently: a scanner that works is useless if it is handed nothing to look
+  // for. Plant an unclassified credential-shaped key and require the same
+  // classification the real check runs to catch it.
+  const candidates = bundledEnvKeys();
+  const plantedKey = 'SELF_TEST_PLANTED_TOKEN';
+  const caught = unclassifiedCredentials([...candidates, plantedKey]);
+  if (!caught.includes(plantedKey)) {
+    console.error(
+      `✗ Self-test failed: an unclassified credential-shaped key was not ` +
+        `caught.\n  The gate would pass while a new secret ships unreviewed.`,
+    );
+    process.exit(2);
+  }
+
+  // A classified key must NOT be reported, or the gate cries wolf and gets
+  // muted — which ends in the same place.
+  if (unclassifiedCredentials(['API_KEY']).length > 0) {
+    console.error(
+      '✗ Self-test failed: a classified key was reported as unclassified.',
+    );
+    process.exit(2);
+  }
+
   console.log(
-    '✓ Self-test passed: a planted secret is found, noise is filtered.',
+    '✓ Self-test passed: a planted secret is found, noise is filtered,\n' +
+      `  and the candidate set (${candidates.length} keys) still catches an ` +
+      `unclassified credential.`,
   );
   process.exit(0);
 }

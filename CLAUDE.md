@@ -570,6 +570,14 @@ changes. Measurement decides what to change; it is not the confirmation step.
 - **Emulator numbers understate hardware. Re-measure on a device before acting.**
   `flashlist_initial_load_ms` for the same screen: 40 ms emulator, 301–934 ms on
   an SM-S908U1.
+- **An iOS simulator errs the OTHER way — it OVERSTATES.** It does not emulate a
+  CPU; it runs arm64 natively on the Mac's cores. So an iOS-sim number beside an
+  Android-device number compares two host machines, not two platforms. Compare
+  iOS to iOS, build over build. iOS also has **no OS-side fully-drawn marker**
+  (no API accepts an app-declared signal), so the two-method agreement that backs
+  `app_fully_drawn_ms` on Android does not carry over —
+  `scripts/ios-frame-sample.mjs` is the only cross-check there is.
+  `docs/audits/perf-ios-baseline-2026-08-25.md`.
 - **State the instrument's resolution.** A difference smaller than one sample is
   not a result — 450 ms screenshot sampling cannot resolve a 100 ms change, and a
   series that returns the same value for two different builds is not measuring

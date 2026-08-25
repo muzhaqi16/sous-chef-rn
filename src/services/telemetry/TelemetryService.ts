@@ -16,6 +16,8 @@ import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
 import { generateId } from '#/utils/generateId';
+import { getVersion, isEmulatorSync } from 'react-native-device-info';
+import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
 
 /**
@@ -23,6 +25,70 @@ import { useStore } from '#store';
  * reset or a cold start is otherwise invisible in the log stream.
  */
 const SESSION_ID = generateId();
+
+/**
+ * The app version, as a metric label.
+ *
+ * BOUNDED on purpose. Every unique label combination is a new Prometheus series,
+ * multiplied again by histogram buckets, so the commit SHA must never go here —
+ * it is unbounded and is the textbook cardinality bomb. The SHA travels on LOGS
+ * instead (a body field, see `log()` below), which is where per-run identity
+ * already lives.
+ *
+ * Without this, nothing on a metric said which build produced it: the only
+ * version-bearing dimension was `service.instance.id`, and every Grafana startup
+ * panel collapsed it with `sum(...) by (le)`. A regression could not be
+ * attributed to a release even in principle.
+ */
+let appVersion: string | undefined;
+function resolveAppVersion(): string {
+  appVersion ??= safeNativeRead(getVersion, 'unknown');
+  return appVersion;
+}
+
+/**
+ * Whether this build is running on an emulator or on real hardware.
+ *
+ * BOUNDED like the app version: exactly two values. `device_model` would be the
+ * obvious label and is the same cardinality bomb as a commit SHA — thousands of
+ * Android models in the field, multiplied again by histogram buckets.
+ *
+ * Without it, an emulator run and a phone run are the SAME series: `instance`
+ * is only `android_<version>`. Measured 2026-08-25, the two disagree by 1.4-2x
+ * on startup marks and by 10-20x on `flashlist_initial_load_ms`, so mixing them
+ * silently poisons any baseline you try to compare a release against.
+ */
+let deviceType: string | undefined;
+function resolveDeviceType(): string {
+  deviceType ??= safeNativeRead(
+    () => (isEmulatorSync() ? 'emulator' : 'physical'),
+    'unknown',
+  );
+  return deviceType;
+}
+
+/**
+ * Read a process-constant value from a native module, once, without letting a
+ * failure escape.
+ *
+ * Both readers below are blocking SYNCHRONOUS bridge calls, and
+ * `isEmulatorSync` in particular enumerates every installed input method on
+ * Android (`getEnabledInputMethodList`, a binder IPC) on real hardware. Run at
+ * module scope they landed inside the startup window this service exists to
+ * measure — the instrument charging itself to the number it reports — and a
+ * throw there took down every `import { Telemetry }` rather than costing one
+ * label. Resolved lazily and memoized instead: the values never change within a
+ * process, so one call apiece is all that is owed.
+ */
+function safeNativeRead<T>(read: () => T, fallback: T): T {
+  let value;
+  try {
+    value = read();
+  } catch {
+    // Degrade to an unlabelled metric rather than breaking every consumer.
+  }
+  return value ?? fallback;
+}
 
 const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
   debug: 0,
@@ -161,6 +227,11 @@ export class TelemetryService {
         // made several readings during the 2026-08-24 audit ambiguous.
         device_id: getDeviceIdSync() ?? 'unknown',
         session_id: SESSION_ID,
+        // The commit the build came from. A body field, never a label, for the
+        // cardinality reason above — but it is what lets a measurement be traced
+        // back to code. `-dirty` means the tree had uncommitted changes, so the
+        // build is not reproducible.
+        git_sha: buildEnv.GIT_SHA ?? 'unknown',
       },
     };
 
@@ -213,6 +284,8 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: resolveAppVersion(),
+        device_type: resolveDeviceType(),
         ...labels,
       },
       timestamp: Date.now(),
@@ -239,6 +312,8 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: resolveAppVersion(),
+        device_type: resolveDeviceType(),
         ...labels,
       },
       timestamp: Date.now(),
@@ -266,6 +341,8 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: resolveAppVersion(),
+        device_type: resolveDeviceType(),
         ...labels,
       },
       timestamp: Date.now(),
