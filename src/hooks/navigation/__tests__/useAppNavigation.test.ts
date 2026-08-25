@@ -125,11 +125,9 @@ describe('useAppNavigation', () => {
       });
     });
 
-    it('toPantryItem defaults to empty params when omitted', () => {
-      const { result } = renderHook(() => useAppNavigation());
-      act(() => result.current.toPantryItem());
-      expect(mockNavigate).toHaveBeenCalledWith('PantryItem', {});
-    });
+    // `itemId` is required: the screen edits an existing item. It was optional
+    // while the form carried an unreachable `add` mode, and an omitted id was
+    // how you selected that mode.
 
     it('toPantryItemDetail navigates at root level with itemId', () => {
       const { result } = renderHook(() => useAppNavigation());

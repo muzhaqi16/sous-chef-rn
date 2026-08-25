@@ -25,10 +25,8 @@ import {
 import {
   StorageState,
   ItemCondition,
-  type ItemSuggestion,
   type StorageLocation,
 } from '#/graphql/generated/schemaTypes';
-import { useCreatePantryItem } from '#features/pantry/hooks/mutations/useCreatePantryItem';
 import { useUpdatePantryItem } from '#features/pantry/hooks/mutations/useUpdatePantryItem';
 import { useUpdatePantryItemQuantity } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import { useResolveUnit } from '#features/pantry/hooks/mutations/useResolveUnit';
@@ -55,25 +53,23 @@ import {
   PAGES,
   TAB_FIELDS,
   INVENTORY_ADVANCED_FIELDS,
-  addItemSchema,
   editItemSchema,
 } from './pantryItemFormConfig';
 import { formatNumberForInput } from '#/utils/formatters/number';
 
 export interface PantryItemFormData {
-  // Item information (add mode)
+  // Item information
   itemName?: string;
   selectedItemId?: string;
   brand?: string;
 
-  // Quantity fields (both modes)
+  // Quantity fields
   quantityInput?: string;
   unit: string; // Tracking unit (for counting items)
 
-  // Edit mode specific
   tags?: string[];
 
-  // Low stock settings (both modes)
+  // Low stock settings
   minQuantity?: string;
   restockQuantity?: string;
 
@@ -82,7 +78,7 @@ export interface PantryItemFormData {
   netWeightUnit?: string;
   netWeightUnitId?: string;
 
-  // Storage fields (both modes)
+  // Storage fields
   storageState: StorageState;
   condition: ItemCondition;
   location: string;
@@ -92,13 +88,27 @@ export interface PantryItemFormData {
 }
 
 interface PantryItemFormProps {
-  mode: 'add' | 'edit';
-  itemId?: string; // Required for edit mode
+  /** The pantry item being edited. This form is edit-only. */
+  itemId: string;
   onSuccess?: () => void;
 }
 
+/**
+ * Edits an existing pantry item.
+ *
+ * This used to carry an `add` mode too — a second create path with its own
+ * schema, defaults, item-picker and `useCreatePantryItem` hook. Nothing could
+ * reach it: `PantryItem` registers with `linking: null`, and both callers of
+ * `toPantryItem` pass an `itemId`. Adding goes through `AddToPantrySheet` →
+ * `AddDetailsSheet` instead.
+ *
+ * It was not harmless while it sat there. Its create did its cache work in the
+ * mutation's `update:` callback, which never runs when a write is queued
+ * offline — the same defect that made offline adds invisible on the live path.
+ * Two creates that disagree is how that class of bug survives a fix to one of
+ * them.
+ */
 export const PantryItemForm: React.FC<PantryItemFormProps> = ({
-  mode,
   itemId,
   onSuccess,
 }) => {
@@ -120,9 +130,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     name: string;
     type: string;
   } | null>(null);
-  const [suggestedBrands, setSuggestedBrands] = useState<
-    { id: string; name: string }[]
-  >([]);
   const [selectedBrandId, setSelectedBrandId] = useState<string | null>(null);
   const [netWeightUnitId, setNetWeightUnitId] = useState<string | null>(null);
 
@@ -145,14 +152,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     skip: !selectedHomeId,
   });
 
-  // Load existing item for edit mode
+  // Load the item being edited
   const {
     data: existingItemData,
     loading: itemLoading,
     refetch: refetchItem,
   } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId ?? '' },
-    skip: mode !== 'edit' || !itemId,
+    skip: !itemId,
   });
 
   // Materialize the form's own narrow fragment from the cache. The screen's
@@ -192,11 +199,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   ) as StorageLocation[];
 
   // Mutation hooks - modular pattern for maintainability
-  const { createPantryItem } = useCreatePantryItem({
-    pantryId: currentPantryId,
-    onSuccess,
-  });
-
   const { updatePantryItemFields } = useUpdatePantryItem({
     onSuccess,
     refetch: refetchItem,
@@ -209,9 +211,8 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const { resolveUnitId } = useResolveUnit();
 
-  // Get initial values based on mode
   const getInitialValues = (): PantryItemFormData => {
-    if (mode === 'edit' && existingPantryItem) {
+    if (existingPantryItem) {
       const item = existingPantryItem;
       // Tracking unit (for counting items) - from item.unit or item.unitName
       const trackingUnitSymbol = item.unit?.symbol || '';
@@ -239,7 +240,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       };
     }
 
-    // Add mode defaults
+    // Not loaded yet — the form shows a spinner until it is.
     return {
       itemName: '',
       brand: '',
@@ -265,9 +266,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setValue,
     reset,
   } = useForm<PantryItemFormData>({
-    resolver: (mode === 'add'
-      ? yupResolver(addItemSchema)
-      : yupResolver(editItemSchema)) as Resolver<PantryItemFormData>,
+    resolver: yupResolver(editItemSchema) as Resolver<PantryItemFormData>,
     defaultValues: getInitialValues(),
     mode: 'onChange',
   });
@@ -277,11 +276,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   // "Adjusting state during render" pattern — avoids setState-in-useEffect lint error
   const [prevExistingItemData, setPrevExistingItemData] =
     useState<typeof existingItemData>();
-  if (
-    mode === 'edit' &&
-    existingPantryItem &&
-    existingItemData !== prevExistingItemData
-  ) {
+  if (existingPantryItem && existingItemData !== prevExistingItemData) {
     setPrevExistingItemData(existingItemData);
     const item = existingPantryItem;
     const trackingUnitSymbol = item.unit?.symbol || '';
@@ -321,34 +316,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       setNetWeightUnitId(item.netWeightUnit.id);
     }
   }
-
-  // Handlers for item selection (add mode only)
-  const handleItemSelect = (item: ItemSuggestion) => {
-    setValue('itemName', item.name);
-    setValue('selectedItemId', item.id);
-    // Handle multiple brands - store all as suggestions, pre-populate with first
-    if (item.brands && item.brands.length > 0) {
-      setSuggestedBrands(item.brands);
-      setValue('brand', item.brands[0].name);
-    } else {
-      setSuggestedBrands([]);
-      setValue('brand', '');
-    }
-    if (item.category?.name) {
-      setValue('category', item.category.name);
-      setSelectedCategoryId(null);
-    }
-    // Set tracking unit from item's default unit
-    if (item.defaultUnit?.symbol) {
-      setValue('unit', item.defaultUnit.symbol);
-      setTrackingUnit({
-        id: item.defaultUnit.id || null,
-        name: item.defaultUnit.name || null,
-        symbol: item.defaultUnit.symbol || null,
-        type: null,
-      });
-    }
-  };
 
   const handleCategorySelect = (categoryId: string | null) => {
     setSelectedCategoryId(categoryId);
@@ -410,10 +377,9 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   };
 
   const item = existingPantryItem;
-  const isWeightLocked = mode === 'edit' && !!item?.lastUsedAt;
+  const isWeightLocked = !!item?.lastUsedAt;
 
   const { handleSave } = usePantryItemFormSubmit({
-    mode,
     itemId,
     currentPantryId,
     isWeightLocked,
@@ -425,15 +391,13 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     selectedBrandId,
     selectedCategoryId,
     selectedStorageLocation,
-    createPantryItem,
     updatePantryItemFields,
     updateQuantity,
     resolveUnitId,
     onSuccess,
   });
 
-  // Show loading for edit mode
-  if (mode === 'edit' && itemLoading) {
+  if (itemLoading) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
         <PrimaryActivityIndicator size="large" />
@@ -441,8 +405,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     );
   }
 
-  // Show error if edit mode but no item found
-  if (mode === 'edit' && !existingPantryItem) {
+  if (!existingPantryItem) {
     return (
       <View style={[commonStyles.container, commonStyles.center]}>
         <Text style={styles.errorText}>{t('errors.itemNotFound')}</Text>
@@ -450,7 +413,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     );
   }
 
-  // Tags section fields (edit mode only)
+  // Tags section fields
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'tags',
@@ -473,8 +436,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     },
   ];
 
-  const formTestID =
-    mode === 'add' ? 'add-pantry-item-modal' : 'edit-pantry-item-modal';
+  const formTestID = 'edit-pantry-item-modal';
 
   // Per-tab error detection — drives the red dot on PageIndicator and
   // auto-expansion of "More options" when an errored field lives inside it.
@@ -503,19 +465,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
       >
         <Header
           variant="form"
-          title={
-            mode === 'add' ? t('itemForm.addTitle') : t('itemForm.editTitle')
-          }
+          title={t('itemForm.editTitle')}
           onClose={() => goBack()}
           rightActions={[
             {
               icon: 'checkmark',
               onPress: handleSubmit(handleSave, logValidationErrors),
               variant: 'primary',
-              testID:
-                mode === 'add'
-                  ? 'add-pantry-item-submit-button'
-                  : 'edit-pantry-item-submit-button',
+              testID: 'edit-pantry-item-submit-button',
             },
           ]}
         />
@@ -531,27 +488,14 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.pageContent}>
-            {currentPage === 0 &&
-              (mode === 'add' ? (
-                <ItemInformationSection
-                  control={control}
-                  errors={errors}
-                  mode="add"
-                  onSelectItem={handleItemSelect}
-                  suggestedBrands={suggestedBrands}
-                  testID="add-pantry-item-name-input"
-                  onCategorySelected={handleCategorySelect}
-                />
-              ) : (
-                <ItemInformationSection
-                  control={control}
-                  errors={errors}
-                  mode="edit"
-                  suggestedBrands={suggestedBrands}
-                  onBrandSelected={setSelectedBrandId}
-                  onCategorySelected={handleCategorySelect}
-                />
-              ))}
+            {currentPage === 0 && (
+              <ItemInformationSection
+                control={control}
+                errors={errors}
+                onBrandSelected={setSelectedBrandId}
+                onCategorySelected={handleCategorySelect}
+              />
+            )}
 
             {currentPage === 1 && (
               <NetWeightSection
@@ -565,7 +509,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               <StorageDetailsSection
                 control={control}
                 errors={errors}
-                mode={mode}
                 storageState={
                   watchedValues.storageState ?? StorageState.Ambient
                 }
@@ -593,36 +536,25 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
                 <QuantitySection
                   control={control}
                   errors={errors}
-                  mode={mode}
                   onUnitSelected={handleUnitSelected}
-                  testID={
-                    mode === 'add'
-                      ? 'add-pantry-item-quantity-input'
-                      : 'edit-pantry-item-quantity-input'
-                  }
-                  unitTestID={
-                    mode === 'add'
-                      ? 'add-pantry-item-unit-picker'
-                      : 'edit-pantry-item-unit-picker'
-                  }
+                  testID="edit-pantry-item-quantity-input"
+                  unitTestID="edit-pantry-item-unit-picker"
                   unitSymbol={item?.unit?.symbol}
                 />
 
-                {mode === 'edit' && (
-                  <CollapsibleSection
-                    title={t('labels.moreOptions')}
-                    expanded={showTags}
-                    onToggle={() => setTagsExpanded(prev => !prev)}
-                  >
-                    <View style={styles.advancedContent}>
-                      <DynamicFormFields
-                        fields={tagsFields}
-                        control={control}
-                        errors={errors}
-                      />
-                    </View>
-                  </CollapsibleSection>
-                )}
+                <CollapsibleSection
+                  title={t('labels.moreOptions')}
+                  expanded={showTags}
+                  onToggle={() => setTagsExpanded(prev => !prev)}
+                >
+                  <View style={styles.advancedContent}>
+                    <DynamicFormFields
+                      fields={tagsFields}
+                      control={control}
+                      errors={errors}
+                    />
+                  </View>
+                </CollapsibleSection>
               </>
             )}
           </View>

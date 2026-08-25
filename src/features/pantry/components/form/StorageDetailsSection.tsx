@@ -43,7 +43,6 @@ const getStorageStateOptions = (t: Translate): ChipOption<StorageState>[] =>
 interface StorageDetailsSectionProps {
   control: Control<PantryItemFormData>;
   errors: FieldErrors<PantryItemFormData>;
-  mode: 'add' | 'edit';
   storageState: StorageState;
   condition: ItemCondition;
   expirationDate?: Date;
@@ -61,7 +60,6 @@ interface StorageDetailsSectionProps {
 export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   control,
   errors,
-  mode,
   storageState,
   condition,
   expirationDate,
@@ -93,7 +91,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
   const notesFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'notes',
-      label: mode === 'edit' ? t('itemForm.storageNotes') : t('itemForm.notes'),
+      label: t('itemForm.storageNotes'),
       placeholder: t('labels.anyAdditionalNotes'),
       component: FormTextArea,
       props: { numberOfLines: 3 },

@@ -60,7 +60,6 @@ function Wrapper(
     <StorageDetailsSection
       control={control}
       errors={errors}
-      mode="add"
       storageState={StorageState.Ambient}
       condition={ItemCondition.Good}
       onStorageStateChange={jest.fn()}
@@ -95,13 +94,8 @@ describe('StorageDetailsSection', () => {
     expect(screen.getByText('Location')).toBeTruthy();
   });
 
-  it('renders notes field label for add mode', () => {
-    render(<Wrapper mode="add" />);
-    expect(screen.getByText('Notes')).toBeTruthy();
-  });
-
-  it('renders notes field label for edit mode', () => {
-    render(<Wrapper mode="edit" />);
+  it('renders the notes field label', () => {
+    render(<Wrapper />);
     expect(screen.getByText('Storage Notes')).toBeTruthy();
   });
 });

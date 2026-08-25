@@ -42,12 +42,7 @@ function Wrapper(
   });
 
   return (
-    <ItemInformationSection
-      control={control}
-      errors={errors}
-      mode="add"
-      {...overrides}
-    />
+    <ItemInformationSection control={control} errors={errors} {...overrides} />
   );
 }
 
@@ -57,19 +52,13 @@ describe('ItemInformationSection', () => {
     expect(screen.getByText('Item Information')).toBeTruthy();
   });
 
-  it('renders add mode fields', () => {
-    render(<Wrapper mode="add" />);
+  it('renders the edit fields', () => {
+    // There is no longer an `add` variant: the form this section belongs to is
+    // edit-only, and its former add mode was unreachable.
+    render(<Wrapper />);
     expect(screen.getByTestId('dynamic-fields')).toBeTruthy();
     expect(screen.getByText('Item Name')).toBeTruthy();
     expect(screen.getByText('Category')).toBeTruthy();
-    expect(screen.getByText('Brand')).toBeTruthy();
-  });
-
-  it('renders edit mode fields', () => {
-    render(<Wrapper mode="edit" />);
-    expect(screen.getByText('Item Name')).toBeTruthy();
-    expect(screen.getByText('Category')).toBeTruthy();
-    // Edit mode brand label has "(optional)"
     expect(screen.getByText('Brand (optional)')).toBeTruthy();
   });
 
