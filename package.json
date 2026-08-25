@@ -43,6 +43,9 @@
     "i18n:check": "node scripts/check-i18n.mjs",
     "watchman": "watchman watch-del-all && watchman shutdown-server",
     "test": "jest",
+    "perf": "reassure",
+    "perf:baseline": "reassure --baseline",
+    "perf:stability": "reassure check-stability",
     "test:changed": "jest --changedSince=main --bail",
     "test:e2e": "detox test --configuration ios.sim.debug",
     "test:e2e:android:device": "detox test --configuration android.att.debug",
@@ -186,6 +189,7 @@
     "prettier": "2.8.8",
     "react-native-svg-transformer": "^1.5.3",
     "react-test-renderer": "19.2.3",
+    "reassure": "^1.6.0",
     "source-map-explorer": "^2.5.3",
     "typescript": "^5.8.3"
   },

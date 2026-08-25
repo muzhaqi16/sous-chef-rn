@@ -118,6 +118,11 @@ src/config/env.generated.ts
 docs/audits/*
 !docs/audits/perf-offline-baseline-2026-08-24.md
 
+# Reassure measurements. Per-run and per-machine — a baseline is only
+# comparable against a current measured on the SAME machine minutes later,
+# so there is nothing here worth committing.
+.reassure/
+
 # Watchman probe files. Watchman drops these into the watched root to verify it
 # is receiving filesystem notifications, then deletes them; one is left behind
 # whenever a watch dies mid-check. Transient, machine-named, never ours to

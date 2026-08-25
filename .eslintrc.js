@@ -197,7 +197,15 @@ module.exports = {
       // freezes the import-time language, so they should be factories taking
       // `t` or tables of key paths.
       files: ['src/**/*.tsx'],
-      excludedFiles: ['**/__tests__/**', '**/__mocks__/**', '**/*.test.tsx'],
+      excludedFiles: [
+        '**/__tests__/**',
+        '**/__mocks__/**',
+        '**/*.test.tsx',
+        // Reassure perf scenarios. Their strings are fixture data sized to
+        // match a real row, never rendered to a user.
+        '**/__perf__/**',
+        '**/*.perf-test.tsx',
+      ],
       plugins: ['i18next'],
       rules: {
         // The module-level `t` does not subscribe to language changes. In a

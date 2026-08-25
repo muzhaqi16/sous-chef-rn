@@ -646,3 +646,60 @@ What occupies the window between `PantryMain` mounting and its first frame. Four
 hypotheses are now excluded. The audit's original recommendation stands: a Hermes
 CPU profile armed BEFORE the mount, which the current tooling cannot do. Do not
 propose a fifth hypothesis without it.
+
+---
+
+# Addendum — 2026-08-25: attribution, and the first regression signal
+
+## Runner stability (the gate before any of this means anything)
+
+Reassure's `check-stability` runs the same code twice. Its guidance: under 5% is
+fine, "10% and more considered too high."
+
+| Scenario | Measured | Stability |
+|---|---|---|
+| single `Text` | **0.1 ms** | **29.5% → 34.1%**, then **4.0% → 4.7%** for identical code |
+| `Text` x40 rows | **1.7 ms** | **2.0% → 3.4%** |
+| weighted average (both) | | **2.1% → 3.5%** |
+
+**The machine is stable; the first reading was not measuring the machine.** At
+0.1 ms the sample sits below the timer's resolution, so the "instability" is
+granularity — which the same scenario reporting 29.5% and then 4.0% for
+unchanged code demonstrates directly.
+
+**Rule that falls out of this: size a perf scenario above ~1 ms.** Under that, it
+is not measuring anything, and the honest response is to make the scenario do
+more work rather than to trust or tune the number.
+
+## Detector validated in both directions
+
+Same harness, same machine, back to back:
+
+- identical code → `1.7 ms → 1.7 ms (+1.4%)`, reported as **"Meaningless changes
+  to duration"** — correctly suppressed, because Reassure requires both p < 0.02
+  and a ≥5% effect size before it will call something a regression;
+- 40 → 60 rows → `1.7 ms → 2.5 ms (+0.8 ms, +49.4%) 🔴🔴`, reported under
+  **"Significant changes to duration"**.
+
+A detector that has only been shown to stay quiet has not been shown to work.
+
+## Attribution now exists
+
+`GIT_SHA` (with a `-dirty` suffix when the tree is unclean) and `BUILD_ID` reach
+the app through `generate-env.js`; CI passes `github.sha` because it builds from
+a detached HEAD. `version` is a metric label; `git_sha` is a **log body field**,
+not a label, because a SHA is unbounded and every label combination is a series
+multiplied by histogram buckets. Tests assert both halves.
+
+The Grafana startup panels no longer collapse the version: `by (le)` became
+`by (le, version)`, an "App version" variable was added, and each legend names
+its version, so two releases render as two series.
+
+## What this still cannot see
+
+Reassure measures React render duration and count in Jest. It sees **no** native
+time, bundle load, startup, frame timing or list-scroll cost. It would not have
+caught any of the four hypotheses rejected above. It is a narrow, trustworthy
+signal — not a cold-start baseline. The cold-start question remains open and
+still needs a device-side benchmark (Macrobenchmark `StartupTimingMetric`,
+deliberately deferred).
