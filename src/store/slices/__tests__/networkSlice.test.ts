@@ -1,5 +1,5 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { isApiUnavailable } from '../networkSlice';
+import { isApiUnavailable, shouldTreatAsOffline } from '../networkSlice';
 
 jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
@@ -197,10 +197,83 @@ describe('networkSlice', () => {
     });
   });
 
+  describe('going offline expires what we knew about the API', () => {
+    const dropLink = (store: ReturnType<typeof createTestStore>) =>
+      store.getState().setNetworkStatus({
+        isOnline: false,
+        isInternetReachable: false,
+        networkType: 'none',
+      });
+
+    it('moves apiReachable to unknown when the link drops', () => {
+      // Not `false` — that would claim proof we do not have — and not `true`,
+      // which would let an assumption override NetInfo. Nothing has been tried
+      // since the link went, so the honest answer is that we do not know.
+      const store = createTestStore();
+      store.getState().setApiReachable(true);
+
+      dropLink(store);
+
+      expect(store.getState().apiReachable).toBeNull();
+    });
+
+    it('expires it on the setOffline path too', () => {
+      // The invariant lives in the store rather than in the breaker so it holds
+      // for every path into the offline state, not just the wired one.
+      const store = createTestStore();
+      store.getState().setApiReachable(true);
+
+      store.getState().setOffline();
+
+      expect(store.getState().apiReachable).toBeNull();
+    });
+  });
+
+  describe('shouldTreatAsOffline', () => {
+    it('blocks traffic while the device is offline and the API is unproven', () => {
+      expect(
+        shouldTreatAsOffline({ isOnline: false, apiReachable: null }),
+      ).toBe(true);
+    });
+
+    it('allows traffic once a probe proves the API reachable', () => {
+      expect(
+        shouldTreatAsOffline({ isOnline: false, apiReachable: true }),
+      ).toBe(false);
+    });
+
+    it('keeps blocking when the API is proven unreachable', () => {
+      expect(
+        shouldTreatAsOffline({ isOnline: false, apiReachable: false }),
+      ).toBe(true);
+    });
+
+    it("says nothing about an online device — that is the breaker's job", () => {
+      // Online with the breaker open must stay FALSE here: `offlineModeLink`
+      // forwards that cache miss as an organic probe, which is how the
+      // API-down case recovers. Folding it in would remove that.
+      expect(
+        shouldTreatAsOffline({ isOnline: true, apiReachable: false }),
+      ).toBe(false);
+    });
+  });
+
   describe('isApiUnavailable', () => {
-    it('is true when the device is offline', () => {
-      expect(isApiUnavailable({ isOnline: false, apiReachable: true })).toBe(
+    it('is true when the device is offline and the API is unproven', () => {
+      // `null` is what going offline leaves behind: nothing has been tried
+      // since the link dropped, so we know nothing about the API.
+      expect(isApiUnavailable({ isOnline: false, apiReachable: null })).toBe(
         true,
+      );
+    });
+
+    it('is false when the API is PROVEN reachable despite NetInfo', () => {
+      // NetInfo probes a generic endpoint, so it describes the route to the
+      // public internet, not the route to us. A `/health` success is direct
+      // evidence and outranks it — otherwise the app refuses traffic that
+      // would have succeeded, and nothing can ever discover otherwise.
+      expect(isApiUnavailable({ isOnline: false, apiReachable: true })).toBe(
+        false,
       );
     });
 

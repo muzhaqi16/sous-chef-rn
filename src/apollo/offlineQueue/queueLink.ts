@@ -5,6 +5,7 @@ import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
+import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { hasSyncMapping } from './convertToSyncMutation';
@@ -91,7 +92,7 @@ export const createQueueLink = () => {
     // Device offline — queue only mutations on the replay allowlist. Anything
     // else fails fast with a network-shaped error (instant honest toast, no
     // doomed request, and no ghost replay on reconnect).
-    if (!state.isOnline) {
+    if (shouldTreatAsOffline(state)) {
       if (!replayable) {
         logger.info(
           `Queue Link: Offline, rejecting online-only mutation ${operation.operationName}`,

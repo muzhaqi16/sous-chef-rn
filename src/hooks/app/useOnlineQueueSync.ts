@@ -47,6 +47,10 @@ export function useOnlineQueueSync(): void {
     apiReachabilityBreaker.reset();
 
     if (!isOnline) {
+      // Unknown, not unreachable — and start probing, because a `/health`
+      // success is the only evidence that can show NetInfo is wrong about a
+      // link our API is reachable over anyway.
+      apiReachabilityBreaker.onDeviceOffline();
       queueManager.onOffline();
       return;
     }

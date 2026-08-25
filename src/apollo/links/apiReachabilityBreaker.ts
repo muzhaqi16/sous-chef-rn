@@ -146,6 +146,26 @@ class ApiReachabilityBreaker {
   }
 
   /**
+   * The device link went down.
+   *
+   * The store has already moved `apiReachable` to `null` — unknown — because
+   * what we knew about the API expired with the link. This starts the probe
+   * loop, which is the only thing that can turn it back into a fact: a
+   * `/health` success while NetInfo says offline proves NetInfo wrong about a
+   * route our API is reachable over anyway. Without it the app had no way to
+   * find out — no traffic is allowed while offline, so the circuit can never
+   * open, and the probe loop only ran while it was open.
+   *
+   * This is the SAME loop the open circuit uses, on the same backoff — not a
+   * second one. A genuinely offline device fails each probe at the socket,
+   * which is cheap, and the backoff caps it at one every two minutes.
+   */
+  onDeviceOffline(): void {
+    this.probeAttempt = 0;
+    this.scheduleProbe();
+  }
+
+  /**
    * App returned to the foreground. The pre-background failure count is stale
    * signal; if the circuit is open (or the store flag is somehow stuck false),
    * probe NOW instead of waiting out a timer that didn't run while suspended.
@@ -211,7 +231,10 @@ class ApiReachabilityBreaker {
     if (this.circuitState === 'open') {
       this.probeAttempt += 1;
       this.scheduleProbe();
-    } else if (
+      return;
+    }
+
+    if (
       useStore.getState().apiReachable === false ||
       this.consecutiveFailures > 0
     ) {
@@ -222,6 +245,17 @@ class ApiReachabilityBreaker {
       // guards also drop stale probe results that resolve after a reset()
       // (which clears the flag and zeroes consecutiveFailures).
       this.open();
+      return;
+    }
+
+    // Circuit closed, nothing else to act on — but if the device link is down
+    // this loop is the ONLY thing running, because no traffic is allowed to
+    // produce a failure that would open the circuit. Keep it alive so a
+    // recovery gets noticed; opening would be wrong, since a failed probe with
+    // no link says nothing about the API.
+    if (!useStore.getState().isOnline) {
+      this.probeAttempt += 1;
+      this.scheduleProbe();
     }
   }
 

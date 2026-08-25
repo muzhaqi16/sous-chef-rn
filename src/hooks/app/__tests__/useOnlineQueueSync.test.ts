@@ -41,7 +41,7 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { onOnline: jest.fn(), onOffline: jest.fn() },
 }));
 jest.mock('#/apollo/links/apiReachabilityBreaker', () => ({
-  apiReachabilityBreaker: { reset: jest.fn() },
+  apiReachabilityBreaker: { reset: jest.fn(), onDeviceOffline: jest.fn() },
 }));
 jest.mock('#/apollo/links/wsLink', () => ({
   resumeWebSocketAfterOnline: jest.fn(),

@@ -28,8 +28,8 @@ function setAppState(state: 'active' | 'background') {
   });
 }
 
-function mockState(apiReachable = true) {
-  mockedGetState.mockReturnValue({ setApiReachable, apiReachable });
+function mockState(apiReachable: boolean | null = true, isOnline = true) {
+  mockedGetState.mockReturnValue({ setApiReachable, apiReachable, isOnline });
 }
 
 /** Flush the microtask chain behind an async probe under fake timers. */
@@ -75,6 +75,45 @@ describe('apiReachabilityBreaker', () => {
     expect(mockedProbe).toHaveBeenCalledTimes(1);
     expect(apiReachabilityBreaker._getState()).toBe('open');
     expect(setApiReachable).toHaveBeenCalledWith(false);
+  });
+
+  describe('device offline — the probe loop is the only way back', () => {
+    // With no link, no traffic is allowed, so nothing can fail, so the circuit
+    // can never open — and the probe loop only ran while it was open. Nothing
+    // probed, and the only way out was NetInfo changing its own mind. If NetInfo
+    // is wrong (it probes a generic endpoint, not our API) that never came.
+
+    it('keeps probing while the device is offline and the circuit is closed', async () => {
+      mockState(null, false);
+      mockedProbe.mockResolvedValue(false);
+
+      apiReachabilityBreaker.onDeviceOffline();
+      jest.advanceTimersByTime(INITIAL_PROBE_MS);
+      await flushProbe();
+      expect(mockedProbe).toHaveBeenCalledTimes(1);
+
+      // A failed probe with no link says nothing about the API, so the circuit
+      // must NOT open — but the loop has to survive to try again.
+      expect(apiReachabilityBreaker._getState()).toBe('closed');
+      expect(setApiReachable).not.toHaveBeenCalledWith(false);
+
+      jest.advanceTimersByTime(INITIAL_PROBE_MS * 2);
+      await flushProbe();
+      expect(mockedProbe).toHaveBeenCalledTimes(2);
+    });
+
+    it('proves the API reachable when a probe succeeds despite NetInfo', async () => {
+      mockState(null, false);
+      mockedProbe.mockResolvedValue(true);
+
+      apiReachabilityBreaker.onDeviceOffline();
+      jest.advanceTimersByTime(INITIAL_PROBE_MS);
+      await flushProbe();
+
+      // This is what reopens the app: `apiReachable === true` is proof, and
+      // `shouldTreatAsOffline` lets proof outrank NetInfo.
+      expect(setApiReachable).toHaveBeenCalledWith(true);
+    });
   });
 
   it('forgives a lone failure when the /health probe succeeds (transient blip)', async () => {
