@@ -127,13 +127,19 @@ export function useStartupInit(): void {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
-      // Not `__DEV__`: that excluded every release variant, so a Detox run
-      // against `localRelease`/`staging` read NO launch args at all — including
-      // the auth-token injection the suite depends on — and release is the only
-      // variant whose performance numbers are valid. Production still ignores
-      // them, so a shipped build cannot have an auth state injected through
-      // `am start --es`.
-      if (!Environment.isProduction) {
+      // An ALLOWLIST, not `!isProduction()`. This gate decides whether the app
+      // will accept an auth state handed to it through `am start --es`, so it
+      // must fail closed: a variant gets that capability only by being named
+      // here, never by omitting a `NODE_ENV=production` somewhere. Under
+      // `!isProduction()` a future `.env.qa` would silently acquire it.
+      //
+      // Not `__DEV__` either — that excluded every release variant, so a Detox
+      // run against `localRelease`/`release` read NO launch args at all, and
+      // release is the only variant whose performance numbers are valid. Every
+      // config the suite uses falls through to `.env` (`NODE_ENV=development`),
+      // and `isDevelopment` also covers any debug bundle via `__DEV__`, so this
+      // costs the suite nothing while excluding staging builds given to testers.
+      if (Environment.isDevelopment()) {
         injectDetoxLaunchArgs(
           detoxBackgroundServicesDisabledRef,
           detoxTelemetryEnabledRef,

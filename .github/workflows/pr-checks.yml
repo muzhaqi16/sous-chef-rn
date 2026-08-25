@@ -252,20 +252,47 @@ jobs:
         run: |
           set -e
           git switch --detach "$BASELINE_REF"
-          npm run perf:baseline
+          # `npx reassure`, NOT `npm run perf:baseline`: this step runs with the
+          # BASE commit's package.json checked out, so an npm script added by
+          # the PR under review does not exist yet and the step dies before
+          # measuring anything. The binary comes from the head's node_modules,
+          # which is installed and never switched.
+          npx reassure --baseline
           git switch --detach "${{ github.event.pull_request.head.sha }}"
-          npm run perf
+          npx reassure
 
       - name: Publish comparison
         if: always()
         run: |
+          # A job that produced nothing must not read like a job that found no
+          # regression. `continue-on-error` is still set, so this reports the
+          # difference rather than gating on it.
+          # Non-empty is not enough: reassure writes a header line to the
+          # output file BEFORE running anything (measure.js:41), so a run that
+          # collected zero scenarios still leaves a 1-line file. A real
+          # measurement adds at least one line after that header.
+          measured=1
+          for f in .reassure/baseline.perf .reassure/current.perf; do
+            if [ ! -f "$f" ] || [ "$(wc -l < "$f")" -lt 2 ]; then
+              measured=0
+            fi
+          done
           {
             echo "## Render performance"
             echo ""
-            if [ -f .reassure/output.md ]; then
+            if [ "$measured" = "0" ]; then
+              echo "> **FAILED TO MEASURE** - one or both measurement files are"
+              echo "> missing or empty, so there is no comparison below. This is"
+              echo "> NOT a clean result; the instrument did not run."
+              echo ""
+              echo '```'
+              ls -la .reassure/ 2>&1 || echo "no .reassure/ directory"
+              echo '```'
+            elif [ -f .reassure/output.md ]; then
               cat .reassure/output.md
             else
-              echo "No measurements produced."
+              echo "> **FAILED TO MEASURE** - both measurement files exist but"
+              echo "> reassure produced no comparison output."
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 

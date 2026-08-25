@@ -13,7 +13,7 @@ import type { PerformanceEntry } from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { StartupMark } from '#/native/StartupMark';
 import {
-  HERMES_PROFILE_STARTUP,
+  isStartupProfilerArmed,
   STARTUP_PROFILE_FILENAME,
   VIEW_MANAGER_REPORT_FILENAME,
 } from './startupProfiling';
@@ -35,6 +35,21 @@ let reportedBundleLoad = false;
 let reportedContentAppeared = false;
 let reportedFullyDrawn = false;
 
+/**
+ * Startup marks observed so far, retained ACROSS observer notifications.
+ *
+ * The observer drains its buffer on every emission (`takeRecords()` in
+ * react-native-performance's performance-observer), so `list.getEntries()` is
+ * only the marks that arrived since the last callback — not everything seen. A
+ * metric derived from two marks therefore required them to land in the same
+ * notification, which is a fact about when the observer was constructed, not
+ * about the marks. `contentAppeared` is emitted on RN's own content-appeared
+ * signal, independently of the startup mark flush, so it is the one most likely
+ * to arrive alone: the metric was then lost for the whole session, because the
+ * one-shot guard stayed false while `nativeLaunchStart` never came back.
+ */
+const observedMarks = new Map<string, number>();
+
 function getGraphQLHost(): string {
   const apiConfig = Environment.getApiConfig();
   try {
@@ -45,31 +60,32 @@ function getGraphQLHost(): string {
 }
 
 function handleNativeMarks(entries: PerformanceEntry[]) {
-  const find = (name: string) => entries.find(e => e.name === name);
+  for (const entry of entries) {
+    if (!observedMarks.has(entry.name)) {
+      observedMarks.set(entry.name, entry.startTime);
+    }
+  }
+  const find = (name: string) => observedMarks.get(name);
 
   if (!reportedNativeLaunch) {
     const launchStart = find('nativeLaunchStart');
     const launchEnd = find('nativeLaunchEnd');
-    if (launchStart && launchEnd) {
+    if (launchStart !== undefined && launchEnd !== undefined) {
       reportedNativeLaunch = true;
-      Telemetry.histogram(
-        'app_native_launch_ms',
-        launchEnd.startTime - launchStart.startTime,
-        { type: 'native_init' },
-      );
+      Telemetry.histogram('app_native_launch_ms', launchEnd - launchStart, {
+        type: 'native_init',
+      });
     }
   }
 
   if (!reportedBundleLoad) {
     const bundleStart = find('runJsBundleStart');
     const bundleEnd = find('runJsBundleEnd');
-    if (bundleStart && bundleEnd) {
+    if (bundleStart !== undefined && bundleEnd !== undefined) {
       reportedBundleLoad = true;
-      Telemetry.histogram(
-        'app_js_bundle_load_ms',
-        bundleEnd.startTime - bundleStart.startTime,
-        { type: 'hermes_bytecode' },
-      );
+      Telemetry.histogram('app_js_bundle_load_ms', bundleEnd - bundleStart, {
+        type: 'hermes_bytecode',
+      });
     }
   }
 
@@ -87,11 +103,11 @@ function handleNativeMarks(entries: PerformanceEntry[]) {
   if (!reportedContentAppeared) {
     const launchStart = find('nativeLaunchStart');
     const contentAppeared = find('contentAppeared');
-    if (launchStart && contentAppeared) {
+    if (launchStart !== undefined && contentAppeared !== undefined) {
       reportedContentAppeared = true;
       Telemetry.histogram(
         'app_content_appeared_ms',
-        contentAppeared.startTime - launchStart.startTime,
+        contentAppeared - launchStart,
       );
     }
   }
@@ -210,6 +226,7 @@ export const NativePerformanceService = {
     reportedBundleLoad = false;
     reportedContentAppeared = false;
     reportedFullyDrawn = false;
+    observedMarks.clear();
   },
 
   /**
@@ -236,7 +253,10 @@ export const NativePerformanceService = {
     if (reportedFullyDrawn || !startTs) return;
     reportedFullyDrawn = true;
 
-    if (HERMES_PROFILE_STARTUP) {
+    // Keyed on whether the profiler ARMED, not on the build flag: the flag has
+    // no platform dimension but the profiler is Android-only, so a flagged iOS
+    // build would otherwise lose the metric and gain no trace in exchange.
+    if (isStartupProfilerArmed()) {
       // Deliberately NO histogram on a profiled run. Sampling inflates the very
       // interval being measured, and one poisoned sample in a series whose
       // whole purpose is build-over-build comparison is worse than a gap.

@@ -15,6 +15,29 @@ import { env as buildEnv } from '#/config/env';
 export const HERMES_PROFILE_STARTUP =
   buildEnv.HERMES_PROFILE_STARTUP === 'true';
 
+/**
+ * Whether the profiler ACTUALLY armed on this run — not merely whether the
+ * build asked for it.
+ *
+ * The flag above is platform-agnostic build config; the profiler is Android-only
+ * (`StartupMark`'s methods early-return elsewhere). Suppressing the histogram on
+ * the flag alone therefore cost an iOS build its `app_fully_drawn_ms` AND gave
+ * it no profile in exchange. Suppression keys off this instead, so it stays
+ * correct if profiling is later added on another platform, or if the native
+ * module fails to resolve on a variant that should have had it.
+ */
+let profilerArmed = false;
+
+/** Called from `index.js` with the result of arming the profiler. */
+export function setStartupProfilerArmed(armed: boolean): void {
+  profilerArmed = armed;
+}
+
+/** True only when this run's timings are actually perturbed by sampling. */
+export function isStartupProfilerArmed(): boolean {
+  return profilerArmed;
+}
+
 /** Trace filename; `adb pull`-able from the app's external files dir. */
 export const STARTUP_PROFILE_FILENAME = 'startup.cpuprofile';
 

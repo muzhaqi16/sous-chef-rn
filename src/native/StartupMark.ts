@@ -1,6 +1,24 @@
 import { NativeModules, Platform } from 'react-native';
 
-const { StartupMarkModule } = NativeModules;
+/**
+ * Resolved per call, never captured at module scope.
+ *
+ * `index.js` imports this module in its first few lines — the earliest point in
+ * the bundle. A destructured `const { StartupMarkModule } = NativeModules` there
+ * caches whatever the registry held at that instant, and an `undefined` captured
+ * then is frozen in for the whole process: every method silently becomes a
+ * no-op, including the one that reports fully-drawn to the OS.
+ *
+ * Deliberately NOT gated on `Platform.OS` — iOS ships the profiling half of this
+ * module (`ios/SousChef/StartupMarkModule.mm`). Each method gates on its own
+ * existence instead, per the note below.
+ */
+const nativeModule = (): {
+  reportFullyDrawn?: () => void;
+  startProfiling?: () => void;
+  stopProfiling?: (filename: string) => Promise<string>;
+  writeTextFile?: (filename: string, contents: string) => Promise<string>;
+} | null => NativeModules.StartupMarkModule ?? null;
 
 /**
  * Tells the PLATFORM that the app is fully drawn.
@@ -31,8 +49,8 @@ const { StartupMarkModule } = NativeModules;
  */
 export const StartupMark = {
   reportFullyDrawn() {
-    if (Platform.OS === 'android' && StartupMarkModule) {
-      StartupMarkModule.reportFullyDrawn();
+    if (Platform.OS === 'android') {
+      nativeModule()?.reportFullyDrawn?.();
     }
   },
 
@@ -43,26 +61,26 @@ export const StartupMark = {
    * menu can be opened — so the profiler has to be armed from `index.js` and
    * stopped at the same instant the fully-drawn marker fires. That makes the
    * profile's window exactly [app_fully_drawn_ms]'s window, by construction.
+   *
+   * Returns whether it actually armed. That answer — not the build flag — is
+   * what decides whether this run's timings are perturbed enough to withhold.
    */
-  startProfiling() {
-    if (StartupMarkModule?.startProfiling) {
-      StartupMarkModule.startProfiling();
-    }
+  startProfiling(): boolean {
+    const start = nativeModule()?.startProfiling;
+    if (!start) return false;
+    start();
+    return true;
   },
 
   /** Write a text file beside the profile (release strips `console`). */
   writeTextFile(filename: string, contents: string): Promise<string | null> {
-    if (StartupMarkModule?.writeTextFile) {
-      return StartupMarkModule.writeTextFile(filename, contents);
-    }
-    return Promise.resolve(null);
+    const write = nativeModule()?.writeTextFile;
+    return write ? write(filename, contents) : Promise.resolve(null);
   },
 
   /** Stop profiling and write the trace; resolves with its absolute path. */
   stopProfiling(filename: string): Promise<string | null> {
-    if (StartupMarkModule?.stopProfiling) {
-      return StartupMarkModule.stopProfiling(filename);
-    }
-    return Promise.resolve(null);
+    const stop = nativeModule()?.stopProfiling;
+    return stop ? stop(filename) : Promise.resolve(null);
   },
 };

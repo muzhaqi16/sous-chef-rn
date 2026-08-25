@@ -74,8 +74,27 @@ class StartupMarkModule(reactContext: ReactApplicationContext) :
       return
     }
     val file = File(dir, filename)
-    HermesSamplingProfiler.dumpSampledTraceToFile(file.absolutePath)
-    HermesSamplingProfiler.disable()
+    // `Throwable`, not `Exception`: the realistic failure here is
+    // `UnsatisfiedLinkError` on a variant where the profiler library was not
+    // merged into `libhermestooling.so`, and that is an Error, not an Exception.
+    // Uncaught, it escapes the @ReactMethod and React Native turns it into a
+    // native crash — instrumentation killing the app it was measuring, with a
+    // Promise sitting right there for exactly this.
+    try {
+      HermesSamplingProfiler.dumpSampledTraceToFile(file.absolutePath)
+    } catch (t: Throwable) {
+      // Disable regardless: leaving the profiler sampling after a failed dump
+      // costs every later measurement in the session.
+      runCatching { HermesSamplingProfiler.disable() }
+      promise.reject("profile_write_failed", t.message ?: t.toString(), t)
+      return
+    }
+    try {
+      HermesSamplingProfiler.disable()
+    } catch (t: Throwable) {
+      promise.reject("profile_disable_failed", t.message ?: t.toString(), t)
+      return
+    }
     promise.resolve(file.absolutePath)
   }
 
@@ -93,7 +112,12 @@ class StartupMarkModule(reactContext: ReactApplicationContext) :
       return
     }
     val file = File(dir, filename)
-    file.writeText(contents)
+    try {
+      file.writeText(contents)
+    } catch (t: Throwable) {
+      promise.reject("text_write_failed", t.message ?: t.toString(), t)
+      return
+    }
     promise.resolve(file.absolutePath)
   }
 

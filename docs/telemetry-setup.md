@@ -157,6 +157,37 @@ In Grafana Explore, query:
 
 ## Metric Reference
 
+### Labels every metric carries
+
+`TelemetryService` attaches these to EVERY counter, gauge and histogram, on top
+of whatever the call site passes. A call-site label of the same name wins.
+
+(Deliberately not a table — the metric-contract test scrapes backticked first
+columns as metric names, and these are labels, not metrics.)
+
+- **platform** — `ios` / `android`. Two values.
+- **env** — the configured environment. A handful of values.
+- **version** — the build's version string, bounded by release cadence. Without
+  it NOTHING on a metric said which build produced it: the only version-bearing
+  dimension was `service.instance.id`, and every startup panel collapsed it with
+  `sum(...) by (le)`, so a regression could not be attributed to a release even
+  in principle.
+- **device_type** — `emulator` / `physical`. Exactly two values. Measured
+  2026-08-25 the two disagree by 1.4-2x on startup marks and by **10-20x** on
+  `flashlist_initial_load_ms`; without this label they are the SAME series,
+  because `instance` is only `android_<version>`. The dashboard exposes it as
+  the `$device_type` variable and splits the startup panels by it — **a label
+  nothing filters on is not a separation**, which is how it shipped the first
+  time.
+
+**The commit SHA is deliberately NOT a metric label.** Every unique label
+combination is a Prometheus series, multiplied again by histogram buckets, and a
+SHA is unbounded — the textbook cardinality bomb. It travels on LOGS instead, as
+the `git_sha` body field (searchable with `| json | git_sha="..."`), which is
+where per-run identity already lives.
+`src/services/telemetry/__tests__/TelemetryService.test.ts` holds that line from
+both sides.
+
 ### Counters
 
 | Metric | Labels | Description |
@@ -218,7 +249,7 @@ In Grafana Explore, query:
 | `http_request_duration_ms` | `host` | HTTP request duration |
 | `graphql_request_duration_ms` | `name` | GraphQL operation duration |
 | `app_content_appeared_ms` | | **First frame.** `nativeLaunchStart` to React Native's own content-appeared signal (`RCTContentDidAppearNotification` on iOS, `ReactMarker.CONTENT_APPEARED` on Android), so it means the same thing on both. This is TTID-shaped: RN's root view is mounted, which says nothing about whether the screen's data has loaded - use `app_fully_drawn_ms` for that. **Origin caveat, BOTH platforms:** `nativeLaunchStart` is derived from elapsed CPU time, not wall clock - `clock_gettime(CLOCK_THREAD_CPUTIME_ID)` on iOS, `endTime - Process.getElapsedCpuTime()` in Android's `StartTimeProvider`. Time the process spent descheduled or blocked is therefore NOT in it, so the origin sits later than true process start and this number understates real time-to-first-frame. Do not reconcile it against wall-clock figures such as logcat's `ActivityTaskManager: Fully drawn` - measured on the Pixel_9a emulator the two differ by roughly a second. Compare each platform against itself, across builds, and nothing else. **iOS also:** prewarming (15+) can start the launch long before the user taps, and nothing segments those launches, so treat iOS outliers as suspect rather than signal. |
-| `app_fully_drawn_ms` | | **First meaningful paint.** JS-bundle entry to the first list finishing its load — i.e. real content on screen, not just RN's first frame (`app_content_appeared_ms`). On a real device those are ~500 ms apart on the pantry, and that gap is the part users notice. Emitted once per session. SCOPE: a launch that never renders a list (signed out, or straight into a detail screen) does not emit it, so this describes signed-in launches. On Android the same moment is also reported to the OS via `Activity.reportFullyDrawn()`, which feeds Play Console vitals and Macrobenchmark's `timeToFullDisplayMs`. |
+| `app_fully_drawn_ms` | | **First meaningful paint.** JS-bundle entry to the first list finishing its load — i.e. real content on screen, not just RN's first frame (`app_content_appeared_ms`). On a real device those are ~500 ms apart on the pantry, and that gap is the part users notice. Emitted once per session. SCOPE: a launch that never renders a list (signed out, or straight into a detail screen) does not emit it, so this describes signed-in launches. On Android the same moment is also reported to the OS via `Activity.reportFullyDrawn()`, which feeds Play Console vitals and Macrobenchmark's `timeToFullDisplayMs`. **Suppressed only on a run where the Hermes startup profiler actually ARMED** - sampling inflates the very interval being measured, and one poisoned point in a build-over-build series is worse than a gap. Setting `HERMES_PROFILE_STARTUP` is not by itself enough to suppress it: the flag has no platform dimension but the profiler is Android-only, so a flagged iOS build still emits this metric (nothing perturbed it) rather than losing both the number and the trace. |
 | `app_apollo_restore_ms` | `outcome` | Persisted-cache restore at cold start. `outcome` is `restored` or `empty` - an `empty` majority means every launch refetches. |
 | `app_js_entry_to_store_ready_ms` | | JS-bundle entry to the Zustand rehydrate callback. NOT hydration cost - the window is dominated by module evaluation; the blob read + parse + rehydrate is ~5 ms of it. Renamed from `app_zustand_hydration_ms`, whose name implied the opposite. |
 | `cache_persist_extract_ms` | | `cache.extract()` cost |

@@ -131,3 +131,136 @@ describe('useStartupInit — the shared JS-entry origin', () => {
     ).toBe(1_000_000);
   });
 });
+
+describe('useStartupInit — the environment gate on launch-arg injection', () => {
+  // Two defects live here. First, `Environment.isProduction` is a METHOD: read
+  // without calling it the reference is always truthy, so the original
+  // `!Environment.isProduction` was always false and injection never ran in any
+  // build — a defect that passed typecheck, lint and the whole suite because
+  // nothing asserted the injection path. Second, `!isProduction()` is a
+  // denylist: it hands the launch-arg auth backdoor to every variant that
+  // merely forgets to say it is production. The gate is now an allowlist on
+  // `isDevelopment()`, so STAGING is the case that distinguishes the two — keep
+  // that test, or a revert to `!isProduction()` passes silently.
+  const { LaunchArguments } = jest.requireMock(
+    'react-native-launch-arguments',
+  ) as { LaunchArguments: { value: jest.Mock } };
+  const { Environment } = jest.requireMock('#/utils/environment') as {
+    Environment: { isProduction: jest.Mock; isDevelopment: jest.Mock };
+  };
+  const { Telemetry } = jest.requireMock('#services/telemetry') as {
+    Telemetry: { updateConfig: jest.Mock };
+  };
+  const { NativePerformanceService } = jest.requireMock(
+    '#/services/performance/NativePerformanceService',
+  ) as { NativePerformanceService: { initialize: jest.Mock } };
+
+  const storeActions = {
+    setAuth: jest.fn(),
+    setNavigationState: jest.fn(),
+    setPantrySortOption: jest.fn(),
+    setPantrySortDirection: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    Environment.isDevelopment.mockReturnValue(true);
+    Environment.isProduction.mockReturnValue(false);
+    useStore.getState.mockReturnValue({
+      user: null,
+      accessToken: null,
+      ...storeActions,
+    });
+  });
+
+  afterEach(() => {
+    LaunchArguments.value.mockReturnValue({});
+  });
+
+  it('injects the session in a development-flavoured build', () => {
+    Environment.isDevelopment.mockReturnValue(true);
+    LaunchArguments.value.mockReturnValue({
+      detoxServer: 'ws://localhost:8099',
+      detoxUserToken: 'access-1',
+      detoxRefreshToken: 'refresh-1',
+      detoxUser: { id: 'u-1' },
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(storeActions.setAuth).toHaveBeenCalledWith(
+      { id: 'u-1' },
+      'access-1',
+      'refresh-1',
+    );
+    // The root navigator gates its groups on navigationState — without this
+    // the injected session still renders the auth group.
+    expect(storeActions.setNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  it('ignores launch arguments in a production build', () => {
+    Environment.isDevelopment.mockReturnValue(false);
+    Environment.isProduction.mockReturnValue(true);
+    LaunchArguments.value.mockReturnValue({
+      detoxUserToken: 'access-1',
+      detoxRefreshToken: 'refresh-1',
+      detoxUser: { id: 'u-1' },
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(storeActions.setAuth).not.toHaveBeenCalled();
+    expect(storeActions.setNavigationState).not.toHaveBeenCalled();
+  });
+
+  it('ignores launch arguments in a STAGING build', () => {
+    // The case that separates an allowlist from a denylist. Staging is neither
+    // development nor production, so `!isProduction()` would accept an injected
+    // session on a build handed to testers, while `isDevelopment()` refuses it.
+    // If this ever passes with the gate back on `!isProduction()`, the allowlist
+    // has been reverted.
+    Environment.isDevelopment.mockReturnValue(false);
+    Environment.isProduction.mockReturnValue(false);
+    LaunchArguments.value.mockReturnValue({
+      detoxUserToken: 'access-1',
+      detoxRefreshToken: 'refresh-1',
+      detoxUser: { id: 'u-1' },
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(storeActions.setAuth).not.toHaveBeenCalled();
+    expect(storeActions.setNavigationState).not.toHaveBeenCalled();
+  });
+
+  it('suppresses telemetry when only background services are disabled', () => {
+    LaunchArguments.value.mockReturnValue({
+      detoxDisableBackgroundServices: 1,
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(Telemetry.updateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ enableLogs: false, enableMetrics: false }),
+    );
+    expect(NativePerformanceService.initialize).not.toHaveBeenCalled();
+  });
+
+  it('keeps telemetry when a measuring run asks for both', () => {
+    // The two flags answer different questions: one stops timers that block
+    // Detox's idle detection, the other keeps the run able to produce numbers.
+    LaunchArguments.value.mockReturnValue({
+      detoxDisableBackgroundServices: 1,
+      detoxEnableTelemetry: 1,
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(Telemetry.updateConfig).not.toHaveBeenCalledWith(
+      expect.objectContaining({ enableLogs: false, enableMetrics: false }),
+    );
+    // Startup marks come from here; without it a measuring run reports no
+    // app_native_launch_ms / app_js_bundle_load_ms.
+    expect(NativePerformanceService.initialize).toHaveBeenCalled();
+  });
+});

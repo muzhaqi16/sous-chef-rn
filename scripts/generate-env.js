@@ -61,7 +61,13 @@ const KEYS = [
  * number measured against a dirty tree is not reproducible and should say so.
  * Returns undefined outside a git checkout rather than failing the build.
  */
+let cachedGitSha;
 function gitSha() {
+  // Memoized: `resolve()` runs twice per key by design (once to build the
+  // output, once for the "N/M keys" count), and `generateEnv()` itself runs on
+  // every Metro start and every build step. Unmemoized that is four git
+  // subprocesses per invocation, one of them a full-worktree `git status`.
+  if (cachedGitSha !== undefined) return cachedGitSha || undefined;
   const run = args =>
     execFileSync('git', args, {
       cwd: repoRoot,
@@ -73,6 +79,8 @@ function gitSha() {
   try {
     sha = run(['rev-parse', '--short', 'HEAD']);
   } catch {
+    // Cache the miss too, so a non-checkout build does not retry per call.
+    cachedGitSha = '';
     return undefined;
   }
   let dirty = '';
@@ -81,7 +89,8 @@ function gitSha() {
   } catch {
     // A status failure says nothing about the SHA; report it unqualified.
   }
-  return `${sha}${dirty}`;
+  cachedGitSha = `${sha}${dirty}`;
+  return cachedGitSha;
 }
 
 const repoRoot = path.resolve(__dirname, '..');

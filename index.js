@@ -29,11 +29,18 @@ import 'react-native-performance';
 // is set at build time — sampling costs time, so a profiled run's numbers are
 // not comparable with an unprofiled one's.
 import { StartupMark } from './src/native/StartupMark';
-import { HERMES_PROFILE_STARTUP } from './src/services/performance/startupProfiling';
+import {
+  HERMES_PROFILE_STARTUP,
+  setStartupProfilerArmed,
+} from './src/services/performance/startupProfiling';
 import { instrumentViewManagerConstants } from './src/services/performance/viewManagerProbe';
 
 if (HERMES_PROFILE_STARTUP) {
-  StartupMark.startProfiling();
+  // Record whether it ACTUALLY armed, not just that the build asked. The flag
+  // is platform-agnostic build config; the profiler is Android-only. Keying the
+  // metric suppression off the flag alone cost an iOS build its
+  // `app_fully_drawn_ms` and gave it no profile in return.
+  setStartupProfilerArmed(StartupMark.startProfiling());
   // Must run before anything pulls in BridgelessUIManager, which captures the
   // global this wraps into a module-scope const at evaluation time.
   instrumentViewManagerConstants();

@@ -1051,24 +1051,24 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "JS→Hydrated P50 {{version}}"
+          "legendFormat": "JS→Hydrated P50 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "B",
-          "legendFormat": "JS→Hydrated P95 {{version}}"
+          "legendFormat": "JS→Hydrated P95 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "C",
-          "legendFormat": "Native Launch P95 {{version}}"
+          "legendFormat": "Native Launch P95 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "D",
-          "legendFormat": "Bundle Load P95 {{version}}"
+          "legendFormat": "Bundle Load P95 {{version}} {{device_type}}"
         }
       ],
       "title": "App Startup (P50/P95)",
@@ -1138,19 +1138,19 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Native Launch {{version}}"
+          "legendFormat": "Native Launch {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "B",
-          "legendFormat": "Bundle Load {{version}}"
+          "legendFormat": "Bundle Load {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "C",
-          "legendFormat": "JS→Hydrated {{version}}"
+          "legendFormat": "JS→Hydrated {{version}} {{device_type}}"
         }
       ],
       "title": "Cold Start Breakdown",
@@ -1202,9 +1202,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Avg Startup {{version}}"
+          "legendFormat": "Avg Startup {{version}} {{device_type}}"
         }
       ],
       "title": "Avg Startup Time",
@@ -1256,9 +1256,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Native Launch P95 {{version}}"
+          "legendFormat": "Native Launch P95 {{version}} {{device_type}}"
         }
       ],
       "title": "Native Launch P95",
@@ -1310,9 +1310,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Bundle Load P95 {{version}}"
+          "legendFormat": "Bundle Load P95 {{version}} {{device_type}}"
         }
       ],
       "title": "Bundle Load P95",
@@ -1364,9 +1364,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Startup P95 {{version}}"
+          "legendFormat": "Startup P95 {{version}} {{device_type}}"
         }
       ],
       "title": "Startup P95",
@@ -1936,24 +1936,24 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "Apollo restore P95 {{version}}"
+          "legendFormat": "Apollo restore P95 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_extract_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_extract_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "B",
-          "legendFormat": "Cache extract P95 {{version}}"
+          "legendFormat": "Cache extract P95 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_stringify_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_stringify_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "C",
-          "legendFormat": "Cache stringify P95 {{version}}"
+          "legendFormat": "Cache stringify P95 {{version}} {{device_type}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_entry_to_store_ready_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_entry_to_store_ready_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "D",
-          "legendFormat": "JS entry \u2192 store ready P95 {{version}}"
+          "legendFormat": "JS entry \u2192 store ready P95 {{version}} {{device_type}}"
         }
       ],
       "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",
@@ -2032,9 +2032,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_apollo_restore_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (outcome)",
+          "expr": "sum(rate(app_apollo_restore_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (outcome, version, device_type)",
           "refId": "A",
-          "legendFormat": "{{outcome}} {{version}}"
+          "legendFormat": "{{outcome}} {{version}} {{device_type}}"
         }
       ],
       "title": "Apollo Cache Restore Outcome",
@@ -2152,6 +2152,34 @@
         "options": [],
         "query": {
           "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, version)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, device_type)",
+        "description": "Emulator vs physical hardware. Measured 2026-08-25 the two disagree by 1.4-2x on startup marks and by 10-20x on flashlist_initial_load_ms, so a panel that blends them is not comparable against anything - the startup panels split by it. Bounded to two values on purpose: device_model would be the same cardinality bomb as a commit SHA.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device type",
+        "multi": true,
+        "name": "device_type",
+        "options": [],
+        "query": {
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, device_type)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,

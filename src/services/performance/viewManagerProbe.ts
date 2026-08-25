@@ -19,6 +19,15 @@ type CallRecord = { name: string; ms: number };
 
 const records: CallRecord[] = [];
 
+/**
+ * Whether the probe found the interop global to wrap.
+ *
+ * Without this, "the probe never attached" and "no view manager was queried"
+ * produce the SAME empty report — and an empty report reads as "this costs
+ * nothing", which is the failure mode this whole measurement exists to avoid.
+ */
+let attached = false;
+
 const now = (): number => {
   const perf = (globalThis as { performance?: { now?: () => number } })
     .performance;
@@ -27,7 +36,13 @@ const now = (): number => {
 
 export function instrumentViewManagerConstants(): void {
   const original = global.RN$LegacyInterop_UIManager_getConstantsForViewManager;
-  if (typeof original !== 'function') return;
+  if (typeof original !== 'function') {
+    // Left false on purpose: the report says it did not observe, rather than
+    // reporting zero observations.
+    attached = false;
+    return;
+  }
+  attached = true;
 
   global.RN$LegacyInterop_UIManager_getConstantsForViewManager = (
     viewManagerName: string,
@@ -69,7 +84,15 @@ export function summarizeViewManagerConstants(): string {
     .sort((a, b) => b.ms - a.ms);
   const total = rows.reduce((sum, row) => sum + row.ms, 0);
   return JSON.stringify(
-    { totalMs: total, count: records.length, rows },
+    {
+      // Read this FIRST. `attached: false` means the probe never wrapped the
+      // interop global — the zeroes below are the absence of a measurement, not
+      // a measurement of absence.
+      attached,
+      totalMs: total,
+      count: records.length,
+      rows,
+    },
     null,
     2,
   );

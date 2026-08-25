@@ -111,6 +111,37 @@ module.exports = {
       },
     },
     {
+      // `no-unnecessary-condition` catches a whole class of silent defect: a
+      // METHOD read without calling it sits in a boolean position and is always
+      // truthy. `!Environment.isProduction` (missing parens) shipped exactly
+      // that — it disabled Detox launch-arg injection in every build, and
+      // typecheck, lint and 643 test suites all stayed green.
+      //
+      // Scoped, not global, on a measurement: across `src/` the rule reports
+      // 793 violations, nearly all deliberate guards against runtime shapes the
+      // types do not model (`typeof list.computeVisibleIndices !== 'function'`
+      // for FlashList test doubles). Turning those into 793 disable comments
+      // would destroy the signal. These files are clean under it today; adding
+      // a file here is cheap, the repo-wide cleanup is its own change.
+      //
+      // NOT `useFlashListPerformance.ts` — it carries two such intentional
+      // defensive checks that predate this rule.
+      files: [
+        'src/hooks/app/useStartupInit.ts',
+        'src/services/performance/NativePerformanceService.ts',
+        'src/services/performance/startupProfiling.ts',
+        'src/services/performance/viewManagerProbe.ts',
+        'src/native/StartupMark.ts',
+        'src/services/telemetry/TelemetryService.ts',
+      ],
+      parserOptions: {
+        project: './tsconfig.json',
+      },
+      rules: {
+        '@typescript-eslint/no-unnecessary-condition': 'error',
+      },
+    },
+    {
       // Tests live outside the production tsconfig (Metro bundles them
       // separately). __tests__/tsconfig.json includes them so ESLint's
       // type-checked rules (no-deprecated, etc.) can still run.

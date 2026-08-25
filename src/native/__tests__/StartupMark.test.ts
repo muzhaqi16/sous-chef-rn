@@ -127,3 +127,67 @@ describe('StartupMark', () => {
     });
   });
 });
+
+/**
+ * Import with the registry EMPTY, then populate it — the ordering `index.js`
+ * actually produces, since it imports this module in its first few lines.
+ */
+const loadThenProvide = (
+  os: 'ios' | 'android',
+): {
+  mark: StartupMarkModule;
+  provide: (native: Record<string, unknown>) => void;
+} => {
+  jest.resetModules();
+  const rn = require('react-native');
+  Object.defineProperty(rn.Platform, 'OS', {
+    value: os,
+    writable: true,
+    configurable: true,
+  });
+  delete rn.NativeModules.StartupMarkModule;
+  return {
+    mark: require('../StartupMark').StartupMark,
+    provide: (native: Record<string, unknown>) => {
+      rn.NativeModules.StartupMarkModule = native;
+    },
+  };
+};
+
+describe('StartupMark — native module resolution', () => {
+  it('resolves the module at call time, not at import time', () => {
+    // A module-scope `const { StartupMarkModule } = NativeModules` freezes in
+    // whatever the registry held at import; an `undefined` captured then makes
+    // every method a permanent silent no-op for the process.
+    const { mark, provide } = loadThenProvide('android');
+    const reportFullyDrawn = jest.fn();
+
+    provide({ reportFullyDrawn });
+    mark.reportFullyDrawn();
+
+    expect(reportFullyDrawn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('StartupMark — whether the profiler armed', () => {
+  it.each(['ios', 'android'] as const)(
+    'reports true on %s when the native module armed it',
+    os => {
+      const mark = load(
+        os,
+        os === 'ios' ? iosNativeModule() : androidNativeModule(),
+      );
+
+      expect(mark.startProfiling()).toBe(true);
+    },
+  );
+
+  it('reports false when the module is absent, so the metric is not withheld', () => {
+    // Suppressing `app_fully_drawn_ms` on the build flag alone left a flagged
+    // build with neither a number nor a trace. The armed answer decides, not
+    // the flag.
+    const mark = load('ios', null);
+
+    expect(mark.startProfiling()).toBe(false);
+  });
+});
