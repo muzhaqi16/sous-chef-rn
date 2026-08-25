@@ -17,6 +17,7 @@
  */
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 // Keys the app consumes. Anything not listed here is ignored (and stripped from
 // the bundle), which keeps unrelated shell vars out of the generated output.
@@ -43,7 +44,42 @@ const KEYS = [
   'PROD_WS_URL',
   'ENABLE_DEBUG_LOGS',
   'ENABLE_PRODUCTION_LOGS',
+  // Build identity. Without these a measurement cannot be traced to the code
+  // that produced it, which is what made a whole performance investigation
+  // unattributable (see docs/audits/perf-offline-baseline-2026-08-24.md).
+  // GIT_SHA falls back to the working tree's HEAD, so local builds are
+  // attributable too; CI overrides both via `process.env`.
+  'GIT_SHA',
+  'BUILD_ID',
 ];
+
+/**
+ * HEAD's short SHA, with `-dirty` when the tree has uncommitted changes — a
+ * number measured against a dirty tree is not reproducible and should say so.
+ * Returns undefined outside a git checkout rather than failing the build.
+ */
+function gitSha() {
+  const run = args =>
+    execFileSync('git', args, {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    })
+      .toString()
+      .trim();
+  let sha;
+  try {
+    sha = run(['rev-parse', '--short', 'HEAD']);
+  } catch {
+    return undefined;
+  }
+  let dirty = '';
+  try {
+    if (run(['status', '--porcelain'])) dirty = '-dirty';
+  } catch {
+    // A status failure says nothing about the SHA; report it unqualified.
+  }
+  return `${sha}${dirty}`;
+}
 
 const repoRoot = path.resolve(__dirname, '..');
 
@@ -92,7 +128,12 @@ function generateEnv() {
   const envFilePath = path.join(repoRoot, envFileName);
   const fileValues = parseEnvFile(envFilePath);
   // process.env wins over the file so CI `env:` overrides take precedence.
-  const resolve = key => process.env[key] ?? fileValues[key];
+  const resolve = key => {
+    const value = process.env[key] ?? fileValues[key];
+    if (value !== undefined) return value;
+    // Derived last, so an explicit CI value always wins.
+    return key === 'GIT_SHA' ? gitSha() : undefined;
+  };
 
   const entries = KEYS.map(key => {
     const value = resolve(key);

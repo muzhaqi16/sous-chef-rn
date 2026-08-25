@@ -16,6 +16,8 @@ import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
 import { generateId } from '#/utils/generateId';
+import { getVersion } from 'react-native-device-info';
+import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
 
 /**
@@ -23,6 +25,22 @@ import { useStore } from '#store';
  * reset or a cold start is otherwise invisible in the log stream.
  */
 const SESSION_ID = generateId();
+
+/**
+ * The app version, as a metric label.
+ *
+ * BOUNDED on purpose. Every unique label combination is a new Prometheus series,
+ * multiplied again by histogram buckets, so the commit SHA must never go here —
+ * it is unbounded and is the textbook cardinality bomb. The SHA travels on LOGS
+ * instead (a body field, see `log()` below), which is where per-run identity
+ * already lives.
+ *
+ * Without this, nothing on a metric said which build produced it: the only
+ * version-bearing dimension was `service.instance.id`, and every Grafana startup
+ * panel collapsed it with `sum(...) by (le)`. A regression could not be
+ * attributed to a release even in principle.
+ */
+const APP_VERSION = getVersion();
 
 const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
   debug: 0,
@@ -161,6 +179,11 @@ export class TelemetryService {
         // made several readings during the 2026-08-24 audit ambiguous.
         device_id: getDeviceIdSync() ?? 'unknown',
         session_id: SESSION_ID,
+        // The commit the build came from. A body field, never a label, for the
+        // cardinality reason above — but it is what lets a measurement be traced
+        // back to code. `-dirty` means the tree had uncommitted changes, so the
+        // build is not reproducible.
+        git_sha: buildEnv.GIT_SHA ?? 'unknown',
       },
     };
 
@@ -213,6 +236,7 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: APP_VERSION,
         ...labels,
       },
       timestamp: Date.now(),
@@ -239,6 +263,7 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: APP_VERSION,
         ...labels,
       },
       timestamp: Date.now(),
@@ -266,6 +291,7 @@ export class TelemetryService {
       labels: {
         platform: Platform.OS,
         env: this.config.environment,
+        version: APP_VERSION,
         ...labels,
       },
       timestamp: Date.now(),

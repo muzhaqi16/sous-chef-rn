@@ -228,7 +228,21 @@ In Grafana Explore, query:
 | `offline_queue_oldest_age_ms` | | Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. |
 | `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. |
 
-All metrics automatically include `env` (environment) and `platform` (ios/android) labels.
+All metrics automatically include `env` (environment), `platform` (ios/android)
+and `version` (the app version) labels.
+
+**`version` is the attribution dimension, and it is deliberately the only one.**
+Every unique label combination is a Prometheus series, multiplied again by
+histogram buckets, so the commit SHA must never become a metric label - it is
+unbounded. The SHA travels on LOGS instead, as the `git_sha` body field
+alongside `device_id` and `session_id` (searchable with
+`| json | git_sha="..."`). `TelemetryService.test.ts` asserts both halves: that
+metrics carry `version`, and that they do NOT carry `git_sha`.
+
+Before this existed, nothing on a metric said which build produced it: the only
+version-bearing dimension was `service.instance.id`, and every Grafana startup
+panel collapsed it with `sum(...) by (le)`. A regression could not be attributed
+to a release even in principle.
 
 **Never emit a metric from inside `if (__DEV__)`.** It is dead-code-eliminated
 in release, so the series exists and is permanently empty - which reads as

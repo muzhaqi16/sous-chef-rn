@@ -207,6 +207,12 @@ jobs:
           echo "Generated $ENV_FILE and copied to .env"
 
       - name: Generate build-time config from .env
+        # GIT_SHA/BUILD_ID make a shipped build traceable to the code that
+        # produced it. The generator derives GIT_SHA from the working tree when
+        # unset, but CI checks out a detached HEAD, so pass it explicitly.
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_number }}
         run: node scripts/generate-env.js
 
       - name: Build Play Store AAB
@@ -480,6 +486,12 @@ jobs:
           echo "Generated $ENV_FILE and copied to .env"
 
       - name: Generate build-time config from .env
+        # GIT_SHA/BUILD_ID make a shipped build traceable to the code that
+        # produced it. The generator derives GIT_SHA from the working tree when
+        # unset, but CI checks out a detached HEAD, so pass it explicitly.
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_number }}
         run: node scripts/generate-env.js
 
       - name: Build Play Store AAB

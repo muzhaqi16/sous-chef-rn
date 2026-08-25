@@ -1051,24 +1051,24 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "JS→Hydrated P50"
+          "legendFormat": "JS→Hydrated P50 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "B",
-          "legendFormat": "JS→Hydrated P95"
+          "legendFormat": "JS→Hydrated P95 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "C",
-          "legendFormat": "Native Launch P95"
+          "legendFormat": "Native Launch P95 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "D",
-          "legendFormat": "Bundle Load P95"
+          "legendFormat": "Bundle Load P95 {{version}}"
         }
       ],
       "title": "App Startup (P50/P95)",
@@ -1138,19 +1138,19 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Native Launch"
+          "legendFormat": "Native Launch {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "B",
-          "legendFormat": "Bundle Load"
+          "legendFormat": "Bundle Load {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "C",
-          "legendFormat": "JS→Hydrated"
+          "legendFormat": "JS→Hydrated {{version}}"
         }
       ],
       "title": "Cold Start Breakdown",
@@ -1202,9 +1202,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Avg Startup"
+          "legendFormat": "Avg Startup {{version}}"
         }
       ],
       "title": "Avg Startup Time",
@@ -1256,9 +1256,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Native Launch P95"
+          "legendFormat": "Native Launch P95 {{version}}"
         }
       ],
       "title": "Native Launch P95",
@@ -1310,9 +1310,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Bundle Load P95"
+          "legendFormat": "Bundle Load P95 {{version}}"
         }
       ],
       "title": "Bundle Load P95",
@@ -1364,9 +1364,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Startup P95"
+          "legendFormat": "Startup P95 {{version}}"
         }
       ],
       "title": "Startup P95",
@@ -1936,24 +1936,24 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_apollo_restore_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "A",
-          "legendFormat": "Apollo restore P95"
+          "legendFormat": "Apollo restore P95 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_extract_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_extract_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "B",
-          "legendFormat": "Cache extract P95"
+          "legendFormat": "Cache extract P95 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_stringify_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(cache_persist_stringify_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "C",
-          "legendFormat": "Cache stringify P95"
+          "legendFormat": "Cache stringify P95 {{version}}"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_entry_to_store_ready_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_entry_to_store_ready_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (le, version))",
           "refId": "D",
-          "legendFormat": "JS entry \u2192 store ready P95"
+          "legendFormat": "JS entry \u2192 store ready P95 {{version}}"
         }
       ],
       "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",
@@ -2032,9 +2032,9 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(app_apollo_restore_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (outcome)",
+          "expr": "sum(rate(app_apollo_restore_ms_count{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\"}[5m])) by (outcome)",
           "refId": "A",
-          "legendFormat": "{{outcome}}"
+          "legendFormat": "{{outcome}} {{version}}"
         }
       ],
       "title": "Apollo Cache Restore Outcome",
@@ -2124,6 +2124,34 @@
         "options": [],
         "query": {
           "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, version)",
+        "description": "App version, labelled on every metric. Select two to compare a release against its predecessor - the startup panels split by it. The commit SHA is deliberately NOT a metric label (unbounded cardinality); it travels on logs as the git_sha field.",
+        "hide": 0,
+        "includeAll": true,
+        "label": "App version",
+        "multi": true,
+        "name": "version",
+        "options": [],
+        "query": {
+          "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, version)",
           "refId": "StandardVariableQuery"
         },
         "refresh": 1,
