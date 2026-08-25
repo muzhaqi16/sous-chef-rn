@@ -178,6 +178,65 @@ grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-ges
 grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
 ```
 
+### RNGH's scroll gesture reaches only RNGH's RefreshControl
+
+**Claim:** a list that renders RNGH's `ScrollView` but supplies React Native's
+`RefreshControl` gets no scroll↔refresh arbitration. The prop RNGH uses to wire
+them together is accepted and discarded, silently.
+
+**Verified against `react-native-gesture-handler@3.2.1` +
+`react-native-unistyles@3.3.0`.** The chain:
+
+1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
+   `refreshControl` as
+   `React.cloneElement(refreshControl, scrollGesture ? { block: scrollGesture } : {})`,
+   with the comment _"block exists (on our RefreshControl)"_.
+2. `block` is a member of `ExternalRelationsConfig`
+   (`v3/hooks/utils/propsWhiteList.ts:30-34`), which is folded into
+   `NativeWrapperProps` (`:116-124`).
+3. `v3/createNativeWrapper.tsx:26-46` splits incoming props on that Set:
+   anything in it goes to `useNativeGesture(gestureHandlerProps)`, everything
+   else to the wrapped child. Only a control built by `createNativeWrapper` —
+   i.e. RNGH's own `RefreshControl`, exported from `v3/components/index.ts` —
+   has that split. RN's control receives `block` as an ordinary unknown prop.
+
+Nothing throws, warns, or type-errors: the failure is entirely absent
+behaviour, which is why it is guarded by a test rather than left to review.
+
+**The trap is that RN's control arrives unnamed.** A list that passes only
+`onRefresh`/`refreshing` and no `refreshControl` never mentions a control at
+all — but FlashList builds one, and the one it builds is React Native's:
+
+```
+node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx:53-66
+  const refreshControl = useMemo(() => {
+    if (customRefreshControl) { return customRefreshControl }
+    else if (onRefresh) { return <RefreshControl … /> }   // RN's
+  }, …)
+```
+
+Observed on device 2026-08-24: the shopping list (the only RNGH-hosted list on
+the bare-prop path) showed a refresh indicator hanging in the MIDDLE of the list
+that would not retract until pushed back up by hand. Every list passing an
+explicit `refreshControl` was unaffected — which is what localises the cause to
+the control's type rather than to the RNGH scrollable itself.
+
+The `withUnistyles` wrapper between them is transparent. It builds
+`deepMergeObjects(mappingsProps, unistyleProps, props)` and spreads the result
+onto the wrapped component; `deepMergeObjects` (`src/utils.ts:3-24`) recurses
+only when BOTH sides of a key are objects, and no mapping declares `block`, so
+the `NativeGesture` is assigned by reference and arrives intact.
+
+Re-check:
+
+```
+node scripts/probe-withunistyles-prop-passthrough.mjs
+grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
+grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
+grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
+npx jest __tests__/gestures/flashListScrollComponents.test.ts
+```
+
 ### unistyles withUnistyles drops function styles
 
 **Claim:** wrapping `Pressable`/`TouchableX` with `withUnistyles(...)`

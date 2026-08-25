@@ -288,6 +288,27 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `__DEV__` unless non-positive. Verified 2026-08-24 vs
   `react-native-gesture-handler@3.2.1`:
   `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
+- **That list's pull-to-refresh must pass an EXPLICIT RNGH `RefreshControl`** —
+  `refreshControl={<ThemedRefreshControl … />}`, never a bare
+  `onRefresh`/`refreshing` pair. RNGH's `ScrollView` hands its scroll gesture to
+  whatever control it is given, as
+  `cloneElement(refreshControl, { block: scrollGesture })`, and `block` is in
+  RNGH's `NativeWrapperProps` — so only a control from `createNativeWrapper`
+  (RNGH's own, which `ThemedRefreshControl` wraps) routes it into
+  `useNativeGesture`. RN's control takes the prop and drops it.
+  **The trap: you get RN's control without ever naming it.** Given only
+  `onRefresh`, FlashList builds one itself (`useSecondaryProps.tsx`,
+  `else if (onRefresh)`) and the one it builds is React Native's — which is how
+  the shopping list shipped an indicator that hung mid-list and would not retract
+  until pushed back up by hand, while every list passing an explicit control was
+  fine. A plain RN scrollable host takes `PlainScrollRefreshControl` instead;
+  pick by host. The `withUnistyles` wrapper is transparent to either (the gesture
+  crosses by reference). Verified 2026-08-24 on device vs
+  `react-native-gesture-handler@3.2.1` + `@shopify/flash-list@2.3.2` +
+  `react-native-unistyles@3.3.0` — re-check:
+  `node scripts/probe-withunistyles-prop-passthrough.mjs`; guarded by
+  `__tests__/gestures/flashListScrollComponents.test.ts`, which derives its file
+  list from the tree so a new list cannot ship the mismatch.
 
 ### Bottom sheets
 
