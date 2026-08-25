@@ -1106,3 +1106,63 @@ Not the three component files: the **13 `.svg` asset imports** and the
 transformer's generated barrel import. Whether that can be avoided at all
 (transformer output, or deferring the icon components off the startup path) is
 unknown and unmeasured. No code changes before that measurement exists.
+
+### Render-phase analysis (2026-08-25) — and a confound that invalidates part of the earlier comparison
+
+Analysed from the six traces already captured; no new device runs. Components
+were identified structurally — a frame whose PARENT is `renderWithHooks` is a
+component's render function — rather than by guessing at names.
+
+**Phone, per run (~1320 ms profiled window):**
+
+| | ms |
+|---|---|
+| React render (component fns) | 389 |
+| React commit (host tree mutation) | 311 |
+| — of which `PantryMainInner` render | **164** |
+
+**100% of `PantryMainInner`'s 164 ms is inside `useQuery`** — the chain is
+`usePantryScreen -> usePantryQuery -> useQuery -> useQuery_ -> createState ->
+diffQueryAgainstStore / execSelectionSetImpl / recomputeNewValue`. That is
+Apollo materialising the pantry query's result out of the normalized cache, once,
+synchronously, during mount. "Apollo cache read anywhere in the profile" is also
+164 ms — i.e. this single read IS all of the phone's Apollo cache work.
+
+At 164 ms it is comparable to the entire UIManager bucket (173 ms), and it is
+~12% of the profiled window.
+
+**THE CONFOUND: the two devices do not hold the same data.** The phone has **63
+pantry items**; the emulator has **18** (both read directly off the captured
+frames). Apollo's `diffQueryAgainstStore` cost scales with the number of
+normalized entities the selection set walks, so:
+
+- `PantryMainInner` 164 ms vs 14 ms (11.7x) conflates hardware with a 3.5x
+  dataset difference. It is NOT a device pathology.
+- The React-render bucket 703 ms vs 402 ms is confounded the same way, so the
+  earlier reading that it "sits exactly on the 1.75x hardware gap" was
+  **coincidence** and is withdrawn.
+
+**What is NOT confounded** — and still stands: the view-manager work (48
+managers on BOTH devices, dataset-independent) and module evaluation (identical
+bundle). The 3.29x / 2.61x UIManager ratios are unaffected.
+
+**Rule going forward:** equalise the datasets before comparing anything
+component- or data-shaped across devices, and record the item count next to the
+numbers, exactly as the package version now is.
+
+### Next hypothesis — revisits a reverted change, for a DIFFERENT reason
+
+`usePantryQuery.ts:85` defaults `itemsFirst` to `PAGE_SIZE.MAX`
+(`pantry.graphql:22` defaults the variable to 50). Earlier in this investigation
+`itemsFirst` 100 -> 25 was tried and reverted, correctly, because
+`INITIAL_RENDER_WINDOW = 24` means the same 24 rows mount either way — that was
+a RENDER-count argument.
+
+The cache read is a different mechanism: `diffQueryAgainstStore` walks **every
+item in the connection**, not the ones that render. So page size should drive
+this 164 ms even though it does not drive mount count.
+
+**Prediction to test:** reducing `itemsFirst` cuts `PantryMainInner`'s render
+time roughly in proportion to the item count, while `flashlist_initial_load_ms`
+stays flat (same 24 rows). If BOTH move, the mechanism is not what this says it
+is. Requires the two devices to hold the same data first.
