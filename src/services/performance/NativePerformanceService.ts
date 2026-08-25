@@ -12,7 +12,13 @@ import performance, {
 import type { PerformanceEntry } from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { StartupMark } from '#/native/StartupMark';
-import { Environment } from '#/utils/environment';
+import {
+  HERMES_PROFILE_STARTUP,
+  STARTUP_PROFILE_FILENAME,
+  VIEW_MANAGER_REPORT_FILENAME,
+} from './startupProfiling';
+import { summarizeViewManagerConstants } from './viewManagerProbe';
+import { Environment, logger } from '#/utils/environment';
 import { env } from '#/config/env';
 
 let initialized = false;
@@ -227,8 +233,27 @@ export const NativePerformanceService = {
     if (reportedFullyDrawn || !startTs) return;
     reportedFullyDrawn = true;
 
-    Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
+    if (HERMES_PROFILE_STARTUP) {
+      // Deliberately NO histogram on a profiled run. Sampling inflates the very
+      // interval being measured, and one poisoned sample in a series whose
+      // whole purpose is build-over-build comparison is worse than a gap.
+      StartupMark.writeTextFile(
+        VIEW_MANAGER_REPORT_FILENAME,
+        summarizeViewManagerConstants(),
+      ).catch(() => {});
+      StartupMark.stopProfiling(STARTUP_PROFILE_FILENAME)
+        .then(path => {
+          logger.info('Hermes startup profile written', { path });
+        })
+        .catch((error: unknown) => {
+          logger.warn('Failed to write Hermes startup profile', { error });
+        });
+    } else {
+      Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
+    }
+
     // Same moment, reported to the platform's own tooling — Android only.
+    // Fires either way: it is the marker, not the measurement.
     StartupMark.reportFullyDrawn();
   },
 

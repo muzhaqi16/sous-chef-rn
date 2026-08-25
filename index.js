@@ -22,6 +22,23 @@ global.__APP_START_TIMESTAMP = Date.now();
 // has no binding for Metro to inline, so this one stays put.
 import 'react-native-performance';
 
+// Opt-in Hermes CPU profile of startup, armed here because this window closes
+// before any UI exists to trigger it from. Stopped in
+// `NativePerformanceService.markFullyDrawn()`, so the profile covers exactly
+// the interval `app_fully_drawn_ms` reports. Off unless HERMES_PROFILE_STARTUP
+// is set at build time — sampling costs time, so a profiled run's numbers are
+// not comparable with an unprofiled one's.
+import { StartupMark } from './src/native/StartupMark';
+import { HERMES_PROFILE_STARTUP } from './src/services/performance/startupProfiling';
+import { instrumentViewManagerConstants } from './src/services/performance/viewManagerProbe';
+
+if (HERMES_PROFILE_STARTUP) {
+  StartupMark.startProfiling();
+  // Must run before anything pulls in BridgelessUIManager, which captures the
+  // global this wraps into a module-scope const at evaluation time.
+  instrumentViewManagerConstants();
+}
+
 /**
  * Configure Reanimated logger BEFORE any Reanimated code runs
  * This prevents "Cannot read property 'level' of undefined" errors

@@ -51,6 +51,9 @@ const KEYS = [
   // attributable too; CI overrides both via `process.env`.
   'GIT_SHA',
   'BUILD_ID',
+  // Opt-in Hermes startup CPU profiling. Off unless explicitly set, because a
+  // profiled run's timings are NOT comparable to an unprofiled one's.
+  'HERMES_PROFILE_STARTUP',
 ];
 
 /**

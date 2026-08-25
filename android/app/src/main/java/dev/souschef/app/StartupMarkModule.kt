@@ -1,9 +1,12 @@
 package dev.souschef.app
 
+import com.facebook.hermes.instrumentation.HermesSamplingProfiler
+import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.UiThreadUtil
+import java.io.File
 
 /**
  * Reports "the app is fully drawn" to Android itself.
@@ -35,6 +38,63 @@ class StartupMarkModule(reactContext: ReactApplicationContext) :
       // `getCurrentActivity()` — the latter is deprecated in RN 0.80+.
       reactApplicationContext.currentActivity?.reportFullyDrawn()
     }
+  }
+
+  /**
+   * Start Hermes' sampling profiler.
+   *
+   * Available in RELEASE builds, which is the whole point: this project has
+   * already proved that debug-build attribution is positional — the first heavy
+   * `require` after a timing mark absorbs ~200 ms belonging to no module — and
+   * withdrew a cost table over it. `libjsijniprofiler` is not its own `.so`;
+   * CMake merges it into `libhermestooling.so`, which ships in the release APK,
+   * and SoLoader resolves it through `@SoLoaderLibrary("jsijniprofiler")`.
+   */
+  @ReactMethod
+  fun startProfiling() {
+    HermesSamplingProfiler.enable()
+  }
+
+  /**
+   * Stop profiling and write the trace, resolving with its absolute path.
+   *
+   * Dump BEFORE disable — that is the order React Native itself uses
+   * (`HermesExecutorFactory.stopSamplingProfiler`); disabling first discards
+   * the samples.
+   *
+   * Writes to the app's EXTERNAL files dir, not `cacheDir`, so `adb pull` can
+   * fetch it. A `localRelease` build is not debuggable, so `adb shell run-as`
+   * cannot reach internal storage — a trace we cannot retrieve is useless.
+   */
+  @ReactMethod
+  fun stopProfiling(filename: String, promise: Promise) {
+    val dir = reactApplicationContext.getExternalFilesDir(null)
+    if (dir == null) {
+      promise.reject("no_external_dir", "External files dir unavailable")
+      return
+    }
+    val file = File(dir, filename)
+    HermesSamplingProfiler.dumpSampledTraceToFile(file.absolutePath)
+    HermesSamplingProfiler.disable()
+    promise.resolve(file.absolutePath)
+  }
+
+  /**
+   * Write a text file beside the profile, in the app's external files dir.
+   *
+   * Needed because a release build strips `console`, so a measurement that only
+   * logged its result would produce nothing retrievable.
+   */
+  @ReactMethod
+  fun writeTextFile(filename: String, contents: String, promise: Promise) {
+    val dir = reactApplicationContext.getExternalFilesDir(null)
+    if (dir == null) {
+      promise.reject("no_external_dir", "External files dir unavailable")
+      return
+    }
+    val file = File(dir, filename)
+    file.writeText(contents)
+    promise.resolve(file.absolutePath)
   }
 
   companion object {

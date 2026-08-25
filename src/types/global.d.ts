@@ -52,4 +52,12 @@ declare function cancelIdleCallback(handle: number): void;
  */
 declare namespace globalThis {
   var __APP_START_TIMESTAMP: number | undefined;
+  /**
+   * Installed by the New Architecture's legacy interop layer. `BridgelessUIManager`
+   * reads it to fetch a native view manager's constants; `viewManagerProbe` wraps
+   * it to time those fetches by name.
+   */
+  var RN$LegacyInterop_UIManager_getConstantsForViewManager:
+    | ((viewManagerName: string) => unknown)
+    | undefined;
 }

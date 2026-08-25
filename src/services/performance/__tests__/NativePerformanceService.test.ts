@@ -42,7 +42,12 @@ jest.mock('#/services/telemetry', () => ({
 }));
 
 jest.mock('#/native/StartupMark', () => ({
-  StartupMark: { reportFullyDrawn: jest.fn() },
+  StartupMark: {
+    reportFullyDrawn: jest.fn(),
+    startProfiling: jest.fn(),
+    stopProfiling: jest.fn(() => Promise.resolve('/sdcard/startup.cpuprofile')),
+    writeTextFile: jest.fn(() => Promise.resolve('/sdcard/viewmanagers.json')),
+  },
 }));
 
 jest.mock('#/config/env', () => ({
@@ -292,6 +297,38 @@ describe('NativePerformanceService', () => {
       // The same moment reported to Android itself, which is what Play Console
       // vitals and Macrobenchmark's timeToFullDisplayMs read.
       expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses the histogram while profiling, but still marks the OS', async () => {
+      // A profiled run's timings are inflated by sampling. Emitting them would
+      // put a poisoned point into the very series used for build-over-build
+      // comparison, so the metric is skipped — while `reportFullyDrawn()`,
+      // which is the marker rather than the measurement, still fires.
+      jest.resetModules();
+      jest.doMock('../startupProfiling', () => ({
+        HERMES_PROFILE_STARTUP: true,
+        STARTUP_PROFILE_FILENAME: 'startup.cpuprofile',
+        VIEW_MANAGER_REPORT_FILENAME: 'viewmanagers.json',
+      }));
+      jest.doMock('../viewManagerProbe', () => ({
+        summarizeViewManagerConstants: () => '{}',
+      }));
+      const svc =
+        require('../NativePerformanceService').NativePerformanceService;
+      const mark = require('#/native/StartupMark').StartupMark;
+
+      svc.markFullyDrawn();
+      await Promise.resolve();
+
+      expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+        'app_fully_drawn_ms',
+        expect.anything(),
+      );
+      expect(mark.stopProfiling).toHaveBeenCalledWith('startup.cpuprofile');
+      expect(mark.reportFullyDrawn).toHaveBeenCalled();
+      jest.dontMock('../startupProfiling');
+      jest.dontMock('../viewManagerProbe');
+      jest.resetModules();
     });
 
     it('fires once — a session has exactly one first meaningful paint', () => {

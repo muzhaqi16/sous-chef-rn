@@ -918,3 +918,191 @@ from stopping at exactly this point.
 ~2.1–2.3 s frame-capture baseline recorded earlier in this document, but the
 builds differ by several fixes and the methods differ, so that is not claimed as
 an improvement.
+
+---
+
+## §4 Hermes CPU profile — attribution, and a correction (2026-08-25)
+
+The lead recorded above said the disproportionately slow phase "is dominated by
+module evaluation". **A sampled profile says that is wrong.** Module evaluation
+is real and is the largest single item early on, but it scales *better* than the
+hardware gap; the disproportionate cost is elsewhere.
+
+### How it was captured — no new dependency
+
+React Native 0.86 already ships `HermesSamplingProfiler`
+(`com.facebook.hermes.instrumentation`, three static JNI methods), so
+`react-native-release-profiler` was **not** adopted. Two facts made the built-in
+route viable in a RELEASE build, both verified rather than assumed:
+
+- `libjsijniprofiler.so` is NOT in the APK — CMake merges it into
+  `libhermestooling.so` (`.../hermes/tooling/CMakeLists.txt:12`: "hermestooling
+  is a shared library where we merge all the hermes* related libraries"), which
+  does ship. SoLoader resolves it via `@SoLoaderLibrary("jsijniprofiler")`.
+- Call order is `enable()` to start, then `dumpSampledTraceToFile()` **before**
+  `disable()` — taken from RN's own `HermesExecutorFactory.stopSamplingProfiler`.
+  Disabling first discards the samples.
+
+`StartupMarkModule` gained `startProfiling` / `stopProfiling`; the trace is
+written to the app's EXTERNAL files dir, because a `localRelease` build is not
+debuggable and `adb shell run-as` cannot reach internal storage. Armed in
+`index.js`, stopped in `markFullyDrawn()` — so the profile's window IS
+`app_fully_drawn_ms`'s window. Build-gated by `HERMES_PROFILE_STARTUP`, off by
+default, and a profiled run **deliberately emits no histogram** (sampling
+inflates the interval being measured; one poisoned point is worse than a gap).
+
+**Build gotcha:** the flag must be set on the **gradle** command, not just on
+`npm run genenv`. `metro.config.js:5` calls `generateEnv()` during bundling, so
+the build regenerates `env.generated.ts` from its own environment and silently
+overwrote a pre-set flag. The first profiled run produced no trace because of
+this, and the give-away was that `app_fully_drawn_ms` got a fresh sample — i.e.
+the non-profiling branch had run.
+
+**Second build gotcha, same class:** gradle does NOT treat `env.generated.ts` as
+an input to its bundle task, so changing the flag and rebuilding leaves the task
+UP-TO-DATE and ships the PREVIOUS bundle. Turning profiling back off appeared to
+succeed, installed fine, and still wrote a trace. `rm -rf
+android/app/build/generated/assets/react/<variant>` forces the re-bundle; the
+tell is whether `LOG:Done writing bundle output` appears in the gradle output.
+Verify a flag flip by BEHAVIOUR (does a trace appear?), never by the build
+succeeding.
+
+### Result — n=3 per device, whole-profile inclusive time
+
+`localRelease`, signed in, warm cache. Sampling is ~10 ms, so treat these as
+coarse. Boundary-free: an earlier fixed 600 ms split was discarded because at
+600 ms the two devices are in **different phases**, so it compared unlike things.
+
+| bucket | PHYSICAL (median) | EMULATOR (median) | ratio |
+|---|---|---|---|
+| module eval (`metroRequire`) | 292 ms | 206 ms | 1.42× — **below** the gap |
+| React render (`performWorkOnRoot`) | 703 ms | 402 ms | 1.75× — **is** the gap |
+| **UIManager view-manager constants** | **173 ms** | **52 ms** | **3.29×** |
+| GC | 31 ms | 42 ms | 0.75× |
+
+Per-run, non-overlapping ranges: phone 173/231/121 ms, emulator 52/72/42 ms.
+
+The flat hardware gap is ~1.75×, and React render sits exactly on it. **Only
+UIManager constants runs at nearly double the gap.**
+
+### What triggers it
+
+Every sampled path reaching it is inside module evaluation:
+
+```
+getConstantsForViewManager <- get <- getValue
+  <- loadModuleImplementation <- guardedLoadModule <- metroRequire
+```
+
+That is the signature of a module querying a native view-manager config at
+IMPORT time — each query is a synchronous hop to native, and native round-trips
+are what the phone is disproportionately slow at. Statically, the installed
+libraries that make such calls are **`react-native-screens`** (pulled in by
+React Navigation during startup) and **`react-native-turbo-image`**.
+
+### Status: attribution, not a fix
+
+That last paragraph is a **candidate list from a static grep**, not a measured
+attribution to a specific library — the profile proves *when* these calls happen
+and *that* they are disproportionately expensive, not *which* component issues
+them. Naming the component is the next measurement, and no code should change
+before it. Raw traces: `scratchpad/prof/*.cpuprofile`.
+
+### Naming the component — the view-manager probe (2026-08-25)
+
+The profile proved *when* `getConstantsForViewManager` runs and *that* it is
+disproportionately expensive, but a Hermes sample carries no arguments, so it
+could not say WHICH component. `src/services/performance/viewManagerProbe.ts`
+closes that: it wraps
+`global.RN$LegacyInterop_UIManager_getConstantsForViewManager` from `index.js`
+— which must happen before anything pulls in `BridgelessUIManager`, since that
+module captures the global into a module-scope const at evaluation (`:44`) —
+and times every call by name. The result is written next to the trace via a
+native `writeTextFile`, because a release build strips `console`.
+
+**48 view managers, each queried exactly once.** No single component dominates;
+the cost is the COUNT.
+
+| library | managers | phone | emulator | ratio |
+|---|---|---|---|---|
+| **react-native-svg** | **29** | **33.4 ms** | 12.1 ms | 2.77× |
+| React Native core | 14 | 19.1 ms | 8.0 ms | 2.39× |
+| react-native-gesture-handler | 3 | 3.0 ms | 1.2 ms | 2.53× |
+| other | 2 | 1.5 ms | 0.6 ms | 2.48× |
+| **TOTAL** | **48** | **57.0 ms** | **21.8 ms** | **2.61×** |
+
+Slowest single manager is `AndroidTextInput` at 4.0 ms; everything else is
+1–2 ms. Every ratio is above the ~1.75× hardware gap.
+
+**`react-native-svg` is 60% of the managers**, and the list includes the entire
+SVG filter surface — `RNSVGFeBlend`, `FeColorMatrix`, `FeComposite`, `FeFlood`,
+`FeGaussianBlur`, `FeMerge`, `FeOffset`, `Filter`, `ForeignObject`, `Marker`,
+`Mask`, `Pattern`, `Symbol`, `TextPath`, `Use` — none of which this app plausibly
+renders during a pantry cold start.
+
+The chain is: pantry chrome renders `EdgeFade` / `AnimatedChip` →
+`import Svg, { … } from 'react-native-svg'` → the package barrel evaluates every
+component module → each calls `requireNativeComponent` → 29 native round-trips.
+
+**Scope caveat:** the probe's 57 ms is only about a third of the profile's
+173 ms UIManager bucket. The probe times the wrapped native call alone; the
+remainder is the JS around it (`get UIManager`, `getValue`, module loading on
+that path). So this names the biggest nameable slice, not the whole bucket.
+
+### Next experiment, NOT yet run
+
+Deep-import the handful of SVG primitives actually used
+(`EdgeFade` needs `Svg/Defs/LinearGradient/Rect/Stop`; `AnimatedChip` needs
+`Svg/Path`; `BarcodeMask` needs `Svg/Defs/Rect/Mask`) instead of going through
+the package barrel, and re-measure. **Prediction to test:** the queried-manager
+count drops well below 48 and the phone's total falls proportionally. If the
+count does NOT drop, the barrel is not what pulls them and this direction is
+dead — record that rather than trying variations. No code changes until that
+measurement exists.
+
+### Deep-import experiment — RUN, and the direction is dead (2026-08-25)
+
+Changed `EdgeFade`, `AnimatedChip` and `BarcodeMask` from the `react-native-svg`
+barrel to deep imports of the 7 primitives they actually use, plus a tsconfig
+`paths` entry mapping `lib/commonjs/elements/*` to `lib/typescript/elements/*`
+(the package has no `typesVersions`, so a deep import is otherwise `any`).
+Typecheck, lint and 7,673 tests all passed. On device it **crashed**:
+
+```
+FATAL EXCEPTION: mqt_v_native
+Invariant Violation: Tried to register two views with the same name RNSVGDefs
+  requireNativeComponent -> codegenNativeComponent -> loadModuleImplementation
+```
+
+**Why the premise was wrong — verified independently of the crash.** The barrel
+is loaded no matter what these three files do: `metro.config.js` registers
+`react-native-svg-transformer`, and the app imports **13 `.svg` assets**, each
+transformed into a component that imports `react-native-svg`. One of them is
+`StorageLocationIcon.tsx`, squarely on the pantry startup path. So the deep
+imports could never have reduced the 48-manager count — they only added a
+SECOND module instance of each element, and each instance ran its own
+module-scope `requireNativeComponent`, hence the duplicate registration.
+
+That reasoning stands on `metro.config.js` and the import list, not on the
+crashed run, so **the "deep-import the component files" direction is dead**
+exactly as the pre-registered prediction said it would be if the count did not
+drop. Reverted.
+
+**MEASUREMENT CONTAMINATION — the run itself is not trustworthy.** A parallel
+session upgraded `react-native-svg` 15.15.4 -> 15.15.5 in the shared checkout at
+14:34:04, while this build was running; the crash logged at 14:37. The package
+layout was read at .4 and the APK built against .5, so the crash has two
+candidate causes and this run cannot separate them. It does not change the
+conclusion above (which does not depend on the run), but it does mean:
+
+- **The 48-manager / 29-SVG baseline was measured on 15.15.4.** Any re-measure
+  must re-baseline on 15.15.5 before comparing.
+- `node_modules` can change underneath a running measurement in this checkout.
+  Record the installed version of the package under test alongside the numbers.
+
+### Where the lever actually is — untested
+
+Not the three component files: the **13 `.svg` asset imports** and the
+transformer's generated barrel import. Whether that can be avoided at all
+(transformer output, or deferring the icon components off the startup path) is
+unknown and unmeasured. No code changes before that measurement exists.
