@@ -1166,3 +1166,73 @@ this 164 ms even though it does not drive mount count.
 time roughly in proportion to the item count, while `flashlist_initial_load_ms`
 stays flat (same 24 rows). If BOTH move, the mechanism is not what this says it
 is. Requires the two devices to hold the same data first.
+
+---
+
+## Matched-dataset re-measurement (2026-08-25) — RETRACTS the UIManager finding
+
+Both devices signed into the same account, **63 pantry items each** (confirmed
+on screen), `react-native-svg` re-baselined at 15.15.5, n=3 per device.
+
+### Headline: with equal data the devices are nearly equal end-to-end
+
+OS `Fully drawn`: phone 1907 / 1728 / 1661 ms (median **1728**), emulator
+1703 / 1639 / 1689 ms (median **1689**) — **1.02x**. The earlier 1.20x
+device-is-slower gap was mostly the 63-vs-18 item difference, not hardware.
+
+### Profile buckets, matched data
+
+| bucket | physical | emulator | ratio |
+|---|---|---|---|
+| module eval (`metroRequire`) | 238 ms | 162 ms | 1.47x |
+| **UIManager constants** | **77 ms** | **51 ms** | **1.53x** |
+| React render+commit | 706 ms | 445 ms | 1.58x |
+| **Apollo cache read** | **155 ms** | **71 ms** | **2.18x** |
+| **`PantryMainInner`** | **144 ms** | **46 ms** | **3.15x** |
+| GC | 53 ms | 51 ms | 1.06x |
+
+The JS-CPU baseline gap is **~1.5x** (module eval, UIManager, React and GC all
+cluster there).
+
+### RETRACTED: "UIManager view-manager constants is the device outlier"
+
+It is not. Matched, it runs at **1.53x** in the profile and **1.64x** by the
+probe (37.4 ms phone / 22.8 ms emulator) — i.e. on the baseline, not above it.
+
+The probe also shows the SVG version bump changed nothing structural: still
+**48 managers, 29 of them `react-native-svg`**, on both devices. What moved was
+the phone's timing: 57.0 ms before vs 37.4 ms now, against an emulator that
+barely moved (21.8 -> 22.8 ms). Per-run phone values across both sessions span
+**36.8-63.9 ms**, so the earlier 3.29x / 2.61x sat inside this metric's own
+run-to-run noise and my n=2/n=3 samples were too thin to see it. The
+"disproportionately expensive on device" claim does not replicate and is
+withdrawn.
+
+The structural facts about SVG survive (48 managers, 29 from the barrel, pulled
+in by 13 `.svg` asset imports) — that is a *count* observation, not a timing
+one. It is simply not a device-specific problem, and at ~37 ms it is small.
+
+### The replicated outlier: Apollo's normalized-cache read
+
+`PantryMainInner` 3.15x and Apollo cache read 2.18x, against a 1.5x baseline,
+with **non-overlapping per-run ranges**: phone [144, 139, 181] vs emulator
+[46, 61, 42]; phone [155, 139, 162] vs emulator [57, 71, 83]. Same dataset on
+both, so this is genuine device sensitivity, not data volume.
+
+`PantryMainInner`'s render is still 100% inside `useQuery` ->
+`diffQueryAgainstStore` / `execSelectionSetImpl`. At ~150 ms it is ~9% of the
+1728 ms fully-drawn window and the most device-sensitive thing measured.
+
+### A caveat on what any of this can buy
+
+The buckets do not sum to the wall clock: the phone's whole JS profile spans
+~1272 ms against a 1728 ms fully-drawn. A meaningful part of startup is not
+JS-CPU-bound, so cutting JS CPU does not convert 1:1 into startup time. Measure
+`app_fully_drawn_ms` after any change rather than assuming the saving lands.
+
+### Standing methodology additions
+
+- Equalise datasets before ANY cross-device comparison, and record the item
+  count with the numbers (this section exists because that was not done).
+- n=3 was not enough for the UIManager metric. Before calling a ratio anomalous,
+  check that the per-run ranges do not overlap — as they do not for Apollo.
