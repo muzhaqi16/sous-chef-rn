@@ -19,16 +19,17 @@ export const HERMES_PROFILE_STARTUP =
  * Whether the profiler ACTUALLY armed on this run — not merely whether the
  * build asked for it.
  *
- * The flag above is platform-agnostic build config; the profiler is Android-only
- * (`StartupMark`'s methods early-return elsewhere). Suppressing the histogram on
- * the flag alone therefore cost an iOS build its `app_fully_drawn_ms` AND gave
- * it no profile in exchange. Suppression keys off this instead, so it stays
- * correct if profiling is later added on another platform, or if the native
- * module fails to resolve on a variant that should have had it.
+ * The flag above is platform-agnostic build config, and so is the profiler:
+ * BOTH natives export `startProfiling`. What varies is whether sampling
+ * actually starts — a non-Hermes variant, or one where the profiler library was
+ * not merged in, arms nothing. Suppressing the histogram on the build flag
+ * would therefore withhold the metric from runs that were never perturbed and
+ * produced no trace either. Suppression keys off this instead, which each
+ * native reports directly.
  */
 let profilerArmed = false;
 
-/** Called from `index.js` with the result of arming the profiler. */
+/** Called from `armStartupProfiling` with the result of arming the profiler. */
 export function setStartupProfilerArmed(armed: boolean): void {
   profilerArmed = armed;
 }
@@ -40,6 +41,17 @@ export function isStartupProfilerArmed(): boolean {
 
 /** Trace filename; `adb pull`-able from the app's external files dir. */
 export const STARTUP_PROFILE_FILENAME = 'startup.cpuprofile';
+
+/**
+ * Trace filename used when capture was forced rather than triggered by first
+ * meaningful paint — a launch that backgrounded early, or one that never
+ * rendered an instrumented list within the capture window.
+ *
+ * Named apart from `STARTUP_PROFILE_FILENAME` on purpose: this trace does NOT
+ * cover the same window as `app_fully_drawn_ms`, and reading it as if it did
+ * would attribute an arbitrary tail of the session to startup.
+ */
+export const FALLBACK_PROFILE_FILENAME = 'startup-fallback.cpuprofile';
 
 /** Companion report naming which view managers were queried, and for how long. */
 export const VIEW_MANAGER_REPORT_FILENAME = 'viewmanagers.json';

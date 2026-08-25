@@ -9,6 +9,32 @@ App: `dev.souschef.app`, Release configuration, embedded bundle, `__DEV__` false
 API: local dev at `localhost:4000`. Collector: Mimir `192.168.1.208:9009`,
 Loki `192.168.1.208:3100`.
 
+## SUPERSEDED for `app_fully_drawn_ms` — read before reusing these numbers
+
+Every `app_fully_drawn_ms` figure below was captured **before** the startup
+instrumentation was repaired, and does not compare with anything measured after
+it. Three defects were in force when these numbers were taken:
+
+- The metric latched on the Pantry's **skeleton** frame, not on content.
+  `PantryContent` hands FlashList a one-row sticky-header sentinel while
+  loading, which satisfies FlashList's `onLoad` immediately — so the recorded
+  interval covers the chrome, not the frame where items appear.
+- The origin was recorded **after** `i18n/config`, `apollo/config` and
+  `theme/unistyles` had evaluated. Metro's `experimentalImportSupport` hoists
+  every `require` above all top-level statements, so `index.js`'s timestamp
+  statement ran last, and the metric excluded that module-evaluation work while
+  being documented as measuring from JS-bundle entry.
+- The capture script read each metric with no freshness guard, so a launch that
+  emitted nothing could record the previous launch's carried-forward sample.
+  `Math.max` across label sets then made the per-run value non-decreasing.
+
+The other metrics here (`app_content_appeared_ms`, `app_native_launch_ms`,
+`app_js_bundle_load_ms`) are unaffected by the first two defects but were read
+through the same unguarded query, so treat any single run as suspect and the
+run-to-run spread as unreliable.
+
+Re-baseline before comparing a build against this document.
+
 ## Read this before comparing anything to the Android numbers
 
 **An iOS simulator is not the counterpart of an Android emulator.** The Android

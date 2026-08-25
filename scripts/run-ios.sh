@@ -37,6 +37,15 @@ case "$MODE" in
   production) export ENVFILE="${ENVFILE:-.env.production}" ;;
 esac
 
+# The measuring builds accept an auth state from launch arguments so Detox can
+# skip the UI login. It is a named, default-off capability rather than something
+# inferred from NODE_ENV — see `Environment.allowsLaunchArgAuth`. Exported here
+# (never written into a committed env file) so only a build produced by this
+# script has it, and CI never does.
+case "$MODE" in
+  debug|release|localRelease) export ALLOW_LAUNCH_ARG_AUTH=true ;;
+esac
+
 case "$MODE" in
   staging)    SCHEME="SousChefRN (Staging)" ;;
   production) SCHEME="SousChefRN (Production)" ;;

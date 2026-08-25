@@ -77,6 +77,8 @@ jobs:
           OTLP_LOGS_AUTH_USERNAME=${{ secrets.OTLP_LOGS_AUTH_USERNAME }}
           OTLP_LOGS_AUTH_PASSWORD=${{ secrets.OTLP_LOGS_AUTH_PASSWORD }}
           SPOONACULAR_API_KEY=${{ secrets.SPOONACULAR_API_KEY }}
+          GIT_SHA=${{ github.sha }}
+          BUILD_ID=${{ github.run_number }}
           EOF
           echo "Generated .env file"
 
@@ -129,6 +131,19 @@ jobs:
       # who obtains the app; rotating it does not change that. Runs against the
       # ARTIFACT with the same .env the build used, and fails if it finds no
       # bundle at all — a moved output must not read as clean.
+      # Both run AFTER the archive, not before it. Metro regenerates
+      # env.generated.ts while Xcode bundles, in a process that inherits
+      # nothing from a step `env:` block — so the overwrite these guard against
+      # happens after any pre-build check would have passed.
+      - name: Verify build identity survived into the bundle
+        run: node scripts/check-build-provenance.mjs
+        env:
+          GIT_SHA: ${{ github.sha }}
+          BUILD_ID: ${{ github.run_number }}
+
+      - name: Refuse launch-argument authentication in a shipped build
+        run: node scripts/check-launch-arg-auth.mjs
+
       - name: Check no third-party credential is in the bundle
         run: |
           node scripts/check-bundled-secrets.mjs \

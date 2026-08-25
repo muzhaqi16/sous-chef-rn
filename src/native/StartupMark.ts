@@ -15,7 +15,7 @@ import { NativeModules, Platform } from 'react-native';
  */
 const nativeModule = (): {
   reportFullyDrawn?: () => void;
-  startProfiling?: () => void;
+  startProfiling?: () => boolean;
   stopProfiling?: (filename: string) => Promise<string>;
   writeTextFile?: (filename: string, contents: string) => Promise<string>;
 } | null => NativeModules.StartupMarkModule ?? null;
@@ -62,14 +62,21 @@ export const StartupMark = {
    * stopped at the same instant the fully-drawn marker fires. That makes the
    * profile's window exactly [app_fully_drawn_ms]'s window, by construction.
    *
-   * Returns whether it actually armed. That answer — not the build flag — is
-   * what decides whether this run's timings are perturbed enough to withhold.
+   * Returns whether sampling actually STARTED, which is what decides whether
+   * this run's timings are perturbed enough to withhold `app_fully_drawn_ms`.
+   * Both natives report that as a boolean; a method that merely EXISTS proves
+   * nothing, because the profiler can fail to arm on a non-Hermes variant or
+   * one missing the profiler library, and a run that claims armed without
+   * arming loses the metric and gets no trace in exchange.
+   *
+   * A native that predates this contract returns undefined rather than a
+   * boolean, which is coerced to false — the safe direction: the metric is
+   * emitted and the trace is simply absent.
    */
   startProfiling(): boolean {
     const start = nativeModule()?.startProfiling;
     if (!start) return false;
-    start();
-    return true;
+    return start() === true;
   },
 
   /** Write a text file beside the profile (release strips `console`). */

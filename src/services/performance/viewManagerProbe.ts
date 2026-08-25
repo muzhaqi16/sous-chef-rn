@@ -55,19 +55,23 @@ export function instrumentViewManagerConstants(): void {
 }
 
 /**
- * Whether the probe observed anything at all.
+ * Whether the probe wrapped the interop global — the one condition that decides
+ * whether the report is worth writing.
  *
  * False on iOS, always: the wrapped global is installed only when
  * `useNativeViewConfigsInBridgelessMode()` is true (`RCTInstance.mm`), and that
  * flag defaults to false, so `instrumentViewManagerConstants` returns at its
- * `typeof original !== 'function'` guard. Callers use this to skip WRITING the
- * report rather than writing an empty one — an artifact that exists and says
- * zero reads as "measured, found nothing", which is the opposite of the truth.
- * iOS does not take this code path at all; view configs come from the static
- * native component registry.
+ * `typeof original !== 'function'` guard. iOS does not take this code path at
+ * all; view configs come from the static native component registry.
+ *
+ * Gating the report on RECORDS instead made `attached: false` — the field the
+ * report tells you to read FIRST — structurally unreachable: no attach means no
+ * records, which meant no report at all, so "never attached" and "attached and
+ * saw nothing" were indistinguishable. Both are real findings; only the second
+ * means the interop path is free.
  */
-export function hasViewManagerRecords(): boolean {
-  return records.length > 0;
+export function didViewManagerProbeAttach(): boolean {
+  return attached;
 }
 
 /** Per-view-manager totals, slowest first. */

@@ -55,6 +55,10 @@ export const Environment = {
   isProduction: jest.fn(() => false),
   isStaging: jest.fn(() => false),
   isTesting: jest.fn(() => true),
+  // Default OFF, matching the real flag: accepting an auth state from launch
+  // arguments is a capability a build opts into, and a mock that defaults it on
+  // would hide a gate regression in every suite that does not think about it.
+  allowsLaunchArgAuth: jest.fn(() => false),
   getPlatform: jest.fn(() => 'ios' as 'ios' | 'android' | 'web'),
   shouldEnableDebugFeatures: jest.fn(() => true),
   shouldEnableCrashReporting: jest.fn(() => false),

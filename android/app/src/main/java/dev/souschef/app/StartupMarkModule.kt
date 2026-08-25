@@ -49,11 +49,25 @@ class StartupMarkModule(reactContext: ReactApplicationContext) :
    * withdrew a cost table over it. `libjsijniprofiler` is not its own `.so`;
    * CMake merges it into `libhermestooling.so`, which ships in the release APK,
    * and SoLoader resolves it through `@SoLoaderLibrary("jsijniprofiler")`.
+   *
+   * Returns whether sampling ACTUALLY started. The JS side keys the
+   * `app_fully_drawn_ms` suppression off that answer, so reporting success from
+   * the mere existence of this method costs a build both the metric and the
+   * trace it was withheld for.
+   *
+   * `Throwable`, not `Exception`, and guarded here rather than only in
+   * `stopProfiling`: the realistic failure is `UnsatisfiedLinkError` on a
+   * variant where the profiler library was not merged into
+   * `libhermestooling.so`, and that is an Error. This is called in the first
+   * lines of the bundle, so uncaught it would crash the app during cold start —
+   * instrumentation killing the launch it was measuring.
    */
-  @ReactMethod
-  fun startProfiling() {
-    HermesSamplingProfiler.enable()
-  }
+  @ReactMethod(isBlockingSynchronousMethod = true)
+  fun startProfiling(): Boolean =
+    runCatching {
+      HermesSamplingProfiler.enable()
+      true
+    }.getOrDefault(false)
 
   /**
    * Stop profiling and write the trace, resolving with its absolute path.

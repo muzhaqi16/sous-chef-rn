@@ -101,6 +101,11 @@ module.exports = {
           shutdownDevice: false,
         },
       },
+      // Artifacts are kept on a PASS here because the UI-tour workflow reads
+      // those screenshots. Detox has no retention setting, so nothing ever
+      // deleted them and `e2e/artifacts/` reached 17 GB — the bound is
+      // `scripts/prune-e2e-artifacts.mjs` (keep the 5 most recent runs per
+      // configuration), which every `test:e2e*` script runs first.
       artifacts: {
         rootDir: 'e2e/artifacts/ios-simulator',
         plugins: {

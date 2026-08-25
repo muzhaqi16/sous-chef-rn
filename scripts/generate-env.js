@@ -54,6 +54,10 @@ const KEYS = [
   // Opt-in Hermes startup CPU profiling. Off unless explicitly set, because a
   // profiled run's timings are NOT comparable to an unprofiled one's.
   'HERMES_PROFILE_STARTUP',
+  // Whether this build will accept an auth state handed to it through launch
+  // arguments. Off unless a build explicitly asks for it. Read the block above
+  // `allowsLaunchArgAuth` in src/utils/environment.ts before setting it.
+  'ALLOW_LAUNCH_ARG_AUTH',
 ];
 
 /**
@@ -135,14 +139,83 @@ function parseEnvFile(filePath) {
   return result;
 }
 
+/** A full 40-character commit sha — what CI records, never what `gitSha()` derives. */
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
+/**
+ * Build identity recorded in a previously generated `env.generated.ts`, kept
+ * only where re-deriving it now would be a DOWNGRADE.
+ *
+ * Metro calls `generateEnv()` at module scope, so the file is rewritten on
+ * every Metro start and every bundling step — often from a process that has
+ * neither variable. Two downgrades are possible and both shipped:
+ *
+ *   - BUILD_ID has no derivation at all, so it simply became `undefined`.
+ *   - GIT_SHA fell back to `gitSha()`, replacing CI's full sha with a short,
+ *     `-dirty`-suffixed one.
+ *
+ * Deliberately NOT a blanket "keep whatever was there": that would freeze a
+ * local checkout's sha at its first value and stop `-dirty` from ever tracking
+ * the tree again. Only these two keys, and GIT_SHA only when the recorded value
+ * is strictly more precise than what this run can derive.
+ */
+function readExistingBuildIdentity() {
+  const generatedPath = path.join(
+    repoRoot,
+    'src',
+    'config',
+    'env.generated.ts',
+  );
+  if (!fs.existsSync(generatedPath)) return {};
+  let source;
+  try {
+    source = fs.readFileSync(generatedPath, 'utf8');
+  } catch {
+    return {};
+  }
+
+  const read = key => {
+    const match = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
+    return match ? match[1] : undefined;
+  };
+
+  const identity = {};
+  // Never derived, so a recorded value can only have come from an explicit
+  // source. Losing it is always a downgrade.
+  const buildId = read('BUILD_ID');
+  if (buildId) identity.BUILD_ID = buildId;
+
+  // Kept only against a less precise derivation — a local run re-deriving its
+  // own short sha must still see the tree's current state.
+  const recordedSha = read('GIT_SHA');
+  if (
+    recordedSha &&
+    FULL_SHA.test(recordedSha) &&
+    !FULL_SHA.test(gitSha() ?? '')
+  ) {
+    identity.GIT_SHA = recordedSha;
+  }
+
+  return identity;
+}
+
 function generateEnv() {
   const envFileName = resolveEnvFileName();
   const envFilePath = path.join(repoRoot, envFileName);
   const fileValues = parseEnvFile(envFilePath);
   // process.env wins over the file so CI `env:` overrides take precedence.
+  // Build identity already written by an earlier run of this script. Metro
+  // calls generateEnv() at module scope on every start and every bundling
+  // step, often in a process that has neither variable — so without this, the
+  // second run replaced a 40-char CI sha with `gitSha()`'s short `-dirty` one
+  // and BUILD_ID with `undefined`, minutes after CI set them correctly.
+  const existing = readExistingBuildIdentity();
+
   const resolve = key => {
     const value = process.env[key] ?? fileValues[key];
     if (value !== undefined) return value;
+    // Never downgrade a recorded identity to a weaker derived one.
+    if (existing[key] !== undefined) return existing[key];
     // Derived last, so an explicit CI value always wins.
     return key === 'GIT_SHA' ? gitSha() : undefined;
   };
@@ -181,7 +254,11 @@ ${entries}
   );
 }
 
-module.exports = { generateEnv };
+// `KEYS` is exported for `check-bundled-secrets.mjs`, which derives its
+// candidate set from it. Exporting the array — rather than having the checker
+// parse this file — keeps one source of truth without making the gate's
+// coverage depend on the punctuation of the comments above.
+module.exports = { generateEnv, KEYS };
 
 // Run when invoked directly (npm scripts, CI), not when required by metro.config.
 if (require.main === module) {

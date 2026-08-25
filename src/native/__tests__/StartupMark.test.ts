@@ -15,7 +15,10 @@ type StartupMarkModule = typeof import('../StartupMark').StartupMark;
 
 /** The real iOS surface: profiling methods, no `reportFullyDrawn`. */
 const iosNativeModule = () => ({
-  startProfiling: jest.fn(),
+  // Both natives report whether sampling actually STARTED. A method that only
+  // exists proves nothing: the profiler fails to arm on a non-Hermes variant,
+  // or one missing the profiler library.
+  startProfiling: jest.fn(() => true),
   stopProfiling: jest.fn().mockResolvedValue('/Documents/startup.cpuprofile'),
   writeTextFile: jest.fn().mockResolvedValue('/Documents/viewmanagers.json'),
 });
@@ -187,6 +190,29 @@ describe('StartupMark — whether the profiler armed', () => {
     // build with neither a number nor a trace. The armed answer decides, not
     // the flag.
     const mark = load('ios', null);
+
+    expect(mark.startProfiling()).toBe(false);
+  });
+
+  it.each(['ios', 'android'] as const)(
+    'reports false on %s when the native says it did not arm',
+    os => {
+      // The case the old contract could not express: the method is present and
+      // callable, and sampling still did not start.
+      const native = os === 'ios' ? iosNativeModule() : androidNativeModule();
+      native.startProfiling.mockReturnValue(false);
+      const mark = load(os, native);
+
+      expect(mark.startProfiling()).toBe(false);
+    },
+  );
+
+  it('reports false when a native predating the contract returns nothing', () => {
+    // Coerced rather than trusted, and false is the safe direction: the metric
+    // is emitted and the trace is simply absent.
+    const native = iosNativeModule();
+    native.startProfiling.mockReturnValue(undefined as unknown as boolean);
+    const mark = load('ios', native);
 
     expect(mark.startProfiling()).toBe(false);
   });

@@ -34,7 +34,8 @@
  *   - the local API and the OTLP collector up
  */
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => {
@@ -67,7 +68,7 @@ const METRICS = [
 const sh = (c, a) => execFileSync(c, a, { encoding: 'utf8', stdio: 'pipe' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-const promql = async query => {
+let promql = async query => {
   const url = `${MIMIR}/prometheus/api/v1/query?query=${encodeURIComponent(
     query,
   )}`;
@@ -89,6 +90,52 @@ const lastWriteSeconds = async metric => {
   return r.length ? Math.max(...r.map(x => Number(x.value[1]))) : 0;
 };
 
+/** Identify a series by its labels, so a value can be paired with its write time. */
+const seriesKey = labels => {
+  const { __name__, ...rest } = labels;
+  return JSON.stringify(Object.entries(rest).sort());
+};
+
+/**
+ * This launch's value for a metric, or `null` if this launch did not produce
+ * one.
+ *
+ * Every series is checked against its OWN write time, because the five-minute
+ * carry-forward `lastWriteSeconds` exists to defeat applies to value reads too:
+ * runs here are 10-30 s apart, so a run that emits no `app_fully_drawn_ms`
+ * still gets the previous run's sample back from a plain query. Reading that as
+ * this run's value made the series silently non-decreasing across runs and fed
+ * the summary cross-launch maxima — the aggregation this file's own footer
+ * forbids.
+ *
+ * Several fresh series is legitimate for per-component metrics
+ * (`flashlist_initial_load_ms` reports one per list), and the max across them
+ * is the slowest list in THIS launch. Several fresh series on a metric that
+ * should have one is a labelling change worth seeing, so it is reported.
+ */
+const readFreshMetric = async (metric, beforeSeconds) => {
+  const [values, writes] = await Promise.all([
+    promql(`{__name__="${metric}_sum", platform="ios"}`),
+    promql(`timestamp(${metric}_sum{platform="ios"})`),
+  ]);
+
+  const writtenAt = new Map(
+    writes.map(x => [seriesKey(x.metric), Number(x.value[1])]),
+  );
+
+  const fresh = values.filter(x => {
+    const ts = writtenAt.get(seriesKey(x.metric));
+    return ts !== undefined && ts > beforeSeconds;
+  });
+
+  if (!fresh.length) return { value: null, series: 0, stale: values.length };
+  return {
+    value: Math.round(Math.max(...fresh.map(x => Number(x.value[1])))),
+    series: fresh.length,
+    stale: values.length - fresh.length,
+  };
+};
+
 const median = xs => {
   const s = [...xs].sort((a, b) => a - b);
   return s.length % 2
@@ -96,10 +143,90 @@ const median = xs => {
     : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
 };
 
+// --- self-test -------------------------------------------------------------
+// The freshness gate decides whether a recorded number belongs to the launch it
+// is filed under, and it is only ever exercised against a live Mimir — where a
+// stale carry-forward and a fresh sample look identical in the output. This
+// drives `readFreshMetric` against a stubbed query layer instead.
+//
+//   node scripts/ios-capture-baseline.mjs --self-test
+if (args.includes('--self-test')) {
+  const stub = (values, writes) => {
+    promql = async query => (query.startsWith('timestamp(') ? writes : values);
+  };
+  const series = (labels, value) => ({
+    metric: labels,
+    value: [0, String(value)],
+  });
+  const failures = [];
+
+  // A launch that emitted nothing: the value query still answers, because
+  // Prometheus carries the previous launch's sample forward for five minutes.
+  stub(
+    [series({ __name__: 'app_fully_drawn_ms_sum', platform: 'ios' }, 2100)],
+    [series({ __name__: 'app_fully_drawn_ms_sum', platform: 'ios' }, 1000)],
+  );
+  const stale = await readFreshMetric('app_fully_drawn_ms', 1000);
+  if (stale.value !== null) {
+    failures.push(
+      `A carried-forward sample was read as this launch's value (${stale.value}).`,
+    );
+  }
+  if (stale.stale !== 1) {
+    failures.push(`Stale series were not counted (got ${stale.stale}).`);
+  }
+
+  // The same shape, written after the baseline: that IS this launch's value.
+  stub(
+    [series({ __name__: 'app_fully_drawn_ms_sum', platform: 'ios' }, 2100)],
+    [series({ __name__: 'app_fully_drawn_ms_sum', platform: 'ios' }, 1500)],
+  );
+  const fresh = await readFreshMetric('app_fully_drawn_ms', 1000);
+  if (fresh.value !== 2100) {
+    failures.push(`A fresh sample was not read (got ${fresh.value}).`);
+  }
+
+  // Per-component metric: max across the FRESH series only, so a stale slow
+  // list cannot inflate a later launch.
+  stub(
+    [
+      series({ __name__: 'x_sum', platform: 'ios', component: 'A' }, 900),
+      series({ __name__: 'x_sum', platform: 'ios', component: 'B' }, 300),
+    ],
+    [
+      series({ __name__: 'x_sum', platform: 'ios', component: 'A' }, 500),
+      series({ __name__: 'x_sum', platform: 'ios', component: 'B' }, 1500),
+    ],
+  );
+  const mixed = await readFreshMetric('x', 1000);
+  if (mixed.value !== 300 || mixed.series !== 1) {
+    failures.push(
+      `Stale series leaked into a multi-series read (value=${mixed.value}, ` +
+        `fresh=${mixed.series}).`,
+    );
+  }
+
+  if (failures.length) {
+    console.error(
+      '\n\u2717 Self-test failed:\n\n' + failures.map(f => `  ${f}`).join('\n'),
+    );
+    process.exit(1);
+  }
+  console.log(
+    '\u2713 Self-test passed: carried-forward samples are not read as this ' +
+      "launch's, and\n  multi-series reads use only fresh series.",
+  );
+  process.exit(0);
+}
+
 const runs = [];
 
 for (let i = 1; i <= RUNS; i++) {
-  const before = await lastWriteSeconds('app_content_appeared_ms');
+  // Per-metric, not one shared baseline: each metric's freshness is judged
+  // against its own last write, so a metric this launch never emits is
+  // reported as absent rather than inheriting another metric's liveness.
+  const before = {};
+  for (const m of METRICS) before[m] = await lastWriteSeconds(m);
 
   try {
     sh('xcrun', ['simctl', 'terminate', DEVICE, BUNDLE]);
@@ -116,7 +243,10 @@ for (let i = 1; i <= RUNS; i++) {
   let fresh = false;
   while (Date.now() < deadline) {
     await sleep(2000);
-    if ((await lastWriteSeconds('app_content_appeared_ms')) > before) {
+    if (
+      (await lastWriteSeconds('app_content_appeared_ms')) >
+      before.app_content_appeared_ms
+    ) {
       fresh = true;
       break;
     }
@@ -130,12 +260,15 @@ for (let i = 1; i <= RUNS; i++) {
 
   const row = { run: i };
   for (const m of METRICS) {
-    const r = await promql(`{__name__="${m}_sum", platform="ios"}`);
-    // A metric can carry several label sets (flashlist reports per list), and
-    // a launch that never rendered a list emits no app_fully_drawn_ms at all.
-    row[m] = r.length
-      ? Math.round(Math.max(...r.map(x => Number(x.value[1]))))
-      : null;
+    const { value, stale } = await readFreshMetric(m, before[m]);
+    row[m] = value;
+    if (value === null && stale > 0) {
+      // Worth saying out loud: the query DID return data, and taking it would
+      // have recorded another launch's number as this one's.
+      console.log(
+        `  ${m}: no sample from this launch (${stale} stale ignored)`,
+      );
+    }
   }
   runs.push(row);
   console.log(
@@ -184,6 +317,10 @@ for (const m of METRICS) {
 }
 
 const out = 'e2e/artifacts/ios-baseline.json';
+// `e2e/artifacts/` is gitignored, so on a fresh checkout it does not exist and
+// this threw AFTER every launch had already been captured — losing the whole
+// run at the last step.
+mkdirSync(dirname(out), { recursive: true });
 writeFileSync(
   out,
   JSON.stringify(

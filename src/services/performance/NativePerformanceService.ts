@@ -10,17 +10,17 @@ import performance, {
   setResourceLoggingEnabled,
 } from 'react-native-performance';
 import type { PerformanceEntry } from 'react-native-performance';
+import { AppState, type NativeEventSubscription } from 'react-native';
 import { Telemetry } from '#/services/telemetry';
 import { StartupMark } from '#/native/StartupMark';
 import {
   isStartupProfilerArmed,
   STARTUP_PROFILE_FILENAME,
-  VIEW_MANAGER_REPORT_FILENAME,
 } from './startupProfiling';
 import {
-  hasViewManagerRecords,
-  summarizeViewManagerConstants,
-} from './viewManagerProbe';
+  captureStartupProfile,
+  captureStartupProfileOnBackground,
+} from './startupProfileCapture';
 import { Environment, logger } from '#/utils/environment';
 import { env } from '#/config/env';
 
@@ -28,12 +28,26 @@ let initialized = false;
 let nativeMarkObserver: InstanceType<typeof PerformanceObserver> | null = null;
 let measureObserver: InstanceType<typeof PerformanceObserver> | null = null;
 let resourceObserver: InstanceType<typeof PerformanceObserver> | null = null;
+let appStateSubscription: NativeEventSubscription | null = null;
 
 // Duplicate-prevention flags for one-shot native metrics
 let reportedNativeLaunch = false;
 let reportedBundleLoad = false;
 let reportedContentAppeared = false;
 let reportedFullyDrawn = false;
+
+/**
+ * Whether this launch stopped to ask the user for something before it could
+ * show content — sign-in, email verification, onboarding, biometric setup.
+ *
+ * `app_fully_drawn_ms` measures how long the APP took, and these gates put an
+ * unbounded human interval inside that window: a signed-out cold start where
+ * someone spends 45 s typing credentials landed ~47,000 ms in the same
+ * unlabelled series as genuine ~2,000 ms launches. The flag is process-scoped
+ * because the metric is, and it is set by the navigator rather than by any one
+ * screen so that every gate is covered by one decision.
+ */
+let sawInteractiveGate = false;
 
 /**
  * Startup marks observed so far, retained ACROSS observer notifications.
@@ -212,20 +226,37 @@ export const NativePerformanceService = {
       }
     });
     resourceObserver.observe({ type: 'resource', buffered: true });
+
+    // 4. Stop an armed profiler if the app leaves the foreground before any
+    // list reports first meaningful paint. Registered here, where React Native
+    // is already loaded — the arming module runs as the bundle's second
+    // require, where importing RN would reorder evaluation ahead of the
+    // startup origin. The time-based fallback covers runs where this never
+    // runs at all.
+    if (isStartupProfilerArmed()) {
+      appStateSubscription = AppState.addEventListener('change', state => {
+        if (state === 'background') {
+          captureStartupProfileOnBackground();
+        }
+      });
+    }
   },
 
   cleanup() {
     nativeMarkObserver?.disconnect();
     measureObserver?.disconnect();
     resourceObserver?.disconnect();
+    appStateSubscription?.remove();
     nativeMarkObserver = null;
     measureObserver = null;
     resourceObserver = null;
+    appStateSubscription = null;
     initialized = false;
     reportedNativeLaunch = false;
     reportedBundleLoad = false;
     reportedContentAppeared = false;
     reportedFullyDrawn = false;
+    sawInteractiveGate = false;
     observedMarks.clear();
   },
 
@@ -253,30 +284,22 @@ export const NativePerformanceService = {
     if (reportedFullyDrawn || !startTs) return;
     reportedFullyDrawn = true;
 
-    // Keyed on whether the profiler ARMED, not on the build flag: the flag has
-    // no platform dimension but the profiler is Android-only, so a flagged iOS
-    // build would otherwise lose the metric and gain no trace in exchange.
+    // Keyed on whether the profiler ARMED, not on the build flag. Both
+    // platforms can profile, but neither always succeeds — so a flagged build
+    // that armed nothing would otherwise lose the metric and gain no trace.
     if (isStartupProfilerArmed()) {
       // Deliberately NO histogram on a profiled run. Sampling inflates the very
       // interval being measured, and one poisoned sample in a series whose
       // whole purpose is build-over-build comparison is worse than a gap.
-      // Only when the probe actually observed something. On iOS it never does
-      // — the global it wraps is not installed there — and writing an empty
-      // report would read as "measured, found nothing" rather than "this cannot
-      // be measured on this platform".
-      if (hasViewManagerRecords()) {
-        StartupMark.writeTextFile(
-          VIEW_MANAGER_REPORT_FILENAME,
-          summarizeViewManagerConstants(),
-        ).catch(() => {});
-      }
-      StartupMark.stopProfiling(STARTUP_PROFILE_FILENAME)
-        .then(path => {
-          logger.info('Hermes startup profile written', { path });
-        })
-        .catch((error: unknown) => {
-          logger.warn('Failed to write Hermes startup profile', { error });
-        });
+      // This is the profile whose window really is `app_fully_drawn_ms`'s;
+      // every other stop path writes under a different name.
+      captureStartupProfile(STARTUP_PROFILE_FILENAME);
+    } else if (sawInteractiveGate) {
+      // The window contains time spent waiting on a person, not on the app.
+      // Suppressed rather than labelled: the metric is unlabelled by design and
+      // both the contract row and the dashboards assume that, so a gap here is
+      // cheaper than a dimension everything downstream has to learn.
+      logger.info('app_fully_drawn_ms suppressed: launch required user input');
     } else {
       Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
     }
@@ -284,6 +307,18 @@ export const NativePerformanceService = {
     // Same moment, reported to the platform's own tooling — Android only.
     // Fires either way: it is the marker, not the measurement.
     StartupMark.reportFullyDrawn();
+  },
+
+  /**
+   * Record that this launch stopped for user input before showing content.
+   *
+   * Called by the navigator for every gate that does so (auth, verification,
+   * onboarding, biometric setup). Must be able to arrive AFTER `markFullyDrawn`
+   * in principle, so it is not a precondition of anything — but in practice the
+   * gate renders long before any instrumented list does.
+   */
+  noteInteractiveGate() {
+    sawInteractiveGate = true;
   },
 
   mark(name: string) {

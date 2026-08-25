@@ -147,16 +147,6 @@ export const PantryContent = React.forwardRef<
     const flashListRef = useRef<FlashListRef<PantryListItem>>(null);
     const settingsIconRef = useRef<View>(null);
 
-    const perfCallbacks = useFlashListPerformance(flashListRef, {
-      componentName: 'PantryContent',
-      reportInterval: 10000,
-    });
-    useDataReferenceTracker(
-      items,
-      'PantryContent.items',
-      perfCallbacks.onDataReferenceChange,
-    );
-
     useImperativeHandle(ref, () => ({
       scrollToTop() {
         requestAnimationFrame(() => {
@@ -310,6 +300,22 @@ export const PantryContent = React.forwardRef<
     const bodyItems = showSkeletons ? [] : windowedItems;
     const listData: PantryListItem[] = [STICKY_HEADER_SENTINEL, ...bodyItems];
     const isEmpty = bodyItems.length === 0;
+
+    // Declared here, below `showSkeletons`, because `hasRealContent` is what
+    // decides when `app_fully_drawn_ms` latches. While skeletons show, the
+    // list is handed exactly one sticky-header sentinel — enough for FlashList
+    // to report `onLoad`, and nothing a user would call content. A settled
+    // empty tab IS content: `showSkeletons` is already false by then.
+    const perfCallbacks = useFlashListPerformance(flashListRef, {
+      componentName: 'PantryContent',
+      reportInterval: 10000,
+      hasRealContent: !showSkeletons,
+    });
+    useDataReferenceTracker(
+      items,
+      'PantryContent.items',
+      perfCallbacks.onDataReferenceChange,
+    );
 
     // End-reached: fetch the next server page if one exists, otherwise grow the
     // local window. `onEndReached` (prop) is defined only when the server has

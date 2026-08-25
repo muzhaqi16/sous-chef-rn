@@ -155,9 +155,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 5000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
             ]
           }
         }
@@ -204,9 +213,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 5 },
-              { "color": "red", "value": 20 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "red",
+                "value": 20
+              }
             ]
           }
         }
@@ -243,9 +261,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "red", "value": 90 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
             ]
           },
           "unit": "percent",
@@ -307,9 +334,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         }
@@ -356,8 +392,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "red", "value": 1 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
+              }
             ]
           }
         }
@@ -377,7 +419,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Screen and component render timing P95",
+      "description": "Commit gap is elapsed wall time between two commits of the same component - NOT render cost, since it includes idle time. React <Profiler onRender> would give true actualDuration, but ReactFabric-prod strips onRender so it cannot report from a release build.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -407,7 +449,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "ms"
         }
@@ -442,7 +489,6 @@
           "legendFormat": "Commit gap: {{component}}"
         }
       ],
-      "description": "Commit gap is elapsed wall time between two commits of the same component - NOT render cost, since it includes idle time. React <Profiler onRender> would give true actualDuration, but ReactFabric-prod strips onRender so it cannot report from a release build.",
       "title": "Screen Transition / Component Commit Gap (P95)",
       "type": "timeseries"
     },
@@ -482,9 +528,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 300 },
-              { "color": "red", "value": 500 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 500
+              }
             ]
           },
           "unit": "ms"
@@ -558,7 +613,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "bytes"
         }
@@ -615,9 +675,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         }
@@ -769,7 +838,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -830,7 +904,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -896,8 +975,14 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "green", "value": 1 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
             ]
           }
         }
@@ -948,9 +1033,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 300 },
-              { "color": "red", "value": 600 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 300
+              },
+              {
+                "color": "red",
+                "value": 600
+              }
             ]
           },
           "unit": "s"
@@ -1023,9 +1117,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 2000 },
-              { "color": "red", "value": 5000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
             ]
           },
           "unit": "ms"
@@ -1053,12 +1156,12 @@
         {
           "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
-          "legendFormat": "JS→Hydrated P50 {{version}} {{device_type}}"
+          "legendFormat": "JS\u2192Hydrated P50 {{version}} {{device_type}}"
         },
         {
           "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "B",
-          "legendFormat": "JS→Hydrated P95 {{version}} {{device_type}}"
+          "legendFormat": "JS\u2192Hydrated P95 {{version}} {{device_type}}"
         },
         {
           "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
@@ -1079,7 +1182,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Cold start waterfall: native launch → bundle load → JS hydration (P50)",
+      "description": "Cold start waterfall: native launch \u2192 bundle load \u2192 JS hydration (P50)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1113,7 +1216,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "ms"
         }
@@ -1150,7 +1258,7 @@
         {
           "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "C",
-          "legendFormat": "JS→Hydrated {{version}} {{device_type}}"
+          "legendFormat": "JS\u2192Hydrated {{version}} {{device_type}}"
         }
       ],
       "title": "Cold Start Breakdown",
@@ -1171,9 +1279,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 2000 },
-              { "color": "red", "value": 4000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
             ]
           },
           "unit": "ms"
@@ -1202,7 +1319,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Avg Startup {{version}} {{device_type}}"
         }
@@ -1225,9 +1342,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 2000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 2000
+              }
             ]
           },
           "unit": "ms"
@@ -1256,7 +1382,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Native Launch P95 {{version}} {{device_type}}"
         }
@@ -1279,9 +1405,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 500 },
-              { "color": "red", "value": 1000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
             ]
           },
           "unit": "ms"
@@ -1310,7 +1445,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Bundle Load P95 {{version}} {{device_type}}"
         }
@@ -1323,7 +1458,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "95th percentile end-to-end app startup time (JS entry → store hydrated)",
+      "description": "95th percentile end-to-end app startup time (JS entry \u2192 store hydrated)",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1333,9 +1468,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 2000 },
-              { "color": "red", "value": 4000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
             ]
           },
           "unit": "ms"
@@ -1364,7 +1508,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Startup P95 {{version}} {{device_type}}"
         }
@@ -1408,9 +1552,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 3000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
             ]
           },
           "unit": "ms"
@@ -1464,9 +1617,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1000 },
-              { "color": "red", "value": 3000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1000
+              },
+              {
+                "color": "red",
+                "value": 3000
+              }
             ]
           },
           "unit": "ms"
@@ -1514,9 +1676,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           }
         }
@@ -1563,9 +1734,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "noValue": "0"
@@ -1613,9 +1793,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "noValue": "0"
@@ -1654,18 +1843,28 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 56 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
       "id": 61,
       "panels": [],
       "title": "FlashList Performance",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Time to first render of each FlashList (P50/P95)",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
@@ -1673,23 +1872,39 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": true
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "ms"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 57 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 57
+      },
       "id": 62,
       "options": {
         "legend": {
@@ -1697,7 +1912,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "single" }
+        "tooltip": {
+          "mode": "single"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1716,11 +1933,16 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "FlashList mounted-session duration, P50/P95 (uses per-metric bounds extending to 5 min)",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
@@ -1728,23 +1950,39 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": true
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "ms"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 57 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 57
+      },
       "id": 63,
       "options": {
         "legend": {
@@ -1752,7 +1990,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "single" }
+        "tooltip": {
+          "mode": "single"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1771,11 +2011,16 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Fraction of scrolled distance with rendered cells (1.0 = no blank cells). P05 is the worst-case tail; P50 the median. Uses per-metric 0-1 bounds.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
@@ -1783,11 +2028,17 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": true
           },
@@ -1797,15 +2048,29 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 0.8 },
-              { "color": "green", "value": 0.95 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.8
+              },
+              {
+                "color": "green",
+                "value": 0.95
+              }
             ]
           },
           "unit": "percentunit"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 65 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 65
+      },
       "id": 64,
       "options": {
         "legend": {
@@ -1813,7 +2078,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "single" }
+        "tooltip": {
+          "mode": "single"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1832,11 +2099,16 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Blank-cell occurrences and data-reference churn per minute, by list",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
@@ -1844,23 +2116,39 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": true
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "short"
         }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 65 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 65
+      },
       "id": 65,
       "options": {
         "legend": {
@@ -1868,7 +2156,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "single" }
+        "tooltip": {
+          "mode": "single"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1888,18 +2178,28 @@
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 73 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 73
+      },
       "id": 66,
       "panels": [],
       "title": "Cold-Start Cache Restore",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "description": "P95 cold-start timings. Apollo restore is a real restore cost; JS entry \u2192 store ready spans bundle entry to the Zustand rehydrate callback and is dominated by module evaluation, NOT by hydration.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "axisLabel": "",
             "axisPlacement": "auto",
@@ -1907,23 +2207,39 @@
             "drawStyle": "line",
             "fillOpacity": 10,
             "gradientMode": "none",
-            "hideFrom": { "tooltip": false, "viz": false, "legend": false },
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
-            "scaleDistribution": { "type": "linear" },
+            "scaleDistribution": {
+              "type": "linear"
+            },
             "showPoints": "never",
             "spanNulls": true
           },
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "unit": "ms"
         }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 74 },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 74
+      },
       "id": 67,
       "options": {
         "legend": {
@@ -1931,7 +2247,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1956,22 +2274,34 @@
           "legendFormat": "JS entry \u2192 store ready P95 {{version}} {{device_type}}"
         }
       ],
-      "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",
       "title": "Cache & Store Restore (P95)",
       "type": "timeseries"
     },
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 82 },
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 82
+      },
       "id": 68,
       "panels": [],
       "title": "Offline Queue",
       "type": "row"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Writes waiting to replay. A depth that never returns to zero means the queue is not draining - see docs/local-first-architecture.md.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 83 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 83
+      },
       "id": 69,
       "options": {
         "legend": {
@@ -1979,7 +2309,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -1993,9 +2325,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Writes the queue gave up on. Each one is user work accepted locally that never reached the server.",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 83 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 83
+      },
       "id": 70,
       "options": {
         "legend": {
@@ -2003,7 +2343,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -2017,9 +2359,17 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Cold starts that restored a persisted cache vs found none. A rising 'empty' share means every launch refetches everything.",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 91 },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 91
+      },
       "id": 71,
       "options": {
         "legend": {
@@ -2027,7 +2377,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -2041,10 +2393,23 @@
       "type": "timeseries"
     },
     {
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
       "description": "Size of the serialized Apollo cache written to MMKV. Drives restore cost at cold start and the idle-time serialize cost.",
-      "fieldConfig": { "defaults": { "unit": "deckbytes" }, "overrides": [] },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 91 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "deckbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 91
+      },
       "id": 72,
       "options": {
         "legend": {
@@ -2052,7 +2417,9 @@
           "displayMode": "list",
           "placement": "bottom"
         },
-        "tooltip": { "mode": "multi" }
+        "tooltip": {
+          "mode": "multi"
+        }
       },
       "pluginVersion": "9.0.0",
       "targets": [
@@ -2063,6 +2430,178 @@
         }
       ],
       "title": "Persisted Cache Size",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "TTID: React Native's root view is mounted. Says nothing about whether the screen's data arrived \u2014 compare against app_fully_drawn_ms. Origin caveat: nativeLaunchStart is derived from elapsed CPU time on both platforms, so this understates real time-to-first-frame. Compare each platform against itself, across builds, and nothing else.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 99
+      },
+      "id": 73,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "title": "First Frame \u2014 app_content_appeared_ms (P50/P95)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "JS-bundle entry to the first instrumented list finishing layout WITH real content. Does not emit when the launch stopped for user input (sign-in, verification, onboarding), when no instrumented list rendered, or when the Hermes startup profiler armed \u2014 so gaps are expected and are not the same as a regression.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 5000
+              }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 99
+      },
+      "id": 74,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "legendFormat": "p95",
+          "refId": "B"
+        }
+      ],
+      "title": "First Meaningful Paint \u2014 app_fully_drawn_ms (P50/P95)",
       "type": "timeseries"
     }
   ],

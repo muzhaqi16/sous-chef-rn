@@ -1,10 +1,22 @@
-// Install crypto.getRandomValues polyfill before any module that uses uuid.
-// Must be the very first import — generateId() runs during app startup
-// (deviceKey, deviceId) and uuid v4 reads globalThis.crypto.getRandomValues.
-import 'react-native-get-random-values';
+// The origin every startup metric is measured from. MUST stay the first
+// import: Metro's `experimentalImportSupport` hoists every `require` above all
+// top-level statements, so a bare `global.__APP_START_TIMESTAMP = Date.now()`
+// here would run after every module below it — i18n, Apollo and unistyles
+// included — and silently exclude them from the number. The module has no
+// imports of its own, so as the first require it is the first thing evaluated.
+// `scripts/check-startup-origin.mjs` asserts that against the transformed
+// output.
+import './src/services/performance/startupClock';
 
-// Record JS entry timestamp before any imports for startup time measurement
-global.__APP_START_TIMESTAMP = Date.now();
+// Arms the opt-in Hermes profiler and the view-manager probe. Second, so it
+// still precedes the imports below; the probe must wrap its global before
+// anything pulls in BridgelessUIManager.
+import './src/services/performance/armStartupProfiling';
+
+// Install crypto.getRandomValues polyfill before any module that uses uuid.
+// generateId() runs during app startup (deviceKey, deviceId) and uuid v4 reads
+// globalThis.crypto.getRandomValues.
+import 'react-native-get-random-values';
 
 // Side-effect import, and it MUST stay eager and near the top.
 //
@@ -21,30 +33,6 @@ global.__APP_START_TIMESTAMP = Date.now();
 // app_js_bundle_load_ms silently returned no data. A bare side-effect import
 // has no binding for Metro to inline, so this one stays put.
 import 'react-native-performance';
-
-// Opt-in Hermes CPU profile of startup, armed here because this window closes
-// before any UI exists to trigger it from. Stopped in
-// `NativePerformanceService.markFullyDrawn()`, so the profile covers exactly
-// the interval `app_fully_drawn_ms` reports. Off unless HERMES_PROFILE_STARTUP
-// is set at build time — sampling costs time, so a profiled run's numbers are
-// not comparable with an unprofiled one's.
-import { StartupMark } from './src/native/StartupMark';
-import {
-  HERMES_PROFILE_STARTUP,
-  setStartupProfilerArmed,
-} from './src/services/performance/startupProfiling';
-import { instrumentViewManagerConstants } from './src/services/performance/viewManagerProbe';
-
-if (HERMES_PROFILE_STARTUP) {
-  // Record whether it ACTUALLY armed, not just that the build asked. The flag
-  // is platform-agnostic build config; the profiler is Android-only. Keying the
-  // metric suppression off the flag alone cost an iOS build its
-  // `app_fully_drawn_ms` and gave it no profile in return.
-  setStartupProfilerArmed(StartupMark.startProfiling());
-  // Must run before anything pulls in BridgelessUIManager, which captures the
-  // global this wraps into a module-scope const at evaluation time.
-  instrumentViewManagerConstants();
-}
 
 /**
  * Configure Reanimated logger BEFORE any Reanimated code runs

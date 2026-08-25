@@ -36,6 +36,15 @@ function setupAdbReverseForLocalTesting() {
 }
 
 /**
+ * Whether an environment variable asks for something to be ON.
+ *
+ * Presence is not the question: `E2E_TELEMETRY=0` is how anyone would write
+ * "off", and a truthiness check on the raw string turned it on.
+ */
+const isTruthyEnv = (value: string | undefined): boolean =>
+  value !== undefined && !['', '0', 'false', 'no', 'off'].includes(value.toLowerCase());
+
+/**
  * Workaround for Detox + React Native Fabric compatibility issue
  *
  * Issue: Detox's FabricUIManagerIdlingResources tries to access
@@ -58,7 +67,12 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
       // left the only deterministic workload in the repo unable to produce a
       // measurement. Set E2E_TELEMETRY=1 to keep it on for a measuring run; the
       // default stays off so ordinary runs are unaffected.
-      ...(process.env.E2E_TELEMETRY ? { detoxEnableTelemetry: 1 } : {}),
+      //
+      // Read by VALUE. A presence check cannot express "off", so `E2E_TELEMETRY=0`
+      // — the obvious way to ask for it to be off — turned telemetry ON.
+      ...(isTruthyEnv(process.env.E2E_TELEMETRY)
+        ? { detoxEnableTelemetry: 1 }
+        : {}),
     },
   });
 

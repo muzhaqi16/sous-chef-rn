@@ -127,19 +127,14 @@ export function useStartupInit(): void {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
-      // An ALLOWLIST, not `!isProduction()`. This gate decides whether the app
-      // will accept an auth state handed to it through `am start --es`, so it
-      // must fail closed: a variant gets that capability only by being named
-      // here, never by omitting a `NODE_ENV=production` somewhere. Under
-      // `!isProduction()` a future `.env.qa` would silently acquire it.
-      //
-      // Not `__DEV__` either — that excluded every release variant, so a Detox
-      // run against `localRelease`/`release` read NO launch args at all, and
-      // release is the only variant whose performance numbers are valid. Every
-      // config the suite uses falls through to `.env` (`NODE_ENV=development`),
-      // and `isDevelopment` also covers any debug bundle via `__DEV__`, so this
-      // costs the suite nothing while excluding staging builds given to testers.
-      if (Environment.isDevelopment()) {
+      // A NAMED capability, default off — not an environment designation.
+      // Accepting an auth state handed in through `am start --es` is its own
+      // decision, and a gate that reads some OTHER property is one a new build
+      // path inherits without anyone choosing it. `isDevelopment()` was exactly
+      // that: `.env` carries `NODE_ENV=development` and every local release
+      // variant falls through to it, so a Release-configuration binary honoured
+      // injected sessions. See `Environment.allowsLaunchArgAuth`.
+      if (Environment.allowsLaunchArgAuth()) {
         injectDetoxLaunchArgs(
           detoxBackgroundServicesDisabledRef,
           detoxTelemetryEnabledRef,
@@ -191,11 +186,22 @@ export function useStartupInit(): void {
         HapticService.initialize();
         if (!detoxDisabled || detoxTelemetryEnabledRef.current) {
           // Startup marks come from here; without it a measuring run reports
-          // no `app_native_launch_ms` / `app_js_bundle_load_ms`.
+          // no `app_native_launch_ms` / `app_js_bundle_load_ms`. Observation
+          // only — it attaches observers and installs no timer.
           NativePerformanceService.initialize();
-          if (!__DEV__) {
-            MemoryMonitor.start();
-          }
+        }
+
+        // Gated on `detoxDisabled` ALONE, unlike the block above. This installs
+        // a 10 s snapshot interval — the only repeating timer NOT needed to
+        // produce a measurement, which is exactly what
+        // `detoxDisableBackgroundServices` exists to stop, because it blocks
+        // Detox's idle detection. (`TelemetryService` keeps its own log and
+        // metric flush timers on a measuring run; those ARE the measurement
+        // getting out, so they stay.) A measuring run sets that flag AND
+        // `detoxEnableTelemetry`, so widening this to match the telemetry gate
+        // put the timer back on precisely the runs meant to be free of it.
+        if (!detoxDisabled && !__DEV__) {
+          MemoryMonitor.start();
         }
       });
 

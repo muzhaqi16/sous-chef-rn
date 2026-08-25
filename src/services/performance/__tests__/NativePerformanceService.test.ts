@@ -392,17 +392,18 @@ describe('NativePerformanceService', () => {
     });
 
     /** Load the service with the profiler reporting a given armed state. */
-    const loadWithProfiler = (armed: boolean, hasRecords = true) => {
+    const loadWithProfiler = (armed: boolean, probeAttached = true) => {
       jest.resetModules();
       jest.doMock('../startupProfiling', () => ({
         isStartupProfilerArmed: () => armed,
         setStartupProfilerArmed: jest.fn(),
         HERMES_PROFILE_STARTUP: true,
         STARTUP_PROFILE_FILENAME: 'startup.cpuprofile',
+        FALLBACK_PROFILE_FILENAME: 'startup-fallback.cpuprofile',
         VIEW_MANAGER_REPORT_FILENAME: 'viewmanagers.json',
       }));
       jest.doMock('../viewManagerProbe', () => ({
-        hasViewManagerRecords: () => hasRecords,
+        didViewManagerProbeAttach: () => probeAttached,
         summarizeViewManagerConstants: () => '{"rows":[]}',
       }));
       return {
@@ -425,12 +426,15 @@ describe('NativePerformanceService', () => {
       // put a poisoned point into the very series used for build-over-build
       // comparison, so the metric is skipped — while `reportFullyDrawn()`,
       // which is the marker rather than the measurement, still fires.
-      const { svc, mark } = loadWithProfiler(true);
+      const { svc, mark, telemetry } = loadWithProfiler(true);
 
       svc.markFullyDrawn();
       await Promise.resolve();
 
-      expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+      // `telemetry`, NOT the outer `Telemetry`: `resetModules` gave the
+      // re-required service a fresh mock, and asserting on the stale one made
+      // this pass even with the suppression branch deleted outright.
+      expect(telemetry.histogram).not.toHaveBeenCalledWith(
         'app_fully_drawn_ms',
         expect.anything(),
       );
@@ -442,12 +446,12 @@ describe('NativePerformanceService', () => {
       );
     });
 
-    it('writes no view-manager report when the probe observed nothing', async () => {
+    it('writes no view-manager report when the probe never attached', async () => {
       // The probe wraps a global that iOS does not install
-      // (`useNativeViewConfigsInBridgelessMode` defaults false), so it records
-      // nothing there. Writing the report anyway would leave an artifact saying
-      // zero, which reads as "measured, found nothing" rather than "cannot be
-      // measured on this platform" — the opposite of the truth.
+      // (`useNativeViewConfigsInBridgelessMode` defaults false), so it never
+      // attaches there. Writing the report anyway would leave an artifact
+      // saying zero, which reads as "measured, found nothing" rather than
+      // "cannot be measured on this platform" — the opposite of the truth.
       const { svc, mark } = loadWithProfiler(true, false);
 
       svc.markFullyDrawn();
@@ -457,6 +461,22 @@ describe('NativePerformanceService', () => {
       // The profile itself is still written — it is the trace that matters, and
       // it is what proves this call site fired at all.
       expect(mark.stopProfiling).toHaveBeenCalledWith('startup.cpuprofile');
+    });
+
+    it('writes the report when the probe attached, even with nothing to report', async () => {
+      // "Attached and observed nothing" is a real finding: it says the interop
+      // path was instrumented and cost nothing. Gating the report on RECORDS
+      // instead of on attachment made `attached: false` — the field the report
+      // tells you to read first — impossible to ever emit.
+      const { svc, mark } = loadWithProfiler(true, true);
+
+      svc.markFullyDrawn();
+      await Promise.resolve();
+
+      expect(mark.writeTextFile).toHaveBeenCalledWith(
+        'viewmanagers.json',
+        '{"rows":[]}',
+      );
     });
 
     it('still emits the histogram when the build asked to profile but nothing armed', async () => {
@@ -488,6 +508,34 @@ describe('NativePerformanceService', () => {
       );
       expect(reports).toHaveLength(1);
       expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses the metric when the launch stopped for user input', () => {
+      // A signed-out cold start where the user spends 45 s typing credentials
+      // would otherwise land ~47,000 ms in the same unlabelled series as
+      // genuine ~2,000 ms launches. The interval is the person's, not the app's.
+      NativePerformanceService.noteInteractiveGate();
+
+      NativePerformanceService.markFullyDrawn();
+
+      expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+        'app_fully_drawn_ms',
+        expect.anything(),
+      );
+      // Still the marker: Android's own fully-drawn vital is not a measurement
+      // this code gets to withhold.
+      expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports normally when no gate asked the user for anything', () => {
+      // The negative above must be able to fail — without this pair, deleting
+      // the suppression branch would look the same as keeping it.
+      NativePerformanceService.markFullyDrawn();
+
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'app_fully_drawn_ms',
+        2200,
+      );
     });
 
     it('reports nothing when there is no start timestamp to measure from', () => {

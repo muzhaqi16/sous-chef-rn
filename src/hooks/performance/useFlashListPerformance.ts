@@ -58,6 +58,20 @@ interface UseFlashListPerformanceOptions {
   componentName: string;
   /** ms between periodic reports. 0 = manual only. Default: 10000 */
   reportInterval?: number;
+  /**
+   * Whether the list is presenting REAL data rather than chrome.
+   *
+   * Required, not optional, because getting it wrong is silent: FlashList's
+   * `onLoad` fires as soon as every VISIBLE index has been measured, and a
+   * skeleton state that hands the list one sticky-header sentinel satisfies
+   * that immediately. `app_fully_drawn_ms` then latched on the skeleton frame
+   * and reported the chrome, never the frame where items appeared — while its
+   * contract row promised "real content on screen".
+   *
+   * A genuinely-resolved empty result IS content: false means "still waiting",
+   * not "nothing to show".
+   */
+  hasRealContent: boolean;
 }
 
 interface UseFlashListPerformanceReturn {
@@ -107,6 +121,12 @@ export function useFlashListPerformance<T>(
   // ends at the next check that finds none. Counting episodes rather than
   // checks keeps the counter comparable now that commits trigger checks too.
   const inBlankEpisodeRef = useRef(false);
+
+  // State, not a ref: the fully-drawn latch depends on BOTH this and
+  // `hasRealContent`, and content usually arrives on a later commit than
+  // layout. A ref would not re-run the effect when the second condition
+  // becomes true.
+  const [hasFinishedLayout, setHasFinishedLayout] = useState(false);
 
   // Which indices currently have a committed cell. Written only by the cell
   // renderer's layout effects, read only from event handlers and effects. The
@@ -179,17 +199,33 @@ export function useFlashListPerformance<T>(
     sessionStart,
   ]);
 
+  // First meaningful paint: layout finished AND what was laid out is data.
+  // Reported from here rather than from a screen so it works for whichever
+  // list the launch lands on.
+  //
+  // Latched locally as well as in the service. `hasRealContent` legitimately
+  // goes true -> false -> true (switching pantry tabs re-arms skeletons), and
+  // leaning on `markFullyDrawn`'s own one-shot guard to absorb the repeats
+  // would hide an ordering bug here behind a guard that exists for a different
+  // reason. Written in an effect, never during render.
+  const hasLatchedFullyDrawnRef = useRef(false);
+  useEffect(() => {
+    if (hasLatchedFullyDrawnRef.current) return;
+    if (!hasFinishedLayout || !options.hasRealContent) return;
+    hasLatchedFullyDrawnRef.current = true;
+    NativePerformanceService.markFullyDrawn();
+  }, [hasFinishedLayout, options.hasRealContent]);
+
   const onLoad = (info: { elapsedTimeInMs: number }) => {
     Telemetry.histogram('flashlist_initial_load_ms', info.elapsedTimeInMs, {
       component: options.componentName,
     });
 
-    // The first list to finish loading in a session IS the app's first
-    // meaningful paint — everything before it is chrome over an empty body.
-    // Placed here rather than in a screen so it works for whichever list the
-    // launch lands on (Pantry is tab 0, but a deep link can land elsewhere);
-    // `markFullyDrawn` is one-shot, so later lists are no-ops.
-    NativePerformanceService.markFullyDrawn();
+    // Layout is complete; whether it laid out CONTENT is a separate question,
+    // answered by the effect below. FlashList reports `onLoad` once every
+    // visible index is measured, which one sentinel row satisfies while the
+    // body is still skeletons.
+    setHasFinishedLayout(true);
 
     if (__DEV__ && diagnostics) {
       diagnostics.recordOnLoad(info.elapsedTimeInMs);

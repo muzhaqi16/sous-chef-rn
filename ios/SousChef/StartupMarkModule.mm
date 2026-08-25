@@ -93,13 +93,22 @@ static NSString *DocumentsPathFor(NSString *filename)
  * the menu can be opened, so this is armed from `index.js` and stopped at the
  * instant the fully-drawn marker fires.
  */
-RCT_EXPORT_METHOD(startProfiling)
+RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(startProfiling)
 {
+  // Returns whether sampling ACTUALLY started, because JS keys the
+  // `app_fully_drawn_ms` suppression off that answer. A fire-and-forget method
+  // that silently early-returned still looked like success from JS, which cost
+  // a build both the metric and the trace it was withheld for.
   auto *api = HermesRootAPI();
   if (api == nullptr) {
-    return;
+    return @NO;
   }
-  api->enableSamplingProfiler();
+  @try {
+    api->enableSamplingProfiler();
+  } @catch (NSException *exception) {
+    return @NO;
+  }
+  return @YES;
 }
 
 /**
@@ -128,8 +137,25 @@ RCT_EXPORT_METHOD(stopProfiling
     return;
   }
 
-  api->dumpSampledTraceToFile(std::string(path.UTF8String));
-  api->disableSamplingProfiler();
+  // Guarded, and the profiler disabled regardless of whether the dump worked.
+  // An uncaught throw here would terminate the process AND leave sampling on,
+  // perturbing every later measurement in the session — the Kotlin side wraps
+  // the same recovery in `runCatching`.
+  @try {
+    api->dumpSampledTraceToFile(std::string(path.UTF8String));
+  } @catch (NSException *exception) {
+    @try {
+      api->disableSamplingProfiler();
+    } @catch (NSException *ignored) {
+    }
+    reject(@"profile_write_failed", exception.reason ?: @"dump failed", nil);
+    return;
+  }
+
+  @try {
+    api->disableSamplingProfiler();
+  } @catch (NSException *ignored) {
+  }
   resolve(path);
 }
 

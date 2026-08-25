@@ -61,6 +61,7 @@ import {
 } from '#hooks/navigation/useNavigationGuards';
 import NavigationService, { navigationRef } from '#services/NavigationService';
 import { Telemetry } from '#services/telemetry';
+import { NativePerformanceService } from '#services/performance/NativePerformanceService';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { appConfig } from '#/config/appConfig';
 
@@ -225,6 +226,18 @@ const StaticNavigation = createStaticNavigation(RootStack);
  * credentials), so it's set explicitly by `authService.handleLogin` and must not
  * be clobbered here — see the guard in the user-change effect below.
  */
+/**
+ * Navigation states that require the user to do something before the app can
+ * show content. `app_fully_drawn_ms` is suppressed for a launch that hits one,
+ * because the interval would include however long the person took.
+ */
+const INTERACTIVE_GATES = new Set<NavigationState>([
+  'auth',
+  'verification',
+  'biometric_setup',
+  'onboarding',
+]);
+
 function resolveNavTarget(
   user: ReturnType<typeof useUser>,
   verificationSkipped: boolean,
@@ -252,6 +265,16 @@ export function Navigation() {
   const { navigationState, postLoginCredentials, setNavigationState } =
     usePostLoginState();
   const verificationSkipped = useVerificationSkipped();
+
+  // A launch that stops at any of these waits on a person, and that wait would
+  // otherwise land inside `app_fully_drawn_ms` — a signed-out cold start
+  // reports the sign-in typing time as app startup. Recorded here, at the one
+  // place that knows about every gate, rather than in each gate's screen.
+  useEffect(() => {
+    if (INTERACTIVE_GATES.has(navigationState)) {
+      NativePerformanceService.noteInteractiveGate();
+    }
+  }, [navigationState]);
 
   // Track focused-route changes for screen-view analytics + crash breadcrumbs.
   // Only emits when the route name actually changes; intermediate state ticks

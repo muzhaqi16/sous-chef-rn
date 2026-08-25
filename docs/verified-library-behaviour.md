@@ -387,6 +387,60 @@ grep -o 'HEADER_SEARCH_PATHS = .*' "ios/Pods/Target Support Files/Pods-SousChef/
 Used by `ios/SousChef/StartupMarkModule.mm`. **Dump before disable** —
 disabling first discards the samples and leaves a valid-looking empty trace.
 
+### Metro hoists every require above all top-level statements
+
+**Claim:** with `experimentalImportSupport: true`, Metro rewrites ES imports to
+`require` calls and hoists ALL of them above every top-level statement in the
+file. Relative order among the requires is preserved; order between a require
+and a statement is not. A timing origin written as a statement in `index.js`
+therefore runs after every module that file imports, however near the top it
+appears.
+
+**Verified against `metro@0.83.x`** (the version resolved by
+`react-native@0.86.3`), by running `metro-transform-plugins`'
+`import-export-plugin` — the plugin `experimentalImportSupport` enables — over
+`index.js`'s shape:
+
+```
+import 'a';
+global.T = Date.now();
+import 'b';
+import { X } from './x';
+```
+
+emits
+
+```
+require('a');
+require('b');
+var X = require('./x').X;
+global.T = Date.now();
+```
+
+This is why `app_startup_duration_ms` and `app_fully_drawn_ms` silently
+excluded `./src/i18n/config`, `./src/apollo/config` and `./src/theme/unistyles`
+while being documented as measuring from JS-bundle entry: all five of
+`index.js`'s bare side-effect imports evaluated before the timestamp statement.
+`inlineRequires` does not change it for those — a side-effect import has no
+binding to inline, so it stays a hoisted require.
+
+The fix is structural rather than positional: the origin lives in a module with
+NO imports of its own, imported first. Both halves matter — a module's own
+imports evaluate before its body, so an import added there moves the origin
+later again.
+
+Re-check:
+
+```
+node scripts/check-startup-origin.mjs
+```
+
+Guarded by that script, which transforms `index.js` with the real plugin and
+asserts the clock module is the first emitted `require` AND that it is
+dependency-free. Wired into `pre-push` and `npm run check:startup-origin`.
+Pinned to a Metro internal path on purpose: if an upgrade moves the plugin the
+check fails loudly, because the guarantee is a property of that transform.
+
 ### simctl screenshot sampling resolves ~176 ms, no finer
 
 **Claim:** the `xcrun simctl io <device> screenshot` loop in

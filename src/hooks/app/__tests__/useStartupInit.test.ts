@@ -132,21 +132,26 @@ describe('useStartupInit — the shared JS-entry origin', () => {
   });
 });
 
-describe('useStartupInit — the environment gate on launch-arg injection', () => {
-  // Two defects live here. First, `Environment.isProduction` is a METHOD: read
-  // without calling it the reference is always truthy, so the original
-  // `!Environment.isProduction` was always false and injection never ran in any
-  // build — a defect that passed typecheck, lint and the whole suite because
-  // nothing asserted the injection path. Second, `!isProduction()` is a
-  // denylist: it hands the launch-arg auth backdoor to every variant that
-  // merely forgets to say it is production. The gate is now an allowlist on
-  // `isDevelopment()`, so STAGING is the case that distinguishes the two — keep
-  // that test, or a revert to `!isProduction()` passes silently.
+describe('useStartupInit — the build gate on launch-arg injection', () => {
+  // Accepting an auth state from launch arguments is a NAMED capability with
+  // its own default-off flag. Every gate this has worn before was a property of
+  // something else and leaked: `!Environment.isProduction` was a method read
+  // without calling it (always truthy, so injection never ran anywhere), then a
+  // denylist that handed the capability to any variant merely forgetting to say
+  // it was production, then `isDevelopment()` — which `.env`'s
+  // `NODE_ENV=development` makes true in every LOCAL release build.
+  //
+  // So the cases worth holding are the flag being off by default, and the gate
+  // reading nothing but the flag.
   const { LaunchArguments } = jest.requireMock(
     'react-native-launch-arguments',
   ) as { LaunchArguments: { value: jest.Mock } };
   const { Environment } = jest.requireMock('#/utils/environment') as {
-    Environment: { isProduction: jest.Mock; isDevelopment: jest.Mock };
+    Environment: {
+      isProduction: jest.Mock;
+      isDevelopment: jest.Mock;
+      allowsLaunchArgAuth: jest.Mock;
+    };
   };
   const { Telemetry } = jest.requireMock('#services/telemetry') as {
     Telemetry: { updateConfig: jest.Mock };
@@ -156,6 +161,9 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
   ) as {
     NativePerformanceService: { initialize: jest.Mock; cleanup: jest.Mock };
   };
+  const { MemoryMonitor } = jest.requireMock(
+    '#/services/performance/MemoryMonitor',
+  ) as { MemoryMonitor: { start: jest.Mock } };
 
   const storeActions = {
     setAuth: jest.fn(),
@@ -164,10 +172,28 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
     setPantrySortDirection: jest.fn(),
   };
 
+  // Installed and restored HERE rather than borrowed from a sibling describe.
+  // The idle callback is what runs the deferred init these tests assert on, and
+  // depending on another block's `beforeAll` made the positive assertions fail
+  // when this file was run with a `-t` filter and the negative ones pass
+  // vacuously — a guard that reports the opposite of the truth depending on
+  // which other tests ran.
+  let realRequestIdleCallback: typeof global.requestIdleCallback;
+
   beforeEach(() => {
     jest.clearAllMocks();
-    Environment.isDevelopment.mockReturnValue(true);
-    Environment.isProduction.mockReturnValue(false);
+    realRequestIdleCallback = (
+      global as unknown as {
+        requestIdleCallback: typeof global.requestIdleCallback;
+      }
+    ).requestIdleCallback;
+    (
+      global as unknown as { requestIdleCallback: (cb: () => void) => number }
+    ).requestIdleCallback = (cb: () => void) => {
+      cb();
+      return 0;
+    };
+    Environment.allowsLaunchArgAuth.mockReturnValue(true);
     useStore.getState.mockReturnValue({
       user: null,
       accessToken: null,
@@ -176,11 +202,16 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
   });
 
   afterEach(() => {
+    (
+      global as unknown as {
+        requestIdleCallback: typeof global.requestIdleCallback;
+      }
+    ).requestIdleCallback = realRequestIdleCallback;
     LaunchArguments.value.mockReturnValue({});
   });
 
-  it('injects the session in a development-flavoured build', () => {
-    Environment.isDevelopment.mockReturnValue(true);
+  it('injects the session when the build enables the capability', () => {
+    Environment.allowsLaunchArgAuth.mockReturnValue(true);
     LaunchArguments.value.mockReturnValue({
       detoxServer: 'ws://localhost:8099',
       detoxUserToken: 'access-1',
@@ -200,9 +231,8 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
     expect(storeActions.setNavigationState).toHaveBeenCalledWith('main_app');
   });
 
-  it('ignores launch arguments in a production build', () => {
-    Environment.isDevelopment.mockReturnValue(false);
-    Environment.isProduction.mockReturnValue(true);
+  it('ignores launch arguments when the capability is off', () => {
+    Environment.allowsLaunchArgAuth.mockReturnValue(false);
     LaunchArguments.value.mockReturnValue({
       detoxUserToken: 'access-1',
       detoxRefreshToken: 'refresh-1',
@@ -215,14 +245,14 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
     expect(storeActions.setNavigationState).not.toHaveBeenCalled();
   });
 
-  it('ignores launch arguments in a STAGING build', () => {
-    // The case that separates an allowlist from a denylist. Staging is neither
-    // development nor production, so `!isProduction()` would accept an injected
-    // session on a build handed to testers, while `isDevelopment()` refuses it.
-    // If this ever passes with the gate back on `!isProduction()`, the allowlist
-    // has been reverted.
-    Environment.isDevelopment.mockReturnValue(false);
+  it('ignores launch arguments in a development-flavoured build that did not opt in', () => {
+    // The case every previous gate got wrong. A local RELEASE build resolves
+    // `isDevelopment()` true, because `.env` carries `NODE_ENV=development` and
+    // every release variant falls through to it — so a gate reading the
+    // environment accepts an injected session here. Only the flag may decide.
+    Environment.isDevelopment.mockReturnValue(true);
     Environment.isProduction.mockReturnValue(false);
+    Environment.allowsLaunchArgAuth.mockReturnValue(false);
     LaunchArguments.value.mockReturnValue({
       detoxUserToken: 'access-1',
       detoxRefreshToken: 'refresh-1',
@@ -272,5 +302,21 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
     // same pair of flags, and a divergence leaks the observers it attached.
     unmount();
     expect(NativePerformanceService.cleanup).toHaveBeenCalled();
+  });
+
+  it('installs no repeating timer on a measuring run', () => {
+    // `detoxDisableBackgroundServices` exists to stop timers that block Detox's
+    // idle detection, and MemoryMonitor's 10 s snapshot interval is the app's
+    // only one. Re-enabling telemetry for a measuring run must not drag it back
+    // in — these two flags answer different questions.
+    LaunchArguments.value.mockReturnValue({
+      detoxDisableBackgroundServices: 1,
+      detoxEnableTelemetry: 1,
+    });
+
+    renderHook(() => useStartupInit());
+
+    expect(NativePerformanceService.initialize).toHaveBeenCalled();
+    expect(MemoryMonitor.start).not.toHaveBeenCalled();
   });
 });
