@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, type StyleProp, type TextStyle } from 'react-native';
-import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
@@ -277,7 +277,7 @@ export const PerformanceDashboard: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <ThemedRefreshControl
+          <PlainScrollRefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
           />

@@ -117,6 +117,48 @@ describe('QueueStore', () => {
       expect(all.find(m => m.id === 'overflow')).toBeDefined();
     });
 
+    it('evicts an AUTH_ERROR at capacity rather than wedging the queue', () => {
+      // AUTH_ERROR used to be excluded from the terminal set: it was neither
+      // aged out nor evictable, so 100 accumulated auth failures wedged the
+      // queue permanently — every later offline write threw QueueCapacityError
+      // with no way back short of a reinstall.
+      for (let i = 0; i < 100; i++) {
+        store.addMutation(
+          makeMutation({ id: `auth-${i}`, status: QueueStatus.AUTH_ERROR }),
+        );
+      }
+
+      expect(() =>
+        store.addMutation(makeMutation({ id: 'new-write' })),
+      ).not.toThrow();
+
+      const all = store.getMutationsForUser('user-1');
+      expect(all).toHaveLength(100);
+      expect(all.find(m => m.id === 'new-write')).toBeDefined();
+      expect(all.find(m => m.id === 'auth-0')).toBeUndefined();
+    });
+
+    it('takes a reconciled entry before an auth-parked one at capacity', () => {
+      // A SUCCESS replayed and a FAILED was withdrawn, so dropping either loses
+      // nothing. An AUTH_ERROR still has its local change on screen waiting for
+      // a sign-in to replay it, so it goes last.
+      store.addMutation(
+        makeMutation({ id: 'parked-0', status: QueueStatus.AUTH_ERROR }),
+      );
+      store.addMutation(
+        makeMutation({ id: 'done-0', status: QueueStatus.SUCCESS }),
+      );
+      for (let i = 0; i < 98; i++) {
+        store.addMutation(makeMutation({ id: `pending-${i}` }));
+      }
+
+      store.addMutation(makeMutation({ id: 'overflow' }));
+
+      const all = store.getMutationsForUser('user-1');
+      expect(all.find(m => m.id === 'done-0')).toBeUndefined();
+      expect(all.find(m => m.id === 'parked-0')).toBeDefined();
+    });
+
     it('rejects the enqueue when the queue is full of un-synced PENDING work', () => {
       for (let i = 0; i < 100; i++) {
         store.addMutation(makeMutation({ id: `fill-${i}` }));
@@ -495,9 +537,9 @@ describe('QueueStore', () => {
   });
 
   // -------------------------------------------------------------------------
-  // cleanupSuccessful
+  // cleanupTerminal
   // -------------------------------------------------------------------------
-  describe('cleanupSuccessful', () => {
+  describe('cleanupTerminal', () => {
     it('removes successful mutations older than 24 hours', () => {
       const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
       store.addMutation(
@@ -523,8 +565,8 @@ describe('QueueStore', () => {
         }),
       );
 
-      const removed = store.cleanupSuccessful();
-      expect(removed).toBe(1);
+      const removed = store.cleanupTerminal();
+      expect(removed.map(m => m.id)).toEqual(['old-success']);
 
       const remaining = store.getMutationsForUser('user-1');
       expect(remaining).toHaveLength(2);
@@ -542,14 +584,103 @@ describe('QueueStore', () => {
         }),
       );
 
-      const removed = store.cleanupSuccessful();
-      expect(removed).toBe(0);
+      const removed = store.cleanupTerminal();
+      expect(removed).toEqual([]);
       expect(store.getMutation('no-processed-at')).toBeDefined();
     });
 
-    it('returns 0 when nothing to clean', () => {
+    it('returns nothing when there is nothing to clean', () => {
       store.addMutation(makeMutation({ status: QueueStatus.PENDING }));
-      expect(store.cleanupSuccessful()).toBe(0);
+      expect(store.cleanupTerminal()).toEqual([]);
+    });
+
+    it('ages out FAILED and AUTH_ERROR, not only SUCCESS', () => {
+      // These used to be kept forever: the filter matched SUCCESS only, so a
+      // terminal failure occupied queue capacity for the life of the install.
+      const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
+      store.addMutation(
+        makeMutation({
+          id: 'old-failed',
+          status: QueueStatus.FAILED,
+          processedAt: twoDaysAgo,
+        }),
+      );
+      store.addMutation(
+        makeMutation({
+          id: 'old-auth-error',
+          status: QueueStatus.AUTH_ERROR,
+          processedAt: twoDaysAgo,
+        }),
+      );
+
+      // Returned rather than counted: an AUTH_ERROR still has its local change
+      // on screen, and the caller withdraws it when the entry is discarded.
+      expect(
+        store
+          .cleanupTerminal()
+          .map(m => m.id)
+          .sort(),
+      ).toEqual(['old-auth-error', 'old-failed']);
+      expect(store.getMutation('old-failed')).toBeNull();
+      expect(store.getMutation('old-auth-error')).toBeNull();
+    });
+
+    it('revives auth-parked entries so the next drain replays them', () => {
+      // An auth failure is not a refusal — the server never saw the write. A
+      // sign-in is what makes it replayable again, and retries start fresh
+      // because the old count was spent against a token that no longer exists.
+      store.addMutation(
+        makeMutation({
+          id: 'parked',
+          status: QueueStatus.AUTH_ERROR,
+          retryCount: 3,
+          processedAt: Date.now(),
+        }),
+      );
+
+      expect(store.revivePendingAuthErrors('user-1')).toBe(1);
+
+      const revived = store.getMutation('parked');
+      expect(revived?.status).toBe(QueueStatus.PENDING);
+      expect(revived?.retryCount).toBe(0);
+      expect(revived?.processedAt).toBeUndefined();
+      expect(store.getPendingMutationsForUser('user-1')).toHaveLength(1);
+    });
+
+    it('leaves a refused entry parked when reviving', () => {
+      store.addMutation(
+        makeMutation({ id: 'refused', status: QueueStatus.FAILED }),
+      );
+      expect(store.revivePendingAuthErrors('user-1')).toBe(0);
+      expect(store.getMutation('refused')?.status).toBe(QueueStatus.FAILED);
+    });
+
+    it("does not revive another user's parked entries", () => {
+      store.addMutation(
+        makeMutation({
+          id: 'theirs',
+          userId: 'user-2',
+          status: QueueStatus.AUTH_ERROR,
+        }),
+      );
+      expect(store.revivePendingAuthErrors('user-1')).toBe(0);
+      expect(store.getMutation('theirs')?.status).toBe(QueueStatus.AUTH_ERROR);
+    });
+
+    it('stamps processedAt when marking a mutation failed', () => {
+      // Without the stamp a terminal failure has no age and can never be
+      // cleaned, whatever the retention rule says.
+      store.addMutation(makeMutation({ id: 'to-fail' }));
+      store.markMutationFailed('to-fail', {
+        type: 'server',
+        message: 'nope',
+        retryable: false,
+        timestamp: Date.now(),
+      });
+
+      expect(store.getMutation('to-fail')?.processedAt).toEqual(
+        expect.any(Number),
+      );
     });
   });
 

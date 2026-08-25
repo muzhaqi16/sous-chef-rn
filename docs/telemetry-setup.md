@@ -172,8 +172,9 @@ In Grafana Explore, query:
 | `graphql_errors_total` | `name` | GraphQL errors |
 | `graphql_network_errors_total` | | Network-level GraphQL failures |
 | `graphql_slow_queries_total` | | Queries > 1s |
-| `slow_component_renders_total` | `component` | Renders > 16ms |
-| `slow_screen_transitions_total` | `screen` | Transitions > 500ms |
+| `component_render_count` | `component` | Commits per component (re-render churn) |
+| `slow_screen_transitions_total` | `screen` | Transitions > 500ms. Threshold-gated: read durations from `screen_interactive_duration_ms`, never from this counter's labels. |
+| `offline_queue_permanent_failures_total` | | Queued writes the client gave up on |
 
 ### Gauges
 
@@ -182,6 +183,9 @@ In Grafana Explore, query:
 | `app_memory_used_bytes` | `source` | Current memory usage |
 | `app_memory_limit_bytes` | | Device memory limit |
 | `app_memory_usage_percent` | | Memory usage percentage |
+| `cache_persist_size_kb` | | Serialized Apollo cache size written to MMKV |
+| `apollo_cache_edge_count` | `field` | Edges held by a cached connection after merge |
+| `offline_queue_depth` | | Writes waiting to replay |
 
 ### Histograms
 
@@ -194,11 +198,34 @@ In Grafana Explore, query:
 | `screen_mount_duration_ms` | `screen` | Screen mount time |
 | `screen_interactive_duration_ms` | `screen` | Time to interactive |
 | `screen_transition_duration_ms` | `screen` | Full transition time |
-| `component_render_duration_ms` | `component` | Component render time |
+| `component_commit_gap_ms` | `component` | Wall time since the component's previous commit. NOT render cost - it includes idle time. |
 | `http_request_duration_ms` | `host` | HTTP request duration |
 | `graphql_request_duration_ms` | `name` | GraphQL operation duration |
+| `app_apollo_restore_ms` | `outcome` | Persisted-cache restore at cold start. `outcome` is `restored` or `empty` - an `empty` majority means every launch refetches. |
+| `app_zustand_hydration_ms` | | Zustand store hydration time |
+| `cache_persist_extract_ms` | | `cache.extract()` cost |
+| `cache_persist_stringify_ms` | | Cache `JSON.stringify` cost |
+| `resort_edges_duration_ms` | | Cost of re-sorting a cached `itemsConnection` after a subscription event |
 
 All metrics automatically include `env` (environment) and `platform` (ios/android) labels.
+
+**Never emit a metric from inside `if (__DEV__)`.** It is dead-code-eliminated
+in release, so the series exists and is permanently empty - which reads as
+"no problem" rather than "not measured". Dev-only breadcrumbs belong in
+`logger.debug`; gate reporting volume with `enabled` / `sampleRate` instead.
+Enforced by `__tests__/telemetry/noDevGatedMetrics.test.ts`.
+
+**Every log carries `device_id` and `session_id`** as BODY fields, not Loki
+stream labels — query them with `| json | device_id="..."`. A label per device or
+per run would multiply the stream count. Metrics deliberately carry NEITHER: a
+per-device metric label is unbounded cardinality, the same defect as putting a
+duration in a label. Attribute a metric by correlating it with logs from the same
+`session_id`, not by labelling the metric.
+
+**Do not instrument with `logger.*` when the answer must be visible in
+release.** `logger` (`src/utils/environment.ts`) writes to `console` only and
+never reaches Loki, and console output is stripped from release builds. Use
+`Telemetry.*`.
 
 Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000]` ms.
 

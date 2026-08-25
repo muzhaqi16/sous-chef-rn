@@ -5,10 +5,12 @@ import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { useStore } from '#store';
+import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { hasSyncMapping } from './convertToSyncMutation';
 import { OfflineRejectedError } from './OfflineRejectedError';
+import { QueueCapacityError } from './types';
 import { QueuedMutation, QueueStatus } from './types';
 
 /**
@@ -90,7 +92,7 @@ export const createQueueLink = () => {
     // Device offline — queue only mutations on the replay allowlist. Anything
     // else fails fast with a network-shaped error (instant honest toast, no
     // doomed request, and no ghost replay on reconnect).
-    if (!state.isOnline) {
+    if (shouldTreatAsOffline(state)) {
       if (!replayable) {
         logger.info(
           `Queue Link: Offline, rejecting online-only mutation ${operation.operationName}`,
@@ -204,7 +206,24 @@ function enqueueAndComplete(
       requiresAuth: !NEVER_QUEUE_OPERATIONS.includes(operationName),
     };
 
-    queueStore.addMutation(queuedMutation);
+    try {
+      queueStore.addMutation(queuedMutation);
+    } catch (error) {
+      if (!(error instanceof QueueCapacityError)) throw error;
+      // The local-first cache write has already landed — that is the whole
+      // pattern: write, then fire. With the enqueue refused, the change is on
+      // screen and in the persisted cache with nothing that will ever send it.
+      // Withdraw it the same way a refused replay is withdrawn, so the user
+      // sees it undone rather than trusting a change that will never sync.
+      queueManager.withdrawUnqueueableWrite(queuedMutation, {
+        type: 'unknown',
+        message: 'Offline queue is full — change could not be queued',
+        timestamp: Date.now(),
+        retryable: false,
+      });
+      observer.error(error);
+      return;
+    }
 
     // Apollo writes a mutation's result into the cache against its selection set.
     // A bare `null`/`{}` result makes InMemoryCache warn "Missing field <field>

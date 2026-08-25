@@ -15,6 +15,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { useCreateStorageLocation } from './useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
@@ -132,6 +133,15 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
+  // Creating a location IS offline-capable — the server links-or-creates by
+  // name, so a replay converges. Editing one is not: there is no `sync*` twin
+  // and no `idempotencyKey` on these inputs, so a queued replay has no
+  // at-most-once guarantee. They stay online-only, which the API's offline
+  // contract permits — provided the client gates them behind its
+  // "API unavailable" disabled state instead of letting the tap through to a
+  // failure. Surfaced as `isApiUnavailable` for the screen to disable on.
+  const isApiUnavailable = useIsApiUnavailable();
+
   // Errors surfaced via toast in updateLocation below (toastResolvedError for a
   // resolved error member/transport error; the executeMutation handler for a
   // rare throw) — no mutation onError, so there is a single toast.
@@ -191,6 +201,11 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await updateMutation({ variables: { input: { ...input, id } } });
@@ -207,6 +222,11 @@ export function useStorageLocationManagement(
   };
 
   const deleteLocation = async (id: string) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await deleteMutation({ variables: { input: { id } } });
@@ -224,6 +244,11 @@ export function useStorageLocationManagement(
   };
 
   const setDefaultLocation = async (id: string) => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await setDefaultMutation({ variables: { input: { id } } });
@@ -257,6 +282,8 @@ export function useStorageLocationManagement(
     loading,
     initialLoading: !data && loading,
     offline: networkBlocked && !data,
+    /** Editing is online-only — disable the controls rather than let the tap fail. */
+    isApiUnavailable,
     creating,
     updating,
     error,

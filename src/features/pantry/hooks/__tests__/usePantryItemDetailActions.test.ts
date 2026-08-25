@@ -1,10 +1,12 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { ApolloClient } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import type { errorService } from '#/services/errorService';
+import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
 import { alertService } from '#/services/alertService';
@@ -37,6 +39,7 @@ jest.mock('#/services/errorService', () => ({
 
 jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
   removeFromPantryItemsCache: jest.fn(),
+  adjustPantryItemCount: jest.fn(),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
@@ -111,6 +114,9 @@ const mockOnAddToShoppingListNeedsList = jest.fn();
 
 const baseItem = {
   id: 'item-1',
+  // Selected by `PantryItemDetail_pantryItem` — the item's own pantry, which is
+  // authoritative regardless of which pantry the user currently has selected.
+  pantryId: 'pantry-1',
   version: 1,
   quantity: 3,
   unit: { id: 'unit-1', name: 'cups', symbol: 'c' },
@@ -176,10 +182,8 @@ describe('usePantryItemDetailActions', () => {
       const deleteMock = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
-            __typename: 'PantryItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -199,6 +203,240 @@ describe('usePantryItemDetailActions', () => {
         expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
       );
       await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    });
+
+    it('withdraws the row even when the delete is only queued', async () => {
+      // This screen used to own a second DeletePantryItem whose only cache work
+      // was an `update:` callback. That never runs when the delete is queued
+      // offline, so the screen navigated back and the row was still in the
+      // list. The shared `removeItem` withdraws it before firing, which is why
+      // this holds with a queued (no data, no error) result.
+      const queuedDelete = recordMock(DeletePantryItemDocument, {});
+
+      const { result } = setup({}, { operationMocks: [queuedDelete.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      const deleteButton = alertCalls[alertCalls.length - 1][2][1];
+      await act(async () => {
+        deleteButton.onPress();
+      });
+
+      await waitFor(() =>
+        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'pantry-1',
+          'item-1',
+          { evictItem: true },
+        ),
+      );
+    });
+
+    it("evicts from the item's own pantry, not the selected one", async () => {
+      // `removeItem` uses this id for cache surgery — which connection loses the
+      // edge and whose count drops. They normally match, but a deep link or a
+      // notification tap can open an item outside the selected pantry, and then
+      // the selected one would decrement the wrong pantry and leave the real
+      // one holding a stale edge.
+      const deleteMock = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
+            pantryItem: { __typename: 'PantryItem', id: 'item-1' },
+          },
+        },
+      });
+
+      const { result } = setup(
+        {
+          selectedPantryId: 'pantry-OTHER',
+          item: { ...baseItem, pantryId: 'pantry-OWNING' },
+        },
+        { operationMocks: [deleteMock.mock] },
+      );
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'pantry-OWNING',
+          'item-1',
+          { evictItem: true },
+        ),
+      );
+      expect(removeFromPantryItemsCache).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'pantry-OTHER',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
+    it('still deletes when no pantry is selected', async () => {
+      // `selectedPantryId` is genuinely nullable — `navigationSlice` starts it
+      // at null and `authSlice` resets it on logout. It used to be coerced to
+      // `''`, which the shared `removeItem` treats as its "no pantry" guard and
+      // returns early from — while `goBack()` still ran. The user watched the
+      // screen dismiss with the item untouched on the server.
+      const deleteMock = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
+            pantryItem: { __typename: 'PantryItem', id: 'item-1' },
+          },
+        },
+      });
+
+      const { result } = setup(
+        { selectedPantryId: null },
+        { operationMocks: [deleteMock.mock] },
+      );
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(deleteMock.fired).toContainEqual({ input: { id: 'item-1' } }),
+      );
+      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    });
+
+    it('does not pretend to delete when no pantry can be resolved at all', async () => {
+      const deleteMock = recordMock(DeletePantryItemDocument, {});
+
+      const { result } = setup(
+        {
+          selectedPantryId: null,
+          item: { ...baseItem, pantryId: null },
+        },
+        { operationMocks: [deleteMock.mock] },
+      );
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      // Nothing was deleted, so the screen must not behave as though it was.
+      expect(deleteMock.fired).toEqual([]);
+      expect(mockGoBack).not.toHaveBeenCalled();
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenLastCalledWith(
+          'Error',
+          expect.any(String),
+        ),
+      );
+    });
+
+    it('restores the row when the server refuses the delete', async () => {
+      // `removeItem` evicts the row and drops the count BEFORE firing, so a
+      // refusal has to put both back — that is what `refetch` is for. This
+      // screen used to pass `refetch: () => {}`, so a refused delete left the
+      // item gone locally and still present on the server, with nothing to
+      // bring it back.
+      //
+      // A REFUSAL, not a transport failure: `errorPolicy: 'all'` resolves it as
+      // DATA — a non-success union member — so it never reaches `onError`, and
+      // the check sits on the resolved result. A transport failure is the
+      // opposite case and must NOT restore, because the delete is queued for
+      // replay (covered below).
+      const refused = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'NotFoundError',
+            code: 'NOT_FOUND',
+            message: 'Item is referenced by an active meal plan',
+            resource: 'PantryItem',
+            resourceId: 'item-1',
+          },
+        },
+      });
+
+      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+      const { result } = setup({}, { operationMocks: [refused.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() => expect(restore).toHaveBeenCalled());
+      restore.mockRestore();
+    });
+
+    it('tells the user and stays put when the server refuses the delete', async () => {
+      // Restoring the row silently is its own version of the bug this screen
+      // keeps hitting: `removeItem` returns normally on a refusal (it is DATA,
+      // not an error), so the catch never fires — the screen dismissed as
+      // though the delete worked and the row simply reappeared in the list.
+      const refused = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to delete this item',
+          },
+        },
+      });
+
+      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+      const { result } = setup({}, { operationMocks: [refused.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenLastCalledWith(
+          'Error',
+          expect.any(String),
+        ),
+      );
+      expect(mockGoBack).not.toHaveBeenCalled();
+      restore.mockRestore();
+    });
+
+    it('keeps the local removal when the delete only failed to reach the server', async () => {
+      // The offline case: `queueLink` has taken the delete for replay, so the
+      // eviction must STAND. Restoring here would resurrect a row the user
+      // already deleted, and the replay would delete it again later.
+      const offline = recordMock(DeletePantryItemDocument, {
+        error: new Error('Network request failed'),
+      });
+
+      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+      const { result } = setup({}, { operationMocks: [offline.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'pantry-1',
+          'item-1',
+          { evictItem: true },
+        ),
+      );
+      expect(restore).not.toHaveBeenCalled();
+      restore.mockRestore();
     });
   });
 

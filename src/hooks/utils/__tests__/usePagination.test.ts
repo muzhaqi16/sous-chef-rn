@@ -331,4 +331,59 @@ describe('usePagination', () => {
       await promise2!;
     });
   });
+
+  it('a page settling does not immediately re-open loadMore for the next page', async () => {
+    // The append and `setIsFetchingMore(false)` batch into one commit, and
+    // `endCursor` has already advanced by then. Releasing the guard inside that
+    // commit let a fling's next onEndReached start page N+1 while page N was
+    // still mounting, so two pages landed together. The guard must survive the
+    // settling commit and only lift a frame later.
+    const raf = jest
+      .spyOn(global, 'requestAnimationFrame')
+      .mockImplementation(() => 1 as unknown as number);
+
+    try {
+      mockFetchMore.mockResolvedValue({});
+
+      const { result, rerender } = renderHook(
+        (props: { endCursor: string }) =>
+          usePagination({
+            pageInfo: { hasNextPage: true, endCursor: props.endCursor },
+            loading: false,
+            itemCount: 25,
+            fetchMore: mockFetchMore,
+          }),
+        { initialProps: { endCursor: 'cursor-25' } },
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(mockFetchMore).toHaveBeenCalledTimes(1);
+
+      // Apollo publishes the merged page: more rows, cursor moved on.
+      rerender({ endCursor: 'cursor-50' });
+
+      // The frame has not run yet, so the next page must still be refused even
+      // though hasMore is true and the cursor is fresh.
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(mockFetchMore).toHaveBeenCalledTimes(1);
+
+      // Once the frame runs, pagination resumes normally.
+      const release = raf.mock.calls.at(-1)?.[0];
+      act(() => release?.(0));
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      expect(mockFetchMore).toHaveBeenCalledTimes(2);
+      expect(mockFetchMore).toHaveBeenLastCalledWith({
+        variables: { cursor: 'cursor-50' },
+      });
+    } finally {
+      raf.mockRestore();
+    }
+  });
 });

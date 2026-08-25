@@ -1,6 +1,10 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
-import { View } from 'react-native';
+import {
+  View,
+  type AccessibilityActionEvent,
+  type AccessibilityActionInfo,
+} from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // RNGH's Pressable (not the themed RN re-export). This is the draggable card
 // surface inside RNGH's Swipeable; RN's Pressable doesn't register with RNGH's
@@ -20,6 +24,11 @@ interface SwipeableContentProps {
   onLongPress?: () => void;
   accessibilityLabel?: string;
   accessibilityHint?: string;
+  /** Swipe actions exposed to screen readers, which cannot swipe. Hosted here
+   *  rather than on a wrapper view around Swipeable — this container already
+   *  exists, so the row costs one view fewer. */
+  accessibilityActions?: AccessibilityActionInfo[];
+  onAccessibilityAction?: (event: AccessibilityActionEvent) => void;
 }
 
 export const SwipeableContent: React.FC<SwipeableContentProps> = ({
@@ -29,10 +38,16 @@ export const SwipeableContent: React.FC<SwipeableContentProps> = ({
   onLongPress,
   accessibilityLabel,
   accessibilityHint,
+  accessibilityActions,
+  onAccessibilityAction,
 }) => {
   const { t } = useTranslation();
   return (
-    <View style={styles.itemContainer}>
+    <View
+      style={styles.itemContainer}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
+    >
       <Pressable
         testID={testID}
         onPress={onPress}

@@ -8,7 +8,6 @@ import {
   FieldDef,
 } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/molecules/FormInput';
-import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
 import type { PantryItemFormData } from './PantryItemForm';
 
@@ -20,10 +19,7 @@ type SuggestedBrand = {
 interface ItemInformationSectionProps {
   control: Control<PantryItemFormData>;
   errors: FieldErrors<PantryItemFormData>;
-  onSelectItem?: (item: ItemSuggestion) => void;
-  mode: 'add' | 'edit';
   suggestedBrands?: SuggestedBrand[];
-  testID?: string;
   onBrandSelected?: (brandId: string | null) => void;
   onCategorySelected?: (categoryId: string | null) => void;
 }
@@ -31,66 +27,34 @@ interface ItemInformationSectionProps {
 export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   control,
   errors,
-  onSelectItem,
-  mode,
   suggestedBrands,
-  testID,
   onBrandSelected,
   onCategorySelected,
 }) => {
   const { t } = useTranslation();
   const getFields = (): FieldDef<PantryItemFormData>[] => {
-    if (mode === 'add') {
-      return [
-        {
-          name: 'itemName',
-          label: t('labels.itemName'),
-          placeholder: t('itemForm.placeholderItemName'),
-          component: 'itemAutocomplete',
-          props: { required: true },
-          onSelectItem,
-          testID,
-        },
-        {
-          name: 'category',
-          label: t('labels.category'),
-          placeholder: t('itemForm.placeholderCategory'),
-          component: 'categoryAutocomplete',
-          onCategorySelected,
-        },
-        {
-          name: 'brand',
-          label: t('labels.brand'),
-          placeholder: "e.g., Kellogg's",
-          component: 'brandAutocomplete',
-          props: { suggestedBrands },
-        },
-      ];
-    } else {
-      // Edit mode - item name is editable
-      return [
-        {
-          name: 'itemName',
-          label: t('labels.itemName'),
-          placeholder: t('itemForm.placeholderItemName'),
-          component: FormInput,
-        },
-        {
-          name: 'category',
-          label: t('labels.category'),
-          placeholder: t('itemForm.placeholderCategory'),
-          component: 'categoryAutocomplete',
-          onCategorySelected,
-        },
-        {
-          name: 'brand',
-          label: t('itemForm.brandOptional'),
-          placeholder: "e.g., Kellogg's",
-          component: 'brandAutocomplete',
-          props: { suggestedBrands, onBrandSelected },
-        },
-      ];
-    }
+    return [
+      {
+        name: 'itemName',
+        label: t('labels.itemName'),
+        placeholder: t('itemForm.placeholderItemName'),
+        component: FormInput,
+      },
+      {
+        name: 'category',
+        label: t('labels.category'),
+        placeholder: t('itemForm.placeholderCategory'),
+        component: 'categoryAutocomplete',
+        onCategorySelected,
+      },
+      {
+        name: 'brand',
+        label: t('itemForm.brandOptional'),
+        placeholder: "e.g., Kellogg's",
+        component: 'brandAutocomplete',
+        props: { suggestedBrands, onBrandSelected },
+      },
+    ];
   };
 
   return (

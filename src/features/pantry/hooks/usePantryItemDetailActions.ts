@@ -9,8 +9,7 @@ import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
-import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { removeFromPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -21,10 +20,18 @@ import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useCo
 import { useConvertExpiredBatchesToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredBatchesToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
 import { useCorrectPantryItemWeight } from '#features/pantry/hooks/mutations/useCorrectPantryItemWeight';
+import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePantryItemMutations';
 
 type PantryItemForActions =
   | {
       id: string;
+      /**
+       * The item's OWN pantry, selected by `PantryItemDetail_pantryItem`. It is
+       * authoritative regardless of which pantry the user currently has
+       * selected — `selectedPantryId` is genuinely nullable (navigationSlice
+       * starts it null and a deep link can land here before it resolves).
+       */
+      pantryId?: string | null;
       // `PantryItem.version` is `Int!`, and the server now requires it on every
       // update — a mutation sent without one overwrites concurrent edits.
       version: number;
@@ -102,34 +109,37 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  const [deleteItem] = useMutation(DeletePantryItemDocument, {
-    update: (cache, { data: mutationData }, { variables }) => {
-      const payload = mutationData?.deletePantryItem;
-      if (
-        payload?.__typename !== 'DeletePantryItemPayload' ||
-        !selectedPantryId ||
-        !variables
-      ) {
-        return;
-      }
-      removeFromPantryItemsCache(cache, selectedPantryId, variables.input.id, {
-        evictItem: true,
-      });
-      cache.modify({
-        id: cache.identify({ __typename: 'Pantry', id: selectedPantryId }),
-        fields: {
-          stats(existingStats?: {
-            totalItems?: number;
-            readonly __ref?: string;
-          }) {
-            if (!existingStats) return existingStats;
-            return {
-              ...existingStats,
-              totalItems: Math.max(0, (existingStats.totalItems || 0) - 1),
-            };
-          },
-        },
-      });
+  // The shared delete rather than a second one here. This screen used to own a
+  // `DeletePantryItem` mutation whose only cache work was an `update:` callback,
+  // which never runs when the delete is queued offline: the screen navigated
+  // back and the row was still in the list. `removeItem` evicts before firing,
+  // adjusts the count, and registers the pending-delete that keeps a
+  // subscription echo from resurrecting the row.
+  // The item's OWN pantry first. `removeItem` uses this id for cache surgery —
+  // which `itemsConnection` loses the edge, whose `stats.totalItems` drops — so
+  // the pantry that actually holds the item is the correct one; the selected
+  // pantry is a navigation detail that can differ (a deep link or notification
+  // tap can land on an item outside it) and is genuinely nullable besides
+  // (navigationSlice starts it null, authSlice clears it on logout). Keyed only
+  // on `selectedPantryId`, a delete opened before the selection resolved passed
+  // '' to `removeItem`, which early-returns on a falsy pantryId — so nothing was
+  // deleted while the screen still navigated back, reporting a success that
+  // never happened.
+  const resolvedPantryId = item?.pantryId ?? selectedPantryId ?? null;
+
+  const { removeItem } = usePantryItemMutations({
+    pantryId: resolvedPantryId ?? '',
+    // `removeItem` evicts the row and drops the count BEFORE firing, so a
+    // refusal has to put both back — and `refetch` is what it calls to do it.
+    // Passing a no-op here (on the reasoning that this screen navigates away on
+    // success) was wrong: on FAILURE the screen stays, and the item was left
+    // gone locally while still present on the server, with nothing to bring it
+    // back. A refusal resolves as DATA under `errorPolicy: 'all'`, so the check
+    // sits on the resolved result rather than in `onError`, which sees only
+    // transport failures — and those must NOT restore, because the delete is
+    // queued for replay.
+    refetch: () => {
+      void client.refetchQueries({ include: [GetPantryDocument] });
     },
   });
 
@@ -171,9 +181,23 @@ export function usePantryItemDetailActions({
           text: t('labels.delete'),
           style: 'destructive',
           onPress: async () => {
+            if (!resolvedPantryId) {
+              // Neither source resolved: there is nothing to delete from. Say
+              // so rather than dismissing the screen as though it worked.
+              alertService.alert(
+                t('labels.error'),
+                t('errors.deleteItemFailed'),
+              );
+              return;
+            }
             try {
-              await deleteItem({ variables: { input: { id: itemId } } });
-              goBack();
+              // Only leave the screen if the item is actually gone. A refusal
+              // resolves normally (it is DATA, not an error), and `removeItem`
+              // has already told the user and restored the row — navigating
+              // away here would report a success that did not happen.
+              if (await removeItem(itemId)) {
+                goBack();
+              }
             } catch (error) {
               errorService.reportError(error, {
                 operation: 'PantryItemDetail.deleteItem',

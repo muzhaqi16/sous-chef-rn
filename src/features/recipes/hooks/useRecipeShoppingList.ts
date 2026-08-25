@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   CreateShoppingListItemsFromRecipeDocument,
   CreateShoppingListItemFromRecipeIngredientDocument,
@@ -24,6 +24,11 @@ import { toastService } from '#/services/toastService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { generateEntityId } from '#/utils/generateEntityId';
+import {
+  addOptimisticShoppingListItem,
+  createOptimisticShoppingListItem,
+  revertOptimisticShoppingListItem,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { logger } from '#/utils/environment';
 import { stripPriceFromName } from '#/utils/stripPriceFromName';
 import { errorService } from '#/services/errorService';
@@ -66,6 +71,18 @@ async function addIngredientToList(
       context: { localFirst: boolean };
     }): Promise<{ data?: unknown; error?: unknown }>;
     onRejected: () => void;
+    /** Write the row into the cache before firing, so it survives being queued. */
+    writeOptimisticRow(
+      rowId: string,
+      fields: {
+        itemName: string;
+        quantity: number | null;
+        unitName: string | null;
+        itemId?: string;
+      },
+    ): void;
+    /** Take the row back when the server refuses it. */
+    revertOptimisticRow(rowId: string): void;
   },
 ): Promise<boolean> {
   const {
@@ -73,15 +90,35 @@ async function addIngredientToList(
     addRecipeIngredientMutation,
     addItemsToShoppingListMutation,
     onRejected,
+    writeOptimisticRow,
+    revertOptimisticRow,
   } = deps;
 
   if (isBackendRecipe) {
     // Generate the new item's id so a create that gets queued (offline /
     // API down) replays idempotently, keyed by this id.
+    const rowId = generateEntityId();
+    // `in` narrows the DisplayIngredient union; the backend shape carries the
+    // display fields the row needs, so it can be shown before the server
+    // answers rather than only once `update:` runs (which never happens
+    // offline).
+    const unit = 'unit' in ingredient ? ingredient.unit : null;
+    const linkedItem = 'item' in ingredient ? ingredient.item : null;
+    writeOptimisticRow(rowId, {
+      itemName: ingredient.name || 'Unknown ingredient',
+      quantity:
+        'quantity' in ingredient && typeof ingredient.quantity === 'number'
+          ? ingredient.quantity
+          : null,
+      unitName:
+        typeof unit === 'string' ? unit : unit?.symbol || unit?.name || null,
+      itemId: linkedItem?.id,
+    });
+
     const result = await addRecipeIngredientMutation({
       variables: {
         input: {
-          id: generateEntityId(),
+          id: rowId,
           recipeIngredientId: String(ingredient.id),
           shoppingListId,
         },
@@ -93,6 +130,7 @@ async function addIngredientToList(
     // transport error would otherwise fall through to the success toast.
     // Classify and report once on rejection; 'created'/'queued' confirm.
     if (classifyCreateResult(result) === 'rejected') {
+      revertOptimisticRow(rowId);
       onRejected();
       return false;
     }
@@ -102,27 +140,31 @@ async function addIngredientToList(
   if ('amount' in ingredient) {
     // Single ingredient goes through the same batch mutation as a
     // one-element `items` array — there is no separate single-add op.
+    const rowId = generateEntityId();
+    const itemName = stripPriceFromName(
+      ingredient.name || ingredient.original || 'Unknown ingredient',
+    );
+    const unitName =
+      ingredient.measures?.us?.unitShort ||
+      ingredient.measures?.metric?.unitShort ||
+      undefined;
+
+    writeOptimisticRow(rowId, {
+      itemName,
+      quantity: ingredient.amount || 0,
+      unitName: unitName ?? null,
+    });
+
     const result = await addItemsToShoppingListMutation({
       variables: {
         input: {
           shoppingListId,
           items: [
             {
-              id: generateEntityId(),
-              item: {
-                itemName: stripPriceFromName(
-                  ingredient.name ||
-                    ingredient.original ||
-                    'Unknown ingredient',
-                ),
-              },
+              id: rowId,
+              item: { itemName },
               quantity: ingredient.amount || 0,
-              unit: {
-                unitName:
-                  ingredient.measures?.us?.unitShort ||
-                  ingredient.measures?.metric?.unitShort ||
-                  undefined,
-              },
+              unit: { unitName },
               storePrefs: ingredient.aisle
                 ? { aisle: ingredient.aisle }
                 : undefined,
@@ -139,6 +181,7 @@ async function addIngredientToList(
     // toasts on a transport error, so toast here only for the resolved
     // error-union case — exactly one toast either way.
     if (classifyCreateResult(result) === 'rejected') {
+      revertOptimisticRow(rowId);
       if (!result.error) onRejected();
       return false;
     }
@@ -178,6 +221,8 @@ export function useRecipeShoppingList({
 
   const getShoppingListById = (listId: string) =>
     shoppingLists.find(list => list.id === listId) || null;
+
+  const client = useApolloClient();
 
   // State
   const [addingToList, setAddingToList] = useState(false);
@@ -326,12 +371,36 @@ export function useRecipeShoppingList({
     }
 
     try {
-      const added = await addIngredientToList(ingredient, targetList.id, {
+      const listId = targetList.id;
+      const added = await addIngredientToList(ingredient, listId, {
         isBackendRecipe,
         addRecipeIngredientMutation,
         addItemsToShoppingListMutation,
         onRejected: () =>
           toastService.error(t('recipes.addIngredientToListFailed')),
+        // Written before the mutation fires so the row shows immediately and
+        // survives being queued — the `update:` callbacks only run with a
+        // server payload, so offline they never fire.
+        writeOptimisticRow: (rowId, fields) => {
+          const row = createOptimisticShoppingListItem(rowId, {
+            itemName: fields.itemName,
+            quantity: fields.quantity,
+            quantityInput: null,
+            unitName: fields.unitName,
+            category: null,
+            itemId: fields.itemId,
+            unitId: undefined,
+          });
+          try {
+            addOptimisticShoppingListItem(client.cache, listId, row);
+          } catch (cacheError) {
+            errorService.reportError(cacheError, {
+              operation: 'Add recipe ingredient (optimistic)',
+            });
+          }
+        },
+        revertOptimisticRow: rowId =>
+          revertOptimisticShoppingListItem(client.cache, listId, rowId),
       });
       if (!added) return;
 
@@ -421,6 +490,45 @@ export function useRecipeShoppingList({
                 : undefined,
             }));
 
+          // Write the rows before firing. The `update` callback only runs with
+          // a server payload, so offline it never fires: the recipe reported
+          // success and marked its checkmarks while the shopping list stayed
+          // empty. The client mints each `id`, so when the batch does replay the
+          // server response merges onto these same entities rather than
+          // duplicating them.
+          items.forEach(batchItem => {
+            const rowId = batchItem.id;
+            if (!rowId) return;
+            // Value blocks (`?.`, `??`, ternary) must stay OUT of the try —
+            // inside one they bail this whole hook out of the React Compiler.
+            const unitName = batchItem.unit?.unitName ?? null;
+            const quantity =
+              typeof batchItem.quantity === 'number'
+                ? batchItem.quantity
+                : null;
+            const itemName = batchItem.item.itemName ?? '';
+            const optimisticRow = createOptimisticShoppingListItem(rowId, {
+              itemName,
+              quantity,
+              quantityInput: null,
+              unitName,
+              category: null,
+              itemId: undefined,
+              unitId: undefined,
+            });
+            try {
+              addOptimisticShoppingListItem(
+                client.cache,
+                listId,
+                optimisticRow,
+              );
+            } catch (cacheError) {
+              errorService.reportError(cacheError, {
+                operation: 'Add recipe ingredients (optimistic)',
+              });
+            }
+          });
+
           const result = await addItemsToShoppingListMutation({
             variables: {
               input: {
@@ -430,6 +538,22 @@ export function useRecipeShoppingList({
             },
             context: { localFirst: true },
           });
+
+          // A refusal resolves under errorPolicy:'all' with no thrown error, so
+          // the rows have to be taken back explicitly or they linger until the
+          // next refetch. A QUEUED batch (no data, no error) is not a refusal —
+          // it keeps its rows and replays.
+          if (classifyCreateResult(result) === 'rejected') {
+            items.forEach(batchItem => {
+              if (batchItem.id) {
+                revertOptimisticShoppingListItem(
+                  client.cache,
+                  listId,
+                  batchItem.id,
+                );
+              }
+            });
+          }
 
           const payload = result.data?.addItemsToShoppingList;
           if (payload?.__typename === 'AddItemsToShoppingListPayload') {

@@ -105,14 +105,22 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [loadMoreError, setLoadMoreError] = useState(false);
 
-  // Clear the ref guard only after React re-renders with updated hasMore/endCursor.
-  // This prevents stale closures in onEndReached from firing loadMore with old values
-  // during the window between fetchMore completion and re-render.
+  // Release the guard one frame AFTER the commit that appended the page, not
+  // during it. `fetchMore` resolving, the cache broadcast carrying the new rows
+  // and `setIsFetchingMore(false)` all batch into a single commit, so clearing
+  // the ref in that commit's effect phase re-opens `loadMore` while the page is
+  // still mounting — and `endCursor` has already advanced, so the next
+  // `onEndReached` of a fling starts page N+1 immediately and two pages land
+  // together. The extra frame also preserves the original intent: the ref stays
+  // set until a render has published the updated hasMore/endCursor, so a stale
+  // closure cannot fire loadMore with old values.
   useEffect(() => {
-    if (!isFetchingMore) {
+    if (isFetchingMore) return;
+    const handle = requestAnimationFrame(() => {
       isFetchingMoreRef.current = false;
-    }
-  });
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [isFetchingMore]);
 
   const loadMore = async () => {
     // Don't load if:

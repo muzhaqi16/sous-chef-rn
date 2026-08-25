@@ -126,6 +126,12 @@ export function useHomeSubscriptions(userId?: string) {
   const homeEvents = useSubscription(HomeEventsDocument, {
     variables: { homeId: selectedHomeId! },
     skip: homeSkip,
+    // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
+    // `id` only, so caching it writes a Membership/HomeInvite stripped of every
+    // field a screen reads. A removal event would re-create the entity it just
+    // announced was gone, leaving `GetHome` incomplete and forcing a refetch of
+    // the whole page. Every handler here reads the entity back by query anyway.
+    fetchPolicy: 'no-cache',
     ...homeEventHandlers,
   });
   useSubscriptionTransportRecovery('HomeEvents', homeEvents, homeSkip);

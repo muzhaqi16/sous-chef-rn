@@ -550,6 +550,16 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         }
       }
 
+      // Connection size is a release signal — an unbounded connection is what
+      // makes the persisted cache expensive to restore.
+      import('#services/telemetry')
+        .then(({ Telemetry }) =>
+          Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, {
+            field: 'itemsConnection',
+          }),
+        )
+        .catch(() => {});
+
       if (__DEV__) {
         const existingCount = existing?.edges?.length ?? 0;
         const incomingCount = incoming?.edges?.length ?? 0;
@@ -557,13 +567,6 @@ function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         logger.debug(
           `📊 [Cache] itemsConnection merge: existing=${existingCount} incoming=${incomingCount} merged=${mergedEdges.length} cursor=${hasCursor}`,
         );
-        import('#services/telemetry')
-          .then(({ Telemetry }) =>
-            Telemetry.gauge('apollo_cache_edge_count', mergedEdges.length, {
-              field: 'itemsConnection',
-            }),
-          )
-          .catch(() => {});
       }
 
       return { ...incoming, pageInfo, edges: mergedEdges };

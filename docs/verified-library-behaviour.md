@@ -61,7 +61,7 @@ implementation from `useIsBottomSheetInput()` context rather than hardcoding.
 focused input's **bottom edge**, not the caret its docstring mentions; the
 library default is `0`.
 
-**Verified against `react-native-keyboard-controller@1.20.7`.**
+**Verified against `react-native-keyboard-controller@1.22.4`.**
 `KeyboardAwareScrollView/index.tsx` computes
 `point = absoluteY + inputHeight` and scrolls when
 `visibleRect - point <= bottomOffset`; the prop defaults to `0` in the same
@@ -76,6 +76,177 @@ Re-check:
 
 ```
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
+```
+
+### RNGH v3 handlers survive a native scroll takeover
+
+**Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while
+the user is only scrolling, and no activation distance prevents it. RNGH does not
+cancel v3 gesture handlers when a native scrollable takes the touch stream, so the
+row's pan keeps accumulating horizontal travel for the whole drag and crosses any
+threshold eventually.
+
+**Verified against `react-native-gesture-handler@3.2.1`.** The chain:
+
+1. `ReanimatedSwipeable.tsx:27` imports `GestureDetector` from `'../../v3/detectors'`,
+   so its pan registers as `ACTION_TYPE_NATIVE_DETECTOR` / `ACTION_TYPE_VIRTUAL_DETECTOR`
+   (5 / 6 in `GestureHandler.kt:1034-1035`, assigned in
+   `RNGestureHandlerDetectorView.kt:106,189,227`).
+2. A native view grabbing the touch calls
+   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:117`), whose
+   only cancellation is `orchestrator.cancelAllLegacyHandlers()`.
+3. `GestureHandlerOrchestrator.kt:371` — docblock: _"Cancels all handlers created
+   using API v1 and v2"_ — matches only action types 1–4. **Types 5 and 6 are not in
+   the list**, so the swipe pan is never cancelled.
+
+Distance cannot compensate: `activeOffsetX` is measured from touch-down with no time
+limit and no cancellation, so a long scroll crosses 10, 16, 24 — and the 40 that
+failed for the reporter of upstream
+[#2380](https://github.com/software-mansion/react-native-gesture-handler/issues/2380).
+`ReanimatedSwipeable` also exposes no `failOffsetY` in 2.30.0, 3.1.0, 3.2.1 **or
+`3.3.0-nightly-20260824`**, and the legacy non-Reanimated `Swipeable` is gone in 3.x.
+
+**The fix is to make the scrollable an RNGH handler.**
+`GestureHandlerOrchestrator.makeActive()` (`:234-247`) cancels every handler for which
+`shouldHandlerBeCancelledBy` holds, so once the scroll is a real
+`NativeViewGestureHandler` its activation cancels the row's pan through the
+orchestrator — the arbitration `cancelAllLegacyHandlers` fails to provide. FlashList
+takes it via `renderScrollComponent` (`FlashListProps.d.ts:101`); RNGH's root
+`ScrollView` is the v3 wrapper (`src/index.ts:153` re-exports `./v3`), built with
+`createNativeWrapper(..., { disallowInterruption: true }, GestureDetectorType.Intercepting)`.
+It forwards `ref={props.ref}` and re-clones `refreshControl` with `block: scrollGesture`
+(`GestureComponents.tsx:56-115`), so FlashList's scroll ref and pull-to-refresh
+survive the swap. `src/components/atoms/SwipeAwareScrollComponent.tsx` is the single
+place this is wired; `__tests__/gestures/flashListScrollComponents.test.ts` guards it.
+
+**Confirmed on device by controlled A/B (2026-08-24), not just by reading source.**
+With the fix in place the bug was gone; removing `renderScrollComponent` from
+`PantryContent` alone — same freshly-restarted process, same bundle, same
+`dragOffset`, every other list left on RNGH's ScrollView as a control — brought it
+straight back. Restoring the prop cleared it again. That rules out the alternative
+explanation (that a long-lived dev process accumulating stale native registrations
+was the real cause, and the process restart was doing the work), because the failure
+reproduced minutes into a clean process.
+
+Note the direction of the `dragOffset` change in the fixing commit: **24 → 16**, i.e.
+easier to trigger. If activation distance were the lever, lowering it would have made
+misfires worse.
+
+**When it started:** RNGH 2.30.0 → 3.0.2 (2026-07-13, `4a280dae`) moved Swipeable onto
+the v3 detectors. The component's gesture config is identical across 2.30.0 and 3.2.1
+— diffing the component alone clears it wrongly; the engine underneath is what changed.
+Corroboration: `DayMealList.tsx` already used RNGH's `ScrollView` and was the one
+swipeable surface never reported as broken.
+
+**Upstream:** [#4432](https://github.com/software-mansion/react-native-gesture-handler/issues/4432)
+("a regression introduced with the v3 `Pressable`") and open PR
+[#4441](https://github.com/software-mansion/react-native-gesture-handler/pull/4441)
+("when a native `ScrollView` takes the gesture over, nothing stops the handler") are
+the same gap for buttons. That PR's new `cancelHandlersOnNativeTouchGrab` is gated on
+`it is NativeViewGestureHandler`, so it would not cover a detector pan.
+
+**Two near-misses that do NOT close the gap** (checked so nobody re-litigates them):
+
+- `RNGestureHandlerDetectorView.kt:49-63` overrides
+  `requestDisallowInterceptTouchEvent` and cancels its attached handlers — but
+  `requestDisallowInterceptTouchEvent` propagates **upward** from the view that
+  grabs the touch, and a swipeable row's detector sits **below** the ScrollView,
+  so the call never reaches it. It only protects the inverse topology (a native
+  scrollable inside a detector).
+- `ReanimatedSwipeable` renders its detectors with `touchAction="pan-y"`
+  (`ReanimatedSwipeable.tsx:583,590`), which reads as exactly this fix — but
+  `touchAction` is implemented only in `HostGestureDetector.web.tsx`; the
+  Android sources never consume it. Web-only.
+
+**No `minDist` interference.** Android's `PanGestureHandler` inits
+`minDist = defaultMinDist = vc.scaledTouchSlop`, which alone would activate the pan at
+8dp in _any_ direction. Setting any custom criterion (`activeOffsetX` here) makes
+`updateConfig` set `minDist = Float.MAX_VALUE` unless `minDistance` was passed
+explicitly, so the radial fallback is off. On iOS every criterion defaults to `NAN`.
+Never pass `minDistance` alongside these — `validatePanConfig` throws.
+
+`SwipeableItem`'s `dragOffset` (default 16dp, Android's `PAGING_TOUCH_SLOP`) remains as
+defence in depth only. Note `dragOffsetFromRight` **throws** in `__DEV__` unless
+non-positive, which is why the component takes one positive number and applies the sign.
+
+Re-check:
+
+```
+grep -n "cancelAllLegacyHandlers" -A 12 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+grep -rn "renderScrollComponent" src --include=*.tsx
+grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
+grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
+```
+
+### RNGH's scroll gesture reaches only RNGH's RefreshControl
+
+**Claim:** a list that renders RNGH's `ScrollView` but supplies React Native's
+`RefreshControl` gets no scroll↔refresh arbitration. The prop RNGH uses to wire
+them together is accepted and discarded, silently.
+
+**Verified against `react-native-gesture-handler@3.2.1` +
+`react-native-unistyles@3.3.0`.** The chain:
+
+1. `v3/components/GestureComponents.tsx:97-105` — RNGH's `ScrollView` renders
+   `refreshControl` as
+   `React.cloneElement(refreshControl, scrollGesture ? { block: scrollGesture } : {})`,
+   with the comment _"block exists (on our RefreshControl)"_.
+2. `block` is a member of `ExternalRelationsConfig`
+   (`v3/hooks/utils/propsWhiteList.ts:30-34`), which is folded into
+   `NativeWrapperProps` (`:116-124`).
+3. `v3/createNativeWrapper.tsx:26-46` splits incoming props on that Set:
+   anything in it goes to `useNativeGesture(gestureHandlerProps)`, everything
+   else to the wrapped child. Only a control built by `createNativeWrapper` —
+   i.e. RNGH's own `RefreshControl`, exported from `v3/components/index.ts` —
+   has that split. RN's control receives `block` as an ordinary unknown prop.
+
+Nothing throws, warns, or type-errors: the failure is entirely absent
+behaviour, which is why it is guarded by a test rather than left to review.
+
+**The mis-pairing is a CRASH in the other direction.** RNGH's control renders a
+`VirtualDetector`, whose first statement is
+`useRequiredInterceptingDetectorContext()` — it throws
+`"VirtualGestureDetector must be a descendant of an InterceptingGestureDetector"`
+when nothing above it supplies that context
+(`src/v3/detectors/VirtualDetector/VirtualDetector.tsx:17-27,38`). So RNGH's
+control in a plain RN `ScrollView` takes the screen down rather than merely
+losing arbitration; `PlainScrollRefreshControl` is what those hosts take. An
+RNGH host is either a FlashList rendering RNGH's scroll component OR RNGH's
+`ScrollView` used directly — a check written only against
+`renderScrollComponent` reports the second as a false positive.
+
+**The trap is that RN's control arrives unnamed.** A list that passes only
+`onRefresh`/`refreshing` and no `refreshControl` never mentions a control at
+all — but FlashList builds one, and the one it builds is React Native's:
+
+```
+node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx:53-66
+  const refreshControl = useMemo(() => {
+    if (customRefreshControl) { return customRefreshControl }
+    else if (onRefresh) { return <RefreshControl … /> }   // RN's
+  }, …)
+```
+
+Observed on device 2026-08-24: the shopping list (the only RNGH-hosted list on
+the bare-prop path) showed a refresh indicator hanging in the MIDDLE of the list
+that would not retract until pushed back up by hand. Every list passing an
+explicit `refreshControl` was unaffected — which is what localises the cause to
+the control's type rather than to the RNGH scrollable itself.
+
+The `withUnistyles` wrapper between them is transparent. It builds
+`deepMergeObjects(mappingsProps, unistyleProps, props)` and spreads the result
+onto the wrapped component; `deepMergeObjects` (`src/utils.ts:3-24`) recurses
+only when BOTH sides of a key are objects, and no mapping declares `block`, so
+the `NativeGesture` is assigned by reference and arrives intact.
+
+Re-check:
+
+```
+node scripts/probe-withunistyles-prop-passthrough.mjs
+grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
+grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
+grep -n -B 4 "'block'" node_modules/react-native-gesture-handler/src/v3/hooks/utils/propsWhiteList.ts
+npx jest __tests__/gestures/flashListScrollComponents.test.ts
 ```
 
 ### unistyles withUnistyles drops function styles
@@ -151,7 +322,7 @@ not merely deprecated, it is a no-op stub. `runAfterInteractions` is just
 `setImmediate`; `createInteractionHandle()` returns `-1`;
 `clearInteractionHandle`/`addListener`/`setDeadline` do nothing.
 
-**Verified against `react-native@0.85.3`.**
+**Verified against `react-native@0.86.3`.**
 `node_modules/react-native/Libraries/Interaction/InteractionManager.js`
 exports `InteractionManagerStub` with `@deprecated` tags on the module doc and
 every method. Use `requestIdleCallback` for deferring non-urgent work.

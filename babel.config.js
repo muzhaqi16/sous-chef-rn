@@ -14,13 +14,14 @@ module.exports = api => {
       ],
     ],
     plugins: [
-      // Unistyles must run BEFORE React Compiler so the compiler sees
-      // transformed theme accesses and can properly memoize them.
-      // See: https://www.unistyl.es/v3/guides/react-compiler/
-      ['react-native-unistyles/plugin', { root: 'src' }],
-
-      // React Compiler for automatic memoization (after Unistyles transform)
+      // React Compiler must run BEFORE the Unistyles plugin — the reverse of
+      // Unistyles' own docs. Unistyles' transform of `styles.useVariants(...)`
+      // emits an assignment the compiler cannot lower, which fails the entire
+      // file (`BuildHIR::lowerAssignment`) and silently drops its memoization.
+      // If theme updates ever go stale, suspect this ordering first.
       'babel-plugin-react-compiler',
+
+      ['react-native-unistyles/plugin', { root: 'src' }],
       [
         'module-resolver',
         {

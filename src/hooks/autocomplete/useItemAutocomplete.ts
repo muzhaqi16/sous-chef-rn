@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLazyQuery } from '@apollo/client/react';
 import {
   AutocompleteItemsDocument,
@@ -90,10 +90,12 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     ? (autocompleteSuggestions as ItemSuggestion[])
     : semanticSuggestions;
 
-  const deferredItems = useDeferredValue(items);
-  const isStale = items !== deferredItems;
-
-  const getResults = (): ItemSuggestion[] => deferredItems;
+  // Deliberately NOT `useDeferredValue(items)`: this array becomes a FlashList
+  // `data` prop in BottomSheetAutocompleteInput, and a deferred render is
+  // interruptible — the window that produces `index out of bounds, not enough
+  // layouts` (docs/flashlist-layout-index-race.md). `items` already only
+  // changes when a query resolves, which is an ordinary-priority update.
+  const getResults = (): ItemSuggestion[] => items;
 
   // The catalog is far too large to cache, so we keep the items the user has
   // actually seen via search in a bounded LRU. Online we still hit the API for
@@ -107,15 +109,15 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   );
 
   useEffect(() => {
-    if (deferredItems.length > 0) {
-      addCachedItemSuggestions(deferredItems);
+    if (items.length > 0) {
+      addCachedItemSuggestions(items);
     }
-  }, [deferredItems, addCachedItemSuggestions]);
+  }, [items, addCachedItemSuggestions]);
 
   const autocomplete = useAutocompleteSearch<ItemSuggestion>({
     search,
     getResults,
-    loading: loading || semanticLoading || isStale,
+    loading: loading || semanticLoading,
     keyExtractor: item => item.id,
     minChars: 2,
     debounceMs: options?.debounceMs ?? 250,

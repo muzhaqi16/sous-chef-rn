@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { InMemoryCache } from '@apollo/client';
 import {
   renderHookWithApollo,
   type MockedResponse,
@@ -97,9 +98,11 @@ const externalIngredient = (
 async function renderForSingleAdd({
   isBackendRecipe,
   operationMocks,
+  cache,
 }: {
   isBackendRecipe: boolean;
   operationMocks: MockedResponse[];
+  cache?: InMemoryCache;
 }) {
   const rendered = renderHookWithApollo(
     () =>
@@ -109,7 +112,7 @@ async function renderForSingleAdd({
         backendRecipe: null,
         externalRecipe: null,
       }),
-    { operationMocks: [shoppingListsMock(), ...operationMocks] },
+    { operationMocks: [shoppingListsMock(), ...operationMocks], cache },
   );
   await waitFor(() =>
     expect(rendered.result.current.shoppingLists).toHaveLength(1),
@@ -209,6 +212,31 @@ describe('useRecipeShoppingList — handleAddSingleIngredient (external branch)'
     );
     expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastError).not.toHaveBeenCalled();
+  });
+
+  it('writes the row into the cache when the create is queued offline', async () => {
+    // The `update:` callback only runs with a server payload, so offline it
+    // never fired: the recipe confirmed success and marked its checkmark while
+    // the shopping list stayed empty until reconnect. The row is now written
+    // before the mutation fires, keyed by the client-minted id so the eventual
+    // replay merges onto it rather than duplicating.
+    const cache = new InMemoryCache();
+
+    const { result } = await renderForSingleAdd({
+      isBackendRecipe: true,
+      operationMocks: [addRecipeIngredientMock({ kind: 'queued' })],
+      cache,
+    });
+
+    await act(async () => {
+      result.current.handleAddSingleIngredient(externalIngredient({ id: 9 }));
+    });
+
+    await waitFor(() =>
+      expect(result.current.addedIngredients.has(9)).toBe(true),
+    );
+
+    expect(cache.extract()).toHaveProperty('ShoppingListItem:gen-id-1');
   });
 });
 

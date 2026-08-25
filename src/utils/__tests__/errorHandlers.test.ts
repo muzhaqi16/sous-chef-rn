@@ -102,7 +102,11 @@ describe('handleMutationErrorAlert', () => {
     const setApiUnavailable = (unavailable: boolean) => {
       storeApi.setState({
         isOnline: !unavailable,
-        apiReachable: true,
+        // `null` is what losing the link leaves behind: nothing has been tried
+        // since, so the API's state is unknown. `true` would mean a probe had
+        // PROVEN it reachable, which now outranks NetInfo — and would rightly
+        // make this not an outage at all.
+        apiReachable: unavailable ? null : true,
       } as Partial<ReturnType<typeof storeApi.getState>>);
     };
 

@@ -111,7 +111,6 @@
       "Item": "Artikulli",
       "Notification": "Njoftimi"
     },
-    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar.",
     "queuedChangeRejected": "Një ndryshim nuk u ruajt dhe u zhbë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",
@@ -204,7 +203,9 @@
     "deleteHome": "Vërtet dëshiron ta fshish këtë shtëpi?",
     "deleteAccount": "Vërtet dëshiron ta fshish llogarinë? Ky veprim nuk mund të zhbëhet.",
     "logout": "Vërtet dëshiron të dalësh?",
-    "discardChanges": "Vërtet dëshiron t'i shpërfillësh ndryshimet?"
+    "discardChanges": "Vërtet dëshiron t'i shpërfillësh ndryshimet?",
+    "logoutWithPending_one": "Ke {{count}} ndryshim të pasinkronizuar. Dalja do ta heqë atë.",
+    "logoutWithPending_other": "Ke {{count}} ndryshime të pasinkronizuara. Dalja do t'i heqë ato."
   },
   "labels": {
     "storeSelectHint": "Zgjidh një dyqan nga lista për ta ruajtur.",

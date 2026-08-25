@@ -7,6 +7,9 @@ jest.mock('react-native-gesture-handler', () => {
     DrawerLayout: View,
     State: {},
     ScrollView: require('react-native').ScrollView,
+    // RNGH's is a createNativeWrapper over RN's; the wrapper only exists to
+    // route the `block` gesture prop, which has no meaning in jsdom.
+    RefreshControl: require('react-native').RefreshControl,
     Slider: View,
     Switch: View,
     TextInput: View,

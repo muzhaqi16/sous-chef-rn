@@ -141,14 +141,17 @@ function resortEdges(
       },
     });
 
+    // resortEdges sorts every cached itemsConnection variant; this is the only
+    // measurement of that known-open cost, so it has to report from release.
+    const duration = performance.now() - t0;
+    Telemetry.histogram('resort_edges_duration_ms', duration);
+
     if (__DEV__) {
-      const duration = performance.now() - t0;
       logger.debug(
         `📊 [resortEdges] duration=${duration.toFixed(
           2,
         )}ms listId=${shoppingListId}`,
       );
-      Telemetry.histogram('resort_edges_duration_ms', duration);
     }
   } catch (cacheError) {
     errorService.reportError(cacheError, {

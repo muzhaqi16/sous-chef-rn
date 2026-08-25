@@ -28,15 +28,6 @@ export interface PantryItemFormData {
 }
 
 /** Argument shapes for the mutation primitives, matching this hook's call sites. */
-interface CreatePantryItemArgs {
-  input: PantryItemFormData;
-  pantryId: string;
-  quantityValue: number;
-  unitId: string | null;
-  selectedLocationId: string | null;
-  selectedCategoryId: string | null;
-}
-
 interface UpdatePantryItemFieldsArgs {
   itemId: string;
   input: PantryItemFormData;
@@ -58,7 +49,6 @@ interface UpdateQuantityArgs {
 }
 
 export interface UsePantryItemFormSubmitParams {
-  mode: 'add' | 'edit';
   itemId: string | undefined;
   currentPantryId: string | undefined | null;
   isWeightLocked: boolean;
@@ -71,7 +61,6 @@ export interface UsePantryItemFormSubmitParams {
   selectedCategoryId: string | null;
   selectedStorageLocation: { id: string; name: string; type: string } | null;
   /** Mutation primitives. */
-  createPantryItem: (args: CreatePantryItemArgs) => Promise<unknown>;
   updatePantryItemFields: (args: UpdatePantryItemFieldsArgs) => unknown;
   updateQuantity: (args: UpdateQuantityArgs) => unknown;
   resolveUnitId: (id: string | null, symbol: string) => Promise<string | null>;
@@ -97,10 +86,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       alertService.alert(t('labels.error'), t('itemForm.noPantrySelected'));
       return;
     }
-    // Capture the narrowed (non-null) id so it survives into the async closure
-    // below, where property-access narrowing on `params` is not retained.
-    const currentPantryId = params.currentPantryId;
-
     try {
       const unitId =
         params.trackingUnit.id ?? (await params.resolveUnitId(null, data.unit));
@@ -113,29 +98,6 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
         if (resolvedNetWeightUnitId) {
           data.netWeightUnitId = resolvedNetWeightUnitId;
         }
-      }
-
-      if (params.mode === 'add') {
-        // Net weight is all-or-nothing on create: a value with no resolvable
-        // unit is rejected by the API, so prompt for a unit instead of
-        // silently dropping it. (On edit the unit is inherited from the
-        // existing item, so this gate is add-only.)
-        if ((data.netWeight || '').trim() && !data.netWeightUnitId) {
-          alertService.alert(
-            t('labels.error'),
-            t('labels.pleaseSelectAUnitForTheNetWeight'),
-          );
-          return;
-        }
-        await params.createPantryItem({
-          input: data,
-          pantryId: currentPantryId,
-          quantityValue,
-          unitId,
-          selectedLocationId: params.selectedLocationId,
-          selectedCategoryId: params.selectedCategoryId,
-        });
-        return;
       }
 
       const currentItem = params.existingPantryItem;
@@ -196,16 +158,9 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
       }
     } catch (error) {
       errorService.reportError(error, {
-        operation: params.mode === 'add' ? 'addPantryItem' : 'updatePantryItem',
+        operation: 'updatePantryItem',
       });
-      alertService.alert(
-        t('labels.error'),
-        t(
-          params.mode === 'add'
-            ? 'itemForm.addFailed'
-            : 'itemForm.updateFailed',
-        ),
-      );
+      alertService.alert(t('labels.error'), t('itemForm.updateFailed'));
     }
   };
 

@@ -108,9 +108,18 @@ export class QueueManager {
    * Process the queue for the current user
    */
   async processQueue(): Promise<void> {
+    // Logged unconditionally so "never called again" is distinguishable from
+    // "called and returned at a branch" — the `isProcessing` early return had
+    // only a counter, and counters carry no session id.
+    Telemetry.warn('Queue drain invoked');
+
     // Prevent concurrent processing
     if (this.isProcessing) {
       logger.debug('⏳ Queue: Already processing, waiting...');
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'already_processing',
+      });
+      Telemetry.warn('Queue drain skipped: already processing');
       return this.processingPromise || Promise.resolve();
     }
 
@@ -119,6 +128,14 @@ export class QueueManager {
     // Check if user is authenticated
     if (!state.user || !state.accessToken) {
       logger.info('⚠️ Queue: No authenticated user, skipping processing');
+      // Counted, not just logged: `logger` is console-only and console is
+      // stripped from release builds, so on a real device these two branches
+      // were invisible — and they decide whether queued writes ever replay.
+      // `reason` is a fixed small set, so the cardinality is bounded.
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'no_authenticated_user',
+      });
+      Telemetry.warn('Queue drain skipped: no authenticated user');
       return;
     }
 
@@ -126,11 +143,21 @@ export class QueueManager {
     // reachability breaker is open) — replays would just fail and re-trip it.
     if (isApiUnavailable(state)) {
       logger.debug('📴 Queue: Server unreachable, skipping processing');
+      Telemetry.increment('offline_queue_drain_skipped_total', 1, {
+        reason: 'api_unavailable',
+      });
+      Telemetry.warn('Queue drain skipped: API unavailable', {
+        is_online: state.isOnline,
+      });
       return;
     }
 
     const userId = state.user.id;
     logger.info(`🔄 Queue: Starting processing for user ${userId}`);
+
+    Telemetry.increment('offline_queue_drain_started_total', 1);
+
+    Telemetry.warn('Queue drain started');
 
     this.isProcessing = true;
     this.processingPromise = this._processQueueInternal(userId);
@@ -170,6 +197,8 @@ export class QueueManager {
     // of classifying as IDEMPOTENT_REPLAY. Expired entries surface as FAILED.
     queueStore.expireStalePending(userId);
 
+    this.reconcileDiscardedEntries();
+
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
@@ -177,6 +206,7 @@ export class QueueManager {
     Telemetry.gauge('offline_queue_depth', mutations.length);
     if (mutations.length === 0) {
       logger.info('✅ Queue: No pending mutations');
+      Telemetry.warn('Queue drain found no pending mutations');
       return;
     }
     Telemetry.gauge(
@@ -220,9 +250,6 @@ export class QueueManager {
     logger.info(
       `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
     );
-
-    // Cleanup old successful mutations
-    queueStore.cleanupSuccessful();
   }
 
   /**
@@ -441,9 +468,18 @@ export class QueueManager {
     if (queueError.type === 'auth') {
       const newToken = await proactiveTokenRefresh();
       if (!newToken) {
-        logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
+        // Parked, not withdrawn. The server never saw this write, so nothing
+        // about it was rejected — we just could not authenticate. Withdrawing
+        // here destroyed the local change AND left an entry no drain would ever
+        // look at again, under a toast that said the change had been rejected.
+        // `revivePendingAuthErrors` puts it back in play on the next sign-in.
+        logger.error(
+          `❌ Queue: Token refresh failed for ${mutation.id} — parked until re-auth`,
+        );
         queueStore.markMutationFailed(mutation.id, queueError);
-        this.invokeFailureHandler(mutation, queueError);
+        Telemetry.increment('offline_queue_auth_parked_total', 1, {
+          operation: mutation.operationName,
+        });
         return { success: false, mutationId: mutation.id, error: queueError };
       }
       useStore.getState().setNeedsTokenRefresh(false);
@@ -503,16 +539,25 @@ export class QueueManager {
       };
     }
 
-    // Non-retryable (validation / client / 4xx / GraphQL) error — or an auth
-    // error that exhausted its retries (markMutationFailed maps it to
-    // AUTH_ERROR) → permanent failure: mark failed and notify so the
-    // optimistic change can be reverted.
+    // Non-retryable (validation / client / 4xx / GraphQL) error, or an auth
+    // error that exhausted its retries — `markMutationFailed` maps the latter
+    // to AUTH_ERROR.
     queueStore.markMutationFailed(mutation.id, queueError);
-    this.invokeFailureHandler(mutation, queueError);
-    Telemetry.increment('offline_queue_permanent_failures_total', 1, {
-      operation: mutation.operationName,
-      error_type: queueError.type,
-    });
+
+    if (queueError.type === 'auth') {
+      // Parked, not withdrawn — see the token-refresh path above. The local
+      // change stands until the queue actually gives up on it, which is when
+      // `cleanupTerminal` ages the entry out.
+      Telemetry.increment('offline_queue_auth_parked_total', 1, {
+        operation: mutation.operationName,
+      });
+    } else {
+      this.invokeFailureHandler(mutation, queueError);
+      Telemetry.increment('offline_queue_permanent_failures_total', 1, {
+        operation: mutation.operationName,
+        error_type: queueError.type,
+      });
+    }
 
     return {
       success: false,
@@ -666,6 +711,48 @@ export class QueueManager {
    * Invoke the registered failure handler for a permanently failed mutation.
    * Extracts entity metadata and passes it to the handler.
    */
+  /**
+   * Ages out terminal entries, and withdraws the local change of any that was
+   * never actually sent.
+   *
+   * Runs BEFORE the empty-queue early return: it used to run at the end of a
+   * drain, so a queue holding only terminal entries — nothing pending to
+   * trigger the pass — was never cleaned at all.
+   *
+   * Only AUTH_ERROR needs withdrawing. SUCCESS replayed and FAILED was refused
+   * and withdrawn at the time; an auth failure was neither, so its change has
+   * been on screen since, waiting for a sign-in that never came. Ageing the
+   * entry out is the moment that stops being true.
+   */
+  private reconcileDiscardedEntries(): void {
+    for (const discarded of queueStore.cleanupTerminal()) {
+      if (discarded.status !== QueueStatus.AUTH_ERROR) continue;
+      this.invokeFailureHandler(
+        discarded,
+        discarded.lastError ?? {
+          type: 'auth',
+          message: 'Queued change expired without ever being authenticated',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      );
+    }
+  }
+
+  /**
+   * Withdraws a local-first write that could not be queued at all.
+   *
+   * The house pattern writes the cache permanently and THEN fires, so a
+   * rejected enqueue leaves the change on screen, in the persisted cache, with
+   * no queue entry and no drain that will ever carry it — the one way this
+   * system could diverge from the server silently and permanently. A capacity
+   * rejection is a refusal of this write, so it takes the same withdrawal as
+   * any other refusal, from outside the manager.
+   */
+  withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
+    this.invokeFailureHandler(mutation, error);
+  }
+
   private invokeFailureHandler(
     mutation: QueuedMutation,
     error: QueueError,
@@ -719,6 +806,17 @@ export class QueueManager {
   /**
    * Event: User went online
    */
+  /**
+   * Resolves once no drain is in flight.
+   *
+   * Used by the reconnect backfill to sequence itself after replay rather than
+   * alongside it — replayed mutations write their own responses into the cache,
+   * so refetching at the same moment doubles the burst and races the results.
+   */
+  async whenIdle(): Promise<void> {
+    await this.processingPromise?.catch(() => {});
+  }
+
   onOnline(): void {
     logger.info('📡 Queue: Network online, starting queue processing');
     this.processQueue().catch(error => {
@@ -773,6 +871,11 @@ export class QueueManager {
 
     if (newUserId) {
       queueStore.setCurrentUserId(newUserId);
+
+      // A successful sign-in is exactly the event that makes an auth-parked
+      // write replayable again, and this is the one funnel both a fresh login
+      // and a same-user re-login pass through.
+      queueStore.revivePendingAuthErrors(newUserId);
 
       // Process queue for new user if online
       const state = useStore.getState();

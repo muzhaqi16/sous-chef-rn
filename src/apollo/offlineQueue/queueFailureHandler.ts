@@ -1,5 +1,6 @@
 import { client } from '#/apollo/client';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
@@ -29,7 +30,7 @@ import type { FailedMutationInfo } from '#/apollo/offlineQueue/types';
  * heals it. The person is still told.
  */
 export function handleQueueFailure(info: FailedMutationInfo): void {
-  const { entityType, entityId, operationName, error } = info;
+  const { mutationId, entityType, entityId, operationName, error } = info;
 
   logger.warn(
     `Queue: withdrawing locally-applied ${operationName} after permanent failure`,
@@ -46,9 +47,20 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   // The app's own words, not the server's: `error.message` is written for
   // developers and can carry operation names and identifiers.
   toastService.error(t('errors.queuedChangeRejected'));
+
+  // The entry has been withdrawn, so it is no longer a record of anything. Left
+  // in place it sits as FAILED until `cleanupTerminal` ages it out 24h later,
+  // padding every drain scan and every persisted write in between.
+  queueStore.removeMutation(mutationId);
 }
 
-/** Registers {@link handleQueueFailure}. Called once, from app startup. */
+/**
+ * Registers {@link handleQueueFailure}. Called once, from `useStartupInit`.
+ *
+ * This is the ONLY registration. `setFailureHandler` is last-write-wins, and
+ * App.tsx used to register a second handler at module scope; effects run after
+ * imports, so this one always won and that one was dead code that read as live.
+ */
 export function registerQueueFailureHandler(): void {
   queueManager.setFailureHandler(handleQueueFailure);
 }

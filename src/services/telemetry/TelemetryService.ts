@@ -14,7 +14,15 @@ import { HttpTransport } from './transports/HttpTransport';
 import { scrubLogExtra, scrubString } from './scrub';
 import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
+import { getDeviceIdSync } from '#/utils/deviceId';
+import { generateId } from '#/utils/generateId';
 import { useStore } from '#store';
+
+/**
+ * One id per app process. Distinguishes runs of the same install — a counter
+ * reset or a cold start is otherwise invisible in the log stream.
+ */
+const SESSION_ID = generateId();
 
 const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
   debug: 0,
@@ -143,6 +151,16 @@ export class TelemetryService {
         platform: Platform.OS,
         env: this.config.environment,
         ...scrubLogExtra(extra),
+        // Attribution, applied last so a caller's `extra` cannot shadow it.
+        // These are BODY fields, not Loki stream labels: a label per device or
+        // per run would multiply the stream count, while a body field stays
+        // searchable with `| json | device_id="..."`.
+        //
+        // Without them every device reported under the same stream, so logs
+        // from two emulators (or two app runs) were indistinguishable — which
+        // made several readings during the 2026-08-24 audit ambiguous.
+        device_id: getDeviceIdSync() ?? 'unknown',
+        session_id: SESSION_ID,
       },
     };
 

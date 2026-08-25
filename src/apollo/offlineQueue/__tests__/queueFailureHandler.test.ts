@@ -6,6 +6,7 @@ import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
+import { queueStore } from '../queueStore';
 import type { FailedMutationInfo } from '../types';
 
 jest.mock('#/apollo/client', () => ({ client: { cache: {} } }));
@@ -15,6 +16,9 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
 }));
 jest.mock('#/services/toastService', () => ({
   toastService: { error: jest.fn(), success: jest.fn(), info: jest.fn() },
+}));
+jest.mock('../queueStore', () => ({
+  queueStore: { removeMutation: jest.fn() },
 }));
 
 const failure = (
@@ -86,5 +90,43 @@ describe('queue failure handler', () => {
     expect(safeEvict).not.toHaveBeenCalled();
     expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('queue failure handler — dequeue and sole ownership', () => {
+  it('removes the withdrawn entry from the queue', () => {
+    // Left behind, it sits as FAILED until `cleanupTerminal` ages it out a day
+    // later, padding every drain scan and persisted write until then.
+    handleQueueFailure(failure({ mutationId: 'q-42' }));
+    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-42');
+  });
+
+  it('dequeues even when the entity cannot be identified', () => {
+    handleQueueFailure(
+      failure({
+        mutationId: 'q-43',
+        entityType: undefined,
+        entityId: undefined,
+      }),
+    );
+    expect(safeEvict).not.toHaveBeenCalled();
+    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-43');
+  });
+
+  it('is the only thing in the app that registers a failure handler', () => {
+    // `setFailureHandler` is last-write-wins. App.tsx used to register a second
+    // handler at module scope; effects run after imports, so this module always
+    // won and App.tsx's read as live while being dead. One owner, asserted.
+    const { execSync } = require('child_process');
+    const hits = execSync(
+      "grep -rn '\\.setFailureHandler(' src App.tsx --include='*.ts' --include='*.tsx' " +
+        "| grep -v '__tests__' || true",
+      { encoding: 'utf8' },
+    )
+      .split('\n')
+      .filter(Boolean);
+
+    expect(hits).toHaveLength(1);
+    expect(hits[0]).toContain('queueFailureHandler.ts');
   });
 });

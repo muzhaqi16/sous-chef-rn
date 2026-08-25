@@ -2,7 +2,7 @@ import React from 'react';
 import { View, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
-import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { AnalyticsSummaryCard as BaseAnalyticsSummaryCard } from '#components/analytics/AnalyticsSummaryCard';
@@ -120,7 +120,10 @@ const OfflineTabState: React.FC<SharedTabProps> = ({
       style={styles.tabContent}
       contentContainerStyle={styles.offlineContent}
       refreshControl={
-        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <PlainScrollRefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       }
     >
       <EmptyState
@@ -181,7 +184,10 @@ export const UsageTab: React.FC<
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <PlainScrollRefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       }
     >
       {/* Summary Cards */}
@@ -294,7 +300,10 @@ export const WasteTab: React.FC<
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <PlainScrollRefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       }
     >
       {/* Summary Cards */}
@@ -450,7 +459,10 @@ export const LedgerTab: React.FC<
       style={styles.tabContent}
       contentContainerStyle={styles.tabScrollContent}
       refreshControl={
-        <ThemedRefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <PlainScrollRefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+        />
       }
     >
       {/* Granularity Selector */}

@@ -41,9 +41,6 @@ jest.mock('#/styles/commonStyles', () => ({
 }));
 
 // Mutation hooks: behaviour covered by usePantryItemFormSubmit.test.ts.
-jest.mock('#features/pantry/hooks/mutations/useCreatePantryItem', () => ({
-  useCreatePantryItem: jest.fn(() => ({ createPantryItem: jest.fn() })),
-}));
 jest.mock('#features/pantry/hooks/mutations/useUpdatePantryItem', () => ({
   useUpdatePantryItem: jest.fn(() => ({ updatePantryItemFields: jest.fn() })),
 }));
@@ -175,39 +172,33 @@ jest.mock('#components/molecules/FieldRow', () => ({
 }));
 
 jest.mock('../ItemInformationSection', () => ({
-  ItemInformationSection: ({ mode }: { mode: 'add' | 'edit' }) => {
+  ItemInformationSection: () => {
     const { Text, View } = require('react-native');
     return (
       <View testID="item-information-section">
-        <Text>{`Item Information (${mode})`}</Text>
+        <Text>Item Information</Text>
       </View>
     );
   },
 }));
 
 jest.mock('../QuantitySection', () => ({
-  QuantitySection: ({
-    mode,
-    testID,
-  }: {
-    mode: 'add' | 'edit';
-    testID?: string;
-  }) => {
+  QuantitySection: ({ testID }: { testID?: string }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID={testID || 'quantity-section'}>
-        <Text>{`Quantity (${mode})`}</Text>
+        <Text>Quantity</Text>
       </View>
     );
   },
 }));
 
 jest.mock('../StorageDetailsSection', () => ({
-  StorageDetailsSection: ({ mode }: { mode: 'add' | 'edit' }) => {
+  StorageDetailsSection: () => {
     const { Text, View } = require('react-native');
     return (
       <View testID="storage-details-section">
-        <Text>{`Storage Details (${mode})`}</Text>
+        <Text>Storage Details</Text>
       </View>
     );
   },
@@ -267,60 +258,43 @@ function buildCache(opts: {
   return cache;
 }
 
-describe('PantryItemForm — add mode', () => {
-  it('renders the add-mode title and modal testID', () => {
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
+describe('PantryItemForm — sections', () => {
+  // There is no `add` mode any more. It was a second create path nothing could
+  // reach: `PantryItem` registers with `linking: null` and both callers of
+  // `toPantryItem` pass an itemId, so the form only ever opened on an existing
+  // item. Adding goes through `AddToPantrySheet` -> `AddDetailsSheet`.
+  it('renders the item information section by default (Basics tab)', async () => {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
     });
-    expect(screen.getByText('Add Pantry Item')).toBeTruthy();
-    expect(screen.getByTestId('add-pantry-item-modal')).toBeTruthy();
-  });
-
-  it('renders the item information section by default (Basics tab)', () => {
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
-    });
-    expect(screen.getByText('Item Information (add)')).toBeTruthy();
+    await screen.findByText('Edit Pantry Item');
+    expect(screen.getByText('Item Information')).toBeTruthy();
   });
 
   it('switches to Inventory tab and shows the quantity section', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
     });
+    await screen.findByText('Edit Pantry Item');
     await user.press(screen.getByText('Inventory'));
-    expect(screen.getByText('Quantity (add)')).toBeTruthy();
+    expect(screen.getByText('Quantity')).toBeTruthy();
   });
 
   it('switches to Storage tab and shows the storage details section', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
     });
+    await screen.findByText('Edit Pantry Item');
     await user.press(screen.getByText('Storage'));
-    expect(screen.getByText('Storage Details (add)')).toBeTruthy();
-  });
-
-  it('switches to Product tab and shows the net weight section', async () => {
-    const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
-    });
-    await user.press(screen.getByText('Product'));
-    expect(screen.getAllByText('Net Weight').length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('does not render the Tags section in add mode', () => {
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
-    });
-    expect(screen.queryByText('Tags')).toBeNull();
+    expect(screen.getByText('Storage Details')).toBeTruthy();
   });
 });
 
 describe('PantryItemForm — edit mode', () => {
   it('renders the edit-mode title once the item loads', async () => {
-    renderWithApollo(<PantryItemForm mode="edit" itemId="item-1" />, {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({
         itemId: 'item-1',
         itemFixture: { itemName: 'Flour' },
@@ -330,14 +304,14 @@ describe('PantryItemForm — edit mode', () => {
   });
 
   it('shows the edit modal testID when item exists', async () => {
-    renderWithApollo(<PantryItemForm mode="edit" itemId="item-1" />, {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
     await screen.findByTestId('edit-pantry-item-modal');
   });
 
   it('shows "Item not found" when the item query returns null', async () => {
-    renderWithApollo(<PantryItemForm mode="edit" itemId="missing" />, {
+    renderWithApollo(<PantryItemForm itemId="missing" />, {
       cache: buildCache({}),
       operationMocks: [
         recordMock<GetPantryItemQuery>(GetPantryItemDocument, {
@@ -350,20 +324,21 @@ describe('PantryItemForm — edit mode', () => {
 
   it('renders the Inventory tab with quantity section in edit mode', async () => {
     const user = userEvent.setup();
-    renderWithApollo(<PantryItemForm mode="edit" itemId="item-1" />, {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
     await screen.findByText('Edit Pantry Item');
     await user.press(screen.getByText('Inventory'));
-    expect(screen.getByText('Quantity (edit)')).toBeTruthy();
+    expect(screen.getByText('Quantity')).toBeTruthy();
   });
 });
 
 describe('PantryItemForm — page navigation', () => {
-  it('renders all four pages on the PageIndicator', () => {
-    renderWithApollo(<PantryItemForm mode="add" />, {
-      cache: buildCache({}),
+  it('renders all four pages on the PageIndicator', async () => {
+    renderWithApollo(<PantryItemForm itemId="item-1" />, {
+      cache: buildCache({ itemId: 'item-1' }),
     });
+    await screen.findByText('Edit Pantry Item');
     expect(screen.getByText('Basics')).toBeTruthy();
     expect(screen.getByText('Product')).toBeTruthy();
     expect(screen.getByText('Storage')).toBeTruthy();

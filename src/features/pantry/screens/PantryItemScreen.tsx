@@ -4,25 +4,21 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { PantryItemForm } from '#features/pantry/components/form/PantryItemForm';
 
 type PantryItemScreenParams = {
-  itemId?: string;
+  itemId: string;
 };
 
+/**
+ * Edits one pantry item.
+ *
+ * `itemId` is required. It used to be optional, and its absence selected an
+ * `add` mode on the form — a second create path nothing could reach: this
+ * route registers with `linking: null`, and both callers of `toPantryItem`
+ * pass an id. Adding goes through `AddToPantrySheet` → `AddDetailsSheet`.
+ */
 export const PantryItemScreen: React.FC<
-  StaticScreenProps<PantryItemScreenParams | undefined>
+  StaticScreenProps<PantryItemScreenParams>
 > = ({ route }) => {
   const { goBack } = useNavigation();
-  const params = route.params;
 
-  const handleSuccess = () => {
-    goBack();
-  };
-
-  // Render the unified form in add or edit mode based on whether itemId is present
-  return (
-    <PantryItemForm
-      mode={params?.itemId ? 'edit' : 'add'}
-      itemId={params?.itemId}
-      onSuccess={handleSuccess}
-    />
-  );
+  return <PantryItemForm itemId={route.params.itemId} onSuccess={goBack} />;
 };

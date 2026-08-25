@@ -66,7 +66,6 @@ export const TabItem: React.FC<TabItemProps> = ({
         );
       }
     },
-    [tabIndex],
   );
 
   const handlePress = () => {

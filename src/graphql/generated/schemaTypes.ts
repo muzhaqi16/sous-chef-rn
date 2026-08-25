@@ -534,6 +534,15 @@ export type BatchAddShoppingListItemInput = {
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   item: ItemRefInput;
+  /**
+   * Package size for this item.
+   *
+   * A netWeightUnitId with no netWeight is always rejected — a unit with nothing
+   * to measure means nothing. A netWeight with no netWeightUnitId is rejected
+   * unless the row the add lands on already carries a netWeightUnitId to
+   * inherit: a create never does, and a merge, restore or re-add does only if
+   * the existing row was given one.
+   */
   netWeight?: InputMaybe<NetWeightInput>;
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
@@ -11537,13 +11546,17 @@ export type Purchase = {
   expirationDate: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   /**
-   * The catalog item, when the catalog still holds it. Null once that item is
-   * hard-deleted — read itemName, which is always present.
+   * The catalog item, when the shopping line that recorded this purchase had
+   * one. Null when it did not — read itemName, which is always present. A
+   * hard-deleted item does NOT produce this state: the delete destroys the
+   * purchases along with the item.
    */
   item: Maybe<Item>;
   /**
-   * Catalog item bought, when the catalog still holds it. Null once that item is
-   * hard-deleted; itemName is the snapshot of what was bought and is always set.
+   * Catalog item bought, when the shopping line that recorded it had one. Null
+   * when the purchase was recorded against a line with no catalog item — a line
+   * an admin's permanent item delete had already orphaned. Read itemName, the
+   * snapshot of what was bought, which is always set.
    */
   itemId: Maybe<Scalars['ID']['output']>;
   itemName: Scalars['String']['output'];
@@ -15258,6 +15271,15 @@ export type SyncShoppingListItemFieldsInput = {
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
   item: ItemRefInput;
+  /**
+   * Package size for this item.
+   *
+   * A netWeightUnitId with no netWeight is always rejected — a unit with nothing
+   * to measure means nothing. A netWeight with no netWeightUnitId is rejected
+   * unless the row the add lands on already carries a netWeightUnitId to
+   * inherit: a create never does, and a merge, restore or re-add does only if
+   * the existing row was given one.
+   */
   netWeight?: InputMaybe<NetWeightInput>;
   /** User-provided information */
   notes?: InputMaybe<Scalars['String']['input']>;

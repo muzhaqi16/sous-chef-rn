@@ -9,7 +9,9 @@ const CACHE_KEY = 'apollo-cache-v1';
 const CRITICAL_KEY = 'apollo-cache-v1-critical';
 const DEFERRED_KEY = 'apollo-cache-v1-deferred';
 const VERSION_KEY = 'apollo-cache-version';
-const CURRENT_VERSION = '1.0.0'; // Matches jest.setup.js mock of getVersion()
+// Identifies the shape of a persisted blob, not the app version that wrote it
+// — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
+const CURRENT_VERSION = 'shape-1';
 
 describe('ApolloCachePersistence', () => {
   beforeEach(() => {
@@ -59,6 +61,25 @@ describe('ApolloCachePersistence', () => {
 
       const result = apolloCachePersistence.load();
       expect(result).toEqual(cacheData);
+    });
+
+    it('survives an app version bump', () => {
+      // The key used to be `getVersion()`, so every store update and every OTA
+      // purged the cache: the user's first launch after an update, offline, was
+      // an empty app. What makes an old blob unsafe is a change to the type
+      // policies in `cache.ts`, not a version bump — so the key describes the
+      // blob's shape and the app version is not consulted at all.
+      const cacheData = {
+        'PantryItem:1': { id: '1', __typename: 'PantryItem' },
+      };
+      storage.set(VERSION_KEY, CURRENT_VERSION);
+      storage.set(CACHE_KEY, JSON.stringify(cacheData));
+
+      jest
+        .requireMock('react-native-device-info')
+        .getVersion.mockReturnValue('9.9.9');
+
+      expect(apolloCachePersistence.load()).toEqual(cacheData);
     });
 
     it('returns null and clears on JSON parse error', () => {

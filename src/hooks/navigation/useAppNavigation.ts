@@ -109,10 +109,9 @@ export function useAppNavigation() {
     toAppearance: () => navigation.navigate('Appearance'),
 
     // ─── Pantry detail/sub screens ────────────────────────────────────────
-    // `PantryItem` params are an all-optional object (not `undefined`), so
-    // `navigate` requires the argument present — default to `{}` when the
-    // caller omits it. Type-checked: a required-param route would reject `{}`.
-    toPantryItem: (params: RootStackParamList['PantryItem'] = {}) =>
+    // `PantryItem` edits an existing item, so `itemId` is required. It was
+    // optional while the form carried an unreachable `add` mode.
+    toPantryItem: (params: RootStackParamList['PantryItem']) =>
       navigation.navigate('PantryItem', params),
     toPantryItemDetail: (params: RootStackParamList['PantryItemDetail']) =>
       navigation.navigate('PantryItemDetail', params),

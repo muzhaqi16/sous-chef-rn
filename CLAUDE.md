@@ -1,6 +1,6 @@
 # Sous Chef RN — project instructions
 
-React Native 0.85 (New Architecture) · React 19.2 + React Compiler · Apollo
+React Native 0.86 (New Architecture) · React 19.2 + React Compiler · Apollo
 Client 4.1 (`dataMasking` on) + GraphQL codegen · Unistyles 3 · FlashList v2 ·
 React Navigation 8 · Zustand · i18next · MMKV. Offline-first: writes land in
 the cache immediately and replay through an offline queue.
@@ -125,15 +125,15 @@ Masking.
 Pick the cache-update pattern by what the mutation changes
 (`docs/apollo-client-patterns.md` has the deep dive):
 
-| Pattern                                        | Use when                                                            | Example                                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| No `update` callback (preferred default)       | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
-| `cache.modify` on parent aggregates            | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
-| `cache.modify` BEFORE firing, revert on error  | Optimistic UI without a callback                                    | `useToggleShoppingItem`                                                    |
-| `updateEntityFieldsLocalFirst`                 | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
-| `cache.modify` on connection edges + counts    | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
-| `writeFragment`                                | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                 | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
+| Pattern                                       | Use when                                                            | Example                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| No `update` callback (preferred default)      | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
+| `cache.modify` on parent aggregates           | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
+| `cache.modify` BEFORE firing, revert on error | Optimistic UI without a callback                                    | `useToggleShoppingItem`                                                    |
+| `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
+| `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
+| `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
+| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
 
 Defaults:
 
@@ -253,8 +253,13 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `RootNavigator.Navigation` (React Navigation `Theme`), `TrendLineChart`
   (Skia draw calls), `RecipeMain`/`SortableShoppingList` (theme colors into
   data structures).
-- The Unistyles babel plugin runs **before** `babel-plugin-react-compiler`
-  (`babel.config.js`); reversing the order produces compile errors.
+- `babel-plugin-react-compiler` runs **before** the Unistyles babel plugin
+  (`babel.config.js`) — the reverse of the Unistyles docs, deliberately.
+  Unistyles' transform of `styles.useVariants(...)` emits an assignment the
+  compiler cannot lower, which fails the whole file and silently drops its
+  memoization. Verified vs `react-native-unistyles@3.3.0` +
+  `babel-plugin-react-compiler@1.0.0`. If theme updates ever go stale, suspect
+  this ordering first.
 
 ### Pressable & gestures
 
@@ -267,6 +272,43 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   not participate in RNGH's gesture system.
 - `ScrollView` from RNGH only when the container has RNGH gesture components
   inside it; plain forms and settings screens use RN's `ScrollView`.
+- **A FlashList whose rows carry RNGH gestures MUST render RNGH's `ScrollView`**
+  via `renderScrollComponent={SwipeAwareScrollComponent}`
+  (`src/components/atoms/SwipeAwareScrollComponent.tsx`). RNGH cancels only v1/v2
+  handlers when a native scrollable grabs the touch (`cancelAllLegacyHandlers`), and
+  `ReanimatedSwipeable` is on the v3 detectors — so over a plain RN `ScrollView` the
+  row's pan survives the takeover, accumulates horizontal drift for the whole drag,
+  and opens rows mid-scroll. **No `dragOffset` value fixes this**; the drift is
+  unbounded. An RNGH scrollable restores arbitration through the orchestrator.
+  `__tests__/gestures/flashListScrollComponents.test.ts` makes EVERY FlashList
+  declare a `renderScrollComponent` — RNGH's here, gorhom's `BottomSheetScrollable`
+  inside a sheet — or sit on an allowlist with a reason, so a new list cannot ship
+  without the decision being made. `SwipeableItem`'s `dragOffset` (16dp) is defence in
+  depth only, and takes one positive number because `dragOffsetFromRight` throws in
+  `__DEV__` unless non-positive. Verified 2026-08-24 vs
+  `react-native-gesture-handler@3.2.1`:
+  `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
+- **That list's pull-to-refresh must pass an EXPLICIT RNGH `RefreshControl`** —
+  `refreshControl={<ThemedRefreshControl … />}`, never a bare
+  `onRefresh`/`refreshing` pair. RNGH's `ScrollView` hands its scroll gesture to
+  whatever control it is given, as
+  `cloneElement(refreshControl, { block: scrollGesture })`, and `block` is in
+  RNGH's `NativeWrapperProps` — so only a control from `createNativeWrapper`
+  (RNGH's own, which `ThemedRefreshControl` wraps) routes it into
+  `useNativeGesture`. RN's control takes the prop and drops it.
+  **The trap: you get RN's control without ever naming it.** Given only
+  `onRefresh`, FlashList builds one itself (`useSecondaryProps.tsx`,
+  `else if (onRefresh)`) and the one it builds is React Native's — which is how
+  the shopping list shipped an indicator that hung mid-list and would not retract
+  until pushed back up by hand, while every list passing an explicit control was
+  fine. A plain RN scrollable host takes `PlainScrollRefreshControl` instead;
+  pick by host. The `withUnistyles` wrapper is transparent to either (the gesture
+  crosses by reference). Verified 2026-08-24 on device vs
+  `react-native-gesture-handler@3.2.1` + `@shopify/flash-list@2.3.2` +
+  `react-native-unistyles@3.3.0` — re-check:
+  `node scripts/probe-withunistyles-prop-passthrough.mjs`; guarded by
+  `__tests__/gestures/flashListScrollComponents.test.ts`, which derives its file
+  list from the tree so a new list cannot ship the mismatch.
 
 ### Bottom sheets
 
@@ -279,7 +321,7 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `BottomSheetTextInput`** — a plain RN `TextInput` leaves the sheet blind to
   the keyboard. It throws outside a sheet, so shared inputs pick it from
   context — `useIsBottomSheetInput() ? ThemedBottomSheetTextInput :
-  ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
+ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   `BottomSheetAutocompleteInput` do. Verified 2026-08-23 vs
   `@gorhom/bottom-sheet@5.2.14` — mechanism:
   `docs/verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput`.
@@ -297,8 +339,8 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   Find the unconverted set:
   `grep -rl BottomSheetKeyboardAwareScrollView src` (the production files
   besides the component and its wrapper). `bottomOffset` measures from the
-  input's **bottom edge** — Verified 2026-08-23 vs
-  `react-native-keyboard-controller@1.20.7`:
+  input's **bottom edge** — Verified 2026-08-24 vs
+  `react-native-keyboard-controller@1.22.4`:
   `docs/verified-library-behaviour.md#keyboard-controller-bottomoffset-measures-input-bottom`.
 - **Never wrap a scrollable (`FlashList` via
   `useBottomSheetScrollableCreator`, `BottomSheetScrollView`,
@@ -325,9 +367,9 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `perfCallbacks.CellRendererComponent`** — that renderer is how blank cells
   are counted; FlashList's own viewability is geometric and 250 ms-lagged.
   `docs/flashlist-performance-analysis.md` § Reading the instrumentation.
-- **Never use `InteractionManager`** — in the installed RN 0.85.3 it is a
+- **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
-  `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-23:
+  `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
   `docs/verified-library-behaviour.md#interactionmanager-is-a-no-op-stub`.
 
 ### Autocomplete & dropdowns
@@ -372,9 +414,10 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
 
 - **Default to NOT writing `useMemo` / `useCallback` / `React.memo`** — the
   compiler memoizes. A default, not an absolute; manual memoization is right
-  for: a value feeding a **dependency array**, a prop read by something the
-  compiler did not compile (a third-party `===` check), and any file in the
-  bailout baseline (`scripts/check-compiler-bailouts.baseline.json`). The
+  for: a value feeding a **dependency array**, and a prop read by something the
+  compiler did not compile (a third-party `===` check). The bailout baseline
+  (`scripts/check-compiler-bailouts.baseline.json`) is empty — a file appearing
+  there is a regression to fix, not a licence to memoize. The
   lint rule is an error so the exception is written down:
   `// eslint-disable-next-line no-restricted-imports` + the reason.
 - **Two `try` shapes bail the compiler out of the whole function**: a
@@ -399,12 +442,16 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `node scripts/check-compiler-bailouts.mjs` is the real enforcement; for
   `finally` cases use the helpers in `src/utils/finallyHelpers.ts`. Mechanism:
   `docs/verified-library-behaviour.md#react-compiler-try-shapes`.
+
 - **Never read or write `ref.current` during render** — use the
   adjusting-state-during-render pattern for previous/current comparisons.
-- Hook return objects and inline `renderItem`s are auto-memoized only in files
-  the compiler actually compiled. If a profile points at a component whose
-  parent is in the bailout baseline, `React.memo` there is a legitimate fix —
-  say so in a comment.
+- Hook return objects and inline `renderItem`s are auto-memoized in every file
+  the compiler reaches. Reach for `React.memo` only once a profile shows a
+  specific component re-rendering on unchanged props, and say so in a comment.
+- Memoization only skips **re-renders**; it never makes a **mount** cheaper.
+  A profile dominated by `(mount)` rows — a list paginating, a screen opening —
+  will not improve from `React.memo` or the compiler. Reduce elements per row
+  or mount fewer of them instead.
 
 ## Worklets — `scheduleOnRN`
 
@@ -420,7 +467,7 @@ const gesture = Gesture.Tap().onEnd(() => {
   scheduleOnRN(handleDismiss);
 });
 
-scheduleOnRN(() => onDismiss(id));         // WRONG — inline fn: native crash
+scheduleOnRN(() => onDismiss(id)); // WRONG — inline fn: native crash
 scheduleOnRN(dismissEntry, onDismiss, id); // WRONG — fn arg: object in release
 ```
 

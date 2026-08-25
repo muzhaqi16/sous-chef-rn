@@ -89,7 +89,12 @@ function handleMeasure(entry: PerformanceEntry) {
     return;
   }
 
-  // component:<name>:render → route to component render histogram
+  // component:<name>:render → route to component render histogram.
+  // No producer today: nothing emits a `component:*:render` measure, so this
+  // metric is never written. Kept because the name is correct for what it would
+  // carry — a true render duration. `useCommitTracking` reports the different,
+  // weaker `component_commit_gap_ms` instead, because React strips
+  // `<Profiler onRender>` from ReactFabric-prod.
   if (name.startsWith('component:')) {
     const component = name.split(':')[1];
     Telemetry.histogram('component_render_duration_ms', duration, {

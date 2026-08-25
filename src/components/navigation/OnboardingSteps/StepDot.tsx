@@ -75,7 +75,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       transform: [{ scale }],
       opacity,
     };
-  }, [index, stepSize]);
+  });
 
   const iconAnimatedStyle = useAnimatedStyle(() => {
     const isCompleted = activeIndex.get() > index;
@@ -90,7 +90,7 @@ export const StepDot: React.FC<StepDotProps> = ({
       opacity,
       transform: [{ scale }],
     };
-  }, [index]);
+  });
 
   const handlePress = () => {
     if (allowNavigation && onPress) {

@@ -128,9 +128,16 @@ class ApiReachabilityBreaker {
   }
 
   /**
-   * Fresh, optimistic start. Called on every device connectivity transition so
-   * a reconnect doesn't carry a stale open circuit (which would keep serving
-   * cache until the next probe fired even though the network is back).
+   * Fresh start, optimistic only while a link exists. Called when the device
+   * reconnects so it doesn't carry a stale open circuit (which would keep
+   * serving cache until the next probe fired even though the network is back).
+   *
+   * The optimism is conditional on purpose: with no link, reachability is
+   * UNKNOWN, not proven. Asserting `true` here once made `shouldTreatAsOffline`
+   * (`!isOnline && apiReachable !== true`) false for an entire offline session,
+   * and the probe loop could not correct it — this also zeroes the counter and
+   * closes the circuit, so a failing probe matched no branch that records a
+   * verdict. Callers must not have to know that; `reset()` reads the link.
    */
   reset(): void {
     this.consecutiveFailures = 0;
@@ -142,7 +149,29 @@ class ApiReachabilityBreaker {
     // is dropped by the flag/counter guards in `probe()`.
     this.probeInFlight = false;
     this.circuitState = 'closed';
-    useStore.getState().setApiReachable(true);
+    useStore
+      .getState()
+      .setApiReachable(useStore.getState().isOnline ? true : null);
+  }
+
+  /**
+   * The device link went down.
+   *
+   * The store has already moved `apiReachable` to `null` — unknown — because
+   * what we knew about the API expired with the link. This starts the probe
+   * loop, which is the only thing that can turn it back into a fact: a
+   * `/health` success while NetInfo says offline proves NetInfo wrong about a
+   * route our API is reachable over anyway. Without it the app had no way to
+   * find out — no traffic is allowed while offline, so the circuit can never
+   * open, and the probe loop only ran while it was open.
+   *
+   * This is the SAME loop the open circuit uses, on the same backoff — not a
+   * second one. A genuinely offline device fails each probe at the socket,
+   * which is cheap, and the backoff caps it at one every two minutes.
+   */
+  onDeviceOffline(): void {
+    this.probeAttempt = 0;
+    this.scheduleProbe();
   }
 
   /**
@@ -211,7 +240,10 @@ class ApiReachabilityBreaker {
     if (this.circuitState === 'open') {
       this.probeAttempt += 1;
       this.scheduleProbe();
-    } else if (
+      return;
+    }
+
+    if (
       useStore.getState().apiReachable === false ||
       this.consecutiveFailures > 0
     ) {
@@ -222,6 +254,17 @@ class ApiReachabilityBreaker {
       // guards also drop stale probe results that resolve after a reset()
       // (which clears the flag and zeroes consecutiveFailures).
       this.open();
+      return;
+    }
+
+    // Circuit closed, nothing else to act on — but if the device link is down
+    // this loop is the ONLY thing running, because no traffic is allowed to
+    // produce a failure that would open the circuit. Keep it alive so a
+    // recovery gets noticed; opening would be wrong, since a failed probe with
+    // no link says nothing about the API.
+    if (!useStore.getState().isOnline) {
+      this.probeAttempt += 1;
+      this.scheduleProbe();
     }
   }
 

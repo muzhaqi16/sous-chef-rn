@@ -10,6 +10,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
 import { FlashList } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
 
@@ -506,6 +507,7 @@ export const FilteredPantryItems: React.FC<
 
       <FilteredItemsActionsProvider actions={actions}>
         <FlashList
+          renderScrollComponent={SwipeAwareScrollComponent}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           data={filteredItems}

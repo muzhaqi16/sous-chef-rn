@@ -59,7 +59,7 @@ export interface NetworkState {
    * timing out / behind a captive portal. Driven by `apiReachabilityBreaker`
    * (a circuit breaker over network outcomes), NOT by NetInfo.
    */
-  apiReachable: boolean;
+  apiReachable: boolean | null;
   /**
    * Debounced, presentation-only view of the offline state — the single input
    * to `OfflineStatusPill` / `OfflineTransitionToaster` (via
@@ -88,7 +88,7 @@ export interface NetworkState {
    * take the debounced path.
    */
   setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
-  setApiReachable: (reachable: boolean) => void;
+  setApiReachable: (reachable: boolean | null) => void;
 }
 
 /**
@@ -99,7 +99,31 @@ export interface NetworkState {
  */
 export const isApiUnavailable = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
-): boolean => !state.isOnline || state.apiReachable === false;
+): boolean => state.apiReachable === false || shouldTreatAsOffline(state);
+
+/**
+ * NetInfo reports no internet, and nothing has proven our API is reachable in
+ * spite of that.
+ *
+ * The two signals are not equal evidence and this is where that matters.
+ * `isOnline` is NetInfo's verdict from probing a GENERIC endpoint — by default
+ * Google's `generate_204` — so it describes the device's route to the public
+ * internet, not the route to us. `apiReachable` is direct: real traffic
+ * outcomes and `/health`. Letting the weaker, second-hand signal veto the
+ * stronger, first-hand one is how the app ended up refusing traffic that would
+ * have succeeded, with nothing able to discover otherwise: with no traffic
+ * allowed, the breaker never opens, and its `/health` loop only runs while it
+ * is open. A one-way door.
+ *
+ * So `apiReachable` is tri-state. `true` and `false` are PROVEN — a real
+ * response either way. `null` is UNKNOWN: the device link went down, so
+ * nothing has been tried since. Only proof overrides NetInfo; an assumption
+ * does not, which is why going offline sets `null` rather than keeping the
+ * optimistic `true`.
+ */
+export const shouldTreatAsOffline = (
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
+): boolean => !state.isOnline && state.apiReachable !== true;
 
 /**
  * Whether a query that misses the cache is answered with an offline error
@@ -112,8 +136,8 @@ export const isApiUnavailable = (
  * failed" — `offlineModeLink` reads the same selector so the two cannot drift.
  */
 export const blocksCacheMissQueries = (
-  state: Pick<NetworkState, 'isOnline' | 'offlineModeEnabled'>,
-): boolean => !state.isOnline || state.offlineModeEnabled;
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
+): boolean => state.offlineModeEnabled || shouldTreatAsOffline(state);
 
 /**
  * The reason the user should be told we're offline, at this instant and with no
@@ -124,7 +148,9 @@ export const blocksCacheMissQueries = (
 const resolveOfflineCause = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
 ): OfflineBannerCause | null => {
-  if (!state.isOnline) return 'device-offline';
+  // Not "offline" to the person using the app if our API is demonstrably
+  // answering — whatever NetInfo believes about the wider internet.
+  if (shouldTreatAsOffline(state)) return 'device-offline';
   if (state.apiReachable === false) return 'api-unreachable';
   if (state.offlineModeEnabled) return 'offline-mode';
   return null;
@@ -218,6 +244,12 @@ export const createNetworkSlice: StateCreator<
           state.lastOnlineTime = Date.now();
         } else if (wasOnline && !status.isOnline) {
           state.lastOfflineTime = Date.now();
+          // Losing the link invalidates what we knew about the API: nothing has
+          // been tried since, so `true` would be an assumption and only PROOF
+          // may override NetInfo. The breaker's /health loop turns it back into
+          // a fact either way. Owned here rather than by the breaker so the
+          // invariant holds however the device goes offline.
+          state.apiReachable = null;
         }
       });
       syncOfflineBanner();
@@ -240,6 +272,9 @@ export const createNetworkSlice: StateCreator<
         set(draft => {
           draft.isOnline = false;
           draft.lastOfflineTime = Date.now();
+          // See `setNetworkStatus`: what we knew about the API expires with the
+          // link, so it goes back to unknown until a probe settles it.
+          draft.apiReachable = null;
         });
         syncOfflineBanner();
       }
@@ -263,7 +298,7 @@ export const createNetworkSlice: StateCreator<
       syncOfflineBanner(immediate);
     },
 
-    setApiReachable: (reachable: boolean) => {
+    setApiReachable: (reachable: boolean | null) => {
       if (get().apiReachable === reachable) return;
       set(draft => {
         draft.apiReachable = reachable;

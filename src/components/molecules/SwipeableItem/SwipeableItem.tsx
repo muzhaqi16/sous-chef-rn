@@ -21,6 +21,13 @@ import { SwipeableItemProps } from './types';
 // action background during the placeholder→actual component transition.
 const CARD_EDGE_EXTENSION = 12;
 
+// Defence in depth only: what actually keeps a scroll from opening rows is the list
+// rendering RNGH's ScrollView (see SwipeAwareScrollComponent) — no activation
+// distance can, because the v3 pan is never cancelled when the scroll takes over and
+// so crosses any threshold eventually. 16dp is Android's own PAGING_TOUCH_SLOP for a
+// horizontal gesture nested in a vertical scroller.
+const DEFAULT_DRAG_OFFSET = 16;
+
 const LEFT_PLACEHOLDER_STYLES: Record<number, ViewStyle> = {
   80: { width: 80, marginRight: -CARD_EDGE_EXTENSION },
   120: { width: 120, marginRight: -CARD_EDGE_EXTENSION },
@@ -58,6 +65,7 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   testIDPrefix,
   swipeMode,
   enabled = true,
+  dragOffset = DEFAULT_DRAG_OFFSET,
 }) => {
   const { t } = useTranslation();
   // Calculate thresholds based on number of actions
@@ -177,40 +185,41 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
     }
   };
 
+  // No wrapper view: the accessibility actions live on SwipeableContent's own
+  // container, and `swipeableContainer` already carries the `overflow: 'visible'`
+  // the wrapper existed for. One fewer view per row on every list using this
+  // molecule — the frame cost on device is Yoga layout and RenderThread draw
+  // over the mounted view tree, so per-row view count is what matters.
   return (
-    <View
-      style={styles.gestureContainer}
-      accessibilityActions={accessibilityActions}
-      onAccessibilityAction={handleAccessibilityAction}
+    <Swipeable
+      ref={swipeableRef}
+      enabled={enabled}
+      friction={friction}
+      leftThreshold={computedLeftThreshold}
+      rightThreshold={computedRightThreshold}
+      renderLeftActions={leftButtonCount > 0 ? renderLeftActions : undefined}
+      renderRightActions={rightButtonCount > 0 ? renderRightActions : undefined}
+      onSwipeableWillOpen={handleSwipeableWillOpen}
+      onSwipeableClose={handleSwipeableClose}
+      onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}
+      dragOffsetFromLeft={dragOffset}
+      dragOffsetFromRight={-dragOffset}
+      overshootFriction={8}
+      overshootRight={false}
+      overshootLeft={false}
+      containerStyle={styles.swipeableContainer}
+      childrenContainerStyle={styles.childrenContainer}
     >
-      <Swipeable
-        ref={swipeableRef}
-        enabled={enabled}
-        friction={friction}
-        leftThreshold={computedLeftThreshold}
-        rightThreshold={computedRightThreshold}
-        renderLeftActions={leftButtonCount > 0 ? renderLeftActions : undefined}
-        renderRightActions={
-          rightButtonCount > 0 ? renderRightActions : undefined
-        }
-        onSwipeableWillOpen={handleSwipeableWillOpen}
-        onSwipeableClose={handleSwipeableClose}
-        onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}
-        overshootFriction={8}
-        overshootRight={false}
-        overshootLeft={false}
-        containerStyle={styles.swipeableContainer}
-        childrenContainerStyle={styles.childrenContainer}
+      <SwipeableContent
+        testID={testIDPrefix}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        accessibilityActions={accessibilityActions}
+        onAccessibilityAction={handleAccessibilityAction}
       >
-        <SwipeableContent
-          testID={testIDPrefix}
-          onPress={onPress}
-          onLongPress={onLongPress}
-        >
-          {children}
-        </SwipeableContent>
-      </Swipeable>
-    </View>
+        {children}
+      </SwipeableContent>
+    </Swipeable>
   );
 };
 

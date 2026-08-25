@@ -116,7 +116,6 @@ export const SegmentedControl = <T extends string>({
   const offset = useSharedValue(0);
   const indicatorX = useDerivedValue(
     () => selectedIndex * tabWidth + offset.get(),
-    [selectedIndex, tabWidth],
   );
 
   // Slide the pill from the previously-selected segment to the new one. Seeded

@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.3.7",
+  "version": "4.3.9",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -104,15 +104,15 @@
     "react": "19.2.3",
     "react-hook-form": "^7.56.2",
     "react-i18next": "^17.0.7",
-    "react-native": "^0.85.3",
+    "react-native": "^0.86.3",
     "react-native-calendars": "^1.1314.0",
     "react-native-device-info": "^15.0.2",
     "react-native-edge-to-edge": "^1.8.1",
-    "react-native-gesture-handler": "3.1.0",
+    "react-native-gesture-handler": "3.2.1",
     "react-native-get-random-values": "^2.0.0",
     "react-native-haptic-feedback": "^3.0.0",
     "react-native-image-picker": "^8.2.1",
-    "react-native-keyboard-controller": "^1.20.7",
+    "react-native-keyboard-controller": "^1.22.4",
     "react-native-keychain": "^10.0.0",
     "react-native-launch-arguments": "^4.1.1",
     "react-native-mmkv": "^4.3.2",
@@ -121,7 +121,7 @@
     "react-native-pager-view": "^7.0.2",
     "react-native-performance": "^6.0.0",
     "react-native-permissions": "^5.6.1",
-    "react-native-reanimated": "^4.5.3",
+    "react-native-reanimated": "^4.6.0",
     "react-native-safe-area-context": "^5.8.0",
     "react-native-screens": "^4.26.2",
     "react-native-svg": "^15.15.4",
@@ -130,7 +130,7 @@
     "react-native-unistyles": "^3.3.0",
     "react-native-vision-camera": "^5.2.2",
     "react-native-vision-camera-barcode-scanner": "^5.1.0",
-    "react-native-worklets": "^0.11.3",
+    "react-native-worklets": "^0.12.1",
     "uuid": "^14.0.0",
     "victory-native": "^41.20.2",
     "yup": "^1.7.0",
@@ -155,11 +155,11 @@
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-tools/mock": "^9.1.7",
     "@react-native-community/cli": "^20.1.1",
-    "@react-native/babel-preset": "0.85.3",
-    "@react-native/eslint-config": "0.85.3",
-    "@react-native/jest-preset": "0.85.3",
-    "@react-native/metro-config": "0.85.3",
-    "@react-native/typescript-config": "0.85.3",
+    "@react-native/babel-preset": "0.86.3",
+    "@react-native/eslint-config": "0.86.3",
+    "@react-native/jest-preset": "0.86.3",
+    "@react-native/metro-config": "0.86.3",
+    "@react-native/typescript-config": "0.86.3",
     "@react-navigation/devtools": "8.0.0-alpha.32",
     "@testing-library/react-native": "^13.3.3",
     "@types/chroma-js": "^3.1.2",
@@ -200,6 +200,6 @@
     ]
   },
   "engines": {
-    "node": ">= 22.11.0"
+    "node": ">= 22.13.0"
   }
 }

@@ -1,9 +1,11 @@
 import {
   ActivityIndicator,
   Pressable as RNPressable,
-  RefreshControl,
+  RefreshControl as RNRefreshControl,
   TextInput,
 } from 'react-native';
+// RNGH's, not RN's — see `ThemedRefreshControl` below.
+import { RefreshControl } from 'react-native-gesture-handler';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -89,11 +91,37 @@ export const WhiteActivityIndicator = withUnistyles(
   }),
 );
 
-/** RefreshControl with brand-primary spinner + tint. */
+/**
+ * RefreshControl with brand-primary spinner + tint, built on RNGH's control.
+ *
+ * RNGH's ScrollView hands its scroll gesture to whatever refresh control it is
+ * given, as `cloneElement(refreshControl, { block: scrollGesture })`. `block`
+ * is in RNGH's `NativeWrapperProps`, so only a control from its
+ * `createNativeWrapper` routes it into `useNativeGesture`; RN's own control
+ * takes the prop and drops it, leaving the pull outside the arbitration with
+ * nothing to warn you. The `withUnistyles` wrapper is transparent to it — the
+ * injected gesture crosses by reference
+ * (`scripts/probe-withunistyles-prop-passthrough.mjs`).
+ */
 export const ThemedRefreshControl = withUnistyles(RefreshControl, theme => ({
   colors: [theme.colors.primary],
   tintColor: theme.colors.primary,
 }));
+
+/**
+ * The same theming on RN's own RefreshControl — for plain RN `ScrollView`
+ * hosts. RNGH's control renders a `VirtualDetector` that throws at render
+ * unless an RNGH scrollable provides the intercepting-detector context, so
+ * pick by host: RNGH scrollable → `ThemedRefreshControl`, RN scrollable →
+ * this one.
+ */
+export const PlainScrollRefreshControl = withUnistyles(
+  RNRefreshControl,
+  theme => ({
+    colors: [theme.colors.primary],
+    tintColor: theme.colors.primary,
+  }),
+);
 
 /** Theme-reactive Icon wrapper. Re-renders on theme change so `tone`/`color`
  * derived values stay in sync. Pass color/size/name as props at the call site. */

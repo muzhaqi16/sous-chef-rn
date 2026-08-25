@@ -20,7 +20,7 @@ import { errorService } from '#/services/errorService';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
-import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 
 const SECTION_TITLE_KEYS: Record<string, string> = {
   'Personal Information': 'labels.personalInformation',
@@ -220,7 +220,7 @@ export const PersonalInformationScreen: React.FC = () => {
     <ProfileScreenWrapper
       title={t('labels.personalInformation')}
       refreshControl={
-        <ThemedRefreshControl
+        <PlainScrollRefreshControl
           refreshing={refreshing}
           onRefresh={handleRefresh}
         />

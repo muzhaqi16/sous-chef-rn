@@ -74,7 +74,14 @@ export const MealTemplateBuilderScreen: React.FC<
     removeItem,
     creating,
     updating,
+    itemEditsUnavailable,
   } = useMealTemplateEditor();
+
+  // Only EDIT mode touches the server per item; in create mode the rows are
+  // local drafts flushed with the template itself, which is local-first. So
+  // being offline blocks editing an existing template's items, and nothing at
+  // all about building a new one.
+  const itemActionsDisabled = isEdit && itemEditsUnavailable;
 
   const { data } = useQuery(GetMealTemplateForEditDocument, {
     variables: { id: templateId ?? '' },
@@ -307,32 +314,42 @@ export const MealTemplateBuilderScreen: React.FC<
           {t('mealTemplateBuilder.noMeals')}
         </Text>
       ) : (
-        items.map(item => (
-          <View key={item.key} style={styles.itemRow}>
-            <Pressable
-              style={styles.itemInfo}
-              onPress={() => loadItemIntoForm(item)}
-            >
-              <Text size="sm" weight="medium">
-                {item.customMealName}
-              </Text>
-              <Text size="xs" tone="secondary">
-                {t('mealTemplateBuilder.itemSummary', {
-                  day: item.dayOffset + 1,
-                  meal: formatEnum(item.mealType),
-                  servings: item.servings,
-                })}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => handleRemoveItem(item)}
-              hitSlop={8}
-              testID={`remove-item-${item.key}`}
-            >
-              <Icon name="close-circle" size={22} tone="error" />
-            </Pressable>
-          </View>
-        ))
+        items.map(item => {
+          // Only a row that exists on the server needs a network call to
+          // remove; a local draft row is removed from state either way.
+          const removeDisabled = itemActionsDisabled && !!item.serverId;
+          return (
+            <View key={item.key} style={styles.itemRow}>
+              <Pressable
+                style={styles.itemInfo}
+                onPress={() => loadItemIntoForm(item)}
+              >
+                <Text size="sm" weight="medium">
+                  {item.customMealName}
+                </Text>
+                <Text size="xs" tone="secondary">
+                  {t('mealTemplateBuilder.itemSummary', {
+                    day: item.dayOffset + 1,
+                    meal: formatEnum(item.mealType),
+                    servings: item.servings,
+                  })}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleRemoveItem(item)}
+                hitSlop={8}
+                disabled={removeDisabled}
+                testID={`remove-item-${item.key}`}
+              >
+                <Icon
+                  name="close-circle"
+                  size={22}
+                  tone={removeDisabled ? 'secondary' : 'error'}
+                />
+              </Pressable>
+            </View>
+          );
+        })
       )}
 
       {/* Add / edit meal sub-form */}
@@ -375,6 +392,7 @@ export const MealTemplateBuilderScreen: React.FC<
             pressed && styles.pressed,
           ]}
           onPress={handleSubmitItem}
+          disabled={itemActionsDisabled}
           testID="submit-item-button"
         >
           <Icon

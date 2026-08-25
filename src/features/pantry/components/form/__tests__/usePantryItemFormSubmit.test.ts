@@ -58,11 +58,15 @@ function defaults(
   overrides: Partial<UsePantryItemFormSubmitParams> = {},
 ): UsePantryItemFormSubmitParams {
   return {
-    mode: 'add',
-    itemId: undefined,
+    // The hook is edit-only now: the form's `add` mode was a second create path
+    // nothing could reach, so the create branch is gone with it.
+    itemId: 'item-1',
     currentPantryId: 'pantry-1',
     isWeightLocked: false,
-    existingPantryItem: null,
+    existingPantryItem: {
+      id: 'item-1',
+      unit: { symbol: 'L' },
+    } as PantryItemForm_PantryItemFragment,
     dirtyFields: {},
     trackingUnit: { id: 'unit-1', name: 'Liter', symbol: 'L', type: null },
     netWeightUnitId: null,
@@ -70,7 +74,6 @@ function defaults(
     selectedBrandId: null,
     selectedCategoryId: null,
     selectedStorageLocation: null,
-    createPantryItem: jest.fn().mockResolvedValue(undefined),
     updatePantryItemFields: jest.fn(),
     updateQuantity: jest.fn(),
     resolveUnitId: jest.fn(),
@@ -91,7 +94,8 @@ describe('usePantryItemFormSubmit', () => {
         'Error',
         'Please enter a valid quantity',
       );
-      expect(params.createPantryItem).not.toHaveBeenCalled();
+      expect(params.updateQuantity).not.toHaveBeenCalled();
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
     });
 
     it('alerts when no pantry is selected', async () => {
@@ -104,36 +108,17 @@ describe('usePantryItemFormSubmit', () => {
         'Error',
         'No pantry selected. Please select a pantry first.',
       );
-      expect(params.createPantryItem).not.toHaveBeenCalled();
+      expect(params.updateQuantity).not.toHaveBeenCalled();
+      expect(params.updatePantryItemFields).not.toHaveBeenCalled();
     });
   });
 
-  describe('add mode', () => {
-    it('calls createPantryItem with form input + pantry context', async () => {
-      const params = defaults({
-        selectedLocationId: 'loc-1',
-        selectedCategoryId: 'cat-1',
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(params.createPantryItem).toHaveBeenCalledWith({
-          input: baseData,
-          pantryId: 'pantry-1',
-          quantityValue: 2,
-          unitId: 'unit-1',
-          selectedLocationId: 'loc-1',
-          selectedCategoryId: 'cat-1',
-        }),
-      );
-    });
-
+  describe('unit resolution (runs before the update branch)', () => {
     it('resolves unitId from symbol when trackingUnit.id is null', async () => {
       const resolveUnitId = jest.fn().mockResolvedValue('resolved-unit');
       const params = defaults({
         trackingUnit: { id: null, name: null, symbol: null, type: null },
+        dirtyFields: { quantityInput: true },
         resolveUnitId,
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
@@ -141,7 +126,7 @@ describe('usePantryItemFormSubmit', () => {
       result.current.handleSave(baseData);
 
       await waitFor(() =>
-        expect(params.createPantryItem).toHaveBeenCalledWith(
+        expect(params.updateQuantity).toHaveBeenCalledWith(
           expect.objectContaining({ unitId: 'resolved-unit' }),
         ),
       );
@@ -180,7 +165,7 @@ describe('usePantryItemFormSubmit', () => {
 
       result.current.handleSave({ ...baseData, netWeightUnit: 'oz' });
 
-      await waitFor(() => expect(params.createPantryItem).toHaveBeenCalled());
+      await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
       expect(resolveUnitId).not.toHaveBeenCalled();
     });
   });
@@ -188,16 +173,7 @@ describe('usePantryItemFormSubmit', () => {
   describe('edit mode', () => {
     const editParams = (
       overrides: Partial<UsePantryItemFormSubmitParams> = {},
-    ) =>
-      defaults({
-        mode: 'edit',
-        itemId: 'item-1',
-        existingPantryItem: {
-          id: 'item-1',
-          unit: { symbol: 'L' },
-        } as PantryItemForm_PantryItemFragment,
-        ...overrides,
-      });
+    ) => defaults({ ...overrides });
 
     it('alerts when editing without an existing item', async () => {
       const params = editParams({ existingPantryItem: null });
@@ -295,30 +271,8 @@ describe('usePantryItemFormSubmit', () => {
   });
 
   describe('error handling', () => {
-    it('alerts on add-mode failure with mode-specific message', async () => {
+    it('alerts on failure', async () => {
       const params = defaults({
-        createPantryItem: jest.fn().mockRejectedValue(new Error('boom')),
-      });
-      const { result } = renderHook(() => usePantryItemFormSubmit(params));
-
-      result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenCalledWith(
-          'Error',
-          'Failed to add pantry item. Please try again.',
-        ),
-      );
-    });
-
-    it('alerts on edit-mode failure with mode-specific message', async () => {
-      const params = defaults({
-        mode: 'edit',
-        itemId: 'item-1',
-        existingPantryItem: {
-          id: 'item-1',
-          unit: { symbol: 'L' },
-        } as PantryItemForm_PantryItemFragment,
         dirtyFields: { quantityInput: true },
         updateQuantity: jest.fn(() => {
           throw new Error('boom');

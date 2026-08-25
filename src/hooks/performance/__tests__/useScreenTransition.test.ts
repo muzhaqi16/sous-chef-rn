@@ -36,6 +36,7 @@ jest.mock('#/store/performanceStore', () => ({
 import { renderHook } from '@testing-library/react-native';
 import { useScreenTransition } from '../useScreenTransition';
 import performance from 'react-native-performance';
+import { Telemetry } from '#/services/telemetry';
 import { useFocusEffect } from '@react-navigation/native';
 
 describe('useScreenTransition', () => {
@@ -111,6 +112,26 @@ describe('useScreenTransition', () => {
 
     // Restore original mock
     mockUseFocusEffect.mockImplementation((cb: Function) => cb());
+  });
+
+  it('reports a slow transition without putting duration in a label', () => {
+    // duration as a label mints a new time series per distinct millisecond.
+    jest.useFakeTimers();
+    (performance.measure as jest.Mock).mockReturnValue({ duration: 600 });
+
+    try {
+      renderHook(() => useScreenTransition('SlowScreen'));
+      jest.runAllTimers();
+
+      const call = (Telemetry.increment as jest.Mock).mock.calls.find(
+        c => c[0] === 'slow_screen_transitions_total',
+      );
+      expect(call).toBeDefined();
+      expect(call![2]).toEqual({ screen: 'SlowScreen' });
+    } finally {
+      jest.useRealTimers();
+      (performance.measure as jest.Mock).mockReset();
+    }
   });
 
   it('handles different screen names', () => {

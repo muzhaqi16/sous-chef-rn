@@ -41,7 +41,16 @@ jest.mock('@shopify/flash-list', () => {
   return {
     FlashList: (props: Record<string, unknown>) => {
       flashListProps.push(props);
-      return ReactLocal.createElement(FlatList, props);
+      // FlashList takes `renderScrollComponent` as a component, VirtualizedList
+      // as a render function — adapt before handing the props to FlatList.
+      const { renderScrollComponent, ...rest } = props;
+      return ReactLocal.createElement(FlatList, {
+        ...rest,
+        renderScrollComponent: renderScrollComponent
+          ? (scrollProps: Record<string, unknown>) =>
+              ReactLocal.createElement(renderScrollComponent, scrollProps)
+          : undefined,
+      });
     },
     MasonryFlashList: FlatList,
     useRecyclingState: (initial: unknown) => [

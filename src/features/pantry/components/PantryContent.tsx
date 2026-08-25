@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
-import { View, RefreshControl } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
@@ -30,7 +34,7 @@ import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
-import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
@@ -134,7 +138,7 @@ export const PantryContent = React.forwardRef<
     },
     ref,
   ) => {
-    useRenderTime('PantryContent', { slowThreshold: 1000 });
+    useCommitTracking('PantryContent');
     const { t } = useTranslation();
     const { bottom: safeBottom } = useSafeAreaInsets();
     // Apollo cache reads run inside the image-preload effect; each leaf
@@ -409,6 +413,7 @@ export const PantryContent = React.forwardRef<
         <PantryStickyTabsProvider value={stickyTabs}>
           <View style={styles.container}>
             <FlashList<PantryListItem>
+              renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
               testID="pantry-list"
@@ -430,7 +435,7 @@ export const PantryContent = React.forwardRef<
               scrollEventThrottle={16}
               refreshControl={
                 onRefresh ? (
-                  <RefreshControl
+                  <ThemedRefreshControl
                     testID="pantry-refresh-control"
                     refreshing={refreshing}
                     onRefresh={onRefresh}

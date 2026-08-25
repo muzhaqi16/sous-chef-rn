@@ -93,7 +93,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       ),
       opacity: disabled ? animatedTheme.get().opacity.disabled : 1,
     };
-  }, [selectedProgress, disabled]);
+  });
 
   // Animated text style driven by shared value
   const animatedTextStyle = useAnimatedStyle(() => {
@@ -107,7 +107,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
         ],
       ),
     };
-  }, [selectedProgress]);
+  });
 
   // SVG checkmark draw-on animation driven by same shared value.
   // Stroke color is read from animatedTheme so it stays reactive without a
@@ -121,7 +121,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       ),
       stroke: animatedTheme.get().colors.primary,
     };
-  }, [selectedProgress]);
+  });
 
   // UNISTYLES FIX: Wrapper pattern - static Unistyles on outer Animated.View
   // Layout animation on outer container so Pressable doesn't conflict with it

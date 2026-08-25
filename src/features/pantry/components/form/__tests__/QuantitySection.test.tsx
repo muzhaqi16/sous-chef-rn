@@ -83,55 +83,39 @@ function Wrapper(
     },
   });
 
-  return (
-    <QuantitySection
-      control={control}
-      errors={errors}
-      mode="add"
-      {...overrides}
-    />
-  );
+  return <QuantitySection control={control} errors={errors} {...overrides} />;
 }
 
 describe('QuantitySection', () => {
-  it('renders section title for add mode', () => {
-    render(<Wrapper mode="add" />);
-    expect(screen.getByText('Quantity & Unit')).toBeTruthy();
-  });
-
-  it('renders section title for edit mode', () => {
-    render(<Wrapper mode="edit" />);
+  // The `add` variant is gone with the form's unreachable add mode.
+  it('renders the section title', () => {
+    render(<Wrapper />);
     expect(screen.getByText('Quantity & Stock')).toBeTruthy();
   });
 
-  it('renders quantity label for add mode', () => {
-    render(<Wrapper mode="add" />);
-    expect(screen.getByText('Quantity *')).toBeTruthy();
-  });
-
-  it('renders quantity label for edit mode', () => {
-    render(<Wrapper mode="edit" />);
+  it('renders the quantity label', () => {
+    render(<Wrapper />);
     expect(screen.getByText('Current Quantity')).toBeTruthy();
   });
 
   it('renders unit autocomplete field', () => {
-    render(<Wrapper mode="add" />);
+    render(<Wrapper />);
     expect(screen.getByText('Unit')).toBeTruthy();
   });
 
   it('renders low stock setting fields', () => {
-    render(<Wrapper mode="add" />);
+    render(<Wrapper />);
     expect(screen.getByText('Alert When Below')).toBeTruthy();
     expect(screen.getByText('Restock To')).toBeTruthy();
   });
 
   it('renders field rows', () => {
-    render(<Wrapper mode="add" />);
+    render(<Wrapper />);
     expect(screen.getAllByTestId('field-row')).toHaveLength(2);
   });
 
   it('passes testID props through', () => {
-    render(<Wrapper mode="add" testID="qty-input" unitTestID="unit-picker" />);
+    render(<Wrapper testID="qty-input" unitTestID="unit-picker" />);
     expect(screen.getByTestId('qty-input')).toBeTruthy();
     expect(screen.getByTestId('unit-picker')).toBeTruthy();
   });

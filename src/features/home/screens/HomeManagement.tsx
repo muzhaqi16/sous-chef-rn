@@ -4,7 +4,7 @@ import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import {
   PrimaryActivityIndicator,
-  ThemedRefreshControl,
+  PlainScrollRefreshControl,
 } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, {
@@ -374,7 +374,7 @@ export const HomeManagement: React.FC = () => {
             keyboardDismissMode="on-drag"
             contentContainerStyle={{ flexGrow: 1 }}
             refreshControl={
-              <ThemedRefreshControl
+              <PlainScrollRefreshControl
                 refreshing={refreshing}
                 onRefresh={handleRefresh}
               />

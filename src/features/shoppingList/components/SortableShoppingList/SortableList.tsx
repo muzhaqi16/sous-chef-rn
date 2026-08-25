@@ -8,6 +8,8 @@ import {
   type FlashListRef,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { SwipeableListItem } from './SortableItem';
 import {
@@ -22,14 +24,15 @@ import {
   type ShoppingListRowOptions,
 } from './SortableListThemeContext';
 import { getTabBarBottomPadding } from '#constants/layout';
-import { useRenderTime } from '#hooks/performance/useRenderTime';
+import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
 
-// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
-// ~95px/item. Provides better scroll coverage while keeping pagination cost
-// manageable.
+// Screen-relative draw distance: 2× viewport. This window spans more rows than a
+// whole ITEMS_PAGE_SIZE page, so an append can mount a full page in one commit —
+// costly in a debug build, but not what drops frames in release. See
+// pantryDisplay/constants.ts DRAW_DISTANCE before changing it.
 const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 2);
 
 // Module-level constant — avoids creating a new object reference per render
@@ -76,7 +79,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onMomentumScrollEnd,
   scrollEventThrottle,
 }) => {
-  useRenderTime('SortableShoppingList', { slowThreshold: 1000 });
+  useCommitTracking('SortableShoppingList');
   const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
 
   const perfCallbacks = useFlashListPerformance(flashListRef, {
@@ -167,6 +170,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
         >
           <View style={styles.container}>
             <FlashList<ShoppingListRowItem>
+              renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
               data={items}
@@ -192,8 +196,21 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               onScrollEndDrag={onScrollEndDrag}
               onMomentumScrollEnd={onMomentumScrollEnd}
               scrollEventThrottle={scrollEventThrottle}
-              onRefresh={onRefresh}
-              refreshing={refreshing}
+              // An explicit control, NOT the bare `onRefresh`/`refreshing` pair.
+              // Given only those, FlashList builds React Native's RefreshControl
+              // itself (`useSecondaryProps.tsx` — `else if (onRefresh)`), and
+              // RNGH's ScrollView above then hands that control its scroll
+              // gesture as `block`, which RN's control silently drops. The
+              // indicator ends up outside the arbitration: it hangs mid-list and
+              // will not retract until the user pushes it back up by hand.
+              refreshControl={
+                onRefresh ? (
+                  <ThemedRefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                  />
+                ) : undefined
+              }
               maintainVisibleContentPosition={MVCP_DISABLED}
             />
           </View>

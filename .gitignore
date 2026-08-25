@@ -94,8 +94,12 @@ output.js.map
 # react-native-config codegen
 ios/tmp.xcconfig
 .claude/
+.codex/
+.mcp.json
+.vscode/mcp.json
 .agents/
 openspec/
+
 artifacts/
 e2e/artifacts/
 

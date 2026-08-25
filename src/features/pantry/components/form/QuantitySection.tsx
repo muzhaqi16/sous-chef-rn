@@ -13,7 +13,6 @@ import type { PantryItemFormData } from './PantryItemForm';
 interface QuantitySectionProps {
   control: Control<PantryItemFormData>;
   errors: FieldErrors<PantryItemFormData>;
-  mode: 'add' | 'edit';
   onUnitSelected?: (
     unitId: string | null,
     unitName: string | null,
@@ -28,7 +27,6 @@ interface QuantitySectionProps {
 export const QuantitySection: React.FC<QuantitySectionProps> = ({
   control,
   errors,
-  mode,
   onUnitSelected,
   testID,
   unitTestID,
@@ -37,9 +35,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
   return (
     <View style={styles.section}>
       <Text size="lg" weight="semibold" style={styles.sectionTitle}>
-        {mode === 'add'
-          ? t('itemForm.quantityUnit')
-          : t('itemForm.quantityStock')}
+        {t('itemForm.quantityStock')}
       </Text>
 
       {/* Row 1: Quantity + Tracking Unit */}
@@ -49,11 +45,7 @@ export const QuantitySection: React.FC<QuantitySectionProps> = ({
           name="quantityInput"
           render={({ field: { onChange, value } }) => (
             <FractionInput
-              label={
-                mode === 'add'
-                  ? t('itemForm.quantityRequired')
-                  : t('itemForm.quantityCurrent')
-              }
+              label={t('itemForm.quantityCurrent')}
               value={value ?? ''}
               onChangeText={onChange}
               placeholder={t('labels.eG1114')}

@@ -11,7 +11,10 @@ import {
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  addToPantryItemsCache,
+  adjustPantryItemCount,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
@@ -299,6 +302,12 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     );
     try {
       addToPantryItemsCache(client.cache, pantryId, optimisticItem);
+      // Beside the optimistic row, not in the mutation's `update:` callback:
+      // that callback only runs with a server payload, so offline the row
+      // appeared while the header kept the old count. This is the add path the
+      // AddToPantry sheet actually uses — `useCreatePantryItem` is a separate
+      // entry point with its own copy of this.
+      adjustPantryItemCount(client.cache, pantryId, 1);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Add Pantry Item (optimistic)',
@@ -319,6 +328,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (!result) {
       // Hard failure (threw) → revert the optimistic item.
       safeEvict(client.cache, 'PantryItem', id);
+      adjustPantryItemCount(client.cache, pantryId, -1);
       alertService.alert(t('labels.error'), t('errors.addItemFailed'));
       return;
     }
@@ -334,6 +344,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       // Already in the pantry → the server keeps the existing row, not our
       // optimistic cuid. Evict the phantom optimistic item.
       safeEvict(client.cache, 'PantryItem', id);
+      adjustPantryItemCount(client.cache, pantryId, -1);
       promptPantryDuplicate({
         onRestock: async () => {
           let restockResult;
@@ -427,6 +438,7 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     if (outcome === 'rejected') {
       // The server refused the create — discard the item we showed.
       safeEvict(client.cache, 'PantryItem', id);
+      adjustPantryItemCount(client.cache, pantryId, -1);
       alertService.alert(t('labels.error'), t('errors.addItemFailed'));
     } else {
       // 'created' or 'queued' — the item stays (and replays if queued offline).
