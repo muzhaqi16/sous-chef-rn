@@ -191,8 +191,13 @@ export function usePantryItemDetailActions({
               return;
             }
             try {
-              await removeItem(itemId);
-              goBack();
+              // Only leave the screen if the item is actually gone. A refusal
+              // resolves normally (it is DATA, not an error), and `removeItem`
+              // has already told the user and restored the row — navigating
+              // away here would report a success that did not happen.
+              if (await removeItem(itemId)) {
+                goBack();
+              }
             } catch (error) {
               errorService.reportError(error, {
                 operation: 'PantryItemDetail.deleteItem',

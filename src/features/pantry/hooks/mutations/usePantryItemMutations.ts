@@ -41,6 +41,8 @@ import {
 } from '#/apollo/utils/pantryCacheUpdaters';
 import type { PantryItemUpdate } from '../pantryDataTypes';
 import { errorService } from '#/services/errorService';
+import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
+import { t as tGlobal } from '#/i18n';
 
 interface UsePantryItemMutationsOptions {
   pantryId: string | undefined;
@@ -158,9 +160,10 @@ export function usePantryItemMutations({
     return operation(updates);
   };
 
-  const removeItem = async (itemId: string): Promise<void> => {
+  /** @returns whether the item is gone — false when the server refused it. */
+  const removeItem = async (itemId: string): Promise<boolean> => {
     if (!pantryId) {
-      return;
+      return false;
     }
 
     // Evict the item from the cache before firing, and leave it evicted, so the
@@ -207,9 +210,18 @@ export function usePantryItemMutations({
       // stands.
       const payload = result.data?.deletePantryItem;
       if (payload && payload.__typename !== 'DeletePantryItemPayload') {
+        // And SAY so. Restoring the row without a word reads as the delete
+        // having silently undone itself: the caller navigates away on a
+        // successful return, so a refusal that returns normally looks exactly
+        // like success until the row reappears. `alertRejectedMutation` (not
+        // `alertIfRejected`) because this mutation keeps an `onError` for the
+        // transport case, and the two must not double-alert.
+        alertRejectedMutation(result, tGlobal('errors.deleteItemFailed'));
         refetch();
+        return false;
       }
     }
+    return true;
   };
 
   return {

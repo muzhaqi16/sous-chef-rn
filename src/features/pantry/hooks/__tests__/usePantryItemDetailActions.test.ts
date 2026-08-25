@@ -182,10 +182,8 @@ describe('usePantryItemDetailActions', () => {
       const deleteMock = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
-            __typename: 'PantryItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -289,10 +287,8 @@ describe('usePantryItemDetailActions', () => {
       const deleteMock = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
-            __typename: 'PantryItemPayload',
-            success: true,
-            message: '',
-            code: 'SUCCESS',
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
             pantryItem: { __typename: 'PantryItem', id: 'item-1' },
           },
         },
@@ -377,6 +373,40 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await waitFor(() => expect(restore).toHaveBeenCalled());
+      restore.mockRestore();
+    });
+
+    it('tells the user and stays put when the server refuses the delete', async () => {
+      // Restoring the row silently is its own version of the bug this screen
+      // keeps hitting: `removeItem` returns normally on a refusal (it is DATA,
+      // not an error), so the catch never fires — the screen dismissed as
+      // though the delete worked and the row simply reappeared in the list.
+      const refused = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'ForbiddenError',
+            code: 'FORBIDDEN',
+            message: 'You do not have permission to delete this item',
+          },
+        },
+      });
+
+      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+      const { result } = setup({}, { operationMocks: [refused.mock] });
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(alertService.alert).toHaveBeenLastCalledWith(
+          'Error',
+          expect.any(String),
+        ),
+      );
+      expect(mockGoBack).not.toHaveBeenCalled();
       restore.mockRestore();
     });
 
