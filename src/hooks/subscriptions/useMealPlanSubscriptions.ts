@@ -398,6 +398,12 @@ export function useMealPlanSubscriptions(userId?: string) {
   const mealPlanEvents = useSubscription(MealPlanEventsDocument, {
     variables: { homeId: selectedHomeId! },
     skip: mealPlanSkip,
+    // Same reason as `PantryEvents`: the envelope's `node` is `__typename` +
+    // `id` only, and `MealPlanForEvent` / `GetMealPlan` read the entity back
+    // over HTTP. Cached, a DELETE event re-creates the MealPlanItem it just
+    // announced was gone as a bare `{ id }`, and the incomplete `GetMealPlan`
+    // result costs a full-page refetch per delete.
+    fetchPolicy: 'no-cache',
     ...eventHandlers,
   });
   useSubscriptionTransportRecovery(
