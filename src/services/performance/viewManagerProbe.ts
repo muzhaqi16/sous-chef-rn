@@ -39,6 +39,22 @@ export function instrumentViewManagerConstants(): void {
   };
 }
 
+/**
+ * Whether the probe observed anything at all.
+ *
+ * False on iOS, always: the wrapped global is installed only when
+ * `useNativeViewConfigsInBridgelessMode()` is true (`RCTInstance.mm`), and that
+ * flag defaults to false, so `instrumentViewManagerConstants` returns at its
+ * `typeof original !== 'function'` guard. Callers use this to skip WRITING the
+ * report rather than writing an empty one — an artifact that exists and says
+ * zero reads as "measured, found nothing", which is the opposite of the truth.
+ * iOS does not take this code path at all; view configs come from the static
+ * native component registry.
+ */
+export function hasViewManagerRecords(): boolean {
+  return records.length > 0;
+}
+
 /** Per-view-manager totals, slowest first. */
 export function summarizeViewManagerConstants(): string {
   const byName = new Map<string, { calls: number; ms: number }>();

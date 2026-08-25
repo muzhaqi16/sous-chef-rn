@@ -311,7 +311,8 @@ describe('NativePerformanceService', () => {
         VIEW_MANAGER_REPORT_FILENAME: 'viewmanagers.json',
       }));
       jest.doMock('../viewManagerProbe', () => ({
-        summarizeViewManagerConstants: () => '{}',
+        hasViewManagerRecords: () => true,
+        summarizeViewManagerConstants: () => '{"rows":[]}',
       }));
       const svc =
         require('../NativePerformanceService').NativePerformanceService;
@@ -326,6 +327,43 @@ describe('NativePerformanceService', () => {
       );
       expect(mark.stopProfiling).toHaveBeenCalledWith('startup.cpuprofile');
       expect(mark.reportFullyDrawn).toHaveBeenCalled();
+      expect(mark.writeTextFile).toHaveBeenCalledWith(
+        'viewmanagers.json',
+        '{"rows":[]}',
+      );
+      jest.dontMock('../startupProfiling');
+      jest.dontMock('../viewManagerProbe');
+      jest.resetModules();
+    });
+
+    it('writes no view-manager report when the probe observed nothing', async () => {
+      // The probe wraps a global that iOS does not install
+      // (`useNativeViewConfigsInBridgelessMode` defaults false), so it records
+      // nothing there. Writing the report anyway would leave an artifact saying
+      // zero, which reads as "measured, found nothing" rather than "cannot be
+      // measured on this platform" — the opposite of the truth.
+      jest.resetModules();
+      jest.doMock('../startupProfiling', () => ({
+        HERMES_PROFILE_STARTUP: true,
+        STARTUP_PROFILE_FILENAME: 'startup.cpuprofile',
+        VIEW_MANAGER_REPORT_FILENAME: 'viewmanagers.json',
+      }));
+      jest.doMock('../viewManagerProbe', () => ({
+        hasViewManagerRecords: () => false,
+        summarizeViewManagerConstants: () =>
+          '{"totalMs":0,"count":0,"rows":[]}',
+      }));
+      const svc =
+        require('../NativePerformanceService').NativePerformanceService;
+      const mark = require('#/native/StartupMark').StartupMark;
+
+      svc.markFullyDrawn();
+      await Promise.resolve();
+
+      expect(mark.writeTextFile).not.toHaveBeenCalled();
+      // The profile itself is still written — it is the trace that matters, and
+      // it is what proves this call site fired at all.
+      expect(mark.stopProfiling).toHaveBeenCalledWith('startup.cpuprofile');
       jest.dontMock('../startupProfiling');
       jest.dontMock('../viewManagerProbe');
       jest.resetModules();

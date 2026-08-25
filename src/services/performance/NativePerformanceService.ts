@@ -17,7 +17,10 @@ import {
   STARTUP_PROFILE_FILENAME,
   VIEW_MANAGER_REPORT_FILENAME,
 } from './startupProfiling';
-import { summarizeViewManagerConstants } from './viewManagerProbe';
+import {
+  hasViewManagerRecords,
+  summarizeViewManagerConstants,
+} from './viewManagerProbe';
 import { Environment, logger } from '#/utils/environment';
 import { env } from '#/config/env';
 
@@ -237,10 +240,16 @@ export const NativePerformanceService = {
       // Deliberately NO histogram on a profiled run. Sampling inflates the very
       // interval being measured, and one poisoned sample in a series whose
       // whole purpose is build-over-build comparison is worse than a gap.
-      StartupMark.writeTextFile(
-        VIEW_MANAGER_REPORT_FILENAME,
-        summarizeViewManagerConstants(),
-      ).catch(() => {});
+      // Only when the probe actually observed something. On iOS it never does
+      // — the global it wraps is not installed there — and writing an empty
+      // report would read as "measured, found nothing" rather than "this cannot
+      // be measured on this platform".
+      if (hasViewManagerRecords()) {
+        StartupMark.writeTextFile(
+          VIEW_MANAGER_REPORT_FILENAME,
+          summarizeViewManagerConstants(),
+        ).catch(() => {});
+      }
       StartupMark.stopProfiling(STARTUP_PROFILE_FILENAME)
         .then(path => {
           logger.info('Hermes startup profile written', { path });
