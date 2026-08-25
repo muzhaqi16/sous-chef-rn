@@ -1,12 +1,32 @@
 import type { NormalizedCacheObject } from '@apollo/client';
-import { getVersion } from 'react-native-device-info';
 import { storage, isStorageReady } from '#storage/mmkv';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
-const CURRENT_CACHE_VERSION = getVersion(); // Purge stale cache on every app version bump
+/**
+ * Identifies the SHAPE of a persisted blob, not the app that wrote it.
+ *
+ * This used to be `getVersion()`, so every store update and every OTA purged
+ * the cache. Now that restore actually works, that meant a user's first launch
+ * after an update — offline, on a plane, in a basement — was an empty app. The
+ * queue survived the purge; nothing they could read did.
+ *
+ * App version was never the right key. A persisted blob is a raw
+ * `NormalizedCacheObject` of field keys produced by `src/apollo/cache.ts`'s
+ * type policies, so what makes an old blob unsafe is a change to THOSE, not a
+ * version bump. Most such changes are harmless anyway — a changed `keyArgs`
+ * strands old field keys, which is a cache miss and a refetch. The one that
+ * genuinely bites is a changed `merge`/`read` running over a value written in
+ * the old shape.
+ *
+ * So: bump this by hand when a change to `cache.ts` makes previously persisted
+ * data unsafe to restore. `__tests__/apollo/cacheSchemaVersion.test.ts` fails
+ * on any edit to that file until the change has been looked at, because a
+ * hand-maintained constant that nothing checks will drift.
+ */
+const CURRENT_CACHE_VERSION = 'shape-1';
 
 /**
  * Written by a previous scheme that split the cache into a small "critical"
