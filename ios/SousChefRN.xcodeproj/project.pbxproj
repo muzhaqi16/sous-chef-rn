@@ -15,6 +15,7 @@
 		A1B2C3D4E5F6A7B800000001 /* WindowBackgroundModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000002 /* WindowBackgroundModule.swift */; };
 		A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000004 /* WindowBackgroundModule.m */; };
 		A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B800000006 /* PushNotificationForwarder.m */; };
+		C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */ = {isa = PBXBuildFile; fileRef = F27910D27828985604CDD2C3 /* StartupMarkModule.mm */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		AF21E45479A23913AB3C227A /* Pods-SousChef.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SousChef.debug.xcconfig"; path = "Target Support Files/Pods-SousChef/Pods-SousChef.debug.xcconfig"; sourceTree = "<group>"; };
 		B8515327E8B8493A80BF6463 /* Config.xcconfig */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.xcconfig; path = Config.xcconfig; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		F27910D27828985604CDD2C3 /* StartupMarkModule.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = StartupMarkModule.mm; path = SousChef/StartupMarkModule.mm; sourceTree = "<group>"; };
 		F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = SousChef.entitlements; path = SousChef/SousChef.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -63,6 +65,7 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 				F2D1A3B82D4E0F0000A1C2E3 /* SousChef.entitlements */,
+				F27910D27828985604CDD2C3 /* StartupMarkModule.mm */,
 			);
 			name = SousChef;
 			sourceTree = "<group>";
@@ -268,6 +271,7 @@
 				A1B2C3D4E5F6A7B800000001 /* WindowBackgroundModule.swift in Sources */,
 				A1B2C3D4E5F6A7B800000003 /* WindowBackgroundModule.m in Sources */,
 				A1B2C3D4E5F6A7B800000005 /* PushNotificationForwarder.m in Sources */,
+				C1945D0219D8B0D4943130D4 /* StartupMarkModule.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
