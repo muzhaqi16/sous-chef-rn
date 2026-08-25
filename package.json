@@ -73,7 +73,7 @@
     "@notifee/react-native": "^9.1.8",
     "@paralleldrive/cuid2": "^3.3.0",
     "@react-native-clipboard/clipboard": "^1.16.3",
-    "@react-native-community/datetimepicker": "^8.6.0",
+    "@react-native-community/datetimepicker": "^9.1.0",
     "@react-native-community/image-editor": "^4.3.0",
     "@react-native-community/netinfo": "^11.4.1",
     "@react-native-community/push-notification-ios": "^1.12.0",
