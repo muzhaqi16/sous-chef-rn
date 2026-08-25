@@ -41,19 +41,23 @@ export function useOnlineQueueSync(): void {
   // `setFailureHandler` is last-write-wins and one owner is the whole point.
 
   useEffect(() => {
-    // Reset the API-reachability breaker on every connectivity transition so a
-    // reconnect starts optimistic — a stale open circuit would otherwise keep
-    // serving cache for up to the half-open delay after the network is back.
-    apiReachabilityBreaker.reset();
-
     if (!isOnline) {
       // Unknown, not unreachable — and start probing, because a `/health`
       // success is the only evidence that can show NetInfo is wrong about a
       // link our API is reachable over anyway.
+      //
+      // Deliberately NOT `reset()`. It ends in `setApiReachable(true)`, which
+      // would overwrite the `null` the store just wrote and make
+      // `shouldTreatAsOffline` false for the whole offline window — no offline
+      // rejection, no offline banner, no cache-only reads.
       apiReachabilityBreaker.onDeviceOffline();
       queueManager.onOffline();
       return;
     }
+
+    // Back online: clear any stale open circuit so the reconnect starts
+    // optimistic, instead of serving cache until the next probe fires.
+    apiReachabilityBreaker.reset();
 
     // Resume a WebSocket reconnect cycle deferred while offline (wsLink stops
     // dialing when NetInfo says the device has no connectivity).

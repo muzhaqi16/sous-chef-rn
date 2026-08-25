@@ -128,9 +128,16 @@ class ApiReachabilityBreaker {
   }
 
   /**
-   * Fresh, optimistic start. Called on every device connectivity transition so
-   * a reconnect doesn't carry a stale open circuit (which would keep serving
-   * cache until the next probe fired even though the network is back).
+   * Fresh start, optimistic only while a link exists. Called when the device
+   * reconnects so it doesn't carry a stale open circuit (which would keep
+   * serving cache until the next probe fired even though the network is back).
+   *
+   * The optimism is conditional on purpose: with no link, reachability is
+   * UNKNOWN, not proven. Asserting `true` here once made `shouldTreatAsOffline`
+   * (`!isOnline && apiReachable !== true`) false for an entire offline session,
+   * and the probe loop could not correct it — this also zeroes the counter and
+   * closes the circuit, so a failing probe matched no branch that records a
+   * verdict. Callers must not have to know that; `reset()` reads the link.
    */
   reset(): void {
     this.consecutiveFailures = 0;
@@ -142,7 +149,9 @@ class ApiReachabilityBreaker {
     // is dropped by the flag/counter guards in `probe()`.
     this.probeInFlight = false;
     this.circuitState = 'closed';
-    useStore.getState().setApiReachable(true);
+    useStore
+      .getState()
+      .setApiReachable(useStore.getState().isOnline ? true : null);
   }
 
   /**
