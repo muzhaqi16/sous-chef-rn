@@ -6,6 +6,22 @@ import 'react-native-get-random-values';
 // Record JS entry timestamp before any imports for startup time measurement
 global.__APP_START_TIMESTAMP = Date.now();
 
+// Side-effect import, and it MUST stay eager and near the top.
+//
+// `react-native-performance` attaches its native `mark` listener at module
+// evaluation (its `index.ts:27`). Android's PerformanceModule buffers every
+// startup ReactMarker and flushes the whole buffer once, at CONTENT_APPEARED
+// — if nothing is listening at that instant the marks are gone, and the JS
+// entry store stays empty, so a later observer's `buffered: true` has nothing
+// to replay. Metro runs with `inlineRequires: true` (metro.config.js:49), so
+// every `import performance from 'react-native-performance'` elsewhere is
+// deferred to first USE, and the earliest real use is
+// `NativePerformanceService.initialize()` inside a `requestIdleCallback` —
+// well after CONTENT_APPEARED. That is why app_native_launch_ms and
+// app_js_bundle_load_ms silently returned no data. A bare side-effect import
+// has no binding for Metro to inline, so this one stays put.
+import 'react-native-performance';
+
 /**
  * Configure Reanimated logger BEFORE any Reanimated code runs
  * This prevents "Cannot read property 'level' of undefined" errors

@@ -16,7 +16,7 @@ import { logger } from '#/utils/environment';
 import { serializeError } from '#/utils/errorSerialization';
 import { getDeviceIdSync } from '#/utils/deviceId';
 import { generateId } from '#/utils/generateId';
-import { getVersion } from 'react-native-device-info';
+import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import { env as buildEnv } from '#/config/env';
 import { useStore } from '#store';
 
@@ -41,6 +41,20 @@ const SESSION_ID = generateId();
  * attributed to a release even in principle.
  */
 const APP_VERSION = getVersion();
+
+/**
+ * Whether this build is running on an emulator or on real hardware.
+ *
+ * BOUNDED like [APP_VERSION]: exactly two values. `device_model` would be the
+ * obvious label and is the same cardinality bomb as a commit SHA — thousands of
+ * Android models in the field, multiplied again by histogram buckets.
+ *
+ * Without it, an emulator run and a phone run are the SAME series: `instance`
+ * is only `android_<version>`. Measured 2026-08-25, the two disagree by 1.4-2x
+ * on startup marks and by 10-20x on `flashlist_initial_load_ms`, so mixing them
+ * silently poisons any baseline you try to compare a release against.
+ */
+const DEVICE_TYPE = isEmulatorSync() ? 'emulator' : 'physical';
 
 const LOG_LEVEL_PRIORITY: Record<LogEntry['level'], number> = {
   debug: 0,
@@ -237,6 +251,7 @@ export class TelemetryService {
         platform: Platform.OS,
         env: this.config.environment,
         version: APP_VERSION,
+        device_type: DEVICE_TYPE,
         ...labels,
       },
       timestamp: Date.now(),
@@ -264,6 +279,7 @@ export class TelemetryService {
         platform: Platform.OS,
         env: this.config.environment,
         version: APP_VERSION,
+        device_type: DEVICE_TYPE,
         ...labels,
       },
       timestamp: Date.now(),
@@ -292,6 +308,7 @@ export class TelemetryService {
         platform: Platform.OS,
         env: this.config.environment,
         version: APP_VERSION,
+        device_type: DEVICE_TYPE,
         ...labels,
       },
       timestamp: Date.now(),

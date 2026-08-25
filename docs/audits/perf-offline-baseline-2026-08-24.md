@@ -703,3 +703,218 @@ caught any of the four hypotheses rejected above. It is a narrow, trustworthy
 signal — not a cold-start baseline. The cold-start question remains open and
 still needs a device-side benchmark (Macrobenchmark `StartupTimingMetric`,
 deliberately deferred).
+
+---
+
+## Addendum — two silent metric failures found by running the new metric (2026-08-25)
+
+Wiring `app_content_appeared_ms` / `app_fully_drawn_ms` and then actually
+looking in Mimir found that **two already-shipped startup metrics had been
+emitting nothing**, and that the new ones inherited the same failure. Both are
+fixed; both were invisible to typecheck, lint and 7,672 tests.
+
+### 1. `useStartupInit` destroyed a shared global to get an HMR guard
+
+`useStartupInit` reported `app_startup_duration_ms` at hydration and then set
+`global.__APP_START_TIMESTAMP = undefined` — commented "Prevent re-reporting on
+HMR". But that global is the **shared JS-entry origin**: `store/index.ts:191`
+reads it, and `NativePerformanceService.markFullyDrawn()` measures from it when
+the first list finishes loading, seconds later. So `app_fully_drawn_ms` read
+`undefined` and silently returned on every launch.
+
+Fixed with a module-scope `reportedStartupDuration` latch — same one-shot
+guarantee, without destroying a value other consumers need. `store/index.ts`
+only ever worked by ordering luck. Guarded by a new test in
+`useStartupInit.test.ts`, verified to fail when the clear is reintroduced.
+
+### 2. `inlineRequires` deferred the native-mark listener past the one flush
+
+`app_native_launch_ms` and `app_js_bundle_load_ms` — both shipped, both
+documented — returned **NO DATA**, while `Date.now()`-based metrics
+(`app_apollo_restore_ms`, `app_js_entry_to_store_ready_ms`) were present. That
+split localised the fault to the `react-native-mark` path.
+
+Mechanism, read out of the installed package rather than guessed:
+
+- `react-native-performance` attaches its native `mark` listener at **module
+  evaluation** (`src/index.ts:27`).
+- Android's `PerformanceModule` buffers every startup ReactMarker and flushes
+  the buffer **once**, at `CONTENT_APPEARED` (`PerformanceModule.java:71-76`).
+  Nothing listening at that instant means the marks are gone for good.
+- `metro.config.js:49` sets `inlineRequires: true`, so every
+  `import performance from 'react-native-performance'` is deferred to first
+  USE — and the earliest real use is `NativePerformanceService.initialize()`
+  inside a `requestIdleCallback`, well after `CONTENT_APPEARED`.
+- The observer's `buffered: true` cannot rescue it: it replays from the JS
+  entry store (`performance-observer.ts:140`), which was never populated.
+
+Fixed with a bare side-effect `import 'react-native-performance'` at the top of
+`index.js` — a side-effect import has no binding for Metro to inline, so it
+stays eager. `PerformancePackage` self-registers `setupListener()` (its
+constructor, `PerformancePackage.java:19`), so no native change was needed.
+
+**Prediction stated before the change:** all three mark-derived metrics go NO
+DATA → present. **Result:** they did.
+
+### Emulator numbers, `localRelease`, Pixel_9a (`emulator-5554`), n=2, warm cache
+
+| Metric | Value | Origin |
+|---|---|---|
+| `app_native_launch_ms` | 18 ms | `nativeLaunchStart`→`End` |
+| `app_js_bundle_load_ms` | 93 ms | `runJsBundleStart`→`End` |
+| `app_content_appeared_ms` | 215 ms | `nativeLaunchStart` → RN content appeared |
+| `app_startup_duration_ms` | 121 ms | JS entry → hydrated |
+| `app_fully_drawn_ms` | **835 ms** | JS entry → first list painted |
+| logcat `Fully drawn` | **+1317 / +1268 ms** | OS, from activity start |
+
+Emulator only — the device figures in the earlier addendum (~2.2 s) stand as
+the real baseline.
+
+### `nativeLaunchStart` is CPU-time-derived on BOTH platforms, not just iOS
+
+The plan recorded the CPU-time caveat as iOS-only. It is not:
+`StartTimeProvider.java:29` computes `startTime = endTime -
+Process.getElapsedCpuTime()`, the same shape as iOS's
+`clock_gettime(CLOCK_THREAD_CPUTIME_ID)`. Time spent descheduled is excluded on
+both, so the origin sits later than true process start and every
+`nativeLaunchStart`-based number **understates** real elapsed time.
+
+That is why the table above does not reconcile: `app_content_appeared_ms`
+(215 ms) and logcat's wall-clock `Fully drawn` (+1317 ms) do not share an
+origin and never will. `docs/telemetry-setup.md`'s contract row now says so.
+**These metrics are for comparing a platform against itself across builds, and
+for nothing else.**
+
+### What this run did NOT verify
+
+The plan's real check — `app_fully_drawn_ms` agreeing with the ~2.2 s
+frame-capture figure from two independent methods — **needs the physical
+device** and was not done here; only the emulator was attached. What the
+emulator run does establish is that the pipeline works end-to-end and that the
+call site fires: logcat's `ActivityTaskManager: Fully drawn` line can only
+appear if `markFullyDrawn()` ran, which is also independent proof that fix #1
+works. iOS (verification step 6) is still outstanding.
+
+### Two-method agreement check — DONE on the emulator (2026-08-25)
+
+The earlier note said this check needed the physical device. That was wrong: it
+needs *one* device measured *two* ways, not a phone. The ~2.2 s figure it was
+going to be compared against is an SM-S908U1 number, and comparing an emulator
+metric to it would only have re-proven that emulators are faster. Running both
+methods on the emulator answers the actual question — **is the marker in the
+right place?**
+
+Method A: `Activity.reportFullyDrawn()`, logged by the OS as
+`ActivityTaskManager: Fully drawn` — driven by our JS `markFullyDrawn()`.
+Method B: `adb exec-out screencap` sampled in a loop from `am start`, frames
+classified by PNG byte size after visually establishing the signature
+(<25 KB blank · ~123 KB skeletons · ~247 KB real rows, placeholder thumbnails ·
+~403 KB settled).
+
+Pixel_9a emulator, `localRelease`, warm cache, all times from `am start`:
+
+| run | first real rows | settled frame | OS fully-drawn | settled ↔ OS |
+|---|---|---|---|---|
+| 1 | 1325 ms | 1480 ms | 1470 ms | −10 ms |
+| 2 | 1241 ms | 1552 ms | 1516 ms | −36 ms |
+| 4 | 1257 ms | 1428 ms | 1442 ms | +14 ms |
+
+A fourth run was **discarded**: its 2 ms frame already exceeded the threshold
+because the previous screen was still displayed at relaunch, so the classifier
+locked onto a stale frame. Recorded rather than quietly dropped.
+
+**Resolution:** sampling interval 130–160 ms, and each frame's timestamp is
+taken *before* `screencap` executes, so labels are biased early — which is why
+run 4's OS value sits 14 ms *after* its recorded settle.
+
+**Verdict: the marker is in the right place.** It tracks the settled frame to
+within ±36 ms — well inside one sample — and fires 145–275 ms *after* the first
+frame containing real rows. So `app_fully_drawn_ms` is a deliberately
+conservative definition of first meaningful paint: it can lag slightly, and it
+**never fires before content is on screen**, which is the failure mode that
+would have mattered.
+
+`app_fully_drawn_ms` read 946 ms (JS-entry origin) for the last flushed run
+against an OS figure of 1442 ms (activity-start origin) — a ~496 ms
+activity-start→JS-entry gap, consistent with the 93 ms bundle load plus RN init.
+
+**Note on reading this metric:** `_count` came back as **n=1**, not n=6. Each
+cold start is a new process, so the cumulative counter resets every launch and
+only the last flushed process is visible. Read `app_fully_drawn_ms` **per
+session**; a `_sum / _count` average across launches is meaningless here, as
+already warned for `slow_*` counters.
+
+**Emulator vs device sequence.** The emulator shows blank → skeletons (1195 ms)
+→ populated (1325 ms). The SM-S908U1 showed a **header-only frame with no
+skeletons and no rows** at 1.6–1.8 s. The emulator does not reproduce that
+state, so it cannot be used to investigate it — only to detect regressions
+against itself.
+
+### Physical device, signed in, with a `device_type` label (2026-08-25)
+
+Two problems blocked device-vs-emulator comparison and are now fixed.
+
+**1. The phone was signed out**, so it never rendered a list and
+`app_fully_drawn_ms` correctly never fired — the documented SCOPE limitation
+behaving exactly as written. Signed back in (63 pantry items).
+
+**2. Both devices wrote to the SAME series.** `instance` is only
+`android_<version>`; nothing distinguished a phone run from an emulator run, so
+each silently overwrote the other's history. `TelemetryService` now emits
+`device_type` = `emulator` | `physical` (`isEmulatorSync()`), on all three emit
+paths. **Two values, deliberately** — `device_model` is the same cardinality
+bomb as a commit SHA (thousands of Android models × histogram buckets), and is
+rejected for the same reason.
+
+SM-S908U1 vs Pixel_9a emulator, `localRelease`, warm cache, signed in:
+
+| metric | emulator | physical | ratio |
+|---|---|---|---|
+| `app_native_launch_ms` | 31 ms | 55 ms | 1.77× |
+| `app_js_bundle_load_ms` | 176 ms | 319 ms | 1.81× |
+| `app_content_appeared_ms` | 336 ms | 583 ms | 1.74× |
+| **`app_startup_duration_ms`** | **202 ms** | **670 ms** | **3.32×** |
+| `app_fully_drawn_ms` | 966 ms | 1443 ms | 1.49× |
+
+OS `Fully drawn` (wall clock, activity-start origin): phone 1766 / 1684 /
+1850 ms; emulator 1496 / 1499 / 1444 ms. Phone frame capture put the settled
+frame at 1676 / 1844 / 1864 ms — agreeing with the OS marker within one sample
+(phone `screencap` interval is ~450 ms, much coarser than the emulator's ~140 ms).
+
+**The device is healthy — the gap is not a fault.** Checked before measuring:
+thermal status `0` (no throttling, AP 34.7 °C), battery saver off
+(`low_power=0`), governor `walt` with cpu4 pinned at its 2496000 max. An
+emulator runs x86_64 natively on a desktop CPU with host RAM and SSD; beating a
+2022 phone SoC on startup is the expected result.
+
+### The lead: one phase is disproportionately slow on device
+
+Every metric sits at ~1.75× — the flat hardware gap — **except
+`app_startup_duration_ms` at ~3.3×.** Sampled repeatedly rather than trusted at
+n=1 (each cold start is a new process, so only the last flush is visible):
+
+| trial | physical | emulator |
+|---|---|---|
+| 1 | 799 ms | 194 ms |
+| 2 | 560 ms | 190 ms |
+| 3 | 560 ms | 190 ms |
+| earlier | 670 ms | 202 ms |
+
+Reproducible, and the emulator side is remarkably stable (190–202 ms). So this
+phase costs roughly **1.7× more than the flat hardware gap explains**.
+
+That window is JS entry → store hydrated, and it is **dominated by module
+evaluation, not hydration** — the actual rehydrate in it measured ~5 ms, which
+is why the metric was renamed `app_js_entry_to_store_ready_ms`.
+
+**This is a LEAD, not a cause.** It says *where* to point the Hermes CPU profile
+(§4 of the plan) first; it does not name a function. Candidate explanations —
+module evaluation, or the ~57 ms keychain read that could be far more expensive
+against a hardware-backed keystore — are hypotheses to be tested by the profile,
+not conclusions. The four rejected hypotheses in this document were all born
+from stopping at exactly this point.
+
+**Not controlled for:** the phone's OS-marker figure (~1.77 s) is below the
+~2.1–2.3 s frame-capture baseline recorded earlier in this document, but the
+builds differ by several fixes and the methods differ, so that is not claimed as
+an improvement.

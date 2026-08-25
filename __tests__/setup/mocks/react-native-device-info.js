@@ -9,6 +9,7 @@ jest.mock('react-native-device-info', () => ({
   getBrand: jest.fn(() => 'Apple'),
   getModel: jest.fn(() => 'iPhone 15'),
   isEmulator: jest.fn(() => Promise.resolve(false)),
+  isEmulatorSync: jest.fn(() => false),
   getApplicationName: jest.fn(() => 'SousChef'),
   getBundleId: jest.fn(() => 'com.souschef.app'),
 }));

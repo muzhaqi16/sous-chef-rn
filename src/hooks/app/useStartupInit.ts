@@ -109,6 +109,9 @@ function injectDetoxLaunchArgs(
  * Guarded by an internal ref so the heavy services don't restart when the
  * effect re-runs (e.g., theme changes that touch UnistylesRuntime).
  */
+/** One-shot guard for `app_startup_duration_ms` across Fast Refresh remounts. */
+let reportedStartupDuration = false;
+
 export function useStartupInit(): void {
   const isHydrated = useIsHydrated();
   const setHasStoredCredentials = useAppStore(
@@ -200,13 +203,17 @@ export function useStartupInit(): void {
         requestIdleCallback(() => authService.registerDeviceInBackground());
       }
 
-      if (global.__APP_START_TIMESTAMP) {
+      // A module-scope latch, NOT `global.__APP_START_TIMESTAMP = undefined`.
+      // That global is the shared JS-entry origin — `store/index.ts` and
+      // `NativePerformanceService.markFullyDrawn()` both measure from it, and
+      // the latter runs when the first list finishes loading, long after this.
+      // Clearing it here to get an HMR guard silently zeroed those consumers.
+      if (global.__APP_START_TIMESTAMP && !reportedStartupDuration) {
+        reportedStartupDuration = true;
         const startupDuration = Date.now() - global.__APP_START_TIMESTAMP;
         Telemetry.histogram('app_startup_duration_ms', startupDuration, {
           type: 'js_to_hydrated',
         });
-
-        global.__APP_START_TIMESTAMP = undefined; // Prevent re-reporting on HMR
       }
 
       Telemetry.trackEvent('app_launched', {

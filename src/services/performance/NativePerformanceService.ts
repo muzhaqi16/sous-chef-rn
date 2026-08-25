@@ -222,10 +222,9 @@ export const NativePerformanceService = {
    * different things on different launches, which is worse than a gap.
    */
   markFullyDrawn() {
-    if (reportedFullyDrawn) return;
     const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
       .__APP_START_TIMESTAMP;
-    if (!startTs) return;
+    if (reportedFullyDrawn || !startTs) return;
     reportedFullyDrawn = true;
 
     Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
