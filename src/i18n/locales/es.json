@@ -111,7 +111,6 @@
       "Item": "el artículo",
       "Notification": "la notificación"
     },
-    "queuedChangeSyncFailed": "No se pudieron sincronizar los cambios. Desliza para actualizar.",
     "queuedChangeRejected": "No se pudo guardar un cambio y se ha deshecho.",
     "itemNameRequired": "Introduce el nombre del artículo",
     "invalidQuantity": "Introduce una cantidad válida",

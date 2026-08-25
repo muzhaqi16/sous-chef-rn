@@ -111,7 +111,6 @@
       "Item": "item",
       "Notification": "notification"
     },
-    "queuedChangeSyncFailed": "Couldn't sync changes. Pull to refresh.",
     "queuedChangeRejected": "A change couldn't be saved and has been undone.",
     "itemNameRequired": "Please enter an item name",
     "invalidQuantity": "Please enter a valid quantity",

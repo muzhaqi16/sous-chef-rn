@@ -111,7 +111,6 @@
       "Item": "Artikulli",
       "Notification": "Njoftimi"
     },
-    "queuedChangeSyncFailed": "Ndryshimet nuk u sinkronizuan. Tërhiq poshtë për të rifreskuar.",
     "queuedChangeRejected": "Një ndryshim nuk u ruajt dhe u zhbë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "invalidQuantity": "Ju lutemi shkruani një sasi të vlefshme",

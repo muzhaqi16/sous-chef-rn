@@ -37,11 +37,8 @@ export function useOnlineQueueSync(): void {
   // does not pointlessly re-run this.
   const hasAccessToken = useAppStore(state => !!state.accessToken);
 
-  // The permanent-failure handler is registered once at module scope in App.tsx
-  // (`handleFailedMutation` — evicts the stale entity, clears persisted optimistic
-  // fields, toasts, and removes the entry from the queue). It is intentionally NOT
-  // registered here: this hook mounts after App.tsx loads, so registering it here
-  // would override the full handler with a lesser one.
+  // The permanent-failure handler is registered by `useStartupInit`, not here —
+  // `setFailureHandler` is last-write-wins and one owner is the whole point.
 
   useEffect(() => {
     // Reset the API-reachability breaker on every connectivity transition so a
