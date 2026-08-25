@@ -41,6 +41,10 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+jest.mock('#/native/StartupMark', () => ({
+  StartupMark: { reportFullyDrawn: jest.fn() },
+}));
+
 jest.mock('#/config/env', () => ({
   env: { API_URL: 'https://api.example.com/graphql' },
 }));
@@ -176,6 +180,58 @@ describe('NativePerformanceService', () => {
         { type: 'hermes_bytecode' },
       );
     });
+
+    it('reports contentAppeared as time from nativeLaunchStart', () => {
+      // The only first-frame number the app has. Every other startup metric
+      // begins at JS-bundle entry, so none of them can see a frame at all.
+      NativePerformanceService.initialize();
+
+      observers[0]._callback({
+        getEntries: () => [
+          { name: 'nativeLaunchStart', startTime: 100 },
+          { name: 'contentAppeared', startTime: 950 },
+        ],
+      });
+
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'app_content_appeared_ms',
+        850,
+      );
+    });
+
+    it('reports contentAppeared once, however often the mark is delivered', () => {
+      // The observer is `buffered: true` and fires on every batch, so without
+      // the one-shot guard a single launch would report repeatedly and skew
+      // its own histogram.
+      NativePerformanceService.initialize();
+      const entries = {
+        getEntries: () => [
+          { name: 'nativeLaunchStart', startTime: 100 },
+          { name: 'contentAppeared', startTime: 950 },
+        ],
+      };
+
+      observers[0]._callback(entries);
+      observers[0]._callback(entries);
+
+      const reports = (Telemetry.histogram as jest.Mock).mock.calls.filter(
+        ([name]) => name === 'app_content_appeared_ms',
+      );
+      expect(reports).toHaveLength(1);
+    });
+
+    it('waits for both marks rather than reporting a partial launch', () => {
+      NativePerformanceService.initialize();
+
+      observers[0]._callback({
+        getEntries: () => [{ name: 'contentAppeared', startTime: 950 }],
+      });
+
+      expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+        'app_content_appeared_ms',
+        expect.anything(),
+      );
+    });
   });
 
   describe('measure observer', () => {
@@ -207,6 +263,61 @@ describe('NativePerformanceService', () => {
         15,
         { component: 'MyList' },
       );
+    });
+  });
+
+  describe('markFullyDrawn', () => {
+    const { StartupMark } = jest.requireMock('#/native/StartupMark');
+    const START = 1_000_000;
+
+    beforeEach(() => {
+      (globalThis as { __APP_START_TIMESTAMP?: number }).__APP_START_TIMESTAMP =
+        START;
+      jest.spyOn(Date, 'now').mockReturnValue(START + 2200);
+    });
+
+    afterEach(() => {
+      (Date.now as jest.Mock).mockRestore?.();
+      delete (globalThis as { __APP_START_TIMESTAMP?: number })
+        .__APP_START_TIMESTAMP;
+    });
+
+    it('reports the time from JS entry and tells the platform', () => {
+      NativePerformanceService.markFullyDrawn();
+
+      expect(Telemetry.histogram).toHaveBeenCalledWith(
+        'app_fully_drawn_ms',
+        2200,
+      );
+      // The same moment reported to Android itself, which is what Play Console
+      // vitals and Macrobenchmark's timeToFullDisplayMs read.
+      expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('fires once — a session has exactly one first meaningful paint', () => {
+      // Every list's onLoad calls this; only the first one means anything.
+      NativePerformanceService.markFullyDrawn();
+      NativePerformanceService.markFullyDrawn();
+      NativePerformanceService.markFullyDrawn();
+
+      const reports = (Telemetry.histogram as jest.Mock).mock.calls.filter(
+        ([name]) => name === 'app_fully_drawn_ms',
+      );
+      expect(reports).toHaveLength(1);
+      expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports nothing when there is no start timestamp to measure from', () => {
+      delete (globalThis as { __APP_START_TIMESTAMP?: number })
+        .__APP_START_TIMESTAMP;
+
+      NativePerformanceService.markFullyDrawn();
+
+      expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+        'app_fully_drawn_ms',
+        expect.anything(),
+      );
+      expect(StartupMark.reportFullyDrawn).not.toHaveBeenCalled();
     });
   });
 

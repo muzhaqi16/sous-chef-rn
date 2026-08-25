@@ -11,6 +11,7 @@ import performance, {
 } from 'react-native-performance';
 import type { PerformanceEntry } from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
+import { StartupMark } from '#/native/StartupMark';
 import { Environment } from '#/utils/environment';
 import { env } from '#/config/env';
 
@@ -22,6 +23,8 @@ let resourceObserver: InstanceType<typeof PerformanceObserver> | null = null;
 // Duplicate-prevention flags for one-shot native metrics
 let reportedNativeLaunch = false;
 let reportedBundleLoad = false;
+let reportedContentAppeared = false;
+let reportedFullyDrawn = false;
 
 function getGraphQLHost(): string {
   const apiConfig = Environment.getApiConfig();
@@ -57,6 +60,29 @@ function handleNativeMarks(entries: PerformanceEntry[]) {
         'app_js_bundle_load_ms',
         bundleEnd.startTime - bundleStart.startTime,
         { type: 'hermes_bytecode' },
+      );
+    }
+  }
+
+  // First frame. `contentAppeared` is React Native's own signal that the root
+  // component's view is on screen — `RCTContentDidAppearNotification` on iOS,
+  // `ReactMarker.CONTENT_APPEARED` on Android — so it means the same thing on
+  // both platforms. `react-native-performance` has always emitted it and this
+  // app never read it, which left us with no first-frame number at all: every
+  // other startup metric here begins at JS-bundle entry, so none of them can
+  // see a frame.
+  //
+  // Measured from `nativeLaunchStart` so it shares an origin with
+  // `app_native_launch_ms` and the two are subtractable. Note the iOS origin is
+  // an approximation — see the contract row in docs/telemetry-setup.md.
+  if (!reportedContentAppeared) {
+    const launchStart = find('nativeLaunchStart');
+    const contentAppeared = find('contentAppeared');
+    if (launchStart && contentAppeared) {
+      reportedContentAppeared = true;
+      Telemetry.histogram(
+        'app_content_appeared_ms',
+        contentAppeared.startTime - launchStart.startTime,
       );
     }
   }
@@ -173,6 +199,38 @@ export const NativePerformanceService = {
     initialized = false;
     reportedNativeLaunch = false;
     reportedBundleLoad = false;
+    reportedContentAppeared = false;
+    reportedFullyDrawn = false;
+  },
+
+  /**
+   * The app is showing real content — not just RN's first frame.
+   *
+   * `app_content_appeared_ms` is TTID: React Native's root view is mounted,
+   * which says nothing about whether the screen's data has arrived. On the
+   * pantry those are ~500 ms apart on a real device, and the gap is the part
+   * users actually notice — the header paints while the list is still empty.
+   *
+   * Called from the first list that finishes loading in a session
+   * (`useFlashListPerformance`'s `onLoad`), so it means "first meaningful
+   * paint, whichever screen that was". One-shot: a session has exactly one.
+   *
+   * KNOWN SCOPE: a launch that never renders a list — signed out, or straight
+   * into a non-list detail screen — never fires this, so the metric describes
+   * signed-in launches. That is the right scope for a cold-start baseline of a
+   * list-first app; firing it on any screen instead would make the number mean
+   * different things on different launches, which is worse than a gap.
+   */
+  markFullyDrawn() {
+    if (reportedFullyDrawn) return;
+    const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
+      .__APP_START_TIMESTAMP;
+    if (!startTs) return;
+    reportedFullyDrawn = true;
+
+    Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
+    // Same moment, reported to the platform's own tooling — Android only.
+    StartupMark.reportFullyDrawn();
   },
 
   mark(name: string) {

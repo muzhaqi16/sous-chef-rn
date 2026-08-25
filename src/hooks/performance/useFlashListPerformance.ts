@@ -32,6 +32,7 @@ import type { FlashListRef } from '@shopify/flash-list';
 import type ViewToken from '@shopify/flash-list/dist/recyclerview/viewability/ViewToken';
 import { FlashListDiagnostics } from '#/services/performance/FlashListDiagnostics';
 import { Telemetry } from '#/services/telemetry';
+import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import type {
   ScrollFrameMetric,
   BlankRiskAssessment,
@@ -182,6 +183,13 @@ export function useFlashListPerformance<T>(
     Telemetry.histogram('flashlist_initial_load_ms', info.elapsedTimeInMs, {
       component: options.componentName,
     });
+
+    // The first list to finish loading in a session IS the app's first
+    // meaningful paint — everything before it is chrome over an empty body.
+    // Placed here rather than in a screen so it works for whichever list the
+    // launch lands on (Pantry is tab 0, but a deep link can land elsewhere);
+    // `markFullyDrawn` is one-shot, so later lists are no-ops.
+    NativePerformanceService.markFullyDrawn();
 
     if (__DEV__ && diagnostics) {
       diagnostics.recordOnLoad(info.elapsedTimeInMs);
