@@ -198,6 +198,17 @@ export function usePantryItemMutations({
     }
     if (result) {
       subscriptionService.unregisterPendingDelete(itemId);
+
+      // `errorPolicy: 'all'` resolves a refusal as DATA — a non-success union
+      // member — so it never reaches `onError`. The row was evicted and the
+      // count dropped before firing, and the server still has the item, so the
+      // refusal has to put both back. A transport failure is the opposite case
+      // and is handled in `onError`: the delete is queued, so the eviction
+      // stands.
+      const payload = result.data?.deletePantryItem;
+      if (payload && payload.__typename !== 'DeletePantryItemPayload') {
+        refetch();
+      }
     }
   };
 

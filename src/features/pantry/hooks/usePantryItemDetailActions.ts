@@ -9,6 +9,7 @@ import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/screens/PantryItemDetail.generated';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -24,6 +25,13 @@ import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePant
 type PantryItemForActions =
   | {
       id: string;
+      /**
+       * The item's OWN pantry, selected by `PantryItemDetail_pantryItem`. It is
+       * authoritative regardless of which pantry the user currently has
+       * selected — `selectedPantryId` is genuinely nullable (navigationSlice
+       * starts it null and a deep link can land here before it resolves).
+       */
+      pantryId?: string | null;
       // `PantryItem.version` is `Int!`, and the server now requires it on every
       // update — a mutation sent without one overwrites concurrent edits.
       version: number;
@@ -107,12 +115,23 @@ export function usePantryItemDetailActions({
   // back and the row was still in the list. `removeItem` evicts before firing,
   // adjusts the count, and registers the pending-delete that keeps a
   // subscription echo from resurrecting the row.
+  // Fall back to the item's own pantry. Keyed only on `selectedPantryId`, a
+  // delete opened before the selection resolved passed '' to `removeItem`,
+  // which early-returns on a falsy pantryId — so nothing was deleted while the
+  // screen still navigated back, reporting a success that never happened.
+  const resolvedPantryId = selectedPantryId ?? item?.pantryId ?? null;
+
   const { removeItem } = usePantryItemMutations({
-    pantryId: selectedPantryId ?? '',
-    // `refetch` backs the shared hook's UPDATE path (version-conflict refresh);
-    // `removeItem` never consults it, and this screen navigates back on delete,
-    // so there is no view left to refresh.
-    refetch: () => {},
+    pantryId: resolvedPantryId ?? '',
+    // `removeItem` evicts the row and drops the count BEFORE firing, so a
+    // refusal has to put both back — and `refetch` is what the shared hook's
+    // `onError` calls to do it. Passing a no-op here (on the reasoning that
+    // this screen navigates away on success) was wrong: on FAILURE the screen
+    // stays, and the item was left gone locally while still present on the
+    // server, with nothing to bring it back.
+    refetch: () => {
+      void client.refetchQueries({ include: [GetPantryDocument] });
+    },
   });
 
   const [addToShoppingList] = useMutation(
@@ -153,6 +172,15 @@ export function usePantryItemDetailActions({
           text: t('labels.delete'),
           style: 'destructive',
           onPress: async () => {
+            if (!resolvedPantryId) {
+              // Neither source resolved: there is nothing to delete from. Say
+              // so rather than dismissing the screen as though it worked.
+              alertService.alert(
+                t('labels.error'),
+                t('errors.deleteItemFailed'),
+              );
+              return;
+            }
             try {
               await removeItem(itemId);
               goBack();
