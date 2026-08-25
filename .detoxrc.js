@@ -145,9 +145,15 @@ module.exports = {
       artifacts: {
         rootDir: 'e2e/artifacts/ios-simulator-release',
         plugins: {
+          // Kept on a PASS, unlike a normal release run. This configuration is
+          // the measuring one (`E2E_TELEMETRY=1 npm run test:e2e:release`), and
+          // a measuring run that succeeds is exactly the run whose log and
+          // screenshots are wanted — the log is where the token-injection vs
+          // UI-login fallback is visible, which decides whether the sample is
+          // a clean signed-in cold start or has a login flow inside it.
           log: {
             enabled: true,
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
           },
           screenshot: {
             enabled: true,
@@ -156,7 +162,7 @@ module.exports = {
               testStart: false,
               testDone: true,
             },
-            keepOnlyFailedTestsArtifacts: true,
+            keepOnlyFailedTestsArtifacts: false,
           },
           video: {
             enabled: false,
