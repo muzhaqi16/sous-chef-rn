@@ -122,6 +122,80 @@ describe('FlashList scroll components', () => {
     expect(undeclared).toEqual([]);
   });
 
+  /**
+   * The scrollable is only half the arbitration.
+   *
+   * RNGH's ScrollView hands its scroll gesture to the refresh control as
+   * `cloneElement(refreshControl, { block: scrollGesture })`, and `block` is in
+   * `NativeWrapperProps` — so only a control built by RNGH's `createNativeWrapper`
+   * routes it into `useNativeGesture`. Handed RN's plain RefreshControl the prop is
+   * simply inert: no error, no warning, no arbitration on the pull.
+   *
+   * The trap is that you can get RN's control WITHOUT ever naming it. Given a bare
+   * `onRefresh`/`refreshing` pair and no `refreshControl`, FlashList builds one
+   * itself — `useSecondaryProps.tsx`, `else if (onRefresh)` — and the one it builds
+   * is React Native's. That is how the shopping list shipped with an indicator that
+   * hung mid-list and would not retract until pushed back up by hand, while every
+   * list that passed an explicit control was fine.
+   *
+   * So the rule is about the HOST, and this derives its file list from the tree
+   * rather than a constant: any list rendering RNGH's scrollable that offers
+   * pull-to-refresh must pass an explicit RNGH-based control.
+   */
+  const rnghHostedLists = flashListRenderers.filter(file =>
+    stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
+      'renderScrollComponent={SwipeAwareScrollComponent}',
+    ),
+  );
+
+  it('finds the RNGH-hosted lists, so the check below is not vacuous', () => {
+    expect(rnghHostedLists).toEqual(expect.arrayContaining(RNGH_GESTURE_ROWS));
+  });
+
+  it.each(RNGH_GESTURE_ROWS)(
+    '%s is covered by the RNGH-host refresh rule',
+    file => {
+      expect(rnghHostedLists).toContain(file);
+    },
+  );
+
+  it('gives every RNGH-hosted list with pull-to-refresh an RNGH control', () => {
+    const offenders = rnghHostedLists.filter(file => {
+      const source = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      if (!source.includes('onRefresh=')) return false; // no pull-to-refresh
+
+      // An explicit control is required — a bare onRefresh gets RN's.
+      if (!source.includes('refreshControl=')) return true;
+      // And it has to be the RNGH-based one.
+      if (!source.includes('ThemedRefreshControl')) return true;
+      // RN's control must not be reachable by name either.
+      return /import\s*\{[^}]*\bRefreshControl\b[^}]*\}\s*from\s*'react-native'/.test(
+        source,
+      );
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  /**
+   * `ThemedRefreshControl` is the single place the RNGH-vs-RN choice is made for
+   * every list above, so the per-file checks cannot see it. This is that check.
+   * `PlainScrollRefreshControl` is its counterpart for plain RN scrollable hosts.
+   */
+  it('builds ThemedRefreshControl on RNGH, not RN', () => {
+    const source = readFileSync(
+      join(process.cwd(), 'src/components/atoms/themedComponents.tsx'),
+      'utf8',
+    );
+
+    expect(source).toMatch(
+      /import\s*\{[^}]*\bRefreshControl\b[^}]*\}\s*from\s*'react-native-gesture-handler'/,
+    );
+    expect(source).toContain('PlainScrollRefreshControl');
+  });
+
   it('keeps the allowlist honest', () => {
     for (const [file, reason] of Object.entries(NO_RNGH_GESTURES_IN_ROWS)) {
       // Still a list — otherwise the entry is dead and should go.

@@ -5,7 +5,10 @@ import {
   type NativeScrollEvent,
   ScrollView,
 } from 'react-native';
-import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import {
+  PlainScrollRefreshControl,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import {
   FlashList,
   type FlashListRef,
@@ -262,7 +265,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
-            <ThemedRefreshControl
+            <PlainScrollRefreshControl
               refreshing={refreshing}
               onRefresh={handleRefresh}
             />

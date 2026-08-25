@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, ScrollView } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { ThemedRefreshControl } from '#components/atoms/themedComponents';
+import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useNavigation } from '@react-navigation/native';
@@ -198,7 +198,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <ThemedRefreshControl
+            <PlainScrollRefreshControl
               refreshing={isRefetching}
               onRefresh={refetch}
             />

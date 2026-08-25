@@ -9,6 +9,7 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
+import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { SwipeableListItem } from './SortableItem';
 import {
@@ -195,8 +196,21 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               onScrollEndDrag={onScrollEndDrag}
               onMomentumScrollEnd={onMomentumScrollEnd}
               scrollEventThrottle={scrollEventThrottle}
-              onRefresh={onRefresh}
-              refreshing={refreshing}
+              // An explicit control, NOT the bare `onRefresh`/`refreshing` pair.
+              // Given only those, FlashList builds React Native's RefreshControl
+              // itself (`useSecondaryProps.tsx` — `else if (onRefresh)`), and
+              // RNGH's ScrollView above then hands that control its scroll
+              // gesture as `block`, which RN's control silently drops. The
+              // indicator ends up outside the arbitration: it hangs mid-list and
+              // will not retract until the user pushes it back up by hand.
+              refreshControl={
+                onRefresh ? (
+                  <ThemedRefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                  />
+                ) : undefined
+              }
               maintainVisibleContentPosition={MVCP_DISABLED}
             />
           </View>

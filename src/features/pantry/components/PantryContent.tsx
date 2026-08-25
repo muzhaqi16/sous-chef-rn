@@ -1,12 +1,15 @@
 import React, { useEffect, useRef, useState, useImperativeHandle } from 'react';
-import { View, RefreshControl } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import { Pressable } from '#components/atoms/themedComponents';
+import {
+  Pressable,
+  ThemedRefreshControl,
+} from '#components/atoms/themedComponents';
 import { getTabBarBottomPadding } from '#constants/layout';
 import { Icon } from '#utils/iconUtils';
 import { LocationFilter } from '#features/pantry/utils/pantryFilters';
@@ -432,7 +435,7 @@ export const PantryContent = React.forwardRef<
               scrollEventThrottle={16}
               refreshControl={
                 onRefresh ? (
-                  <RefreshControl
+                  <ThemedRefreshControl
                     testID="pantry-refresh-control"
                     refreshing={refreshing}
                     onRefresh={onRefresh}
