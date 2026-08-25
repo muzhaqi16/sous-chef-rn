@@ -30,6 +30,7 @@ import {
 } from '#operations/storageLocation/storageLocation.generated';
 import { StorageType } from '#/graphql/generated/schemaTypes';
 import { useStorageLocationManagement } from '../useStorageLocationManagement';
+import { storeApi } from '#store';
 
 type ManagementApi = ReturnType<typeof useStorageLocationManagement>;
 
@@ -375,6 +376,54 @@ describe('useStorageLocationManagement', () => {
     });
 
     expect(mockToastError).toHaveBeenCalledWith('Location has items');
+  });
+
+  describe('editing is online-only and says so', () => {
+    // Creating a location IS offline-capable (the server links-or-creates by
+    // name, so a replay converges). Editing is not: no `sync*` twin and no
+    // `idempotencyKey`, so a queued replay has no at-most-once guarantee. The
+    // API's offline contract permits online-only provided the client gates it
+    // — before this it fired anyway and the tap simply failed.
+    const offline = () =>
+      storeApi.setState({ isOnline: false, apiReachable: null } as Partial<
+        ReturnType<typeof storeApi.getState>
+      >);
+
+    afterEach(() =>
+      storeApi.setState({ isOnline: true, apiReachable: true } as Partial<
+        ReturnType<typeof storeApi.getState>
+      >),
+    );
+
+    it.each([
+      [
+        'updateLocation',
+        (api: ManagementApi) => api.updateLocation('loc-1', { name: 'x' }),
+      ],
+      ['deleteLocation', (api: ManagementApi) => api.deleteLocation('loc-1')],
+      [
+        'setDefaultLocation',
+        (api: ManagementApi) => api.setDefaultLocation('loc-1'),
+      ],
+    ])('%s refuses without firing the mutation', async (_name, call) => {
+      const { result } = renderHookWithApollo(
+        () => useStorageLocationManagement('home-1'),
+        // No mutation mock: reaching the network would fail the test.
+        { operationMocks: [buildGetLocationsMock()] },
+      );
+      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+      offline();
+      await waitFor(() => expect(result.current.isApiUnavailable).toBe(true));
+
+      let outcome: unknown;
+      await act(async () => {
+        outcome = await call(result.current);
+      });
+
+      expect(outcome).toBe(false);
+      expect(mockToastError).toHaveBeenCalled();
+    });
   });
 
   it('returns refetch function', async () => {
