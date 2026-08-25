@@ -30,7 +30,10 @@ jest.mock('../queueStore', () => ({
 // Mock queueManager (queueLink calls requestDrain on a successful local-first
 // mutation — keep it a no-op spy so no real timer/processing is scheduled).
 jest.mock('../queueManager', () => ({
-  queueManager: { requestDrain: jest.fn() },
+  queueManager: {
+    requestDrain: jest.fn(),
+    withdrawUnqueueableWrite: jest.fn(),
+  },
 }));
 
 // Mock generateId
@@ -616,6 +619,53 @@ describe('createQueueLink', () => {
         complete() {
           expect(forward).toHaveBeenCalledTimes(1);
           expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+  });
+
+  describe('capacity rejection withdraws the write that already landed', () => {
+    // The house pattern writes the cache permanently and THEN fires. A refused
+    // enqueue therefore leaves the change on screen, in the persisted cache, with
+    // no queue entry and no drain that will ever carry it — the one way this
+    // system could diverge from the server silently and permanently.
+    const { QueueCapacityError } = require('../types');
+    const { queueManager } = require('../queueManager');
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (queueStore.addMutation as jest.Mock).mockImplementation(() => {
+        throw new QueueCapacityError();
+      });
+    });
+
+    afterEach(() => {
+      (queueStore.addMutation as jest.Mock).mockReset();
+    });
+
+    it('withdraws the local change and surfaces the error', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple' } },
+        context: { localFirst: true },
+      });
+
+      link.request(operation, makeForward())!.subscribe({
+        next() {
+          done(new Error('a refused enqueue must not report success'));
+        },
+        error(error) {
+          expect(error).toBeInstanceOf(QueueCapacityError);
+          expect(queueManager.withdrawUnqueueableWrite).toHaveBeenCalledWith(
+            expect.objectContaining({ operationName: 'AddItem' }),
+            expect.objectContaining({ retryable: false }),
+          );
           done();
         },
       });

@@ -739,6 +739,20 @@ export class QueueManager {
     }
   }
 
+  /**
+   * Withdraws a local-first write that could not be queued at all.
+   *
+   * The house pattern writes the cache permanently and THEN fires, so a
+   * rejected enqueue leaves the change on screen, in the persisted cache, with
+   * no queue entry and no drain that will ever carry it — the one way this
+   * system could diverge from the server silently and permanently. A capacity
+   * rejection is a refusal of this write, so it takes the same withdrawal as
+   * any other refusal, from outside the manager.
+   */
+  withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
+    this.invokeFailureHandler(mutation, error);
+  }
+
   private invokeFailureHandler(
     mutation: QueuedMutation,
     error: QueueError,
