@@ -125,15 +125,15 @@ Masking.
 Pick the cache-update pattern by what the mutation changes
 (`docs/apollo-client-patterns.md` has the deep dive):
 
-| Pattern                                        | Use when                                                            | Example                                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| No `update` callback (preferred default)       | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
-| `cache.modify` on parent aggregates            | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
-| `cache.modify` BEFORE firing, revert on error  | Optimistic UI without a callback                                    | `useToggleShoppingItem`                                                    |
-| `updateEntityFieldsLocalFirst`                 | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
-| `cache.modify` on connection edges + counts    | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
-| `writeFragment`                                | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)                 | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
+| Pattern                                       | Use when                                                            | Example                                                                    |
+| --------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| No `update` callback (preferred default)      | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
+| `cache.modify` on parent aggregates           | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
+| `cache.modify` BEFORE firing, revert on error | Optimistic UI without a callback                                    | `useToggleShoppingItem`                                                    |
+| `updateEntityFieldsLocalFirst`                | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
+| `cache.modify` on connection edges + counts   | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
+| `writeFragment`                               | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
+| `refetchQueries` (last resort)                | Query shape underivable from the response                           | `CreateHomeScreen`, `useRecipePreload`                                     |
 
 Defaults:
 
@@ -272,6 +272,22 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   not participate in RNGH's gesture system.
 - `ScrollView` from RNGH only when the container has RNGH gesture components
   inside it; plain forms and settings screens use RN's `ScrollView`.
+- **A FlashList whose rows carry RNGH gestures MUST render RNGH's `ScrollView`**
+  via `renderScrollComponent={SwipeAwareScrollComponent}`
+  (`src/components/atoms/SwipeAwareScrollComponent.tsx`). RNGH cancels only v1/v2
+  handlers when a native scrollable grabs the touch (`cancelAllLegacyHandlers`), and
+  `ReanimatedSwipeable` is on the v3 detectors — so over a plain RN `ScrollView` the
+  row's pan survives the takeover, accumulates horizontal drift for the whole drag,
+  and opens rows mid-scroll. **No `dragOffset` value fixes this**; the drift is
+  unbounded. An RNGH scrollable restores arbitration through the orchestrator.
+  `__tests__/gestures/flashListScrollComponents.test.ts` makes EVERY FlashList
+  declare a `renderScrollComponent` — RNGH's here, gorhom's `BottomSheetScrollable`
+  inside a sheet — or sit on an allowlist with a reason, so a new list cannot ship
+  without the decision being made. `SwipeableItem`'s `dragOffset` (16dp) is defence in
+  depth only, and takes one positive number because `dragOffsetFromRight` throws in
+  `__DEV__` unless non-positive. Verified 2026-08-24 vs
+  `react-native-gesture-handler@3.2.1`:
+  `docs/verified-library-behaviour.md#rngh-v3-handlers-survive-a-native-scroll-takeover`.
 
 ### Bottom sheets
 
@@ -284,7 +300,7 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `BottomSheetTextInput`** — a plain RN `TextInput` leaves the sheet blind to
   the keyboard. It throws outside a sheet, so shared inputs pick it from
   context — `useIsBottomSheetInput() ? ThemedBottomSheetTextInput :
-  ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
+ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   `BottomSheetAutocompleteInput` do. Verified 2026-08-23 vs
   `@gorhom/bottom-sheet@5.2.14` — mechanism:
   `docs/verified-library-behaviour.md#gorhom-keyboard-handling-requires-bottomsheettextinput`.
@@ -405,6 +421,7 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `node scripts/check-compiler-bailouts.mjs` is the real enforcement; for
   `finally` cases use the helpers in `src/utils/finallyHelpers.ts`. Mechanism:
   `docs/verified-library-behaviour.md#react-compiler-try-shapes`.
+
 - **Never read or write `ref.current` during render** — use the
   adjusting-state-during-render pattern for previous/current comparisons.
 - Hook return objects and inline `renderItem`s are auto-memoized in every file
@@ -429,7 +446,7 @@ const gesture = Gesture.Tap().onEnd(() => {
   scheduleOnRN(handleDismiss);
 });
 
-scheduleOnRN(() => onDismiss(id));         // WRONG — inline fn: native crash
+scheduleOnRN(() => onDismiss(id)); // WRONG — inline fn: native crash
 scheduleOnRN(dismissEntry, onDismiss, id); // WRONG — fn arg: object in release
 ```
 

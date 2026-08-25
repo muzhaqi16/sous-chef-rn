@@ -3,6 +3,7 @@ import { View, RefreshControl } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
 import { FlashList, type FlashListRef } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
@@ -409,6 +410,7 @@ export const PantryContent = React.forwardRef<
         <PantryStickyTabsProvider value={stickyTabs}>
           <View style={styles.container}>
             <FlashList<PantryListItem>
+              renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
               testID="pantry-list"

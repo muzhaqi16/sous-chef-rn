@@ -78,6 +78,91 @@ Re-check:
 grep -n "absoluteY + inputHeight\|bottomOffset = " node_modules/react-native-keyboard-controller/src/components/KeyboardAwareScrollView/index.tsx
 ```
 
+### RNGH v3 handlers survive a native scroll takeover
+
+**Claim:** a `ReanimatedSwipeable` row inside a plain RN `ScrollView` opens while
+the user is only scrolling, and no activation distance prevents it. RNGH does not
+cancel v3 gesture handlers when a native scrollable takes the touch stream, so the
+row's pan keeps accumulating horizontal travel for the whole drag and crosses any
+threshold eventually.
+
+**Verified against `react-native-gesture-handler@3.2.1`.** The chain:
+
+1. `ReanimatedSwipeable.tsx:27` imports `GestureDetector` from `'../../v3/detectors'`,
+   so its pan registers as `ACTION_TYPE_NATIVE_DETECTOR` / `ACTION_TYPE_VIRTUAL_DETECTOR`
+   (5 / 6 in `GestureHandler.kt:1034-1035`, assigned in
+   `RNGestureHandlerDetectorView.kt:106,189,227`).
+2. A native view grabbing the touch calls
+   `RNGestureHandlerRootHelper.requestDisallowInterceptTouchEvent()` (`:117`), whose
+   only cancellation is `orchestrator.cancelAllLegacyHandlers()`.
+3. `GestureHandlerOrchestrator.kt:371` — docblock: _"Cancels all handlers created
+   using API v1 and v2"_ — matches only action types 1–4. **Types 5 and 6 are not in
+   the list**, so the swipe pan is never cancelled.
+
+Distance cannot compensate: `activeOffsetX` is measured from touch-down with no time
+limit and no cancellation, so a long scroll crosses 10, 16, 24 — and the 40 that
+failed for the reporter of upstream
+[#2380](https://github.com/software-mansion/react-native-gesture-handler/issues/2380).
+`ReanimatedSwipeable` also exposes no `failOffsetY` in 2.30.0, 3.1.0, 3.2.1 **or
+`3.3.0-nightly-20260824`**, and the legacy non-Reanimated `Swipeable` is gone in 3.x.
+
+**The fix is to make the scrollable an RNGH handler.**
+`GestureHandlerOrchestrator.makeActive()` (`:234-247`) cancels every handler for which
+`shouldHandlerBeCancelledBy` holds, so once the scroll is a real
+`NativeViewGestureHandler` its activation cancels the row's pan through the
+orchestrator — the arbitration `cancelAllLegacyHandlers` fails to provide. FlashList
+takes it via `renderScrollComponent` (`FlashListProps.d.ts:101`); RNGH's root
+`ScrollView` is the v3 wrapper (`src/index.ts:153` re-exports `./v3`), built with
+`createNativeWrapper(..., { disallowInterruption: true }, GestureDetectorType.Intercepting)`.
+It forwards `ref={props.ref}` and re-clones `refreshControl` with `block: scrollGesture`
+(`GestureComponents.tsx:56-115`), so FlashList's scroll ref and pull-to-refresh
+survive the swap. `src/components/atoms/SwipeAwareScrollComponent.tsx` is the single
+place this is wired; `__tests__/gestures/flashListScrollComponents.test.ts` guards it.
+
+**Confirmed on device by controlled A/B (2026-08-24), not just by reading source.**
+With the fix in place the bug was gone; removing `renderScrollComponent` from
+`PantryContent` alone — same freshly-restarted process, same bundle, same
+`dragOffset`, every other list left on RNGH's ScrollView as a control — brought it
+straight back. Restoring the prop cleared it again. That rules out the alternative
+explanation (that a long-lived dev process accumulating stale native registrations
+was the real cause, and the process restart was doing the work), because the failure
+reproduced minutes into a clean process.
+
+Note the direction of the `dragOffset` change in the fixing commit: **24 → 16**, i.e.
+easier to trigger. If activation distance were the lever, lowering it would have made
+misfires worse.
+
+**When it started:** RNGH 2.30.0 → 3.0.2 (2026-07-13, `4a280dae`) moved Swipeable onto
+the v3 detectors. The component's gesture config is identical across 2.30.0 and 3.2.1
+— diffing the component alone clears it wrongly; the engine underneath is what changed.
+Corroboration: `DayMealList.tsx` already used RNGH's `ScrollView` and was the one
+swipeable surface never reported as broken.
+
+**Upstream:** [#4432](https://github.com/software-mansion/react-native-gesture-handler/issues/4432)
+("a regression introduced with the v3 `Pressable`") and open PR
+[#4441](https://github.com/software-mansion/react-native-gesture-handler/pull/4441)
+("when a native `ScrollView` takes the gesture over, nothing stops the handler") are
+the same gap for buttons. That PR's new `cancelHandlersOnNativeTouchGrab` is gated on
+`it is NativeViewGestureHandler`, so it would not cover a detector pan.
+
+**No `minDist` interference.** Android's `PanGestureHandler` inits
+`minDist = defaultMinDist = vc.scaledTouchSlop`, which alone would activate the pan at
+8dp in _any_ direction. Setting any custom criterion (`activeOffsetX` here) makes
+`updateConfig` set `minDist = Float.MAX_VALUE` unless `minDistance` was passed
+explicitly, so the radial fallback is off. On iOS every criterion defaults to `NAN`.
+Never pass `minDistance` alongside these — `validatePanConfig` throws.
+
+`SwipeableItem`'s `dragOffset` (default 16dp, Android's `PAGING_TOUCH_SLOP`) remains as
+defence in depth only. Note `dragOffsetFromRight` **throws** in `__DEV__` unless
+non-positive, which is why the component takes one positive number and applies the sign.
+
+Re-check:
+
+```
+grep -n "cancelAllLegacyHandlers" -A 12 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
+grep -rn "renderScrollComponent" src --include=*.tsx
+```
+
 ### unistyles withUnistyles drops function styles
 
 **Claim:** wrapping `Pressable`/`TouchableX` with `withUnistyles(...)`

@@ -36,6 +36,8 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { useUser } from '#store/useAppStore';
 import {
   TemplateCategory,
@@ -119,6 +121,16 @@ export function useMealTemplateEditor() {
   );
   const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
   const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
+
+  // The template itself is local-first (create/update above); its ITEMS are
+  // not, and cannot be as things stand: there is no `sync*` twin and no
+  // `idempotencyKey` on these inputs, so a queued replay has no at-most-once
+  // guarantee — a replayed `addItem` would add the line twice. The API's
+  // offline contract permits online-only, provided the client gates it behind
+  // its "API unavailable" state instead of letting the tap fail. Without this,
+  // the builder let you create a template offline and then silently fail to
+  // put anything in it.
+  const isApiUnavailable = useIsApiUnavailable();
 
   // Returns the created template's id (for navigation) or null on failure.
   const createTemplate = async (
@@ -269,6 +281,11 @@ export function useMealTemplateEditor() {
   };
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await addItemMutation({ variables: { input } });
@@ -284,6 +301,11 @@ export function useMealTemplateEditor() {
   const updateItem = async (
     input: UpdateTemplateItemInput,
   ): Promise<boolean> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await updateItemMutation({ variables: { input } });
@@ -297,6 +319,11 @@ export function useMealTemplateEditor() {
   };
 
   const removeItem = async (itemId: string): Promise<boolean> => {
+    if (isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     let result;
     try {
       result = await removeItemMutation({
@@ -323,5 +350,7 @@ export function useMealTemplateEditor() {
     creating,
     updating,
     addingItem,
+    /** Template ITEM edits are online-only — disable the controls, don't fail the tap. */
+    itemEditsUnavailable: isApiUnavailable,
   };
 }

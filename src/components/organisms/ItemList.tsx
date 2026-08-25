@@ -11,6 +11,7 @@ import {
   type FlashListRef,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/atoms/EmptyState';
 import { ItemCard } from './ItemCard';
@@ -282,6 +283,7 @@ export const ItemList: React.FC<ItemListProps> = ({
   return (
     <ItemListActionsProvider actions={actions}>
       <FlashList
+        renderScrollComponent={SwipeAwareScrollComponent}
         ref={flashListRef}
         data={items}
         keyExtractor={keyExtractor}

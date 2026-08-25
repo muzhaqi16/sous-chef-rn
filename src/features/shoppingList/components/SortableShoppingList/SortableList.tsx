@@ -8,6 +8,7 @@ import {
   type FlashListRef,
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
+import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { SwipeableListItem } from './SortableItem';
 import {
@@ -168,6 +169,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
         >
           <View style={styles.container}>
             <FlashList<ShoppingListRowItem>
+              renderScrollComponent={SwipeAwareScrollComponent}
               ref={flashListRef}
               CellRendererComponent={perfCallbacks.CellRendererComponent}
               data={items}

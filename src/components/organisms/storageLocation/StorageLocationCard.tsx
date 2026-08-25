@@ -46,6 +46,13 @@ interface StorageLocationCardProps {
   onEdit: () => void;
   onDelete: () => void;
   onSetDefault: () => void;
+  /**
+   * Editing a location is online-only — there is no `sync*` twin or
+   * `idempotencyKey` for these mutations, so a queued replay has no
+   * at-most-once guarantee. Disable rather than let the tap through to a
+   * failure. Creating one is unaffected: the server links-or-creates by name.
+   */
+  actionsDisabled?: boolean;
 }
 
 export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
@@ -55,6 +62,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
   onEdit,
   onDelete,
   onSetDefault,
+  actionsDisabled = false,
 }) => {
   const { t } = useTranslation();
   /** Fallback for a type the schema gained after this table was written. */
@@ -153,9 +161,18 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
               <AppPressable
                 style={[commonStyles.row, styles.actionButton]}
                 onPress={onSetDefault}
+                disabled={actionsDisabled}
               >
-                <Icon name="star-outline" size={18} />
-                <Text size="sm" weight="medium">
+                <Icon
+                  name="star-outline"
+                  size={18}
+                  tone={actionsDisabled ? 'textSecondary' : undefined}
+                />
+                <Text
+                  size="sm"
+                  weight="medium"
+                  tone={actionsDisabled ? 'tertiary' : undefined}
+                >
                   {t('labels.setDefault')}
                 </Text>
               </AppPressable>
@@ -163,18 +180,36 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
             <AppPressable
               style={[commonStyles.row, styles.actionButton]}
               onPress={onEdit}
+              disabled={actionsDisabled}
             >
-              <Icon name="create-outline" size={18} />
-              <Text size="sm" weight="medium">
+              <Icon
+                name="create-outline"
+                size={18}
+                tone={actionsDisabled ? 'textSecondary' : undefined}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                tone={actionsDisabled ? 'tertiary' : undefined}
+              >
                 {t('labels.edit')}
               </Text>
             </AppPressable>
             <AppPressable
               style={[commonStyles.row, styles.deleteActionButton]}
               onPress={onDelete}
+              disabled={actionsDisabled}
             >
-              <Icon name="trash-outline" size={18} tone="error" />
-              <Text size="sm" weight="medium" tone="error">
+              <Icon
+                name="trash-outline"
+                size={18}
+                tone={actionsDisabled ? 'textSecondary' : 'error'}
+              />
+              <Text
+                size="sm"
+                weight="medium"
+                tone={actionsDisabled ? 'tertiary' : 'error'}
+              >
                 {t('labels.delete')}
               </Text>
             </AppPressable>

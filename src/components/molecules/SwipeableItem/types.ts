@@ -39,6 +39,11 @@ export interface SwipeableItemProps {
   swipeMode?: SwipeMode;
   /** Disables swipe gestures when false (e.g. during tutorial spotlight steps) */
   enabled?: boolean;
+  /**
+   * Horizontal travel (dp) before the row starts following the finger. Raise it
+   * if scrolling still opens rows; lower it for a more eager swipe.
+   */
+  dragOffset?: number;
 }
 
 export interface ActionButtonProps {
