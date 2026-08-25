@@ -140,7 +140,7 @@ skip flag follows focus and that a blur/focus cycle costs no request;
 
 ## Reading the instrumentation
 
-- **`useRenderTime`** (`[Performance] X render #N: Y ms`, `render discarded: exceeded
+- **`useCommitTracking`** (formerly `useRenderTime`) (`render discarded: exceeded
 1000ms cap`) measures wall time **between commits**. It includes network
   round-trips and idle time; it is not render cost. The "discarded" lines are noise.
 - **Blank cells are counted from mounted cells** (since 2026-08-20).
@@ -163,6 +163,12 @@ skip flag follows focus and that a blur/focus cycle costs no request;
   query/mutation timings. Reports print every 10 s while a list is active; the
   window that contains an append should add at most one long frame, and its size is
   the append's cost.
+- **`flashlist_initial_load_ms` is device-sensitive, and every number in this doc
+  is from an emulator.** Same screen (`PantryContent`), same release variant:
+  **40 ms** on the Pixel_9a emulator, **301-934 ms** on an SM-S908U1 (2026-08-25).
+  The reading that "the list is not the bottleneck" holds for the emulator and
+  does not transfer. Re-measure on hardware before drawing a conclusion from any
+  figure below.
 
 ## Disposition of the earlier investigation's issues
 

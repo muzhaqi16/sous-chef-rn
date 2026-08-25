@@ -1896,7 +1896,7 @@
     },
     {
       "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" },
-      "description": "P95 cold-start cache/store restore timings (Apollo cache restore variants + Zustand/MMKV hydration)",
+      "description": "P95 cold-start timings. Apollo restore is a real restore cost; JS entry \u2192 store ready spans bundle entry to the Zustand rehydrate callback and is dominated by module evaluation, NOT by hydration.",
       "fieldConfig": {
         "defaults": {
           "color": { "mode": "palette-classic" },
@@ -1951,9 +1951,9 @@
           "legendFormat": "Cache stringify P95"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_zustand_hydration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_entry_to_store_ready_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
           "refId": "D",
-          "legendFormat": "Zustand hydration P95"
+          "legendFormat": "JS entry \u2192 store ready P95"
         }
       ],
       "description": "Apollo restore reports on both paths with an `outcome` label (restored|empty). A rising `empty` rate means cold starts run on an empty cache.",

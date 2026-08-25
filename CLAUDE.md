@@ -549,6 +549,43 @@ infrastructure credential never qualifies. Decisions:
 - Parallel sessions may share this checkout — touch only the files your task
   edits; no whole-tree git commands (`stash`, `reset --hard`, `checkout .`).
 
+## Performance measurement
+
+Every rule here was broken in one session (2026-08-25) and cost four reverted
+changes. Measurement decides what to change; it is not the confirmation step.
+
+- **A mechanism is not a cause.** Confirming in library source HOW something
+  works says nothing about its SHARE of the time. Measure the share first.
+- **Read a metric's definition before reasoning from its name.** The contract
+  table is `docs/telemetry-setup.md` § Metric Reference, and
+  `__tests__/telemetry/metricContracts.test.ts` keeps it complete.
+  `app_zustand_hydration_ms` measured JS-entry → rehydrate (a module-evaluation
+  window); the real hydration in it is ~5 ms. The name sent a whole pass after
+  that 5 ms — it is now `app_js_entry_to_store_ready_ms`.
+- **Numbers come from a release build; attribution may come from debug — never
+  mix them in one comparison.** A debug build overstates mount/append cost, and
+  in a debug bundle the FIRST heavy `require` after a timing mark absorbs
+  ~200 ms that belongs to no module: move an unrelated import in front of it and
+  the cost follows the position, not the module.
+- **Emulator numbers understate hardware. Re-measure on a device before acting.**
+  `flashlist_initial_load_ms` for the same screen: 40 ms emulator, 301–934 ms on
+  an SM-S908U1.
+- **State the instrument's resolution.** A difference smaller than one sample is
+  not a result — 450 ms screenshot sampling cannot resolve a 100 ms change, and a
+  series that returns the same value for two different builds is not measuring
+  them.
+- **Run a control before believing an attribution.** Vary something you do NOT
+  believe in. If the cost follows it, the attribution was positional.
+- **Never read a performance value from a `slow_*_total` counter's labels.**
+  They are threshold-gated and structurally cannot show the fast half of the
+  distribution. Use the `_bucket`/`_sum`/`_count` histogram series.
+- **Judge an intermittent mode against a distribution, not a handful of samples.**
+  Per-session counters plus lingering series also make cross-session aggregation
+  (`sum(...) by (screen)`) untrustworthy — read per session.
+
+Protocol, numbers, and the retractions behind these rules:
+`docs/audits/perf-offline-baseline-2026-08-24.md`.
+
 ## Verification
 
 After code changes:

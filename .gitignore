@@ -111,7 +111,12 @@ src/graphql/generated/fragmentMatcher.json
 # Generated build-time config (see scripts/generate-env.js)
 src/config/env.generated.ts
 
+# Audits are scratch by default, but the perf/offline baseline is tracked: it
+# holds the measurement protocol, the numbers, and — more importantly — the
+# retractions of earlier readings that were artifacts. Untracked, each session
+# re-derives it and repeats the same mistakes.
 docs/audits/*
+!docs/audits/perf-offline-baseline-2026-08-24.md
 
 # Watchman probe files. Watchman drops these into the watched root to verify it
 # is receiving filesystem notifications, then deletes them; one is left behind

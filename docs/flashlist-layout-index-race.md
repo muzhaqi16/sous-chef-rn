@@ -141,7 +141,7 @@ gaps and timings are.
   the same build threw on 4 of 4.
 - **Pantry deletes:** long frames unchanged at 2, peak frame gap 63 ms across a 190 s
   session; per-delete commit intervals 87–476 ms, the same order as before. (The
-  `useRenderTime` "exceeded 1000ms cap" lines are wall time between commits and include
+  `useCommitTracking` (formerly `useRenderTime`) "exceeded 1000ms cap" lines are wall time between commits and include
   the `DeletePantryItem` + `GetPantry` round-trips.)
 - **Pantry local-window appends** (24 → 48 → 59, now rendered synchronously) never
   registered a long frame.

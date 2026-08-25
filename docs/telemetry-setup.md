@@ -175,6 +175,23 @@ In Grafana Explore, query:
 | `component_render_count` | `component` | Commits per component (re-render churn) |
 | `slow_screen_transitions_total` | `screen` | Transitions > 500ms. Threshold-gated: read durations from `screen_interactive_duration_ms`, never from this counter's labels. |
 | `offline_queue_permanent_failures_total` | | Queued writes the client gave up on |
+| `apollo_client_errors_total` | `operation`, `type` | Apollo error surfaced to a hook. `type` is `cache` or `graphql`. |
+| `app_level_errors_total` | | Error caught by the outermost `AppErrorBoundary`. |
+| `auth_errors_total` | | Error caught by the auth-screen error boundary. |
+| `navigation_errors_total` | | Error caught by the navigation error boundary. |
+| `onboarding_errors_total` | | Error caught by the onboarding error boundary. |
+| `pantry_errors_total` | | Error caught by the pantry error boundary. |
+| `recipe_detail_errors_total` | | Error caught by the recipe-detail error boundary. |
+| `shopping_list_errors_total` | | Error caught by the shopping-list error boundary. |
+| `app_unhandled_exceptions_total` | `fatal` | Global JS exception handler. `fatal` is `"true"`/`"false"` as a string. |
+| `flashlist_blank_cells_total` | `component` | Blank EPISODES, not evaluations - a transition into "a visible index has no mounted cell". Counts from mounted cells since 2026-08-20; older blank percentages were a 250 ms viewability artifact and are not comparable. |
+| `flashlist_data_reference_changes` | `component` | The list's `data` array changed identity. Two trackers feed this per list (raw + sorted), so it counts both. |
+| `offline_queue_drain_started_total` | | A queue drain actually began. |
+| `offline_queue_drain_skipped_total` | `reason` | A drain was requested and declined - `already_processing`, no authenticated user, API unavailable. Pair with `_started_total` to see whether writes are replaying at all. |
+| `offline_queue_conflicts_total` | `operation` | A replayed mutation came back as a conflict. |
+| `offline_queue_auth_parked_total` | `operation` | A queued write was parked because the token could not be refreshed. NOT a rejection - the server never saw it; it is revived on the next sign-in. |
+| `reconnect_backfill_queries_total` | | Active queries refetched after an outage ended. Incremented by the number refetched, so it is a volume, not an event count. |
+| `storage_recovery_instance_used` | | The device key was unavailable and the session fell back to unencrypted recovery storage. Any non-zero value means encrypted data was not readable that launch. |
 
 ### Gauges
 
@@ -194,7 +211,6 @@ In Grafana Explore, query:
 | `app_startup_duration_ms` | | Full app startup time |
 | `app_native_launch_ms` | | Native platform init time |
 | `app_js_bundle_load_ms` | | Hermes bytecode load time |
-| `app_content_appeared_ms` | | Time to first content |
 | `screen_mount_duration_ms` | `screen` | Screen mount time |
 | `screen_interactive_duration_ms` | `screen` | Time to interactive |
 | `screen_transition_duration_ms` | `screen` | Full transition time |
@@ -202,10 +218,15 @@ In Grafana Explore, query:
 | `http_request_duration_ms` | `host` | HTTP request duration |
 | `graphql_request_duration_ms` | `name` | GraphQL operation duration |
 | `app_apollo_restore_ms` | `outcome` | Persisted-cache restore at cold start. `outcome` is `restored` or `empty` - an `empty` majority means every launch refetches. |
-| `app_zustand_hydration_ms` | | Zustand store hydration time |
+| `app_js_entry_to_store_ready_ms` | | JS-bundle entry to the Zustand rehydrate callback. NOT hydration cost - the window is dominated by module evaluation; the blob read + parse + rehydrate is ~5 ms of it. Renamed from `app_zustand_hydration_ms`, whose name implied the opposite. |
 | `cache_persist_extract_ms` | | `cache.extract()` cost |
 | `cache_persist_stringify_ms` | | Cache `JSON.stringify` cost |
 | `resort_edges_duration_ms` | | Cost of re-sorting a cached `itemsConnection` after a subscription event |
+| `flashlist_initial_load_ms` | `component` | FlashList `onLoad` - mount to first layout complete. Device-sensitive: measured 40 ms on the Pixel_9a emulator and 301-934 ms on an SM-S908U1. Do not read an emulator value as a device value. |
+| `flashlist_scroll_coverage_ratio` | `component` | Mounted cells / expected visible cells during scroll, custom bounds. 1.0 is full coverage. |
+| `flashlist_session_duration_ms` | `component` | How long a list stayed mounted, emitted on unmount. |
+| `offline_queue_oldest_age_ms` | | Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. |
+| `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. |
 
 All metrics automatically include `env` (environment) and `platform` (ios/android) labels.
 

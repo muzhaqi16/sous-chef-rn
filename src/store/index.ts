@@ -180,15 +180,22 @@ export const handleStoreRehydration = (
   // keychain (not MMKV) is their persistence tier.
   void hydrateSessionTokensThenFinish(state);
 
-  // Cold-start telemetry: time from JS bundle entry to Zustand
-  // hydration callback firing. Captures MMKV decrypt + JSON parse +
-  // store rehydrate cost. Imported lazily to avoid pulling
-  // telemetry into the persist closure during module load.
+  // Cold-start telemetry. NAME THE WINDOW, not the last thing in it: this spans
+  // JS-bundle entry (`__APP_START_TIMESTAMP`) to this rehydrate callback, so it
+  // is dominated by module evaluation and whatever else holds the JS thread —
+  // NOT by store hydration. Measured 2026-08-25: the persisted blob is ~35 KB
+  // and its read + JSON.parse + rehydrate is ~5 ms of the window. It was called
+  // `app_zustand_hydration_ms`, and that name alone sent an optimisation pass
+  // after a 5 ms cost. Imported lazily to avoid pulling telemetry into the
+  // persist closure during module load.
   const startTs = (globalThis as { __APP_START_TIMESTAMP?: number })
     .__APP_START_TIMESTAMP;
   if (startTs) {
     import('#services/telemetry').then(({ Telemetry }) => {
-      Telemetry.histogram('app_zustand_hydration_ms', Date.now() - startTs);
+      Telemetry.histogram(
+        'app_js_entry_to_store_ready_ms',
+        Date.now() - startTs,
+      );
     });
   }
 

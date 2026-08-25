@@ -1,5 +1,5 @@
 PODS:
-  - APNGKit (2.3.0):
+  - APNGKit (2.4.0):
     - Delegate (~> 1.3)
   - Delegate (1.3.0)
   - FBLazyVector (0.86.3)
@@ -144,7 +144,7 @@ PODS:
     - React-utils
     - ReactNativeDependencies
     - Yoga
-  - React-Core-prebuilt (0.85.3):
+  - React-Core-prebuilt (0.86.3):
     - ReactNativeDependencies
   - React-Core/CoreModulesHeaders (0.86.3):
     - hermes-engine
@@ -3081,7 +3081,7 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native/ReactCommon/yoga"
 
 SPEC CHECKSUMS:
-  APNGKit: eb7e111277527cfd47636f797c9c8e7aab5d9601
+  APNGKit: dd0334806d724c889d0aa06cfbccee1f2d32e89c
   Delegate: 0ff4467868095239ff578ab531efd8af46e62881
   FBLazyVector: 2138c6c2ab66c31bf5754dc18097fbc498a49c7f
   Gifu: 9f7e52357d41c0739709019eb80a71ad9aab1b6d
@@ -3099,7 +3099,7 @@ SPEC CHECKSUMS:
   React: 52dce66f71097ed7a4968673d95eeb8095ded74e
   React-callinvoker: afa0525ab27f4ffbb4c377f855fe9368edb099bc
   React-Core: fdb67992e049f2526ade3e258c21b8404e7943a3
-  React-Core-prebuilt: 5e5307a3b03a8d08c4c50af4d1477d6741381dbd
+  React-Core-prebuilt: 9abc518a8aa7aa4fa3bbbe52bc825bcd9fb3c3ce
   React-CoreModules: 456d91152aa283ddc6ae8abfcec3292af88912f6
   React-cxxreact: 73a20c0dde5ec221f98d5e4da0e71349ab48353d
   React-debug: d06757ac6c78b84af0c31e513a83662d6b8d0ac7
