@@ -270,11 +270,16 @@ Histogram bucket boundaries: `[10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 1000
 
 | Problem | Cause | Fix |
 |---------|-------|-----|
-| No metrics after changing env vars | `react-native-config` needs native rebuild | Run `npx react-native run-android/ios` |
+| No metrics after changing env vars | Env is baked into the bundle at build time by `scripts/generate-env.js` | Rebuild: `npm run android` / `npm run ios` (or `npm run ios:release`) |
 | HTTP 401 on metrics | Wrong instance ID or expired token | Check OTLP instance ID (not Prometheus ID) and regenerate token |
 | HTTP 400 "invalid temporality" | Backend expects CUMULATIVE | Ensure `aggregationTemporality: 2` in HttpTransport |
 | Dashboards show "No data" | Metrics not ingested or wrong `service_name` label | Query `{service_name="sous-chef-app"}` in Explore to verify |
 | Logs not appearing | Logs endpoint not configured or token missing `logs:write` scope | Check `OTLP_LOGS_ENDPOINT` is set and `OTLP_LOGS_AUTH_*` token has the correct scopes |
+| A whole run emits nothing, with no error | No `.env`, so `OTLP_METRICS_ENDPOINT` is `undefined` and `transports.http` resolves false | Create `.env`; verify with `npm run genenv && grep OTLP src/config/env.generated.ts` — the values must be strings |
+| A Detox run emits nothing, but a hand-run build works | `e2e/init.ts` sets `detoxDisableBackgroundServices`, which switches telemetry off | Prefix the run with `E2E_TELEMETRY=1`, which adds `detoxEnableTelemetry` |
+| A Detox **release** run ignores `E2E_TELEMETRY` and the injected auth tokens | `useStartupInit` reads launch args only when `!Environment.isProduction()`, and a release build with no `NODE_ENV` resolves to production | Set `NODE_ENV=development` in `.env` — release JS, local API, launch args honoured |
+| 404 on `/v1/metrics/v1/metrics` | `OTLP_*_ENDPOINT` was given a full path | The transport appends `/v1/metrics` and `/v1/logs` itself, so configure the BASE path only |
+| iOS emits nothing against a plaintext collector | App Transport Security | `NSAllowsLocalNetworking` permits plaintext to private-range and `.local` hosts; any other plaintext host is blocked on iOS and needs TLS |
 
 ## Code Structure
 

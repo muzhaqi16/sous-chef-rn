@@ -4,8 +4,8 @@ The probe record behind CLAUDE.md's one-line verification stamps. Each entry
 pins a rule to what the INSTALLED package actually does: the claim, the
 version it was verified against, the mechanism in the library's own source,
 and a command that re-derives it. **If a rule changes, re-run its probe and
-update the entry — a rule without a live check is a hypothesis.** All entries
-last verified 2026-08-23.
+update the entry — a rule without a live check is a hypothesis.** Entries are
+last verified 2026-08-23 unless the entry names a later date.
 
 ### gorhom BottomSheetView cannot bound a scrollable
 
@@ -345,3 +345,144 @@ subscription's sink; `dispose()` latches a `disposed` flag with no reset, and
 `src/apollo/links/wsCloseCodes.ts`, pinned by
 `src/apollo/links/__tests__/wsCloseCodes.library.test.ts`, which drives the
 real installed library against a fake socket. Re-check: run that suite.
+
+### Hermes' sampling profiler is reachable on iOS with no new dependency
+
+**Claim:** the Hermes startup CPU profiler that
+`android/.../StartupMarkModule.kt` drives through the static
+`com.facebook.hermes.instrumentation.HermesSamplingProfiler` has a direct iOS
+counterpart in the installed pod — a process-global root API — so
+`react-native-release-profiler` is not needed on either platform.
+
+**Verified 2026-08-25 against `hermes-engine` as vendored by
+`react-native@0.86.3`.** `facebook::hermes::makeHermesRootAPI()` returns a
+`jsi::ICast*` with static lifetime that casts to `IHermesRootAPI`, and
+`enableSamplingProfiler(double)`, `disableSamplingProfiler()` and
+`dumpSampledTraceToFile(const std::string&)` are declared on that interface.
+They are `virtual`, so they dispatch through the returned object's vtable and
+need no exported symbols of their own — `makeHermesRootAPI()` being exported is
+the entire linkage requirement.
+
+Three things were checked rather than assumed, because each is a way the route
+could exist in headers and still not work in a shipped build:
+
+- The entry symbol is exported in the prebuilt xcframework, not just declared.
+- The profiler is genuinely compiled in rather than stubbed out by
+  `HERMESVM_SAMPLING_PROFILER_AVAILABLE` — `SamplingProfiler.cpp.o`,
+  `SamplingProfilerPosix.cpp.o` and `SamplingProfilerSampler.cpp.o` are all
+  linked into the binary, on the device slice as well as the simulator one.
+- The app target can already see the headers and the framework, so no Podfile
+  change and no `pod install` is involved.
+
+Re-check:
+
+```
+SLICE=ios/Pods/hermes-engine/destroot/Library/Frameworks/universal/hermesvm.xcframework/ios-arm64_x86_64-simulator
+nm -gU "$SLICE/hermesvm.framework/hermesvm" | c++filt | grep makeHermesRootAPI
+nm -a  "$SLICE/hermesvm.framework/hermesvm" | grep -c SamplingProfiler   # expect ~106, not 0
+grep -n "makeHermesRootAPI\|SamplingProfiler" ios/Pods/hermes-engine/destroot/include/hermes/hermes.h
+grep -o 'HEADER_SEARCH_PATHS = .*' "ios/Pods/Target Support Files/Pods-SousChef/Pods-SousChef.release.xcconfig" | tr ' ' '\n' | grep hermes-engine
+```
+
+Used by `ios/SousChef/StartupMarkModule.mm`. **Dump before disable** —
+disabling first discards the samples and leaves a valid-looking empty trace.
+
+### simctl screenshot sampling resolves ~176 ms, no finer
+
+**Claim:** the `xcrun simctl io <device> screenshot` loop in
+`scripts/ios-frame-sample.mjs` samples at roughly 176 ms, so it can resolve the
+~2 s scale of a cold start and cannot resolve anything under ~200 ms.
+
+**Verified 2026-08-25 on Xcode 26.6 / iOS 26.5, iPhone 17 simulator**, n=20 over
+a static screen: median 176 ms per screenshot, min 159, max 351. For scale, the
+Android equivalents were 130-160 ms on the emulator and ~450 ms on the phone.
+`simctl` writes full-resolution PNGs with no downscale option (~2.9 MB each),
+which is most of the cost and why a run's output directory is wiped first.
+
+This matters because iOS has **no OS-side fully-drawn marker** — there is no API
+that accepts an app-declared "fully drawn" signal — so this loop is the only
+second method available for cross-checking `app_fully_drawn_ms` on the platform,
+and the Android two-method agreement result does not carry over.
+
+Re-check: run `node scripts/ios-frame-sample.mjs`; it reports the achieved
+median/min/max interval for that run rather than trusting this number.
+
+Two classification traps this instrument has, both found by running it and both
+now handled in the script: the pre-launch frame is often the LARGEST of the run
+(3.21 MB against a 776 KB settled frame), so min/max-derived bands put real
+content in a middle band and call the pre-launch frame "settled"; and relative
+bands cannot mark the END of a load at all, because the tallest frame is always
+the top band. Anchor to the blankest frame and detect the plateau — a settled
+screen holds its byte size flat, here 776,027 bytes for seven seconds.
+
+### jest.isolateModules cannot hold a Platform.OS override past its callback
+
+**Claim:** a test that sets `Platform.OS` inside `jest.isolateModules(...)` and
+then calls the code under test *outside* the callback silently gets the real
+`Platform.OS` back.
+
+**Verified 2026-08-25 against `react-native@0.86.3`.** RN's index exports
+`Platform` through a lazy getter that `require`s the module on every access, and
+Babel's ESM interop compiles `import { Platform } from 'react-native'` into that
+same live read. So a `Platform.OS` check runs its `require` when the method is
+CALLED, not when the module is imported — and once the `isolateModules` callback
+returns, that require resolves against the restored OUTER registry and hands
+back the untouched `Platform`.
+
+The failure is silent and one-sided, which is what makes it worth writing down:
+anything destructured out of `NativeModules` at import time keeps pointing at
+the stub, so those assertions still pass and only the `Platform`-gated ones
+fail. Use `jest.resetModules()` and keep the mutated registry live instead.
+
+Re-check: `src/native/__tests__/StartupMark.test.ts`, whose `load()` helper
+carries the same explanation at its call site.
+
+### RN$LegacyInterop_UIManager_getConstantsForViewManager does not exist on iOS
+
+**Claim:** `src/services/performance/viewManagerProbe.ts` records nothing on
+iOS, and structurally cannot — so `viewmanagers.json` is written but always
+holds `{"totalMs":0,"count":0,"rows":[]}` there.
+
+**Verified 2026-08-25 against `react-native@0.86.3`**, by running a profiled
+release build on an iPhone 17 simulator and reading the file back out of the app
+container. The probe wraps
+`global.RN$LegacyInterop_UIManager_getConstantsForViewManager`, which on iOS is
+installed only when `ReactNativeFeatureFlags::useNativeViewConfigsInBridgelessMode()`
+is true (`RCTInstance.mm:457-459`), and that flag defaults to **false**
+(`ReactNativeFeatureFlagsDefaults.h:354-356`). The binding is therefore never
+installed and the probe's `typeof original !== 'function'` guard returns
+immediately. Android installs its equivalent through
+`ReactAndroid/.../UIConstantsProviderBinding.cpp` regardless.
+
+This is a platform difference, not a tooling gap, and it matters for how the
+Android result is read: the standout finding there was UIManager view-manager
+constants running at 3.29x the hardware gap, queried synchronously at
+module-import time through exactly this global. **iOS does not take that code
+path at all** — view configs come from the static native component registry —
+so the cost has no iOS counterpart. Its absence is a different mechanism, not a
+faster one.
+
+Re-check:
+
+```
+grep -rn "useNativeViewConfigsInBridgelessMode" node_modules/react-native/ReactCommon/react/runtime/platform/ios/ReactCommon/RCTInstance.mm
+grep -n -A3 "useNativeViewConfigsInBridgelessMode" node_modules/react-native/ReactCommon/react/featureflags/ReactNativeFeatureFlagsDefaults.h
+```
+
+### A profiled run's app_fully_drawn_ms suppression needs timestamp(), not query_range
+
+**Claim:** checking that a `HERMES_PROFILE_STARTUP` run emitted no
+`app_fully_drawn_ms` sample with a Prometheus range query gives the wrong
+answer — the series looks freshly written when it was not.
+
+**Verified 2026-08-25 against Mimir.** Prometheus carries a series' last value
+forward for five minutes, so a `query_range` over a window that includes the
+PREVIOUS unprofiled session shows samples at every step right through the
+profiled run. `timestamp(app_fully_drawn_ms_count{platform="ios"})` returns the
+sample's own write time instead, which is what distinguishes them: 15:33:55 (the
+terminated session) against 15:35:42 for `app_content_appeared_ms_count`,
+`app_native_launch_ms_count` and `app_starts_total` from the live profiled run.
+
+Same reason the audit says to read these per session and never aggregate: each
+cold start is a new process, so the transport's cumulative accumulator restarts
+and `_count` is 1 per launch.
