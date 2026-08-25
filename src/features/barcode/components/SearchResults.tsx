@@ -27,7 +27,10 @@ import {
   createOptimisticShoppingListItem,
   reconcileShoppingCreate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  addToPantryItemsCache,
+  adjustPantryItemCount,
+} from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import {
@@ -193,6 +196,13 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           );
           try {
             addToPantryItemsCache(client.cache, pantryId, optimisticPantryItem);
+            // The connection updater moves the LIST; the header's "N items"
+            // reads `Pantry.stats.totalItems`, which only the mutation's
+            // `update:` callback touched — and that never runs when the create
+            // is queued offline. Same defect as the add sheet had, on the third
+            // create path. It sits beside the optimistic row so both move
+            // together whether or not the create reaches the server.
+            adjustPantryItemCount(client.cache, pantryId, 1);
           } catch (cacheError) {
             errorService.reportError(cacheError, {
               operation: 'Add Pantry Item (optimistic)',
@@ -214,8 +224,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           if (duplicateInfo) {
             setIsLoading(false);
             // Already in the pantry → the server keeps the existing row, not
-            // our optimistic item. Discard the one we wrote.
+            // our optimistic item. Discard the one we wrote, count included.
             safeEvict(client.cache, 'PantryItem', id);
+            adjustPantryItemCount(client.cache, pantryId, -1);
             promptPantryDuplicate({
               onRestock: () => {
                 executeWithLoadingState(
@@ -283,8 +294,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
           const outcome = classifyCreateResult(result);
           if (outcome === 'rejected') {
-            // The server refused the create — discard the item we wrote.
+            // The server refused the create — discard the item we wrote,
+            // count included.
             safeEvict(client.cache, 'PantryItem', id);
+            adjustPantryItemCount(client.cache, pantryId, -1);
             alertService.alert(
               t('labels.error'),
               t('errors.addItemFailedRetry'),

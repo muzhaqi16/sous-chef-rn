@@ -15,6 +15,11 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   safeEvict: jest.fn(),
 }));
 
+jest.mock('#/apollo/utils/pantryCacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/pantryCacheUpdaters'),
+  adjustPantryItemCount: jest.fn(),
+}));
+
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => {
   const { classifyCreateResult } = jest.requireActual(
     '#/apollo/utils/classifyCreateResult',
@@ -215,6 +220,66 @@ describe('SearchResults', () => {
     expect(firedInput.netWeight).toEqual({
       netWeight: 1.89,
       netWeightUnitId: 'unit-litre',
+    });
+  });
+
+  describe('the pantry item count', () => {
+    // `addToPantryItemsCache` moves the LIST; the header's "N items" reads
+    // `Pantry.stats.totalItems`, which only the mutation's `update:` callback
+    // touched — and that never runs when the create is queued offline. The
+    // scanner is the third create path and was the last one still doing it.
+    const { adjustPantryItemCount } = jest.requireMock(
+      '#/apollo/utils/pantryCacheUpdaters',
+    );
+
+    it('moves with the optimistic row, before the server answers', async () => {
+      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          },
+        },
+      });
+
+      renderWithProviders(<SearchResults {...defaultProps} />, {
+        apolloProps: { mocks: [rec.mock] },
+      });
+      fireEvent.press(screen.getByTestId('primary-btn'));
+
+      await waitFor(() =>
+        expect(adjustPantryItemCount).toHaveBeenCalledWith(
+          expect.anything(),
+          defaultProps.pantryId,
+          1,
+        ),
+      );
+    });
+
+    it('is taken back when the server refuses the create', async () => {
+      const rec = recordMock(BarcodeCreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'nope',
+            field: 'quantity',
+          },
+        },
+      });
+
+      renderWithProviders(<SearchResults {...defaultProps} />, {
+        apolloProps: { mocks: [rec.mock] },
+      });
+      fireEvent.press(screen.getByTestId('primary-btn'));
+
+      await waitFor(() =>
+        expect(adjustPantryItemCount).toHaveBeenCalledWith(
+          expect.anything(),
+          defaultProps.pantryId,
+          -1,
+        ),
+      );
     });
   });
 });
