@@ -153,7 +153,9 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
   };
   const { NativePerformanceService } = jest.requireMock(
     '#/services/performance/NativePerformanceService',
-  ) as { NativePerformanceService: { initialize: jest.Mock } };
+  ) as {
+    NativePerformanceService: { initialize: jest.Mock; cleanup: jest.Mock };
+  };
 
   const storeActions = {
     setAuth: jest.fn(),
@@ -238,12 +240,15 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
       detoxDisableBackgroundServices: 1,
     });
 
-    renderHook(() => useStartupInit());
+    const { unmount } = renderHook(() => useStartupInit());
 
     expect(Telemetry.updateConfig).toHaveBeenCalledWith(
       expect.objectContaining({ enableLogs: false, enableMetrics: false }),
     );
     expect(NativePerformanceService.initialize).not.toHaveBeenCalled();
+
+    unmount();
+    expect(NativePerformanceService.cleanup).not.toHaveBeenCalled();
   });
 
   it('keeps telemetry when a measuring run asks for both', () => {
@@ -254,7 +259,7 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
       detoxEnableTelemetry: 1,
     });
 
-    renderHook(() => useStartupInit());
+    const { unmount } = renderHook(() => useStartupInit());
 
     expect(Telemetry.updateConfig).not.toHaveBeenCalledWith(
       expect.objectContaining({ enableLogs: false, enableMetrics: false }),
@@ -262,5 +267,10 @@ describe('useStartupInit — the environment gate on launch-arg injection', () =
     // Startup marks come from here; without it a measuring run reports no
     // app_native_launch_ms / app_js_bundle_load_ms.
     expect(NativePerformanceService.initialize).toHaveBeenCalled();
+
+    // Whatever init started, cleanup has to stop — the two guards read the
+    // same pair of flags, and a divergence leaks the observers it attached.
+    unmount();
+    expect(NativePerformanceService.cleanup).toHaveBeenCalled();
   });
 });

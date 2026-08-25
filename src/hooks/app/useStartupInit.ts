@@ -233,8 +233,11 @@ export function useStartupInit(): void {
     // ref read inside cleanup — keeps react-hooks/exhaustive-deps happy
     // and reflects the post-injection value.
     const detoxDisabledAtCleanup = detoxBackgroundServicesDisabledRef.current;
+    const detoxTelemetryEnabledAtCleanup = detoxTelemetryEnabledRef.current;
     return () => {
-      if (!detoxDisabledAtCleanup) {
+      // Mirrors the init guard above — a measuring run initializes both, so it
+      // has to tear both down.
+      if (!detoxDisabledAtCleanup || detoxTelemetryEnabledAtCleanup) {
         NativePerformanceService.cleanup();
         MemoryMonitor.stop();
       }
