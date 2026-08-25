@@ -49,7 +49,8 @@ jest.mock('../queueStore', () => ({
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
     markMutationFailed: jest.fn(() => true),
-    cleanupTerminal: jest.fn(() => 0),
+    cleanupTerminal: jest.fn(() => []),
+    revivePendingAuthErrors: jest.fn(() => 0),
     clearQueueForUser: jest.fn(() => 0),
     setCurrentUserId: jest.fn(),
     clearCurrentUserId: jest.fn(),
@@ -211,7 +212,10 @@ describe('QueueManager', () => {
       expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledWith(
         'user-1',
       );
-      expect(queueStore.cleanupTerminal).not.toHaveBeenCalled();
+      // Cleanup runs even with nothing pending. It used to sit after the
+      // empty-queue return, so a queue holding only terminal entries — with no
+      // pending work to trigger a pass — was never cleaned at all.
+      expect(queueStore.cleanupTerminal).toHaveBeenCalled();
     });
 
     it('recovers stranded PROCESSING entries before collecting pending work', async () => {
@@ -2026,8 +2030,12 @@ describe('QueueManager', () => {
     });
 
     // --- Integration: auth failure invokes failure handler ---
-    describe('auth failure invokes failure handler on token refresh failure', () => {
-      it('invokes failure handler when token refresh fails', async () => {
+    describe('an auth failure parks the write instead of withdrawing it', () => {
+      // The server never saw the write, so nothing about it was rejected — we
+      // just could not authenticate. Withdrawing here used to destroy the local
+      // change AND leave an entry no drain would look at again, under a toast
+      // saying the change had been rejected. Both were wrong.
+      it('does not withdraw the local change when token refresh fails', async () => {
         const { proactiveTokenRefresh } = require('../../links/refreshToken');
         (proactiveTokenRefresh as jest.Mock).mockResolvedValue(null);
         const handler = jest.fn();
@@ -2036,26 +2044,88 @@ describe('QueueManager', () => {
           manager['handleMutationError'].bind(manager);
 
         jest.useRealTimers();
-        const mutation = makeMutation({
-          id: 'auth-fail-h',
-          operationName: 'UpdateShoppingList',
-          variables: { input: { id: 'list-10' } },
-        });
-        await handleMutationError(mutation, {
-          message: 'Unauthorized',
-          extensions: { code: 'UNAUTHENTICATED' },
-        });
+        await handleMutationError(
+          makeMutation({
+            id: 'auth-fail-h',
+            operationName: 'UpdateShoppingList',
+            variables: { input: { id: 'list-10' } },
+          }),
+          { message: 'Unauthorized', extensions: { code: 'UNAUTHENTICATED' } },
+        );
         jest.useFakeTimers();
 
-        expect(handler).toHaveBeenCalledTimes(1);
+        expect(handler).not.toHaveBeenCalled();
+        expect(queueStore.markMutationFailed).toHaveBeenCalledWith(
+          'auth-fail-h',
+          expect.objectContaining({ type: 'auth' }),
+        );
+      });
+
+      it('revives auth-parked writes when a user signs in', () => {
+        manager.onUserChange('user-1', null);
+        expect(queueStore.revivePendingAuthErrors).toHaveBeenCalledWith(
+          'user-1',
+        );
+      });
+
+      it('withdraws the change only once the entry is actually aged out', async () => {
+        // Ageing the entry out is the last moment it exists: the change is
+        // still on screen, never sent, and now has nothing left to send it.
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+        });
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        const expired = makeMutation({
+          id: 'auth-expired',
+          operationName: 'UpdateShoppingList',
+          variables: { input: { id: 'list-11' } },
+        });
+        expired.status = QueueStatus.AUTH_ERROR;
+        (queueStore.cleanupTerminal as jest.Mock).mockReturnValueOnce([
+          expired,
+        ]);
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+
+        jest.useRealTimers();
+        await manager.processQueue();
+        jest.useFakeTimers();
+
         expect(handler).toHaveBeenCalledWith(
           expect.objectContaining({
-            mutationId: 'auth-fail-h',
-            operationName: 'UpdateShoppingList',
-            entityType: 'ShoppingList',
-            entityId: 'list-10',
+            mutationId: 'auth-expired',
+            entityId: 'list-11',
+            error: expect.objectContaining({ type: 'auth' }),
           }),
         );
+      });
+
+      it('leaves an aged-out SUCCESS entry alone', async () => {
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+        });
+        const handler = jest.fn();
+        manager.setFailureHandler(handler);
+
+        const done = makeMutation({ id: 'done-1' });
+        done.status = QueueStatus.SUCCESS;
+        (queueStore.cleanupTerminal as jest.Mock).mockReturnValueOnce([done]);
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+
+        jest.useRealTimers();
+        await manager.processQueue();
+        jest.useFakeTimers();
+
+        expect(handler).not.toHaveBeenCalled();
       });
     });
   });

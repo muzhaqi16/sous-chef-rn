@@ -197,6 +197,8 @@ export class QueueManager {
     // of classifying as IDEMPOTENT_REPLAY. Expired entries surface as FAILED.
     queueStore.expireStalePending(userId);
 
+    this.reconcileDiscardedEntries();
+
     const mutations = queueStore.getPendingMutationsForUser(userId);
 
     // Queue health at drain time: depth, and how long the oldest entry has
@@ -248,9 +250,6 @@ export class QueueManager {
     logger.info(
       `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
     );
-
-    // Cleanup old successful mutations
-    queueStore.cleanupTerminal();
   }
 
   /**
@@ -469,9 +468,18 @@ export class QueueManager {
     if (queueError.type === 'auth') {
       const newToken = await proactiveTokenRefresh();
       if (!newToken) {
-        logger.error(`❌ Queue: Token refresh failed for ${mutation.id}`);
+        // Parked, not withdrawn. The server never saw this write, so nothing
+        // about it was rejected — we just could not authenticate. Withdrawing
+        // here destroyed the local change AND left an entry no drain would ever
+        // look at again, under a toast that said the change had been rejected.
+        // `revivePendingAuthErrors` puts it back in play on the next sign-in.
+        logger.error(
+          `❌ Queue: Token refresh failed for ${mutation.id} — parked until re-auth`,
+        );
         queueStore.markMutationFailed(mutation.id, queueError);
-        this.invokeFailureHandler(mutation, queueError);
+        Telemetry.increment('offline_queue_auth_parked_total', 1, {
+          operation: mutation.operationName,
+        });
         return { success: false, mutationId: mutation.id, error: queueError };
       }
       useStore.getState().setNeedsTokenRefresh(false);
@@ -531,16 +539,25 @@ export class QueueManager {
       };
     }
 
-    // Non-retryable (validation / client / 4xx / GraphQL) error — or an auth
-    // error that exhausted its retries (markMutationFailed maps it to
-    // AUTH_ERROR) → permanent failure: mark failed and notify so the
-    // optimistic change can be reverted.
+    // Non-retryable (validation / client / 4xx / GraphQL) error, or an auth
+    // error that exhausted its retries — `markMutationFailed` maps the latter
+    // to AUTH_ERROR.
     queueStore.markMutationFailed(mutation.id, queueError);
-    this.invokeFailureHandler(mutation, queueError);
-    Telemetry.increment('offline_queue_permanent_failures_total', 1, {
-      operation: mutation.operationName,
-      error_type: queueError.type,
-    });
+
+    if (queueError.type === 'auth') {
+      // Parked, not withdrawn — see the token-refresh path above. The local
+      // change stands until the queue actually gives up on it, which is when
+      // `cleanupTerminal` ages the entry out.
+      Telemetry.increment('offline_queue_auth_parked_total', 1, {
+        operation: mutation.operationName,
+      });
+    } else {
+      this.invokeFailureHandler(mutation, queueError);
+      Telemetry.increment('offline_queue_permanent_failures_total', 1, {
+        operation: mutation.operationName,
+        error_type: queueError.type,
+      });
+    }
 
     return {
       success: false,
@@ -694,6 +711,34 @@ export class QueueManager {
    * Invoke the registered failure handler for a permanently failed mutation.
    * Extracts entity metadata and passes it to the handler.
    */
+  /**
+   * Ages out terminal entries, and withdraws the local change of any that was
+   * never actually sent.
+   *
+   * Runs BEFORE the empty-queue early return: it used to run at the end of a
+   * drain, so a queue holding only terminal entries — nothing pending to
+   * trigger the pass — was never cleaned at all.
+   *
+   * Only AUTH_ERROR needs withdrawing. SUCCESS replayed and FAILED was refused
+   * and withdrawn at the time; an auth failure was neither, so its change has
+   * been on screen since, waiting for a sign-in that never came. Ageing the
+   * entry out is the moment that stops being true.
+   */
+  private reconcileDiscardedEntries(): void {
+    for (const discarded of queueStore.cleanupTerminal()) {
+      if (discarded.status !== QueueStatus.AUTH_ERROR) continue;
+      this.invokeFailureHandler(
+        discarded,
+        discarded.lastError ?? {
+          type: 'auth',
+          message: 'Queued change expired without ever being authenticated',
+          timestamp: Date.now(),
+          retryable: false,
+        },
+      );
+    }
+  }
+
   private invokeFailureHandler(
     mutation: QueuedMutation,
     error: QueueError,
@@ -801,6 +846,11 @@ export class QueueManager {
 
     if (newUserId) {
       queueStore.setCurrentUserId(newUserId);
+
+      // A successful sign-in is exactly the event that makes an auth-parked
+      // write replayable again, and this is the one funnel both a fresh login
+      // and a same-user re-login pass through.
+      queueStore.revivePendingAuthErrors(newUserId);
 
       // Process queue for new user if online
       const state = useStore.getState();

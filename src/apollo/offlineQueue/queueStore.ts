@@ -18,14 +18,16 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 const MAX_QUEUE_SIZE = 100;
 
 /**
- * Terminal = the queue is done with it. SUCCESS replayed; FAILED and AUTH_ERROR
- * were given up on and their local change already withdrawn by the failure
- * handler.
+ * Terminal = the queue will not replay it as things stand. SUCCESS replayed;
+ * FAILED was refused and its local change already withdrawn.
  *
- * AUTH_ERROR belongs here. It used to be neither evictable at capacity nor aged
- * out, so 100 accumulated auth failures wedged the queue permanently: every
- * later enqueue threw QueueCapacityError and offline writes stopped working with
- * no way back.
+ * AUTH_ERROR is terminal in the same bookkeeping sense but NOT in meaning: the
+ * server never saw the write, so nothing about it was rejected — we just could
+ * not authenticate. It is revived by {@link QueueStore.revivePendingAuthErrors}
+ * on the next sign-in and its local change stands until it is actually
+ * discarded. It counts as terminal here so it stays evictable at capacity:
+ * before that, 100 accumulated auth failures wedged the queue permanently, and
+ * every later enqueue threw QueueCapacityError with no way back.
  */
 function isTerminal(status: QueueStatus): boolean {
   return (
@@ -240,7 +242,17 @@ export class QueueStore {
     // never happened). If nothing terminal exists, the queue is full of
     // un-synced work: reject the enqueue honestly.
     if (queue.length >= MAX_QUEUE_SIZE) {
-      const evictIndex = queue.findIndex(m => isTerminal(m.status));
+      // Prefer an entry whose local change is already reconciled — SUCCESS
+      // replayed, FAILED was withdrawn. An AUTH_ERROR still has its change on
+      // screen awaiting a sign-in, so it is evicted only when it is the only
+      // thing left to take.
+      const reconciled = (m: QueuedMutation): boolean =>
+        m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED;
+      const preferred = queue.findIndex(reconciled);
+      const evictIndex =
+        preferred !== -1
+          ? preferred
+          : queue.findIndex(m => isTerminal(m.status));
       if (evictIndex === -1) {
         logger.warn(
           'Queue at capacity with no terminal entries — rejecting enqueue',
@@ -537,27 +549,61 @@ export class QueueStore {
   /**
    * Clean up old successful mutations (keep last 24 hours for reconciliation)
    */
-  cleanupTerminal(): number {
+  cleanupTerminal(): QueuedMutation[] {
     const queue = this.loadQueue();
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    const initialLength = queue.length;
 
+    const discarded: QueuedMutation[] = [];
     const filtered = queue.filter(m => {
       if (!isTerminal(m.status)) return true;
       if (!m.processedAt) return true;
-      return m.processedAt > oneDayAgo;
+      if (m.processedAt > oneDayAgo) return true;
+      discarded.push(m);
+      return false;
     });
 
-    if (filtered.length < initialLength) {
+    if (discarded.length > 0) {
       this.saveQueue(filtered);
       logger.debug(
-        `🧹 Queue: Cleaned up ${
-          initialLength - filtered.length
-        } old terminal mutations`,
+        `🧹 Queue: Cleaned up ${discarded.length} old terminal mutations`,
       );
     }
 
-    return initialLength - filtered.length;
+    // Returned rather than counted because an AUTH_ERROR entry still has its
+    // local change on screen: aging it out is the moment the queue truly gives
+    // up, and the caller withdraws it then.
+    return discarded;
+  }
+
+  /**
+   * Returns AUTH_ERROR entries to PENDING so the next drain replays them.
+   *
+   * An auth failure is not a refusal — the server never saw the write. The
+   * queue parks it rather than dropping it, and a successful sign-in is the
+   * event that makes it replayable again. Retries start fresh: the previous
+   * count was spent against a token that no longer exists.
+   */
+  revivePendingAuthErrors(userId: string): number {
+    const queue = this.loadQueue();
+    let revived = 0;
+
+    for (const mutation of queue) {
+      if (mutation.userId !== userId) continue;
+      if (mutation.status !== QueueStatus.AUTH_ERROR) continue;
+      mutation.status = QueueStatus.PENDING;
+      mutation.retryCount = 0;
+      mutation.processedAt = undefined;
+      revived++;
+    }
+
+    if (revived > 0) {
+      this.saveQueue(queue);
+      logger.info(
+        `🔓 Queue: Revived ${revived} auth-parked mutation(s) for replay`,
+      );
+    }
+
+    return revived;
   }
 
   /**
