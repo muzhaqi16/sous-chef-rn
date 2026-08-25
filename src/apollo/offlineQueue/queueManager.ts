@@ -806,6 +806,17 @@ export class QueueManager {
   /**
    * Event: User went online
    */
+  /**
+   * Resolves once no drain is in flight.
+   *
+   * Used by the reconnect backfill to sequence itself after replay rather than
+   * alongside it — replayed mutations write their own responses into the cache,
+   * so refetching at the same moment doubles the burst and races the results.
+   */
+  async whenIdle(): Promise<void> {
+    await this.processingPromise?.catch(() => {});
+  }
+
   onOnline(): void {
     logger.info('📡 Queue: Network online, starting queue processing');
     this.processQueue().catch(error => {

@@ -2,6 +2,7 @@ import { useNetworkStatus } from '#hooks/useNetworkStatus';
 import { useTheme } from '#hooks/useTheme';
 import { useAppearance } from '#hooks/useAppearance';
 import { useOnlineQueueSync } from '#hooks/app/useOnlineQueueSync';
+import { useReconnectBackfill } from '#hooks/app/useReconnectBackfill';
 import { useStartupInit } from '#hooks/app/useStartupInit';
 import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
 
@@ -14,14 +15,16 @@ import { useAppStateLifecycle } from '#hooks/app/useAppStateLifecycle';
  *   1. Theme + appearance — must run before any UI paints
  *   2. Network status — populates isOnline used by the queue sync below
  *   3. Online queue sync — reacts to isOnline transitions
- *   4. Startup init — one-time bootstrap (telemetry, perf, device ID, ...)
- *   5. AppState lifecycle — token refresh + queue resume + telemetry flush
+ *   4. Reconnect backfill — re-reads watched queries after an outage ends
+ *   5. Startup init — one-time bootstrap (telemetry, perf, device ID, ...)
+ *   6. AppState lifecycle — token refresh + queue resume + telemetry flush
  */
 export function useAppLifecycle(): void {
   useTheme();
   useAppearance();
   useNetworkStatus();
   useOnlineQueueSync();
+  useReconnectBackfill();
   useStartupInit();
   useAppStateLifecycle();
 }
