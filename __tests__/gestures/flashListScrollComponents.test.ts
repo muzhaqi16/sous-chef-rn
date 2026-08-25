@@ -180,6 +180,52 @@ describe('FlashList scroll components', () => {
   });
 
   /**
+   * The pairing is not merely a quality issue in one direction — it is a CRASH.
+   *
+   * `ThemedRefreshControl` wraps RNGH's control, which renders a `VirtualDetector`,
+   * and that component's first statement is `useRequiredInterceptingDetectorContext()`
+   * — it THROWS `"VirtualGestureDetector must be a descendant of an
+   * InterceptingGestureDetector"` when no RNGH scrollable is above it. So an RNGH
+   * control in a plain RN `ScrollView` does not merely lose arbitration, it takes
+   * the screen down. `PlainScrollRefreshControl` exists for those hosts.
+   *
+   * An RNGH host is either a FlashList rendering RNGH's scroll component, or RNGH's
+   * `ScrollView` used directly — both provide the context, and the second is why a
+   * check written only against `renderScrollComponent` reads false positives.
+   */
+  const usesRnghRefreshControl = collectTsxFiles(SRC)
+    .map(file => relative(process.cwd(), file))
+    .filter(file => file !== 'src/components/atoms/themedComponents.tsx')
+    .filter(file =>
+      stripComments(readFileSync(join(process.cwd(), file), 'utf8')).includes(
+        '<ThemedRefreshControl',
+      ),
+    )
+    .sort();
+
+  it('finds the RNGH refresh-control call sites, so the check below is not vacuous', () => {
+    expect(usesRnghRefreshControl.length).toBeGreaterThan(3);
+  });
+
+  it('never puts an RNGH refresh control in a plain RN scrollable', () => {
+    const wouldThrow = usesRnghRefreshControl.filter(file => {
+      const source = stripComments(
+        readFileSync(join(process.cwd(), file), 'utf8'),
+      );
+      const flashListHost = source.includes(
+        'renderScrollComponent={SwipeAwareScrollComponent}',
+      );
+      const rnghScrollViewHost =
+        /import\s*\{[^}]*\bScrollView\b[^}]*\}\s*from\s*'react-native-gesture-handler'/.test(
+          source,
+        );
+      return !flashListHost && !rnghScrollViewHost;
+    });
+
+    expect(wouldThrow).toEqual([]);
+  });
+
+  /**
    * `ThemedRefreshControl` is the single place the RNGH-vs-RN choice is made for
    * every list above, so the per-file checks cannot see it. This is that check.
    * `PlainScrollRefreshControl` is its counterpart for plain RN scrollable hosts.

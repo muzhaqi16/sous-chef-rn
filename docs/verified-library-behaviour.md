@@ -203,6 +203,18 @@ them together is accepted and discarded, silently.
 Nothing throws, warns, or type-errors: the failure is entirely absent
 behaviour, which is why it is guarded by a test rather than left to review.
 
+**The mis-pairing is a CRASH in the other direction.** RNGH's control renders a
+`VirtualDetector`, whose first statement is
+`useRequiredInterceptingDetectorContext()` — it throws
+`"VirtualGestureDetector must be a descendant of an InterceptingGestureDetector"`
+when nothing above it supplies that context
+(`src/v3/detectors/VirtualDetector/VirtualDetector.tsx:17-27,38`). So RNGH's
+control in a plain RN `ScrollView` takes the screen down rather than merely
+losing arbitration; `PlainScrollRefreshControl` is what those hosts take. An
+RNGH host is either a FlashList rendering RNGH's scroll component OR RNGH's
+`ScrollView` used directly — a check written only against
+`renderScrollComponent` reports the second as a false positive.
+
 **The trap is that RN's control arrives unnamed.** A list that passes only
 `onRefresh`/`refreshing` and no `refreshControl` never mentions a control at
 all — but FlashList builds one, and the one it builds is React Native's:
