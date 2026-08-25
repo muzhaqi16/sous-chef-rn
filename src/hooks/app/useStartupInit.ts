@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { LogBox } from 'react-native';
 import { UnistylesRuntime } from 'react-native-unistyles';
 import { LaunchArguments } from 'react-native-launch-arguments';
-import { logger } from '#/utils/environment';
+import { logger, Environment } from '#/utils/environment';
 import { useAppStore, useIsHydrated } from '#store/useAppStore';
 import { useStore } from '#store';
 import {
@@ -26,6 +26,7 @@ import { registerQueueFailureHandler } from '#/apollo/offlineQueue/queueFailureH
  */
 function injectDetoxLaunchArgs(
   detoxBackgroundServicesDisabledRef: React.RefObject<boolean>,
+  detoxTelemetryEnabledRef: React.RefObject<boolean>,
 ): void {
   try {
     // react-native-launch-arguments JSON.parses any value it can, so the
@@ -37,6 +38,7 @@ function injectDetoxLaunchArgs(
       detoxRefreshToken?: string;
       detoxUser?: string | Record<string, unknown>;
       detoxDisableBackgroundServices?: string;
+      detoxEnableTelemetry?: string;
       detoxPantrySortOption?: string;
       detoxPantrySortDirection?: string;
     }>();
@@ -80,6 +82,17 @@ function injectDetoxLaunchArgs(
       detoxBackgroundServicesDisabledRef.current = true;
       logger.debug('[Detox] Background services disabled for E2E tests');
     }
+    // Opt-in, and separate from the flag above, because the two answer
+    // different questions. `detoxDisableBackgroundServices` exists to stop
+    // timers that block Detox's idle detection; it was ALSO switching telemetry
+    // off, which made the e2e suite — the only deterministic workload in the
+    // repo — incapable of producing a measurement. A run that wants numbers
+    // passes both. Opt-in rather than on-by-default so existing suites are
+    // unaffected.
+    if (args.detoxEnableTelemetry) {
+      detoxTelemetryEnabledRef.current = true;
+      logger.debug('[Detox] Telemetry kept ON for this E2E run');
+    }
   } catch (error) {
     // A real injection failure must be loud (dev log level always shows
     // warn), or E2E auth silently degrades to the slow UI-login fallback.
@@ -105,13 +118,23 @@ export function useStartupInit(): void {
 
   const hydrationInitializedRef = useRef(false);
   const detoxBackgroundServicesDisabledRef = useRef(false);
+  const detoxTelemetryEnabledRef = useRef(false);
 
   useEffect(() => {
     if (isHydrated && !hydrationInitializedRef.current) {
       hydrationInitializedRef.current = true;
 
-      if (__DEV__) {
-        injectDetoxLaunchArgs(detoxBackgroundServicesDisabledRef);
+      // Not `__DEV__`: that excluded every release variant, so a Detox run
+      // against `localRelease`/`staging` read NO launch args at all — including
+      // the auth-token injection the suite depends on — and release is the only
+      // variant whose performance numbers are valid. Production still ignores
+      // them, so a shipped build cannot have an auth state injected through
+      // `am start --es`.
+      if (!Environment.isProduction) {
+        injectDetoxLaunchArgs(
+          detoxBackgroundServicesDisabledRef,
+          detoxTelemetryEnabledRef,
+        );
       }
 
       // Capture AFTER Detox injection has had a chance to mutate the ref,
@@ -142,7 +165,9 @@ export function useStartupInit(): void {
       // value is already correct.
 
       const telemetryConfig = getTelemetryConfig();
-      if (detoxDisabled) {
+      // A run that asked for telemetry keeps it, even with background services
+      // off — those flags answer different questions (see injectDetoxLaunchArgs).
+      if (detoxDisabled && !detoxTelemetryEnabledRef.current) {
         telemetryConfig.enableLogs = false;
         telemetryConfig.enableMetrics = false;
       }
@@ -155,7 +180,9 @@ export function useStartupInit(): void {
       // the navigation-mount critical path.
       requestIdleCallback(() => {
         HapticService.initialize();
-        if (!detoxDisabled) {
+        if (!detoxDisabled || detoxTelemetryEnabledRef.current) {
+          // Startup marks come from here; without it a measuring run reports
+          // no `app_native_launch_ms` / `app_js_bundle_load_ms`.
           NativePerformanceService.initialize();
           if (!__DEV__) {
             MemoryMonitor.start();

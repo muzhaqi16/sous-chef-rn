@@ -54,6 +54,11 @@ export async function launchAppWithFabricWorkaround(options: any = {}) {
       ...options.launchArgs,
       detoxEnableSynchronization: 0, // Disable sync during launch
       detoxDisableBackgroundServices: 1, // Disable timers that block Detox idle detection
+      // `detoxDisableBackgroundServices` used to switch telemetry off too, which
+      // left the only deterministic workload in the repo unable to produce a
+      // measurement. Set E2E_TELEMETRY=1 to keep it on for a measuring run; the
+      // default stays off so ordinary runs are unaffected.
+      ...(process.env.E2E_TELEMETRY ? { detoxEnableTelemetry: 1 } : {}),
     },
   });
 
