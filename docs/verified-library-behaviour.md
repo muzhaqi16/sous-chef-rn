@@ -145,6 +145,19 @@ swipeable surface never reported as broken.
 the same gap for buttons. That PR's new `cancelHandlersOnNativeTouchGrab` is gated on
 `it is NativeViewGestureHandler`, so it would not cover a detector pan.
 
+**Two near-misses that do NOT close the gap** (checked so nobody re-litigates them):
+
+- `RNGestureHandlerDetectorView.kt:49-63` overrides
+  `requestDisallowInterceptTouchEvent` and cancels its attached handlers — but
+  `requestDisallowInterceptTouchEvent` propagates **upward** from the view that
+  grabs the touch, and a swipeable row's detector sits **below** the ScrollView,
+  so the call never reaches it. It only protects the inverse topology (a native
+  scrollable inside a detector).
+- `ReanimatedSwipeable` renders its detectors with `touchAction="pan-y"`
+  (`ReanimatedSwipeable.tsx:583,590`), which reads as exactly this fix — but
+  `touchAction` is implemented only in `HostGestureDetector.web.tsx`; the
+  Android sources never consume it. Web-only.
+
 **No `minDist` interference.** Android's `PanGestureHandler` inits
 `minDist = defaultMinDist = vc.scaledTouchSlop`, which alone would activate the pan at
 8dp in _any_ direction. Setting any custom criterion (`activeOffsetX` here) makes
@@ -161,6 +174,8 @@ Re-check:
 ```
 grep -n "cancelAllLegacyHandlers" -A 12 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 grep -rn "renderScrollComponent" src --include=*.tsx
+grep -n -A 12 "requestDisallowInterceptTouchEvent" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/react/RNGestureHandlerDetectorView.kt
+grep -rn "touchAction" node_modules/react-native-gesture-handler/android/src/main/java   # no hits = still web-only
 ```
 
 ### unistyles withUnistyles drops function styles
