@@ -1,4 +1,19 @@
-# Phase 2: Performance Monitoring Implementation
+# Performance Monitoring Implementation
+
+> **Partly stale — verify against `src/hooks/performance/` before using any
+> example here.** Written as a phase log and not kept in step with the code.
+> Known drift, as of 2026-08-25:
+>
+> | Named here | Reality |
+> |---|---|
+> | `useRenderTime` | Renamed to `useCommitTracking` (`src/hooks/performance/useCommitTracking.ts`). It reports the gap BETWEEN commits, not render cost. |
+> | `useMemoryMonitor` | Deleted. Only the `MemoryMonitor` service survives. |
+> | `useFilterTransition` | Deleted. |
+>
+> The metric list below is also incomplete — `docs/telemetry-setup.md`
+> § Metric Reference is the contract, and
+> `__tests__/telemetry/metricContracts.test.ts` keeps it complete. For how to
+> take a measurement at all, see CLAUDE.md § Performance measurement.
 
 ## Overview
 
@@ -329,7 +344,6 @@ const MyComponent = () => {
 All performance data is reported to the Telemetry system:
 
 **Counters:**
-- `component_render_count` - Total renders per component
 - `component_render_count` - Commits per component (re-render churn)
 - `slow_screen_transitions_total` - Count of slow transitions
 - `app_memory_warnings_total` - Memory warning events
@@ -383,7 +397,10 @@ All performance data is reported to the Telemetry system:
 ❌ **Avoid:**
 - Simple presentational components
 - Components that render very frequently (animations)
-- Production builds (unless specific issue investigation)
+
+(Note: this list once said to avoid production builds. That contradicts
+"Availability: All builds" above and the point of routing these metrics to OTLP —
+release is where the numbers are valid. Debug is for attribution only.)
 
 ### Performance Thresholds
 
@@ -437,10 +454,14 @@ All performance data is reported to the Telemetry system:
 
 ### Performance Verification
 
-1. Check console logs for slow render warnings
-2. Monitor memory usage over time
-3. Verify screen transitions under 500ms
-4. Confirm telemetry metrics are being sent
+The protocol — build variant, device, run count, controls, which series to read —
+is CLAUDE.md § Performance measurement. The numbers and the retracted readings
+behind those rules are in `docs/audits/perf-offline-baseline-2026-08-24.md`.
+
+The four bullets that used to live here ("check console logs", "monitor memory",
+"verify transitions under 500ms", "confirm metrics are sent") named no build, no
+device and no sample size, which is how an emulator reading became a conclusion
+about hardware.
 
 ## References
 
