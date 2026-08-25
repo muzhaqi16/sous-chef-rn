@@ -234,6 +234,52 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
+    it("evicts from the item's own pantry, not the selected one", async () => {
+      // `removeItem` uses this id for cache surgery — which connection loses the
+      // edge and whose count drops. They normally match, but a deep link or a
+      // notification tap can open an item outside the selected pantry, and then
+      // the selected one would decrement the wrong pantry and leave the real
+      // one holding a stale edge.
+      const deleteMock = recordMock(DeletePantryItemDocument, {
+        data: {
+          deletePantryItem: {
+            __typename: 'DeletePantryItemPayload',
+            pantry: null,
+            pantryItem: { __typename: 'PantryItem', id: 'item-1' },
+          },
+        },
+      });
+
+      const { result } = setup(
+        {
+          selectedPantryId: 'pantry-OTHER',
+          item: { ...baseItem, pantryId: 'pantry-OWNING' },
+        },
+        { operationMocks: [deleteMock.mock] },
+      );
+
+      act(() => result.current.handleDelete());
+      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
+      await act(async () => {
+        alertCalls[alertCalls.length - 1][2][1].onPress();
+      });
+
+      await waitFor(() =>
+        expect(removeFromPantryItemsCache).toHaveBeenCalledWith(
+          expect.anything(),
+          'pantry-OWNING',
+          'item-1',
+          { evictItem: true },
+        ),
+      );
+      expect(removeFromPantryItemsCache).not.toHaveBeenCalledWith(
+        expect.anything(),
+        'pantry-OTHER',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+
     it('still deletes when no pantry is selected', async () => {
       // `selectedPantryId` is genuinely nullable — `navigationSlice` starts it
       // at null and `authSlice` resets it on logout. It used to be coerced to
@@ -299,13 +345,16 @@ describe('usePantryItemDetailActions', () => {
 
     it('restores the row when the server refuses the delete', async () => {
       // `removeItem` evicts the row and drops the count BEFORE firing, so a
-      // refusal has to put it back — that is what the shared mutation's
-      // `onError` refetch is for. This screen used to pass `refetch: () => {}`,
-      // so a refused delete left the item gone locally and present on the
-      // server, with nothing to bring it back.
+      // refusal has to put both back — that is what `refetch` is for. This
+      // screen used to pass `refetch: () => {}`, so a refused delete left the
+      // item gone locally and still present on the server, with nothing to
+      // bring it back.
+      //
       // A REFUSAL, not a transport failure: `errorPolicy: 'all'` resolves it as
-      // data, so it never reaches `onError` — and a transport failure must NOT
-      // restore, because the delete is queued for replay (covered below).
+      // DATA — a non-success union member — so it never reaches `onError`, and
+      // the check sits on the resolved result. A transport failure is the
+      // opposite case and must NOT restore, because the delete is queued for
+      // replay (covered below).
       const refused = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {
