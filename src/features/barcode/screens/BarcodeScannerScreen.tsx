@@ -19,6 +19,7 @@ import { Button } from '#components/atoms/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
 import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
+import { TIMING } from '#/constants/animations';
 import type { BarcodeSource } from '#/types/navigation';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
@@ -72,12 +73,50 @@ export const BarcodeScannerScreen: React.FC<
   // events so a command issued mid-transition is deferred rather than rejected.
   const [isSessionRunning, setIsSessionRunning] = useState(false);
 
-  // 1) Request permission once the initial check completes and status is undetermined
+  // 1) Request permission once the initial check completes and the status is
+  //    undetermined — but only after this screen has SETTLED, never from a
+  //    plain mount effect.
+  //
+  //    Firing it on mount raced two animations that were still running: the
+  //    stack push, and the Add-to-Pantry sheet's blur-dismiss
+  //    (`useStandardBottomSheet` dismisses on `blur`, which React Navigation
+  //    emits when the navigation state changes, not when the animation
+  //    finishes). The OS dialog landed on top of a half-dismissed sheet over a
+  //    half-transitioned screen — the "camera permission overlaps Add to
+  //    Pantry" report.
+  //
+  //    A timer rather than the native stack's own `transitionEnd`: that event
+  //    is not reachable through the navigation type here (RootNavigator
+  //    registers a global navigator, so `useNavigation()` resolves to the root
+  //    navigation whose `EventMapCore` has no `transitionEnd`, and the generic
+  //    does not override a global registration). The delay covers the push plus
+  //    the sheet's dismiss, both bounded by the same constants that drive them.
+  //
+  //    Armed on FOCUS, not mount: this screen is `React.lazy`, so its chunk can
+  //    resolve at any point relative to the transition, and focus is the one
+  //    moment we know the screen is the active one.
+  const [screenSettled, setScreenSettled] = useState(false);
+  const [onScannerFocus] = useState(() => () => {
+    const handle = setTimeout(
+      () => setScreenSettled(true),
+      TIMING.SLOW + TIMING.STANDARD,
+    );
+    return () => clearTimeout(handle);
+  });
+  useFocusEffect(onScannerFocus);
+
   useEffect(() => {
+    if (!screenSettled) return;
     if (!isCheckingPermission && !hasPermission && !isBlocked) {
       requestPermission();
     }
-  }, [isCheckingPermission, hasPermission, isBlocked, requestPermission]);
+  }, [
+    screenSettled,
+    isCheckingPermission,
+    hasPermission,
+    isBlocked,
+    requestPermission,
+  ]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
