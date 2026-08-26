@@ -118,6 +118,7 @@ src/config/env.generated.ts
 docs/audits/*
 !docs/audits/perf-offline-baseline-2026-08-24.md
 !docs/audits/perf-ios-baseline-2026-08-25.md
+!docs/audits/regression-triage-2026-08-26.md
 
 # Reassure measurements. Per-run and per-machine — a baseline is only
 # comparable against a current measured on the SAME machine minutes later,
