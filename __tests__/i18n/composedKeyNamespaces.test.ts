@@ -2,6 +2,11 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { getI18n } from '#/i18n/config';
 import en from '#/i18n/locales/en.json';
+import {
+  PRIORITY_OPTIONS,
+  PRIORITY_OPTION_BY_VALUE,
+  priorityLabelKey,
+} from '#features/shoppingList/utils/priority';
 
 const HOOKS_DIR = join(__dirname, '..', '..', 'src', 'hooks', 'items');
 
@@ -99,5 +104,35 @@ describe('alertMutationFailure key prefixes', () => {
 
     expect(found.length).toBeGreaterThan(0);
     expect([...new Set(found)].sort()).toEqual([...ALERT_PREFIXES].sort());
+  });
+});
+
+/**
+ * `priorityLabelKey` (src/features/shoppingList/utils/priority.ts) composes an
+ * option id into `shoppingListScreens.priority${Capitalized}`. Nothing could
+ * see those keys: `keysExist` matches single-quoted literals and the key here
+ * is built from a template, so `priorityMedium` was simply absent from all four
+ * locales and the Add Item sheet rendered the raw string
+ * "shoppingListScreens.priorityMedium" between "Low" and "High" — in
+ * production, in every language, until someone screenshotted it.
+ *
+ * Driven off `PRIORITY_OPTIONS` rather than a hardcoded list so adding a
+ * priority tier fails here before it ships as a raw key on screen.
+ */
+describe('shopping-list priority labels', () => {
+  it.each(PRIORITY_OPTIONS)('%s resolves to real copy', option => {
+    const key = priorityLabelKey(option);
+    const value = getI18n().t(key);
+
+    expect(value).not.toBe(key);
+    expect(value).toBeTruthy();
+  });
+
+  it('covers every option the API mapping accepts', () => {
+    // A tier added to the API mapping but not to the option list would never
+    // reach the check above.
+    expect([...PRIORITY_OPTIONS].sort()).toEqual(
+      Object.values(PRIORITY_OPTION_BY_VALUE).sort(),
+    );
   });
 });
