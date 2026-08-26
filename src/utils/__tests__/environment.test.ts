@@ -112,6 +112,24 @@ describe('environment', () => {
       }
     };
 
+    // NODE_ENV comes from the BUILD MACHINE's env file, which is gitignored:
+    // a local `.env` carries `development`, CI generates the module with the
+    // key undefined. A test asserting what a NODE_ENV value implies has to set
+    // it. Clearing the cache is what makes the write visible — `getConfig()`
+    // memoizes on first read.
+    const withNodeEnv = (value: string | undefined, fn: () => void) => {
+      const mutable = env as Record<string, string | undefined>;
+      const previous = mutable.NODE_ENV;
+      mutable.NODE_ENV = value;
+      Environment.clearCache();
+      try {
+        fn();
+      } finally {
+        mutable.NODE_ENV = previous;
+        Environment.clearCache();
+      }
+    };
+
     it('is on in a debug build, with no build flag needed', () => {
       // Covers Detox: its builds run xcodebuild/gradlew directly, never the
       // run scripts, and for a debug build Metro is a separate process no
@@ -144,10 +162,12 @@ describe('environment', () => {
       // NODE_ENV=development and every LOCAL release variant falls through to
       // it, so a gate reading the environment said yes here.
       withDev(false, () =>
-        withFlag(undefined, () => {
-          expect(Environment.isDevelopment()).toBe(true);
-          expect(Environment.allowsLaunchArgAuth()).toBe(false);
-        }),
+        withFlag(undefined, () =>
+          withNodeEnv('development', () => {
+            expect(Environment.isDevelopment()).toBe(true);
+            expect(Environment.allowsLaunchArgAuth()).toBe(false);
+          }),
+        ),
       );
     });
   });
