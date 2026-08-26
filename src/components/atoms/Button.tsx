@@ -46,6 +46,18 @@ export const Button: React.FC<ButtonProps> = ({
   accessibilityLabel,
   accessibilityHint,
 }) => {
+  // 'use no memo' — REQUIRED, not a preference. `styles.useVariants(...)` is
+  // rewritten by the Unistyles babel plugin into a rebound `styles` local, but
+  // that happens AFTER the React Compiler has already picked its cache keys
+  // (babel.config.js runs the compiler first, deliberately). The compiler sees
+  // `styles` as a stable module global, so it caches the resolved variant style
+  // on the wrong dependencies and the variant freezes at its first-render
+  // value — a button that mounts disabled stays looking disabled after the
+  // prop clears. Verified against the installed babel-plugin-react-compiler +
+  // react-native-unistyles@3.3.0 by
+  // `node scripts/check-unistyles-variant-staleness.mjs --explain`.
+  'use no memo';
+
   // Use title/children as fallback for accessibility label
   const buttonLabel =
     accessibilityLabel ||

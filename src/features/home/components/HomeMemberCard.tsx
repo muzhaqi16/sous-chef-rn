@@ -167,20 +167,30 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  // `commonStyles.card` already supplies `padding: md` and `marginBottom: sm`.
+  // This used to re-declare both — the padding identically (harmless) and the
+  // margin as `marginVertical` (not harmless: RN margins do not collapse, so
+  // every pair of adjacent cards sat `sm + sm` apart). Only the border is this
+  // card's own.
+  //
+  // `gap` rather than trailing margins on the children: the actions row and the
+  // permissions list are BOTH conditional, and for a member viewing their own
+  // home neither renders — a `marginBottom` on `memberInfo` was then pure dead
+  // space under a single line of text. A gap only exists between siblings that
+  // are actually there.
   memberCard: {
-    padding: theme.spacing.md,
-    marginVertical: theme.spacing.sm,
+    gap: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  // Same reasoning one level down: the email line is conditional too.
   memberInfo: {
-    marginBottom: theme.spacing.sm,
+    gap: theme.spacing.xs,
   },
   memberHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: theme.spacing.xs,
   },
   memberName: {
     flex: 1,
@@ -196,8 +206,8 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
+    paddingTop: theme.spacing.sm,
     borderTopColor: theme.colors.border,
   },
   actionButton: {
@@ -222,7 +232,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.info,
   },
   permissionList: {
-    marginTop: theme.spacing.sm,
+    // No `marginTop` — the card's `gap` is the separation now.
     paddingTop: theme.spacing.sm,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,

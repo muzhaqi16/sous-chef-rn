@@ -9,10 +9,13 @@ export const executeRefreshWithFinally = jest.fn(
   async (
     refreshFn: () => Promise<unknown>,
     setRefreshing: (v: boolean) => void,
+    onError?: (error: unknown) => void,
   ): Promise<void> => {
     setRefreshing(true);
     try {
       await refreshFn();
+    } catch (error) {
+      onError?.(error);
     } finally {
       setRefreshing(false);
     }

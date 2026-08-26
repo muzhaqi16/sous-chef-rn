@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
 import { SettingSection } from '#components/settings/SettingSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
@@ -11,11 +11,8 @@ import {
   type AppSettings,
 } from '#features/profile/hooks/useAppSettings';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
-import { Picker } from '@react-native-picker/picker';
-
-const ThemedPickerItem = withUnistyles(Picker.Item, theme => ({
-  color: theme.colors.textPrimary,
-}));
+import { ModalPicker } from '#components/molecules/ModalPicker';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { commonStyles } from '#/styles/commonStyles';
 import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
 import { useStore } from '#store';
@@ -28,6 +25,7 @@ import { Text } from '#components/atoms/Text';
 export const AppSettingsScreen: React.FC = () => {
   const { t } = useTranslation();
   const [updating, setUpdating] = useState<string | null>(null);
+  const [unitPickerVisible, setUnitPickerVisible] = useState(false);
 
   const { settings, loading, updateAppSetting, resetToDefaults } =
     useAppSettings();
@@ -149,6 +147,22 @@ export const AppSettingsScreen: React.FC = () => {
     );
   };
 
+  // In-app `ModalPicker`, NOT `@react-native-picker/picker`. On Android the
+  // native picker's dropdown is an Android DIALOG, themed from the Activity
+  // theme — `Theme.EdgeToEdge` with no `values-night` override — so it follows
+  // the OS `uiMode` and ignores the app's own light/dark preference entirely.
+  // A user on the light in-app theme with the OS in dark mode got a dark popup
+  // over a light screen, and nothing on the RN side can reach it. The same
+  // limit applies to `Alert.alert` and the date pickers.
+  const unitSystemOptions = [
+    { label: t('settings.unitMetric'), value: UnitSystem.Metric },
+    { label: t('settings.unitImperial'), value: UnitSystem.Imperial },
+    { label: t('settings.unitSystemDefault'), value: UnitSystem.System },
+  ];
+  const selectedUnitLabel =
+    unitSystemOptions.find(o => o.value === settings.preferredUnitSystem)
+      ?.label ?? t('labels.select');
+
   if (loading) {
     return (
       <View style={commonStyles.loadingContainer}>
@@ -165,32 +179,33 @@ export const AppSettingsScreen: React.FC = () => {
       testID="settings-screen"
     >
       <SettingSection title={t('settings.unitsSection')}>
-        <View style={styles.pickerContainer}>
+        <AppPressable
+          haptic
+          testID="settings-unit-system-picker"
+          style={styles.pickerContainer}
+          onPress={() => setUnitPickerVisible(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.preferredUnitSystem')}
+          accessibilityValue={{ text: selectedUnitLabel }}
+        >
           <Text style={commonStyles.subtitle}>
             {t('settings.preferredUnitSystem')}
           </Text>
-          <Picker
-            testID="settings-unit-system-picker"
-            selectedValue={settings.preferredUnitSystem}
-            onValueChange={value =>
-              handleSettingChange('preferredUnitSystem', value)
-            }
-            style={styles.picker}
-          >
-            <ThemedPickerItem
-              label={t('settings.unitMetric')}
-              value={UnitSystem.Metric}
-            />
-            <ThemedPickerItem
-              label={t('settings.unitImperial')}
-              value={UnitSystem.Imperial}
-            />
-            <ThemedPickerItem
-              label={t('settings.unitSystemDefault')}
-              value={UnitSystem.System}
-            />
-          </Picker>
-        </View>
+          <Text size="sm" tone="accent" style={styles.picker}>
+            {selectedUnitLabel}
+          </Text>
+        </AppPressable>
+        <ModalPicker
+          label={t('settings.preferredUnitSystem')}
+          visible={unitPickerVisible}
+          options={unitSystemOptions}
+          selected={settings.preferredUnitSystem}
+          onSelect={value => {
+            handleSettingChange('preferredUnitSystem', value as UnitSystem);
+            setUnitPickerVisible(false);
+          }}
+          onCancel={() => setUnitPickerVisible(false)}
+        />
       </SettingSection>
 
       <SettingSection title={t('settings.syncOffline')}>

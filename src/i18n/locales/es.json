@@ -1090,6 +1090,7 @@
     "netWeightPlaceholder": "ej., 500",
     "priorityNone": "Ninguna",
     "priorityLow": "Baja",
+    "priorityMedium": "Media",
     "priorityHigh": "Alta",
     "store": "Tienda preferida",
     "storePlaceholder": "ej., Costco"
