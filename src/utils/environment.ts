@@ -109,7 +109,20 @@ export class Environment {
    * build if it is ever on alongside a production or staging NODE_ENV.
    */
   static allowsLaunchArgAuth(): boolean {
-    return env.ALLOW_LAUNCH_ARG_AUTH === 'true';
+    // `__DEV__` covers every debug build, including Detox's. It is a
+    // COMPILE-TIME constant that the bundler eliminates from release output,
+    // so it cannot leak the capability into a shipped binary — unlike
+    // `isDevelopment()`, which reads `NODE_ENV` from the bundled env and is
+    // therefore true in a local RELEASE build too. That difference is the
+    // whole reason this gate exists.
+    //
+    // Without this clause the flag had to reach Metro, and for a debug build
+    // Metro is a separate process started by `npm start` that no build command
+    // can hand a variable to — so Detox token injection broke silently: an
+    // ignored launch arg looks exactly like one that was never passed.
+    //
+    // The build flag remains the ONLY way a release build gets the capability.
+    return __DEV__ || env.ALLOW_LAUNCH_ARG_AUTH === 'true';
   }
 
   /**
