@@ -17,7 +17,7 @@ jobs:
         run: /usr/bin/xcodebuild -version
 
       - name: checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the Apple certificate and provisioning profile
         env:
@@ -51,7 +51,7 @@ jobs:
           security find-identity -v -p codesigning
           ls -l ~/Library/MobileDevice/Provisioning\ Profiles
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
           cache: "npm"
@@ -106,7 +106,7 @@ jobs:
           agvtool new-version -all "${{ github.run_number }}"
 
       - name: Cache Xcode DerivedData
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/Library/Developer/Xcode/DerivedData
           key: ${{ runner.os }}-xcode-derived-${{ hashFiles('ios/Podfile.lock') }}
