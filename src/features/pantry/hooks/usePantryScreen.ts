@@ -15,6 +15,7 @@ import {
   filterByLocation,
 } from '#features/pantry/utils/pantryFilters';
 import { PAGE_SIZE } from '#/constants/pagination';
+import { logger } from '#/utils/environment';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
@@ -296,8 +297,17 @@ export function usePantryScreen() {
     setLocationFilter(filter);
   };
 
+  // No `refreshing` flag to clear — the control reads Apollo's `networkStatus`
+  // (see `usePantryQuery`), which resets itself. The catch is still needed:
+  // `refetch()` rejects on a network error, and an uncaught rejection here is
+  // just noise on top of the error state the query already surfaces. Plain
+  // statements only in the try body, so the compiler still lowers this hook.
   const handleRefresh = async () => {
-    await refetch();
+    try {
+      await refetch();
+    } catch {
+      logger.debug('Pantry pull-to-refresh failed; query error state stands');
+    }
   };
 
   // -------------------------------------------------------------------------
