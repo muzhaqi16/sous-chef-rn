@@ -808,13 +808,48 @@ async function register(
   }
 }
 
-async function logout(): Promise<void> {
+interface LogoutOptions {
+  /**
+   * Also delete this account's stored biometric credentials.
+   *
+   * Default FALSE, and deliberately so: biometric login exists precisely to
+   * get the user back IN after a sign-out, so clearing the keychain here made
+   * the feature structurally impossible — `hasCredentials` came back false on
+   * the login screen (no biometric button) AND in
+   * `shouldShowPostLoginBiometricPrompt` (enrol again, every login), and
+   * `autoLogin` could never succeed after a manual sign-out.
+   *
+   * Enrolment is per account and biometry-gated, so leaving it in place does
+   * not expose anything on a shared device — reading the slot still costs a
+   * successful biometric prompt from that account's owner.
+   *
+   * Pass `true` only when the account itself is going away (delete account).
+   * The user-facing way to forget a device is Profile → Security → disable,
+   * which calls `removeCredentials` directly.
+   */
+  forgetDevice?: boolean;
+}
+
+async function logout(options?: LogoutOptions): Promise<void> {
   const store = useStore.getState();
   const user = store.user;
 
   try {
     const currentUserEmail = user?.email;
     const currentUserId = user?.id;
+
+    // Biometric credentials SURVIVE a sign-out (see `LogoutOptions`). Only an
+    // account that is going away takes its keychain slot with it; credentials
+    // are scoped per account, so this never touches another user's.
+    //
+    // Done FIRST, not last. Everything below can throw, and the whole body is
+    // wrapped in a catch that only logs — so a security-relevant deletion
+    // parked at the end is a deletion that silently may not happen. There is
+    // nothing to lose by clearing early: the caller has already decided the
+    // account is gone, and logout always ends locally signed-out regardless.
+    if (options?.forgetDevice && currentUserEmail) {
+      await removeCredentials(currentUserEmail);
+    }
 
     // Tear down the prior user's push/notification state before clearing auth,
     // so nothing survives on a shared device. Deregistration dispatches while
@@ -846,12 +881,6 @@ async function logout(): Promise<void> {
     if (currentUserId) {
       const prefs = getUserPreferences(currentUserId);
       prefs?.trackLogout();
-    }
-
-    // Clear only this account's biometric credentials. Credentials are scoped
-    // per account, so logging one user out never touches another's slot.
-    if (currentUserEmail) {
-      await removeCredentials(currentUserEmail);
     }
   } catch (error) {
     logger.error('Logout error:', error);
