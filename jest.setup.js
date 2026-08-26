@@ -93,3 +93,40 @@ jest.mock('@react-native-firebase/messaging', () => ({
     PROVISIONAL: 2,
   },
 }));
+
+// ---------------------------------------------------------------------------
+// Timers must never be the reason a worker cannot exit
+//
+// Jest force-kills a worker whose event loop is still held open when its files
+// finish ("A worker process has failed to exit gracefully"), and a pending real
+// timer is enough to do it. Plenty of those are legitimate: production code
+// arms long safety nets — a 30s pending-delete sweep, a 10s WebSocket stability
+// window — that outlive the test which triggered them, and chasing each one
+// into a per-suite teardown is endless.
+//
+// So unref every real timer instead. An unref'd timer still fires normally
+// while the worker has work to do (its IPC channel keeps the loop alive); it
+// simply stops being something the process must wait on before exiting.
+//
+// This is a worker-exit guard, NOT a leak detector: it deliberately silences
+// the warning, so it cannot tell you about a genuine runaway timer in
+// production code. `npx jest --detectOpenHandles <paths>` still names them, and
+// remains the tool to reach for.
+//
+// Assigning over the globals composes with fake timers: `jest.useFakeTimers()`
+// saves whatever is installed (these wrappers) and `useRealTimers()` puts it
+// back, so a suite can still swap in fake timers freely.
+// ---------------------------------------------------------------------------
+const unrefTimer = timer => {
+  if (timer && typeof timer.unref === 'function') timer.unref();
+  return timer;
+};
+
+const realSetTimeout = global.setTimeout;
+const realSetInterval = global.setInterval;
+
+global.setTimeout = (...args) => unrefTimer(realSetTimeout(...args));
+global.setInterval = (...args) => unrefTimer(realSetInterval(...args));
+// `promisify(setTimeout)` reads this off the function object.
+global.setTimeout.__promisify__ = realSetTimeout.__promisify__;
+global.setInterval.__promisify__ = realSetInterval.__promisify__;

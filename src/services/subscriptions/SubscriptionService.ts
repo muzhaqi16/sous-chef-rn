@@ -88,6 +88,9 @@ export class SubscriptionService {
       entityType: string;
       parentTypename: string;
       connectionField: string;
+      // Handle for the 30s safety-net expiry, so removing the entry early can
+      // also cancel the timer instead of leaving it pending for the full 30s.
+      timer: ReturnType<typeof setTimeout>;
     }
   >();
 
@@ -137,21 +140,38 @@ export class SubscriptionService {
     parentTypename: string = 'Pantry',
     connectionField: string = 'itemsConnection',
   ): void {
+    // A re-register for the same id would otherwise strand the previous entry's
+    // timer, which still holds a reference for its full 30s.
+    this.clearPendingDelete(itemId);
     this.pendingDeletes.set(itemId, {
       parentId,
       entityType,
       parentTypename,
       connectionField,
+      // Auto-cleanup after 30s to prevent memory leaks in edge cases
+      timer: setTimeout(() => this.clearPendingDelete(itemId), 30000),
     });
-    // Auto-cleanup after 30s to prevent memory leaks in edge cases
-    setTimeout(() => this.pendingDeletes.delete(itemId), 30000);
+  }
+
+  /**
+   * Drop a pending delete AND cancel its expiry timer.
+   *
+   * The single removal path: deleting the map entry on its own leaves a live
+   * 30s timer behind, one per delete, long after the mutation it guards has
+   * settled.
+   */
+  private clearPendingDelete(itemId: string): void {
+    const pending = this.pendingDeletes.get(itemId);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pendingDeletes.delete(itemId);
   }
 
   /**
    * Unregister a pending delete (called after mutation completes)
    */
   unregisterPendingDelete(itemId: string): void {
-    this.pendingDeletes.delete(itemId);
+    this.clearPendingDelete(itemId);
   }
 
   /**
@@ -744,7 +764,7 @@ export class SubscriptionService {
 
             // Then evict the item itself
             safeEvict(cache, config.entityType, itemId);
-            this.pendingDeletes.delete(itemId);
+            this.clearPendingDelete(itemId);
             break;
           }
 
@@ -964,6 +984,7 @@ export class SubscriptionService {
     this.subscriptions.clear();
     this.processedMutations.clear();
     this.recentReorders.clear();
+    this.pendingDeletes.forEach(pending => clearTimeout(pending.timer));
     this.pendingDeletes.clear();
     this.pendingParentDeletes.clear();
     this.stats = {

@@ -221,12 +221,18 @@ describe('authLink', () => {
       mockStoreState.accessToken = makeToken(120);
 
       const stalled = Symbol('stalled');
+      // Held so the loser can be cancelled: on the passing path the request
+      // wins the race and this timer would otherwise stay armed for its full
+      // 500ms after the test ends, which is enough to stop the Jest worker
+      // exiting on its own.
+      let stallTimer: ReturnType<typeof setTimeout> | undefined;
       const outcome = await Promise.race([
         run('GetPantry'),
-        new Promise<typeof stalled>(resolve =>
-          setTimeout(() => resolve(stalled), 500),
-        ),
+        new Promise<typeof stalled>(resolve => {
+          stallTimer = setTimeout(() => resolve(stalled), 500);
+        }),
       ]);
+      clearTimeout(stallTimer);
 
       expect(outcome).not.toBe(stalled);
       expect((outcome as Headers).authorization).toBe(

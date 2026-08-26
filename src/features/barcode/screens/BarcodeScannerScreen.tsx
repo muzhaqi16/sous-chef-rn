@@ -105,11 +105,33 @@ export const BarcodeScannerScreen: React.FC<
   });
   useFocusEffect(onScannerFocus);
 
+  // Whether the request has been ISSUED AND RESOLVED. Until then nothing is
+  // known about the user's intent, so the render below must not claim they
+  // refused. `status` cannot answer this on Android: react-native-permissions
+  // reports a never-requested permission as `RESULTS.DENIED` — that result
+  // means "requestable", not "refused" — which `PermissionService` normalizes
+  // to `'denied'`, indistinguishable from a real refusal. So track the ask.
+  const [hasAskedPermission, setHasAskedPermission] = useState(false);
+
   useEffect(() => {
     if (!screenSettled) return;
-    if (!isCheckingPermission && !hasPermission && !isBlocked) {
-      requestPermission();
-    }
+    if (isCheckingPermission || hasPermission || isBlocked) return;
+    let active = true;
+    const ask = async () => {
+      // Set on the throw path too: this flag is the only thing that lifts the
+      // neutral screen, so swallowing a native rejection here would strand the
+      // user on a blank screen with no way back.
+      try {
+        await requestPermission();
+      } catch (e) {
+        logger.warn('[BarcodeScanner] camera permission request failed', e);
+      }
+      if (active) setHasAskedPermission(true);
+    };
+    ask();
+    return () => {
+      active = false;
+    };
   }, [
     screenSettled,
     isCheckingPermission,
@@ -209,8 +231,17 @@ export const BarcodeScannerScreen: React.FC<
 
   // --- RENDER FALLBACKS ---
 
-  // A) Still checking permission status — show black screen to prevent flash
-  if (isCheckingPermission) {
+  // A) Nothing truthful to show yet — a neutral screen, never the refusal UI.
+  //    Either the initial check is still running, or we have not finished
+  //    ASKING: the request waits for `screenSettled`, so branch B would
+  //    otherwise render "camera access is required" plus a Grant button for a
+  //    permission the app has not requested yet — telling the user they
+  //    refused something they were never asked. `isBlocked` is excluded
+  //    because a blocked permission IS a settled refusal worth showing at once.
+  if (
+    isCheckingPermission ||
+    (!hasPermission && !isBlocked && !hasAskedPermission)
+  ) {
     return <View style={styles.centeredContainer} />;
   }
 

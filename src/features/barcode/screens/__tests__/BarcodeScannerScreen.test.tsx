@@ -4,6 +4,7 @@ import React from 'react';
 import { act, fireEvent, render } from '@testing-library/react-native';
 import { BarcodeScannerScreen } from '../BarcodeScannerScreen';
 import type { BarcodeSource } from '#/types/navigation';
+import { TIMING } from '#/constants/animations';
 
 // Mock token scheduler / refreshToken
 jest.mock('#/apollo/links/tokenScheduler');
@@ -116,8 +117,46 @@ describe('BarcodeScannerScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('shows permission request when camera not granted', () => {
-    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
+  // Renders, then drives the screen past its settle delay and the permission
+  // request the way a real focus plus an answered OS dialog would — the only
+  // route to the refusal UI now that it waits for the ask to resolve. The
+  // suite's no-op `useFocusEffect` mock never arms the settle timer, so capture
+  // the callbacks and fire them once by hand: running them on every render
+  // instead re-arms the timer indefinitely.
+  const renderAfterPermissionAsk = async (route = defaultRoute) => {
+    const { useFocusEffect } = jest.requireMock('@react-navigation/native');
+    const focusCallbacks: React.EffectCallback[] = [];
+    useFocusEffect.mockImplementation((cb: React.EffectCallback) => {
+      focusCallbacks.push(cb);
+    });
+    jest.useFakeTimers();
+    const utils = render(<BarcodeScannerScreen route={route} />);
+    await act(async () => {
+      focusCallbacks.splice(0).forEach(cb => cb());
+      jest.advanceTimersByTime(TIMING.SLOW + TIMING.STANDARD);
+    });
+    jest.useRealTimers();
+    return utils;
+  };
+
+  // The screen must never present a refusal the user has not made. On Android a
+  // never-requested permission checks as `RESULTS.DENIED`, so "not granted" on
+  // its own is NOT evidence of a refusal — and the request is deliberately
+  // delayed until the screen settles, which left this copy on screen for half a
+  // second before the OS dialog even appeared.
+  it('shows no refusal copy before the permission has been requested', () => {
+    const { queryByText } = render(
+      <BarcodeScannerScreen route={defaultRoute} />,
+    );
+    expect(
+      queryByText('Camera access is required to scan barcodes.'),
+    ).toBeNull();
+    expect(queryByText('Grant Permission')).toBeNull();
+    expect(queryByText('Cancel')).toBeNull();
+  });
+
+  it('shows permission request once the request resolved and was refused', async () => {
+    const { getByText } = await renderAfterPermissionAsk();
     expect(
       getByText('Camera access is required to scan barcodes.'),
     ).toBeTruthy();
@@ -175,7 +214,7 @@ describe('BarcodeScannerScreen', () => {
     expect(getByText('Point your camera at a barcode')).toBeTruthy();
   });
 
-  it('shows Cancel button on permission screen', () => {
+  it('shows Cancel button on permission screen', async () => {
     const { usePermission } = jest.requireMock(
       '#hooks/permissions/usePermission',
     );
@@ -186,7 +225,7 @@ describe('BarcodeScannerScreen', () => {
       openSettings: mockOpenSettings,
     });
 
-    const { getByText } = render(<BarcodeScannerScreen route={defaultRoute} />);
+    const { getByText } = await renderAfterPermissionAsk();
     expect(getByText('Cancel')).toBeTruthy();
   });
 
