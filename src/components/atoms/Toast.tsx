@@ -122,6 +122,17 @@ const supersedes = (older: ToastOptions, newer: ToastOptions) =>
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  // 'use no memo' — REQUIRED. The container never unmounts, so its style is
+  // read inside a React Compiler cache block keyed on values that do not move
+  // when `type` does (see Button.tsx for the full mechanism). The result was a
+  // success toast rendering the DEFAULT container background — near-white in
+  // the dark theme — behind correctly-tinted green text, because `toastText`
+  // happened to sit in a cache block the message change invalidated and
+  // `toastContainer` did not. Barely legible, and the two halves of one toast
+  // disagreeing is the tell. Memoization here is worth nothing: this provider
+  // re-renders once per toast.
+  'use no memo';
+
   const insets = useSafeAreaInsets();
 
   // Updater pattern lets two synchronous showToast() calls coordinate — the
