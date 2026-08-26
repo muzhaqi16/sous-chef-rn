@@ -33,6 +33,19 @@ module.exports = {
       retryTimes: SLOW ? 1 : 0,
     },
   },
+  // The RELEASE e2e configs set ALLOW_LAUNCH_ARG_AUTH, because a release build
+  // is the one shape where `Environment.allowsLaunchArgAuth()` needs it: that
+  // gate is `__DEV__ || flag`, and `__DEV__` is false in a release bundle.
+  //
+  // Debug configs deliberately do NOT set it — `__DEV__` covers them, and it
+  // has to, because for a debug build Metro is a separate process started by
+  // `npm start` that no build command can hand a variable to. Setting it here
+  // would imply otherwise and invite someone to drop the `__DEV__` clause.
+  //
+  // Release bundling runs inside xcodebuild/gradlew, so the variable does reach
+  // Metro there. Exported per-build rather than committed to an env file, so
+  // only a build produced by this config carries the capability; CI never sets
+  // it, and `scripts/check-launch-arg-auth.mjs` fails any build that ships it.
   apps: {
     'ios.debug': {
       type: 'ios.app',
@@ -45,7 +58,7 @@ module.exports = {
       binaryPath:
         'ios/build/Build/Products/Release-iphonesimulator/SousChef.app',
       build:
-        'xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
+        'ALLOW_LAUNCH_ARG_AUTH=true xcodebuild -workspace ios/SousChefRN.xcworkspace -scheme SousChefRN -configuration Release -sdk iphonesimulator -derivedDataPath ios/build',
     },
     'android.debug': {
       type: 'android.apk',
@@ -62,7 +75,7 @@ module.exports = {
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
-        'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest',
+        "ALLOW_LAUNCH_ARG_AUTH=true bash -c 'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest'",
     },
   },
   devices: {
