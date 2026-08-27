@@ -1,4 +1,11 @@
-import { useState } from 'react';
+import {
+  useForm,
+  useWatch,
+  type Resolver,
+  type Path,
+  type PathValue,
+} from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 
 import { type UseShoppingListItemForm_ItemFragment } from './useShoppingListItemForm.generated';
 import {
@@ -8,108 +15,59 @@ import {
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
-
-type FormState = {
-  itemName: string;
-  quantityInput: string;
-  unit: string;
-  selectedUnitId: string | null;
-  notes: string;
-  category: string;
-  estimatedPrice: string;
-  /** Priority Int (0 low, 1 medium, 2 high); see shoppingList/utils/priority. */
-  priority: number;
-  /** Preferred store (storePrefs.preferredStoreId). */
-  storeId: string | null;
-  storeName: string;
-  /** Brand as typed; `brandId` is set only by picking a suggestion. */
-  brand: string;
-  brandId: string | null;
-  /** Package size (net weight) as typed, plus its unit. */
-  netWeight: string;
-  netWeightUnit: string;
-  netWeightUnitId: string | null;
-};
+import {
+  shoppingItemSchema,
+  SHOPPING_ITEM_DEFAULTS,
+  DIRTY_TRACKED_FIELDS,
+  type ShoppingItemFormData,
+} from './shoppingItemFormConfig';
 
 /**
- * `storeName` is deliberately absent: it is the display label for `storeId`,
- * never sent on its own.
+ * The shopping-list item form, on react-hook-form.
+ *
+ * Both flows that create or edit a shopping item use this — the `AddEditItem`
+ * screen and the `AddToShoppingListSheet` details step — so neither can drift
+ * on what is required, what the message says, or which fields count as dirty.
+ *
+ * Two things this replaced, both of which react-hook-form already does:
+ *   - a hand-rolled dirty map compared against a saved snapshot of the initial
+ *     state (`formState.dirtyFields` + `reset()` as the new baseline), and
+ *   - three `alertService.alert` calls per consumer for required fields, which
+ *     covered the form and had to be dismissed before the field could be fixed.
+ *     Validation now renders on the field, from one schema.
  */
-type DirtyField = Exclude<keyof FormState, 'storeName'>;
-type DirtyFields = Record<DirtyField, boolean>;
-
-/** The one list — the dirty map and its default are derived from it. */
-const DIRTY_FIELDS: readonly DirtyField[] = [
-  'itemName',
-  'quantityInput',
-  'unit',
-  'selectedUnitId',
-  'notes',
-  'category',
-  'estimatedPrice',
-  'priority',
-  'storeId',
-  'brand',
-  'brandId',
-  'netWeight',
-  'netWeightUnit',
-  'netWeightUnitId',
-];
-
-const DEFAULT_FORM_STATE: FormState = {
-  itemName: '',
-  quantityInput: '1',
-  unit: '',
-  selectedUnitId: null,
-  notes: '',
-  category: '',
-  estimatedPrice: '',
-  priority: 0,
-  storeId: null,
-  storeName: '',
-  brand: '',
-  brandId: null,
-  netWeight: '',
-  netWeightUnit: '',
-  netWeightUnitId: null,
-};
-
-const buildDirtyFields = (
-  isDirty: (field: DirtyField) => boolean,
-): DirtyFields =>
-  Object.fromEntries(
-    DIRTY_FIELDS.map(field => [field, isDirty(field)]),
-  ) as DirtyFields;
-
-const DEFAULT_DIRTY_FIELDS: DirtyFields = buildDirtyFields(() => false);
-
-export function useShoppingListItemForm(initialState?: Partial<FormState>) {
-  const [formState, setFormState] = useState<FormState>({
-    ...DEFAULT_FORM_STATE,
-    ...initialState,
+export function useShoppingListItemForm(
+  initialState?: Partial<ShoppingItemFormData>,
+) {
+  const {
+    control,
+    handleSubmit,
+    reset,
+    getValues,
+    setValue,
+    trigger,
+    formState: { errors, dirtyFields, isDirty },
+  } = useForm<ShoppingItemFormData>({
+    resolver: yupResolver(shoppingItemSchema) as Resolver<ShoppingItemFormData>,
+    defaultValues: { ...SHOPPING_ITEM_DEFAULTS, ...initialState },
+    // Re-validates as the user edits, so a message retires on the keystroke
+    // that fixes it rather than surviving until the next submit.
+    mode: 'onChange',
   });
 
-  // Track initial state for dirty field comparison (edit mode)
-  const [savedInitialState, setSavedInitialState] = useState<FormState | null>(
-    null,
-  );
+  // Subscribed rather than read, because several derived values below feed
+  // JSX (a disabled Save, the net-weight hint) and must re-render on change.
+  const values = useWatch({ control }) as ShoppingItemFormData;
 
-  // Compute dirty fields by comparing current state with initial state
-  const dirtyFields: DirtyFields = savedInitialState
-    ? buildDirtyFields(field => formState[field] !== savedInitialState[field])
-    : DEFAULT_DIRTY_FIELDS;
-
-  const hasDirtyFields = Object.values(dirtyFields).some(Boolean);
-
-  const updateField = <K extends keyof FormState>(
-    field: K,
-    value: FormState[K],
-  ) => {
-    setFormState(prev => ({ ...prev, [field]: value }));
-  };
-
+  /**
+   * Replace the form with an existing item AND make it the dirty baseline.
+   *
+   * `reset` is what makes edit mode work: `dirtyFields` is computed against
+   * the values passed here, so opening an item and saving without touching
+   * anything sends nothing.
+   */
   const setFromItem = (item: UseShoppingListItemForm_ItemFragment) => {
-    const state: FormState = {
+    reset({
       itemName: item.itemName || '',
       quantityInput:
         item.quantityInput || formatNumberForInput(item.quantity) || '1',
@@ -127,89 +85,112 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
       netWeightUnit:
         item.netWeightUnit?.symbol || item.netWeightUnit?.name || '',
       netWeightUnitId: item.netWeightUnit?.id || null,
-    };
-    setFormState(state);
-    setSavedInitialState(state); // Save initial state for dirty comparison
+    });
   };
 
   /**
-   * A net weight with no unit is a number without a meaning, and the create
-   * path rejects it outright. Screens alert on this before saving; in edit
-   * mode the item's own unit satisfies it.
+   * Set a field the user did not type into directly — the id behind an
+   * autocomplete pick, or a value derived from another field.
+   *
+   * `shouldDirty` so it counts for edit mode; `shouldValidate` so picking a
+   * unit clears the net-weight message immediately.
    */
-  const netWeightNeedsUnit =
-    !!formState.netWeight.trim() && !formState.netWeightUnitId;
+  const setFieldValue = <K extends Path<ShoppingItemFormData>>(
+    field: K,
+    value: PathValue<ShoppingItemFormData, K>,
+  ) => {
+    // `storeName` is excluded from dirty tracking at the SOURCE rather than
+    // subtracted from `isDirty` afterwards: react-hook-form mutates
+    // `dirtyFields` in place, so a boolean derived from it memoizes against an
+    // object identity that never changes and freezes at its first value.
+    // Marking the field clean keeps `isDirty` — a subscribed primitive —
+    // authoritative.
+    const tracked = (DIRTY_TRACKED_FIELDS as string[]).includes(field);
+    setValue(field, value, { shouldDirty: tracked, shouldValidate: true });
+    // `shouldValidate` re-runs the rule on THIS field only, and the
+    // all-or-nothing net-weight rule lives on `netWeightUnit` while its inputs
+    // are `netWeight` and `netWeightUnitId`. Without this, typing a weight
+    // never raises the message and picking a unit never clears it.
+    if (field === 'netWeight' || field === 'netWeightUnitId') {
+      // Both halves of the all-or-nothing rule, because each direction reports
+      // on a different field and either edit can raise or clear either message.
+      void trigger(['netWeightUnit', 'netWeight']);
+    }
+  };
 
   /** Parsed net weight, or undefined when the field is empty or not a number. */
   const parseNetWeightInput = (): number | undefined => {
-    if (!formState.netWeight.trim()) return undefined;
-    const value = parseDecimalInput(formState.netWeight);
+    const raw = getValues('netWeight');
+    if (!raw?.trim()) return undefined;
+    const value = parseDecimalInput(raw);
     return Number.isFinite(value) ? value : undefined;
   };
 
   const buildUnitInput = (): { unit: UnitSpecInput } | {} => {
-    if (!formState.unit && !formState.selectedUnitId) return {};
+    const { unit, selectedUnitId } = getValues();
+    if (!unit && !selectedUnitId) return {};
     return {
       unit: {
-        unitName: formState.unit,
-        ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }),
+        unitName: unit,
+        ...(selectedUnitId && { unitId: selectedUnitId }),
       },
     };
   };
 
-  // Build partial input with only dirty fields (for edit mode)
-  // Sends raw quantityInput string - server handles conversion via FlexibleQuantity
+  // Build partial input with only dirty fields (for edit mode).
+  // Sends raw quantityInput string - server handles conversion via FlexibleQuantity.
   const buildDirtyInput = (): Partial<UpdateShoppingListItemInput> => {
     const input: Partial<UpdateShoppingListItemInput> = {};
+    const v = getValues();
 
     if (dirtyFields.itemName) {
-      input.itemName = formState.itemName;
+      input.itemName = v.itemName;
     }
 
     if (dirtyFields.quantityInput) {
       // Send raw string - server accepts FlexibleQuantity ("1/3", "1 1/4", "0.5", etc.)
-      input.quantity = formState.quantityInput;
+      input.quantity = v.quantityInput;
     }
 
     // Unit — nest into UnitSpecInput
     if (dirtyFields.unit || dirtyFields.selectedUnitId) {
       input.unit = {
-        unitName: formState.unit,
-        ...(formState.selectedUnitId && { unitId: formState.selectedUnitId }),
+        unitName: v.unit,
+        ...(v.selectedUnitId && { unitId: v.selectedUnitId }),
       };
     }
 
     if (dirtyFields.notes) {
-      input.notes = formState.notes;
+      input.notes = v.notes;
     }
 
     if (dirtyFields.category) {
-      input.category = formState.category;
+      input.category = v.category;
     }
 
     // Pricing — nest into PricingEstimatesInput
-    if (dirtyFields.estimatedPrice && formState.estimatedPrice) {
+    if (dirtyFields.estimatedPrice && v.estimatedPrice) {
       input.pricing = {
-        estimatedPrice: parseDecimalInput(formState.estimatedPrice),
+        estimatedPrice: parseDecimalInput(v.estimatedPrice),
       };
     }
 
     if (dirtyFields.priority) {
-      input.priority = formState.priority;
+      input.priority = v.priority;
     }
 
     // Store — nest preferred store into StorePreferencesInput.
     if (dirtyFields.storeId) {
-      input.storePrefs = { preferredStoreId: formState.storeId };
+      input.storePrefs = { preferredStoreId: v.storeId };
     }
 
     // Brand — BrandReferenceInput. The server lets brandId win over brandName
     // and find-or-creates a name it does not know; an explicit `brandId: null`
     // is the only way to remove one (omitting the sub-input leaves it alone).
     if (dirtyFields.brand || dirtyFields.brandId) {
-      const brandName = formState.brand.trim();
-      input.brand = formState.brandId
-        ? { brandId: formState.brandId }
+      const brandName = v.brand.trim();
+      input.brand = v.brandId
+        ? { brandId: v.brandId }
         : brandName
         ? { brandName }
         : { brandId: null };
@@ -230,8 +211,8 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
           ? { netWeight: null }
           : {
               netWeight: value,
-              ...(formState.netWeightUnitId && {
-                netWeightUnitId: formState.netWeightUnitId,
+              ...(v.netWeightUnitId && {
+                netWeightUnitId: v.netWeightUnitId,
               }),
             };
     }
@@ -240,7 +221,7 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   };
 
   const parseQuantityInput = () => {
-    const result = parseFractionalInput(formState.quantityInput);
+    const result = parseFractionalInput(getValues('quantityInput'));
     if (result === null || result <= 0) {
       return null;
     }
@@ -248,14 +229,20 @@ export function useShoppingListItemForm(initialState?: Partial<FormState>) {
   };
 
   return {
-    formState,
+    // react-hook-form surface — fields render through `Controller control={control}`
+    // and Save goes through `handleSubmit(onValid, logValidationErrors)`.
+    control,
+    handleSubmit,
+    errors,
+    /** Current values, subscribed — for logic and display, not for field wiring. */
+    values,
     dirtyFields,
-    hasDirtyFields,
-    updateField,
+    /** True when any SUBMITTED field changed — see `setFieldValue`. */
+    hasDirtyFields: isDirty,
+    setFieldValue,
     setFromItem,
     parseQuantityInput,
     parseNetWeightInput,
-    netWeightNeedsUnit,
     buildUnitInput,
     buildDirtyInput,
   };

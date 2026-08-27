@@ -2,11 +2,11 @@
  * The single place an armed Hermes startup profile is written and stopped.
  *
  * Termination used to hang off `markFullyDrawn()`, which is reachable only from
- * `useFlashListPerformance`'s `onLoad` — and that hook has three consumers
- * against the 70-odd files that render a FlashList. A profiled launch that
- * landed signed out, or on any screen whose list is not instrumented, left the
- * sampler running for the whole session: every later measurement perturbed, no
- * trace written, and `console` stripped in release so nothing said so.
+ * `useFlashListPerformance` — and that hook has three consumers against the
+ * 70-odd files that render a FlashList. A profiled launch that landed signed
+ * out, or on any screen whose list is not instrumented, left the sampler
+ * running for the whole session: every later measurement perturbed, no trace
+ * written, and `console` stripped in release so nothing said so.
  *
  * So capture is latched here rather than at any one call site, and armed with
  * fallbacks that do not depend on the launch reaching a particular screen.
@@ -16,7 +16,7 @@ import { logger } from '#/utils/environment';
 
 import {
   isStartupProfilerArmed,
-  STARTUP_PROFILE_FILENAME,
+  STARTUP_WINDOW_MS,
   FALLBACK_PROFILE_FILENAME,
   VIEW_MANAGER_REPORT_FILENAME,
 } from './startupProfiling';
@@ -28,11 +28,12 @@ import {
 /**
  * How long a profiled launch may run before the profile is written anyway.
  *
- * Generous on purpose: the point is to bound the sampler's lifetime, not to
- * race first meaningful paint. A launch slower than this has bigger problems
- * than a mistimed trace, and the fallback filename says which window it covers.
+ * The same bound the metric uses (`STARTUP_WINDOW_MS`), so the two halves of
+ * this feature agree on where startup ends: past it, the metric emits nothing
+ * and the sampler stops. The fallback filename says which window the trace
+ * actually covers.
  */
-const FALLBACK_CAPTURE_MS = 20_000;
+const FALLBACK_CAPTURE_MS = STARTUP_WINDOW_MS;
 
 let captured = false;
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null;

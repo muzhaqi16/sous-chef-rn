@@ -50,6 +50,8 @@ interface StaggeredTabContentProps {
   scrollEventThrottle?: number;
   // Scrollable header content
   listHeaderComponent?: React.ReactElement | null;
+  /** First FlashList layout commit with rows visible — see SortableShoppingListProps. */
+  onFirstContentLayout?: () => void;
 }
 
 export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
@@ -81,6 +83,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
   onMomentumScrollEnd,
   scrollEventThrottle,
   listHeaderComponent,
+  onFirstContentLayout,
 }) => {
   const footerComponent = (
     <PaginationFooter
@@ -122,6 +125,7 @@ export const StaggeredTabContent: React.FC<StaggeredTabContentProps> = ({
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={scrollEventThrottle}
         ListHeaderComponent={listHeaderComponent}
+        onFirstContentLayout={onFirstContentLayout}
       />
     </View>
   );

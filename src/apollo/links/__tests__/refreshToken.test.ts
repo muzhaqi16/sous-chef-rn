@@ -353,12 +353,6 @@ describe('refreshToken', () => {
       });
     });
 
-    // The test that used to sit here asserted the socket reconnect was SKIPPED
-    // while `isWebSocketReconnecting()` was true. That guard is gone, and with
-    // it the flag: it was set and cleared inside one synchronous try/finally in
-    // `wsLink`, so it was never observably true and the guard never skipped
-    // anything. The debounce that does the job lives in `reconnectWebSocket`.
-
     it('handles token expired error by triggering logout with auth_rejected', done => {
       const mockTokenRefreshFailed = jest.fn();
       (mockedUseStore.getState as jest.Mock).mockReturnValue({

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
@@ -51,18 +51,39 @@ const ShoppingTabComponent: React.FC = () => {
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Sync the module-level flag when content is truly rendered (ready, loaded, not transitioning).
+  // First FlashList layout commit with rows visible. Data being ready is NOT
+  // rows being visible: FlashList holds every cell at `opacity: 0` through its
+  // progressive first layout (~200 ms of blank on a mid-range device), so the
+  // overlay releases on this signal instead of on the loading flags. A settled
+  // EMPTY list never fires it (the list's `hasRealContent` is `items.length >
+  // 0`), which is why the conditions below always pair it with a length check
+  // — otherwise an empty tab would hold skeletons forever.
+  const [listPainted, setListPainted] = useState(false);
+  const handleFirstContentLayout = () => setListPainted(true);
+
+  // Sync the module-level flag when content is truly rendered (ready, loaded,
+  // not transitioning, and — when there are rows — actually painted).
   useEffect(() => {
-    if (isReady && !loading && !isTransitioning) {
+    if (
+      isReady &&
+      !loading &&
+      !isTransitioning &&
+      (items.length === 0 || listPainted)
+    ) {
       hasShoppingTabShownContent = true;
     }
-  }, [isReady, loading, isTransitioning]);
+  }, [isReady, loading, isTransitioning, items.length, listPainted]);
 
-  // Show skeletons only on the very first data load, before content is ready.
-  // The minimum-visible latch keeps a fast cache-warm load from flashing them
-  // for a sub-perceptible frame; when content is ready immediately it never arms.
+  // Show skeletons only on the very first data load, before content is ready
+  // AND painted. The minimum-visible latch keeps a fast cache-warm load from
+  // flashing them for a sub-perceptible frame; when content is ready
+  // immediately it never arms.
   const rawShowSkeletons =
-    !hasShoppingTabShownContent && (!isReady || isTransitioning || !!loading);
+    !hasShoppingTabShownContent &&
+    (!isReady ||
+      isTransitioning ||
+      !!loading ||
+      (items.length > 0 && !listPainted));
   const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
   const { t } = useTranslation();
@@ -127,6 +148,7 @@ const ShoppingTabComponent: React.FC = () => {
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={scrollEventThrottle}
           listHeaderComponent={listHeaderComponent}
+          onFirstContentLayout={handleFirstContentLayout}
         />
       </View>
 

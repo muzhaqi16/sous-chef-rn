@@ -15,7 +15,13 @@
  */
 
 import { createRequire } from 'node:module';
-import { mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
+import {
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+  readFileSync,
+  globSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -25,16 +31,20 @@ const { parse, print, Kind } = require('graphql');
 const {
   generatePersistedQueryManifest,
 } = require('@apollo/generate-persisted-query-manifest');
-const globby = require('globby');
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = join(repoRoot, 'persisted-query-manifest.json');
 
-const files = globby
-  .sync(['src/**/*.graphql', '!src/graphql/generated/**'], {
-    cwd: repoRoot,
-    absolute: true,
-  })
+// `exclude` is called with both bare directory names and repo-relative paths,
+// so the pattern has to be anchored on a path segment: a `startsWith('src/...')`
+// predicate never sees the directory and lets `generated/schema.graphql`
+// through. globSync does not sort, and the manifest's operation order has to be
+// stable across machines.
+const files = globSync('src/**/*.graphql', {
+  cwd: repoRoot,
+  exclude: p => /(^|\/)graphql\/generated(\/|$)/.test(p),
+})
+  .map(f => join(repoRoot, f))
   .sort();
 
 const tmp = mkdtempSync(join(tmpdir(), 'pq-manifest-'));

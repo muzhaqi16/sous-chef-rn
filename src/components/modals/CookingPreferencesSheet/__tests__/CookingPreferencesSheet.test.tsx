@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '../CookingPreferencesSheet';
 
 jest.mock('#hooks/useSharedBottomSheetConfigs', () => ({
@@ -67,14 +67,39 @@ jest.mock('#components/atoms/BottomSheetHeader', () => ({
   },
 }));
 
-jest.mock('@react-native-picker/picker', () => {
+// Stands in for the tray so the OPTIONS are reachable without driving gorhom's
+// present/animate cycle. `stackBehavior` is captured because passing 'push' is
+// what keeps this picker from minimizing the sheet it opens from.
+const modalPickerProps: { stackBehavior?: string }[] = [];
+jest.mock('#components/molecules/ModalPicker', () => {
   const RN = require('react-native');
   const R = require('react');
-  const Picker = ({ children }: { children: React.ReactNode }) =>
-    R.createElement(RN.View, { testID: 'picker' }, children);
-  Picker.Item = ({ label, value }: { label: string; value: string }) =>
-    R.createElement(RN.Text, { key: value }, label);
-  return { Picker };
+  return {
+    ModalPicker: (props: {
+      visible: boolean;
+      options: { label: string; value: string }[];
+      onSelect: (value: string) => void;
+      stackBehavior?: string;
+    }) => {
+      modalPickerProps.push({ stackBehavior: props.stackBehavior });
+      if (!props.visible) return null;
+      return R.createElement(
+        RN.View,
+        { testID: 'modal-picker' },
+        props.options.map(opt =>
+          R.createElement(
+            RN.Pressable,
+            {
+              key: opt.value,
+              testID: `modal-picker-option-${opt.value}`,
+              onPress: () => props.onSelect(opt.value),
+            },
+            R.createElement(RN.Text, null, opt.label),
+          ),
+        ),
+      );
+    },
+  };
 });
 
 jest.mock('#/constants/dietary', () => ({
@@ -120,11 +145,44 @@ describe('CookingPreferencesSheet', () => {
     expect(screen.getByText('Save')).toBeTruthy();
   });
 
-  it('renders skill level options', () => {
+  it('opens the skill level tray on press and lists every level', () => {
     render(<CookingPreferencesSheet {...defaultProps} />);
+    expect(screen.queryByTestId('modal-picker')).toBeNull();
+
+    fireEvent.press(
+      screen.getByTestId('cooking-preferences-skill-level-picker'),
+    );
+
     expect(screen.getByText('Beginner')).toBeTruthy();
     expect(screen.getByText('Intermediate')).toBeTruthy();
     expect(screen.getByText('Advanced')).toBeTruthy();
+  });
+
+  it('opens the skill tray with stackBehavior="push"', () => {
+    // gorhom's default 'switch' minimizes the HOST sheet, which reads as a
+    // crash — this picker always opens from inside one.
+    modalPickerProps.length = 0;
+    render(<CookingPreferencesSheet {...defaultProps} />);
+    expect(modalPickerProps.length).toBeGreaterThan(0);
+    expect(modalPickerProps.every(p => p.stackBehavior === 'push')).toBe(true);
+  });
+
+  it('shows the chosen skill level on the trigger and saves it', async () => {
+    render(<CookingPreferencesSheet {...defaultProps} />);
+    fireEvent.press(
+      screen.getByTestId('cooking-preferences-skill-level-picker'),
+    );
+    fireEvent.press(screen.getByTestId('modal-picker-option-Intermediate'));
+
+    // Tray closed, trigger now reads the selection rather than the placeholder.
+    expect(screen.queryByTestId('modal-picker')).toBeNull();
+    expect(screen.getByText('Intermediate')).toBeTruthy();
+
+    fireEvent.press(screen.getByTestId('save-btn'));
+    await screen.findByText('Cooking Preferences');
+    expect(defaultProps.onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ cookingSkillLevel: 'Intermediate' }),
+    );
   });
 
   it('renders without initial values', () => {

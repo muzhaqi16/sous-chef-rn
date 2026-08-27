@@ -969,4 +969,16 @@ describe('wsLink', () => {
       expect(setTokens).not.toHaveBeenCalled();
     });
   });
+
+  // Several suites here call the `connected` handler directly, and each call
+  // arms the CONNECTION_STABLE_MS (10 s) backoff-reset timer. In the app the
+  // `closed` handler disarms it; in a test nothing does, so the run ends with a
+  // real 10 s timer pending and Jest has to force-exit the worker
+  // ("failed to exit gracefully"). Whether the warning actually surfaced
+  // depended on how long the rest of the run took, which is why it looked like
+  // an interaction between suites rather than a leak in this one.
+  afterAll(() => {
+    disableAutoReconnect();
+    disposeWebSocket();
+  });
 });

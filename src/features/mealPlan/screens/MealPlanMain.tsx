@@ -59,20 +59,7 @@ import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions'
 import { type MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { toastService } from '#/services/toastService';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
-
-async function executeMealPlanRefresh(
-  refetchFn: () => Promise<unknown>,
-  setRefreshing: (v: boolean) => void,
-) {
-  setRefreshing(true);
-  try {
-    await refetchFn();
-  } catch {
-    // Silently handle — Apollo will surface errors via its error state
-  } finally {
-    setRefreshing(false);
-  }
-}
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 
 /**
  * Outer component that gates heavy work behind DeferredScreen.
@@ -197,7 +184,7 @@ const MealPlanMainInner: React.FC = () => {
 
   // Pull-to-refresh
   const [refreshing, setRefreshing] = useState(false);
-  const handleRefresh = () => executeMealPlanRefresh(refetch, setRefreshing);
+  const handleRefresh = () => executeRefreshWithFinally(refetch, setRefreshing);
 
   const plansState = useDataState({
     loading: plansInitialLoading,

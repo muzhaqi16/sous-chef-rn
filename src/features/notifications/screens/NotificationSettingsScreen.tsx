@@ -22,8 +22,9 @@ import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import {
   executeWithLoadingState,
-  executeRefreshWithFinally,
+  executeWriteWithFinally,
 } from '#/utils/finallyHelpers';
+import { logger } from '#/utils/environment';
 import { Text } from '#components/atoms/Text';
 
 interface SettingDef {
@@ -321,8 +322,11 @@ export const NotificationSettingsScreen: React.FC = () => {
       return;
     }
 
-    // Default handling for all other settings
-    executeRefreshWithFinally(
+    // Default handling for all other settings. The `!success` branch covers a
+    // resolved refusal; `onError` covers a throw, which the finalizer would
+    // otherwise swallow — same copy, so one failure produces one message
+    // whichever route it took.
+    executeWriteWithFinally(
       async () => {
         const success = await updateNotificationSetting(key, value);
         if (!success) {
@@ -333,6 +337,10 @@ export const NotificationSettingsScreen: React.FC = () => {
         }
       },
       isLoading => setUpdating(isLoading ? key : null),
+      error => {
+        logger.error('Notification setting update threw', { key, error });
+        alertService.alert(t('labels.error'), t('notifications.updateFailed'));
+      },
     );
   };
 
@@ -346,7 +354,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           text: t('settings.resetSection'),
           style: 'destructive',
           onPress: () => {
-            executeRefreshWithFinally(
+            executeWriteWithFinally(
               async () => {
                 const success = await resetToDefaults();
                 if (success) {
@@ -362,6 +370,13 @@ export const NotificationSettingsScreen: React.FC = () => {
                 }
               },
               isLoading => setUpdating(isLoading ? 'reset' : null),
+              error => {
+                logger.error('Notification settings reset threw', { error });
+                alertService.alert(
+                  t('labels.error'),
+                  t('errors.resetSettingsFailed'),
+                );
+              },
             );
           },
         },

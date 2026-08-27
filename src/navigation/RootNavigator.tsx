@@ -266,16 +266,6 @@ export function Navigation() {
     usePostLoginState();
   const verificationSkipped = useVerificationSkipped();
 
-  // A launch that stops at any of these waits on a person, and that wait would
-  // otherwise land inside `app_fully_drawn_ms` — a signed-out cold start
-  // reports the sign-in typing time as app startup. Recorded here, at the one
-  // place that knows about every gate, rather than in each gate's screen.
-  useEffect(() => {
-    if (INTERACTIVE_GATES.has(navigationState)) {
-      NativePerformanceService.noteInteractiveGate();
-    }
-  }, [navigationState]);
-
   // Track focused-route changes for screen-view analytics + crash breadcrumbs.
   // Only emits when the route name actually changes; intermediate state ticks
   // (animation, gesture, params-only updates) are filtered out.
@@ -300,7 +290,25 @@ export function Navigation() {
   useEffect(() => {
     if (isHydrated && !hasInitialized.current) {
       hasInitialized.current = true;
-      setNavigationState(resolveNavTarget(user, verificationSkipped));
+      const target = resolveNavTarget(user, verificationSkipped);
+
+      // A launch that stops at one of these waits on a person, and that wait
+      // would otherwise land inside `app_fully_drawn_ms` — a signed-out cold
+      // start would report the sign-in typing time as app startup.
+      //
+      // Read from THIS launch's resolved target, never from `navigationState`:
+      // that value is persisted (`PERSISTED_KEYS`) and rehydrated before the
+      // launch resolves its own, so a standalone effect on it saw the PREVIOUS
+      // session's screen. `noteInteractiveGate()` is a one-way process-scoped
+      // latch, so one such read permanently suppressed the metric on launches
+      // that never waited on anyone. A gate entered LATER by an interactive
+      // login is not a launch gate and is deliberately not noted here; the
+      // startup window's own bound covers that interval.
+      if (INTERACTIVE_GATES.has(target)) {
+        NativePerformanceService.noteInteractiveGate();
+      }
+
+      setNavigationState(target);
     }
   }, [isHydrated, user, verificationSkipped, setNavigationState]);
 

@@ -55,10 +55,19 @@ export const Environment = {
   isProduction: jest.fn(() => false),
   isStaging: jest.fn(() => false),
   isTesting: jest.fn(() => true),
-  // Default OFF, matching the real flag: accepting an auth state from launch
-  // arguments is a capability a build opts into, and a mock that defaults it on
-  // would hide a gate regression in every suite that does not think about it.
-  allowsLaunchArgAuth: jest.fn(() => false),
+  // Default ON, matching what the REAL function returns under Jest. The real
+  // gate is `__DEV__ || env.ALLOW_LAUNCH_ARG_AUTH === 'true'`, and
+  // `@react-native/jest-preset` defines `__DEV__` as true, so every test
+  // environment takes the first branch.
+  //
+  // This used to default to `false` with a comment claiming it matched — the
+  // opposite of the truth, and `Environment` is auto-mocked globally, so any
+  // suite rendering `useStartupInit` without an explicit override never entered
+  // `injectDetoxLaunchArgs` at all. A regression inside it — a renamed launch
+  // arg, a parse change, a throw — passed CI untouched. That is the class of
+  // failure that produced commit deaf9d4c. A suite that wants the capability
+  // OFF now says so explicitly, which is the state the old comment described.
+  allowsLaunchArgAuth: jest.fn(() => true),
   getPlatform: jest.fn(() => 'ios' as 'ios' | 'android' | 'web'),
   shouldEnableDebugFeatures: jest.fn(() => true),
   shouldEnableCrashReporting: jest.fn(() => false),

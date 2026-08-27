@@ -1,12 +1,11 @@
 /**
  * `isLoadingInitial` says a request is still in flight — nothing else.
  *
- * It used to be `!hasUIItems && (loading || hasRawData)`, and the two counts it
- * compared were not the same set: `hasUIItems` counts the rows the list would
- * render (post-search), while `hasRawData` counted every row fetched. So a
- * search matching none of the loaded items satisfied `hasRawData` and the tab
- * showed loading skeletons for a result that had already arrived, instead of
- * the "nothing matched" state it renders for exactly this case.
+ * Not `!hasUIItems && (loading || hasRawData)`: those two counts are different
+ * sets — `hasUIItems` counts the rows the list would render (post-search),
+ * `hasRawData` every row fetched. A search matching none of the loaded items
+ * satisfies `hasRawData`, showing loading skeletons for a result that has
+ * already arrived instead of the "nothing matched" state.
  *
  * The composed hooks are mocked rather than driven through Apollo: the
  * derivation under test reads four numbers, and standing up the real query,

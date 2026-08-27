@@ -1,4 +1,6 @@
 {
   "maxFilesWithBailouts": 0,
-  "files": []
+  "files": [],
+  "isolatedLeaves": {},
+  "noMemoOptOuts": []
 }

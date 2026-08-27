@@ -67,7 +67,7 @@ describe('SuggestEditForm', () => {
   });
 
   // Without the snapshot there is nothing to diff against, so a failed load has
-  // to say so — it used to sit on a spinner that never resolved.
+  // to say so rather than sit on a spinner that never resolves.
   it('offers a retry when the item cannot be loaded', async () => {
     renderForm([
       {

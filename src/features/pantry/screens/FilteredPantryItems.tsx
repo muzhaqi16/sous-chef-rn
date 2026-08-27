@@ -31,6 +31,7 @@ import { useAddLowStockToShoppingList } from '#features/pantry/hooks/useAddLowSt
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import {
   addOptimisticShoppingListItem,
   createOptimisticShoppingListItem,
@@ -400,10 +401,8 @@ export const FilteredPantryItems: React.FC<
     isPaused: !isScreenFocused,
   });
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await refetch();
-    setRefreshing(false);
+  const handleRefresh = () => {
+    executeRefreshWithFinally(refetch, setRefreshing);
   };
 
   const handleAddToList = async (

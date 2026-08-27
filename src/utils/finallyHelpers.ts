@@ -14,17 +14,49 @@
  * enforces it — no linter can (see CLAUDE.md's React Compiler Conventions).
  */
 
-/** Wraps an async refresh with try/finally to keep setRefreshing(false) guaranteed */
+/**
+ * Wraps an async refresh so `setRefreshing(false)` is guaranteed.
+ *
+ * This is the ONLY correct way to drive a pull-to-refresh flag. Writing
+ * `setRefreshing(true); await onRefresh(); setRefreshing(false);` inline looks
+ * equivalent and is not: Apollo's `refetch()` REJECTS on a network error, and
+ * the un-finalized form then never reaches the third line — the spinner spins
+ * until the screen unmounts. That was the "pull to refresh sometimes hangs"
+ * report, and "sometimes" was "whenever the network was flaky".
+ *
+ * The catch is part of the contract, not an extra: a refresh that rejects has
+ * already been surfaced by the query's own error state, so re-throwing here
+ * only produces an unhandled rejection. Pass `onError` when a caller wants to
+ * do more than clear the flag.
+ */
 export async function executeRefreshWithFinally(
   refreshFn: () => Promise<unknown>,
   setRefreshing: (value: boolean) => void,
+  onError?: (error: unknown) => void,
 ): Promise<void> {
   setRefreshing(true);
-  try {
-    await refreshFn();
-  } finally {
-    setRefreshing(false);
-  }
+  await executeAsyncWithCleanup(refreshFn, () => setRefreshing(false), onError);
+}
+
+/**
+ * The same finalizer for a WRITE, with `onError` REQUIRED rather than optional.
+ *
+ * `executeRefreshWithFinally`'s swallow is safe for a refetch because the query
+ * it refreshes surfaces its own error state. A mutation has no such second
+ * surface: if it throws rather than resolving `{ success: false }` — a payload
+ * unwrap raising, or a network throw outside `errorPolicy: 'all'` — swallowing
+ * clears the spinner and reports nothing at all. Requiring the handler is what
+ * makes that omission a type error instead of a silent one, so this is not a
+ * convenience wrapper: prefer it for every write, and never widen the parameter
+ * back to optional.
+ */
+export async function executeWriteWithFinally(
+  writeFn: () => Promise<unknown>,
+  setPending: (value: boolean) => void,
+  onError: (error: unknown) => void,
+): Promise<void> {
+  setPending(true);
+  await executeAsyncWithCleanup(writeFn, () => setPending(false), onError);
 }
 
 /** Wraps an async operation with try-catch-finally where loading state is set externally

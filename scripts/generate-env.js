@@ -46,7 +46,7 @@ const KEYS = [
   'ENABLE_PRODUCTION_LOGS',
   // Build identity. Without these a measurement cannot be traced to the code
   // that produced it, which is what made a whole performance investigation
-  // unattributable (see docs/audits/perf-offline-baseline-2026-08-24.md).
+  // unattributable — every reading had to be retracted.
   // GIT_SHA falls back to the working tree's HEAD, so local builds are
   // attributable too; CI overrides both via `process.env`.
   'GIT_SHA',
@@ -117,6 +117,20 @@ function resolveEnvFileName() {
   return '.env';
 }
 
+/**
+ * Read one key out of a generated `env.generated.ts` source.
+ *
+ * Three-way on purpose: a string for a written value, `null` for a key written
+ * as `undefined`, and `undefined` for a key that is not there at all. The
+ * provenance check needs to tell "recorded as absent" from "never emitted".
+ */
+function readGeneratedValue(source, key) {
+  const defined = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
+  if (defined) return defined[1];
+  if (new RegExp(`^  ${key}: undefined,$`, 'm').test(source)) return null;
+  return undefined;
+}
+
 /** Minimal .env parser (KEY=VALUE lines; ignores comments/blanks; strips quotes). */
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -139,9 +153,6 @@ function parseEnvFile(filePath) {
   return result;
 }
 
-/** A full 40-character commit sha — what CI records, never what `gitSha()` derives. */
-const FULL_SHA = /^[0-9a-f]{40}$/;
-
 /**
  * Build identity recorded in a previously generated `env.generated.ts`, kept
  * only where re-deriving it now would be a DOWNGRADE.
@@ -156,8 +167,9 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
  *
  * Deliberately NOT a blanket "keep whatever was there": that would freeze a
  * local checkout's sha at its first value and stop `-dirty` from ever tracking
- * the tree again. Only these two keys, and GIT_SHA only when the recorded value
- * is strictly more precise than what this run can derive.
+ * the tree again — which is exactly what the precision test that used to guard
+ * this did, because it could never be false. Only these two keys, and GIT_SHA
+ * only when this tree can derive no sha at all.
  */
 function readExistingBuildIdentity() {
   const generatedPath = path.join(
@@ -174,10 +186,7 @@ function readExistingBuildIdentity() {
     return {};
   }
 
-  const read = key => {
-    const match = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
-    return match ? match[1] : undefined;
-  };
+  const read = key => readGeneratedValue(source, key) ?? undefined;
 
   const identity = {};
   // Never derived, so a recorded value can only have come from an explicit
@@ -185,14 +194,21 @@ function readExistingBuildIdentity() {
   const buildId = read('BUILD_ID');
   if (buildId) identity.BUILD_ID = buildId;
 
-  // Kept only against a less precise derivation — a local run re-deriving its
-  // own short sha must still see the tree's current state.
+  // Kept ONLY when this tree cannot describe itself at all.
+  //
+  // The condition here used to be `!FULL_SHA.test(gitSha() ?? '')`, which is
+  // unconditionally TRUE: `gitSha()` only ever returns a SHORT sha, so it never
+  // matches FULL_SHA and the recorded value was preserved on every subsequent
+  // run. One `GIT_SHA=$(git rev-parse HEAD) npm run ios:release` therefore
+  // pinned every later local build to that commit — `-dirty` never reappeared,
+  // and `check-build-provenance.mjs` did not notice because it only compares
+  // when `process.env.GIT_SHA` is set. That defeats the traceability the value
+  // exists for: the build reports a commit it was not built from.
+  //
+  // A tree that CAN derive a sha always wins, precise or not: describing the
+  // wrong commit is worse than describing this one less precisely.
   const recordedSha = read('GIT_SHA');
-  if (
-    recordedSha &&
-    FULL_SHA.test(recordedSha) &&
-    !FULL_SHA.test(gitSha() ?? '')
-  ) {
+  if (recordedSha && !gitSha()) {
     identity.GIT_SHA = recordedSha;
   }
 
@@ -258,7 +274,7 @@ ${entries}
 // candidate set from it. Exporting the array — rather than having the checker
 // parse this file — keeps one source of truth without making the gate's
 // coverage depend on the punctuation of the comments above.
-module.exports = { generateEnv, KEYS };
+module.exports = { generateEnv, KEYS, parseEnvFile, readGeneratedValue };
 
 // Run when invoked directly (npm scripts, CI), not when required by metro.config.
 if (require.main === module) {

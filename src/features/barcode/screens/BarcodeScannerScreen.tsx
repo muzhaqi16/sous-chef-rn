@@ -19,6 +19,7 @@ import { Button } from '#components/atoms/Button';
 import { IconButton } from '#components/atoms/IconButton';
 import { HapticService } from '#services/haptic/HapticService';
 import { useHiddenStatusBar } from '#hooks/useHiddenStatusBar';
+import { TIMING } from '#/constants/animations';
 import type { BarcodeSource } from '#/types/navigation';
 import { Text } from '#components/atoms/Text';
 import { logger } from '#/utils/environment';
@@ -72,12 +73,72 @@ export const BarcodeScannerScreen: React.FC<
   // events so a command issued mid-transition is deferred rather than rejected.
   const [isSessionRunning, setIsSessionRunning] = useState(false);
 
-  // 1) Request permission once the initial check completes and status is undetermined
+  // 1) Request permission once the initial check completes and the status is
+  //    undetermined — but only after this screen has SETTLED, never from a
+  //    plain mount effect.
+  //
+  //    Firing it on mount raced two animations that were still running: the
+  //    stack push, and the Add-to-Pantry sheet's blur-dismiss
+  //    (`useStandardBottomSheet` dismisses on `blur`, which React Navigation
+  //    emits when the navigation state changes, not when the animation
+  //    finishes). The OS dialog landed on top of a half-dismissed sheet over a
+  //    half-transitioned screen — the "camera permission overlaps Add to
+  //    Pantry" report.
+  //
+  //    A timer rather than the native stack's own `transitionEnd`: that event
+  //    is not reachable through the navigation type here (RootNavigator
+  //    registers a global navigator, so `useNavigation()` resolves to the root
+  //    navigation whose `EventMapCore` has no `transitionEnd`, and the generic
+  //    does not override a global registration). The delay covers the push plus
+  //    the sheet's dismiss, both bounded by the same constants that drive them.
+  //
+  //    Armed on FOCUS, not mount: this screen is `React.lazy`, so its chunk can
+  //    resolve at any point relative to the transition, and focus is the one
+  //    moment we know the screen is the active one.
+  const [screenSettled, setScreenSettled] = useState(false);
+  const [onScannerFocus] = useState(() => () => {
+    const handle = setTimeout(
+      () => setScreenSettled(true),
+      TIMING.SLOW + TIMING.STANDARD,
+    );
+    return () => clearTimeout(handle);
+  });
+  useFocusEffect(onScannerFocus);
+
+  // Whether the request has been ISSUED AND RESOLVED. Until then nothing is
+  // known about the user's intent, so the render below must not claim they
+  // refused. `status` cannot answer this on Android: react-native-permissions
+  // reports a never-requested permission as `RESULTS.DENIED` — that result
+  // means "requestable", not "refused" — which `PermissionService` normalizes
+  // to `'denied'`, indistinguishable from a real refusal. So track the ask.
+  const [hasAskedPermission, setHasAskedPermission] = useState(false);
+
   useEffect(() => {
-    if (!isCheckingPermission && !hasPermission && !isBlocked) {
-      requestPermission();
-    }
-  }, [isCheckingPermission, hasPermission, isBlocked, requestPermission]);
+    if (!screenSettled) return;
+    if (isCheckingPermission || hasPermission || isBlocked) return;
+    let active = true;
+    const ask = async () => {
+      // Set on the throw path too: this flag is the only thing that lifts the
+      // neutral screen, so swallowing a native rejection here would strand the
+      // user on a blank screen with no way back.
+      try {
+        await requestPermission();
+      } catch (e) {
+        logger.warn('[BarcodeScanner] camera permission request failed', e);
+      }
+      if (active) setHasAskedPermission(true);
+    };
+    ask();
+    return () => {
+      active = false;
+    };
+  }, [
+    screenSettled,
+    isCheckingPermission,
+    hasPermission,
+    isBlocked,
+    requestPermission,
+  ]);
 
   // 2) When screen focuses *and* permission granted, turn scanner on;
   //    when unfocused, turn it off.
@@ -170,8 +231,17 @@ export const BarcodeScannerScreen: React.FC<
 
   // --- RENDER FALLBACKS ---
 
-  // A) Still checking permission status — show black screen to prevent flash
-  if (isCheckingPermission) {
+  // A) Nothing truthful to show yet — a neutral screen, never the refusal UI.
+  //    Either the initial check is still running, or we have not finished
+  //    ASKING: the request waits for `screenSettled`, so branch B would
+  //    otherwise render "camera access is required" plus a Grant button for a
+  //    permission the app has not requested yet — telling the user they
+  //    refused something they were never asked. `isBlocked` is excluded
+  //    because a blocked permission IS a settled refusal worth showing at once.
+  if (
+    isCheckingPermission ||
+    (!hasPermission && !isBlocked && !hasAskedPermission)
+  ) {
     return <View style={styles.centeredContainer} />;
   }
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
@@ -48,18 +48,35 @@ const PurchasedTabComponent: React.FC = () => {
   // This ensures smooth screen transitions by showing skeletons during navigation animation
   const isReady = useDeferredRender();
 
-  // Sync the module-level flag when content is truly rendered (ready, loaded, not transitioning).
+  // First FlashList layout commit with rows visible — see ShoppingTab for the
+  // full rationale. A settled EMPTY list never fires it, so every condition
+  // below pairs it with a length check.
+  const [listPainted, setListPainted] = useState(false);
+  const handleFirstContentLayout = () => setListPainted(true);
+
+  // Sync the module-level flag when content is truly rendered (ready, loaded,
+  // not transitioning, and — when there are rows — actually painted).
   useEffect(() => {
-    if (isReady && !loading && !isTransitioning) {
+    if (
+      isReady &&
+      !loading &&
+      !isTransitioning &&
+      (items.length === 0 || listPainted)
+    ) {
       hasPurchasedTabShownContent = true;
     }
-  }, [isReady, loading, isTransitioning]);
+  }, [isReady, loading, isTransitioning, items.length, listPainted]);
 
-  // Show skeletons only on the very first data load, before content is ready.
-  // The minimum-visible latch keeps a fast cache-warm load from flashing them
-  // for a sub-perceptible frame; when content is ready immediately it never arms.
+  // Show skeletons only on the very first data load, before content is ready
+  // AND painted. The minimum-visible latch keeps a fast cache-warm load from
+  // flashing them for a sub-perceptible frame; when content is ready
+  // immediately it never arms.
   const rawShowSkeletons =
-    !hasPurchasedTabShownContent && (!isReady || isTransitioning || !!loading);
+    !hasPurchasedTabShownContent &&
+    (!isReady ||
+      isTransitioning ||
+      !!loading ||
+      (items.length > 0 && !listPainted));
   const showSkeletons = useMinimumVisible(rawShowSkeletons);
 
   const { t } = useTranslation();
@@ -118,6 +135,7 @@ const PurchasedTabComponent: React.FC = () => {
           onMomentumScrollEnd={onMomentumScrollEnd}
           scrollEventThrottle={scrollEventThrottle}
           listHeaderComponent={listHeaderComponent}
+          onFirstContentLayout={handleFirstContentLayout}
         />
       </View>
 

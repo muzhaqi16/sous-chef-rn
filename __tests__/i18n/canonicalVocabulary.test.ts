@@ -40,6 +40,18 @@ const COMPOSED_KEY_REASON =
 
 const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = [
   {
+    keys: ['recipes.difficultyLabel.MEDIUM', 'shoppingListScreens.priorityMedium'],
+    reason:
+      'Two adjectives that happen to coincide, not one string used twice. ' +
+      'Each agrees with a different noun — recipe DIFFICULTY vs shopping-list ' +
+      'PRIORITY — and they match in all four locales only because both nouns ' +
+      'are feminine in es/it. The siblings already diverge (es "Fácil"/' +
+      '"Difícil" vs "Baja"/"Alta"), so merging the middle term would couple ' +
+      'the shopping list to the recipes namespace and break the first locale ' +
+      'where the two nouns take different agreement. Per CLAUDE.md, noun ' +
+      'agreement belongs in per-context keys.',
+  },
+  {
     keys: ['errors.entityHome', 'labels.home', 'notifications.categoryHome', 'invitationAcceptance.resourceHome', 'homeManagement.statsHome_one', 'joinHome.homeFallback'],
     reason:
       'The English is one word for two roles: sq "Shtëpia" vs ' +

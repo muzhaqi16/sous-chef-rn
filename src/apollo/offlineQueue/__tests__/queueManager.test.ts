@@ -212,9 +212,9 @@ describe('QueueManager', () => {
       expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledWith(
         'user-1',
       );
-      // Cleanup runs even with nothing pending. It used to sit after the
-      // empty-queue return, so a queue holding only terminal entries — with no
-      // pending work to trigger a pass — was never cleaned at all.
+      // Cleanup runs even with nothing pending: a queue holding only terminal
+      // entries has no pending work to trigger a pass, so gating cleanup on
+      // pending work would leave it never cleaned.
       expect(queueStore.cleanupTerminal).toHaveBeenCalled();
     });
 

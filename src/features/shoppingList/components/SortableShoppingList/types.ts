@@ -85,6 +85,13 @@ export interface SortableShoppingListProps
    * Defaults to true.
    */
   showImages?: boolean;
+  /**
+   * Fires once per list mount, on the first FlashList layout commit that
+   * lands with rows present — the earliest frame where cells are actually
+   * visible (FlashList holds them at `opacity: 0` until then). The tab's
+   * skeleton overlay releases on this, not on the data arriving.
+   */
+  onFirstContentLayout?: () => void;
 }
 
 // Sort order update for API calls

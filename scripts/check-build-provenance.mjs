@@ -20,6 +20,7 @@
  * which is the useful local check.
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { readGeneratedValue } from './generate-env.js';
 
 const GENERATED = new URL('../src/config/env.generated.ts', import.meta.url);
 
@@ -34,12 +35,7 @@ if (!existsSync(GENERATED)) {
 const source = readFileSync(GENERATED, 'utf8');
 
 /** Read a generated key's value; `null` when it was written as `undefined`. */
-function generatedValue(key) {
-  const defined = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
-  if (defined) return defined[1];
-  if (new RegExp(`^  ${key}: undefined,$`, 'm').test(source)) return null;
-  return undefined;
-}
+const generatedValue = key => readGeneratedValue(source, key);
 
 const failures = [];
 

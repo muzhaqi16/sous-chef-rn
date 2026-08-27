@@ -26,7 +26,7 @@ import { createHash } from 'crypto';
  * Re-record with:
  *   sha256sum src/apollo/cache.ts | cut -c1-16
  */
-const REVIEWED_CACHE_POLICY_HASH = '4d9fb4d354c2dcd3';
+const REVIEWED_CACHE_POLICY_HASH = 'e4aab68d114ce0c2';
 
 it('cache.ts has not changed without the persisted-shape decision being made', () => {
   const actual = createHash('sha256')

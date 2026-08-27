@@ -101,11 +101,35 @@ describe('TelemetryService', () => {
       expect(mockSendMetrics).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
-            name: 'app_starts_total',
+            name: 'app_events_total',
             type: 'counter',
           }),
         ]),
       );
+    });
+
+    it('emits no metric of its own from initialize()', async () => {
+      // `initialize()` is called synchronously from the startup hydration
+      // effect, so anything it emits is the FIRST labelled metric of a cold
+      // start — and resolving `device_type` means `isEmulatorSync()`, a binder
+      // IPC on Android hardware and free on an emulator. Emitting from here put
+      // that read inside the very window `app_startup_duration_ms` and
+      // `app_fully_drawn_ms` measure, on real devices only, biasing the
+      // comparison the label exists to enable. `app_starts_total` now comes
+      // from `useStartupInit`'s idle callback instead.
+      const service = new TelemetryService({
+        enabled: true,
+        enableLogs: true,
+        enableMetrics: true,
+      });
+
+      service.initialize();
+      await service.flush();
+
+      const metricNames = mockSendMetrics.mock.calls
+        .flatMap(([metrics]) => metrics as { name: string }[])
+        .map(m => m.name);
+      expect(metricNames).not.toContain('app_starts_total');
     });
 
     it('starts flush timers when logs are enabled', () => {

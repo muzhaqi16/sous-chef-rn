@@ -236,11 +236,10 @@ function preservePendingEdges(
  * This is the difference between a refresh that works and one that only ever
  * adds. The append-only branch below keeps every existing edge in place and
  * appends whatever is new, which is right for `fetchMore` and wrong for a
- * refetch: an entry deleted on another device stayed on screen because it was
- * in `existing` and simply absent from `incoming`, and an entry that now sorts
- * first stayed wherever it used to be, because its position came from the
- * cached edge rather than the fresh page. Pull-to-refresh appeared to do
- * nothing.
+ * refetch: an entry deleted on another device would stay on screen (it is in
+ * `existing` and simply absent from `incoming`), and an entry that now sorts
+ * first would keep its old position, taken from the cached edge rather than the
+ * fresh page — pull-to-refresh appearing to do nothing.
  *
  * How much the page re-states is decided by `hasNextPage`, and only by it:
  *

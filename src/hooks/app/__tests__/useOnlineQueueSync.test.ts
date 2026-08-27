@@ -94,8 +94,8 @@ describe('useOnlineQueueSync', () => {
   });
 
   it('drains even when a deferred token refresh never settles', () => {
-    // The drain used to be called only from the refresh promise's
-    // `.then`/`.catch`. `proactiveTokenRefresh` hands every later caller the
+    // The drain must not hang off the refresh promise's `.then`/`.catch`:
+    // `proactiveTokenRefresh` hands every later caller the
     // existing in-flight promise and only the ORIGINAL caller's `finally`
     // resets the state, and `performTokenRefresh` has no timeout over its
     // backoff-retry loop — so one stuck refresh stranded the queue silently.

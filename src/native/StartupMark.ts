@@ -85,9 +85,30 @@ export const StartupMark = {
     return write ? write(filename, contents) : Promise.resolve(null);
   },
 
-  /** Stop profiling and write the trace; resolves with its absolute path. */
+  /**
+   * Stop profiling and write the trace; resolves with its absolute path.
+   *
+   * REJECTS when the native cannot stop, rather than resolving `null`. A build
+   * that can `startProfiling` but not `stopProfiling` — an older native, or a
+   * platform not yet wired — is the worst case there is: sampling has already
+   * started, so resolving success cleared the fallback timer, logged "profile
+   * written" with a null path, and left the sampler running for the rest of the
+   * session. Every later measurement perturbed, `isStartupProfilerArmed()` true
+   * so `app_fully_drawn_ms` stayed suppressed, no trace produced, and the only
+   * diagnostic said it had worked. A rejection reaches the existing `.catch`
+   * and says so.
+   */
   stopProfiling(filename: string): Promise<string | null> {
     const stop = nativeModule()?.stopProfiling;
-    return stop ? stop(filename) : Promise.resolve(null);
+    if (!stop) {
+      return Promise.reject(
+        new Error(
+          'StartupMark.stopProfiling is unavailable in this build: sampling ' +
+            'was started and cannot be stopped, so this session’s timings ' +
+            'are perturbed and no trace will be written.',
+        ),
+      );
+    }
+    return stop(filename);
   },
 };

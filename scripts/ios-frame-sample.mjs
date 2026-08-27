@@ -2,11 +2,13 @@
 /**
  * Frame-timeline capture for an iOS cold start.
  *
- * The iOS analogue of the Android method in
- * `docs/audits/perf-offline-baseline-2026-08-24.md` (§ "Two-method agreement
- * check"): sample the screen in a loop from launch, classify each frame by PNG
- * byte size, and read off when real content appeared. On Android that was
- * `adb exec-out screencap`; here it is `xcrun simctl io <device> screenshot`.
+ * The iOS analogue of the Android two-method agreement check: sample the screen
+ * in a loop from launch, classify each frame by PNG byte size, and read off when
+ * real content appeared. On Android that was `adb exec-out screencap`; here it is
+ * `xcrun simctl io <device> screenshot`.
+ *
+ * Sampling resolution bounds what this can resolve: at ~450 ms per screenshot a
+ * change smaller than one sample is not a result.
  *
  * Why it matters more on iOS than it did on Android: Android could cross-check
  * `app_fully_drawn_ms` against the OS itself, because `Activity.reportFullyDrawn()`
@@ -42,30 +44,21 @@
  *     pass first (`reinstallApp: false` keeps the session), then this.
  *   - Run it against a RELEASE build. Debug numbers are not comparable.
  */
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { median, parseFlags, sh } from './lib/tooling.mjs';
 
-const args = process.argv.slice(2);
-const arg = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-};
+const flags = parseFlags({
+  device: { type: 'string', default: 'iPhone 17' },
+  bundle: { type: 'string', default: 'dev.souschef.app' },
+  seconds: { type: 'string', default: '12' },
+  out: { type: 'string' },
+});
 
-const DEVICE = arg('device', 'iPhone 17');
-const BUNDLE = arg('bundle', 'dev.souschef.app');
-const SECONDS = Number(arg('seconds', '12'));
-const OUT = arg('out', join('e2e', 'artifacts', 'ios-frames'));
-
-const sh = (cmd, cmdArgs, opts = {}) =>
-  execFileSync(cmd, cmdArgs, { encoding: 'utf8', stdio: 'pipe', ...opts });
-
-const median = xs => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s.length % 2
-    ? s[(s.length - 1) / 2]
-    : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-};
+const DEVICE = flags.device;
+const BUNDLE = flags.bundle;
+const SECONDS = Number(flags.seconds);
+const OUT = flags.out ?? join('e2e', 'artifacts', 'ios-frames');
 
 // ── Prepare ────────────────────────────────────────────────────────────────
 rmSync(OUT, { recursive: true, force: true });

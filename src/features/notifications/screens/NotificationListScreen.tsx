@@ -40,9 +40,8 @@ export const NotificationListScreen: React.FC = () => {
   } = useNotifications();
 
   // The feed. The category filter is applied SERVER-side by this query, so
-  // there is no second client-side filter here — there used to be one, over a
-  // Zustand copy of the same rows, which could disagree with the query that
-  // produced them.
+  // there is no second client-side filter here: one over a local copy of the
+  // same rows could disagree with the query that produced them.
   const {
     notifications,
     loadMore,

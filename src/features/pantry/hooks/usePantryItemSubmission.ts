@@ -56,7 +56,6 @@ export interface PantryItemSubmissionParams {
   costPerUnit: string;
   acquisitionMethod: AcquisitionMethod;
   onSuccess: () => void;
-  handlePageChange: (index: number) => void;
 }
 
 export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
@@ -89,7 +88,6 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
     costPerUnit,
     acquisitionMethod,
     onSuccess,
-    handlePageChange,
   } = params;
 
   const client = useApolloClient();
@@ -123,29 +121,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   const handleConfirm = async () => {
     if (!pantryId) return;
 
-    if (!itemName.trim()) {
-      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
-      handlePageChange(0);
-      return;
-    }
-
+    // No validation here. The sheet's yup schema owns it and reports on the
+    // field; `handleSubmit` only reaches this on a valid form. `quantity` is
+    // therefore known to parse.
     const quantity = parseFractionalInput(quantityInput);
-    if (quantity === null || isNaN(quantity) || quantity <= 0) {
-      alertService.alert(t('labels.error'), t('errors.invalidQuantity'));
-      handlePageChange(1);
-      return;
-    }
-
-    // Net weight is all-or-nothing — a value without a unit would be rejected by
-    // the API, so prompt the user to pick a unit instead of silently dropping it.
-    if (pantryNetWeight.trim() && !pantryNetWeightUnitId) {
-      alertService.alert(
-        t('labels.error'),
-        t('labels.pleaseSelectAUnitForTheNetWeight'),
-      );
-      handlePageChange(1);
-      return;
-    }
+    if (quantity === null) return;
 
     // Build itemUnits array if package details are provided (outside try for React Compiler)
     let itemUnits;

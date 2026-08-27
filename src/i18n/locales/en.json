@@ -1090,6 +1090,7 @@
     "netWeightPlaceholder": "e.g., 500",
     "priorityNone": "None",
     "priorityLow": "Low",
+    "priorityMedium": "Medium",
     "priorityHigh": "High",
     "store": "Preferred Store",
     "storePlaceholder": "e.g., Costco"

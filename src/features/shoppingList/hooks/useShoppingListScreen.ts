@@ -171,11 +171,10 @@ export function useShoppingListScreen() {
   const loading = listsLoading || itemsLoading;
   const hasUIItems = unpurchasedItems.length > 0 || purchasedItems.length > 0;
 
-  // Measured on the rows the list would actually RENDER, which is why the
-  // second term is gone. It used to be `|| hasRawData`, counting the unfiltered
-  // rows — so a search matching none of them read as "still loading" and the
-  // tab showed skeletons for a result that had already arrived, instead of the
-  // "nothing matched" state it renders for exactly this case.
+  // Measured on the rows the list would actually RENDER. A second `||
+  // hasRawData` term counting the unfiltered rows makes a search matching none
+  // of them read as "still loading", showing skeletons for a result that has
+  // already arrived instead of the "nothing matched" state.
   //
   // That term was there for the one-render gap while the (since removed)
   // `useDeferredValue` lagged behind the store. The transform is synchronous

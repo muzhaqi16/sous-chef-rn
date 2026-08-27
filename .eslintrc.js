@@ -29,6 +29,35 @@ module.exports = {
       rules: { 'no-restricted-syntax': 'off' },
     },
     {
+      // Evaluating the installed package's own source IS this probe's method:
+      // it proves what the resolved version does, which a local copy could not.
+      files: ['scripts/probe-withunistyles-prop-passthrough.mjs'],
+      rules: { 'no-new-func': 'off' },
+    },
+    {
+      // Build tooling may only import packages package.json declares. An import
+      // that resolves because npm hoisted the package out of another
+      // dependency's tree survives until a dedupe or lockfile regeneration
+      // moves it, then fails on an unrelated change — and never resolves at all
+      // under pnpm or Yarn PnP, which do not hoist.
+      files: ['scripts/**/*.{js,mjs,cjs}', '*.{js,mjs,cjs}'],
+      // These are Node tooling, not RN source: the shared config's parser and
+      // globals do not apply, and `.mjs` needs an explicit module sourceType.
+      parser: 'espree',
+      parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+      env: { node: true, es2024: true },
+      rules: {
+        'import/no-extraneous-dependencies': [
+          'error',
+          {
+            devDependencies: true,
+            optionalDependencies: false,
+            peerDependencies: false,
+          },
+        ],
+      },
+    },
+    {
       // Lint GraphQL operation documents against the schema pulled from the live
       // API (codegen writes it to src/graphql/generated/schema.graphql). This
       // surfaces a deprecated field/arg/enum value or a selection that no longer
@@ -403,6 +432,16 @@ module.exports = {
                   'array, a prop read by something the compiler did not compile, or a ' +
                   'file it bails out of (see scripts/check-compiler-bailouts.mjs). ' +
                   'When one of those applies, add an eslint-disable-next-line with the reason.',
+              },
+              {
+                name: '@react-native-picker/picker',
+                message:
+                  'Use ModalPicker (#components/molecules/ModalPicker) instead. ' +
+                  'On Android the native picker opens an Activity-themed DIALOG: it ' +
+                  'follows the OS uiMode and ignores the in-app theme, and nothing ' +
+                  'reachable from RN retints it — so with the OS in dark mode and the ' +
+                  'app in light (or the reverse) the options are unreadable. Inside a ' +
+                  'bottom sheet, pass stackBehavior="push".',
               },
             ],
             patterns: [

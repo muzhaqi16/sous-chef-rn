@@ -64,11 +64,9 @@ describe('ApolloCachePersistence', () => {
     });
 
     it('survives an app version bump', () => {
-      // The key used to be `getVersion()`, so every store update and every OTA
-      // purged the cache: the user's first launch after an update, offline, was
-      // an empty app. What makes an old blob unsafe is a change to the type
-      // policies in `cache.ts`, not a version bump — so the key describes the
-      // blob's shape and the app version is not consulted at all.
+      // What makes an old blob unsafe is a change to the type policies in
+      // `cache.ts`, not a version bump — so the key describes the blob's shape
+      // and the app version is not consulted at all.
       const cacheData = {
         'PantryItem:1': { id: '1', __typename: 'PantryItem' },
       };

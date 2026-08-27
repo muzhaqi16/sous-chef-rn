@@ -127,6 +127,15 @@ jobs:
       - name: Check for new compiler bailouts
         run: node scripts/check-compiler-bailouts.mjs
 
+      # Same job, same reasoning, opposite failure: a bailout loses memoization
+      # loudly enough to count, while a stale variant keeps the memoization and
+      # renders the wrong style. Both live only in compiled output. This ran
+      # pre-push but never in CI, and pre-push is bypassable — the baseline is
+      # empty now, so anything it reports is a real regression rather than a
+      # number to absorb.
+      - name: Check for stale Unistyles variants
+        run: node scripts/check-unistyles-variant-staleness.mjs
+
   # Stale cache field detector — a mutation that omits a field the server
   # recomputes leaves the old value in the normalized cache, which reads as
   # "wrong until I reload" and never corrects at all while offline.
@@ -215,8 +224,8 @@ jobs:
   # `continue-on-error` is deliberate and is why this job is absent from
   # `pr-status`'s `needs`. Mobile render measurements are noisy, and a gate set
   # before the real variance is known produces false failures. Gate later, on
-  # evidence — the runner's measured stability is recorded in
-  # docs/audits/perf-offline-baseline-2026-08-24.md.
+  # evidence: measure this runner's own variance across repeated runs of an
+  # unchanged commit first, and set the threshold from that.
   performance:
     name: Render Performance (record-only)
     runs-on: ubuntu-latest
@@ -308,7 +317,22 @@ jobs:
   pr-status:
     name: PR Status Check
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, i18n-check, fragment-audit, unit-tests]
+    # Every gate that must block a merge belongs here. A job that runs but is
+    # absent from this list reports its failure beside the PR instead of
+    # stopping it — which defeats the reason the compiler/cache/secret checks
+    # were moved into CI in the first place (pre-push is bypassable).
+    # `performance` is deliberately excluded: it reports, it does not gate.
+    needs:
+      [
+        typecheck,
+        lint,
+        i18n-check,
+        fragment-audit,
+        unit-tests,
+        compiler-bailouts,
+        stale-cache-fields,
+        bundled-secret-scanner,
+      ]
     if: always()
 
     steps:
@@ -318,7 +342,10 @@ jobs:
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.i18n-check.result }}" != "success" ] || \
              [ "${{ needs.fragment-audit.result }}" != "success" ] || \
-             [ "${{ needs.unit-tests.result }}" != "success" ]; then
+             [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.compiler-bailouts.result }}" != "success" ] || \
+             [ "${{ needs.stale-cache-fields.result }}" != "success" ] || \
+             [ "${{ needs.bundled-secret-scanner.result }}" != "success" ]; then
             echo "❌ One or more PR checks failed"
             echo "## PR Check Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
@@ -327,6 +354,9 @@ jobs:
             echo "- i18n: ${{ needs.i18n-check.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Fragment Audit: ${{ needs.fragment-audit.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Compiler Bailouts: ${{ needs.compiler-bailouts.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Stale Cache Fields: ${{ needs.stale-cache-fields.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Bundled Secrets: ${{ needs.bundled-secret-scanner.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
           echo "✅ All PR checks passed!"
@@ -338,3 +368,6 @@ jobs:
           echo "- ✅ i18n" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Fragment Audit" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Compiler Bailouts" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Stale Cache Fields" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Bundled Secrets" >> $GITHUB_STEP_SUMMARY

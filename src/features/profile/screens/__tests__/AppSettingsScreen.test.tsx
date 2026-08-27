@@ -1,7 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
-import type { PickerProps, PickerItemProps } from '@react-native-picker/picker';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
 
 // --- Mocks ---
@@ -135,19 +134,38 @@ jest.mock('#components/settings/SettingSection', () => {
   };
 });
 
-jest.mock('@react-native-picker/picker', () => {
-  const { View, Text } = require('react-native');
-  const Picker = ({ children, testID, selectedValue }: PickerProps) => (
-    <View testID={testID}>
-      <Text>{selectedValue}</Text>
-      {children}
-    </View>
-  );
-  Picker.Item = ({ label }: PickerItemProps) => {
-    const { Text: RNText } = require('react-native');
-    return <RNText>{label}</RNText>;
+// Stands in for the tray so the OPTIONS are reachable without driving gorhom's
+// present/animate cycle. The seam is the screen's contract with ModalPicker —
+// `visible` in, `onSelect` out — which is the part this screen owns.
+jest.mock('#components/molecules/ModalPicker', () => {
+  const { View, Text, Pressable } = require('react-native');
+  return {
+    ModalPicker: ({
+      visible,
+      options,
+      selected,
+      onSelect,
+    }: {
+      visible: boolean;
+      options: { label: string; value: string }[];
+      selected: string;
+      onSelect: (value: string) => void;
+    }) =>
+      visible ? (
+        <View testID="modal-picker">
+          <Text testID="modal-picker-selected">{selected}</Text>
+          {options.map(opt => (
+            <Pressable
+              key={opt.value}
+              testID={`modal-picker-option-${opt.value}`}
+              onPress={() => onSelect(opt.value)}
+            >
+              <Text>{opt.label}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null,
   };
-  return { Picker };
 });
 
 describe('AppSettingsScreen', () => {
@@ -207,9 +225,30 @@ describe('AppSettingsScreen', () => {
     expect(screen.getByText('Reset to Defaults')).toBeTruthy();
   });
 
-  it('renders the unit system picker', () => {
+  it('renders the unit system picker closed, and opens it on press', () => {
     render(<AppSettingsScreen />);
-    expect(screen.getByTestId('settings-unit-system-picker')).toBeTruthy();
+    expect(screen.queryByTestId('modal-picker')).toBeNull();
+
+    fireEvent.press(screen.getByTestId('settings-unit-system-picker'));
+
+    expect(screen.getByTestId('modal-picker')).toBeTruthy();
+    // The tray opens on the current value, not on a default.
+    expect(screen.getByTestId('modal-picker-selected')).toHaveTextContent(
+      'METRIC',
+    );
+  });
+
+  it('writes the selected unit system through and closes the picker', () => {
+    render(<AppSettingsScreen />);
+    fireEvent.press(screen.getByTestId('settings-unit-system-picker'));
+
+    fireEvent.press(screen.getByTestId('modal-picker-option-IMPERIAL'));
+
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith(
+      'preferredUnitSystem',
+      'IMPERIAL',
+    );
+    expect(screen.queryByTestId('modal-picker')).toBeNull();
   });
 });
 

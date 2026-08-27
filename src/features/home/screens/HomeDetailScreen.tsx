@@ -26,7 +26,11 @@ import { useUser } from '#store/useAppStore';
 import { Icon } from '#utils/iconUtils';
 import { Button } from '#components/atoms/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import {
+  executeRefreshWithFinally,
+  executeWriteWithFinally,
+} from '#/utils/finallyHelpers';
+import { logger } from '#/utils/environment';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#/utils/formatters/inviteFormatters';
@@ -137,9 +141,16 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   };
 
   const handleToggleJoinCode = (enabled: boolean) => {
-    executeRefreshWithFinally(
+    // A write, so the throw has to be surfaced: there is no query error state
+    // behind this switch, and swallowing left the toggle snapping back with no
+    // explanation.
+    executeWriteWithFinally(
       () => toggleJoinCode(enabled),
       setJoinCodeLoading,
+      error => {
+        logger.error('Join-code toggle threw', { enabled, error });
+        alertService.alert(t('labels.error'), t('errors.saveFailed'));
+      },
     );
   };
 

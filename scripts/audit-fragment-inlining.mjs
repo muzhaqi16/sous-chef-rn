@@ -21,14 +21,20 @@
  *   node scripts/audit-fragment-inlining.mjs           # check
  *   node scripts/audit-fragment-inlining.mjs --update  # rewrite baseline
  */
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
+import {
+  baselineFile,
+  filesUnder,
+  fromRoot,
+  REPO_ROOT,
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const SRC = join(ROOT, 'src');
-const BASELINE = join(__dirname, 'audit-fragment-inlining.baseline.json');
+const ROOT = REPO_ROOT;
+const BASELINE = baselineFile(
+  fromRoot('scripts', 'audit-fragment-inlining.baseline.json'),
+);
 
 /**
  * Each pattern is a regex run against whitespace-normalized GraphQL text.
@@ -96,17 +102,6 @@ const PATTERNS = [
   },
 ];
 
-function walk(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    if (entry === 'node_modules' || entry.startsWith('.')) continue;
-    const full = join(dir, entry);
-    const stat = statSync(full);
-    if (stat.isDirectory()) walk(full, out);
-    else if (entry.endsWith('.graphql')) out.push(full);
-  }
-  return out;
-}
-
 function normalize(text) {
   // Strip GraphQL line comments (`# …` to end of line) BEFORE collapsing
   // whitespace — otherwise a documented example selection in a comment
@@ -122,6 +117,9 @@ function normalize(text) {
 function countPatterns(files) {
   const counts = Object.create(null);
   const byFile = Object.create(null);
+  // Seeded in PATTERNS order so the written baseline's key order is a property
+  // of this list, not of the order the files happened to be walked in.
+  for (const { name } of PATTERNS) counts[name] = 0;
   for (const file of files) {
     const text = normalize(readFileSync(file, 'utf8'));
     const rel = relative(ROOT, file);
@@ -129,8 +127,8 @@ function countPatterns(files) {
       regex.lastIndex = 0;
       const matches = text.match(regex);
       const n = matches ? matches.length : 0;
+      counts[name] += n;
       if (n > 0) {
-        counts[name] = (counts[name] || 0) + n;
         byFile[rel] ??= {};
         byFile[rel][name] = n;
       }
@@ -139,27 +137,21 @@ function countPatterns(files) {
   return { counts, byFile };
 }
 
-function loadBaseline() {
-  try {
-    return JSON.parse(readFileSync(BASELINE, 'utf8'));
-  } catch {
-    return null;
-  }
-}
-
-function writeBaseline(data) {
-  writeFileSync(BASELINE, JSON.stringify(data, null, 2) + '\n');
-}
-
 function main() {
   const args = new Set(process.argv.slice(2));
   const update = args.has('--update');
 
-  const files = walk(SRC);
+  const files = filesUnder('src/**/*.graphql');
+  requireNonEmptyScan({
+    count: files.length,
+    what: 'GraphQL documents',
+    check: 'audit-fragment-inlining',
+    hint: '`src/` moved, or the operations are no longer `.graphql` files.',
+  });
   const { counts, byFile } = countPatterns(files);
 
   if (update) {
-    writeBaseline({
+    BASELINE.write({
       _description:
         'Per-pattern counts of inline field selections across src/**/*.graphql. ' +
         'The audit-fragment-inlining.mjs script fails if any count regresses.',
@@ -173,13 +165,7 @@ function main() {
     return;
   }
 
-  const baseline = loadBaseline();
-  if (!baseline) {
-    console.error(
-      `No baseline found at ${BASELINE}. Run with --update to create one.`,
-    );
-    process.exit(1);
-  }
+  const baseline = BASELINE.require('audit-fragment-inlining');
 
   let regressions = 0;
   console.log('Inline-fragment audit:');

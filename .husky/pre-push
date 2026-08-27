@@ -16,6 +16,14 @@ npm run check:startup-origin || exit 1
 # receives. Cheap to check, and impossible to notice by reading the diff.
 npm run check:launch-arg-auth || exit 1
 
+# Both of these compile source to find their defect, so neither ESLint nor tsc
+# can see it. The variant check catches a style read frozen at its first-render
+# value (a page indicator that never highlights); the bailout check catches a
+# component silently leaving React Compiler coverage — including via a bare
+# `'use no memo'`, which nothing else reports.
+npm run check:unistyles-variants || exit 1
+npm run check:compiler-bailouts || exit 1
+
 if ! git diff --quiet HEAD || ! git diff --cached --quiet HEAD; then
   echo "Working tree has uncommitted changes; skipping codegen drift check." >&2
   exit 0

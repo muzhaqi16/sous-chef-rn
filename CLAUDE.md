@@ -19,7 +19,8 @@ npm run codegen      # re-pull schema + regenerate types (run before lint if sch
 npm run typecheck    # app AND test tsconfig — run after every code change
 npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema
 npm test             # full Jest suite (~15s) — always run unfiltered
-node scripts/check-compiler-bailouts.mjs         # nothing runs these two for you
+node scripts/check-compiler-bailouts.mjs         # also in pre-push
+node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
@@ -253,13 +254,18 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `RootNavigator.Navigation` (React Navigation `Theme`), `TrendLineChart`
   (Skia draw calls), `RecipeMain`/`SortableShoppingList` (theme colors into
   data structures).
-- `babel-plugin-react-compiler` runs **before** the Unistyles babel plugin
-  (`babel.config.js`) — the reverse of the Unistyles docs, deliberately.
-  Unistyles' transform of `styles.useVariants(...)` emits an assignment the
-  compiler cannot lower, which fails the whole file and silently drops its
-  memoization. Verified vs `react-native-unistyles@3.3.0` +
-  `babel-plugin-react-compiler@1.0.0`. If theme updates ever go stale, suspect
-  this ordering first.
+- **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
+  (`babel.config.js`), i.e. the documented order plus a crawl wedged between.
+  Unistyles' `useVariants` rewrite declares a shadowing binding without calling
+  `scope.crawl()`, so without the crawl the compiler cannot lower the function
+  and skips it. Running the compiler FIRST also compiles, but it then caches the
+  variant-resolved style on the wrong dependencies and the variant freezes at
+  its first-render value — memoized, zero bailouts, and silently wrong. Don't
+  reorder these three. Verified vs `react-native-unistyles@3.3.0` +
+  `babel-plugin-react-compiler@1.0.0` — re-check:
+  `node scripts/probe-unistyles-compiler-order.mjs`; mechanism and the measured
+  three-way table:
+  `docs/verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler`.
 
 ### Pressable & gestures
 
@@ -364,9 +370,27 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   fatal (`index out of bounds, not enough layouts`).
   `docs/flashlist-layout-index-race.md`.
 - **Every FlashList using `useFlashListPerformance` passes
-  `perfCallbacks.CellRendererComponent`** — that renderer is how blank cells
-  are counted; FlashList's own viewability is geometric and 250 ms-lagged.
+  `perfCallbacks.CellRendererComponent` AND `onCommitLayoutEffect`** — the
+  renderer is how blank cells are counted (FlashList's own viewability is
+  geometric and 250 ms-lagged), and the commit callback drives the
+  `hasContentLayout` latch. The renderer is per-SESSION sampled
+  (`flashListInstrumentationSampleRate`: dev 1.0, release 0.05) because the
+  per-cell `Animated.View` + layout effect costs ~30–60 ms of the device's
+  ~320 ms first-layout window; `undefined` in unsampled sessions is normal.
   `docs/flashlist-performance-analysis.md` § Reading the instrumentation.
+- **A skeleton over a mounting FlashList releases on `hasContentLayout`, never
+  on data-loading flags** — FlashList v2 holds EVERY cell (sticky sentinel
+  rows included) at `opacity: 0` until its progressive first layout commits,
+  so "data ready" precedes "rows visible" by 300 ms+ on a mid-range device
+  and a loading-flag release exposes a header-only blank frame. And the cover
+  itself must exist from the list's FIRST commit: anything whose mount waits
+  on a post-commit state update (`onLayout` measurement, a deferred flag) is
+  starved behind the row-mount storm it exists to hide — the pantry's cover
+  is an absolute flap inside `ListHeaderComponent` for exactly this reason
+  (`PantryListSkeletonOverlay.tsx`). `onLoad` cannot stand in for the latch:
+  it fires once per mount and a sentinel-only skeleton layout consumes it.
+  Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
+  `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`.
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
   `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
@@ -395,6 +419,39 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   layout-only wrappers — a missed level paints the dropdown UNDER later
   inputs, on device only, invisible to typecheck/lint/jest.
 
+### Forms & validation
+
+- **A field the user can fix is reported ON the field, never through
+  `alertService.alert`.** A modal covers the form, has to be dismissed before
+  the field can be corrected, and once dismissed no longer says which field —
+  or, in a paged sheet, which page — it meant. Alerts remain correct for
+  SUBMISSION failures (a server refusal, a network throw): those are not a
+  field the user can edit.
+- **Validation lives in a yup schema next to the form**, resolved through
+  `yupResolver` on `useForm`; fields render through `Controller` and Save goes
+  through `handleSubmit(onValid, logValidationErrors)`. The submit hook does
+  not validate — reaching it means the form is already valid. Schemas:
+  `shoppingItemFormConfig.ts` (shared by the AddEditItem screen and the
+  AddToShoppingList sheet), `addPantryItemFormConfig.ts`,
+  `pantryItemFormConfig.ts` (the edit form).
+- **Schema messages resolve LAZILY** — `const msg = key => () => t(key)`. A
+  schema is built once at module scope, so an eagerly-resolved message freezes
+  whichever language was active at import time; yup calls the function when the
+  rule fails, which lands after any language change. Never hardcode the
+  English string. Pattern: `src/utils/validation/common.ts`.
+- **A cross-field rule needs an explicit `trigger()`.**
+  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only.
+  The all-or-nothing net-weight rule lives on the *unit* while its inputs are
+  the weight and the unit id, so without
+  `trigger('netWeightUnit')` typing a weight never raised the message and
+  picking a unit never cleared it. Verified on device 2026-08-26.
+- **A paged form maps field → page** (`FIELD_PAGE` in
+  `addPantryItemFormConfig.ts`) and navigates before reporting, so the message
+  is on screen instead of behind a tab the user has to find.
+- **`dirtyFields` OMITS clean fields** — react-hook-form does not set them
+  `false`. Read for truthiness (`if (dirtyFields.itemName)`), and assert
+  `toBeUndefined()`, not `toBe(false)`.
+
 ### Navigation
 
 - Navigators default to `inactiveBehavior: 'pause'`; **only `HomeTabs` and the
@@ -420,6 +477,15 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   there is a regression to fix, not a licence to memoize. The
   lint rule is an error so the exception is written down:
   `// eslint-disable-next-line no-restricted-imports` + the reason.
+- **Never add `'use no memo'`.** The `noMemoOptOuts` list in
+  `scripts/check-compiler-bailouts.baseline.json` is EMPTY and the ratchet only
+  lets it shrink, so a new one fails the check. Needing one means the Babel
+  plugin order or `scripts/babel/unistyles-scope-crawl.js` has regressed and a
+  component's `styles.useVariants(...)` reads are freezing at their
+  first-render value — run `node scripts/probe-unistyles-compiler-order.mjs`
+  and fix that, rather than opting the component out.
+  `node scripts/check-unistyles-variant-staleness.mjs` (baseline empty, runs in
+  CI and pre-push) is what catches it.
 - **Two `try` shapes bail the compiler out of the whole function**: a
   finalizer (`finally` with or without `catch`; also a catch-less `try`), and
   a value block (`?.`, `??`, `&&`, `||`, ternary) inside the `try` body. A
@@ -525,7 +591,18 @@ Full patterns and examples: `docs/development.md` § Testing.
 - Helper shortcuts: `recordMock()` (captures every variables payload Apollo
   observed), `seedCache()` (pre-writes entities for `cache.readFragment`).
 - `Environment` and `logger` are auto-mocked globally — override per-suite
-  with `mockReturnValue`, never replace the module with a partial factory.
+  with `mockReturnValue`, never replace the module with a partial factory. Its
+  `allowsLaunchArgAuth` default is `true`, matching what the REAL function
+  returns under Jest (`__DEV__` is true) — a double that inverts the thing it
+  stands in for silently disables coverage everywhere.
+- **A react-hook-form form cannot be stubbed with a plain object** — fields
+  render through `Controller control={control}` and `control` has no
+  plain-object equivalent. Delegate to the real hook
+  (`jest.requireActual(...)`, seeded via `initialState`) and spy on the writes;
+  the test then exercises the real schema, so a case expecting a refusal gets
+  one for the real reason. `jest.clearAllMocks()` does NOT reset a spy's
+  implementation — a `mockImplementation` in one test leaks its seeded form
+  into every test after it, so pair it with `jest.restoreAllMocks()`.
 
 ## Bundled credentials
 
@@ -536,6 +613,16 @@ gains, not whether it can be extracted: `PUBLIC_BY_DESIGN` requires write-only
 or identity-only, individually revocable, and rate-limited server-side; an
 infrastructure credential never qualifies. Decisions:
 `docs/bundled-credentials-decision.md`.
+
+**Launch-argument auth is gated on the ARTIFACT, not the environment.**
+`ALLOW_LAUNCH_ARG_AUTH` lets a build take a session from launch arguments, and
+`MODE=release npm run android` resolves to a development `NODE_ENV` *and* signs
+with the distribution key — so an environment test passes while the APK is one
+you could hand to someone. `scripts/check-launch-arg-auth.mjs --platform
+android --variant <name>` reads the variant's `signingConfig` out of
+`build.gradle` and refuses anything not debug-signed; `run-android.sh` grants
+the flag to `debug|localRelease` only, and both run-scripts invoke the gate on
+the build path itself, not just in pre-push.
 
 ## Git & PR conventions
 
@@ -577,7 +664,21 @@ changes. Measurement decides what to change; it is not the confirmation step.
   (no API accepts an app-declared signal), so the two-method agreement that backs
   `app_fully_drawn_ms` on Android does not carry over —
   `scripts/ios-frame-sample.mjs` is the only cross-check there is.
-  `docs/audits/perf-ios-baseline-2026-08-25.md`.
+- **A startup metric is BOUNDED, and the drop is counted.**
+  `app_fully_drawn_ms` latches on the first instrumented list showing real
+  content, and `HomeTabs` is lazy — only the Pantry tab mounts at cold start,
+  so the other two lists can only latch after a navigation. Past
+  `STARTUP_WINDOW_MS` (10 s, `startupProfiling.ts`, shared with the profiler's
+  own fallback) nothing is emitted and `startup_window_exceeded_total`
+  increments instead, so an EXCLUDED launch stays distinguishable from an
+  unmeasured one. The bound is not defended by argument: a non-trivial rate on
+  that counter is the evidence for changing it.
+- **A metric's terminating condition reads the UN-SMOOTHED signal.** The
+  pantry's skeletons pass through a 280 ms `useMinimumVisible` anti-flicker
+  hold; reading it put that hold under `app_fully_drawn_ms` as a floor, so any
+  improvement below 280 ms was structurally unmeasurable — the same defect as
+  reading a threshold-gated `slow_*_total`. Measurement takes
+  `initialSkeletons`, presentation keeps `showSkeletons`.
 - **State the instrument's resolution.** A difference smaller than one sample is
   not a result — 450 ms screenshot sampling cannot resolve a 100 ms change, and a
   series that returns the same value for two different builds is not measuring
@@ -591,8 +692,10 @@ changes. Measurement decides what to change; it is not the confirmation step.
   Per-session counters plus lingering series also make cross-session aggregation
   (`sum(...) by (screen)`) untrustworthy — read per session.
 
-Protocol, numbers, and the retractions behind these rules:
-`docs/audits/perf-offline-baseline-2026-08-24.md`.
+Audit write-ups are scratch and untracked (`.gitignore`), so each rule above
+carries its own number and stands on its own. Treat every `app_fully_drawn_ms`
+figure recorded before 2026-08-26 as invalid: it predates both the 280 ms floor
+fix and the suppression fix.
 
 ## Verification
 
@@ -600,11 +703,18 @@ After code changes:
 
 ```bash
 npm run typecheck && npm run lint && npm test
-node scripts/check-compiler-bailouts.mjs   # separate — nothing runs it for you
+npm run check:compiler-bailouts && npm run check:unistyles-variants
 ```
 
-`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
-bails where a variant call was deliberately extracted into a leaf.
+`check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails
+where a variant call was deliberately extracted into a leaf; and separately
+again, the `'use no memo'` opt-out list — now EMPTY, which makes it an
+invariant rather than a tally: nobody should need the directive, so any entry
+is a regression in the Babel plugin ordering.
+`check-unistyles-variants` compiles each file to find a style read frozen at its
+first-render value — a defect neither ESLint nor tsc can see, because it exists
+only in the output of two Babel plugins composed in a particular order. Both run
+in `pre-push` now, so neither depends on being remembered.
 `check:version-sync` (pre-push) keeps `package.json` / `versionName` /
 `MARKETING_VERSION` aligned — a drifted platform silently loses the
 version-keyed cache purge and misreports `CLIENT_VERSION`; detail:

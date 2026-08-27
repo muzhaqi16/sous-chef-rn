@@ -285,8 +285,9 @@ describe('useNotificationSync — cached badge aggregates', () => {
     expect(readBadge(cache)?.unreadNotificationCount).toBe(5);
   });
 
-  // The rollback used to be `cache.restore(cache.extract())`, which replaced the
-  // whole store — discarding anything written while the mutation was in flight.
+  // The rollback must not be `cache.restore(cache.extract())`: that replaces
+  // the whole store, discarding anything written while the mutation is in
+  // flight.
   it('a refused delete restores the row and the badge, leaving other entities alone', async () => {
     const cache = seedFeed(5, [{ id: 'n1', status: UNREAD }]);
     const { result } = renderSync(cache, [deleteRejectedMock()]);

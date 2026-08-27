@@ -15,6 +15,10 @@ import { localizeNumericHint } from '#/utils/formatters/number';
 export interface DetailsPageProps {
   quantityInput: string;
   setQuantityInput: (value: string) => void;
+  /** Validation message for the quantity field. */
+  quantityError?: string;
+  /** Validation message for the net-weight UNIT picker (net weight is all-or-nothing). */
+  pantryNetWeightUnitError?: string;
   unit: string;
   setUnit: (value: string) => void;
   handleUnitSelected: (id: string | null, name: string | null) => void;
@@ -44,6 +48,8 @@ export interface DetailsPageProps {
 export const DetailsPage: React.FC<DetailsPageProps> = ({
   quantityInput,
   setQuantityInput,
+  quantityError,
+  pantryNetWeightUnitError,
   unit,
   setUnit,
   handleUnitSelected,
@@ -84,6 +90,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           <EditableCounter
             label={t('labels.quantity')}
             required
+            error={quantityError}
             value={quantityInput}
             onChangeText={setQuantityInput}
             placeholder={t('addToPantry.quantityPlaceholder')}
@@ -115,6 +122,7 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
           <UnitAutocompleteField
             variant="inline"
             label={t('storageLocationForm.unit')}
+            error={pantryNetWeightUnitError}
             value={pantryNetWeightUnit}
             onChangeText={setPantryNetWeightUnit}
             onUnitSelected={handlePantryNetWeightUnitSelected}

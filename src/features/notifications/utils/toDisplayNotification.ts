@@ -4,13 +4,10 @@
  * `isRead` collapses `status` to a boolean, and `requiresAction` / `actionType`
  * come from the notification's type. Everything else is passed straight
  * through, so this is a projection of the server fragment — NOT a second copy
- * of it. It used to write into a Zustand slice; the notifications themselves
- * now live only in the Apollo cache and this runs at read time.
+ * of it. The notifications live only in the Apollo cache, so this runs at read
+ * time.
  *
- * `priority` is the schema's own `Priority`. It used to be converted into a
- * locally-declared `NotificationPriority`, which existed only to rename the
- * server's `NORMAL` to `MEDIUM` — a rename nothing depended on except the
- * conversion itself, which had drifted into two identical copies.
+ * `priority` is the schema's own `Priority`, not renamed locally.
  */
 
 import {

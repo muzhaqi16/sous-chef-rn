@@ -1090,6 +1090,7 @@
     "netWeightPlaceholder": "p.sh., 500",
     "priorityNone": "Asnjë",
     "priorityLow": "E ulët",
+    "priorityMedium": "Mesatare",
     "priorityHigh": "E lartë",
     "store": "Dyqani i preferuar",
     "storePlaceholder": "p.sh., Costco"

@@ -199,8 +199,6 @@ export function classifyError(error: unknown): QueueError {
   // errorLink's policy: treat it as a permanent failure rather than retrying
   // behind a refresh. It is the single authorization code on both channels (the
   // mutation result-union member's `code` and the top-level `extensions.code`).
-  // The AUTHZ_FORBIDDEN that used to be matched with it is retired and emitted
-  // by nothing.
   // AUTH_ACCOUNT_SUSPENDED joins it: the account is suspended, banned, or
   // deleted, so no replay of this entry can ever succeed and a token refresh
   // cannot revive it. Classified here rather than left to the default so the

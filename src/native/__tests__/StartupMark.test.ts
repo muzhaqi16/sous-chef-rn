@@ -118,15 +118,26 @@ describe('StartupMark', () => {
   });
 
   describe('with the native module absent', () => {
-    it('no-ops rather than throwing, and resolves null', async () => {
+    it('no-ops rather than throwing for the fire-and-forget calls', async () => {
       const mark = load('ios', null);
 
       expect(() => mark.reportFullyDrawn()).not.toThrow();
       expect(() => mark.startProfiling()).not.toThrow();
-      await expect(
-        mark.stopProfiling('startup.cpuprofile'),
-      ).resolves.toBeNull();
       await expect(mark.writeTextFile('x.json', '{}')).resolves.toBeNull();
+    });
+
+    it('reports a stop it cannot perform as a FAILURE, not a success', async () => {
+      // Resolving `null` here was the worst available answer: a build that can
+      // start sampling but not stop it had already started, so a resolve
+      // cleared the fallback timer, logged "profile written" with a null path,
+      // and left the sampler running for the whole session — every later
+      // measurement perturbed, `app_fully_drawn_ms` suppressed throughout, no
+      // trace produced, and the only diagnostic saying it had worked.
+      const mark = load('ios', null);
+
+      await expect(mark.stopProfiling('startup.cpuprofile')).rejects.toThrow(
+        /unavailable in this build/,
+      );
     });
   });
 });

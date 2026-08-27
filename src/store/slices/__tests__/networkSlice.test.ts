@@ -5,6 +5,16 @@ jest.mock('../../../apollo/links/tokenScheduler');
 jest.mock('../../../apollo/links/refreshToken');
 
 describe('networkSlice', () => {
+  // Nearly every action here runs `syncOfflineBanner`, which schedules a real
+  // dwell timer. Left on real timers those outlive the suite and are what force
+  // Jest to kill the worker. Faking them suite-wide also lets `clearAllTimers`
+  // drop whatever a test left armed.
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => {
+    jest.clearAllTimers();
+    jest.useRealTimers();
+  });
+
   it('initializes as online', () => {
     const store = createTestStore();
     expect(store.getState().isOnline).toBe(true);

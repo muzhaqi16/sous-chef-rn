@@ -27,10 +27,24 @@ gql() { # $1 = json body
 # The API allows 10 logins per 900s and this script needs a token twice per
 # run, so repeated runs exhaust the budget and fail with OPERATION_RATE_LIMITED
 # (~9 minutes to recover). Cache the token and reuse it while it is fresh.
+# Freshness comes from the token's own `exp` claim rather than the file mtime:
+# `stat` takes -f on BSD and -c on GNU, and the token's real lifetime is the
+# only thing that decides whether a reuse works.
 TOKEN_CACHE="${TMPDIR:-/tmp}/souschef-e2e-token"
-if [ -f "$TOKEN_CACHE" ] && [ "$(( $(date +%s) - $(stat -f %m "$TOKEN_CACHE") ))" -lt 600 ]; then
-  TOKEN=$(cat "$TOKEN_CACHE")
-  echo "→ reusing cached token"
+if [ -f "$TOKEN_CACHE" ]; then
+  TOKEN=$(python3 -c "
+import base64, json, sys, time
+raw = open(sys.argv[1]).read().strip()
+try:
+    payload = raw.split('.')[1]
+    claims = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+    print(raw if claims['exp'] - 60 > time.time() else '')
+except Exception:
+    print('')
+" "$TOKEN_CACHE")
+  # An `&&` here would be the script's last command under `set -e`, so an
+  # expired token would exit 1 instead of falling through to re-authenticate.
+  if [ -n "$TOKEN" ]; then echo "→ reusing cached token"; fi
 fi
 
 if [ -z "${TOKEN:-}" ]; then

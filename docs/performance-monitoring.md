@@ -455,8 +455,8 @@ release is where the numbers are valid. Debug is for attribution only.)
 ### Performance Verification
 
 The protocol — build variant, device, run count, controls, which series to read —
-is CLAUDE.md § Performance measurement. The numbers and the retracted readings
-behind those rules are in `docs/audits/perf-offline-baseline-2026-08-24.md`.
+is CLAUDE.md § Performance measurement, which states each rule alongside the
+reading that produced it.
 
 The four bullets that used to live here ("check console logs", "monitor memory",
 "verify transitions under 500ms", "confirm metrics are sent") named no build, no

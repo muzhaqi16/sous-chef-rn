@@ -37,7 +37,6 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
-import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';
 import {
   FLASHLIST_DEFAULTS,
   STICKY_HEADER_SENTINEL,
@@ -62,6 +61,7 @@ import {
 } from './pantryDisplay/renderItem';
 import { PantryStickyTabsProvider } from './pantryDisplay/PantryStickyTabs';
 import { PantryEmptyState } from './PantryEmptyState';
+import { PantryListSkeletonOverlay } from './PantryListSkeletonOverlay';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -283,16 +283,15 @@ export const PantryContent = React.forwardRef<
       return () => cancelAnimationFrame(handle);
     }, [sortOption, sortDirection]);
 
-    // The anti-flash minimum applies only to the *initial* (no-content-yet)
-    // skeletons: a fast cache-warm load could otherwise flash them for a
-    // sub-perceptible frame and then swap straight to content — the "switches
-    // between states very quickly" glitch. When content is ready on the first
-    // render the latch never arms, so nothing is delayed. The switch overlay
-    // (`switching && fetching`) keeps its own arm/lift timing so a freshly
-    // fetched tab/sort isn't held back by the minimum.
+    // Data handoff is gated on the UN-SMOOTHED loading signal: the moment items
+    // exist they go to FlashList, which needs its 300 ms+ progressive first
+    // layout before any cell is visible anyway (see the overlay below). The
+    // anti-flash minimum lives on the overlay, not here, so a fast load is not
+    // delayed by presentation smoothing while the list sits idle. The switch overlay (`switching && fetching`) keeps its
+    // own arm/lift timing so a freshly fetched tab/sort isn't held back.
     const initialSkeletons = awaitingItems || (!hasShownContent && loading);
-    const showSkeletons =
-      useMinimumVisible(initialSkeletons) || (switching && fetching);
+    const switchSkeletons = switching && fetching;
+    const showSkeletons = initialSkeletons || switchSkeletons;
 
     // While skeletons show, hand the list only the sticky tabs so the chrome +
     // tabs stay visible with skeleton rows below (PantryEmptyState) — and any
@@ -301,21 +300,47 @@ export const PantryContent = React.forwardRef<
     const listData: PantryListItem[] = [STICKY_HEADER_SENTINEL, ...bodyItems];
     const isEmpty = bodyItems.length === 0;
 
-    // Declared here, below `showSkeletons`, because `hasRealContent` is what
-    // decides when `app_fully_drawn_ms` latches. While skeletons show, the
-    // list is handed exactly one sticky-header sentinel — enough for FlashList
-    // to report `onLoad`, and nothing a user would call content. A settled
-    // empty tab IS content: `showSkeletons` is already false by then.
+    // `hasRealContent` decides when `app_fully_drawn_ms` latches, and it reads
+    // the UN-SMOOTHED `initialSkeletons` — never a presentation flag.
+    //
+    // MEASUREMENT IS NOT PRESENTATION. Feeding a presentation flag (overlay
+    // visibility, exit-fade timing) here would put presentation smoothing
+    // under the metric as a floor — the historical version of this defect
+    // reported ~280 ms for a warm-cache launch whose items resolved at
+    // 150 ms, making any improvement under the hold structurally
+    // unmeasurable (the threshold-gated-counter defect CLAUDE.md forbids).
+    // It would also DEADLOCK the overlay: its release depends on the
+    // `hasContentLayout` latch, and the latch only arms while
+    // `hasRealContent` is true, so `hasRealContent` must never be derived
+    // from overlay visibility.
+    //
+    // While initial skeletons show, the list is handed exactly one
+    // sticky-header sentinel — enough for FlashList to report `onLoad`, and
+    // nothing a user would call content. A settled empty tab IS content:
+    // `initialSkeletons` is already false by then.
     const perfCallbacks = useFlashListPerformance(flashListRef, {
       componentName: 'PantryContent',
       reportInterval: 10000,
-      hasRealContent: !showSkeletons,
+      hasRealContent: !initialSkeletons,
     });
     useDataReferenceTracker(
       items,
       'PantryContent.items',
       perfCallbacks.onDataReferenceChange,
     );
+
+    // The blank-window cover. FlashList keeps every cell (sticky tabs row
+    // included) invisible until its progressive first layout commits, while
+    // the ListHeaderComponent chrome paints immediately — on a mid-range
+    // device that is a 300 ms+ header-only frame between skeleton and rows.
+    // The cover renders inside the ListHeaderComponent from the FIRST commit
+    // (see PantryListSkeletonOverlay for why it cannot wait on any measured
+    // state), and releases the moment `hasContentLayout` reports the commit
+    // whose cells are actually visible. No `useMinimumVisible` here: the
+    // 200 ms exit fade is the anti-flash smoothing, and the latch itself
+    // cannot fire before the rows exist — an artificial minimum would only
+    // delay genuinely-fast reveals.
+    const overlayVisible = initialSkeletons || !perfCallbacks.hasContentLayout;
 
     // End-reached: fetch the next server page if one exists, otherwise grow the
     // local window. `onEndReached` (prop) is defined only when the server has
@@ -449,7 +474,12 @@ export const PantryContent = React.forwardRef<
                 ) : undefined
               }
               ListHeaderComponent={
-                <>
+                // The wrapper is the positioned parent the skeleton flap
+                // anchors to (`top: '100%'` = flush below the chrome). The
+                // header paints outside FlashList's opacity-gated cell
+                // container; everything below it does not — the flap covers
+                // that area until the first content layout commits.
+                <View>
                   <View style={styles.header}>
                     <PantryHeader
                       userName={userName}
@@ -523,7 +553,8 @@ export const PantryContent = React.forwardRef<
                       />
                     </View>
                   )}
-                </>
+                  {overlayVisible ? <PantryListSkeletonOverlay /> : null}
+                </View>
               }
               ListFooterComponent={
                 isEmpty ? (
@@ -558,6 +589,7 @@ export const PantryContent = React.forwardRef<
               }
               onLoad={perfCallbacks.onLoad}
               onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+              onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
               maintainVisibleContentPosition={MVCP_DISABLED}
             />
 

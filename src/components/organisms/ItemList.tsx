@@ -27,6 +27,7 @@ import { CachedImage, preloadImages } from '#components/atoms/CachedImage';
 import { commonStyles } from '#/styles/commonStyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import {
   ItemListActionsProvider,
   useItemListActions,
@@ -222,12 +223,12 @@ export const ItemList: React.FC<ItemListProps> = ({
     paddingBottom: getTabBarBottomPadding(safeBottom),
   };
 
-  const handleRefresh = async () => {
-    if (onRefresh) {
-      setRefreshing(true);
-      await onRefresh();
-      setRefreshing(false);
-    }
+  // Through the helper, never inline: an `await onRefresh()` between two
+  // `setRefreshing` calls strands the spinner when the refresh rejects, which
+  // Apollo's `refetch()` does on any network error.
+  const handleRefresh = () => {
+    if (!onRefresh) return;
+    executeRefreshWithFinally(onRefresh, setRefreshing);
   };
 
   // Bundle actions for context provider
@@ -321,6 +322,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
         maintainVisibleContentPosition={MVCP_DISABLED}
         onLoad={perfCallbacks.onLoad}
+        onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
         onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}

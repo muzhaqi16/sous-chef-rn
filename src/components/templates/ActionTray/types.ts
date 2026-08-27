@@ -16,6 +16,13 @@ export interface ActionTrayProps {
   footer?: ReactNode;
   showCloseButton?: boolean;
   enableBackdrop?: boolean;
+  /**
+   * Set `'push'` when this tray opens from INSIDE another bottom sheet.
+   * gorhom's default `'switch'` minimizes the host sheet, which reads as a
+   * crash. Left undefined outside a sheet so the dismiss-dedupe above keeps
+   * handling the `onChange(-1)`-without-`onDismiss` case that 'switch' emits.
+   */
+  stackBehavior?: 'push' | 'switch' | 'replace';
 }
 
 export interface ActionTrayRef {

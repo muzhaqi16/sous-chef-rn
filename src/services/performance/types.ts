@@ -82,6 +82,16 @@ export interface PerformanceConfig {
   trackScreens: boolean;
   /** Sample rate (0-1, percentage of events to track) */
   sampleRate: number;
+  /**
+   * Per-SESSION probability that a FlashList arms its per-cell mount
+   * instrumentation (the `MountedCellRenderer` wrapper + blank-state
+   * evaluation). Decided once per list mount, never per event — the wrapper
+   * changes the cell tree shape (a Reanimated `Animated.View` around every
+   * cell), so it must not flip mid-session. `flashlist_initial_load_ms`,
+   * session duration, and the first-content-layout latch are never gated by
+   * this.
+   */
+  flashListInstrumentationSampleRate: number;
   /** Threshold for "slow" renders in milliseconds */
   /** Threshold for memory warnings (percentage 0-100) */
   memoryWarningThreshold: number;
@@ -172,7 +182,15 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
   trackRenders: true, // Track component renders (sampled in production)
   trackMemory: false, // Disable - RN APIs are unreliable
   trackScreens: true, // Track screen transitions in all environments
-  sampleRate: 1.0, // 100% — first release, small user base, capture everything
+  // Commit-gap telemetry volume. Full capture in dev; sampled in release —
+  // the emission runs on the commit path of the busiest components.
+  sampleRate: __DEV__ ? 1.0 : 0.2,
+  // Per-cell FlashList instrumentation costs real mount time on the initial
+  // paint path: ~30-60 ms of a ~320 ms first-layout window, measured on an
+  // SM-S908U1 release build. Full capture in dev; a
+  // sampled minority of release sessions keeps `flashlist_blank_cells_total`
+  // and `flashlist_scroll_coverage_ratio` alive as series.
+  flashListInstrumentationSampleRate: __DEV__ ? 1.0 : 0.05,
   memoryWarningThreshold: 80, // Warn at 80% memory usage
   maxMemorySnapshots: 100, // Keep last 100 snapshots
 };

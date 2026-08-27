@@ -8,10 +8,9 @@ import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
  * The pantry list's sticky filter tabs, and the context they read from.
  *
  * The tabs are row 0 of the FlashList (pinned via `stickyHeaderIndices`), so
- * they have to come through `renderItem`. They used to be rendered by an inline
- * `renderItem` that closed over the filter state — which made every mounted
- * item cell re-render whenever the filter changed, through BOTH of FlashList's
- * re-render triggers.
+ * they have to come through `renderItem` — but not an inline one closing over
+ * the filter state, which re-renders every mounted item cell whenever the
+ * filter changes, through BOTH of FlashList's re-render triggers.
  *
  * Verified against the installed `@shopify/flash-list@2.3.2`: `ViewHolder`'s
  * `React.memo` comparator (`src/recyclerview/ViewHolder.tsx`) compares

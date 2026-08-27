@@ -12,11 +12,24 @@ jest.mock('@shopify/flash-list', () => {
       ? scrollProps => React.createElement(ScrollComponent, scrollProps)
       : undefined;
 
-  const FlashListMock = ({ renderScrollComponent, ...props }) =>
-    React.createElement(FlatList, {
+  // The real FlashList fires `onCommitLayoutEffect` from the commit that ends
+  // each progressive layout pass — on mount and again after every data change.
+  // An effect with no dependency array is the closest FlatList-world stand-in;
+  // without it, anything gated on first-content-layout (skeleton overlays)
+  // never releases in tests.
+  const FlashListMock = ({
+    renderScrollComponent,
+    onCommitLayoutEffect,
+    ...props
+  }) => {
+    React.useEffect(() => {
+      onCommitLayoutEffect?.();
+    });
+    return React.createElement(FlatList, {
       ...props,
       renderScrollComponent: asRenderFunction(renderScrollComponent),
     });
+  };
 
   return {
     FlashList: FlashListMock,

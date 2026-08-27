@@ -18,39 +18,53 @@
  *   node scripts/check-compiler-bailouts.mjs --list    # print offending files
  */
 import babel from '@babel/core';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 import {
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-  statSync,
-  existsSync,
-} from 'fs';
-import { join, extname } from 'path';
+  baselineFile,
+  filesUnder,
+  fromRoot,
+  REPO_ROOT,
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
 
-const SRC = 'src';
-const BASELINE = 'scripts/check-compiler-bailouts.baseline.json';
+const BASELINE = baselineFile(
+  fromRoot('scripts', 'check-compiler-bailouts.baseline.json'),
+);
 const UPDATE = process.argv.includes('--update');
 const LIST = process.argv.includes('--list');
 
-function sourceFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (['__tests__', '__mocks__', 'generated'].includes(entry)) continue;
-      sourceFiles(full, out);
-    } else if (
-      ['.ts', '.tsx'].includes(extname(entry)) &&
-      !/\.(test|spec)\.tsx?$/.test(entry) &&
-      !/\.generated\.ts$/.test(entry)
-    ) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-const files = sourceFiles(SRC);
+const files = filesUnder(['src/**/*.ts', 'src/**/*.tsx'], {
+  exclude: [
+    /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
+    /\.(test|spec)\.tsx?$/,
+    /\.generated\.ts$/,
+  ],
+});
 const failures = [];
+
+/**
+ * `'use no memo'` — the OTHER way out of compiler coverage, and the one this
+ * check could not see.
+ *
+ * A bailout is involuntary and this script counts it. The directive is
+ * voluntary and produced exactly the same outcome — the function stops being
+ * memoized — while the summary went on printing "0 files with bailouts" against
+ * an empty baseline. Three production components had left coverage that way
+ * with nothing reporting it, one of them a context provider whose published
+ * value the memoization was holding stable.
+ *
+ * It is never the right fix. `babel.config.js` runs Unistyles ->
+ * unistyles-scope-crawl -> React Compiler, and that crawl is what keeps a
+ * `styles.useVariants(...)` read in the compiler's cache key. A component whose
+ * variant freezes means that ordering has regressed, so the repair is to the
+ * toolchain (`node scripts/probe-unistyles-compiler-order.mjs`), not to the
+ * component — see check-unistyles-variant-staleness.mjs. So `noMemoOptOuts` is
+ * EMPTY and ratcheted shrink-only: an entry is a regression to fix, not a
+ * budget to spend.
+ */
+const OPT_OUT_DIRECTIVE = /^\s*['"]use no memo['"]\s*;?\s*$/;
+const optOuts = [];
 let compiled = 0;
 let succeeded = 0;
 
@@ -63,25 +77,41 @@ let succeeded = 0;
  * stopped being memoized. Without the name the two are indistinguishable.
  */
 function functionNameAt(lines, line) {
-  const DECL =
-    /(?:export\s+)?(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function)/;
-  for (let i = line - 1; i >= 0 && i > line - 12; i--) {
-    const m = DECL.exec(lines[i] ?? '');
-    if (m) return m[1] ?? m[2];
+  // A NAMED declaration wins outright, however far back it is within the
+  // window: scanning line-by-line for "anything function-shaped" picked up a
+  // destructured prop (`onPress`) sitting between the directive and the
+  // component that actually owns it, which named the wrong thing in a report
+  // whose whole value is naming the right one.
+  const NAMED =
+    /(?:export\s+)?(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)|(?:^|\s)([A-Z][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function|React\.)/;
+  const LOOSE = /([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function)/;
+
+  let loose;
+  for (let i = line - 1; i >= 0 && i > line - 30; i--) {
+    const text = lines[i] ?? '';
+    const named = NAMED.exec(text);
+    if (named) return named[1] ?? named[2];
+    if (!loose) {
+      const m = LOOSE.exec(text);
+      if (m) loose = m[1];
+    }
   }
-  return '<anonymous>';
+  return loose ?? '<anonymous>';
 }
 
 for (const file of files) {
   let sawEvent = false;
   const reasons = [];
   const bailedFns = [];
+  // Everything recorded is repo-relative: the baseline is committed, so an
+  // absolute path would make it machine-specific.
+  const rel = relative(REPO_ROOT, file);
   const source = readFileSync(file, 'utf8');
   const lines = source.split('\n');
   try {
     await babel.transformAsync(source, {
       filename: file,
-      cwd: process.cwd(),
+      cwd: REPO_ROOT,
       configFile: './babel.config.js',
       caller: { name: 'compiler-bailout-check', supportsStaticESM: true },
       plugins: [
@@ -115,10 +145,16 @@ for (const file of files) {
     console.error(`\n✗ ${file} failed to transform:\n  ${error.message}\n`);
     process.exit(2);
   }
+  lines.forEach((text, i) => {
+    if (OPT_OUT_DIRECTIVE.test(text)) {
+      optOuts.push({ file: rel, fn: functionNameAt(lines, i + 1) });
+    }
+  });
+
   if (sawEvent) compiled++;
   if (reasons.length) {
     failures.push({
-      file,
+      file: rel,
       reasons: [...new Set(reasons)],
       fns: [...new Set(bailedFns)],
     });
@@ -127,18 +163,19 @@ for (const file of files) {
 
 // A run that compiled nothing must not look like a clean run. This is the same
 // vacuity trap the checks in this change exist to close.
-if (compiled === 0) {
-  console.error(
-    `✗ Compiled 0 of ${files.length} files — the compiler produced no events at all.\n` +
-      `  Something is wrong with the setup, not with the code. Not reporting this as clean.`,
-  );
-  process.exit(2);
-}
+requireNonEmptyScan({
+  count: compiled,
+  what: `files reaching the compiler (of ${files.length} scanned)`,
+  check: 'check-compiler-bailouts',
+  hint: 'the Babel config or preset changed and the compiler emitted no events.',
+});
 
 const count = failures.length;
+const optOutKeys = [...new Set(optOuts.map(o => `${o.file} → ${o.fn}`))].sort();
 console.log(
   `Scanned ${files.length} files · ${compiled} reached the compiler · ` +
-    `${succeeded} functions compiled · ${count} files with bailouts`,
+    `${succeeded} functions compiled · ${count} files with bailouts · ` +
+    `${optOutKeys.length} \`use no memo\` opt-out(s)`,
 );
 
 if (LIST || UPDATE) {
@@ -149,27 +186,22 @@ if (LIST || UPDATE) {
   }
 }
 
+const existingBaseline = BASELINE.read() ?? {};
+
 if (UPDATE) {
-  writeFileSync(
-    BASELINE,
-    `${JSON.stringify(
-      { maxFilesWithBailouts: count, files: failures.map(f => f.file).sort() },
-      null,
-      2,
-    )}\n`,
-  );
+  BASELINE.write({
+    maxFilesWithBailouts: count,
+    files: failures.map(f => f.file).sort(),
+    // Preserved across updates: `isolatedLeaves` records WHICH function is
+    // expected to bail where a variant call was deliberately extracted.
+    isolatedLeaves: existingBaseline.isolatedLeaves ?? {},
+    noMemoOptOuts: optOutKeys,
+  });
   console.log(`\nBaseline updated: ${count} files.`);
   process.exit(0);
 }
 
-if (!existsSync(BASELINE)) {
-  console.error(
-    `\n✗ No baseline at ${BASELINE}. Run with --update to record one.`,
-  );
-  process.exit(2);
-}
-
-const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+const baseline = BASELINE.require('check-compiler-bailouts');
 
 /**
  * Files where the variant call was deliberately extracted into a leaf, so only
@@ -229,6 +261,40 @@ if (count > baseline.maxFilesWithBailouts) {
       `and CLAUDE.md § React Compiler.`,
   );
   process.exit(1);
+}
+
+// The opt-out ratchet. Same rule as the bailout count: it may shrink, never
+// grow. A new `'use no memo'` is a deliberate exit from compiler coverage, so
+// it is recorded here and argued for in review rather than appearing silently.
+const knownOptOuts = new Set(baseline.noMemoOptOuts ?? []);
+const newOptOuts = optOutKeys.filter(k => !knownOptOuts.has(k));
+if (newOptOuts.length > 0) {
+  console.error(
+    `\n✗ ${newOptOuts.length} new \`use no memo\` opt-out(s) — a function ` +
+      `leaving React Compiler coverage:\n`,
+  );
+  for (const k of newOptOuts) console.error(`  ${k}`);
+  console.error(
+    `\nRemove it. \`noMemoOptOuts\` is empty on purpose and may only shrink.\n\n` +
+      `If you added it because a \`styles.useVariants(...)\` read was freezing at\n` +
+      `its first-render value, that is a TOOLCHAIN regression, not a property of\n` +
+      `the component: babel.config.js must run Unistyles ->\n` +
+      `unistyles-scope-crawl -> React Compiler, in that order.\n\n` +
+      `  node scripts/probe-unistyles-compiler-order.mjs\n\n` +
+      `Opting the component out hides that regression everywhere else it applies,\n` +
+      `and costs the component its memoization. See\n` +
+      `check-unistyles-variant-staleness.mjs.\n`,
+  );
+  process.exit(1);
+}
+
+const removedOptOuts = [...knownOptOuts].filter(k => !optOutKeys.includes(k));
+if (removedOptOuts.length > 0) {
+  console.log(
+    `\n✓ ${removedOptOuts.length} \`use no memo\` opt-out(s) removed since ` +
+      `the baseline — run --update to ratchet down:`,
+  );
+  for (const k of removedOptOuts) console.log(`  ${k}`);
 }
 
 if (count < baseline.maxFilesWithBailouts) {

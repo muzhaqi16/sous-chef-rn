@@ -93,3 +93,49 @@ jest.mock('@react-native-firebase/messaging', () => ({
     PROVISIONAL: 2,
   },
 }));
+
+// ---------------------------------------------------------------------------
+// Timers must never be the reason a worker cannot exit
+//
+// Jest force-kills a worker whose event loop is still held open when its files
+// finish ("A worker process has failed to exit gracefully"), and a pending real
+// timer is enough to do it. Plenty of those are legitimate: production code
+// arms long safety nets — a 30s pending-delete sweep, a 10s WebSocket stability
+// window — that outlive the test which triggered them, and chasing each one
+// into a per-suite teardown is endless.
+//
+// So unref every real timer instead. An unref'd timer still fires normally
+// while the worker has work to do (its IPC channel keeps the loop alive); it
+// simply stops being something the process must wait on before exiting.
+//
+// This is a worker-exit guard, NOT a leak detector: it deliberately silences
+// the warning, so it cannot tell you about a genuine runaway timer in
+// production code. `npx jest --detectOpenHandles <paths>` still names them, and
+// remains the tool to reach for.
+//
+// Assigning over the globals composes with fake timers: `jest.useFakeTimers()`
+// saves whatever is installed (these wrappers) and `useRealTimers()` puts it
+// back, so a suite can still swap in fake timers freely.
+// ---------------------------------------------------------------------------
+const unrefTimer = timer => {
+  if (timer && typeof timer.unref === 'function') timer.unref();
+  return timer;
+};
+
+const realSetTimeout = global.setTimeout;
+const realSetInterval = global.setInterval;
+
+global.setTimeout = (...args) => unrefTimer(realSetTimeout(...args));
+global.setInterval = (...args) => unrefTimer(realSetInterval(...args));
+
+// `promisify()` looks for `util.promisify.custom`, a SYMBOL — not the
+// `__promisify__` property, which is a @types/node declaration with no runtime
+// existence. Copying `__promisify__` assigned `undefined`, and the arrow
+// wrappers above do not inherit the symbol, so `promisify(setTimeout)` threw
+// instead of resolving.
+//
+// Only `setTimeout` carries it; Node defines no custom promisifier for
+// `setInterval` (the async-iterator form lives in `timers/promises`), so there
+// is nothing to forward there.
+const { promisify } = require('util');
+global.setTimeout[promisify.custom] = realSetTimeout[promisify.custom];

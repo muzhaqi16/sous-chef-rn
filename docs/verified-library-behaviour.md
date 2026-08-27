@@ -540,3 +540,72 @@ terminated session) against 15:35:42 for `app_content_appeared_ms_count`,
 Same reason the audit says to read these per session and never aggregate: each
 cold start is a new process, so the transport's cumulative accumulator restarts
 and `_count` is 1 per launch.
+
+### FlashList v2 first-layout opacity gate
+
+**Claim:** FlashList v2 renders its initial cells progressively across
+multiple commits (~`initialDrawBatchSize` = 2 cells per
+commit→measure→setState pass) and holds the ENTIRE cell container —
+sticky-header sentinel rows included — at `opacity: 0` until the loop finishes
+and `commitLayout()` runs, while `ListHeaderComponent` renders outside the
+gated container and paints on the first commit. `onLoad` and
+`isFirstLayoutComplete` latch ONCE per mount, so a sentinel-only skeleton
+layout consumes them before real data arrives; the public
+`onCommitLayoutEffect` prop is the signal that re-fires — it is driven by a
+layout effect on the container's `renderId`, which `commitLayout()` increments
+at the end of EVERY settled layout pass, including the first one after a data
+change.
+
+**Verified against `@shopify/flash-list@2.3.2`**, and on-device
+(SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
+blank frame between skeleton dismissal and rows, eliminated by releasing
+skeletons on the first `onCommitLayoutEffect` that lands with real content —
+numbers and protocol in
+[audits/perf-blank-window-2026-08-26.md](audits/perf-blank-window-2026-08-26.md).
+Consumed by `useFlashListPerformance`'s `hasContentLayout` latch.
+
+Re-check:
+
+```
+grep -n "opacity: renderId" node_modules/@shopify/flash-list/src/recyclerview/ViewHolderCollection.tsx
+grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
+grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
+```
+
+### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
+
+**Claim:** `react-native-unistyles`' Babel plugin rewrites a component that
+calls `styles.useVariants(...)` by assigning `path.node.body` directly —
+inserting `const _styles = styles;`, wrapping the remaining statements in a new
+`BlockStatement`, and declaring a shadowing `const styles =
+_styles.useVariants(args)` inside it — and never calls `path.scope.crawl()`.
+Babel's scope table therefore holds no binding for that declaration, and
+`babel-plugin-react-compiler` cannot lower the function.
+
+This is an upstream defect, not an incompatibility. A `scope.crawl()` between
+the two plugins fixes it, which is what `scripts/babel/unistyles-scope-crawl.js`
+does. The crawl only works at `Program.enter`; at `Program.exit` the compiler
+has already analysed the file and the crawl is a silent no-op.
+
+**Verified against `react-native-unistyles@3.3.0` +
+`babel-plugin-react-compiler@1.0.0`.** Three orders, three outcomes:
+
+| plugin order | compiler | variant read |
+| --- | --- | --- |
+| `[unistyles, compiler]` (their docs) | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized |
+| `[compiler, unistyles]` | compiles | STALE — `if ($[2] !== style)`, the read is not a dependency |
+| `[unistyles, crawl, compiler]` (shipped) | compiles | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
+
+The middle row is the trap: zero bailouts and full memoization, while every
+variant style freezes at its first-render value.
+
+Re-check (asserts all three legs; fails if any stops holding):
+
+```
+node scripts/probe-unistyles-compiler-order.mjs
+```
+
+If the docs order stops skipping the function, the upstream bug is fixed —
+delete the crawl plugin and the probe, and restore the plain documented order.
+Ongoing regression cover is
+`node scripts/check-unistyles-variant-staleness.mjs`.
