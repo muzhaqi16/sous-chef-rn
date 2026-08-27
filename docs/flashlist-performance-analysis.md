@@ -243,7 +243,59 @@ panel) is GPU-bound and unsolved.
 | 7   | Apollo watchers keep running on hidden tabs (`freezeOnBlur`)                | `HomeTabs` deliberately uses `inactiveBehavior: 'none'` — the background work is the accepted price of avoiding multi-second resumes (CLAUDE.md). **Closed (by design).**                               |
 | 8   | Dead `ShoppingList.items` merge policy                                      | Removed. **Closed.**                                                                                                                                                                                    |
 
+## Instrumentation coverage — a scoped decision, not a backlog
+
+`useFlashListPerformance` is on the five list surfaces that matter plus the two
+full screens that were previously invisible to every metric:
+`PantryContent`, `SortableList`, `ItemList`, `MyRecipes`, `SavedRecipes`,
+`FilteredPantryItems`, `PurchaseHistoryScreen`.
+
+The eight bottom-sheet lists (`BottomSheetAutocompleteInput`, `FolderPicker`,
+`TagPicker`, `AddMealSheet`, `TemplateBrowserSheet`, `IngredientMatchingSheet`,
+`ShoppingListPickerSheet`, `IngredientSelectorSheet`) are deliberately NOT
+instrumented. They show a handful of rows for a few seconds, so
+`flashlist_initial_load_ms` there is noise — while `CellRendererComponent` wraps
+every cell in an `Animated.View` + layout effect, which is real mount cost in
+the sampled sessions. Instrumenting them would cost more than it tells you.
+
 ## Still open
+
+- **BUG — ROOT-CAUSED: a paginated `itemsConnection` can report completeness
+  while holding a subset, and client-side filtering over it silently lies.**
+  Probed on device (139-item pantry, one item expiring in 2 days):
+  `allItems.length: 101`, `totalCount: 139`, **`hasMore: false`**,
+  `withExpiry: 0`. `MAX_WINDOW_EDGES = 100` (`cache.ts`) caps the cached edges,
+  but `pageInfo.hasNextPage` reflects the LAST FETCHED PAGE, so the connection
+  ends up claiming there is nothing more while 38 items — including the only one
+  carrying `expiresAt` — are absent. `FilteredPantryItems` then filters an
+  incomplete set and correctly finds nothing, and its "load every page" effect
+  cannot recover because it is gated on `hasMore`.
+
+  Broken invariant: **`edges.length < totalCount` while `hasNextPage === false`.**
+
+  **Do NOT "fix" this by deriving `hasMore` from `totalCount`** (e.g.
+  `hasNextPage || itemCount < totalCount` in `usePagination`): each fetched page
+  is capped straight back to 100 edges, so `hasMore` would never go false and the
+  screen would fetch forever.
+
+  **FIXED for the expiry modes:** `FilteredPantryItems` now narrows server-side
+  via `ModeConfig.serverFilters` (`{ expiringSoon: true }` for both `expiring`
+  and `expired` — the API filter has no lower bound, so it returns the superset
+  and the client predicate splits it). A non-null filter also re-keys the cache
+  entry, so those screens get their own small connection instead of sharing the
+  capped one. Verified against the API: `expiringSoon: true` on a 139-item
+  pantry returns `totalCount: 1, hasNextPage: false`.
+
+  **`lowStock` is still exposed** — `PantryItemFilters` has no equivalent, so it
+  still filters client-side and remains unreliable above 100 items. Requested in
+  sous-chef-api#293. Raising the cap only moves the threshold.
+
+  Likely also affects the MAIN pantry list above 100 items (it stops scrolling
+  while the header count reads the server total) — observed, not yet counted.
+
+  Note the screen's tests mock BOTH `useCurrentPantry` and `usePantryManagement`,
+  so they verify the filter against injected data and structurally cannot catch
+  this.
 
 - The pantry's frame-rate ceiling: ~4 ms must come out of RenderThread draw +
   GPU present (image decode/upload, rounded-corner clipping, overdraw) to reach

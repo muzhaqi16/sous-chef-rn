@@ -118,23 +118,27 @@ let mockLoading = false;
 let mockError: Error | undefined;
 let mockHasResult = true;
 
+const mockUsePantryManagement = jest.fn();
 jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
-  usePantryManagement: () => ({
-    state: {
-      items: mockAllItems,
-      loading: mockLoading,
-      error: mockError,
-      // A response arrived — separates an empty result from a fetch that
-      // never answered, which must not render the same way.
-      hasResult: mockHasResult,
-      hasMore: false,
-      isLoadingMore: false,
-    },
-    actions: {
-      refetch: jest.fn(() => Promise.resolve()),
-      loadMore: jest.fn(),
-    },
-  }),
+  usePantryManagement: (...args: unknown[]) => {
+    mockUsePantryManagement(...args);
+    return {
+      state: {
+        items: mockAllItems,
+        loading: mockLoading,
+        error: mockError,
+        // A response arrived — separates an empty result from a fetch that
+        // never answered, which must not render the same way.
+        hasResult: mockHasResult,
+        hasMore: false,
+        isLoadingMore: false,
+      },
+      actions: {
+        refetch: jest.fn(() => Promise.resolve()),
+        loadMore: jest.fn(),
+      },
+    };
+  },
 }));
 
 jest.mock('#components/molecules/Header', () => ({
@@ -306,6 +310,42 @@ describe('FilteredPantryItems', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
       expect(screen.queryByText('Salmon')).toBeNull();
       expect(screen.getByText('No items are expiring soon')).toBeTruthy();
+    });
+  });
+
+  describe('server-side narrowing', () => {
+    // Load-bearing: `itemsConnection` caps cached edges at 100 while
+    // `pageInfo.hasNextPage` reports the last FETCHED page, so above 100 items a
+    // client-only filter runs over a subset that claims to be complete and
+    // silently reports "none". The expiry modes must narrow on the server.
+    beforeEach(() => {
+      mockUsePantryManagement.mockClear();
+    });
+
+    it('asks the server for expiring items rather than filtering the whole pantry', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expiring')} />);
+      expect(mockUsePantryManagement).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ filters: { expiringSoon: true } }),
+      );
+    });
+
+    it('asks the server for the same superset in expired mode', () => {
+      // `expiringSoon` has no lower bound server-side, so it returns
+      // already-expired items too; the client predicate splits the two.
+      renderWithApollo(<FilteredPantryItems route={makeRoute('expired')} />);
+      expect(mockUsePantryManagement).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ filters: { expiringSoon: true } }),
+      );
+    });
+
+    it('sends no server filter for low stock — the API has none', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+      expect(mockUsePantryManagement).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ filters: null }),
+      );
     });
   });
 
