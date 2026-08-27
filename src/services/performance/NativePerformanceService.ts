@@ -279,9 +279,14 @@ export const NativePerformanceService = {
    * pantry those are ~500 ms apart on a real device, and the gap is the part
    * users actually notice — the header paints while the list is still empty.
    *
-   * Called from the first list that finishes loading in a session
-   * (`useFlashListPerformance`'s `onLoad`), so it means "first meaningful
-   * paint, whichever screen that was". One-shot: a session has exactly one.
+   * Called from `useFlashListPerformance`, by the effect that fires once
+   * `hasFinishedLayout && hasRealContent` — layout has committed AND what was
+   * laid out is data, not a skeleton. Whichever instrumented list the launch
+   * lands on first claims it, so it means "first meaningful paint, whichever
+   * screen that was". One-shot: a session has exactly one.
+   *
+   * NOT `onLoad`: that fires once per mount, and a sentinel-only skeleton
+   * layout consumes it before any row exists.
    *
    * KNOWN SCOPE: a launch that never renders a list — signed out, or straight
    * into a non-list detail screen — never fires this, so the metric describes

@@ -282,14 +282,37 @@ const scanned = sourceFiles(SRC);
 
 // A preset upgrade, a rename, or a moved directory can leave this scan matching
 // nothing — and a scan that matched nothing prints exactly what a clean tree
-// prints. Fail instead. The floor is the baseline's own size: this check has
-// never legitimately collapsed from 50 files to a handful in one change.
+// prints. Fail instead.
+//
+// The floor comes from `scannedFiles`, which records how many files the scan
+// reached at the last `--update`. It cannot come from `files`: that is the
+// FINDINGS list, it is empty by design and meant to stay empty, so a floor
+// derived from it is permanently 1 and a collapse from 76 files to one passes
+// silently — the exact failure this call exists to prevent.
+//
+// (This is not the `maxFilesWithStaleVariants` count removed earlier. That one
+// capped findings and nothing read it. This one is read here, every run, and is
+// the only thing standing between a broken scan and a green tick.)
 const baselineForFloor = JSON.parse(readFileSync(BASELINE, 'utf8'));
+
+if (typeof baselineForFloor.scannedFiles !== 'number' && !UPDATE) {
+  console.error(
+    `\n✗ check-unistyles-variant-staleness.baseline.json has no \`scannedFiles\` count, so this check has no\n` +
+      `  credible floor and cannot tell a working scan from a broken one.\n\n` +
+      `  Run: node scripts/check-unistyles-variant-staleness.mjs --update\n`,
+  );
+  process.exit(2);
+}
+
 requireNonEmptyScan({
   count: scanned.length,
   what: 'source files calling `.useVariants(...)`',
   check: 'check-unistyles-variant-staleness',
-  minimum: Math.max(1, Math.floor(baselineForFloor.files.length * 0.5)),
+  // On `--update` the recorded count is the one being replaced, so it cannot
+  // gate its own replacement — bootstrap at 1 and let the write record the truth.
+  minimum: UPDATE
+    ? 1
+    : Math.max(1, Math.floor(baselineForFloor.scannedFiles * 0.5)),
   hint:
     'the Unistyles babel plugin changed its output shape, or `src/` moved. ' +
     'Run with --explain to see the transform this depends on.',
@@ -360,16 +383,19 @@ if (UPDATE) {
   writeFileSync(
     BASELINE,
     JSON.stringify(
-      // `files` only. A `maxFilesWithStaleVariants` count used to be written
-      // beside it and was never read by anything — enforcement is entirely
-      // set-membership over `files`, so the number was decoration that looked
-      // like a limit.
-      { files },
+      // `files` is the findings list — enforcement is set-membership over it.
+      // `scannedFiles` is not a second findings number: it records how far the
+      // scan reached, and is read at the top of this file as the floor below
+      // which the scan is not credible. Without it a collapsed scan reports a
+      // clean tree.
+      { files, scannedFiles: scanned.length },
       null,
       2,
     ) + '\n',
   );
-  console.log(`Baseline updated: ${files.length} files.`);
+  console.log(
+    `Baseline updated: ${files.length} findings, ${scanned.length} files scanned.`,
+  );
   process.exit(0);
 }
 
@@ -389,8 +415,18 @@ if (added.length > 0) {
     }
   }
   console.error(
-    '\nAdd `use no memo` as the first statement of the component, with a comment\n' +
-      'saying why. Run with --explain to see the transform this defends against.\n',
+    '\nThis is a TOOLCHAIN failure, not a defect in the file above. A finding\n' +
+      "here means the Babel plugin order has regressed: Unistyles' `useVariants`\n" +
+      'rewrite declares a shadowing binding without re-crawling scope, so the\n' +
+      'React Compiler caches the variant-resolved style on the wrong\n' +
+      'dependencies and it freezes at its first-render value.\n\n' +
+      '  1. node scripts/probe-unistyles-compiler-order.mjs\n' +
+      '  2. Confirm babel.config.js still runs\n' +
+      '     Unistyles -> unistyles-scope-crawl -> React Compiler, in that order.\n\n' +
+      'Do NOT add `use no memo` to the component. The `noMemoOptOuts` list in\n' +
+      'check-compiler-bailouts.baseline.json is empty and shrink-only, so the\n' +
+      'next pre-push step rejects it — and it would hide the regression rather\n' +
+      'than fix it. Run with --explain to see the transform this defends against.\n',
   );
   process.exit(1);
 }
@@ -403,5 +439,8 @@ if (fixed.length > 0) {
 }
 
 console.log(
-  `Stale-variant risk: ${files.length} file(s), baseline ${baseline.files.length}. OK.`,
+  `Stale-variant risk: ${files.length} file(s), baseline ${baseline.files.length}; ` +
+    `${scanned.length} files scanned (floor ${Math.floor(
+      baseline.scannedFiles * 0.5,
+    )}). OK.`,
 );

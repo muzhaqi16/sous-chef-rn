@@ -127,6 +127,15 @@ const realSetInterval = global.setInterval;
 
 global.setTimeout = (...args) => unrefTimer(realSetTimeout(...args));
 global.setInterval = (...args) => unrefTimer(realSetInterval(...args));
-// `promisify(setTimeout)` reads this off the function object.
-global.setTimeout.__promisify__ = realSetTimeout.__promisify__;
-global.setInterval.__promisify__ = realSetInterval.__promisify__;
+
+// `promisify()` looks for `util.promisify.custom`, a SYMBOL — not the
+// `__promisify__` property, which is a @types/node declaration with no runtime
+// existence. Copying `__promisify__` assigned `undefined`, and the arrow
+// wrappers above do not inherit the symbol, so `promisify(setTimeout)` threw
+// instead of resolving.
+//
+// Only `setTimeout` carries it; Node defines no custom promisifier for
+// `setInterval` (the async-iterator form lives in `timers/promises`), so there
+// is nothing to forward there.
+const { promisify } = require('util');
+global.setTimeout[promisify.custom] = realSetTimeout[promisify.custom];

@@ -314,7 +314,9 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
                       ...(brandName && { brandName }),
                     },
                   }),
-                  // Both or neither — `netWeightNeedsUnit` was checked above.
+                  // Both or neither: the schema refuses a weight without a
+                  // resolved unit id, so reaching here with one and not the
+                  // other is not possible.
                   ...(netWeightValue !== undefined &&
                     netWeightUnitId && {
                       netWeight: {

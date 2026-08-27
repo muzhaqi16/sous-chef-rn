@@ -106,10 +106,11 @@ src/graphql/generated/fragmentMatcher.json
 # Generated build-time config (see scripts/generate-env.js)
 src/config/env.generated.ts
 
-# Audits are scratch by default, but the perf/offline baseline is tracked: it
-# holds the measurement protocol, the numbers, and — more importantly — the
-# retractions of earlier readings that were artifacts. Untracked, each session
-# re-derives it and repeats the same mistakes.
+# Audit write-ups are scratch: per-session and per-machine, and a measurement is
+# only comparable against one taken on the SAME hardware minutes later, so there
+# is nothing here worth committing. Conclusions that must outlive a session
+# belong in the rule they justify — CLAUDE.md, or the doc under docs/ that owns
+# the topic — stated with its number, not as a pointer to a file no clone has.
 docs/audits/*
 
 # Reassure measurements. Per-run and per-machine — a baseline is only

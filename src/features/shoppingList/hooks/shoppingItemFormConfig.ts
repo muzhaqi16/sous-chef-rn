@@ -85,17 +85,31 @@ export const shoppingItemSchema = object({
   storeName: string(),
   brand: string(),
   brandId: string().nullable(),
-  netWeight: string(),
-  // Net weight is ALL-OR-NOTHING: the API rejects a value with no unit on
-  // create, so the unit is required exactly when a weight was typed. Reported
-  // on the unit because that is the field the user has to fill in.
+  // Net weight is ALL-OR-NOTHING in BOTH directions: `netWeight` and
+  // `netWeightUnitId` are either both set or both empty. The schema is explicit
+  // that "a netWeightUnitId with no netWeight is always rejected — a unit with
+  // nothing to measure means nothing", and both submit paths send the pair only
+  // when both are present, so either half alone is dropped without a word.
+  //
+  // Each direction reports on the field the user has to fill.
+  netWeight: string().test(
+    'net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if ((value ?? '').trim()) return true;
+      return !context.parent.netWeightUnitId;
+    },
+  ),
+  // Satisfied by `netWeightUnitId` alone — a typed symbol that never resolved
+  // to an id does NOT count. `NetWeightInput` has no symbol field, so a unit
+  // the user typed but never selected is structurally unsendable.
   netWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (value, context) => {
+    (_value, context) => {
       const weight = (context.parent.netWeight ?? '').trim();
       if (!weight) return true;
-      return Boolean(value?.trim()) || Boolean(context.parent.netWeightUnitId);
+      return Boolean(context.parent.netWeightUnitId);
     },
   ),
   netWeightUnitId: string().nullable(),

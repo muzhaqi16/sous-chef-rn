@@ -63,11 +63,14 @@ const failures = [];
  * with nothing reporting it, one of them a context provider whose published
  * value the memoization was holding stable.
  *
- * It is sometimes REQUIRED: the compiler runs before the Unistyles plugin, so a
- * component reading `styles.useVariants(...)` results can freeze its variant at
- * the first render (see check-unistyles-variant-staleness.mjs). So this is
- * recorded and ratcheted, not banned — the baseline may shrink, never grow, and
- * a new one has to be argued for in review rather than slipping in unseen.
+ * It is never the right fix. `babel.config.js` runs Unistyles ->
+ * unistyles-scope-crawl -> React Compiler, and that crawl is what keeps a
+ * `styles.useVariants(...)` read in the compiler's cache key. A component whose
+ * variant freezes means that ordering has regressed, so the repair is to the
+ * toolchain (`node scripts/probe-unistyles-compiler-order.mjs`), not to the
+ * component — see check-unistyles-variant-staleness.mjs. So `noMemoOptOuts` is
+ * EMPTY and ratcheted shrink-only: an entry is a regression to fix, not a
+ * budget to spend.
  */
 const OPT_OUT_DIRECTIVE = /^\s*['"]use no memo['"]\s*;?\s*$/;
 const optOuts = [];
@@ -295,14 +298,15 @@ if (newOptOuts.length > 0) {
   );
   for (const k of newOptOuts) console.error(`  ${k}`);
   console.error(
-    `\nThe directive is REQUIRED in one case: a component whose ` +
-      `\`styles.useVariants(...)\`\nreads would otherwise freeze at their ` +
-      `first-render value, because the compiler\nruns before the Unistyles ` +
-      `plugin (see check-unistyles-variant-staleness.mjs).\n\n` +
-      `If that is the case here, apply it to the smallest LEAF that owns the\n` +
-      `variant read — not to a parent, and never to a context provider, whose\n` +
-      `published value the memoization is what keeps stable — then re-run with\n` +
-      `--update. Otherwise remove it.\n`,
+    `\nRemove it. \`noMemoOptOuts\` is empty on purpose and may only shrink.\n\n` +
+      `If you added it because a \`styles.useVariants(...)\` read was freezing at\n` +
+      `its first-render value, that is a TOOLCHAIN regression, not a property of\n` +
+      `the component: babel.config.js must run Unistyles ->\n` +
+      `unistyles-scope-crawl -> React Compiler, in that order.\n\n` +
+      `  node scripts/probe-unistyles-compiler-order.mjs\n\n` +
+      `Opting the component out hides that regression everywhere else it applies,\n` +
+      `and costs the component its memoization. See\n` +
+      `check-unistyles-variant-staleness.mjs.\n`,
   );
   process.exit(1);
 }

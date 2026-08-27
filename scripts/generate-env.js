@@ -46,7 +46,7 @@ const KEYS = [
   'ENABLE_PRODUCTION_LOGS',
   // Build identity. Without these a measurement cannot be traced to the code
   // that produced it, which is what made a whole performance investigation
-  // unattributable (see docs/audits/perf-offline-baseline-2026-08-24.md).
+  // unattributable — every reading had to be retracted.
   // GIT_SHA falls back to the working tree's HEAD, so local builds are
   // attributable too; CI overrides both via `process.env`.
   'GIT_SHA',

@@ -249,6 +249,33 @@ describe('useShoppingListItemForm', () => {
       // Other fields should not be dirty — react-hook-form omits clean keys.
       expect(result.current.dirtyFields.quantityInput).toBeUndefined();
     });
+
+    // `storeName` is the display label for `storeId` and no submit path sends
+    // it. On react-hook-form's whole-form `isDirty` an edit to it alone fired
+    // `updateShoppingListItem` with an empty input.
+    it('does not count storeName, which no submit path sends', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFieldValue('storeName', 'Corner Shop');
+      });
+
+      // Never marked dirty at all — excluded in `setFieldValue`, not
+      // subtracted afterwards.
+      expect(result.current.dirtyFields.storeName).toBeUndefined();
+      expect(result.current.hasDirtyFields).toBe(false);
+      expect(result.current.buildDirtyInput()).toEqual({});
+    });
+
+    it('counts storeId, which is sent', () => {
+      const { result } = renderHook(() => useShoppingListItemForm());
+
+      act(() => {
+        result.current.setFieldValue('storeId', 'store-1');
+      });
+
+      expect(result.current.hasDirtyFields).toBe(true);
+    });
   });
 
   describe('buildUnitInput', () => {

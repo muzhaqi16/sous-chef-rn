@@ -45,7 +45,31 @@ module.exports = {
   // Release bundling runs inside xcodebuild/gradlew, so the variable does reach
   // Metro there. Exported per-build rather than committed to an env file, so
   // only a build produced by this config carries the capability; CI never sets
-  // it, and `scripts/check-launch-arg-auth.mjs` fails any build that ships it.
+  // it.
+  //
+  // Every Android build command below invokes `scripts/check-launch-arg-auth.mjs`
+  // first. The gate reads the variant's `signingConfig` out of build.gradle, and
+  // it only runs where it is called — so calling it here is what makes it
+  // enforcement for this path rather than for `run-android.sh`'s alone.
+  //
+  // The gate runs INSIDE the `ALLOW_LAUNCH_ARG_AUTH=true` environment, not
+  // before it: it judges the pairing of that flag with the variant's signing
+  // key, and reads the flag from its own `process.env`. Put the assignment
+  // after the gate and it sees the flag unset, reports "authentication is off",
+  // and exits 0 for every variant — a gate that cannot fail.
+  //
+  // `android.release` builds `localRelease`, not `release`. Both are
+  // release-configured; only `localRelease` is debug-signed (build.gradle:
+  // `initWith release` + `signingConfig signingConfigs.debug`), which is what
+  // lets it carry launch-argument auth. A `release` APK is signed with the
+  // distribution key, so one built with this capability would accept a session
+  // from `am start --es detoxUserToken <jwt>`.
+  //
+  // The app and the androidTest APK are built in SEPARATE gradlew invocations.
+  // `splits.abi.enable` reads `gradle.startParameter.taskNames` and goes false
+  // if any task name contains `debug`, so building both at once would silently
+  // drop the ABI splits — and with them the `universal` infix in the app APK's
+  // filename that `binaryPath` below names.
   apps: {
     'ios.debug': {
       type: 'ios.app',
@@ -66,16 +90,17 @@ module.exports = {
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
+        'node scripts/check-launch-arg-auth.mjs --platform android --variant debug && ' +
         'cd android && ./gradlew assembleDebug assembleAndroidTest -DtestBuildType=debug',
     },
     'android.release': {
       type: 'android.apk',
       binaryPath:
-        'android/app/build/outputs/apk/release/app-universal-release.apk',
+        'android/app/build/outputs/apk/localRelease/app-universal-localRelease.apk',
       testBinaryPath:
         'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk',
       build:
-        "ALLOW_LAUNCH_ARG_AUTH=true bash -c 'cd android && ./gradlew assembleRelease :app:assembleDebugAndroidTest'",
+        "ALLOW_LAUNCH_ARG_AUTH=true bash -c 'node scripts/check-launch-arg-auth.mjs --platform android --variant localRelease && cd android && ./gradlew assembleLocalRelease && ./gradlew :app:assembleDebugAndroidTest'",
     },
   },
   devices: {

@@ -56,7 +56,7 @@ export function isStartupProfilerArmed(): boolean {
  * arriving through a different door.
  *
  * WHY 10 s: the worst cold start actually recorded on hardware is ~2.2 s on an
- * SM-S908U1 (docs/audits/), so this is over four times the observed worst case
+ * SM-S908U1, so this is over four times the observed worst case
  * — wide enough that slower hardware is still measured, narrow enough that a
  * navigation cannot pass for a launch. It is NOT defended by argument: an
  * out-of-bound launch increments `startup_window_exceeded_total`, and a

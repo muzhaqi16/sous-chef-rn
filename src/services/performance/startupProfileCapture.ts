@@ -2,11 +2,11 @@
  * The single place an armed Hermes startup profile is written and stopped.
  *
  * Termination used to hang off `markFullyDrawn()`, which is reachable only from
- * `useFlashListPerformance`'s `onLoad` — and that hook has three consumers
- * against the 70-odd files that render a FlashList. A profiled launch that
- * landed signed out, or on any screen whose list is not instrumented, left the
- * sampler running for the whole session: every later measurement perturbed, no
- * trace written, and `console` stripped in release so nothing said so.
+ * `useFlashListPerformance` — and that hook has three consumers against the
+ * 70-odd files that render a FlashList. A profiled launch that landed signed
+ * out, or on any screen whose list is not instrumented, left the sampler
+ * running for the whole session: every later measurement perturbed, no trace
+ * written, and `console` stripped in release so nothing said so.
  *
  * So capture is latched here rather than at any one call site, and armed with
  * fallbacks that do not depend on the launch reaching a particular screen.

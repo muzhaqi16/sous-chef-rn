@@ -322,6 +322,7 @@ export const ItemList: React.FC<ItemListProps> = ({
         drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
         maintainVisibleContentPosition={MVCP_DISABLED}
         onLoad={perfCallbacks.onLoad}
+        onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
         onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
         onEndReached={onEndReached}
         onEndReachedThreshold={onEndReachedThreshold}

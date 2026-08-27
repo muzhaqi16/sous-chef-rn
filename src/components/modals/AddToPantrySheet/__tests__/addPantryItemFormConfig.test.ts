@@ -102,6 +102,35 @@ describe('addPantryItemSchema', () => {
         await messageFor({ ...valid }, 'pantryNetWeightUnit'),
       ).toBeUndefined();
     });
+
+    // The other direction, and the unconditional one: "a netWeightUnitId with
+    // no netWeight is always rejected — a unit with nothing to measure means
+    // nothing." Reported on the weight, the field the user has to fill.
+    it('needs a weight once a unit is picked', async () => {
+      expect(
+        await messageFor(
+          { ...valid, pantryNetWeightUnitId: 'unit-g' },
+          'pantryNetWeight',
+        ),
+      ).toBe('Enter both a package size and its unit, or leave both empty.');
+    });
+
+    it('passes once the weight is entered', async () => {
+      expect(
+        await messageFor(
+          {
+            ...valid,
+            pantryNetWeight: '500',
+            pantryNetWeightUnitId: 'unit-g',
+          },
+          'pantryNetWeight',
+        ),
+      ).toBeUndefined();
+    });
+
+    it('does not ask for a weight when no unit was picked', async () => {
+      expect(await messageFor({ ...valid }, 'pantryNetWeight')).toBeUndefined();
+    });
   });
 
   describe('FIELD_PAGE', () => {

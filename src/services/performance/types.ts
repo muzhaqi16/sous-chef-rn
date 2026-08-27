@@ -186,8 +186,8 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceConfig = {
   // the emission runs on the commit path of the busiest components.
   sampleRate: __DEV__ ? 1.0 : 0.2,
   // Per-cell FlashList instrumentation costs real mount time on the initial
-  // paint path (~30-60 ms of a ~320 ms first-layout window on an SM-S908U1;
-  // docs/audits/perf-blank-window-2026-08-26.md). Full capture in dev; a
+  // paint path: ~30-60 ms of a ~320 ms first-layout window, measured on an
+  // SM-S908U1 release build. Full capture in dev; a
   // sampled minority of release sessions keeps `flashlist_blank_cells_total`
   // and `flashlist_scroll_coverage_ratio` alive as series.
   flashListInstrumentationSampleRate: __DEV__ ? 1.0 : 0.05,

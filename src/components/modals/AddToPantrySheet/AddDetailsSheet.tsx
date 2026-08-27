@@ -225,10 +225,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
     // `shouldValidate` re-runs the rule on THIS field only, and the
-    // all-or-nothing net-weight rule lives on `pantryNetWeightUnit` while its
-    // inputs are `pantryNetWeight` and `pantryNetWeightUnitId`.
+    // all-or-nothing net-weight rule spans `pantryNetWeight`,
+    // `pantryNetWeightUnit` and `pantryNetWeightUnitId` — each direction
+    // reporting on a different field, so both halves are re-run.
     if (field === 'pantryNetWeight' || field === 'pantryNetWeightUnitId') {
-      void trigger('pantryNetWeightUnit');
+      void trigger(['pantryNetWeightUnit', 'pantryNetWeight']);
     }
   };
 

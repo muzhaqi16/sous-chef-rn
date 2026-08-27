@@ -136,7 +136,9 @@ export const ShoppingListDetailsStep: React.FC<
           estimatedPrice: estimatedPrice || undefined,
           brandName: brand.trim() || undefined,
           brandId: brandId ?? undefined,
-          // Both or neither — `netWeightNeedsUnit` was checked above.
+          // Both or neither: the schema refuses a weight without a resolved
+          // unit id, so reaching here with one and not the other is not
+          // possible.
           netWeight:
             netWeightValue !== undefined && netWeightUnitId
               ? netWeightValue

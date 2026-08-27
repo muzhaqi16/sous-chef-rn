@@ -390,9 +390,7 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   (`PantryListSkeletonOverlay.tsx`). `onLoad` cannot stand in for the latch:
   it fires once per mount and a sentinel-only skeleton layout consumes it.
   Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
-  `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`
-  (the companion `docs/audits/perf-blank-window-2026-08-26.md` was deleted in
-  `8a7c8c76`; recover with `git checkout 8a7c8c76^ -- docs/audits/`).
+  `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`.
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
   `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
@@ -694,12 +692,10 @@ changes. Measurement decides what to change; it is not the confirmation step.
   Per-session counters plus lingering series also make cross-session aggregation
   (`sum(...) by (screen)`) untrustworthy — read per session.
 
-The protocol, the numbers and the retractions behind these rules lived in
-`docs/audits/`, deleted in `8a7c8c76` — recover with
-`git checkout 8a7c8c76^ -- docs/audits/` if you need the evidence. The rules
-above stand on their own; treat every `app_fully_drawn_ms` figure recorded
-before 2026-08-26 as invalid regardless, since it predates both the 280 ms
-floor fix and the suppression fix.
+Audit write-ups are scratch and untracked (`.gitignore`), so each rule above
+carries its own number and stands on its own. Treat every `app_fully_drawn_ms`
+figure recorded before 2026-08-26 as invalid: it predates both the 280 ms floor
+fix and the suppression fix.
 
 ## Verification
 

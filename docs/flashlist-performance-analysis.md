@@ -155,7 +155,7 @@ skip flag follows focus and that a blur/focus cycle costs no request;
   sampled** (`flashListInstrumentationSampleRate`: dev 1.0, release 0.05) —
   the cell wrapper is a Reanimated `Animated.View` + layout effect around
   every cell, measured at ~30–60 ms of the SM-S908U1's ~320 ms first-layout
-  window (`docs/audits/perf-blank-window-2026-08-26.md`). An unsampled
+  window on a release build. An unsampled
   session's `CellRendererComponent` is `undefined` (FlashList's plain View)
   and emits no blank/coverage series; `flashlist_initial_load_ms`, session
   duration and the `hasContentLayout` latch are never sampled out.
@@ -166,7 +166,6 @@ skip flag follows focus and that a blur/focus cycle costs no request;
   (`onCommitLayoutEffect`), never on data-loading flags. Mechanism, on-device
   numbers (300–342 ms header-only frame, eliminated), and the starvation trap
   for covers gated on measured state:
-  `docs/audits/perf-blank-window-2026-08-26.md` +
   `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`.
   **Reports from before that change are not comparable.** The old detector compared
   the visible range against `onViewableItemsChanged`, and FlashList's viewability is

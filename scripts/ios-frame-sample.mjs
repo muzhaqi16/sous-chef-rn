@@ -2,11 +2,13 @@
 /**
  * Frame-timeline capture for an iOS cold start.
  *
- * The iOS analogue of the Android method in
- * `docs/audits/perf-offline-baseline-2026-08-24.md` (§ "Two-method agreement
- * check"): sample the screen in a loop from launch, classify each frame by PNG
- * byte size, and read off when real content appeared. On Android that was
- * `adb exec-out screencap`; here it is `xcrun simctl io <device> screenshot`.
+ * The iOS analogue of the Android two-method agreement check: sample the screen
+ * in a loop from launch, classify each frame by PNG byte size, and read off when
+ * real content appeared. On Android that was `adb exec-out screencap`; here it is
+ * `xcrun simctl io <device> screenshot`.
+ *
+ * Sampling resolution bounds what this can resolve: at ~450 ms per screenshot a
+ * change smaller than one sample is not a result.
  *
  * Why it matters more on iOS than it did on Android: Android could cross-check
  * `app_fully_drawn_ms` against the OS itself, because `Activity.reportFullyDrawn()`

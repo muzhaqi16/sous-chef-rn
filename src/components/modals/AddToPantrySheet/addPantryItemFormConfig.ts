@@ -66,6 +66,7 @@ export const FIELD_PAGE: Partial<Record<keyof AddPantryItemFormData, number>> =
   {
     itemName: 0,
     quantityInput: 1,
+    pantryNetWeight: 1,
     pantryNetWeightUnit: 1,
   };
 
@@ -133,13 +134,23 @@ export const addPantryItemSchema = object({
       msg('errors.invalidQuantity'),
       isPositiveQuantity,
     ),
-  // Net weight is ALL-OR-NOTHING: the API rejects a value with no unit, so the
-  // unit is required exactly when a weight was typed. Reported on the unit,
-  // because that is the field the user has to fill in.
+  // Net weight is ALL-OR-NOTHING in BOTH directions — the same rule the
+  // shopping-item form applies, against the same create contract: "a
+  // netWeightUnitId with no netWeight is always rejected", and a weight with no
+  // resolved unit id is dropped by the submit path. Each direction reports on
+  // the field the user has to fill.
+  pantryNetWeight: string().test(
+    'net-weight-needs-value',
+    msg('errors.field.netWeight'),
+    (value, context) => {
+      if ((value ?? '').trim()) return true;
+      return !context.parent.pantryNetWeightUnitId;
+    },
+  ),
   pantryNetWeightUnit: string().test(
     'net-weight-needs-unit',
     msg('labels.pleaseSelectAUnitForTheNetWeight'),
-    (value, context) => {
+    (_value, context) => {
       const weight = (context.parent.pantryNetWeight ?? '').trim();
       if (!weight) return true;
       return Boolean(context.parent.pantryNetWeightUnitId);
@@ -152,7 +163,6 @@ export const addPantryItemSchema = object({
   storageState: string().oneOf(Object.values(StorageState)),
   unit: string(),
   unitId: string().nullable(),
-  pantryNetWeight: string(),
   pantryNetWeightUnitId: string().nullable(),
   showPackageDetails: boolean(),
   packageSize: string(),

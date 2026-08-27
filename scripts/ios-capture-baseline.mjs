@@ -28,7 +28,9 @@
  * at wherever your Mimir actually is.
  *
  * Prerequisites, none of which this script creates:
- *   - a RELEASE build installed and SIGNED IN (see docs/audits/perf-ios-baseline-2026-08-25.md)
+ *   - a RELEASE build installed and SIGNED IN. A debug build overstates mount
+ *     cost, and a signed-out launch never renders a list, so it produces no
+ *     `app_fully_drawn_ms` at all
  *   - tutorials already dismissed — a SpotlightCoachMark mounts inside the
  *     measured window and its state persists once skipped
  *   - the local API and the OTLP collector up

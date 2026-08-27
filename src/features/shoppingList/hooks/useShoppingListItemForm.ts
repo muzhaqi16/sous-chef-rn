@@ -18,6 +18,7 @@ import { formatNumberForInput } from '#/utils/formatters/number';
 import {
   shoppingItemSchema,
   SHOPPING_ITEM_DEFAULTS,
+  DIRTY_TRACKED_FIELDS,
   type ShoppingItemFormData,
 } from './shoppingItemFormConfig';
 
@@ -98,13 +99,22 @@ export function useShoppingListItemForm(
     field: K,
     value: PathValue<ShoppingItemFormData, K>,
   ) => {
-    setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    // `storeName` is excluded from dirty tracking at the SOURCE rather than
+    // subtracted from `isDirty` afterwards: react-hook-form mutates
+    // `dirtyFields` in place, so a boolean derived from it memoizes against an
+    // object identity that never changes and freezes at its first value.
+    // Marking the field clean keeps `isDirty` — a subscribed primitive —
+    // authoritative.
+    const tracked = (DIRTY_TRACKED_FIELDS as string[]).includes(field);
+    setValue(field, value, { shouldDirty: tracked, shouldValidate: true });
     // `shouldValidate` re-runs the rule on THIS field only, and the
     // all-or-nothing net-weight rule lives on `netWeightUnit` while its inputs
     // are `netWeight` and `netWeightUnitId`. Without this, typing a weight
     // never raises the message and picking a unit never clears it.
     if (field === 'netWeight' || field === 'netWeightUnitId') {
-      void trigger('netWeightUnit');
+      // Both halves of the all-or-nothing rule, because each direction reports
+      // on a different field and either edit can raise or clear either message.
+      void trigger(['netWeightUnit', 'netWeight']);
     }
   };
 
@@ -227,6 +237,7 @@ export function useShoppingListItemForm(
     /** Current values, subscribed — for logic and display, not for field wiring. */
     values,
     dirtyFields,
+    /** True when any SUBMITTED field changed — see `setFieldValue`. */
     hasDirtyFields: isDirty,
     setFieldValue,
     setFromItem,
