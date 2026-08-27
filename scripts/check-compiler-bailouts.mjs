@@ -18,38 +18,29 @@
  *   node scripts/check-compiler-bailouts.mjs --list    # print offending files
  */
 import babel from '@babel/core';
+import { readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 import {
-  readFileSync,
-  writeFileSync,
-  readdirSync,
-  statSync,
-  existsSync,
-} from 'fs';
-import { join, extname } from 'path';
+  baselineFile,
+  filesUnder,
+  fromRoot,
+  REPO_ROOT,
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
 
-const SRC = 'src';
-const BASELINE = 'scripts/check-compiler-bailouts.baseline.json';
+const BASELINE = baselineFile(
+  fromRoot('scripts', 'check-compiler-bailouts.baseline.json'),
+);
 const UPDATE = process.argv.includes('--update');
 const LIST = process.argv.includes('--list');
 
-function sourceFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (['__tests__', '__mocks__', 'generated'].includes(entry)) continue;
-      sourceFiles(full, out);
-    } else if (
-      ['.ts', '.tsx'].includes(extname(entry)) &&
-      !/\.(test|spec)\.tsx?$/.test(entry) &&
-      !/\.generated\.ts$/.test(entry)
-    ) {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
-const files = sourceFiles(SRC);
+const files = filesUnder(['src/**/*.ts', 'src/**/*.tsx'], {
+  exclude: [
+    /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
+    /\.(test|spec)\.tsx?$/,
+    /\.generated\.ts$/,
+  ],
+});
 const failures = [];
 
 /**
@@ -112,12 +103,15 @@ for (const file of files) {
   let sawEvent = false;
   const reasons = [];
   const bailedFns = [];
+  // Everything recorded is repo-relative: the baseline is committed, so an
+  // absolute path would make it machine-specific.
+  const rel = relative(REPO_ROOT, file);
   const source = readFileSync(file, 'utf8');
   const lines = source.split('\n');
   try {
     await babel.transformAsync(source, {
       filename: file,
-      cwd: process.cwd(),
+      cwd: REPO_ROOT,
       configFile: './babel.config.js',
       caller: { name: 'compiler-bailout-check', supportsStaticESM: true },
       plugins: [
@@ -153,14 +147,14 @@ for (const file of files) {
   }
   lines.forEach((text, i) => {
     if (OPT_OUT_DIRECTIVE.test(text)) {
-      optOuts.push({ file, fn: functionNameAt(lines, i + 1) });
+      optOuts.push({ file: rel, fn: functionNameAt(lines, i + 1) });
     }
   });
 
   if (sawEvent) compiled++;
   if (reasons.length) {
     failures.push({
-      file,
+      file: rel,
       reasons: [...new Set(reasons)],
       fns: [...new Set(bailedFns)],
     });
@@ -169,13 +163,12 @@ for (const file of files) {
 
 // A run that compiled nothing must not look like a clean run. This is the same
 // vacuity trap the checks in this change exist to close.
-if (compiled === 0) {
-  console.error(
-    `✗ Compiled 0 of ${files.length} files — the compiler produced no events at all.\n` +
-      `  Something is wrong with the setup, not with the code. Not reporting this as clean.`,
-  );
-  process.exit(2);
-}
+requireNonEmptyScan({
+  count: compiled,
+  what: `files reaching the compiler (of ${files.length} scanned)`,
+  check: 'check-compiler-bailouts',
+  hint: 'the Babel config or preset changed and the compiler emitted no events.',
+});
 
 const count = failures.length;
 const optOutKeys = [...new Set(optOuts.map(o => `${o.file} → ${o.fn}`))].sort();
@@ -193,38 +186,22 @@ if (LIST || UPDATE) {
   }
 }
 
-const existingBaseline = existsSync(BASELINE)
-  ? JSON.parse(readFileSync(BASELINE, 'utf8'))
-  : {};
+const existingBaseline = BASELINE.read() ?? {};
 
 if (UPDATE) {
-  writeFileSync(
-    BASELINE,
-    `${JSON.stringify(
-      {
-        maxFilesWithBailouts: count,
-        files: failures.map(f => f.file).sort(),
-        // Preserved across updates: `isolatedLeaves` records WHICH function is
-        // expected to bail where a variant call was deliberately extracted.
-        isolatedLeaves: existingBaseline.isolatedLeaves ?? {},
-        noMemoOptOuts: optOutKeys,
-      },
-      null,
-      2,
-    )}\n`,
-  );
+  BASELINE.write({
+    maxFilesWithBailouts: count,
+    files: failures.map(f => f.file).sort(),
+    // Preserved across updates: `isolatedLeaves` records WHICH function is
+    // expected to bail where a variant call was deliberately extracted.
+    isolatedLeaves: existingBaseline.isolatedLeaves ?? {},
+    noMemoOptOuts: optOutKeys,
+  });
   console.log(`\nBaseline updated: ${count} files.`);
   process.exit(0);
 }
 
-if (!existsSync(BASELINE)) {
-  console.error(
-    `\n✗ No baseline at ${BASELINE}. Run with --update to record one.`,
-  );
-  process.exit(2);
-}
-
-const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+const baseline = BASELINE.require('check-compiler-bailouts');
 
 /**
  * Files where the variant call was deliberately extracted into a leaf, so only

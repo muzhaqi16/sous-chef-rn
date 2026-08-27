@@ -52,14 +52,14 @@
  *
  *   node scripts/find-stale-cache-fields.mjs [--all]
  */
+import { readFileSync, existsSync } from 'node:fs';
+import { relative } from 'node:path';
 import {
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-  existsSync,
-} from 'fs';
-import { join, extname } from 'path';
+  baselineFile,
+  filesUnder,
+  fromRoot,
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
 import {
   parse,
   visit,
@@ -71,9 +71,10 @@ import {
   isInterfaceType,
 } from 'graphql';
 
-const SRC = 'src';
-const SCHEMA = 'src/graphql/generated/schema.graphql';
-const BASELINE = 'scripts/find-stale-cache-fields.baseline.json';
+const SCHEMA = fromRoot('src', 'graphql', 'generated', 'schema.graphql');
+const BASELINE = baselineFile(
+  fromRoot('scripts', 'find-stale-cache-fields.baseline.json'),
+);
 const SHOW_ALL = process.argv.includes('--all');
 const CHECK = process.argv.includes('--check');
 const UPDATE = process.argv.includes('--update');
@@ -99,21 +100,10 @@ if (!schema) {
 const DERIVED =
   /count|total|sum|rate|average|avg|stats|summary|last[A-Z]|recent|remaining|completed|previously|has[A-Z]|is[A-Z].*ed$|progress|balance|score/i;
 
-function graphqlFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (entry === 'generated' || entry === '__tests__') continue;
-      graphqlFiles(full, out);
-    } else if (extname(entry) === '.graphql') {
-      out.push(full);
-    }
-  }
-  return out;
-}
-
 // --- collect documents -------------------------------------------------------
-const files = graphqlFiles(SRC);
+const files = filesUnder('src/**/*.graphql', {
+  exclude: [/(^|\/)(generated|__tests__)(\/|$)/],
+});
 const fragments = new Map(); // name -> FragmentDefinition
 const operations = []; // { kind, name, ast }
 
@@ -268,7 +258,7 @@ for (const op of operations) {
         type,
         derived,
         missing,
-        file: op.file.replace(`${SRC}/`, ''),
+        file: relative(fromRoot('src'), op.file),
       });
     }
   }
@@ -292,36 +282,28 @@ findings.sort(
 
 // A run that examined nothing must not read as clean — the same vacuity trap
 // this whole change exists to close.
-if (!operations.length) {
-  console.error('✗ Parsed 0 operations. Not reporting this as clean.');
-  process.exit(2);
-}
+requireNonEmptyScan({
+  count: operations.length,
+  what: 'GraphQL operations',
+  check: 'find-stale-cache-fields',
+  hint: '`src/` moved, or the operations are no longer `.graphql` files.',
+});
 
 const risky = findings.filter(f => f.mutatesExisting);
 
 if (CHECK || UPDATE) {
   const key = f => `${f.mutation}::${f.type}`;
   if (UPDATE) {
-    writeFileSync(
-      BASELINE,
-      `${JSON.stringify(
-        { maxRiskyPairs: risky.length, pairs: risky.map(key).sort() },
-        null,
-        2,
-      )}\n`,
-    );
+    BASELINE.write({
+      maxRiskyPairs: risky.length,
+      pairs: risky.map(key).sort(),
+    });
     console.log(
       `Examined ${operations.length} operations. Baseline updated: ${risky.length} risky pairs.`,
     );
     process.exit(0);
   }
-  if (!existsSync(BASELINE)) {
-    console.error(
-      `✗ No baseline at ${BASELINE}. Run with --update to record one.`,
-    );
-    process.exit(2);
-  }
-  const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+  const baseline = BASELINE.require('find-stale-cache-fields');
   const known = new Set(baseline.pairs);
   const added = risky.filter(f => !known.has(key(f)));
   console.log(

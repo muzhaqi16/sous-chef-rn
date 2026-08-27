@@ -45,25 +45,22 @@
 import babel from '@babel/core';
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
-import { join, extname, relative } from 'path';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
+import { readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
+import { createRequire } from 'node:module';
 
 import {
-  requireNonEmptyScan,
+  baselineFile,
+  filesUnder,
+  REPO_ROOT,
   refuseEmptyBaselineUpdate,
-} from './lib/guardScan.mjs';
+  requireNonEmptyScan,
+} from './lib/tooling.mjs';
 
 const traverse = _traverse.default ?? _traverse;
 
-// Resolved from this file, not the cwd — every sibling check does the same, and
-// a cwd-relative 'src' silently scanned nothing when run from anywhere else.
-const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
-const SRC = join(REPO_ROOT, 'src');
-const BASELINE = join(
-  REPO_ROOT,
-  'scripts/check-unistyles-variant-staleness.baseline.json',
+const BASELINE = baselineFile(
+  join(REPO_ROOT, 'scripts/check-unistyles-variant-staleness.baseline.json'),
 );
 
 /**
@@ -105,23 +102,6 @@ const BABEL_OPTIONS = {
     resolveFromRepo('babel-plugin-react-compiler'),
   ],
 };
-
-function sourceFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      if (['__tests__', '__mocks__', 'generated'].includes(entry)) continue;
-      sourceFiles(full, out);
-    } else if (
-      extname(entry) === '.tsx' &&
-      !/\.(test|spec)\.tsx$/.test(entry) &&
-      USE_VARIANTS_CALL.test(readFileSync(full, 'utf8'))
-    ) {
-      out.push(full);
-    }
-  }
-  return out;
-}
 
 /**
  * Style keys that actually declare `variants:` — the only ones that can go
@@ -278,7 +258,14 @@ const styles = StyleSheet.create(() => ({
   process.exit(0);
 }
 
-const scanned = sourceFiles(SRC);
+// The path filters go to the glob; the content grep cannot — it is what makes
+// this a scan of variant-using components rather than of every .tsx.
+const scanned = filesUnder('src/**/*.tsx', {
+  exclude: [
+    /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
+    /\.(test|spec)\.tsx$/,
+  ],
+}).filter(f => USE_VARIANTS_CALL.test(readFileSync(f, 'utf8')));
 
 // A preset upgrade, a rename, or a moved directory can leave this scan matching
 // nothing — and a scan that matched nothing prints exactly what a clean tree
@@ -293,7 +280,7 @@ const scanned = sourceFiles(SRC);
 // (This is not the `maxFilesWithStaleVariants` count removed earlier. That one
 // capped findings and nothing read it. This one is read here, every run, and is
 // the only thing standing between a broken scan and a green tick.)
-const baselineForFloor = JSON.parse(readFileSync(BASELINE, 'utf8'));
+const baselineForFloor = BASELINE.require('check-unistyles-variant-staleness');
 
 if (typeof baselineForFloor.scannedFiles !== 'number' && !UPDATE) {
   console.error(
@@ -380,19 +367,11 @@ if (UPDATE) {
     baselineCount: baselineForFloor.files.length,
     check: 'check-unistyles-variant-staleness',
   });
-  writeFileSync(
-    BASELINE,
-    JSON.stringify(
-      // `files` is the findings list — enforcement is set-membership over it.
-      // `scannedFiles` is not a second findings number: it records how far the
-      // scan reached, and is read at the top of this file as the floor below
-      // which the scan is not credible. Without it a collapsed scan reports a
-      // clean tree.
-      { files, scannedFiles: scanned.length },
-      null,
-      2,
-    ) + '\n',
-  );
+  // `files` is the findings list — enforcement is set-membership over it.
+  // `scannedFiles` is not a second findings number: it records how far the scan
+  // reached, and is read at the top of this file as the floor below which the
+  // scan is not credible. Without it a collapsed scan reports a clean tree.
+  BASELINE.write({ files, scannedFiles: scanned.length });
   console.log(
     `Baseline updated: ${files.length} findings, ${scanned.length} files scanned.`,
   );
