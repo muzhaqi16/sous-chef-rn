@@ -96,9 +96,11 @@ interface ModeConfig {
    * so these screens get their own small connection instead of sharing the
    * capped one.
    *
-   * `null` = no server filter exists for this mode; see `lowStock`.
+   * Non-nullable on purpose: a mode that declares no narrowing is a mode that
+   * silently breaks above 100 items, which is how the expiring list came to
+   * report "none" against a pantry that had some.
    */
-  serverFilters: PantryItemFilters | null;
+  serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
   sort?: (a: FilteredItem, b: FilteredItem) => number;
   subtitle: (item: FilteredItem) => string;
@@ -126,11 +128,13 @@ function buildModeConfig(
       title: t('filteredPantry.lowStockTitle'),
       emptyMessage: t('filteredPantry.lowStockEmpty'),
       emptyIcon: 'cube-outline',
-      // No server-side low-stock filter exists (`PantryItemFilters` has no
-      // `lowStock`), so this mode still filters client-side and is therefore
-      // unreliable above 100 pantry items — see the ModeConfig note. Requested
-      // in sous-chef-api#293; switch to `{ lowStock: true }` when it lands.
-      serverFilters: null,
+      // `lowStock` is quantity <= 0, or <= minQuantity when a minimum is set —
+      // exactly what `PantryStats.lowStockCount` counts and `PantryItem
+      // .isLowStock` reports, so the badge and this list cannot disagree.
+      // NOT the `lowStockAlert` opt-in, which only records whether the user
+      // wants notifying; the suggestion and shopping-list paths gate on that
+      // one instead, and answer a different question.
+      serverFilters: { lowStock: true },
       filter: item => item.isLowStock,
       subtitle: item =>
         t('filteredPantry.remaining', {
@@ -157,10 +161,15 @@ function buildModeConfig(
       title: t('filteredPantry.expiringTitle'),
       emptyMessage: t('filteredPantry.expiringEmpty'),
       emptyIcon: 'time-outline',
-      // `expiringSoon` is `expiresAt <= now + 7d AND quantity > 0` server-side —
-      // note it has NO lower bound, so it returns already-expired items too.
-      // That superset is exactly what both this mode and `expired` need; the
-      // predicate below splits it.
+      // `expiringSoon` is `expiresAt <= now + expirationDays AND quantity > 0`
+      // server-side — note it has NO lower bound, so it returns already-expired
+      // items too. That superset is exactly what both this mode and `expired`
+      // need; the predicate below splits it.
+      //
+      // We deliberately do NOT pass `expirationDays`. It defaults to 7, and
+      // `PantryStats.expiringCount` is ALWAYS a 7-day window regardless of it —
+      // so the filter and the badge line up arithmetically only at the default.
+      // Widening the horizon here would list items the badge never counted.
       serverFilters: { expiringSoon: true },
       // Mirrors server `PantryStats.expiringCount`: expiring within 7 days but
       // NOT yet expired (now ≤ expiresAt ≤ now + 7d, quantity > 0). Already-

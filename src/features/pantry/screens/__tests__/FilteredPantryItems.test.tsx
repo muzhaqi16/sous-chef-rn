@@ -340,11 +340,11 @@ describe('FilteredPantryItems', () => {
       );
     });
 
-    it('sends no server filter for low stock — the API has none', () => {
+    it('narrows low stock server-side, matching the badge definition', () => {
       renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
       expect(mockUsePantryManagement).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ filters: null }),
+        expect.objectContaining({ filters: { lowStock: true } }),
       );
     });
   });

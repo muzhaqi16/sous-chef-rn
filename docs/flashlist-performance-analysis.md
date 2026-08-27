@@ -286,12 +286,28 @@ the sampled sessions. Instrumenting them would cost more than it tells you.
   capped one. Verified against the API: `expiringSoon: true` on a 139-item
   pantry returns `totalCount: 1, hasNextPage: false`.
 
-  **`lowStock` is still exposed** — `PantryItemFilters` has no equivalent, so it
-  still filters client-side and remains unreliable above 100 items. Requested in
-  sous-chef-api#293. Raising the cap only moves the threshold.
+  **`lowStock` is FIXED too** — sous-chef-api#293 landed, so all three modes now
+  narrow server-side. The filter is quantity <= 0 (or <= minQuantity when set):
+  exactly what `PantryStats.lowStockCount` counts and `PantryItem.isLowStock`
+  reports, so a filtered page and the badge cannot disagree. It is NOT the
+  `lowStockAlert` opt-in — that records whether the user wants notifying, and
+  the suggestion and shopping-list paths gate on it because they answer a
+  different question. `ModeConfig.serverFilters` is non-nullable so a new mode
+  cannot ship without declaring narrowing.
 
-  Likely also affects the MAIN pantry list above 100 items (it stops scrolling
-  while the header count reads the server total) — observed, not yet counted.
+  We deliberately do not pass `expirationDays`. It defaults to 7 and
+  `PantryStats.expiringCount` is ALWAYS a 7-day window regardless of it, so
+  filter and badge line up arithmetically only at the default; widening the
+  horizon would list items the badge never counted.
+
+  **The MAIN pantry list is NOT affected** — falsified on device, not assumed.
+  `usePantryScreen` flips to SERVER mode when `stats.totalItems > PAGE_SIZE.MAX`
+  (`usePantryScreen.ts:133`), sending filter/sort/search to the server so they
+  stay correct beyond the window. Verified on a seeded 114-item pantry: search
+  finds an item far outside the newest-first window, and a full scroll to the
+  bottom and back leaves the head of the list intact despite the merge policy
+  evicting oldest edges. The switch is gated on `isOnline`, so offline a >100
+  pantry filters over the cached window — a physical limit, not a defect.
 
   Note the screen's tests mock BOTH `useCurrentPantry` and `usePantryManagement`,
   so they verify the filter against injected data and structurally cannot catch
