@@ -12,10 +12,7 @@ import {
   addToPantryItemsCache,
   removeFromPantryItemsCache,
 } from '#/apollo/utils/pantryCacheUpdaters';
-import {
-  addOptimisticShoppingListItem,
-  removeItemFromShoppingListForMoveToPantry,
-} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
 
@@ -134,30 +131,6 @@ function applyMoveToPantryCacheUpdate(
   }
 }
 
-/**
- * Undo an optimistic move after the server refuses it: drop the pantry row we
- * invented and put the shopping row back.
- *
- * Module-level for the same reason as {@link applyMoveToPantryCacheUpdate} —
- * the `&&` guard is a value block, and the React Compiler bails out of the
- * whole hook when one appears inside a try body.
- */
-function revertOptimisticMove(
-  cache: ApolloCache,
-  args: {
-    pantryId: string;
-    pantryItemId: string;
-    currentListId: string | undefined;
-    removeFromList: boolean;
-    item: ShoppingListItemDisplayFragment;
-  },
-): void {
-  removeFromPantryItemsCache(cache, args.pantryId, args.pantryItemId);
-  if (args.removeFromList && args.currentListId) {
-    addOptimisticShoppingListItem(cache, args.currentListId, args.item);
-  }
-}
-
 export function useMoveToPantry({
   currentListId,
   onSuccess,
@@ -245,15 +218,15 @@ export function useMoveToPantry({
       client.cache,
     );
 
+    // ONLY the pantry side is written eagerly. Removing the shopping row here
+    // too would be lossy: when a REPLAY fails (not the initial call), the queue
+    // withdraws the entity it created — the PantryItem — but nothing restores a
+    // shopping row this hook removed, so the item would vanish from both lists.
+    // Observed on device: a move whose first attempt timed out, retried, and
+    // came back NotFound left the row in neither place. The shopping side stays
+    // with the mutation's `update` callback, which runs only on a real payload.
     try {
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
-      applyMoveToPantryCacheUpdate(client.cache, {
-        pantryId: input.pantryId,
-        shoppingListItemId: item.id,
-        removeFromList: input.removeFromList,
-        currentListId,
-        pantryItem: optimisticPantryItem,
-      });
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Move Item to Pantry (optimistic)',
@@ -289,17 +262,9 @@ export function useMoveToPantry({
     const outcome = classifyCreateResult(result);
 
     if (outcome === 'rejected') {
-      // Put both sides back: drop the pantry row we invented, and restore the
-      // shopping row we removed. Position within the list is not restored — the
-      // next fetch settles it, and this path only runs on a real refusal.
+      // Only the pantry row needs undoing — the shopping row was never touched.
       try {
-        revertOptimisticMove(client.cache, {
-          pantryId: input.pantryId,
-          pantryItemId,
-          currentListId,
-          removeFromList: input.removeFromList,
-          item,
-        });
+        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected move to pantry',
