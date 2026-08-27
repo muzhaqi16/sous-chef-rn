@@ -1,1 +1,23 @@
-npx lint-staged
+npx lint-staged || exit 1
+
+# Whole-tree gates that cost ~0.2s together. They run here rather than on push
+# so a broken locale key or a version drift surfaces at the commit that caused
+# it, not ten commits later. Invoked directly rather than through `npm run`,
+# which would triple the cost in wrapper startup alone.
+#
+# getVersion() is native, so a platform whose version was not bumped ships
+# reporting the previous release: the version-keyed Apollo cache purge never
+# fires there and CLIENT_VERSION reaches the server's minimum-version gate
+# wrong. Nothing else fails to warn you.
+#
+# Metro hoists every require above all top-level statements, so the startup
+# origin's position is a property of the TRANSFORM, not of index.js. Nothing
+# else notices when it drifts and every startup metric silently shortens.
+#
+# A build that accepts an injected session must never be one anyone else
+# receives. Cheap to check, and impossible to notice by reading the diff.
+node scripts/check-i18n.mjs || exit 1
+node scripts/check-codegen-orphans.mjs || exit 1
+node scripts/check-version-sync.mjs || exit 1
+node scripts/check-startup-origin.mjs || exit 1
+node scripts/check-launch-arg-auth.mjs || exit 1
