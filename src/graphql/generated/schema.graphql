@@ -2345,7 +2345,7 @@ input CreateRecipeInput {
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  source: String
+  source: ExternalSource
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput

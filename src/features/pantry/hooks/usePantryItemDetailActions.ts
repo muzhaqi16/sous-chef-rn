@@ -239,6 +239,7 @@ export function usePantryItemDetailActions({
     // Built before the try: the `||`/`?.` below are value blocks, and the React
     // Compiler bails out of a hook when one appears inside a try body.
     const optimisticListItem = createOptimisticShoppingListItem(id, {
+      shoppingListId: selectedShoppingListId,
       itemName,
       quantity,
       itemId: catalogItemId || undefined,

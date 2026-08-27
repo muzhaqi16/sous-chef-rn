@@ -268,6 +268,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const netWeightValue = parseNetWeightInput();
         const brandName = brand.trim();
         const optimisticItem = createOptimisticShoppingListItem(id, {
+          shoppingListId: listId,
           itemName,
           quantity: parseDecimalInput(quantityInput) || 1,
           quantityInput,

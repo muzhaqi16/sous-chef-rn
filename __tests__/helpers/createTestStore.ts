@@ -13,7 +13,6 @@ import { createAuthSlice, AuthState } from '#store/slices/authSlice';
 import { createPreferencesSlice, PreferencesState } from '#store/slices/preferencesSlice';
 import { createNavigationSlice, NavigationState } from '#store/slices/navigationSlice';
 import { createUISlice, UIState } from '#store/slices/uiSlice';
-import { createBarcodeScannerSlice, BarcodeScannerState } from '#store/slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from '#store/slices/appSlice';
 import { createNetworkSlice, NetworkState } from '#store/slices/networkSlice';
 import { createTelemetrySlice, TelemetryState } from '#store/slices/telemetrySlice';
@@ -23,7 +22,6 @@ type TestRootState = AuthState &
   PreferencesState &
   NavigationState &
   UIState &
-  BarcodeScannerState &
   AppState &
   NetworkState &
   TelemetryState;
@@ -42,7 +40,6 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           ...createPreferencesSlice(set, get, api),
           ...createNavigationSlice(set, get, api),
           ...createUISlice(set, get, api),
-          ...createBarcodeScannerSlice(set, get, api),
           ...createAppSlice(set, get, api),
           ...createNetworkSlice(set, get, api),
           ...createTelemetrySlice(set, get, api),

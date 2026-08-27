@@ -38,6 +38,7 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
 }));
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
+import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -152,7 +153,6 @@ describe('a session end leaves no data belonging to the previous person', () => 
           pantryItemName: 'Insulin pens',
         },
       },
-      recentlyScanned: [{ id: 's1', name: 'Pregnancy test' }],
       cachedItemSuggestions: [{ id: 'i1', name: 'Insulin pens' }],
       selectedHomeId: 'home-1',
       selectedPantryId: 'pantry-1',
@@ -164,7 +164,6 @@ describe('a session end leaves no data belonging to the previous person', () => 
     await useStore.getState().resetStore('LOGOUT');
 
     const state = useStore.getState();
-    expect(state.recentlyScanned).toEqual([]);
     expect(state.cachedItemSuggestions).toEqual([]);
     expect(state.selectedHomeId).toBeNull();
     expect(state.selectedPantryId).toBeNull();
@@ -190,6 +189,18 @@ describe('a session end leaves no data belonging to the previous person', () => 
 
     expect(useNotificationStore.getState().pendingExpirationLinks).toEqual({});
     expect(registeredSessionScopedStores()).toContain('notifications');
+  });
+
+  it('clears the scanner history, which names what the previous person bought', async () => {
+    useBarcodeScannerStore
+      .getState()
+      .addToRecentlyScanned({ id: 's1', name: 'Pregnancy test', upc: '0123' });
+    expect(useBarcodeScannerStore.getState().recentlyScanned).toHaveLength(1);
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
+    expect(registeredSessionScopedStores()).toContain('barcodeScanner');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

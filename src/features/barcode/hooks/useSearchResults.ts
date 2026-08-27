@@ -9,8 +9,11 @@ import {
   type CreateItemMutation,
 } from '#operations/item/item.generated';
 import { UpcFormat } from '#/graphql/generated/schemaTypes';
-import { useSearchState, useBottomSheetState } from '#store/useAppStore';
-import { ScannedItem } from '#store/slices/barcodeScannerSlice';
+import {
+  useSearchState,
+  useBottomSheetState,
+} from '#features/barcode/store/barcodeScannerStore';
+import { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { useImageUpload } from '#hooks/useImageUpload';
 import {

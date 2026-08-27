@@ -1,6 +1,5 @@
 import { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
-import { initialBarcodeScannerState } from './slices/barcodeScannerSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
 import {
@@ -100,12 +99,10 @@ const SESSION_SCOPED_STATE = {
   // against the new session.
   hasInitializedHomeData: false,
   isHomeSelectionReady: false,
-  // Persisted and rendered directly to whoever opens the app next: the
-  // notification inbox, the barcode scanner's recent list, and the catalog
-  // items the item autocomplete offers as suggestions. The two slices are
-  // spread whole from their own initial state, so a field added to either is
-  // cleared here without anyone remembering to come back.
-  ...initialBarcodeScannerState,
+  // Persisted and rendered directly to whoever opens the app next: the catalog
+  // items the item autocomplete offers as suggestions. Feature-owned persisted
+  // state (the notification inbox, the scanner's recent list) clears through
+  // resetSessionScopedStores() below instead.
   cachedItemSuggestions: initialAppState.cachedItemSuggestions,
 } satisfies Partial<RootState>;
 
@@ -161,14 +158,11 @@ export const createResetManager = (
       Object.assign(newState, {
         // Reset onboarding state
         onBoardingStep: null,
-        // The same slice the auth branch clears — spread rather than re-listed,
-        // so the two branches cannot describe "empty" differently.
-        ...initialBarcodeScannerState,
       });
 
-      // Idempotent, and deliberately in both branches: this is where the
-      // notification buffer used to be cleared by spreading its initial state,
-      // so ONBOARDING_RESET (auth: false, preferences: true) still empties it.
+      // Idempotent, and deliberately in both branches: feature stores that hold
+      // persisted user data (notifications, scanner history) clear only here, so
+      // ONBOARDING_RESET (auth: false, preferences: true) still empties them.
       resetSessionScopedStores();
     }
 

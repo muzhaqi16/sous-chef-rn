@@ -108,15 +108,6 @@ const selectPostLoginState = (state: RootState) => ({
   setPostLoginCredentials: state.setPostLoginCredentials,
 });
 
-const selectBottomSheetState = (state: RootState) => ({
-  scannerSheetVisible: state.scannerSheetVisible,
-  searchError: state.searchError,
-  scannerSheetIndex: state.scannerSheetIndex,
-  isSearching: state.isSearching,
-  hideBottomSheet: state.hideBottomSheet,
-  showBottomSheet: state.showBottomSheet,
-});
-
 const selectPantryState = (state: RootState) => ({
   selectedPantryId: state.selectedPantryId,
   setSelectedPantryId: state.setSelectedPantryId,
@@ -146,17 +137,6 @@ const selectNavigationUtils = (state: RootState) => ({
   setUserNavigationState: state.setUserNavigationState,
   setOnBoardingStep: state.setOnBoardingStep,
   setOnboarded: state.setOnboarded,
-});
-
-const selectSearchState = (state: RootState) => ({
-  searchResults: state.searchResults,
-  isSearching: state.isSearching,
-  searchError: state.searchError,
-  setSearchResults: state.setSearchResults,
-  setSearching: state.setSearching,
-  setSearchError: state.setSearchError,
-  clearSearch: state.clearSearch,
-  addToRecentlyScanned: state.addToRecentlyScanned,
 });
 
 const selectHapticSettings = (state: RootState) => ({
@@ -218,8 +198,6 @@ export const useAuthTokens = () => useAppStore(useShallow(selectAuthTokens));
 export const useAuthActions = () => useAppStore(useShallow(selectAuthActions));
 export const usePostLoginState = () =>
   useAppStore(useShallow(selectPostLoginState));
-export const useBottomSheetState = () =>
-  useAppStore(useShallow(selectBottomSheetState));
 export const usePantryState = () => useAppStore(useShallow(selectPantryState));
 export const useShoppingListState = () =>
   useAppStore(useShallow(selectShoppingListState));
@@ -227,7 +205,6 @@ export const useHomeState = () => useAppStore(useShallow(selectHomeState));
 export const usePreferences = () => useAppStore(useShallow(selectPreferences));
 export const useNavigationUtils = () =>
   useAppStore(useShallow(selectNavigationUtils));
-export const useSearchState = () => useAppStore(useShallow(selectSearchState));
 export const useHapticSettings = () =>
   useAppStore(useShallow(selectHapticSettings));
 export const useThemePreferences = () =>

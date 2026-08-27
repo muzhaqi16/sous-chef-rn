@@ -9,7 +9,6 @@ import {
   ItemBySkuFilterDocument,
   CreateItemDocument,
 } from '#operations/item/item.generated';
-import type { RootState } from '#store/index';
 import { useSearchResults } from '../useSearchResults';
 
 // Partial item-node shapes for mock connection edges. Kept as a loose record
@@ -29,18 +28,7 @@ const mockClearSearch = jest.fn();
 const mockShowBottomSheet = jest.fn();
 const mockHideBottomSheet = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: <T>(selector: (s: RootState) => T): T =>
-    selector({
-      searchResults: [],
-      setSearchResults: mockSetSearchResults,
-      setSearching: mockSetSearching,
-      addToRecentlyScanned: mockAddToRecentlyScanned,
-      clearSearch: mockClearSearch,
-      setSearchError: mockSetSearchError,
-      showBottomSheet: mockShowBottomSheet,
-      hideBottomSheet: mockHideBottomSheet,
-    } as Partial<RootState> as RootState),
+jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
   useSearchState: jest.fn(() => ({
     searchResults: [],
     setSearchResults: mockSetSearchResults,
@@ -53,10 +41,6 @@ jest.mock('#store/useAppStore', () => ({
     showBottomSheet: mockShowBottomSheet,
     hideBottomSheet: mockHideBottomSheet,
   })),
-}));
-
-jest.mock('zustand/shallow', () => ({
-  useShallow: <T>(fn: T): T => fn,
 }));
 
 jest.mock('#hooks/useImageUpload', () => ({

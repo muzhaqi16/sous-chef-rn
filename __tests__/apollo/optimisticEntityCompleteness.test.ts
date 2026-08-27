@@ -30,7 +30,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { graphql, print, type DocumentNode } from 'graphql';
+import { graphql, print, Kind, type DocumentNode } from 'graphql';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { addMocksToSchema } from '@graphql-tools/mock';
 import { gql } from '@apollo/client';
@@ -40,6 +40,8 @@ import {
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
+import { convertToSyncMutation } from '#/apollo/offlineQueue/convertToSyncMutation';
+import { QueueStatus } from '#/apollo/offlineQueue/types';
 import {
   GetPantryDocument,
   CreatePantryItemDocument,
@@ -326,6 +328,7 @@ describe('optimistic entity completeness', () => {
         cache,
         'list-1',
         createOptimisticShoppingListItem('client-cuid-4', {
+          shoppingListId: 'list-1',
           itemName: 'Offline Bread',
           quantity: 1,
           category: 'Bakery',
@@ -342,6 +345,57 @@ describe('optimistic entity completeness', () => {
       });
       expect(describeMissing(diff.missing)).toBe('none');
       expect(diff.complete).toBe(true);
+    });
+
+    /**
+     * The other direction of completeness, and the one that shipped broken: a
+     * row can be COMPLETE for every query that displays it and still be
+     * unreplayable, because the offline queue reads a field no display query
+     * needs.
+     *
+     * `ToggleShoppingListItemPurchased` / `UpdateShoppingListItemQuantity` /
+     * `UpdateShoppingListItem` send only the row id, so the replay builder has
+     * to backfill `SyncShoppingListItemFieldsInput.shoppingListId` by reading
+     * `shoppingList { id }` back off the cached row. No query that populates
+     * the list selected it, so the read returned null, the builder threw, and
+     * the queue withdrew the change — every offline toggle silently reverted on
+     * reconnect with "A change couldn't be saved and has been undone".
+     *
+     * The builder's own tests could not catch it: they stub `readFragment`, so
+     * they assert the builder works GIVEN the parent link, never that a real
+     * cache holds one. This drives the real cache, seeded by the real list
+     * query, through the real dispatch.
+     */
+    it('can build a toggle replay from a row the list query cached', async () => {
+      const cache = await seedListCache();
+
+      const row = cache.readQuery<Unmasked<GetShoppingListItemsFilteredQuery>>({
+        query: GetShoppingListItemsFilteredDocument,
+        variables: LIST_VARS,
+      })?.shoppingList?.itemsConnection.edges[0]?.node;
+      // The parent link the builder has to find, read from the same cache the
+      // builder reads — so this asserts the round trip, not a literal.
+      expect(row?.shoppingList?.id).toBeTruthy();
+
+      const { syncVariables } = convertToSyncMutation(
+        {
+          id: 'queued-1',
+          userId: 'user-1',
+          operationName: 'ToggleShoppingListItemPurchased',
+          mutation: { kind: Kind.DOCUMENT, definitions: [] },
+          variables: { input: { id: row!.id, purchased: true } },
+          status: QueueStatus.PENDING,
+          createdAt: 0,
+          updatedAt: 0,
+          retryCount: 0,
+          maxRetries: 3,
+          requiresAuth: true,
+        },
+        cache,
+      );
+
+      const input = syncVariables.input as { item: { shoppingListId: string } };
+      expect(input.item.shoppingListId).toBe(row!.shoppingList!.id);
     });
 
     it('keeps GetShoppingListsLite complete after an optimistic list create', async () => {

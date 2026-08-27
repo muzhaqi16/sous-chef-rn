@@ -383,6 +383,7 @@ export function useRecipeShoppingList({
         // server payload, so offline they never fire.
         writeOptimisticRow: (rowId, fields) => {
           const row = createOptimisticShoppingListItem(rowId, {
+            shoppingListId: listId,
             itemName: fields.itemName,
             quantity: fields.quantity,
             quantityInput: null,
@@ -508,6 +509,7 @@ export function useRecipeShoppingList({
                 : null;
             const itemName = batchItem.item.itemName ?? '';
             const optimisticRow = createOptimisticShoppingListItem(rowId, {
+              shoppingListId: listId,
               itemName,
               quantity,
               quantityInput: null,

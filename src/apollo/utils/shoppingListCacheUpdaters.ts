@@ -32,6 +32,13 @@ import {
 import { logger } from '#/utils/environment';
 
 export interface OptimisticShoppingListItemFields {
+  /**
+   * The list this row belongs to. Required, not optional: it is what the
+   * offline queue reads back to build a toggle/quantity/update replay, and a
+   * row written without it makes that replay fail permanently — so the type
+   * forces every caller to supply it rather than letting one forget.
+   */
+  shoppingListId: string;
   itemName: string;
   quantity?: number | null;
   quantityInput?: string | null;
@@ -64,6 +71,10 @@ export function createOptimisticShoppingListItem(
     'ShoppingListItem',
     id,
     {
+      shoppingList: {
+        __typename: 'ShoppingList',
+        id: fields.shoppingListId,
+      },
       itemName: fields.itemName,
       quantity: fields.quantity ?? 1,
       quantityInput: fields.quantityInput ?? null,

@@ -40,7 +40,7 @@ import {
 import { useAppStore } from '#store/useAppStore';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
+import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#/types/navigation';
 import { ScrollView } from 'react-native';
 
@@ -319,6 +319,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // Built before the try: `?.`/`??` are value blocks, and the React
           // Compiler bails out of this component when one is inside a try body.
           const optimisticListItem = createOptimisticShoppingListItem(id, {
+            shoppingListId,
             itemName: item.name,
             // One scanned item = quantity 1; the per-unit weight is the
             // separate netWeight, not the count.

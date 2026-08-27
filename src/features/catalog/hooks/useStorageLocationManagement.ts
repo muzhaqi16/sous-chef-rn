@@ -134,12 +134,18 @@ export function useStorageLocationManagement(
   );
 
   // Creating a location IS offline-capable — the server links-or-creates by
-  // name, so a replay converges. Editing one is not: there is no `sync*` twin
-  // and no `idempotencyKey` on these inputs, so a queued replay has no
-  // at-most-once guarantee. They stay online-only, which the API's offline
-  // contract permits — provided the client gates them behind its
-  // "API unavailable" disabled state instead of letting the tap through to a
-  // failure. Surfaced as `isApiUnavailable` for the screen to disable on.
+  // name, so a replay converges. Editing one is still online-only, and the
+  // binding reason is DELETE, not the absence of an `idempotencyKey`: update
+  // and set-default write absolute fields on a row keyed by `id`, so replaying
+  // either lands the same state twice. A replayed delete does not — the row is
+  // already gone, the server answers `NotFoundError`, and
+  // `classifyReplayResult` reads any non-IDEMPOTENT_REPLAY error member as
+  // `'rejected'`, so a lost response on a committed delete surfaces to the user
+  // as a permanent failure for something that actually worked. Migrating the
+  // three together needs the queue to treat "delete target absent" as
+  // convergence, which is a decision about replay semantics app-wide.
+  // Until then all three stay gated, surfaced as `isApiUnavailable` for the
+  // screen to disable on.
   const isApiUnavailable = useIsApiUnavailable();
 
   // Errors surfaced via toast in updateLocation below (toastResolvedError for a

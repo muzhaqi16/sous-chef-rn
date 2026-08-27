@@ -101,6 +101,7 @@ imports:
 | `graphql/`                        | 🔒      | Compose your own operations instead                                     |
 | `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                           |
 | `utils/`                          | 🔒      | Internal                                                                |
+| `offline/` (pantry, shoppingList) | 🔒\*    | Public to the OFFLINE QUEUE only. A feature's sync builders say what its queued mutation's input means, which nothing but the replayer needs — the kernel imports it, other features may not |
 
 Shared UI atoms, molecules, organisms, and templates live in `src/components/`.
 Those four are the whole taxonomy — there is no `base/`. It existed as a fifth

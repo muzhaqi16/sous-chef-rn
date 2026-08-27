@@ -86,14 +86,6 @@ export function mockAppStore(state: Partial<RootState>) {
       setShowBiometricSetup: state.setShowBiometricSetup,
       setPostLoginCredentials: state.setPostLoginCredentials,
     })),
-    useBottomSheetState: jest.fn(() => ({
-      scannerSheetVisible: state.scannerSheetVisible,
-      searchError: state.searchError,
-      scannerSheetIndex: state.scannerSheetIndex,
-      isSearching: state.isSearching,
-      hideBottomSheet: state.hideBottomSheet,
-      showBottomSheet: state.showBottomSheet,
-    })),
     usePantryState: jest.fn(() => ({
       selectedPantryId: state.selectedPantryId,
       setSelectedPantryId: state.setSelectedPantryId,
@@ -119,16 +111,6 @@ export function mockAppStore(state: Partial<RootState>) {
       setUserNavigationState: state.setUserNavigationState,
       setOnBoardingStep: state.setOnBoardingStep,
       setOnboarded: state.setOnboarded,
-    })),
-    useSearchState: jest.fn(() => ({
-      searchResults: state.searchResults,
-      isSearching: state.isSearching,
-      searchError: state.searchError,
-      setSearchResults: state.setSearchResults,
-      setSearching: state.setSearching,
-      setSearchError: state.setSearchError,
-      clearSearch: state.clearSearch,
-      addToRecentlyScanned: state.addToRecentlyScanned,
     })),
   };
 }

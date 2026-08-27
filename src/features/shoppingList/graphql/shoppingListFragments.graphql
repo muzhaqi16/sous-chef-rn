@@ -7,6 +7,14 @@
 # to strict per-consumer ownership.
 fragment ShoppingListItemDisplayFragment on ShoppingListItem {
   id
+  # The row's parent list. Not shown anywhere — it is what the offline queue
+  # reads back to build a replay: the toggle / quantity / plain-update inputs
+  # carry only the row id, so `SyncShoppingListItemFieldsInput.shoppingListId`
+  # can only come from the cached row. A writer that omits it makes those
+  # replays fail permanently and the change is undone on reconnect.
+  shoppingList {
+    id
+  }
   itemName
   quantity
   quantityInput

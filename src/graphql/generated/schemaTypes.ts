@@ -2103,7 +2103,7 @@ export type CreateRecipeInput = {
   name: Scalars['String']['input'];
   notes?: InputMaybe<Scalars['String']['input']>;
   nutrition?: InputMaybe<NutritionInfoInput>;
-  source?: InputMaybe<Scalars['String']['input']>;
+  source?: InputMaybe<ExternalSource>;
   status?: InputMaybe<RecipeStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timing?: InputMaybe<TimeEstimatesInput>;

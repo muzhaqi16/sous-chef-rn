@@ -172,6 +172,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     // replays it later, keyed by this id).
     const id = generateEntityId();
     const optimisticItem = createOptimisticShoppingListItem(id, {
+      shoppingListId,
       itemName: item.name,
       itemId: item.id,
       unitId: item.defaultUnit?.id,
@@ -259,6 +260,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     // replays it later, keyed by this id).
     const id = generateEntityId();
     const optimisticItem = createOptimisticShoppingListItem(id, {
+      shoppingListId,
       itemName: shoppingItem.name,
       itemId: shoppingItem.itemId,
       unitId,

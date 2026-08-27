@@ -738,9 +738,10 @@ module.exports = {
               './src/features/pantry/hooks/mutations',
               './src/features/pantry/utils',
               './src/features/pantry/components',
+              './src/features/pantry/offline',
             ],
             message:
-              'Cross-feature import into pantry internals (context/, hooks/mutations/, utils/, components/) is not allowed. Use a public hook from src/features/pantry/hooks/.',
+              "Cross-feature import into pantry internals (context/, hooks/mutations/, utils/, components/, offline/) is not allowed. Use a public hook from src/features/pantry/hooks/. offline/ is the offline queue's surface, not another feature's.",
           },
           // shoppingList
           {
@@ -757,9 +758,10 @@ module.exports = {
               './src/features/shoppingList/hooks/mutations',
               './src/features/shoppingList/utils',
               './src/features/shoppingList/components',
+              './src/features/shoppingList/offline',
             ],
             message:
-              'Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/, components/) is not allowed. Use a public hook from src/features/shoppingList/hooks/.',
+              "Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/, components/, offline/) is not allowed. Use a public hook from src/features/shoppingList/hooks/. offline/ is the offline queue's surface, not another feature's.",
           },
           // recipes
           {
@@ -883,6 +885,14 @@ module.exports = {
           // excuses more than it forbids. Generated operation documents are
           // typed and side-effect-free; treating them as a feature's data
           // contract is the honest reading.
+          //
+          // `offline/` is likewise not listed, and for the same reason read the
+          // other way: it exists ONLY for the queue. A feature's sync builders
+          // say what its queued mutation's input means, which nothing but the
+          // replayer needs — so the kernel imports it (one static import per
+          // participating feature, because the queue must know every replayable
+          // op before the first mutation) and the feature-to-feature zones
+          // above forbid it to everyone else.
           //
           // context/, utils/ and hooks/mutations/ ARE private: they carry
           // behaviour, and a shared module reaching for them is the case this

@@ -1,9 +1,19 @@
-import { createTestStore } from '#/test-utils/createTestStore';
-import type { ScannedItem } from '../barcodeScannerSlice';
+import { renderHook } from '@testing-library/react-native';
+import {
+  useBarcodeScannerStore,
+  useSearchState,
+  useBottomSheetState,
+  initialBarcodeScannerState,
+  type ScannedItem,
+} from '../barcodeScannerStore';
 
-// Mock authSlice dependencies
-jest.mock('#/apollo/links/tokenScheduler');
-jest.mock('#/apollo/links/refreshToken');
+// A feature store, so no root-store scaffolding is needed — the auth-slice
+// mocks this file used to carry went with the slice. `resetScanner` keeps the
+// scan history by design, so a full reset is what starts each test clean.
+const createTestStore = () => {
+  useBarcodeScannerStore.setState(() => ({ ...initialBarcodeScannerState }));
+  return useBarcodeScannerStore;
+};
 
 const mockItem: ScannedItem = {
   id: 'item-1',
@@ -11,7 +21,7 @@ const mockItem: ScannedItem = {
   upc: '123456789',
 };
 
-describe('barcodeScannerSlice', () => {
+describe('barcodeScannerStore', () => {
   describe('initial state', () => {
     it('starts with null barcode and empty results', () => {
       const store = createTestStore();
@@ -151,5 +161,27 @@ describe('barcodeScannerSlice', () => {
       expect(state.searchResults).toEqual([]);
       expect(state.scannerSheetVisible).toBe(false);
     });
+  });
+});
+
+describe('grouped selectors', () => {
+  it('useSearchState exposes the search fields and their writers', () => {
+    const store = createTestStore();
+    const { result } = renderHook(() => useSearchState());
+
+    expect(result.current.searchResults).toEqual([]);
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.clearSearch).toBe(store.getState().clearSearch);
+  });
+
+  it('useBottomSheetState exposes the scanner sheet fields', () => {
+    const store = createTestStore();
+    const { result } = renderHook(() => useBottomSheetState());
+
+    expect(result.current.scannerSheetVisible).toBe(false);
+    expect(result.current.isSearching).toBe(false);
+    expect(result.current.hideBottomSheet).toBe(
+      store.getState().hideBottomSheet,
+    );
   });
 });
