@@ -21,7 +21,7 @@ import {
   useRecipeCacheStore,
   textSearchCacheKey,
   ingredientCacheKey,
-} from '#/store/useRecipeCacheStore';
+} from '#features/recipes/store/useRecipeCacheStore';
 import { useUserId } from '#store/useAppStore';
 import type { IconName } from '#/utils/iconUtils';
 import {

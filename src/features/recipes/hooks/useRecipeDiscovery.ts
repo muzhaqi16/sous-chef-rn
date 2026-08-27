@@ -18,7 +18,7 @@ import {
   useRecipeCacheStore,
   ingredientCacheKey,
   randomCacheKey,
-} from '#/store/useRecipeCacheStore';
+} from '#features/recipes/store/useRecipeCacheStore';
 
 export type DiscoveryMode = 'pantry' | 'random' | 'none';
 

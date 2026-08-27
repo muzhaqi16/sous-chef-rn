@@ -15,6 +15,8 @@
  * from the device's capability, and the change-password row shows none.
  */
 
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+
 export interface SettingOptionConfig {
   labelKey: string;
   value: string;
@@ -97,15 +99,22 @@ export const PERSONAL_INFO_CONFIG: SettingSectionConfig[] = [
         key: 'profileVisibility',
         labelKey: 'personalInformation.profileVisibility',
         type: 'modal',
+        // Values come from the generated enum, never typed by hand: the
+        // "friends" option read FRIENDS_ONLY, which the schema has no member
+        // for, so the server refused every selection and the optimistic write
+        // was reverted with nothing shown.
         options: [
-          { labelKey: 'personalInformation.visibilityPublic', value: 'PUBLIC' },
+          {
+            labelKey: 'personalInformation.visibilityPublic',
+            value: ProfileVisibility.Public,
+          },
           {
             labelKey: 'personalInformation.visibilityFriendsOnly',
-            value: 'FRIENDS_ONLY',
+            value: ProfileVisibility.Friends,
           },
           {
             labelKey: 'personalInformation.visibilityPrivate',
-            value: 'PRIVATE',
+            value: ProfileVisibility.Private,
           },
         ],
       },

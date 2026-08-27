@@ -170,7 +170,7 @@ jest.mock('#/services/toastService', () => ({
   },
 }));
 
-jest.mock('#store/useRecipeCacheStore', () => ({
+jest.mock('#features/recipes/store/useRecipeCacheStore', () => ({
   useRecipeCacheStore: {
     getState: jest.fn(() => ({
       getCached: jest.fn(() => null),

@@ -293,8 +293,14 @@ describe('useStorageLocationManagement', () => {
       });
     });
 
+    // The hook returns whether the edit stuck (server-confirmed OR queued);
+    // the new name is asserted on the cache, which is what the screen reads.
     expect(updated).not.toBe(false);
-    expect(updated !== false && updated.name).toBe('Updated Fridge');
+    await waitFor(() =>
+      expect(result.current.locations.find(l => l.id === 'loc-1')?.name).toBe(
+        'Updated Fridge',
+      ),
+    );
   });
 
   it('deleteLocation calls mutation', async () => {
@@ -378,12 +384,20 @@ describe('useStorageLocationManagement', () => {
     expect(mockToastError).toHaveBeenCalledWith('Location has items');
   });
 
-  describe('editing is online-only and says so', () => {
-    // Creating a location IS offline-capable (the server links-or-creates by
-    // name, so a replay converges). Editing is not: no `sync*` twin and no
-    // `idempotencyKey`, so a queued replay has no at-most-once guarantee. The
-    // API's offline contract permits online-only provided the client gates it
-    // — before this it fired anyway and the tap simply failed.
+  describe('editing works offline', () => {
+    /**
+     * This block asserted the opposite until the API closed the gap. Update and
+     * set-default write absolute fields keyed by an existing `id`, so a replay
+     * lands the same state twice; a replayed delete now converges server-side
+     * (`converged: true`) instead of 404ing. So all three queue rather than
+     * refuse, and the screen no longer disables the controls.
+     *
+     * What these assert is the half that lives in this hook: the change is on
+     * the cache before any server round trip, and the call no longer refuses.
+     * The mutation is mocked because `queueLink` — which turns an offline fire
+     * into a queued null result — is not in this harness; its own tests cover
+     * that half.
+     */
     const offline = () =>
       storeApi.setState({ isOnline: false, apiReachable: null } as Partial<
         ReturnType<typeof storeApi.getState>
@@ -395,34 +409,70 @@ describe('useStorageLocationManagement', () => {
       >),
     );
 
-    it.each([
-      [
-        'updateLocation',
-        (api: ManagementApi) => api.updateLocation('loc-1', { name: 'x' }),
-      ],
-      ['deleteLocation', (api: ManagementApi) => api.deleteLocation('loc-1')],
-      [
-        'setDefaultLocation',
-        (api: ManagementApi) => api.setDefaultLocation('loc-1'),
-      ],
-    ])('%s refuses without firing the mutation', async (_name, call) => {
+    it('updateLocation applies the edit to the cache while offline', async () => {
       const { result } = renderHookWithApollo(
         () => useStorageLocationManagement('home-1'),
-        // No mutation mock: reaching the network would fail the test.
-        { operationMocks: [buildGetLocationsMock()] },
+        {
+          operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()],
+        },
       );
       await waitFor(() => expect(result.current.locations).toHaveLength(2));
 
       offline();
-      await waitFor(() => expect(result.current.isApiUnavailable).toBe(true));
 
       let outcome: unknown;
       await act(async () => {
-        outcome = await call(result.current);
+        outcome = await result.current.updateLocation('loc-1', {
+          name: 'Updated Fridge',
+        });
       });
 
-      expect(outcome).toBe(false);
-      expect(mockToastError).toHaveBeenCalled();
+      // Previously this returned false without touching the network.
+      expect(outcome).not.toBe(false);
+    });
+
+    it('deleteLocation goes through while offline', async () => {
+      const { result } = renderHookWithApollo(
+        () => useStorageLocationManagement('home-1'),
+        {
+          operationMocks: [
+            buildGetLocationsMock(),
+            buildDeleteLocationMock(true),
+          ],
+        },
+      );
+      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+      offline();
+
+      let outcome: unknown;
+      await act(async () => {
+        outcome = await result.current.deleteLocation('loc-1');
+      });
+
+      // Previously this returned false and toasted "Not available offline".
+      expect(outcome).toBe(true);
+      expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
+    });
+
+    it('setDefaultLocation moves the flag while offline', async () => {
+      const { result } = renderHookWithApollo(
+        () => useStorageLocationManagement('home-1'),
+        { operationMocks: [buildGetLocationsMock(), buildSetDefaultMock()] },
+      );
+      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+      offline();
+
+      await act(async () => {
+        await result.current.setDefaultLocation('loc-2');
+      });
+
+      await waitFor(() =>
+        expect(
+          result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
+        ).toBe(true),
+      );
     });
   });
 

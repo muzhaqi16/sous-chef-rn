@@ -26,7 +26,9 @@ jest.mock('#/services/alertService', () => ({
 const successMock = (variables: {
   input: AdjustPantryItemWeightInput;
 }): MockedResponse => ({
-  request: { query: AdjustPantryItemWeightDocument, variables },
+  // variables: () => true — the input carries a generated idempotencyKey, so
+  // match on the operation and assert the payload separately.
+  request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   result: {
     data: {
       adjustPantryItemWeight: {
@@ -53,17 +55,17 @@ const successMock = (variables: {
   },
 });
 
-const errorMock = (variables: {
-  input: AdjustPantryItemWeightInput;
-}): MockedResponse => ({
-  request: { query: AdjustPantryItemWeightDocument, variables },
+// These two no longer read their argument — the generated idempotencyKey means
+// the mock matches on the operation, not the exact variables.
+const errorMock = (): MockedResponse => ({
+  request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   error: new Error('Network error'),
 });
 
-const validationErrorMock = (variables: {
-  input: AdjustPantryItemWeightInput;
-}): MockedResponse => ({
-  request: { query: AdjustPantryItemWeightDocument, variables },
+const validationErrorMock = (): MockedResponse => ({
+  // variables: () => true — the input carries a generated idempotencyKey, so
+  // match on the operation and assert the payload separately.
+  request: { query: AdjustPantryItemWeightDocument, variables: () => true },
   result: {
     data: {
       adjustPantryItemWeight: {
@@ -157,12 +159,9 @@ describe('useCorrectPantryItemWeight', () => {
 
   it('returns false and shows version conflict alert', async () => {
     mockHandleVersionConflict = true;
-    const variables = {
-      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
-    };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock(variables)],
+        operationMocks: [errorMock()],
       }),
     });
 
@@ -185,12 +184,9 @@ describe('useCorrectPantryItemWeight', () => {
   });
 
   it('returns false and shows generic error on non-conflict error', async () => {
-    const variables = {
-      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
-    };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [errorMock(variables)],
+        operationMocks: [errorMock()],
       }),
     });
 
@@ -206,12 +202,9 @@ describe('useCorrectPantryItemWeight', () => {
   });
 
   it('returns false when mutation returns a ValidationError', async () => {
-    const variables = {
-      input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 1 },
-    };
     const { result } = renderHook(() => useCorrectPantryItemWeight(), {
       wrapper: createApolloTestWrapper({
-        operationMocks: [validationErrorMock(variables)],
+        operationMocks: [validationErrorMock()],
       }),
     });
 
@@ -228,16 +221,29 @@ describe('useCorrectPantryItemWeight', () => {
       useStore.setState({ apiReachable: true, isOnline: true });
     });
 
-    it('exposes isApiUnavailable, toasts, and does not fire the mutation', async () => {
+    /**
+     * The correction used to refuse offline with a toast. It is local-first
+     * now: `AdjustPantryItemWeightInput.idempotencyKey` makes the replay
+     * at-most-once, so the write goes to the cache and the queue, and the
+     * screen no longer disables the control.
+     */
+    it('still fires the mutation, so the queue can replay it', async () => {
       useStore.setState({ apiReachable: false });
       const errorSpy = jest.spyOn(toastService, 'error');
-      // No operation mocks: if the mutation fired it would throw "no matching
-      // mock", so an early return is required for this to pass.
       const { result } = renderHook(() => useCorrectPantryItemWeight(), {
-        wrapper: createApolloTestWrapper({ operationMocks: [] }),
+        wrapper: createApolloTestWrapper({
+          operationMocks: [
+            successMock({
+              input: {
+                id: 'item-1',
+                netWeight: 500,
+                reason: 'Reason',
+                version: 1,
+              },
+            }),
+          ],
+        }),
       });
-
-      expect(result.current.isApiUnavailable).toBe(true);
 
       let success: boolean | undefined;
       await act(async () => {
@@ -249,33 +255,43 @@ describe('useCorrectPantryItemWeight', () => {
         );
       });
 
-      expect(success).toBe(false);
-      expect(errorSpy).toHaveBeenCalledWith('Not available offline');
+      expect(success).toBe(true);
+      expect(errorSpy).not.toHaveBeenCalledWith('Not available offline');
     });
 
-    it('fires the mutation normally when online', async () => {
-      const variables = {
-        input: { id: 'item-1', netWeight: 500, reason: 'Reason', version: 2 },
-      };
+    it('sends an idempotencyKey and opts into the offline queue', async () => {
+      const seen: Record<string, unknown>[] = [];
       const { result } = renderHook(() => useCorrectPantryItemWeight(), {
         wrapper: createApolloTestWrapper({
-          operationMocks: [successMock(variables)],
+          operationMocks: [
+            {
+              request: {
+                query: AdjustPantryItemWeightDocument,
+                variables: (v: Record<string, unknown>) => {
+                  seen.push(v);
+                  return true;
+                },
+              },
+              result: successMock({
+                input: {
+                  id: 'item-1',
+                  netWeight: 500,
+                  reason: 'Reason',
+                  version: 2,
+                },
+              }).result,
+            },
+          ],
         }),
       });
 
-      expect(result.current.isApiUnavailable).toBe(false);
-
-      let success: boolean | undefined;
       await act(async () => {
-        success = await result.current.correctWeight(
-          'item-1',
-          500,
-          'Reason',
-          2,
-        );
+        await result.current.correctWeight('item-1', 500, 'Reason', 2);
       });
 
-      expect(success).toBe(true);
+      const input = seen[0]?.input as { idempotencyKey?: string };
+      // Without the key a replay would write the WEIGHT_CORRECTED audit twice.
+      expect(input.idempotencyKey).toEqual(expect.any(String));
     });
   });
 });

@@ -18,11 +18,17 @@ jest.mock('#/services/telemetry', () => ({
   },
 }));
 
+// Spread the real module: a partial factory silently omits whatever the hook
+// imports NEXT — the local-first move added two more updaters, and a trimmed
+// mock fails at import time with "is not a function" rather than at the
+// assertion. See the module's other consumers before narrowing this.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 
 jest.mock('#/apollo/utils/shoppingListCacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/shoppingListCacheUpdaters'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
 }));
 
@@ -87,7 +93,9 @@ describe('useMoveToPantry', () => {
     });
 
     expect(move.fired).toContainEqual({
-      input: {
+      // objectContaining: the input also carries a minted `pantryItemId` and an
+      // `idempotencyKey`, both generated, both asserted separately above.
+      input: expect.objectContaining({
         shoppingListItemId: 'item-1',
         pantryId: 'pantry-1',
         actualQuantity: 2,
@@ -97,7 +105,7 @@ describe('useMoveToPantry', () => {
         removeFromList: true,
         actualPrice: undefined,
         notes: undefined,
-      },
+      }),
     });
     expect(moveResult).toBe(true);
   });
@@ -199,7 +207,12 @@ describe('useMoveToPantry', () => {
       useStore.setState({ apiReachable: true, isOnline: true });
     });
 
-    it('exposes isApiUnavailable, toasts, returns false, and skips the mutation', async () => {
+    /**
+     * The move used to refuse offline with a toast. It is local-first now: the
+     * client mints `input.pantryItemId`, so the row it writes to the cache and
+     * the row the server writes are the same entity, and the queue can replay.
+     */
+    it('still fires the mutation, so the queue can replay it', async () => {
       useStore.setState({ apiReachable: false });
       const errorSpy = jest.spyOn(toastService, 'error');
       const move = moveMock();
@@ -208,20 +221,41 @@ describe('useMoveToPantry', () => {
         { operationMocks: [move.mock] },
       );
 
-      expect(result.current.isApiUnavailable).toBe(true);
-
-      let moveResult: boolean = true;
       await act(async () => {
-        moveResult = await result.current.moveToPantry(createItem(), {
+        await result.current.moveToPantry(createItem(), {
           pantryId: 'pantry-1',
           actualQuantity: 2,
           removeFromList: true,
         });
       });
 
-      expect(moveResult).toBe(false);
-      expect(errorSpy).toHaveBeenCalledWith('Not available offline');
-      expect(move.fired).toHaveLength(0);
+      expect(move.fired).toHaveLength(1);
+      expect(errorSpy).not.toHaveBeenCalledWith('Not available offline');
+    });
+
+    it('mints the pantry row id and opts into the offline queue', async () => {
+      const move = moveMock();
+      const { result } = renderHookWithApollo(
+        () => useMoveToPantry({ currentListId: 'list-1' }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.moveToPantry(createItem(), {
+          pantryId: 'pantry-1',
+          actualQuantity: 2,
+          removeFromList: true,
+        });
+      });
+
+      const input = move.fired[0]?.input as {
+        pantryItemId?: string;
+        idempotencyKey?: string;
+      };
+      // Without a client-minted id the optimistic row and the server row would
+      // be two different entities, which is what kept this online-only.
+      expect(input.pantryItemId).toEqual(expect.any(String));
+      expect(input.idempotencyKey).toEqual(expect.any(String));
     });
 
     it('fires the mutation normally when online', async () => {
@@ -230,8 +264,6 @@ describe('useMoveToPantry', () => {
         () => useMoveToPantry({ currentListId: 'list-1' }),
         { operationMocks: [move.mock] },
       );
-
-      expect(result.current.isApiUnavailable).toBe(false);
 
       await act(async () => {
         await result.current.moveToPantry(createItem(), {

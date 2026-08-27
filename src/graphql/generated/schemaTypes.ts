@@ -239,6 +239,15 @@ export type AddRestrictionResult = AddRestrictionPayload | ConflictError | Forbi
 
 export type AddTemplateItemInput = {
   dayOffset: Scalars['Int']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+   * Persisted as the template item's primary key; when omitted the server
+   * generates one. Replaying an add with the same id returns a ConflictError
+   * carrying code IDEMPOTENT_REPLAY (treat it as already-applied). A different
+   * meal sent to an already-filled dayOffset/mealType slot is a genuine
+   * CONFLICT.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
   meal: MealRefInput;
   mealType: MealType;
@@ -342,6 +351,7 @@ export type AdjustPantryItemQuantityResult = AdjustPantryItemQuantityPayload | C
  */
 export type AdjustPantryItemWeightInput = {
   id: Scalars['ID']['input'];
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
   netWeight: Scalars['Float']['input'];
   /** Unit for the net weight (optional — only provide to also change the unit) */
@@ -2815,8 +2825,18 @@ export type DeletePantryItemResult = ConflictError | DeletePantryItemPayload | F
 
 export type DeletePantryPayload = {
   __typename: 'DeletePantryPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the pantry was
+   * already deleted) — a no-op success that did NOT re-delete or re-publish.
+   * The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   home: Maybe<Home>;
-  pantry: Pantry;
+  /**
+   * The deleted pantry, or null when it was already deleted — an idempotent
+   * replay (or second device) that converged as success. See converged.
+   */
+  pantry: Maybe<Pantry>;
 };
 
 /**
@@ -2850,6 +2870,12 @@ export type DeleteRecipeFolderInput = {
 
 export type DeleteRecipeFolderPayload = {
   __typename: 'DeleteRecipeFolderPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state — no saved recipe
+   * carried the label, so the folder did not exist and nothing moved. A no-op
+   * success. The canonical, API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   /** The deleted folder label (folders are string labels, not entities). */
   folder: Scalars['String']['output'];
   /** How many saved recipes were moved out of the folder. */
@@ -2953,8 +2979,19 @@ export type DeleteStorageLocationInput = {
 
 export type DeleteStorageLocationPayload = {
   __typename: 'DeleteStorageLocationPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the location was
+   * already deleted) — a no-op success that did NOT re-delete. The canonical,
+   * API-wide replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   home: Maybe<Home>;
-  storageLocation: StorageLocation;
+  /**
+   * The deleted storage location, or null when it was already deleted — an
+   * idempotent replay (or second device) that converged as success. See
+   * converged.
+   */
+  storageLocation: Maybe<StorageLocation>;
 };
 
 /**
@@ -6344,6 +6381,12 @@ export type MealTemplateItem = {
 
 export type MealTemplateItemInput = {
   dayOffset: Scalars['Int']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+   * Persisted as the template item's primary key; when omitted the server
+   * generates one.
+   */
+  id?: InputMaybe<Scalars['ID']['input']>;
   /** Meal reference: exactly one of a recipe id or a custom meal name (@oneOf). */
   meal: MealRefInput;
   mealType: MealType;
@@ -6529,6 +6572,12 @@ export enum ModerationStatus {
 }
 
 export type MovePurchasedItemsToPantryInput = {
+  /**
+   * Optional per-line id hints. The server still decides which lines are
+   * purchased; a line with no hint gets a server-minted id, and a hint for a
+   * line that is no longer purchased is ignored.
+   */
+  pantryItemIds?: InputMaybe<Array<MoveToPantryIdHintInput>>;
   shoppingListId: Scalars['ID']['input'];
 };
 
@@ -6568,6 +6617,19 @@ export type MoveShoppingItemToPantryInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   /** ID of the target pantry */
   pantryId: Scalars['ID']['input'];
+  /**
+   * Optional client-generated permanent ID (CUID2) for the pantry row this move
+   * creates. Offline-first clients mint it so the optimistic local row and the
+   * server row are the same entity. When omitted, the server generates one via
+   * @default(cuid(2)).
+   *
+   * Honoured only when the move CREATES a pantry entry. When the target pantry
+   * already holds an active stack of the same catalog item, the move restocks
+   * that stack instead and the payload returns that existing row's id — compare
+   * pantryItem.id against the id you sent to tell the two apart. Replaying an id
+   * that already exists returns IDEMPOTENT_REPLAY.
+   */
+  pantryItemId?: InputMaybe<Scalars['ID']['input']>;
   /** Whether to remove the item from the shopping list after moving (default: true) */
   removeFromList?: InputMaybe<Scalars['Boolean']['input']>;
   /** ID of the shopping list item to move */
@@ -6609,6 +6671,20 @@ export type MoveShoppingListItemPayload = {
  * Always include a __typename so the variant can be discriminated.
  */
 export type MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemPayload | NotFoundError | ValidationError;
+
+/**
+ * A client-minted permanent id for the pantry row one purchased line will create.
+ *
+ * Same create-branch-only semantics as MoveShoppingItemToPantryInput.pantryItemId:
+ * a line that restocks an existing stack returns that stack's id instead.
+ */
+export type MoveToPantryIdHintInput = {
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
+  /** Client-generated permanent ID (CUID2) for the pantry row that line creates. */
+  pantryItemId: Scalars['ID']['input'];
+  /** The purchased shopping list item this hint applies to. */
+  shoppingListItemId: Scalars['ID']['input'];
+};
 
 /**
  * Info about a successfully moved item (the per-element entity of
@@ -10955,6 +11031,14 @@ export type PantryItem = {
   expiresAt: Maybe<Scalars['DateTime']['output']>;
   id: Scalars['ID']['output'];
   isComposted: Scalars['Boolean']['output'];
+  /**
+   * Whether this item is low on stock: quantity at or below zero, or at or below
+   * minQuantity when a minimum is set. The same definition
+   * PantryStats.lowStockCount counts and the lowStock filter on
+   * PantryItemFilters selects.
+   *
+   * Not lowStockAlert, which records only whether the user wants to be notified.
+   */
   isLowStock: Scalars['Boolean']['output'];
   isRecycled: Scalars['Boolean']['output'];
   item: Item;
@@ -11157,8 +11241,36 @@ export type PantryItemEdge = Edge & {
 export type PantryItemFilters = {
   condition?: InputMaybe<ItemCondition>;
   expirationDays?: InputMaybe<Scalars['Int']['input']>;
+  /**
+   * Only items expiring within expirationDays (default 7), and only items you
+   * still have — an item whose quantity is zero is not expiring.
+   *
+   * Has NO lower bound, so ALREADY-EXPIRED items are included. This is a
+   * deliberate superset of PantryStats.expiringCount, which bounds at the
+   * present moment and therefore reports a smaller number than this filter
+   * returns; PantryStats.expiredCount covers the difference. Clients that want
+   * both an Expiring and an Expired section split this one page by date.
+   */
   expiringSoon?: InputMaybe<Scalars['Boolean']['input']>;
   itemId?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Only items that are low on stock: quantity at or below zero, or at or below
+   * minQuantity when a minimum is set. Exactly the definition
+   * PantryStats.lowStockCount counts and PantryItem.isLowStock reports, so a
+   * filtered page and the count cannot disagree.
+   *
+   * NOT the lowStockAlert column, which records whether the user wants to be
+   * notified: a well-stocked item with alerts on is not low, and a depleted item
+   * with alerts off is.
+   *
+   * A false or null value means UNFILTERED, matching every other field of this
+   * input. There is no only-well-stocked mode.
+   *
+   * Combines with expiringSoon. Since expiringSoon already excludes items you
+   * have none of, the intersection is items you still have, at or below their
+   * minimum, expiring within the horizon.
+   */
+  lowStock?: InputMaybe<Scalars['Boolean']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
   storageLocationId?: InputMaybe<Scalars['ID']['input']>;
   storageState?: InputMaybe<StorageState>;
@@ -13428,8 +13540,19 @@ export type RemoveTemplateItemInput = {
 
 export type RemoveTemplateItemPayload = {
   __typename: 'RemoveTemplateItemPayload';
+  /**
+   * True when this call CONVERGED on a pre-existing state (the item was already
+   * removed) — a no-op success that did NOT re-remove. The canonical, API-wide
+   * replay flag.
+   */
+  converged: Scalars['Boolean']['output'];
   mealTemplate: Maybe<MealTemplate>;
-  mealTemplateItem: MealTemplateItem;
+  /**
+   * The removed template item, or null when it was already removed — an
+   * idempotent replay (or second device) that converged as success. See
+   * converged.
+   */
+  mealTemplateItem: Maybe<MealTemplateItem>;
 };
 
 /**

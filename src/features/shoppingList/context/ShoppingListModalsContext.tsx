@@ -177,7 +177,6 @@ export function ShoppingListModalsProvider({
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}
         onConfirm={moveToPantry.confirm}
-        confirmDisabled={moveToPantry.isApiUnavailable}
       />
 
       {/* Add to Shopping List Sheet */}

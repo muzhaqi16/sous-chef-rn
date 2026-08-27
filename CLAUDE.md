@@ -54,7 +54,13 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
   `#features/*`, own a `.graphql` document, or carry a file named after a
   domain. `node scripts/check-layer-purity.mjs` holds it: the baseline is EMPTY,
   which makes it an invariant rather than a debt — it went 76 → 0, so any entry
-  is a regression to fix. Schema-type imports are counted, not failed.
+  is a regression to fix. Schema-type imports are counted, not failed. The same
+  script also scans the **kernel** (`src/apollo/`, `src/store/`, `src/utils/`, …)
+  for modules NAMED after a feature, under a separate NON-empty baseline that may
+  only shrink — a worklist, not an invariant. Only the name test runs there: the
+  kernel's feature imports are load-bearing (offline queue, i18n bundling, the
+  subscription layer) and are governed by the `.eslintrc.js` zone instead.
+  Per-feature nav stacks are exempt by design.
 - `src/features/catalog/` — the grocery `Item`, its pickers, and storage
   locations. The one feature with a PUBLIC component directory (`ui/`): its
   pickers are domain UI that two features consume, so they belong in neither a

@@ -14,5 +14,22 @@
     "src/hooks/useImageUpload.ts",
     "src/hooks/useInviteUserModal.tsx"
   ],
-  "scannedFiles": 286
+  "scannedFiles": 286,
+  "kernelFiles": [
+    "src/apollo/utils/pantryCacheUpdaters.ts",
+    "src/apollo/utils/recipeReviewCacheUpdaters.ts",
+    "src/apollo/utils/shoppingListCacheUpdaters.ts",
+    "src/constants/dietary.ts",
+    "src/constants/shoppingList.ts",
+    "src/services/recipeApi/SpoonacularService.ts",
+    "src/services/recipeApi/types.ts",
+    "src/services/recipeApi/utils.ts",
+    "src/utils/errors/pantryItemDuplicate.ts",
+    "src/utils/nutritionUtils.ts",
+    "src/utils/permissions/mealPlanPermissions.ts",
+    "src/utils/permissions/pantryPermissions.ts",
+    "src/utils/permissions/shoppingListPermissions.ts",
+    "src/utils/purchasePrice.ts",
+    "src/utils/recipeTransform.ts"
+  ]
 }

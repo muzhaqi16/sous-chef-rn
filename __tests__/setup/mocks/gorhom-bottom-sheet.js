@@ -73,6 +73,21 @@ jest.mock('@gorhom/bottom-sheet', () => {
       handleContentLayout: jest.fn(),
     })),
     useBottomSheetSpringConfigs: jest.fn(config => config),
+    // `BottomSheetKeyboardAwareScrollView` builds its base component at module
+    // scope from these two, so a suite that merely imports something rendering
+    // `BottomSheetFormScrollView` fails to load without them.
+    SCROLLABLE_TYPE: {
+      UNDETERMINED: 0,
+      VIEW: 1,
+      FLATLIST: 2,
+      SCROLLVIEW: 3,
+      SECTIONLIST: 4,
+      VIRTUALIZEDLIST: 5,
+    },
+    createBottomSheetScrollableComponent: (_type, Scrollable) =>
+      React.forwardRef((props, ref) =>
+        React.createElement(Scrollable, { ...props, ref }),
+      ),
     useBottomSheetScrollableCreator: jest.fn(() => {
       const ScrollableMock = props => React.createElement(View, props);
       return ScrollableMock;

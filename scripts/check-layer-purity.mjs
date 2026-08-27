@@ -1,7 +1,14 @@
 #!/usr/bin/env node
 /**
- * Fails when the shared UI kit (`src/components/`, `src/hooks/`) knows about a
- * feature.
+ * Fails when a layer below the features knows about one.
+ *
+ * Two scans with two different baseline meanings:
+ *
+ *   KIT     `src/components/`, `src/hooks/` — baseline EMPTY, an invariant.
+ *           Four kinds of coupling; see "What counts" below.
+ *   KERNEL  `src/apollo/`, `src/store/`, `src/utils/`, … — baseline NON-EMPTY,
+ *           a debt list that may only shrink. NAME test only; see KERNEL_GLOBS
+ *           for why `featureImport` is deliberately not applied there.
  *
  * ## The rule
  *
@@ -33,10 +40,15 @@
  * finds 251 files, most of them a comment or a test fixture; a gate that noisy
  * gets disabled. A file NAMED `MoveToPantryModal.tsx` is not a judgement call.
  *
- * The baseline is now EMPTY. That makes it an invariant rather than a debt
+ * The KIT baseline is EMPTY. That makes it an invariant rather than a debt
  * being paid down: nobody should need a kit file that knows about a feature, so
  * any entry is a regression to fix rather than a number to watch. It reached
  * zero from 76.
+ *
+ * The KERNEL baseline is not empty and is not claimed to be an invariant yet —
+ * it is the worklist for moving domain code (cache updaters, permission
+ * helpers, the Spoonacular client, domain transforms) down into the features
+ * that own it. What the gate buys today is that the number cannot grow.
  *
  *   node scripts/check-layer-purity.mjs           # check
  *   node scripts/check-layer-purity.mjs --list    # print every finding
@@ -71,6 +83,44 @@ const BASELINE = baselineFile(
  */
 const KIT_GLOBS = ['src/components/**/*.{ts,tsx}', 'src/hooks/**/*.{ts,tsx}'];
 const KIT_GRAPHQL = ['src/components/**/*.graphql', 'src/hooks/**/*.graphql'];
+
+/**
+ * The kernel: the layer BELOW the kit, which a sibling app keeps unchanged.
+ *
+ * Only the NAME test runs here, deliberately. The kernel genuinely imports
+ * features in a few places and each is load-bearing: the offline queue has to
+ * know every feature's sync builders before the first mutation, `i18n`
+ * assembles every feature's locale bundle, and the subscription layer mounts
+ * every feature's event subscription centrally. A `featureImport` rule would
+ * be a rule that excuses more than it forbids — that reasoning is already
+ * written down in the `import/no-restricted-paths` zone in `.eslintrc.js`,
+ * which is where those crossings are governed.
+ *
+ * A kernel module NAMED after a feature is a different claim, and an
+ * unambiguous one: `src/utils/recipeTransform.ts` is recipe code that a
+ * sibling app without recipes still has to carry, fork or delete. This is
+ * what let two recipe result caches sit in `src/store/` long enough to also
+ * miss their session reset.
+ */
+const KERNEL_GLOBS = [
+  'src/apollo/**/*.{ts,tsx}',
+  'src/store/**/*.{ts,tsx}',
+  'src/services/**/*.{ts,tsx}',
+  'src/navigation/**/*.{ts,tsx}',
+  'src/config/**/*.{ts,tsx}',
+  'src/utils/**/*.{ts,tsx}',
+  'src/constants/**/*.{ts,tsx}',
+  'src/theme/**/*.{ts,tsx}',
+  'src/i18n/**/*.{ts,tsx}',
+];
+
+/**
+ * Per-feature navigation stacks are named after features BY DESIGN — they are
+ * the composition layer wiring a feature's screens into the navigator, the same
+ * exemption `src/app/` gets. Naming `PantryStack.tsx` anything else would make
+ * it worse, not more portable.
+ */
+const KERNEL_EXEMPT = [/^src\/navigation\/stacks\//];
 
 const SKIP = [
   /(^|\/)__tests__(\/|$)/,
@@ -212,6 +262,25 @@ for (const file of filesUnder(KIT_GRAPHQL, { exclude: SKIP })) {
   record(relative(REPO_ROOT, file), 'ownsGraphql');
 }
 
+const kernelFiles = filesUnder(KERNEL_GLOBS, { exclude: SKIP });
+
+requireNonEmptyScan({
+  count: kernelFiles.length,
+  what: 'kernel files',
+  check: 'check-layer-purity',
+  hint: 'a top-level src/ directory moved, or the glob no longer matches',
+  minimum: 100,
+});
+
+const kernelFindings = new Map(); // relPath -> term it is named after
+for (const file of kernelFiles) {
+  const rel = relative(REPO_ROOT, file);
+  if (KERNEL_EXEMPT.some(re => re.test(rel))) continue;
+  const term = namesDomain(rel);
+  if (term) kernelFindings.set(rel, term);
+}
+const currentKernel = [...kernelFindings.keys()].sort();
+
 const current = [...findings.keys()].sort();
 const recorded = BASELINE.exists() ? BASELINE.read().files ?? [] : [];
 
@@ -219,8 +288,12 @@ if (flags.list) {
   for (const rel of current) {
     console.log(`${[...findings.get(rel)].sort().join(',').padEnd(34)} ${rel}`);
   }
+  for (const rel of currentKernel) {
+    console.log(`${`kernelName:${kernelFindings.get(rel)}`.padEnd(34)} ${rel}`);
+  }
   console.log(
     `\n${current.length} kit file(s) coupled to a feature.` +
+      `\n${currentKernel.length} kernel file(s) named after a feature.` +
       `\n${schemaTypeFiles.size} kit file(s) import generated schema types (tracked, not failing).`,
   );
   process.exit(0);
@@ -234,17 +307,20 @@ if (flags.update) {
   });
   BASELINE.write({
     files: current,
+    kernelFiles: currentKernel,
     schemaTypeImporters: [...schemaTypeFiles].sort(),
     scannedFiles: kitFiles.length,
   });
   console.log(
-    `Recorded ${current.length} coupled kit file(s) from ${kitFiles.length} scanned.`,
+    `Recorded ${current.length} coupled kit file(s) from ${kitFiles.length} scanned, ` +
+      `and ${currentKernel.length} domain-named kernel file(s) from ${kernelFiles.length}.`,
   );
   process.exit(0);
 }
 
 const baseline = BASELINE.require('check-layer-purity');
 const { added, removed } = diffSets(current, baseline.files ?? []);
+const kernelDiff = diffSets(currentKernel, baseline.kernelFiles ?? []);
 
 if (added.length) {
   console.error(
@@ -266,9 +342,32 @@ if (added.length) {
   process.exit(1);
 }
 
+if (kernelDiff.added.length) {
+  console.error(
+    `\n✗ check-layer-purity: ${kernelDiff.added.length} kernel file(s) newly named after a feature.\n`,
+  );
+  for (const rel of kernelDiff.added) {
+    console.error(`    ${kernelFindings.get(rel).padEnd(30)} ${rel}`);
+  }
+  console.error(
+    `\n  The kernel is what a sibling app keeps unchanged. A module here named\n` +
+      `  after a domain is that feature's code sitting below the layer that is\n` +
+      `  meant to be domain-free — move it into src/features/<name>/.\n\n` +
+      `  A feature store must also call registerSessionScopedStore(): the root\n` +
+      `  store's SESSION_SCOPED_STATE cannot reach it, which is how the recipe\n` +
+      `  caches came to survive a sign-out.\n`,
+  );
+  process.exit(1);
+}
+
 console.log(
   `check-layer-purity: ${current.length} coupled kit file(s), ` +
     `baseline ${baseline.files.length}` +
     (removed.length ? ` (${removed.length} cleared — run --update)` : '') +
+    `.\ncheck-layer-purity: ${currentKernel.length} domain-named kernel file(s), ` +
+    `baseline ${(baseline.kernelFiles ?? []).length}` +
+    (kernelDiff.removed.length
+      ? ` (${kernelDiff.removed.length} cleared — run --update)`
+      : '') +
     `.\n${schemaTypeFiles.size} import generated schema types (tracked).`,
 );

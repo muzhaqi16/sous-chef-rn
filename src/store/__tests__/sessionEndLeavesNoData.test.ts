@@ -39,6 +39,11 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
 
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
+import {
+  useRecipeCacheStore,
+  textSearchCacheKey,
+} from '#features/recipes/store/useRecipeCacheStore';
+import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -201,6 +206,32 @@ describe('a session end leaves no data belonging to the previous person', () => 
 
     expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
     expect(registeredSessionScopedStores()).toContain('barcodeScanner');
+  });
+
+  it('clears the recipe caches, which name what the last person cooked', async () => {
+    // These two are the registry's own motivating example — `recipe-search-cache`
+    // and `recipe-suggestions-cache` are how a feature store was first found
+    // surviving a sign-out. Asserted here so they cannot regress to that again.
+    useRecipeCacheStore
+      .getState()
+      .setCached(textSearchCacheKey('chicken'), [
+        { id: 1, title: 'Roast chicken', image: '', imageType: 'jpg' },
+      ]);
+    useRecipeSuggestionsStore
+      .getState()
+      .setCachedSuggestions('insulin pens', []);
+    expect(Object.keys(useRecipeCacheStore.getState().cache)).not.toEqual([]);
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useRecipeCacheStore.getState().cache).toEqual({});
+    expect(useRecipeSuggestionsStore.getState().cache).toEqual({});
+    expect(registeredSessionScopedStores()).toEqual(
+      expect.arrayContaining([
+        'useRecipeCacheStore',
+        'useRecipeSuggestionsStore',
+      ]),
+    );
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

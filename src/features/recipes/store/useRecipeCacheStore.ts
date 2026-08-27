@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { registerSessionScopedStore } from '#store/sessionScopedStores';
+
 import { immer } from 'zustand/middleware/immer';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { zustandStorage } from '#/storage/mmkv';
@@ -192,4 +194,16 @@ export const useRecipeCacheStore = create<RecipeCacheState>()(
       partialize: state => ({ cache: state.cache }),
     },
   ),
+);
+
+/**
+ * Recipe searches name what the previous person was cooking, and the cache is
+ * persisted — so a sign-out on a shared device has to empty it.
+ *
+ * The root store's `SESSION_SCOPED_STATE` only reaches root state, so a feature
+ * store is outside it by construction — which is exactly how this cache came to
+ * survive a sign-out unnoticed.
+ */
+registerSessionScopedStore('useRecipeCacheStore', () =>
+  useRecipeCacheStore.getState().clearAllCache(),
 );

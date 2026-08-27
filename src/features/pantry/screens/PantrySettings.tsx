@@ -13,6 +13,7 @@ import { ScreenHeader } from '#components/molecules/ScreenHeader';
 import { LoadingInline } from '#components/atoms/Loading';
 import { InfoRow } from '#components/molecules/InfoRow';
 import { useApolloClient, useQuery, useMutation } from '@apollo/client/react';
+import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
 import type { ApolloCache } from '@apollo/client';
 import {
   GetPantryDocument,
@@ -56,12 +57,13 @@ function buildDeletePantryUpdater(selectedHomeId: string | null | undefined) {
     { data }: { data?: DeletePantryMutation | null },
     { variables }: { variables?: DeletePantryMutationVariables },
   ) {
-    const deletePayload =
-      data?.deletePantry?.__typename === 'DeletePantryPayload'
-        ? data.deletePantry
-        : null;
-    if (!deletePayload?.pantry || !variables?.input?.id || !selectedHomeId)
-      return;
+    // Keyed off the VARIABLES, not the payload: `DeletePantryPayload.pantry` is
+    // nullable — it is null when the server converges a replay on an
+    // already-deleted row — so a guard on it would skip the cache update for
+    // precisely the replay case this has to handle.
+    const isDeletePayload =
+      data?.deletePantry?.__typename === 'DeletePantryPayload';
+    if (!isDeletePayload || !variables?.input?.id || !selectedHomeId) return;
     try {
       removeOptimisticPantry(cache, selectedHomeId, variables.input.id);
     } catch (error) {
@@ -98,11 +100,18 @@ function buildCreatePantryUpdater(selectedHomeId: string | null | undefined) {
 async function safeSetDefaultPantry(
   setDefaultPantry: (opts: {
     variables: { input: { id: string } };
+    context?: { localFirst: boolean };
   }) => Promise<unknown>,
   pantryId: string,
 ): Promise<void> {
   try {
-    await setDefaultPantry({ variables: { input: { id: pantryId } } });
+    await setDefaultPantry({
+      variables: { input: { id: pantryId } },
+      // Absolute flag on an existing row: replaying sets it again, which is the
+      // same state. The server clears the previous holder; the cached flag on
+      // that row corrects on the next fetch.
+      context: { localFirst: true },
+    });
   } catch (error) {
     errorService.reportError(error, {
       operation: 'PantrySettings.setDefaultPantry',
@@ -321,14 +330,26 @@ export const PantrySettings: React.FC<
           setSelectedPantryId(id);
           goBack();
         } else {
-          await updatePantry({
-            variables: {
-              input: {
-                id: pantryId,
-                name: name.trim(),
-                description: description.trim(),
-              },
+          // Absolute field write on an existing row, so a replay lands the same
+          // state twice — safe to queue, and the rename shows immediately.
+          const updates = {
+            name: name.trim(),
+            description: description.trim(),
+          };
+          await updateEntityFieldsLocalFirst({
+            cache: apolloClient.cache,
+            entity: { __typename: 'Pantry', id: pantryId },
+            updates,
+            previous: {
+              name: pantry?.name ?? '',
+              description: pantry?.description ?? '',
             },
+            logLabel: 'PantrySettings.updatePantry',
+            mutate: () =>
+              updatePantry({
+                variables: { input: { id: pantryId, ...updates } },
+                context: { localFirst: true },
+              }),
           });
         }
       },
@@ -361,7 +382,13 @@ export const PantrySettings: React.FC<
 
             executeAsyncWithCleanup(
               async () => {
-                await deletePantry({ variables: { input: { id: pantryId } } });
+                // Queued when offline: the delete converges server-side on
+                // replay (`converged: true` for an already-deleted row), so
+                // re-sending it is safe rather than a permanent failure.
+                await deletePantry({
+                  variables: { input: { id: pantryId } },
+                  context: { localFirst: true },
+                });
                 setSelectedPantryId(null);
                 goBack();
               },

@@ -72,7 +72,6 @@ export const StorageLocationsScreen: React.FC<
     createLocation,
     error,
     offline,
-    isApiUnavailable,
     refetch,
   } = useStorageLocationManagement(homeId, selectedPantryId ?? undefined);
 
@@ -105,7 +104,6 @@ export const StorageLocationsScreen: React.FC<
           onEdit={() => handleOpenEdit(node)}
           onDelete={() => handleDelete(node)}
           onSetDefault={() => handleSetDefault(node.id)}
-          actionsDisabled={isApiUnavailable}
         />
         {node.childLocations?.map(child => renderTreeNode(child, depth + 1))}
       </View>
@@ -315,7 +313,6 @@ export const StorageLocationsScreen: React.FC<
                 onEdit={() => handleOpenEdit(location)}
                 onDelete={() => handleDelete(location)}
                 onSetDefault={() => handleSetDefault(location.id)}
-                actionsDisabled={isApiUnavailable}
               />
             ))
           )}

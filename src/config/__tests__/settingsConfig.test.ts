@@ -2,6 +2,7 @@ import {
   PERSONAL_INFO_CONFIG,
   PROFILE_SETTINGS_CONFIG,
 } from '../settingsConfig';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 describe('settingsConfig', () => {
   describe('PERSONAL_INFO_CONFIG', () => {
@@ -61,17 +62,35 @@ describe('settingsConfig', () => {
       expect(visibilityItem!.type).toBe('modal');
       if (visibilityItem && 'options' in visibilityItem) {
         expect(visibilityItem.options).toEqual([
-          { labelKey: 'personalInformation.visibilityPublic', value: 'PUBLIC' },
+          {
+            labelKey: 'personalInformation.visibilityPublic',
+            value: ProfileVisibility.Public,
+          },
           {
             labelKey: 'personalInformation.visibilityFriendsOnly',
-            value: 'FRIENDS_ONLY',
+            value: ProfileVisibility.Friends,
           },
           {
             labelKey: 'personalInformation.visibilityPrivate',
-            value: 'PRIVATE',
+            value: ProfileVisibility.Private,
           },
         ]);
       }
+    });
+
+    // The options are the wire values, not labels. FRIENDS_ONLY shipped here
+    // for a schema that only has FRIENDS: the server refused every selection
+    // and the optimistic write reverted with nothing shown to the user.
+    it('offers only profileVisibility values the schema defines', () => {
+      const section = PERSONAL_INFO_CONFIG.find(s => s.id === 'privacy')!;
+      const visibilityItem = section.items.find(
+        i => i.key === 'profileVisibility',
+      )!;
+      const allowed: string[] = Object.values(ProfileVisibility);
+
+      expect(visibilityItem.options!.map(o => o.value).sort()).toEqual(
+        [...allowed].sort(),
+      );
     });
   });
 

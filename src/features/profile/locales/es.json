@@ -308,6 +308,7 @@
     "urlScheme": "La URL debe empezar por http:// o https://",
     "dateFormat": "La fecha debe tener el formato AAAA-MM-DD",
     "dateInvalid": "Introduce una fecha válida",
-    "dateUnreasonable": "Introduce una fecha de nacimiento razonable"
+    "dateUnreasonable": "Introduce una fecha de nacimiento razonable",
+    "invalidVisibility": "Selecciona una opción de visibilidad válida"
   }
 }

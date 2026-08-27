@@ -4,7 +4,6 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
-import { useStore } from '#store';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
 
 const mockToastSuccess = jest.fn();
@@ -68,7 +67,7 @@ function moveMock(payload: {
 describe('useBatchMoveToPantry', () => {
   it('returns batchMoveToPantry function and loading state', () => {
     const { result } = renderHookWithApollo(() =>
-      useBatchMoveToPantry({ currentListId: 'list-1' }),
+      useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
     );
 
     expect(typeof result.current.batchMoveToPantry).toBe('function');
@@ -77,7 +76,7 @@ describe('useBatchMoveToPantry', () => {
 
   it('shows error toast when no list is selected', async () => {
     const { result } = renderHookWithApollo(() =>
-      useBatchMoveToPantry({ currentListId: undefined }),
+      useBatchMoveToPantry({ currentListId: undefined, purchasedItems: [] }),
     );
 
     await act(async () => {
@@ -96,7 +95,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -116,7 +116,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -136,7 +137,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -156,7 +158,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -178,7 +181,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -204,6 +208,7 @@ describe('useBatchMoveToPantry', () => {
       () =>
         useBatchMoveToPantry({
           currentListId: 'list-1',
+          purchasedItems: [],
           onSuccess: mockOnSuccess,
         }),
       { operationMocks: [move.mock] },
@@ -226,7 +231,8 @@ describe('useBatchMoveToPantry', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
       { operationMocks: [move.mock] },
     );
 
@@ -260,6 +266,7 @@ describe('useBatchMoveToPantry', () => {
       () =>
         useBatchMoveToPantry({
           currentListId: 'list-1',
+          purchasedItems: [],
           onSuccess: mockOnSuccess,
         }),
       { operationMocks: [move.mock] },
@@ -273,7 +280,14 @@ describe('useBatchMoveToPantry', () => {
     expect(mockOnSuccess).not.toHaveBeenCalled();
   });
 
-  it('does not call onSuccess when mutation returns no data', async () => {
+  /**
+   * A null payload with no error is how the offline queue reports a QUEUED
+   * mutation, not a failure — `classifyCreateResult` is the single place that
+   * meaning is encoded. This used to assert the opposite, which was right when
+   * the batch move was online-only and a null result could only mean something
+   * had gone wrong.
+   */
+  it('treats a null payload as queued: reports the local count and succeeds', async () => {
     const mockOnSuccess = jest.fn();
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
       data: { movePurchasedItemsToPantry: null },
@@ -283,6 +297,7 @@ describe('useBatchMoveToPantry', () => {
       () =>
         useBatchMoveToPantry({
           currentListId: 'list-1',
+          purchasedItems: [{ id: 'item-1' }],
           onSuccess: mockOnSuccess,
         }),
       { operationMocks: [move.mock] },
@@ -292,16 +307,17 @@ describe('useBatchMoveToPantry', () => {
       await result.current.batchMoveToPantry();
     });
 
-    expect(mockOnSuccess).not.toHaveBeenCalled();
+    expect(mockOnSuccess).toHaveBeenCalled();
+    expect(mockAlert).not.toHaveBeenCalled();
   });
 
   describe('when the API is unavailable', () => {
-    afterEach(() => {
-      useStore.setState({ apiReachable: true, isOnline: true });
-    });
-
-    it('exposes isApiUnavailable, toasts, and does not fire the mutation', async () => {
-      useStore.setState({ apiReachable: false });
+    /**
+     * Used to refuse with a toast. The batch is local-first now: the client
+     * mints a pantry-row id per purchased line (`pantryItemIds`), so a replay
+     * resolves to the same rows rather than creating a second set.
+     */
+    it('still fires the mutation, so the queue can replay it', async () => {
       const move = moveMock({
         movedCount: 1,
         skippedCount: 0,
@@ -310,40 +326,55 @@ describe('useBatchMoveToPantry', () => {
       });
 
       const { result } = renderHookWithApollo(
-        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
+        () =>
+          useBatchMoveToPantry({
+            currentListId: 'list-1',
+            purchasedItems: [{ id: 'item-1' }],
+          }),
         { operationMocks: [move.mock] },
       );
-
-      expect(result.current.isApiUnavailable).toBe(true);
-
-      await act(async () => {
-        await result.current.batchMoveToPantry();
-      });
-
-      expect(mockToastError).toHaveBeenCalledWith('Not available offline');
-      expect(move.fired).toHaveLength(0);
-    });
-
-    it('fires the mutation normally when online', async () => {
-      const move = moveMock({
-        movedCount: 1,
-        skippedCount: 0,
-        targetPantryName: 'My Pantry',
-        movedItemIds: ['item-1'],
-      });
-
-      const { result } = renderHookWithApollo(
-        () => useBatchMoveToPantry({ currentListId: 'list-1' }),
-        { operationMocks: [move.mock] },
-      );
-
-      expect(result.current.isApiUnavailable).toBe(false);
 
       await act(async () => {
         await result.current.batchMoveToPantry();
       });
 
       expect(move.fired).toHaveLength(1);
+      expect(mockToastError).not.toHaveBeenCalledWith('Not available offline');
+    });
+
+    it('sends one client-minted id hint per purchased line', async () => {
+      const move = moveMock({
+        movedCount: 2,
+        skippedCount: 0,
+        targetPantryName: 'My Pantry',
+        movedItemIds: ['item-1', 'item-2'],
+      });
+
+      const { result } = renderHookWithApollo(
+        () =>
+          useBatchMoveToPantry({
+            currentListId: 'list-1',
+            purchasedItems: [{ id: 'item-1' }, { id: 'item-2' }],
+          }),
+        { operationMocks: [move.mock] },
+      );
+
+      await act(async () => {
+        await result.current.batchMoveToPantry();
+      });
+
+      const input = move.fired[0]?.input as {
+        pantryItemIds?: { shoppingListItemId: string; pantryItemId: string }[];
+      };
+      expect(input.pantryItemIds).toHaveLength(2);
+      expect(input.pantryItemIds?.map(h => h.shoppingListItemId)).toEqual([
+        'item-1',
+        'item-2',
+      ]);
+      // Distinct ids — one row per line, not one row reused.
+      expect(new Set(input.pantryItemIds?.map(h => h.pantryItemId)).size).toBe(
+        2,
+      );
     });
   });
 });

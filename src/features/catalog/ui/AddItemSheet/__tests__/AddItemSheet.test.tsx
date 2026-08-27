@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
-// The sheet renders ReportItemSheet, whose useReportItem calls useMutation, so
-// the tree needs an Apollo context even though this suite mocks the data hooks.
+// The report step renders ReportItemForm, whose useReportItem calls useMutation,
+// so the tree needs an Apollo context even though this suite mocks the data hooks.
 import { renderWithApollo as render } from '#/test-utils/apolloMockProvider';
 import { AddItemSheet, useAddItemSheetRefs } from '../AddItemSheet';
 import { pantrySheetConfig } from '#features/pantry/components/modals/AddToPantrySheet/pantrySheetConfig';
@@ -51,13 +51,21 @@ jest.mock('#components/molecules/BottomSheetSearchBar', () => {
   };
 });
 
-// Mock ItemSuggestionsList
+// Mock ItemSuggestionsList. The report footer is exposed as a pressable so the
+// morph to the report step can be driven without the real list's data shape.
 jest.mock('#components/molecules/ItemSuggestionsList', () => {
   const R = require('react');
   const RN = require('react-native');
   return {
-    ItemSuggestionsList: () =>
-      R.createElement(RN.View, { testID: 'item-suggestions-list' }),
+    ItemSuggestionsList: ({ onReportItem }: { onReportItem?: () => void }) =>
+      R.createElement(
+        RN.View,
+        { testID: 'item-suggestions-list' },
+        R.createElement(RN.Pressable, {
+          testID: 'report-item-footer',
+          onPress: onReportItem,
+        }),
+      ),
   };
 });
 
@@ -436,6 +444,31 @@ describe('AddItemSheet', () => {
     render(<AddItemSheet {...defaultProps} />);
     // When search results show, action buttons should be hidden
     // The ItemSuggestionsList is rendered
+    expect(screen.getByTestId('item-suggestions-list')).toBeTruthy();
+  });
+
+  it('morphs to the report step in place instead of stacking a second sheet', async () => {
+    const {
+      useItemAutocomplete,
+    } = require('#features/catalog/hooks/useItemAutocomplete');
+    useItemAutocomplete.mockReturnValue({
+      searchTerm: 'mi',
+      displayItems: [{ id: '1', name: 'Milk' }],
+      isLoading: false,
+      handleSearchTermChange: mockHandleSearchTermChange,
+      reset: mockResetAutocomplete,
+    });
+
+    render(<AddItemSheet {...defaultProps} />);
+    await userEvent.press(screen.getByTestId('report-item-footer'));
+
+    // The report form replaced the search step inside the SAME sheet — a
+    // stacked BottomSheetModal here would minimize this one (gorhom's default
+    // stackBehavior: 'switch') and strand the global backdrop.
+    expect(screen.getByTestId('report-item-submit-button')).toBeTruthy();
+    expect(screen.queryByTestId('item-suggestions-list')).toBeNull();
+
+    await userEvent.press(screen.getByTestId('report-item-cancel-button'));
     expect(screen.getByTestId('item-suggestions-list')).toBeTruthy();
   });
 

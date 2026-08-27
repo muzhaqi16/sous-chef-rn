@@ -308,6 +308,7 @@
     "urlScheme": "URL must start with http:// or https://",
     "dateFormat": "Date must be in YYYY-MM-DD format",
     "dateInvalid": "Please enter a valid date",
-    "dateUnreasonable": "Please enter a reasonable birth date"
+    "dateUnreasonable": "Please enter a reasonable birth date",
+    "invalidVisibility": "Please select a valid visibility option"
   }
 }

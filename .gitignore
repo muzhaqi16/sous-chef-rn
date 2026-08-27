@@ -123,3 +123,4 @@ docs/audits/*
 # whenever a watch dies mid-check. Transient, machine-named, never ours to
 # commit.
 .watchman-cookie-*
+.argent/

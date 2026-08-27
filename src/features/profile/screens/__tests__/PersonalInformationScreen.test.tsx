@@ -1,13 +1,22 @@
 'use no memo';
 import React from 'react';
-import { screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import {
+  recordMock,
+  renderWithApollo,
+  type MockedResponse,
+} from '#/test-utils/apolloMockProvider';
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
 import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
+import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 
 jest.mock('#features/profile/hooks/useProfileData', () => ({
   useProfileData: () => ({
     profile: {
+      __typename: 'UserProfile',
+      id: 'profile-1',
       firstName: 'John',
       lastName: 'Doe',
       displayName: 'JohnDoe',
@@ -31,6 +40,10 @@ jest.mock('#/services/errorService', () => ({
   errorService: {
     reportError: jest.fn(),
   },
+}));
+
+jest.mock('#/services/alertService', () => ({
+  alertService: { alert: jest.fn() },
 }));
 
 jest.mock('#/utils/finallyHelpers');
@@ -82,6 +95,27 @@ jest.mock('#/config/settingsConfig', () => ({
       titleKey: 'personalInformation.sectionPrivacySettings',
       items: [
         {
+          key: 'profileVisibility',
+          labelKey: 'personalInformation.profileVisibility',
+          type: 'modal',
+          // The real config's values, so the assertion below is about what the
+          // screen sends rather than about this stub.
+          options: [
+            {
+              labelKey: 'personalInformation.visibilityPublic',
+              value: 'PUBLIC',
+            },
+            {
+              labelKey: 'personalInformation.visibilityFriendsOnly',
+              value: 'FRIENDS',
+            },
+            {
+              labelKey: 'personalInformation.visibilityPrivate',
+              value: 'PRIVATE',
+            },
+          ],
+        },
+        {
           key: 'showEmail',
           labelKey: 'personalInformation.showEmail',
           type: 'toggle',
@@ -116,8 +150,10 @@ jest.mock('#components/templates/ProfileScreenWrapper', () => {
   };
 });
 
+// Stands in for the real row + picker sheet: each modal option becomes a
+// pressable that fires the row's `onSave`, which is the whole chain under test.
 jest.mock('#components/organisms/SettingsSection', () => {
-  const { View, Text } = require('react-native');
+  const { View, Text, Pressable } = require('react-native');
   return {
     SettingsSection: ({ title, items }: SettingsSectionProps) => (
       <View testID={`section-${title}`}>
@@ -128,6 +164,13 @@ jest.mock('#components/organisms/SettingsSection', () => {
             {item.value !== undefined && (
               <Text testID={`value-${item.key}`}>{String(item.value)}</Text>
             )}
+            {item.options?.map(opt => (
+              <Pressable
+                key={opt.value}
+                testID={`option-${item.key}-${opt.value}`}
+                onPress={() => item.onSave?.(opt.value)}
+              />
+            ))}
           </View>
         ))}
       </View>
@@ -196,5 +239,61 @@ describe('PersonalInformationScreen', () => {
     renderWithApollo(<PersonalInformationScreen />);
     expect(screen.getByTestId('value-showEmail')).toBeTruthy();
     expect(screen.getByText('true')).toBeTruthy();
+  });
+
+  describe('profileVisibility', () => {
+    const renderWith = (operationMocks: MockedResponse[]) =>
+      renderWithApollo(<PersonalInformationScreen />, { operationMocks });
+
+    // The screen casts the picked string with `as ProfileVisibility`, so tsc
+    // cannot catch a value the schema has no member for. FRIENDS_ONLY shipped
+    // that way and the server refused every selection.
+    it('sends a value the schema defines', async () => {
+      const { mock, fired } = recordMock(UpdateUserProfileDocument, {
+        data: {
+          updateProfile: {
+            __typename: 'UpdateProfilePayload',
+            userProfile: {
+              __typename: 'UserProfile',
+              id: 'profile-1',
+              profileVisibility: ProfileVisibility.Friends,
+            },
+          },
+        },
+      });
+      renderWith([mock]);
+
+      await userEvent.press(
+        screen.getByTestId('option-profileVisibility-FRIENDS'),
+      );
+
+      await waitFor(() => expect(fired).toHaveLength(1));
+      const sent = fired[0].input as { profileVisibility: string };
+      expect(Object.values(ProfileVisibility)).toContain(
+        sent.profileVisibility,
+      );
+    });
+
+    // Without this the optimistic write was reverted and the row just snapped
+    // back with nothing said.
+    it('tells the user when the server refuses the change', async () => {
+      const { mock } = recordMock(UpdateUserProfileDocument, {
+        data: {
+          updateProfile: {
+            __typename: 'ValidationError',
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid visibility',
+            field: 'profileVisibility',
+          },
+        },
+      });
+      renderWith([mock]);
+
+      await userEvent.press(
+        screen.getByTestId('option-profileVisibility-PRIVATE'),
+      );
+
+      await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+    });
   });
 });

@@ -9,7 +9,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PrimaryActivityIndicator } from '#components/atoms/themedComponents';
 import { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { ItemSuggestionsList } from '#components/molecules/ItemSuggestionsList';
-import { ReportItemSheet } from '#features/catalog/ui/ReportItemSheet/ReportItemSheet';
+import { ReportItemForm } from '#features/catalog/ui/ReportItemForm/ReportItemForm';
 import {
   BottomSheetSearchBar,
   type BottomSheetSearchBarRef,
@@ -82,13 +82,15 @@ export function AddItemSheet<
     keyboardBehavior: 'extend',
   });
 
-  // Morphing step: the SAME sheet shows either the search/suggestions view or,
-  // when a consumer supplies `renderDetails`, an in-place details form. This
-  // replaces the old "stack a second BottomSheetModal" approach (which raced the
-  // global backdrop and tore the first sheet down). The sheet keeps its current
-  // height across the morph — it opens at the first (search) snap point and the
-  // user can drag it up to the 95% max; we never force-expand it.
-  const [step, setStep] = useState<'search' | 'details'>('search');
+  // Morphing step: the SAME sheet shows the search/suggestions view, an
+  // in-place details form when a consumer supplies `renderDetails`, or the
+  // report-an-item form. This replaces the old "stack a second
+  // BottomSheetModal" approach (which raced the global backdrop and tore the
+  // first sheet down — and, with gorhom's default `stackBehavior: 'switch'`,
+  // minimized this sheet instead of stacking on it). The sheet keeps its
+  // current height across the morph — it opens at the first (search) snap
+  // point and the user can drag it up to the 95% max; we never force-expand it.
+  const [step, setStep] = useState<'search' | 'details' | 'report'>('search');
   const goBackToSearch = () => {
     setStep('search');
   };
@@ -109,8 +111,6 @@ export function AddItemSheet<
   // Autocomplete search — debounceMs: 0 because BottomSheetSearchBar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
   const { handleSearchTermChange, reset: resetAutocomplete } = autocomplete;
-
-  const [reportVisible, setReportVisible] = useState(false);
 
   // Drill-down view state: when set, the sheet shows one source's full list
   // instead of the multi-section overview.
@@ -158,8 +158,8 @@ export function AddItemSheet<
   if (prevIsOpen !== isOpen) {
     setPrevIsOpen(isOpen);
     setActiveSourceKey(null);
-    // Always reopen on the search step so a stale details step can never
-    // persist from a previous visit.
+    // Always reopen on the search step so a stale details or report step can
+    // never persist from a previous visit.
     setStep('search');
   }
 
@@ -274,7 +274,17 @@ export function AddItemSheet<
       testID={`${config.testIDPrefix}-modal`}
     >
       <View style={{ flex: 1 }} testID={`${config.testIDPrefix}-modal`}>
-        {step === 'details' && renderDetails ? (
+        {step === 'report' ? (
+          <ReportItemForm
+            candidates={autocomplete.displayItems.map(item => ({
+              id: item.id,
+              name: item.name,
+              imageUrl: item.imageUrl,
+              brandName: item.brands?.[0]?.name,
+            }))}
+            onClose={goBackToSearch}
+          />
+        ) : step === 'details' && renderDetails ? (
           renderDetails({ goBack: goBackToSearch })
         ) : inDrilldown && activeGroup ? (
           <SuggestionDrilldown
@@ -331,7 +341,7 @@ export function AddItemSheet<
                 placeholderIcon={config.placeholderIcon}
                 showBrands={false}
                 showImages={showImages}
-                onReportItem={() => setReportVisible(true)}
+                onReportItem={() => setStep('report')}
               />
             )}
 
@@ -391,25 +401,6 @@ export function AddItemSheet<
           </BottomSheetScrollView>
         )}
       </View>
-
-      {/* Mounted only while open — reportVisible is only ever cleared by
-          onDismiss (which gorhom fires after the close animation completes),
-          so gating the mount on the same flag can't cut off that animation.
-          Avoids paying useStandardBottomSheet's mount cost (Reanimated shared
-          value + derived value + animated reaction) for a rarely-used,
-          secondary flow that's always mounted alongside the primary sheet. */}
-      {!!reportVisible && (
-        <ReportItemSheet
-          visible={reportVisible}
-          candidates={autocomplete.displayItems.map(item => ({
-            id: item.id,
-            name: item.name,
-            imageUrl: item.imageUrl,
-            brandName: item.brands?.[0]?.name,
-          }))}
-          onDismiss={() => setReportVisible(false)}
-        />
-      )}
     </BottomSheetModal>
   );
 }

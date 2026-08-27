@@ -308,6 +308,7 @@
     "urlScheme": "URL-ja duhet të fillojë me http:// ose https://",
     "dateFormat": "Data duhet të jetë në formatin VVVV-MM-DD",
     "dateInvalid": "Shkruaj një datë të vlefshme",
-    "dateUnreasonable": "Shkruaj një datëlindje të arsyeshme"
+    "dateUnreasonable": "Shkruaj një datëlindje të arsyeshme",
+    "invalidVisibility": "Zgjidh një opsion të vlefshëm dukshmërie"
   }
 }

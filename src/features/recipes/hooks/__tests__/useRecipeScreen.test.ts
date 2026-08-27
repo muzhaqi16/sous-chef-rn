@@ -4,7 +4,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import { useRecipeCacheStore } from '#/store/useRecipeCacheStore';
+import { useRecipeCacheStore } from '#features/recipes/store/useRecipeCacheStore';
 import { SearchRecipesDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeScreen } from '../useRecipeScreen';
 

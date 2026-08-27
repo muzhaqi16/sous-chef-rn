@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { spoonacularService } from '#/services/recipeApi/SpoonacularService';
 import type { RecipeInformation } from '#/services/recipeApi/types';
-import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
+import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
 import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 

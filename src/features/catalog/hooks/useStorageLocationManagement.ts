@@ -1,5 +1,6 @@
+import type { ApolloCache } from '@apollo/client';
 import { toastService } from '#/services/toastService';
-import { useMutation, useQuery } from '@apollo/client/react';
+import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import {
   GetStorageLocationsDocument,
   UpdateStorageLocationDocument,
@@ -10,12 +11,18 @@ import {
 import { type UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import {
+  createAddToQueryConnectionUpdater,
+  createAddToParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
+import {
+  updateEntityFieldsLocalFirst,
+  writeEntityFields,
+} from '#/apollo/utils/localFirstFields';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#hooks/app/useBlocksCacheMissQueries';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 
@@ -42,6 +49,53 @@ type FlatStorageLocation =
 type StorageLocationTreeNode = FlatStorageLocation & {
   childLocations: StorageLocationTreeNode[];
 };
+
+/**
+ * The two connections a storage location lives in: the screen's flat
+ * `storageLocations` query and PantryMain's `Pantry.storageLocationsConnection`.
+ * Both writers are module-level so each caller's try body stays a single plain
+ * call — a value block inside a try bails the whole hook out of the React
+ * Compiler.
+ */
+const removeFromStorageLocationsQuery = createRemoveFromQueryConnectionUpdater(
+  'storageLocations',
+  'StorageLocation',
+);
+const removeFromPantryLocations = createRemoveFromParentConnectionUpdater(
+  'Pantry',
+  'storageLocationsConnection',
+  'StorageLocation',
+);
+const addToStorageLocationsQuery =
+  createAddToQueryConnectionUpdater<FlatStorageLocation>(
+    'storageLocations',
+    'StorageLocation',
+  );
+const addToPantryLocations =
+  createAddToParentConnectionUpdater<FlatStorageLocation>(
+    'Pantry',
+    'storageLocationsConnection',
+    'StorageLocation',
+  );
+
+function removeLocationFromCaches(
+  cache: ApolloCache,
+  id: string,
+  pantryId: string | undefined,
+): void {
+  if (pantryId) removeFromPantryLocations(cache, pantryId, id);
+  removeFromStorageLocationsQuery(cache, id, { evictItem: true });
+}
+
+function restoreLocationToCaches(
+  cache: ApolloCache,
+  location: FlatStorageLocation,
+  pantryId: string | undefined,
+): void {
+  addToStorageLocationsQuery(cache, location, { position: 'end' });
+  if (pantryId)
+    addToPantryLocations(cache, pantryId, location, { position: 'end' });
+}
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -133,20 +187,13 @@ export function useStorageLocationManagement(
     pantryId,
   );
 
-  // Creating a location IS offline-capable — the server links-or-creates by
-  // name, so a replay converges. Editing one is still online-only, and the
-  // binding reason is DELETE, not the absence of an `idempotencyKey`: update
-  // and set-default write absolute fields on a row keyed by `id`, so replaying
-  // either lands the same state twice. A replayed delete does not — the row is
-  // already gone, the server answers `NotFoundError`, and
-  // `classifyReplayResult` reads any non-IDEMPOTENT_REPLAY error member as
-  // `'rejected'`, so a lost response on a committed delete surfaces to the user
-  // as a permanent failure for something that actually worked. Migrating the
-  // three together needs the queue to treat "delete target absent" as
-  // convergence, which is a decision about replay semantics app-wide.
-  // Until then all three stay gated, surfaced as `isApiUnavailable` for the
-  // screen to disable on.
-  const isApiUnavailable = useIsApiUnavailable();
+  const client = useApolloClient();
+
+  // Every write here is offline-capable. Update and set-default write absolute
+  // fields on a row keyed by its existing `id`, so a replay lands the same state
+  // twice; delete converges server-side (`converged: true` when the row is
+  // already gone, `NotFoundError` only for a target that never existed), so a
+  // replayed delete is a success rather than a permanent failure.
 
   // Errors surfaced via toast in updateLocation below (toastResolvedError for a
   // resolved error member/transport error; the executeMutation handler for a
@@ -155,47 +202,10 @@ export function useStorageLocationManagement(
     UpdateStorageLocationDocument,
   );
 
-  const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
-    update: (cache, { data }, { variables }) => {
-      if (
-        data?.deleteStorageLocation?.__typename !==
-          'DeleteStorageLocationPayload' ||
-        !variables ||
-        !homeId
-      ) {
-        return;
-      }
-
-      try {
-        // Remove from PantryMain's filter tabs before evicting the entity
-        if (pantryId) {
-          const removeFromPantryLocations =
-            createRemoveFromParentConnectionUpdater(
-              'Pantry',
-              'storageLocationsConnection',
-              'StorageLocation',
-            );
-          removeFromPantryLocations(cache, pantryId, variables.input.id);
-        }
-
-        const removeFromStorageLocationsCache =
-          createRemoveFromQueryConnectionUpdater(
-            'storageLocations',
-            'StorageLocation',
-          );
-        removeFromStorageLocationsCache(cache, variables.input.id, {
-          evictItem: true,
-        });
-      } catch (cacheError) {
-        // Refetching resyncs the list rather than leaving it half-updated.
-        errorService.reportError(cacheError, {
-          operation: 'Cache update failed for deleteStorageLocation:',
-        });
-        refetch?.();
-      }
-    },
-    // Errors surfaced via toast in deleteLocation below — no onError.
-  });
+  // No `update` callback: the removal happens eagerly in `deleteLocation` so it
+  // is visible offline too, and running it again on the response would just
+  // re-evict an already-evicted entity. Errors surface via toast there.
+  const [deleteMutation] = useMutation(DeleteStorageLocationDocument);
 
   // SetDefault returns the updated location; Apollo auto-normalizes by id. Errors
   // surfaced via toast in setDefaultLocation below — no onError.
@@ -207,67 +217,130 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    // The input's field names ARE the StorageLocation field names, so the
+    // change can be written straight onto the cached entity and rolled back
+    // from the pre-edit values if the server refuses.
+    const current = locations.find(location => location.id === id);
+    const previous = Object.fromEntries(
+      Object.keys(input)
+        .filter(key => key in (current ?? {}))
+        .map(key => [key, (current as Record<string, unknown>)[key]]),
+    );
+
+    const { persisted, result } = await updateEntityFieldsLocalFirst({
+      cache: client.cache,
+      entity: current ? { __typename: 'StorageLocation', id } : undefined,
+      updates: input,
+      previous,
+      logLabel: 'Update Storage Location',
+      mutate: () =>
+        updateMutation({
+          variables: { input: { ...input, id } },
+          context: { localFirst: true },
+        }),
+    });
+
+    if (!persisted) {
+      toastResolvedError(
+        (result?.data as { updateStorageLocation?: unknown } | undefined)
+          ?.updateStorageLocation as Parameters<typeof toastResolvedError>[0],
+      );
       return false;
     }
 
-    let result;
-    try {
-      result = await updateMutation({ variables: { input: { ...input, id } } });
-    } catch {
-      toastService.error(t('errors.codes.genericRetry'));
-    }
-    if (!result) return false;
-    const payload = result.data?.updateStorageLocation;
-    if (payload?.__typename === 'UpdateStorageLocationPayload') {
-      return payload.storageLocation;
-    }
-    toastResolvedError(payload);
-    return false;
+    // Persisted covers BOTH outcomes that keep the edit: the server confirmed
+    // it, or the queue took it. The only consumer reads truthiness.
+    return true;
   };
 
   const deleteLocation = async (id: string) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
-      return false;
+    // Snapshot before removing: a refusal has to put the row back, and once the
+    // entity is evicted the cache can no longer describe it.
+    const removed = locations.find(location => location.id === id);
+
+    try {
+      removeLocationFromCaches(client.cache, id, pantryId);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Delete Storage Location (optimistic)',
+      });
     }
 
     let result;
     try {
-      result = await deleteMutation({ variables: { input: { id } } });
-    } catch {
-      toastService.error(t('errors.codes.genericRetry'));
+      result = await deleteMutation({
+        variables: { input: { id } },
+        context: { localFirst: true },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Delete Storage Location',
+      });
     }
-    if (!result) return false;
-    const payload = result.data?.deleteStorageLocation;
-    if (payload?.__typename === 'DeleteStorageLocationPayload') {
-      toastService.success(t('success.storageLocationDeleted'));
-      return true;
+
+    if (classifyCreateResult(result) === 'rejected') {
+      if (removed) {
+        try {
+          restoreLocationToCaches(client.cache, removed, pantryId);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected storage-location delete',
+          });
+        }
+      }
+      toastResolvedError(result?.data?.deleteStorageLocation);
+      return false;
     }
-    toastResolvedError(payload);
-    return false;
+
+    toastService.success(t('success.storageLocationDeleted'));
+    return true;
   };
 
   const setDefaultLocation = async (id: string) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    // Default is exclusive: the server clears the previous holder, so the cache
+    // has to as well or two rows read as default until the next fetch.
+    const previousDefault = locations.find(
+      location => location.isDefault && location.id !== id,
+    );
+
+    const { persisted, result } = await updateEntityFieldsLocalFirst({
+      cache: client.cache,
+      entity: { __typename: 'StorageLocation', id },
+      updates: { isDefault: true },
+      previous: { isDefault: false },
+      logLabel: 'Set Default Storage Location',
+      mutate: async () => {
+        if (previousDefault) {
+          writeEntityFields(
+            client.cache,
+            { __typename: 'StorageLocation', id: previousDefault.id },
+            { isDefault: false },
+          );
+        }
+        return setDefaultMutation({
+          variables: { input: { id } },
+          context: { localFirst: true },
+        });
+      },
+    });
+
+    if (!persisted) {
+      if (previousDefault) {
+        writeEntityFields(
+          client.cache,
+          { __typename: 'StorageLocation', id: previousDefault.id },
+          { isDefault: true },
+        );
+      }
+      toastResolvedError(
+        (result?.data as { markStorageLocationAsDefault?: unknown } | undefined)
+          ?.markStorageLocationAsDefault as Parameters<
+          typeof toastResolvedError
+        >[0],
+      );
       return false;
     }
-
-    let result;
-    try {
-      result = await setDefaultMutation({ variables: { input: { id } } });
-    } catch {
-      toastService.error(t('errors.codes.genericRetry'));
-    }
-    if (!result) return false;
-    const payload = result.data?.markStorageLocationAsDefault;
-    if (payload?.__typename === 'MarkStorageLocationAsDefaultPayload') {
-      return payload.storageLocation;
-    }
-    toastResolvedError(payload);
-    return false;
+    return true;
   };
 
   // Preserve data even when query fails to prevent cascade failures
@@ -288,8 +361,6 @@ export function useStorageLocationManagement(
     loading,
     initialLoading: !data && loading,
     offline: networkBlocked && !data,
-    /** Editing is online-only — disable the controls rather than let the tap fail. */
-    isApiUnavailable,
     creating,
     updating,
     error,

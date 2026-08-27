@@ -1,13 +1,35 @@
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { ApolloCache } from '@apollo/client';
 import {
   DeleteRecipeFolderDocument,
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { toastService } from '#/services/toastService';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+
+/**
+ * Read / write the folder list. Module-level so each caller's try body stays a
+ * single plain call — a value block inside a try bails the whole hook out of
+ * the React Compiler.
+ */
+function readFolders(cache: ApolloCache): string[] | undefined {
+  return (
+    cache.readQuery<SavedRecipeFoldersQuery>({
+      query: SavedRecipeFoldersDocument,
+    })?.savedRecipeFolders ?? undefined
+  );
+}
+
+function writeFolders(cache: ApolloCache, folders: string[]): void {
+  cache.writeQuery<SavedRecipeFoldersQuery>({
+    query: SavedRecipeFoldersDocument,
+    data: { __typename: 'Query', savedRecipeFolders: folders },
+  });
+}
 
 /**
  * Hook for folder management actions (rename, delete)
@@ -17,6 +39,7 @@ import { toastService } from '#/services/toastService';
  */
 export function useFolderActions() {
   const { t } = useTranslation();
+  const client = useApolloClient();
   const [loading, setLoading] = useState(false);
 
   const [deleteRecipeFolderMutation] = useMutation(DeleteRecipeFolderDocument, {
@@ -38,44 +61,40 @@ export function useFolderActions() {
 
     setLoading(true);
 
+    // Rename the folder in the cache BEFORE firing so it survives a queued
+    // (offline / API-down) call; a refusal restores the snapshot. Replaying is
+    // safe: the old folder is already gone, which the server converges.
+    const previousFolders = readFolders(client.cache);
+    if (previousFolders) {
+      writeFolders(
+        client.cache,
+        previousFolders.map(f => (f === oldName ? newName : f)),
+      );
+    }
+
     let result;
     try {
       result = await deleteRecipeFolderMutation({
         variables: { input: { folder: oldName, moveTo: newName } },
-        update(cache) {
-          const existing = cache.readQuery<SavedRecipeFoldersQuery>({
-            query: SavedRecipeFoldersDocument,
-          });
-          if (existing?.savedRecipeFolders) {
-            cache.writeQuery<SavedRecipeFoldersQuery>({
-              query: SavedRecipeFoldersDocument,
-              data: {
-                __typename: 'Query',
-                savedRecipeFolders: existing.savedRecipeFolders.map(f =>
-                  f === oldName ? newName : f,
-                ),
-              },
-            });
-          }
-        },
+        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'renameFolder' });
-      toastService.error(t('recipes.renameFolderFailedRetry'));
     }
 
     setLoading(false);
 
-    if (!result) return false;
-
-    const payload = result.data?.deleteRecipeFolder;
-    if (payload?.__typename === 'DeleteRecipeFolderPayload') {
-      toastService.success(t('recipes.folderRenamed', { oldName, newName }));
-      return true;
+    if (classifyCreateResult(result) === 'rejected') {
+      if (previousFolders) writeFolders(client.cache, previousFolders);
+      const rejected = result?.data?.deleteRecipeFolder;
+      const reason =
+        rejected && 'message' in rejected ? rejected.message : null;
+      toastService.error(reason ?? t('recipes.renameFolderFailedRetry'));
+      return false;
     }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? t('recipes.renameFolderFailed'));
-    return false;
+
+    toastService.success(t('recipes.folderRenamed', { oldName, newName }));
+    return true;
   };
 
   /**
@@ -87,44 +106,37 @@ export function useFolderActions() {
 
     setLoading(true);
 
+    const previousFolders = readFolders(client.cache);
+    if (previousFolders) {
+      writeFolders(
+        client.cache,
+        previousFolders.filter(f => f !== folderName),
+      );
+    }
+
     let result;
     try {
       result = await deleteRecipeFolderMutation({
         variables: { input: { folder: folderName } },
-        update(cache) {
-          const existing = cache.readQuery<SavedRecipeFoldersQuery>({
-            query: SavedRecipeFoldersDocument,
-          });
-          if (existing?.savedRecipeFolders) {
-            cache.writeQuery<SavedRecipeFoldersQuery>({
-              query: SavedRecipeFoldersDocument,
-              data: {
-                __typename: 'Query',
-                savedRecipeFolders: existing.savedRecipeFolders.filter(
-                  f => f !== folderName,
-                ),
-              },
-            });
-          }
-        },
+        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'deleteFolder' });
-      toastService.error(t('recipes.deleteFolderFailedRetry'));
     }
 
     setLoading(false);
 
-    if (!result) return false;
-
-    const payload = result.data?.deleteRecipeFolder;
-    if (payload?.__typename === 'DeleteRecipeFolderPayload') {
-      toastService.success(t('recipes.folderDeleted', { folderName }));
-      return true;
+    if (classifyCreateResult(result) === 'rejected') {
+      if (previousFolders) writeFolders(client.cache, previousFolders);
+      const rejected = result?.data?.deleteRecipeFolder;
+      const reason =
+        rejected && 'message' in rejected ? rejected.message : null;
+      toastService.error(reason ?? t('recipes.deleteFolderFailed'));
+      return false;
     }
-    const message = payload && 'message' in payload ? payload.message : null;
-    toastService.error(message ?? t('recipes.deleteFolderFailed'));
-    return false;
+
+    toastService.success(t('recipes.folderDeleted', { folderName }));
+    return true;
   };
 
   return {

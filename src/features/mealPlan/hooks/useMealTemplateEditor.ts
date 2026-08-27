@@ -36,8 +36,14 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { toastService } from '#/services/toastService';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { updateEntityFieldsLocalFirst } from '#/apollo/utils/localFirstFields';
+import {
+  buildOptimisticTemplateItem,
+  addTemplateItemToCache,
+  removeTemplateItemFromCache,
+  readTemplateItem,
+} from '#features/mealPlan/utils/optimisticTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
   TemplateCategory,
@@ -122,15 +128,13 @@ export function useMealTemplateEditor() {
   const [updateItemMutation] = useMutation(UpdateTemplateItemDocument);
   const [removeItemMutation] = useMutation(RemoveTemplateItemDocument);
 
-  // The template itself is local-first (create/update above); its ITEMS are
-  // not, and cannot be as things stand: there is no `sync*` twin and no
-  // `idempotencyKey` on these inputs, so a queued replay has no at-most-once
-  // guarantee — a replayed `addItem` would add the line twice. The API's
-  // offline contract permits online-only, provided the client gates it behind
-  // its "API unavailable" state instead of letting the tap fail. Without this,
-  // the builder let you create a template offline and then silently fail to
-  // put anything in it.
-  const isApiUnavailable = useIsApiUnavailable();
+  // Items are local-first too now. `AddTemplateItemInput.id` accepts a
+  // client-minted CUID2, so a replayed add resolves to the same row
+  // (`IDEMPOTENT_REPLAY`) instead of adding the line twice; update writes
+  // absolute fields on an existing id; and a replayed remove converges
+  // server-side rather than 404ing. Each writes the cache before firing,
+  // because these mutations return the whole `mealTemplate { items }` and rely
+  // on the response to move anything on screen.
 
   // Returns the created template's id (for navigation) or null on failure.
   const createTemplate = async (
@@ -281,64 +285,129 @@ export function useMealTemplateEditor() {
   };
 
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
-      return false;
+    const id = generateEntityId();
+    const optimisticItem = buildOptimisticTemplateItem(client.cache, id, input);
+
+    try {
+      addTemplateItemToCache(client.cache, input.templateId, optimisticItem);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Add Template Item (optimistic)',
+      });
     }
 
     let result;
     try {
-      result = await addItemMutation({ variables: { input } });
+      result = await addItemMutation({
+        variables: { input: { ...input, id } },
+        context: { localFirst: true },
+      });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Add Template Item error:',
       });
     }
-    if (!result) return false;
-    return !alertIfRejected(result, t('mealTemplateBuilder.failedToAddItem'));
+
+    if (classifyCreateResult(result) === 'rejected') {
+      try {
+        removeTemplateItemFromCache(client.cache, input.templateId, id);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected template-item add',
+        });
+      }
+      alertIfRejected(result, t('mealTemplateBuilder.failedToAddItem'));
+      return false;
+    }
+    return true;
   };
 
   const updateItem = async (
     input: UpdateTemplateItemInput,
   ): Promise<boolean> => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
+    const { id, meal, ...flatFields } = input;
+    const previousItem = readTemplateItem(client.cache, id);
+    // `meal` is an @oneOf ref, not a flat field — the row shows it as
+    // `customMealName` / `recipe`, so map it rather than writing it through.
+    const updates = {
+      ...flatFields,
+      ...(meal ? { customMealName: meal.customMealName ?? null } : {}),
+    };
+
+    const { persisted, result } = await updateEntityFieldsLocalFirst({
+      cache: client.cache,
+      entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
+      updates,
+      previous: Object.fromEntries(
+        Object.keys(updates).map(key => [
+          key,
+          (previousItem as Record<string, unknown> | null)?.[key],
+        ]),
+      ),
+      logLabel: 'Update Template Item',
+      mutate: () =>
+        updateItemMutation({
+          variables: { input },
+          context: { localFirst: true },
+        }),
+    });
+
+    if (!persisted) {
+      alertIfRejected(result, t('mealTemplateBuilder.failedToSaveItem'));
       return false;
     }
-
-    let result;
-    try {
-      result = await updateItemMutation({ variables: { input } });
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: 'Update Template Item error:',
-      });
-    }
-    if (!result) return false;
-    return !alertIfRejected(result, t('mealTemplateBuilder.failedToSaveItem'));
+    return true;
   };
 
-  const removeItem = async (itemId: string): Promise<boolean> => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
-      return false;
+  /**
+   * @param templateId - the parent, needed to take the row out of its `items`
+   *   list before the server answers (and to put it back on a refusal).
+   */
+  const removeItem = async (
+    itemId: string,
+    templateId: string,
+  ): Promise<boolean> => {
+    // Snapshot before evicting: a refusal has to put the row back, and once the
+    // entity is gone the cache can no longer describe it.
+    const removed = readTemplateItem(client.cache, itemId);
+    const parentTemplateId = templateId;
+
+    if (parentTemplateId) {
+      try {
+        removeTemplateItemFromCache(client.cache, parentTemplateId, itemId);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Remove Template Item (optimistic)',
+        });
+      }
     }
 
     let result;
     try {
       result = await removeItemMutation({
         variables: { input: { id: itemId } },
+        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Remove Template Item error:',
       });
     }
-    if (!result) return false;
-    return !alertIfRejected(
-      result,
-      t('mealTemplateBuilder.failedToRemoveItem'),
-    );
+
+    if (classifyCreateResult(result) === 'rejected') {
+      if (removed && parentTemplateId) {
+        try {
+          addTemplateItemToCache(client.cache, parentTemplateId, removed);
+        } catch (cacheError) {
+          errorService.reportError(cacheError, {
+            operation: 'Revert rejected template-item remove',
+          });
+        }
+      }
+      alertIfRejected(result, t('mealTemplateBuilder.failedToRemoveItem'));
+      return false;
+    }
+    return true;
   };
 
   return {
@@ -351,6 +420,5 @@ export function useMealTemplateEditor() {
     updating,
     addingItem,
     /** Template ITEM edits are online-only — disable the controls, don't fail the tap. */
-    itemEditsUnavailable: isApiUnavailable,
   };
 }
