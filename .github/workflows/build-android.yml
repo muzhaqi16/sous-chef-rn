@@ -87,6 +87,14 @@ jobs:
         with:
           clean: true
 
+      # The runner image's own Node is older than package.json's `engines`
+      # floor, and `scripts/` uses builtins that only exist from Node 22
+      # (`fs.globSync`). Pin it as every other job in every workflow does.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Detect Android SDK and Java paths
         run: |
           if [ "$(uname)" = "Darwin" ]; then
