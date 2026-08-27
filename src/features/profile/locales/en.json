@@ -43,8 +43,6 @@
     "slowestScreens": "Slowest Screen Transitions",
     "slowestScreensSubtitle": "Screens with highest average interactive time",
     "screen": "Screen",
-    "maxInteractive": "Max Interactive",
-    "avgInteractive": "Avg Interactive",
     "memoryUsage": "Memory Usage",
     "current": "Current",
     "used": "Used",

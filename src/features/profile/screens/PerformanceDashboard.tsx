@@ -521,7 +521,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderAvg}
                 >
-                  {t('performance.maxInteractive')}
+                  {t('performance.avg')}
                 </Text>
                 <Text
                   size="xs"
@@ -530,7 +530,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderMax}
                 >
-                  {t('performance.avgInteractive')}
+                  {t('performance.max')}
                 </Text>
                 <Text
                   size="xs"
@@ -552,10 +552,10 @@ export const PerformanceDashboard: React.FC = () => {
                     {metric.screenName}
                   </Text>
                   <Text size="sm" align="right" style={styles.tableCellAvg}>
-                    {formatTime(metric.maxInteractiveTime)}
+                    {formatTime(metric.avgInteractiveTime)}
                   </Text>
                   <Text size="sm" align="right" style={styles.tableCellMax}>
-                    {formatTime(metric.avgInteractiveTime)}
+                    {formatTime(metric.maxInteractiveTime)}
                   </Text>
                   <Text size="sm" align="right" style={styles.tableCellCount}>
                     {metric.transitionCount}
