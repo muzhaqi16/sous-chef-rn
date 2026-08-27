@@ -4,6 +4,7 @@
 #import <hermes/hermes.h>
 #import <jsi/jsi.h>
 
+#include <exception>
 #include <string>
 
 /**
@@ -103,9 +104,16 @@ RCT_EXPORT_BLOCKING_SYNCHRONOUS_METHOD(startProfiling)
   if (api == nullptr) {
     return @NO;
   }
-  @try {
+  // `catch (...)`, NOT `@catch (NSException *)`. Hermes/JSI throw C++ —
+  // `std::runtime_error`, `jsi::JSINativeException` — and an Objective-C
+  // `@catch` does not match those: the throw unwinds straight past it. This is
+  // called from the first lines of the bundle, so an unmatched throw here is
+  // `std::terminate` during cold start: the instrument killing the launch it
+  // was added to measure. The Kotlin twin is correct already because
+  // `runCatching` really is a catch-all.
+  try {
     api->enableSamplingProfiler();
-  } @catch (NSException *exception) {
+  } catch (...) {
     return @NO;
   }
   return @YES;
@@ -137,24 +145,36 @@ RCT_EXPORT_METHOD(stopProfiling
     return;
   }
 
-  // Guarded, and the profiler disabled regardless of whether the dump worked.
-  // An uncaught throw here would terminate the process AND leave sampling on,
-  // perturbing every later measurement in the session — the Kotlin side wraps
-  // the same recovery in `runCatching`.
-  @try {
+  // Guarded with a C++ `catch`, and the profiler disabled regardless of whether
+  // the dump worked. `dumpSampledTraceToFile` throws C++ — `std::system_error`
+  // from `llvh::raw_fd_ostream` when Documents is read-only or full, or a
+  // `jsi::JSINativeException` — and `@catch (NSException *)` matches none of
+  // them, so the guard that was here caught nothing: the throw unwound past it,
+  // terminating the process AND leaving sampling on, while `resolve`/`reject`
+  // were never called and the JS promise hung forever. The Kotlin side gets
+  // this right with `runCatching`.
+  try {
     api->dumpSampledTraceToFile(std::string(path.UTF8String));
-  } @catch (NSException *exception) {
-    @try {
+  } catch (const std::exception &e) {
+    try {
       api->disableSamplingProfiler();
-    } @catch (NSException *ignored) {
+    } catch (...) {
     }
-    reject(@"profile_write_failed", exception.reason ?: @"dump failed", nil);
+    reject(@"profile_write_failed",
+           [NSString stringWithUTF8String:e.what()] ?: @"dump failed", nil);
+    return;
+  } catch (...) {
+    try {
+      api->disableSamplingProfiler();
+    } catch (...) {
+    }
+    reject(@"profile_write_failed", @"dump failed", nil);
     return;
   }
 
-  @try {
+  try {
     api->disableSamplingProfiler();
-  } @catch (NSException *ignored) {
+  } catch (...) {
   }
   resolve(path);
 }

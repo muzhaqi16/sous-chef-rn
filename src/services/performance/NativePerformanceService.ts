@@ -16,6 +16,7 @@ import { StartupMark } from '#/native/StartupMark';
 import {
   isStartupProfilerArmed,
   STARTUP_PROFILE_FILENAME,
+  STARTUP_WINDOW_MS,
 } from './startupProfiling';
 import {
   captureStartupProfile,
@@ -255,9 +256,19 @@ export const NativePerformanceService = {
     reportedNativeLaunch = false;
     reportedBundleLoad = false;
     reportedContentAppeared = false;
-    reportedFullyDrawn = false;
-    sawInteractiveGate = false;
     observedMarks.clear();
+
+    // `reportedFullyDrawn` and `sawInteractiveGate` are deliberately NOT reset.
+    // They are scoped to the PROCESS, like the origin they are measured against
+    // (`__APP_START_TIMESTAMP`, which nothing clears). Resetting them while the
+    // origin stood made a remount — App unmount, Fast Refresh, any remount of
+    // the hook that owns this cleanup — emit a second `app_fully_drawn_ms`
+    // measured from the original JS entry, i.e. minutes of session time in a
+    // series documented as at most once per process; clearing the gate flag
+    // additionally let a re-fired run report a launch that DID stop at sign-in
+    // as though it had not. Between no measurement after a remount and a wrong
+    // one, only the first is acceptable. `useStartupInit.ts` makes the same
+    // choice for `reportedStartupDuration`.
   },
 
   /**
@@ -284,6 +295,30 @@ export const NativePerformanceService = {
     if (reportedFullyDrawn || !startTs) return;
     reportedFullyDrawn = true;
 
+    const elapsed = Date.now() - startTs;
+
+    // Past the window this is not a launch any more. `HomeTabs` is lazy, so at
+    // cold start only the Pantry tab mounts — the other two instrumented lists
+    // can ONLY latch after a navigation, and `__APP_START_TIMESTAMP` is never
+    // cleared. Without this bound, opening the shopping list twenty seconds in
+    // wrote ~20,000 ms into the same series as ~2,000 ms launches.
+    //
+    // Counted rather than dropped in silence: an absent value and an excluded
+    // one read identically on a dashboard, and the rate here is the evidence
+    // for whether `STARTUP_WINDOW_MS` is set right.
+    if (elapsed > STARTUP_WINDOW_MS) {
+      Telemetry.increment('startup_window_exceeded_total');
+      logger.info(
+        'app_fully_drawn_ms not emitted: outside the startup window',
+        {
+          elapsed,
+          windowMs: STARTUP_WINDOW_MS,
+        },
+      );
+      StartupMark.reportFullyDrawn();
+      return;
+    }
+
     // Keyed on whether the profiler ARMED, not on the build flag. Both
     // platforms can profile, but neither always succeeds — so a flagged build
     // that armed nothing would otherwise lose the metric and gain no trace.
@@ -301,12 +336,26 @@ export const NativePerformanceService = {
       // cheaper than a dimension everything downstream has to learn.
       logger.info('app_fully_drawn_ms suppressed: launch required user input');
     } else {
-      Telemetry.histogram('app_fully_drawn_ms', Date.now() - startTs);
+      Telemetry.histogram('app_fully_drawn_ms', elapsed);
     }
 
     // Same moment, reported to the platform's own tooling — Android only.
     // Fires either way: it is the marker, not the measurement.
     StartupMark.reportFullyDrawn();
+  },
+
+  /**
+   * Test seam for the two PROCESS-scoped startup latches.
+   *
+   * Deliberately separate from `cleanup()`: production teardown must not reset
+   * these, or a remount re-emits a once-per-process metric measured from the
+   * original JS entry (see the note in `cleanup`). A test needs a fresh process
+   * per case and has no other way to get one, so it says so explicitly here
+   * rather than borrowing a production path that must not do this.
+   */
+  resetStartupLatchesForTesting() {
+    reportedFullyDrawn = false;
+    sawInteractiveGate = false;
   },
 
   /**

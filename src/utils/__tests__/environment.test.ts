@@ -170,6 +170,28 @@ describe('environment', () => {
         ),
       );
     });
+
+    it('the shared mock default agrees with the real function under Jest', () => {
+      // A globally auto-mocked module that INVERTS the thing it stands in for
+      // disables coverage everywhere without failing anything. This mock
+      // defaulted to `false` while the real function returns `true` under Jest
+      // (`__DEV__` is defined true by @react-native/jest-preset), so every
+      // suite that rendered `useStartupInit` without an explicit override
+      // skipped `injectDetoxLaunchArgs` entirely — a renamed launch arg or a
+      // parse change inside it passed CI untouched, which is how the Detox
+      // auth break in deaf9d4c reached main.
+      //
+      // Compared against the REAL function rather than asserted as a literal,
+      // so changing the real gate's behaviour under test fails here instead of
+      // silently re-opening the gap.
+      const real = Environment.allowsLaunchArgAuth();
+
+      const mocked = jest.requireActual<{
+        Environment: { allowsLaunchArgAuth: () => boolean };
+      }>('../__mocks__/environment');
+
+      expect(mocked.Environment.allowsLaunchArgAuth()).toBe(real);
+    });
   });
 
   describe('getWebAppUrl', () => {

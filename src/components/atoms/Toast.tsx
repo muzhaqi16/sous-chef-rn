@@ -119,20 +119,86 @@ const sameType = (a: ToastOptions, b: ToastOptions) =>
 const supersedes = (older: ToastOptions, newer: ToastOptions) =>
   older.supersede === true && newer.supersede === true;
 
+/**
+ * The visible toast, kept as its own component rather than inlined into
+ * `ToastProvider`.
+ *
+ * The split is deliberate: this owns the `styles.useVariants({ type })` read,
+ * and the provider owns `showToast`, the value published through
+ * `ToastContext`. Keeping the variant-reading render work off the provider
+ * means anything done to THIS component cannot reach that published value — a
+ * locally-declared arrow whose only free variable is the stable `setQueue`, and
+ * which the compiler keeps reference-stable for all seven `useToast()`
+ * consumers. Losing that identity rebuilt `panGesture` so the
+ * `GestureDetector` re-attached, and stored a fresh closure on the
+ * module-level dispatch singleton, on each of the several provider renders per
+ * toast (show, the render-phase `setDisplayed`, auto-dismiss, queue pop).
+ *
+ * This component previously carried `'use no memo'`: its container style was
+ * cached on values that did not move when `type` did, so a success toast drew
+ * the DEFAULT near-white container behind correctly-tinted green text. That was
+ * the inverted Babel plugin order, fixed at the root in
+ * `scripts/babel/unistyles-scope-crawl.js`; the directive is gone and the
+ * component is compiled and memoized like any other.
+ */
+function ToastCard({
+  message,
+  type,
+  actionLabel,
+  onActionPress,
+  interactive,
+  topInset,
+  animatedStyle,
+}: {
+  message?: string;
+  type: ToastType;
+  actionLabel?: string;
+  onActionPress: () => void;
+  interactive: boolean;
+  topInset: number;
+  animatedStyle: ReturnType<typeof useAnimatedStyle>;
+}) {
+  const iconName = TOAST_ICONS[type];
+  styles.useVariants({ type: type === 'default' ? undefined : type });
+
+  return (
+    <Animated.View
+      testID={`toast-${type}`}
+      pointerEvents={interactive ? 'auto' : 'none'}
+      // Safe-area offset applied as layout, not animation — see the entry
+      // effect. `marginTop` (spacing.md) is the gap below it.
+      style={[styles.toastContainer, { top: topInset }, animatedStyle]}
+    >
+      {iconName ? (
+        <ThemedToastIcon
+          name={iconName}
+          size={18}
+          style={styles.icon}
+          uniProps={t => ({
+            color:
+              type !== 'default' && type in t.colors.alertBanner
+                ? t.colors.alertBanner[
+                    type as keyof typeof t.colors.alertBanner
+                  ].text
+                : t.colors.textInverse,
+          })}
+        />
+      ) : null}
+      <Text style={styles.toastText} testID="toast-message" numberOfLines={2}>
+        {message}
+      </Text>
+      {actionLabel ? (
+        <Pressable onPress={onActionPress} style={styles.actionButton}>
+          <Text style={styles.actionText}>{actionLabel}</Text>
+        </Pressable>
+      ) : null}
+    </Animated.View>
+  );
+}
+
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // 'use no memo' — REQUIRED. The container never unmounts, so its style is
-  // read inside a React Compiler cache block keyed on values that do not move
-  // when `type` does (see Button.tsx for the full mechanism). The result was a
-  // success toast rendering the DEFAULT container background — near-white in
-  // the dark theme — behind correctly-tinted green text, because `toastText`
-  // happened to sit in a cache block the message change invalidated and
-  // `toastContainer` did not. Barely legible, and the two halves of one toast
-  // disagreeing is the tell. Memoization here is worth nothing: this provider
-  // re-renders once per toast.
-  'use no memo';
-
   const insets = useSafeAreaInsets();
 
   // Updater pattern lets two synchronous showToast() calls coordinate — the
@@ -290,49 +356,19 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const type = displayed?.type ?? 'default';
-  const iconName = TOAST_ICONS[type];
-  styles.useVariants({ type: type === 'default' ? undefined : type });
-
   return (
     <ToastContext.Provider value={showToast}>
       {children}
       <GestureDetector gesture={panGesture}>
-        <Animated.View
-          testID={`toast-${type}`}
-          pointerEvents={current ? 'auto' : 'none'}
-          // Safe-area offset applied as layout, not animation — see the entry
-          // effect. `marginTop` (spacing.md) is the gap below it.
-          style={[styles.toastContainer, { top: insets.top }, animatedStyle]}
-        >
-          {iconName ? (
-            <ThemedToastIcon
-              name={iconName}
-              size={18}
-              style={styles.icon}
-              uniProps={t => ({
-                color:
-                  type !== 'default' && type in t.colors.alertBanner
-                    ? t.colors.alertBanner[
-                        type as keyof typeof t.colors.alertBanner
-                      ].text
-                    : t.colors.textInverse,
-              })}
-            />
-          ) : null}
-          <Text
-            style={styles.toastText}
-            testID="toast-message"
-            numberOfLines={2}
-          >
-            {displayed?.message}
-          </Text>
-          {displayed?.action ? (
-            <Pressable onPress={handleActionPress} style={styles.actionButton}>
-              <Text style={styles.actionText}>{displayed.action.label}</Text>
-            </Pressable>
-          ) : null}
-        </Animated.View>
+        <ToastCard
+          message={displayed?.message}
+          type={displayed?.type ?? 'default'}
+          actionLabel={displayed?.action?.label}
+          onActionPress={handleActionPress}
+          interactive={current != null}
+          topInset={insets.top}
+          animatedStyle={animatedStyle}
+        />
       </GestureDetector>
     </ToastContext.Provider>
   );

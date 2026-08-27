@@ -38,6 +38,8 @@ import {
   reconcileShoppingCreate,
   buildAddItemsReconcileUpdate,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
+import { Controller } from 'react-hook-form';
+import { logValidationErrors } from '#/utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import {
   handleMutationError,
@@ -72,7 +74,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const isEdit = !!itemId;
 
   const {
-    formState: {
+    control,
+    handleSubmit,
+    errors,
+    values: {
       itemName,
       quantityInput,
       unit,
@@ -85,15 +90,13 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       brand,
       brandId,
       netWeight,
-      netWeightUnit,
       netWeightUnitId,
     },
-    updateField,
+    setFieldValue,
     setFromItem,
     buildUnitInput,
     buildDirtyInput,
     parseNetWeightInput,
-    netWeightNeedsUnit,
     hasDirtyFields,
   } = useShoppingListItemForm();
   const [saving, setSaving] = useState(false);
@@ -152,34 +155,34 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Pre-populate item name when adding new item with initial value
   useEffect(() => {
     if (!isEdit && initialItemName) {
-      updateField('itemName', initialItemName);
+      setFieldValue('itemName', initialItemName);
     }
-  }, [isEdit, initialItemName, updateField]);
+  }, [isEdit, initialItemName, setFieldValue]);
 
   // Handle autocomplete item selection
   const handleItemSelect = (item: ItemSuggestion) => {
-    updateField('itemName', item.name);
+    setFieldValue('itemName', item.name);
     if (item.defaultUnit?.symbol) {
-      updateField('unit', item.defaultUnit.symbol);
+      setFieldValue('unit', item.defaultUnit.symbol);
     }
     if (item.defaultUnit?.id) {
-      updateField('selectedUnitId', item.defaultUnit.id);
+      setFieldValue('selectedUnitId', item.defaultUnit.id);
     }
     if (item.category?.name) {
-      updateField('category', item.category.name);
+      setFieldValue('category', item.category.name);
     }
   };
 
   // Handle unit selection from autocomplete
   const handleUnitSelect = (unitId: string | null) => {
-    updateField('selectedUnitId', unitId);
+    setFieldValue('selectedUnitId', unitId);
   };
 
   // The brand field hands back (id, name); the name is kept only when a
   // suggestion was actually picked, so free typing keeps the text as typed.
   const handleBrandSelect = (id: string | null, name: string | null) => {
-    updateField('brandId', id);
-    if (name) updateField('brand', name);
+    setFieldValue('brandId', id);
+    if (name) setFieldValue('brand', name);
   };
 
   // Only the id. `UnitAutocompleteField` writes the SYMBOL through
@@ -188,36 +191,16 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // repopulates the field with nor what the item detail renders. Same shape as
   // `handleUnitSelect` above.
   const handleNetWeightUnitSelect = (id: string | null) => {
-    updateField('netWeightUnitId', id);
+    setFieldValue('netWeightUnitId', id);
   };
 
   const formatPriorityLabel = (option: string) => t(priorityLabelKey(option));
 
-  // Handle form submission
+  // Wrapped in `handleSubmit` at the call site, not here: this body reads
+  // `itemVersionRef.current`, and calling `handleSubmit` during render makes
+  // that a render-time ref read (react-hooks/refs). Same shape as
+  // `PantryItemForm`'s `handleSubmit(handleSave, logValidationErrors)`.
   const handleSave = () => {
-    if (!itemName.trim()) {
-      alertService.alert(t('labels.error'), t('errors.itemNameRequired'));
-      return;
-    }
-
-    if (!quantityInput.trim()) {
-      alertService.alert(
-        t('labels.error'),
-        t('shoppingListScreens.pleaseEnterQuantity'),
-      );
-      return;
-    }
-
-    // Net weight is all-or-nothing — a value without a unit is rejected by the
-    // API on create, so prompt for a unit instead of silently dropping it.
-    if (netWeightNeedsUnit) {
-      alertService.alert(
-        t('labels.error'),
-        t('labels.pleaseSelectAUnitForTheNetWeight'),
-      );
-      return;
-    }
-
     // Skip mutation if no fields changed (edit mode only)
     if (isEdit && !hasDirtyFields) {
       navigation.goBack();
@@ -389,7 +372,11 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
     <FormModal
       title={isEdit ? t('labels.editItem') : t('labels.addItem')}
       onClose={() => navigation.goBack()}
-      onSave={handleSave}
+      // Wrapped in an arrow so the whole submit — including this body's read
+      // of `itemVersionRef.current` — happens on press, not during render.
+      onSave={() => {
+        void handleSubmit(handleSave, logValidationErrors)();
+      }}
       loading={saving}
       testID={modalTestID}
       submitButtonTestID={
@@ -397,36 +384,44 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       }
     >
       {/* Item Name Field - Use autocomplete for new items only */}
-      {isEdit ? (
-        <FormInput
-          label={t('labels.itemName')}
-          required
-          value={itemName}
-          onChangeText={text => updateField('itemName', text)}
-          placeholder={t('shoppingListScreens.itemNamePlaceholder')}
-          autoFocus
-          testID="edit-item-name-input"
-        />
-      ) : (
-        <ItemAutocompleteField
-          variant="modal"
-          label={t('labels.itemName')}
-          value={itemName}
-          onChangeText={text => updateField('itemName', text)}
-          onSelectItem={handleItemSelect}
-          placeholder={t('shoppingListScreens.itemNamePlaceholder')}
-          required
-          autoFocus
-          testID="add-item-name-input"
-        />
-      )}
+      <Controller
+        control={control}
+        name="itemName"
+        render={({ field: { value, onChange } }) =>
+          isEdit ? (
+            <FormInput
+              label={t('labels.itemName')}
+              required
+              error={errors.itemName?.message}
+              value={value}
+              onChangeText={onChange}
+              placeholder={t('shoppingListScreens.itemNamePlaceholder')}
+              autoFocus
+              testID="edit-item-name-input"
+            />
+          ) : (
+            <ItemAutocompleteField
+              variant="modal"
+              label={t('labels.itemName')}
+              error={errors.itemName?.message}
+              value={value}
+              onChangeText={onChange}
+              onSelectItem={handleItemSelect}
+              placeholder={t('shoppingListScreens.itemNamePlaceholder')}
+              required
+              autoFocus
+              testID="add-item-name-input"
+            />
+          )
+        }
+      />
 
       {/* Brand */}
       <BrandAutocompleteField
         variant="modal"
         label={t('labels.brand')}
         value={brand}
-        onChangeText={text => updateField('brand', text)}
+        onChangeText={text => setFieldValue('brand', text)}
         onBrandSelected={handleBrandSelect}
         placeholder={t('shoppingListScreens.brandPlaceholder')}
         testID={isEdit ? 'edit-item-brand-input' : 'add-item-brand-input'}
@@ -437,28 +432,35 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         variant="modal"
         label={t('labels.category')}
         value={category}
-        onChangeText={text => updateField('category', text)}
+        onChangeText={text => setFieldValue('category', text)}
         placeholder={t('labels.eGDairyProduce')}
         categoryType={CategoryType.General}
       />
 
       {/* Quantity + Unit (inline) */}
       <FieldRow>
-        <EditableCounter
-          label={t('labels.quantity')}
-          required
-          value={quantityInput}
-          onChangeText={text => updateField('quantityInput', text)}
-          placeholder="1"
-          testID={
-            isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'
-          }
+        <Controller
+          control={control}
+          name="quantityInput"
+          render={({ field: { value, onChange } }) => (
+            <EditableCounter
+              label={t('labels.quantity')}
+              required
+              error={errors.quantityInput?.message}
+              value={value}
+              onChangeText={onChange}
+              placeholder="1"
+              testID={
+                isEdit ? 'edit-item-quantity-input' : 'add-item-quantity-input'
+              }
+            />
+          )}
         />
         <UnitAutocompleteField
           variant="modal"
           label={t('storageLocationForm.unit')}
           value={unit}
-          onChangeText={text => updateField('unit', text)}
+          onChangeText={text => setFieldValue('unit', text)}
           onUnitSelected={handleUnitSelect}
           placeholder={t('labels.pcsKgEtc')}
           testID={isEdit ? 'edit-item-unit-picker' : 'add-item-unit-picker'}
@@ -470,25 +472,32 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         <FormInput
           label={t('labels.netWeight')}
           value={netWeight}
-          onChangeText={text => updateField('netWeight', text)}
+          onChangeText={text => setFieldValue('netWeight', text)}
           placeholder={t('shoppingListScreens.netWeightPlaceholder')}
           keyboardType="decimal-pad"
           testID={
             isEdit ? 'edit-item-net-weight-input' : 'add-item-net-weight-input'
           }
         />
-        <UnitAutocompleteField
-          variant="modal"
-          label={t('labels.weightUnit')}
-          value={netWeightUnit}
-          onChangeText={text => updateField('netWeightUnit', text)}
-          onUnitSelected={handleNetWeightUnitSelect}
-          placeholder={t('labels.pcsKgEtc')}
-          testID={
-            isEdit
-              ? 'edit-item-net-weight-unit-picker'
-              : 'add-item-net-weight-unit-picker'
-          }
+        <Controller
+          control={control}
+          name="netWeightUnit"
+          render={({ field: { value, onChange } }) => (
+            <UnitAutocompleteField
+              variant="modal"
+              label={t('labels.weightUnit')}
+              error={errors.netWeightUnit?.message}
+              value={value}
+              onChangeText={onChange}
+              onUnitSelected={handleNetWeightUnitSelect}
+              placeholder={t('labels.pcsKgEtc')}
+              testID={
+                isEdit
+                  ? 'edit-item-net-weight-unit-picker'
+                  : 'add-item-net-weight-unit-picker'
+              }
+            />
+          )}
         />
       </FieldRow>
 
@@ -497,7 +506,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         testID={isEdit ? 'edit-item-price-input' : 'add-item-price-input'}
         label={t('shoppingListScreens.estimatedPrice')}
         value={estimatedPrice}
-        onChangeText={text => updateField('estimatedPrice', text)}
+        onChangeText={text => setFieldValue('estimatedPrice', text)}
         placeholder={localizeNumericHint(
           t('shoppingListScreens.estimatedPricePlaceholder'),
         )}
@@ -510,7 +519,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         options={PRIORITY_OPTIONS}
         value={PRIORITY_OPTION_BY_VALUE[priority] ?? 'low'}
         onChange={option =>
-          updateField('priority', PRIORITY_VALUES[option] ?? 0)
+          setFieldValue('priority', PRIORITY_VALUES[option] ?? 0)
         }
         formatLabel={formatPriorityLabel}
       />
@@ -520,10 +529,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         variant="modal"
         label={t('shoppingListScreens.store')}
         value={storeName}
-        onChangeText={text => updateField('storeName', text)}
+        onChangeText={text => setFieldValue('storeName', text)}
         onStoreSelected={(id, name) => {
-          updateField('storeId', id);
-          if (name) updateField('storeName', name);
+          setFieldValue('storeId', id);
+          if (name) setFieldValue('storeName', name);
         }}
         placeholder={t('shoppingListScreens.storePlaceholder')}
         helperText={t('labels.storeSelectHint')}
@@ -533,7 +542,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       <FormInput
         label={t('shoppingListScreens.notes')}
         value={notes}
-        onChangeText={text => updateField('notes', text)}
+        onChangeText={text => setFieldValue('notes', text)}
         placeholder={t('shoppingListScreens.notesPlaceholder')}
         multiline
         numberOfLines={3}

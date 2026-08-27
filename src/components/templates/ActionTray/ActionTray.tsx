@@ -50,6 +50,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
       footer,
       showCloseButton = true,
       enableBackdrop = true,
+      stackBehavior,
     },
     ref,
   ) => {
@@ -233,6 +234,7 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
         enableDynamicSizing={true}
         maxDynamicContentSize={height * 0.7}
         enablePanDownToClose={true}
+        stackBehavior={stackBehavior}
         backdropComponent={NullBackdrop}
         handleComponent={renderHandle}
         footerComponent={renderFooter}

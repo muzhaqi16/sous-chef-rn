@@ -41,6 +41,8 @@
     "check:version-sync": "node scripts/check-version-sync.mjs",
     "check:startup-origin": "node scripts/check-startup-origin.mjs",
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
+    "check:unistyles-variants": "node scripts/check-unistyles-variant-staleness.mjs",
+    "check:compiler-bailouts": "node scripts/check-compiler-bailouts.mjs",
     "e2e:prune": "node scripts/prune-e2e-artifacts.mjs",
     "codegen:watch": "graphql-codegen --watch --config codegen.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p __tests__/tsconfig.json",

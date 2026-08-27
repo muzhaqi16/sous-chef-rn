@@ -22,6 +22,24 @@ export const executeRefreshWithFinally = jest.fn(
   },
 );
 
+/** `onError` is REQUIRED here, matching the real helper — see finallyHelpers.ts. */
+export const executeWriteWithFinally = jest.fn(
+  async (
+    writeFn: () => Promise<unknown>,
+    setPending: (v: boolean) => void,
+    onError: (error: unknown) => void,
+  ): Promise<void> => {
+    setPending(true);
+    try {
+      await writeFn();
+    } catch (error) {
+      onError(error);
+    } finally {
+      setPending(false);
+    }
+  },
+);
+
 export const executeAsyncWithCleanup = jest.fn(
   async (
     fn: () => Promise<void>,

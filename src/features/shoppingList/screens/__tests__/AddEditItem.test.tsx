@@ -13,7 +13,7 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { AddEditItem } from '../AddEditItem';
-import type { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
+import type { ShoppingItemFormData } from '#features/shoppingList/hooks/shoppingItemFormConfig';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -30,54 +30,31 @@ const mockNav = (
   }
 ).useAppNavigation();
 
-// A STATEFUL stub. It was a frozen object with a no-op `updateField`, which
-// made every field on the screen permanently empty — so no test here could
-// observe what a control actually writes, and one asserting it would pass
-// whatever the screen did. `updateField` is still the same spy, so existing
-// call assertions are unaffected; it now also updates the state it reports.
-const mockUpdateField = jest.fn();
+// Delegates to the REAL hook, recording writes on the way through.
+//
+// It used to be a hand-rolled stateful stub of the old API. That is no longer
+// possible: the screen renders its fields through `Controller control={control}`
+// and react-hook-form's `control` is not something a plain object can stand in
+// for. Delegating also means these tests exercise the real yup schema, which is
+// what gates Save — a stub would let an invalid form submit.
+const mockSetFieldValue = jest.fn();
 jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
-  useShoppingListItemForm: () => {
+  useShoppingListItemForm: (
+    ...args: Parameters<
+      typeof import('#features/shoppingList/hooks/useShoppingListItemForm').useShoppingListItemForm
+    >
+  ) => {
+    const actual = jest
+      .requireActual('#features/shoppingList/hooks/useShoppingListItemForm')
+      .useShoppingListItemForm(...args);
     const RN = require('react');
-    const [formState, setFormState] = RN.useState({
-      itemName: '',
-      quantityInput: '1',
-      unit: '',
-      selectedUnitId: null,
-      notes: '',
-      category: '',
-      estimatedPrice: '',
-      priority: 0,
-      storeId: null,
-      storeName: '',
-      brand: '',
-      brandId: null,
-      netWeight: '',
-      netWeightUnit: '',
-      netWeightUnitId: null,
-    });
-
-    // Stable identity: AddEditItem lists `updateField` in an effect's deps, and
-    // a fresh function each render turns that effect into a render loop. The
-    // real hook is stable because the React Compiler memoizes it.
-    const updateField = RN.useCallback((field: string, value: unknown) => {
-      mockUpdateField(field, value);
-      setFormState((prev: Record<string, unknown>) => ({
-        ...prev,
-        [field]: value,
-      }));
+    // Stable identity: AddEditItem lists `setFieldValue` in an effect's deps,
+    // and a fresh function each render turns that effect into a render loop.
+    const setFieldValue = RN.useCallback((field: string, value: unknown) => {
+      mockSetFieldValue(field, value);
+      actual.setFieldValue(field, value);
     }, []);
-
-    return {
-      formState,
-      updateField,
-      setFromItem: jest.fn(),
-      buildUnitInput: jest.fn(() => ({})),
-      buildDirtyInput: jest.fn(() => ({})),
-      parseNetWeightInput: jest.fn(() => undefined),
-      netWeightNeedsUnit: false,
-      hasDirtyFields: false,
-    };
+    return { ...actual, setFieldValue };
   },
 }));
 
@@ -177,14 +154,17 @@ jest.mock(
     ItemAutocompleteField: ({
       label,
       testID,
+      error,
     }: {
       label?: string;
       testID?: string;
+      error?: string;
     }) => {
       const { View, Text } = require('react-native');
       return (
         <View testID={testID}>
           <Text>{label}</Text>
+          {error ? <Text>{error}</Text> : null}
         </View>
       );
     },
@@ -202,12 +182,14 @@ jest.mock(
       label,
       testID,
       value,
+      error,
       onChangeText,
       onUnitSelected,
     }: {
       label?: string;
       testID?: string;
       value?: string;
+      error?: string;
       onChangeText?: (text: string) => void;
       onUnitSelected?: (
         id: string | null,
@@ -221,6 +203,7 @@ jest.mock(
         <View testID={testID}>
           <Text>{label}</Text>
           <Text testID={`${testID}-value`}>{value}</Text>
+          {error ? <Text>{error}</Text> : null}
           <Text
             testID={`${testID}-pick`}
             onPress={() => {
@@ -268,11 +251,23 @@ jest.mock(
   }),
 );
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: ({ label, testID }: { label?: string; testID?: string }) => {
+  // Renders `error` — validation now reports on the field, so a test asserting
+  // a refusal has to be able to see it. The real component paints it as a red
+  // border plus this message.
+  EditableCounter: ({
+    label,
+    testID,
+    error,
+  }: {
+    label?: string;
+    testID?: string;
+    error?: string;
+  }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID={testID}>
         <Text>{label}</Text>
+        {error ? <Text>{error}</Text> : null}
       </View>
     );
   },
@@ -448,38 +443,36 @@ function buildGetShoppingListItemMock(itemId: string): MockedResponse {
   };
 }
 
-const mockUseShoppingListItemForm = (
-  overrides: Partial<
-    Omit<ReturnType<typeof useShoppingListItemForm>, 'formState'>
-  > & {
-    formState?: Partial<
-      ReturnType<typeof useShoppingListItemForm>['formState']
-    >;
-  } = {},
-) => ({
-  updateField: mockUpdateField,
-  setFromItem: jest.fn(),
-  buildUnitInput: jest.fn(() => ({})),
-  buildDirtyInput: jest.fn(() => ({})),
-  parseNetWeightInput: jest.fn(() => undefined),
-  netWeightNeedsUnit: false,
-  hasDirtyFields: false,
-  ...overrides,
-  formState: {
-    itemName: '',
-    quantityInput: '1',
-    unit: '',
-    notes: '',
-    category: '',
-    estimatedPrice: '',
-    brand: '',
-    brandId: null,
-    netWeight: '',
-    netWeightUnit: '',
-    netWeightUnitId: null,
-    ...(overrides.formState ?? {}),
-  },
-});
+/**
+ * Builds a hook IMPLEMENTATION (not a return value) that seeds the real hook.
+ *
+ * It used to return a frozen object standing in for the whole hook. That
+ * cannot work now: the screen renders through `Controller control={control}`,
+ * and react-hook-form's `control` has no plain-object equivalent. Seeding the
+ * real hook keeps these tests honest — Save is gated by the real yup schema,
+ * so a case that expects a refusal gets one for the real reason.
+ *
+ * Use with `.mockImplementation(...)`, not `.mockReturnValue(...)`.
+ */
+const mockUseShoppingListItemForm =
+  (
+    overrides: {
+      values?: Partial<ShoppingItemFormData>;
+      [key: string]: unknown;
+    } = {},
+  ) =>
+  () => {
+    const { values, ...rest } = overrides;
+    const actual = jest
+      .requireActual('#features/shoppingList/hooks/useShoppingListItemForm')
+      .useShoppingListItemForm(values ?? {});
+    const RN = require('react');
+    const setFieldValue = RN.useCallback((field: string, value: unknown) => {
+      mockSetFieldValue(field, value);
+      actual.setFieldValue(field, value);
+    }, []);
+    return { ...actual, setFieldValue, ...rest };
+  };
 
 // Force the next executeWithLoadingState invocation to immediately call its
 // onError callback with the supplied error. Used to exercise the catch path
@@ -505,6 +498,14 @@ describe('AddEditItem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+  });
+
+  // `clearAllMocks` resets call records but NOT a spy's implementation, so a
+  // `jest.spyOn(...).mockImplementation(...)` in one test leaked its seeded
+  // form into every test after it — which is how a case expecting an empty
+  // form got one pre-filled with another test's values.
+  afterEach(() => {
+    jest.restoreAllMocks();
   });
 
   it('renders add item title', () => {
@@ -607,10 +608,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Oats', quantityInput: '1', netWeight: '500' },
-          netWeightNeedsUnit: true,
+          values: { itemName: 'Oats', quantityInput: '1', netWeight: '500' },
         }),
       );
 
@@ -618,10 +618,12 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />);
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please select a unit for the net weight.',
-    );
+    // On the FIELD now, not in a modal: the message names the unit picker the
+    // user has to fill in, and the alert is gone entirely.
+    expect(
+      await screen.findByText('Please select a unit for the net weight.'),
+    ).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
     formSpy.mockRestore();
   });
 
@@ -673,38 +675,36 @@ describe('AddEditItem', () => {
       params: { listId: 'sl1', initialItemName: 'Bread' },
     };
     renderWithApollo(<AddEditItem route={routeWithInitial} />);
-    expect(mockUpdateField).toHaveBeenCalledWith('itemName', 'Bread');
+    expect(mockSetFieldValue).toHaveBeenCalledWith('itemName', 'Bread');
   });
 
-  it('handles save validation for empty item name', async () => {
+  it('reports an empty item name on the field, not in an alert', async () => {
     const user = userEvent.setup();
     renderWithApollo(<AddEditItem route={addRoute} />);
     await user.press(screen.getByTestId('add-item-submit-button'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please enter an item name',
-    );
+
+    expect(await screen.findByText('Please enter an item name')).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
-  it('handles save validation for empty quantity', async () => {
+  it('reports an empty quantity on the field, not in an alert', async () => {
     const user = userEvent.setup();
     jest
       .spyOn(
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '' },
+          values: { itemName: 'Milk', quantityInput: '' },
         }),
       );
 
     renderWithApollo(<AddEditItem route={addRoute} />);
     await user.press(screen.getByTestId('add-item-submit-button'));
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please enter a quantity',
-    );
+
+    expect(await screen.findByText('Please enter a quantity')).toBeTruthy();
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('navigates back when edit mode and no dirty fields', async () => {
@@ -714,9 +714,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1', unit: 'pcs' },
+          values: { itemName: 'Milk', quantityInput: '1', unit: 'pcs' },
           hasDirtyFields: false,
         }),
       );
@@ -735,9 +735,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: {
+          values: {
             itemName: 'Milk',
             quantityInput: '2',
             unit: 'pcs',
@@ -764,9 +764,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: {
+          values: {
             itemName: 'Updated Milk',
             quantityInput: '3',
             unit: 'pcs',
@@ -801,9 +801,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '3' },
+          values: { itemName: 'Milk', quantityInput: '3' },
           buildDirtyInput: jest.fn(() => ({ quantity: '3' })),
           hasDirtyFields: true,
         }),
@@ -831,9 +831,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -853,9 +853,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -882,9 +882,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
           buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
           hasDirtyFields: true,
         }),
@@ -919,9 +919,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -952,9 +952,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -985,9 +985,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -1018,9 +1018,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -1047,9 +1047,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -1073,9 +1073,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: {
+          values: {
             itemName: 'Steak',
             quantityInput: '1',
             unit: 'lb',
@@ -1101,9 +1101,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Bread', quantityInput: '1' },
+          values: { itemName: 'Bread', quantityInput: '1' },
           setFromItem: mockSetFromItem,
         }),
       );
@@ -1126,9 +1126,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
           buildDirtyInput: jest.fn(() => ({ itemName: 'Milk' })),
           hasDirtyFields: true,
         }),
@@ -1157,9 +1157,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
           buildDirtyInput: jest.fn(() => ({
             netWeight: { netWeightUnitId: 'unit-g' },
           })),
@@ -1209,9 +1209,9 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(
+      .mockImplementation(
         mockUseShoppingListItemForm({
-          formState: { itemName: 'Milk', quantityInput: '1' },
+          values: { itemName: 'Milk', quantityInput: '1' },
         }),
       );
 
@@ -1229,7 +1229,7 @@ describe('AddEditItem', () => {
         require('#features/shoppingList/hooks/useShoppingListItemForm'),
         'useShoppingListItemForm',
       )
-      .mockReturnValue(mockUseShoppingListItemForm());
+      .mockImplementation(mockUseShoppingListItemForm());
 
     const routeWithBoth = {
       params: { listId: 'sl1', itemId: 'item1', initialItemName: 'Bread' },
@@ -1237,6 +1237,6 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={routeWithBoth} />, {
       operationMocks: [buildGetShoppingListItemMock('item1')],
     });
-    expect(mockUpdateField).not.toHaveBeenCalledWith('itemName', 'Bread');
+    expect(mockSetFieldValue).not.toHaveBeenCalledWith('itemName', 'Bread');
   });
 });

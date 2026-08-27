@@ -17,6 +17,8 @@ export interface ModalPickerProps {
   onCancel: () => void;
   /** When set, tapping an option only highlights it; a button with this label confirms the selection. */
   confirmLabel?: string;
+  /** Pass `'push'` when the picker opens from inside another bottom sheet — gorhom's default minimizes the host. */
+  stackBehavior?: 'push' | 'switch' | 'replace';
 }
 
 export const ModalPicker: React.FC<ModalPickerProps> = ({
@@ -27,6 +29,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
   onSelect,
   onCancel,
   confirmLabel,
+  stackBehavior,
 }) => {
   const trayRef = useRef<ActionTrayRef>(null);
 
@@ -55,6 +58,7 @@ export const ModalPicker: React.FC<ModalPickerProps> = ({
     <ActionTray
       ref={trayRef}
       title={label}
+      stackBehavior={stackBehavior}
       onClose={onCancel}
       footer={
         confirmLabel ? (

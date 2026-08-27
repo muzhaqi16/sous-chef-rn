@@ -10,12 +10,15 @@ import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { Label } from '#components/atoms/Label';
+import { Text } from '#components/atoms/Text';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
 interface EditableCounterProps {
   label?: string;
   value: string;
   onChangeText: (text: string) => void;
+  /** Validation message, rendered under the counter with a red border, as `FormInput` does. */
+  error?: string;
   placeholder?: string;
   min?: number;
   step?: number;
@@ -42,6 +45,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   label,
   value,
   onChangeText,
+  error,
   placeholder = '1',
   min = 0,
   step = 1,
@@ -59,7 +63,9 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
     ? ThemedBottomSheetTextInput
     : ThemedTextInput;
 
-  styles.useVariants({ focused: isFocused, disabled });
+  // `error` last so an invalid value stays visibly invalid while focused —
+  // the focus ring would otherwise paint over the thing being reported.
+  styles.useVariants({ focused: isFocused, disabled, error: !!error });
 
   const handleIncrement = (e?: GestureResponderEvent) => {
     e?.stopPropagation?.();
@@ -170,11 +176,19 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           />
         </Pressable>
       </View>
+      {error ? (
+        <Text size="sm" tone="error" style={styles.errorText}>
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  errorText: {
+    marginTop: theme.spacing.xs,
+  },
   wrapper: {
     // No marginBottom - let parent (FieldRow) handle spacing
   },
@@ -199,6 +213,12 @@ const styles = StyleSheet.create(theme => ({
       disabled: {
         true: {
           borderColor: theme.colors.border,
+        },
+      },
+      error: {
+        true: {
+          borderColor: theme.colors.error,
+          borderWidth: 2,
         },
       },
     },

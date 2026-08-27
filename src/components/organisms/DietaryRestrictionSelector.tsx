@@ -12,7 +12,8 @@ import {
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { isLifestyleDiet } from '#/constants/dietary';
-import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { executeWriteWithFinally } from '#/utils/finallyHelpers';
+import { logger } from '#/utils/environment';
 
 // Lifestyle dietary choices. Labels are i18n keys resolved via `t()` at render —
 // the enum value stays the stable identity used for selection and persistence.
@@ -238,6 +239,15 @@ export const DietaryRestrictionSelector: React.FC<
     setGoalSheetVisible(true);
   };
 
+  // Each save below already alerts when the mutation RESOLVES unsuccessfully.
+  // This covers the other route — a throw — which the finalizer would otherwise
+  // swallow, clearing the spinner with nothing shown. Same copy either way, so
+  // the user sees one message for one failure however it arrived.
+  const alertWriteFailed = (body: string) => (error: unknown) => {
+    logger.error('Dietary restriction write threw', { error });
+    alertService.alert(t('labels.error'), body);
+  };
+
   // Save handlers
   const handleSaveDiet = () => {
     const selected = selectedDietIds[0];
@@ -247,20 +257,24 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(async () => {
-      const replaceIds = existingLifestyleRows.map(r => r.id);
-      const success = await onSelectLifestyleDiet(selected, replaceIds);
+    executeWriteWithFinally(
+      async () => {
+        const replaceIds = existingLifestyleRows.map(r => r.id);
+        const success = await onSelectLifestyleDiet(selected, replaceIds);
 
-      if (success) {
-        setSelectedDietIds([]);
-        setDietSheetVisible(false);
-      } else {
-        alertService.alert(
-          t('labels.error'),
-          t('dietaryProfile.updateDietFailed'),
-        );
-      }
-    }, setIsSavingDiets);
+        if (success) {
+          setSelectedDietIds([]);
+          setDietSheetVisible(false);
+        } else {
+          alertService.alert(
+            t('labels.error'),
+            t('dietaryProfile.updateDietFailed'),
+          );
+        }
+      },
+      setIsSavingDiets,
+      alertWriteFailed(t('dietaryProfile.updateDietFailed')),
+    );
   };
 
   const handleSaveConstraints = () => {
@@ -269,23 +283,30 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(async () => {
-      const restrictions: RestrictionType[] = selectedConstraintIds.map(
-        diet => ({ diet }),
-      );
-
-      const success = await onAdd(restrictions, RestrictionSeverity.Preference);
-
-      if (success) {
-        setSelectedConstraintIds([]);
-        setConstraintSheetVisible(false);
-      } else {
-        alertService.alert(
-          t('labels.error'),
-          t('dietaryProfile.addConstraintsFailed'),
+    executeWriteWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedConstraintIds.map(
+          diet => ({ diet }),
         );
-      }
-    }, setIsSavingConstraints);
+
+        const success = await onAdd(
+          restrictions,
+          RestrictionSeverity.Preference,
+        );
+
+        if (success) {
+          setSelectedConstraintIds([]);
+          setConstraintSheetVisible(false);
+        } else {
+          alertService.alert(
+            t('labels.error'),
+            t('dietaryProfile.addConstraintsFailed'),
+          );
+        }
+      },
+      setIsSavingConstraints,
+      alertWriteFailed(t('dietaryProfile.addConstraintsFailed')),
+    );
   };
 
   const handleSaveIntolerances = () => {
@@ -294,28 +315,32 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(async () => {
-      const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
-        intolerance => ({
-          intolerance,
-        }),
-      );
-
-      const success = await onAdd(
-        restrictions,
-        RestrictionSeverity.Intolerance,
-      );
-
-      if (success) {
-        setSelectedIntoleranceIds([]);
-        setIntoleranceSheetVisible(false);
-      } else {
-        alertService.alert(
-          t('labels.error'),
-          t('dietaryProfile.addIntolerancesFailed'),
+    executeWriteWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedIntoleranceIds.map(
+          intolerance => ({
+            intolerance,
+          }),
         );
-      }
-    }, setIsSavingIntolerances);
+
+        const success = await onAdd(
+          restrictions,
+          RestrictionSeverity.Intolerance,
+        );
+
+        if (success) {
+          setSelectedIntoleranceIds([]);
+          setIntoleranceSheetVisible(false);
+        } else {
+          alertService.alert(
+            t('labels.error'),
+            t('dietaryProfile.addIntolerancesFailed'),
+          );
+        }
+      },
+      setIsSavingIntolerances,
+      alertWriteFailed(t('dietaryProfile.addIntolerancesFailed')),
+    );
   };
 
   const handleSaveGoals = () => {
@@ -324,25 +349,29 @@ export const DietaryRestrictionSelector: React.FC<
       return;
     }
 
-    executeRefreshWithFinally(async () => {
-      const restrictions: RestrictionType[] = selectedGoalIds.map(
-        healthGoal => ({
-          healthGoal,
-        }),
-      );
-
-      const success = await onAdd(restrictions, RestrictionSeverity.Goal);
-
-      if (success) {
-        setSelectedGoalIds([]);
-        setGoalSheetVisible(false);
-      } else {
-        alertService.alert(
-          t('labels.error'),
-          t('dietaryProfile.addGoalsFailed'),
+    executeWriteWithFinally(
+      async () => {
+        const restrictions: RestrictionType[] = selectedGoalIds.map(
+          healthGoal => ({
+            healthGoal,
+          }),
         );
-      }
-    }, setIsSavingGoals);
+
+        const success = await onAdd(restrictions, RestrictionSeverity.Goal);
+
+        if (success) {
+          setSelectedGoalIds([]);
+          setGoalSheetVisible(false);
+        } else {
+          alertService.alert(
+            t('labels.error'),
+            t('dietaryProfile.addGoalsFailed'),
+          );
+        }
+      },
+      setIsSavingGoals,
+      alertWriteFailed(t('dietaryProfile.addGoalsFailed')),
+    );
   };
 
   return (

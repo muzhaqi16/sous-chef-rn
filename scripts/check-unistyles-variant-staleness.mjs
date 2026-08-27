@@ -2,13 +2,22 @@
  * Fails when more components can render a STALE `styles.useVariants(...)` value
  * than the recorded baseline allows.
  *
- * ## The mechanism
+ * ## The mechanism — and why this is now a REGRESSION guard, not a tally
  *
- * `babel.config.js` runs `babel-plugin-react-compiler` BEFORE the Unistyles
- * plugin, deliberately — the other order makes the compiler bail out of the
- * whole file (see `check-compiler-bailouts.mjs`). The cost of that choice is
- * this bug, and it was never measured until now.
+ * This defect was systemic while `babel.config.js` ran the compiler BEFORE the
+ * Unistyles plugin. That order was chosen because the documented one made the
+ * compiler bail out of every file using variants — which turned out to be an
+ * upstream scope bug, not an incompatibility. `scripts/babel/
+ * unistyles-scope-crawl.js` fixes the binding, so the documented order now
+ * compiles AND keeps the variant read in the compiler's cache key.
  *
+ * Measured across the 53 files that were flagged under the old order: all 53
+ * compile, none loses memoization, and the findings drop to 2 — both key-name
+ * collisions between two stylesheets in one file, not real staleness. So a
+ * finding here should now be rare and worth reading closely, rather than one
+ * more entry in a long accepted list.
+ *
+ * The historical mechanism, kept because it is what the patterns below match.
  * The Unistyles plugin rewrites
  *
  *     styles.useVariants({ disabled });
@@ -34,13 +43,18 @@
  * after it becomes a success. The worst form is a read cached against
  * `Symbol.for("react.memo_cache_sentinel")` — read exactly once, ever.
  *
- * ## The fix at a call site
+ * ## What a finding means now
  *
- * `'use no memo'` as the first statement of the component. The file then
- * behaves as it does without the compiler: `_styles2.button` is re-read every
- * render and the variant is always current. It costs that component's
- * auto-memoization, which is the correct trade for a component whose variants
- * actually move.
+ * With the crawl plugin in place the compiler puts the style read in its own
+ * cache key, so a hit here means something defeated that — most likely a shape
+ * the guard-aware check below does not recognise, or a genuinely new pattern.
+ * Read the compiled output before acting.
+ *
+ * `'use no memo'` is NO LONGER the answer. It was the per-component workaround
+ * while the ordering was inverted, and it bought correctness by giving up that
+ * component's auto-memoization. All four opt-outs were removed when the
+ * ordering was fixed; reaching for it again means the plugin order or the
+ * crawl has regressed, and that is what to investigate.
  *
  * ## Why a script and not a lint rule
  *
@@ -57,31 +71,63 @@ import babel from '@babel/core';
 import { parse } from '@babel/parser';
 import _traverse from '@babel/traverse';
 import { readFileSync, writeFileSync, readdirSync, statSync } from 'fs';
-import { join, extname } from 'path';
+import { join, extname, relative } from 'path';
+import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+
+import {
+  requireNonEmptyScan,
+  refuseEmptyBaselineUpdate,
+} from './lib/guardScan.mjs';
 
 const traverse = _traverse.default ?? _traverse;
 
-const SRC = 'src';
-const BASELINE = 'scripts/check-unistyles-variant-staleness.baseline.json';
+// Resolved from this file, not the cwd — every sibling check does the same, and
+// a cwd-relative 'src' silently scanned nothing when run from anywhere else.
+const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
+const SRC = join(REPO_ROOT, 'src');
+const BASELINE = join(
+  REPO_ROOT,
+  'scripts/check-unistyles-variant-staleness.baseline.json',
+);
+
+/**
+ * Any stylesheet identifier, not the literal `styles`.
+ *
+ * Matching `styles.useVariants` as a lowercase substring made whole files
+ * invisible: `indicatorStyles.useVariants(...)` in AddDetailsSheet.tsx never
+ * matched, and that file carried the worst form of this defect — the page
+ * indicator's dot read once against `react.memo_cache_sentinel`, so the current
+ * page never highlighted. Six call sites name their stylesheet something other
+ * than `styles`, deliberately: a file with two stylesheets has to.
+ */
+const USE_VARIANTS_CALL = /\b([A-Za-z_$][\w$]*)\.useVariants\s*\(/;
 const UPDATE = process.argv.includes('--update');
 const LIST = process.argv.includes('--list');
 const EXPLAIN = process.argv.includes('--explain');
 
+// Resolved to absolute paths from THIS file. Babel resolves bare plugin names
+// against the cwd, so a bare name made the whole scan fail — every file
+// "could not compile" — when the script ran from anywhere but the repo root.
+const resolveFromRepo = createRequire(import.meta.url).resolve;
+
 const BABEL_OPTIONS = {
-  root: process.cwd(),
+  root: REPO_ROOT,
   babelrc: false,
   configFile: false,
   presets: [
     [
-      'module:@react-native/babel-preset',
+      resolveFromRepo('@react-native/babel-preset'),
       { disableImportExportTransform: true },
     ],
   ],
-  // The real order from babel.config.js. Reversing it here would not reproduce
-  // the defect — that is the whole point.
+  // The real order from babel.config.js, scope-crawl included. This has to
+  // track that file: a scan that compiles a plugin order the app does not ship
+  // reports on a configuration nobody runs.
   plugins: [
-    'babel-plugin-react-compiler',
-    ['react-native-unistyles/plugin', { root: 'src' }],
+    [resolveFromRepo('react-native-unistyles/plugin'), { root: 'src' }],
+    join(REPO_ROOT, 'scripts/babel/unistyles-scope-crawl.js'),
+    resolveFromRepo('babel-plugin-react-compiler'),
   ],
 };
 
@@ -94,7 +140,7 @@ function sourceFiles(dir, out = []) {
     } else if (
       extname(entry) === '.tsx' &&
       !/\.(test|spec)\.tsx$/.test(entry) &&
-      readFileSync(full, 'utf8').includes('styles.useVariants')
+      USE_VARIANTS_CALL.test(readFileSync(full, 'utf8'))
     ) {
       out.push(full);
     }
@@ -102,7 +148,16 @@ function sourceFiles(dir, out = []) {
   return out;
 }
 
-/** Style keys that actually declare `variants:` — the only ones that can go stale. */
+/**
+ * Style keys that actually declare `variants:` — the only ones that can go
+ * stale — as `"<stylesheet>.<key>"` pairs.
+ *
+ * Qualified by the stylesheet they belong to, because key names are NOT unique
+ * within a file. `NutritionSummary.tsx` declares `container` in both `styles`
+ * and `circleStyles`, and `PageIndicator.tsx` declares `label` twice; matching
+ * on the bare key made a correctly-guarded read of one satisfy the other, and
+ * both files sat in the baseline as false positives because of it.
+ */
 function variantBearingKeys(source) {
   const keys = new Set();
   const ast = parse(source, {
@@ -114,10 +169,26 @@ function variantBearingKeys(source) {
       const name = path.node.key.name ?? path.node.key.value;
       if (name !== 'variants') return;
       const entry = path.findParent(p => p.isObjectProperty());
-      if (entry) keys.add(entry.node.key.name ?? entry.node.key.value);
+      if (!entry) return;
+      const key = entry.node.key.name ?? entry.node.key.value;
+      // The `const <name> = StyleSheet.create(...)` this entry lives in.
+      const decl = entry.findParent(p => p.isVariableDeclarator());
+      const sheet = decl?.node.id?.name;
+      if (sheet) keys.add(`${sheet}.${key}`);
     },
   });
   return keys;
+}
+
+/**
+ * `circleStyles$0` / `_circleStyles2` → `circleStyles`.
+ *
+ * Both plugin orders rename the shadowed stylesheet, and the suffix differs
+ * between them, so the local in the compiled output has to be mapped back to
+ * the source stylesheet name before it can be matched against the pairs above.
+ */
+function sheetOf(local) {
+  return local.replace(/^_/, '').replace(/(\$\d+|\d+)$/, '');
 }
 
 /**
@@ -127,11 +198,44 @@ function variantBearingKeys(source) {
 function staleReads(code, keys) {
   // The temp (or inline object) handed to useVariants. A cache guard mentioning
   // it DOES re-run when the variants move, so it is safe.
-  const variantArg = (code.match(/useVariants\((t\d+|\{[^}]*\})\)/) || [])[1];
+  // EVERY `useVariants` argument in the file, not just the first. A file may
+  // hold several stylesheets — NutritionSummary.tsx has `circleStyles`,
+  // `badgeStyles` and `styles`, each with its own call — and exempting guards
+  // against only the first call's temp reports the other two as stale.
+  const variantArgs = Array.from(
+    code.matchAll(/useVariants\((t\d+|\{[^}]*\})\)/g),
+    m => m[1],
+  );
   const found = new Map();
+
+  // Any `<local>.<key>` read, not a particular local NAME. The shadow's name is
+  // an artifact of the plugin order: `_styles2` when the compiler ran first,
+  // `styles$0` now that Unistyles runs first and the scope is re-crawled. A
+  // pattern anchored to `_<name><digits>` matches nothing under the current
+  // order, so the scan would find zero and report a confident all-clear —
+  // exactly the failure a staleness check must not have. `keys` is what makes
+  // this specific: only variant-bearing style keys are ever recorded.
+  const STYLE_READ = /\b([A-Za-z_$][\w$]*)\.([A-Za-z0-9_]+)/g;
+
+  // `<stylesheet>.<key>`, the same shape `variantBearingKeys` produces.
+  const pair = m => `${sheetOf(m[1])}.${m[2]}`;
+
+  // Every style read the compiler tracks as a cache DEPENDENCY anywhere in the
+  // file. Such a read is re-taken whenever the variant resolves to a different
+  // object, so it cannot be stale — and the cache blocks nest, so a read that
+  // its own guard protects is routinely swept up by the fixed-width window of
+  // an OUTER guard that does not mention it. Collecting dependencies file-wide
+  // is what stops that nesting from reporting a fresh read as frozen.
+  const trackedAsDependency = new Set();
+  for (const g of code.matchAll(/if\((\$\[\d+\][!=]==[^)]*?)\)\{/g)) {
+    for (const r of g[1].matchAll(new RegExp(STYLE_READ.source, 'g'))) {
+      trackedAsDependency.add(pair(r));
+    }
+  }
 
   const record = (key, why) => {
     if (!keys.has(key)) return;
+    if (trackedAsDependency.has(key)) return;
     if (!found.has(key)) found.set(key, why);
   };
 
@@ -139,8 +243,8 @@ function staleReads(code, keys) {
   for (const m of code.matchAll(
     /\$\[\d+\]===Symbol\.for\("react\.memo_cache_sentinel"\)\)\{([\s\S]{0,500}?)\}else\{/g,
   )) {
-    for (const r of m[1].matchAll(/_styles\d+\.([A-Za-z0-9_]+)/g)) {
-      record(r[1], 'read once, ever');
+    for (const r of m[1].matchAll(new RegExp(STYLE_READ.source, 'g'))) {
+      record(pair(r), 'read once, ever');
     }
   }
 
@@ -148,10 +252,19 @@ function staleReads(code, keys) {
   for (const m of code.matchAll(
     /if\((\$\[\d+\][!=]==[^)]*?)\)\{([\s\S]{0,500}?)\}else\{/g,
   )) {
-    if (variantArg && m[1].includes(variantArg)) continue;
-    for (const r of m[2].matchAll(/_styles\d+\.([A-Za-z0-9_]+)/g)) {
+    if (variantArgs.some(arg => m[1].includes(arg))) continue;
+    // A guard that tests the style read itself is FRESH, not stale: the cache
+    // is invalidated whenever the variant resolves to a different object. That
+    // is what the corrected plugin order produces —
+    // `if ($[2] !== style || $[3] !== styles$0.button)` — so without this the
+    // check would flag the very shape it exists to ask for.
+    const guarded = new Set(
+      Array.from(m[1].matchAll(new RegExp(STYLE_READ.source, 'g')), pair),
+    );
+    for (const r of m[2].matchAll(new RegExp(STYLE_READ.source, 'g'))) {
+      if (guarded.has(pair(r))) continue;
       record(
-        r[1],
+        pair(r),
         `cached on ${m[1].replace(/\$\[\d+\]!==/g, '').slice(0, 60)}`,
       );
     }
@@ -190,8 +303,26 @@ const styles = StyleSheet.create(() => ({
   process.exit(0);
 }
 
+const scanned = sourceFiles(SRC);
+
+// A preset upgrade, a rename, or a moved directory can leave this scan matching
+// nothing — and a scan that matched nothing prints exactly what a clean tree
+// prints. Fail instead. The floor is the baseline's own size: this check has
+// never legitimately collapsed from 50 files to a handful in one change.
+const baselineForFloor = JSON.parse(readFileSync(BASELINE, 'utf8'));
+requireNonEmptyScan({
+  count: scanned.length,
+  what: 'source files calling `.useVariants(...)`',
+  check: 'check-unistyles-variant-staleness',
+  minimum: Math.max(1, Math.floor(baselineForFloor.files.length * 0.5)),
+  hint:
+    'the Unistyles babel plugin changed its output shape, or `src/` moved. ' +
+    'Run with --explain to see the transform this depends on.',
+});
+
 const findings = {};
-for (const file of sourceFiles(SRC)) {
+let compileFailures = 0;
+for (const file of scanned) {
   const source = readFileSync(file, 'utf8');
   const keys = variantBearingKeys(source);
   if (keys.size === 0) continue;
@@ -200,11 +331,12 @@ for (const file of sourceFiles(SRC)) {
   try {
     code = babel.transformSync(source, {
       ...BABEL_OPTIONS,
-      filename: join(process.cwd(), file),
+      filename: file,
     }).code;
   } catch (error) {
     console.error(`Could not compile ${file}: ${error.message.split('\n')[0]}`);
     process.exitCode = 1;
+    compileFailures++;
     continue;
   }
 
@@ -214,23 +346,50 @@ for (const file of sourceFiles(SRC)) {
   }
 }
 
-const files = Object.keys(findings).sort();
+// A file that would not compile was not examined. Enough of them and the run
+// has the same standing as an empty scan — it must not go on to report zero
+// findings as a clean result, nor invite a re-baseline from it.
+if (compileFailures > scanned.length / 4) {
+  console.error(
+    `\n✗ ${compileFailures} of ${scanned.length} files failed to compile, so ` +
+      `this check did not examine them.\n` +
+      `  Reporting a result from the remainder would understate the risk.\n`,
+  );
+  process.exit(2);
+}
+
+// Recorded repo-relative so the baseline does not depend on where the repo is
+// checked out.
+const files = Object.keys(findings)
+  .map(f => relative(REPO_ROOT, f))
+  .sort();
 
 if (LIST) {
   for (const file of files) {
     console.log(file);
-    for (const [key, why] of Object.entries(findings[file])) {
-      console.log(`    styles.${key}  —  ${why}`);
+    for (const [key, why] of Object.entries(findings[join(REPO_ROOT, file)])) {
+      console.log(`    ${key}  —  ${why}`);
     }
   }
-  process.exit(0);
+  // NOT `process.exit(0)`: a file that failed to compile above set
+  // `process.exitCode = 1`, and exiting explicitly would discard it.
+  process.exit(process.exitCode ?? 0);
 }
 
 if (UPDATE) {
+  refuseEmptyBaselineUpdate({
+    count: files.length,
+    baselineCount: baselineForFloor.files.length,
+    check: 'check-unistyles-variant-staleness',
+  });
   writeFileSync(
     BASELINE,
     JSON.stringify(
-      { maxFilesWithStaleVariants: files.length, files },
+      // `files` only. A `maxFilesWithStaleVariants` count used to be written
+      // beside it and was never read by anything — enforcement is entirely
+      // set-membership over `files`, so the number was decoration that looked
+      // like a limit.
+      { files },
       null,
       2,
     ) + '\n',
@@ -239,7 +398,7 @@ if (UPDATE) {
   process.exit(0);
 }
 
-const baseline = JSON.parse(readFileSync(BASELINE, 'utf8'));
+const baseline = baselineForFloor;
 const known = new Set(baseline.files);
 const added = files.filter(f => !known.has(f));
 const fixed = baseline.files.filter(f => !files.includes(f));
@@ -250,8 +409,8 @@ if (added.length > 0) {
   );
   for (const file of added) {
     console.error(`  ${file}`);
-    for (const [key, why] of Object.entries(findings[file])) {
-      console.error(`      styles.${key}  —  ${why}`);
+    for (const [key, why] of Object.entries(findings[join(REPO_ROOT, file)])) {
+      console.error(`      ${key}  —  ${why}`);
     }
   }
   console.error(

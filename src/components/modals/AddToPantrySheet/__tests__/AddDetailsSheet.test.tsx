@@ -1,7 +1,12 @@
 'use no memo';
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  userEvent,
+  waitFor,
+} from '@testing-library/react-native';
 import { AddDetailsSheet } from '../AddDetailsSheet';
 
 type PagerViewMockProps = {
@@ -48,11 +53,17 @@ jest.mock('#features/pantry/hooks/usePantryItemSubmission', () => ({
 }));
 
 jest.mock('../MainDetailsPage', () => ({
-  MainDetailsPage: () => {
+  // Renders `itemNameError` so the sheet's contract with the page — that a
+  // validation failure reaches the field — is assertable here. Whether the
+  // page paints it as a red border is FormInput's own test.
+  MainDetailsPage: ({ itemNameError }: { itemNameError?: string }) => {
     const { View, Text } = require('react-native');
     return (
       <View testID="main-details-page">
         <Text>Main Details Page</Text>
+        {itemNameError ? (
+          <Text testID="main-details-page-name-error">{itemNameError}</Text>
+        ) : null}
       </View>
     );
   },
@@ -121,7 +132,10 @@ describe('AddDetailsSheet', () => {
   it('shows Adding... when loading', () => {
     const usePantryItemSubmission =
       require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
-    usePantryItemSubmission.mockReturnValueOnce({
+    // `mockReturnValue`, not `…Once`: the form re-renders more than once now
+    // that react-hook-form owns its state, and a one-shot mock would be
+    // consumed by the first render and report `loading: false` thereafter.
+    usePantryItemSubmission.mockReturnValue({
       handleConfirm: jest.fn(),
       loading: true,
     });
@@ -152,18 +166,42 @@ describe('AddDetailsSheet', () => {
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
 
-  it('calls handleConfirm when Add is pressed', async () => {
+  it('does NOT submit an empty form, and says so on the name field', async () => {
+    // The item name is required. This used to be an `alertService.alert` that
+    // covered the form; it is a field message now, and `handleSubmit` gates
+    // the mutation on it.
     const user = userEvent.setup();
     const mockHandleConfirm = jest.fn();
     const usePantryItemSubmission =
       require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
-    usePantryItemSubmission.mockReturnValueOnce({
+    usePantryItemSubmission.mockReturnValue({
       handleConfirm: mockHandleConfirm,
       loading: false,
     });
+
     render(<AddDetailsSheet {...defaultProps} />);
     await user.press(screen.getByTestId('add-pantry-item-submit-button'));
-    expect(mockHandleConfirm).toHaveBeenCalled();
+
+    expect(mockHandleConfirm).not.toHaveBeenCalled();
+    expect(
+      await screen.findByTestId('main-details-page-name-error'),
+    ).toHaveTextContent('Please enter an item name');
+  });
+
+  it('submits once the required fields are filled', async () => {
+    const user = userEvent.setup();
+    const mockHandleConfirm = jest.fn();
+    const usePantryItemSubmission =
+      require('#features/pantry/hooks/usePantryItemSubmission').usePantryItemSubmission;
+    usePantryItemSubmission.mockReturnValue({
+      handleConfirm: mockHandleConfirm,
+      loading: false,
+    });
+
+    render(<AddDetailsSheet {...defaultProps} prefilledItemName="Olive Oil" />);
+    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
+
+    await waitFor(() => expect(mockHandleConfirm).toHaveBeenCalled());
   });
 
   it('uses prefilledItemName when provided', () => {

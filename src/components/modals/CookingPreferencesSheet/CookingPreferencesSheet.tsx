@@ -4,11 +4,12 @@ import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/useStandardBottomSheet';
 import { alertService } from '#/services/alertService';
-import { Picker } from '@react-native-picker/picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
+import { ModalPicker } from '#components/molecules/ModalPicker';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetHeader } from '#components/atoms/BottomSheetHeader';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '#/constants/dietary';
 import { Text } from '#components/atoms/Text';
@@ -51,6 +52,14 @@ export const CookingPreferencesSheet: React.FC<
 
   // Form state
   const [skillLevel, setSkillLevel] = useState('');
+  const [skillPickerVisible, setSkillPickerVisible] = useState(false);
+
+  const skillLevelOptions = SKILL_LEVELS.map(level => ({
+    label: level,
+    value: level,
+  }));
+  const skillLevelLabel =
+    skillLevel || t('cookingPreferences.selectSkillLevel');
   const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
   const [budget, setBudget] = useState('');
@@ -174,26 +183,40 @@ export const CookingPreferencesSheet: React.FC<
           confirmDisabled={saving}
         />
 
-        {/* Skill Level Picker */}
+        {/* Skill Level Picker — an in-app tray, not the platform Picker. On
+            Android the native dropdown is an Activity-themed DIALOG, so it
+            follows the OS `uiMode` and ignores the in-app theme entirely;
+            nothing reachable from RN retints it. `stackBehavior="push"` because
+            this opens from inside a sheet. */}
         <View style={styles.section}>
           <Text size="base" weight="medium" style={styles.label}>
             {t('cookingPreferences.skillLevel')}
           </Text>
-          <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={skillLevel}
-              onValueChange={setSkillLevel}
-              style={styles.picker}
-            >
-              <Picker.Item
-                label={t('cookingPreferences.selectSkillLevel')}
-                value=""
-              />
-              {SKILL_LEVELS.map(level => (
-                <Picker.Item key={level} label={level} value={level} />
-              ))}
-            </Picker>
-          </View>
+          <AppPressable
+            haptic
+            testID="cooking-preferences-skill-level-picker"
+            style={styles.pickerContainer}
+            onPress={() => setSkillPickerVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('cookingPreferences.skillLevel')}
+            accessibilityValue={{ text: skillLevelLabel }}
+          >
+            <Text size="base" tone={skillLevel ? 'accent' : 'tertiary'}>
+              {skillLevelLabel}
+            </Text>
+          </AppPressable>
+          <ModalPicker
+            label={t('cookingPreferences.skillLevel')}
+            visible={skillPickerVisible}
+            options={skillLevelOptions}
+            selected={skillLevel}
+            stackBehavior="push"
+            onSelect={value => {
+              setSkillLevel(value);
+              setSkillPickerVisible(false);
+            }}
+            onCancel={() => setSkillPickerVisible(false)}
+          />
         </View>
 
         {/* Max Prep Time */}
@@ -258,8 +281,8 @@ const styles = StyleSheet.create(theme => ({
     borderWidth: 1,
     borderColor: theme.colors.border,
     overflow: 'hidden',
-  },
-  picker: {
-    backgroundColor: 'transparent',
+    // The native Picker supplied its own row height; a Pressable does not.
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
   },
 }));

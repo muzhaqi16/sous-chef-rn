@@ -163,6 +163,12 @@ function createErrorMock() {
   });
 }
 
+/**
+ * Validation is NOT here. It moved to `addPantryItemSchema`, which reports on
+ * the field instead of through an alert, and `handleSubmit` gates this hook on
+ * it — so `handleConfirm` only ever runs against a valid form. The rules are
+ * covered in `addPantryItemFormConfig.test.ts`.
+ */
 describe('usePantryItemSubmission', () => {
   it('returns handleConfirm and loading', () => {
     const { result } = renderHookWithApollo(() =>
@@ -171,59 +177,6 @@ describe('usePantryItemSubmission', () => {
 
     expect(typeof result.current.handleConfirm).toBe('function');
     expect(result.current.loading).toBe(false);
-  });
-
-  it('shows error and navigates to page 0 when itemName is empty', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission({ ...defaultParams, itemName: '  ' }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please enter an item name',
-    );
-    expect(mockHandlePageChange).toHaveBeenCalledWith(0);
-  });
-
-  it('shows error when quantity is invalid', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission({ ...defaultParams, quantityInput: 'abc' }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please enter a valid quantity',
-    );
-    expect(mockHandlePageChange).toHaveBeenCalledWith(1);
-  });
-
-  it('shows error when quantity is zero', async () => {
-    const m = createMock();
-    const { result } = renderHookWithApollo(
-      () => usePantryItemSubmission({ ...defaultParams, quantityInput: '0' }),
-      { operationMocks: [m.mock] },
-    );
-
-    await act(async () => {
-      await result.current.handleConfirm();
-    });
-
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Error',
-      'Please enter a valid quantity',
-    );
   });
 
   it('does nothing when pantryId is undefined', async () => {

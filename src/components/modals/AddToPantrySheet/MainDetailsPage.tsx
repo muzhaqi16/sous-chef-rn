@@ -17,6 +17,8 @@ const STORAGE_STATES = Object.values(StorageState);
 export interface MainDetailsPageProps {
   itemName: string;
   setItemName: (value: string) => void;
+  /** Validation message for the name field, rendered on the input itself. */
+  itemNameError?: string;
   brand: string;
   setBrand: (value: string) => void;
   suggestedBrands?: { id: string; name: string }[];
@@ -36,6 +38,7 @@ export interface MainDetailsPageProps {
 export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   itemName,
   setItemName,
+  itemNameError,
   brand,
   setBrand,
   suggestedBrands,
@@ -70,6 +73,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
       <FormInput
         label={t('labels.itemName')}
         required
+        error={itemNameError}
         value={itemName}
         onChangeText={setItemName}
         placeholder={t('addToPantry.itemNamePlaceholder')}

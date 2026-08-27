@@ -16,7 +16,7 @@ import { logger } from '#/utils/environment';
 
 import {
   isStartupProfilerArmed,
-  STARTUP_PROFILE_FILENAME,
+  STARTUP_WINDOW_MS,
   FALLBACK_PROFILE_FILENAME,
   VIEW_MANAGER_REPORT_FILENAME,
 } from './startupProfiling';
@@ -28,11 +28,12 @@ import {
 /**
  * How long a profiled launch may run before the profile is written anyway.
  *
- * Generous on purpose: the point is to bound the sampler's lifetime, not to
- * race first meaningful paint. A launch slower than this has bigger problems
- * than a mistimed trace, and the fallback filename says which window it covers.
+ * The same bound the metric uses (`STARTUP_WINDOW_MS`), so the two halves of
+ * this feature agree on where startup ends: past it, the metric emits nothing
+ * and the sampler stops. The fallback filename says which window the trace
+ * actually covers.
  */
-const FALLBACK_CAPTURE_MS = 20_000;
+const FALLBACK_CAPTURE_MS = STARTUP_WINDOW_MS;
 
 let captured = false;
 let fallbackTimer: ReturnType<typeof setTimeout> | null = null;

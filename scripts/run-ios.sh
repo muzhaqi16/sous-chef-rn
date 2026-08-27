@@ -46,6 +46,13 @@ case "$MODE" in
   debug|release|localRelease) export ALLOW_LAUNCH_ARG_AUTH=true ;;
 esac
 
+# This script only ever builds for the simulator (`--simulator` below), and a
+# simulator artifact cannot be installed on a phone — which is what makes the
+# Release configuration safe to measure on iOS without a separate variant, the
+# way Android needed `localRelease`. The gate is passed the sdk rather than the
+# mode so that stays true if this script ever grows a device destination.
+node scripts/check-launch-arg-auth.mjs --platform ios --sdk iphonesimulator
+
 case "$MODE" in
   staging)    SCHEME="SousChefRN (Staging)" ;;
   production) SCHEME="SousChefRN (Production)" ;;

@@ -175,7 +175,16 @@ export class TelemetryService {
       enabled_transports: this.transports.filter(t => t.isAvailable()).length,
     });
 
-    this.incrementCounter('app_starts_total');
+    // `app_starts_total` is emitted by `useStartupInit`'s idle callback, NOT
+    // here. This method is called synchronously from the hydration effect, so
+    // a metric emitted from it is the FIRST labelled metric of a cold start —
+    // and resolving `device_type` means `isEmulatorSync()`, a binder IPC on
+    // Android hardware. That landed inside the very window
+    // `app_startup_duration_ms` and `app_fully_drawn_ms` measure, and only on
+    // real devices (emulators short-circuit on `Build.FINGERPRINT`), so it
+    // biased the comparison the label exists to enable. Making the accessors
+    // lazy moved the read later within the same window; moving its only caller
+    // is what takes it out.
   }
 
   updateConfig(newConfig: Partial<TelemetryConfig>): void {

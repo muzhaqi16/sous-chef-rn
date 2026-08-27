@@ -51,6 +51,26 @@ function sourceFiles(dir, out = []) {
 
 const files = sourceFiles(SRC);
 const failures = [];
+
+/**
+ * `'use no memo'` — the OTHER way out of compiler coverage, and the one this
+ * check could not see.
+ *
+ * A bailout is involuntary and this script counts it. The directive is
+ * voluntary and produced exactly the same outcome — the function stops being
+ * memoized — while the summary went on printing "0 files with bailouts" against
+ * an empty baseline. Three production components had left coverage that way
+ * with nothing reporting it, one of them a context provider whose published
+ * value the memoization was holding stable.
+ *
+ * It is sometimes REQUIRED: the compiler runs before the Unistyles plugin, so a
+ * component reading `styles.useVariants(...)` results can freeze its variant at
+ * the first render (see check-unistyles-variant-staleness.mjs). So this is
+ * recorded and ratcheted, not banned — the baseline may shrink, never grow, and
+ * a new one has to be argued for in review rather than slipping in unseen.
+ */
+const OPT_OUT_DIRECTIVE = /^\s*['"]use no memo['"]\s*;?\s*$/;
+const optOuts = [];
 let compiled = 0;
 let succeeded = 0;
 
@@ -63,13 +83,26 @@ let succeeded = 0;
  * stopped being memoized. Without the name the two are indistinguishable.
  */
 function functionNameAt(lines, line) {
-  const DECL =
-    /(?:export\s+)?(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)|([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function)/;
-  for (let i = line - 1; i >= 0 && i > line - 12; i--) {
-    const m = DECL.exec(lines[i] ?? '');
-    if (m) return m[1] ?? m[2];
+  // A NAMED declaration wins outright, however far back it is within the
+  // window: scanning line-by-line for "anything function-shaped" picked up a
+  // destructured prop (`onPress`) sitting between the directive and the
+  // component that actually owns it, which named the wrong thing in a report
+  // whose whole value is naming the right one.
+  const NAMED =
+    /(?:export\s+)?(?:const|let|function|class)\s+([A-Za-z_$][\w$]*)|(?:^|\s)([A-Z][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function|React\.)/;
+  const LOOSE = /([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s*)?(?:\(|function)/;
+
+  let loose;
+  for (let i = line - 1; i >= 0 && i > line - 30; i--) {
+    const text = lines[i] ?? '';
+    const named = NAMED.exec(text);
+    if (named) return named[1] ?? named[2];
+    if (!loose) {
+      const m = LOOSE.exec(text);
+      if (m) loose = m[1];
+    }
   }
-  return '<anonymous>';
+  return loose ?? '<anonymous>';
 }
 
 for (const file of files) {
@@ -115,6 +148,12 @@ for (const file of files) {
     console.error(`\n✗ ${file} failed to transform:\n  ${error.message}\n`);
     process.exit(2);
   }
+  lines.forEach((text, i) => {
+    if (OPT_OUT_DIRECTIVE.test(text)) {
+      optOuts.push({ file, fn: functionNameAt(lines, i + 1) });
+    }
+  });
+
   if (sawEvent) compiled++;
   if (reasons.length) {
     failures.push({
@@ -136,9 +175,11 @@ if (compiled === 0) {
 }
 
 const count = failures.length;
+const optOutKeys = [...new Set(optOuts.map(o => `${o.file} → ${o.fn}`))].sort();
 console.log(
   `Scanned ${files.length} files · ${compiled} reached the compiler · ` +
-    `${succeeded} functions compiled · ${count} files with bailouts`,
+    `${succeeded} functions compiled · ${count} files with bailouts · ` +
+    `${optOutKeys.length} \`use no memo\` opt-out(s)`,
 );
 
 if (LIST || UPDATE) {
@@ -149,11 +190,22 @@ if (LIST || UPDATE) {
   }
 }
 
+const existingBaseline = existsSync(BASELINE)
+  ? JSON.parse(readFileSync(BASELINE, 'utf8'))
+  : {};
+
 if (UPDATE) {
   writeFileSync(
     BASELINE,
     `${JSON.stringify(
-      { maxFilesWithBailouts: count, files: failures.map(f => f.file).sort() },
+      {
+        maxFilesWithBailouts: count,
+        files: failures.map(f => f.file).sort(),
+        // Preserved across updates: `isolatedLeaves` records WHICH function is
+        // expected to bail where a variant call was deliberately extracted.
+        isolatedLeaves: existingBaseline.isolatedLeaves ?? {},
+        noMemoOptOuts: optOutKeys,
+      },
       null,
       2,
     )}\n`,
@@ -229,6 +281,39 @@ if (count > baseline.maxFilesWithBailouts) {
       `and CLAUDE.md § React Compiler.`,
   );
   process.exit(1);
+}
+
+// The opt-out ratchet. Same rule as the bailout count: it may shrink, never
+// grow. A new `'use no memo'` is a deliberate exit from compiler coverage, so
+// it is recorded here and argued for in review rather than appearing silently.
+const knownOptOuts = new Set(baseline.noMemoOptOuts ?? []);
+const newOptOuts = optOutKeys.filter(k => !knownOptOuts.has(k));
+if (newOptOuts.length > 0) {
+  console.error(
+    `\n✗ ${newOptOuts.length} new \`use no memo\` opt-out(s) — a function ` +
+      `leaving React Compiler coverage:\n`,
+  );
+  for (const k of newOptOuts) console.error(`  ${k}`);
+  console.error(
+    `\nThe directive is REQUIRED in one case: a component whose ` +
+      `\`styles.useVariants(...)\`\nreads would otherwise freeze at their ` +
+      `first-render value, because the compiler\nruns before the Unistyles ` +
+      `plugin (see check-unistyles-variant-staleness.mjs).\n\n` +
+      `If that is the case here, apply it to the smallest LEAF that owns the\n` +
+      `variant read — not to a parent, and never to a context provider, whose\n` +
+      `published value the memoization is what keeps stable — then re-run with\n` +
+      `--update. Otherwise remove it.\n`,
+  );
+  process.exit(1);
+}
+
+const removedOptOuts = [...knownOptOuts].filter(k => !optOutKeys.includes(k));
+if (removedOptOuts.length > 0) {
+  console.log(
+    `\n✓ ${removedOptOuts.length} \`use no memo\` opt-out(s) removed since ` +
+      `the baseline — run --update to ratchet down:`,
+  );
+  for (const k of removedOptOuts) console.log(`  ${k}`);
 }
 
 if (count < baseline.maxFilesWithBailouts) {

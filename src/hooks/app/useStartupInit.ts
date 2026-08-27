@@ -183,6 +183,14 @@ export function useStartupInit(): void {
       // memory monitor are observation-only and benefit from running off
       // the navigation-mount critical path.
       requestIdleCallback(() => {
+        // The session's first labelled metric, deliberately emitted HERE rather
+        // than from `Telemetry.initialize()`. Its `device_type` label resolves
+        // `isEmulatorSync()` — a binder IPC on Android hardware, free on an
+        // emulator — so emitting it on the critical path charged the startup
+        // window it labels, on real devices only. A counter has no timestamp
+        // semantics a few ms of deferral can damage.
+        Telemetry.increment('app_starts_total');
+
         HapticService.initialize();
         if (!detoxDisabled || detoxTelemetryEnabledRef.current) {
           // Startup marks come from here; without it a measuring run reports

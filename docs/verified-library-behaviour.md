@@ -572,3 +572,55 @@ grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopi
 grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
 ```
 
+### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
+
+**Claim:** `react-native-unistyles`' Babel plugin rewrites a component that
+calls `styles.useVariants(...)` by assigning `path.node.body` directly —
+inserting `const _styles = styles;`, wrapping the remaining statements in a new
+`BlockStatement`, and declaring a shadowing `const styles =
+_styles.useVariants(args)` inside it — and never calls `path.scope.crawl()`.
+Babel's scope table therefore holds no binding for that declaration, and
+`babel-plugin-react-compiler` cannot lower the function.
+
+**This is an upstream defect, not an incompatibility.** A `scope.crawl()`
+between the two plugins fixes it, which is what
+`scripts/babel/unistyles-scope-crawl.js` does. The crawl only works at
+`Program.enter`; at `Program.exit` the compiler has already analysed the file
+and the crawl is a silent no-op.
+
+**Verified against `react-native-unistyles@3.3.0` +
+`babel-plugin-react-compiler@1.0.0`.** Three orders, three outcomes:
+
+| plugin order | compiler | variant read |
+| --- | --- | --- |
+| `[unistyles, compiler]` (their docs) | function silently SKIPPED — the compiler catches its own `(BuildHIR::lowerAssignment) Could not find binding for declaration` and emits the original | correct, unmemoized |
+| `[compiler, unistyles]` | compiles | **STALE** — `if ($[2] !== style)`, the read is not a dependency |
+| `[unistyles, crawl, compiler]` (shipped) | compiles | fresh — `if ($[2] !== style \|\| $[3] !== styles$0.button)` |
+
+The middle row is the trap: it reports zero bailouts and full memoization while
+freezing every variant style at its first-render value. That shipped a button
+stuck looking disabled after the prop cleared, a success toast drawing the
+default near-white container behind green text, and a page indicator whose
+current dot never highlighted (read once against
+`react.memo_cache_sentinel`).
+
+Measured over the 53 files that carried the defect: under the shipped order all
+53 compile, none loses memoization, and stale findings drop to **0**. Compiler
+coverage is unchanged (0 bailouts before and after) and `functions compiled`
+rose 879 → 883, being the four components that had been opted out with
+`'use no memo'`. Those four directives were deleted; the opt-out baseline is
+empty and is now a meaningful invariant.
+
+Re-check (asserts all three legs; fails if any stops holding):
+
+```
+node scripts/probe-unistyles-compiler-order.mjs
+```
+
+If the docs order stops skipping the function, the upstream bug has been fixed
+— delete the crawl plugin and the probe, and restore the plain documented
+order. Ongoing regression cover is
+`node scripts/check-unistyles-variant-staleness.mjs`, whose detector was
+re-validated with a positive control: the same detector reports 53/53 under the
+inverted order and 0/53 under the shipped one, so its zero is a measurement
+rather than a blinded scan.

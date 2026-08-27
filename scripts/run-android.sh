@@ -31,8 +31,16 @@ esac
 # (never written into a committed env file) so only a build produced by this
 # script has it, and CI never does.
 case "$MODE" in
-  debug|release|localRelease) export ALLOW_LAUNCH_ARG_AUTH=true ;;
+  debug|localRelease) export ALLOW_LAUNCH_ARG_AUTH=true ;;
 esac
+
+# `release` is deliberately absent above: it is the only variant signed with the
+# distribution key (build.gradle, `signingConfig signingConfigs.release`), so an
+# APK carrying this capability could be handed to someone. `localRelease` is
+# `initWith release` but debug-signed, which is what makes it the measuring
+# build. The gate reads the variant's signing config out of build.gradle, so a
+# new variant has to earn the capability rather than inherit it.
+node scripts/check-launch-arg-auth.mjs --platform android --variant "$MODE"
 
 devices="$(resolve_targets)"
 require_targets "$devices"

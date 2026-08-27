@@ -38,6 +38,7 @@ jest.mock('react-native-performance', () => {
 jest.mock('#/services/telemetry', () => ({
   Telemetry: {
     histogram: jest.fn(),
+    increment: jest.fn(),
   },
 }));
 
@@ -69,6 +70,10 @@ describe('NativePerformanceService', () => {
 
   afterEach(() => {
     NativePerformanceService.cleanup();
+    // `cleanup()` deliberately does NOT reset these — production teardown must
+    // not, or a remount re-emits a once-per-process metric from the original
+    // origin. Tests need a fresh process per case, so they ask explicitly.
+    NativePerformanceService.resetStartupLatchesForTesting();
   });
 
   describe('initialize', () => {
@@ -398,6 +403,7 @@ describe('NativePerformanceService', () => {
         isStartupProfilerArmed: () => armed,
         setStartupProfilerArmed: jest.fn(),
         HERMES_PROFILE_STARTUP: true,
+        STARTUP_WINDOW_MS: 10_000,
         STARTUP_PROFILE_FILENAME: 'startup.cpuprofile',
         FALLBACK_PROFILE_FILENAME: 'startup-fallback.cpuprofile',
         VIEW_MANAGER_REPORT_FILENAME: 'viewmanagers.json',
@@ -549,6 +555,97 @@ describe('NativePerformanceService', () => {
         expect.anything(),
       );
       expect(StartupMark.reportFullyDrawn).not.toHaveBeenCalled();
+    });
+
+    describe('the startup window bound', () => {
+      it('emits at the edge of the window', () => {
+        // Inclusive: the bound is where startup ENDS, so a launch landing
+        // exactly on it is still a launch.
+        (Date.now as jest.Mock).mockReturnValue(START + 10_000);
+
+        NativePerformanceService.markFullyDrawn();
+
+        expect(Telemetry.histogram).toHaveBeenCalledWith(
+          'app_fully_drawn_ms',
+          10_000,
+        );
+        expect(Telemetry.increment).not.toHaveBeenCalledWith(
+          'startup_window_exceeded_total',
+        );
+      });
+
+      it('emits nothing past the window, and counts the drop', () => {
+        // `HomeTabs` is lazy, so at cold start only the Pantry tab mounts —
+        // the other two instrumented lists can ONLY latch after a navigation,
+        // and the origin is never cleared. Opening the shopping list twenty
+        // seconds in wrote ~20,000 ms into the same series as ~2,000 ms
+        // launches.
+        (Date.now as jest.Mock).mockReturnValue(START + 20_000);
+
+        NativePerformanceService.markFullyDrawn();
+
+        expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+          'app_fully_drawn_ms',
+          expect.anything(),
+        );
+        // Counted, not silently dropped: an absent value and an excluded one
+        // read identically on a dashboard.
+        expect(Telemetry.increment).toHaveBeenCalledWith(
+          'startup_window_exceeded_total',
+        );
+        // Still the marker — the OS vital is not ours to withhold.
+        expect(StartupMark.reportFullyDrawn).toHaveBeenCalledTimes(1);
+      });
+
+      it('counts an over-window launch exactly once', () => {
+        (Date.now as jest.Mock).mockReturnValue(START + 30_000);
+
+        NativePerformanceService.markFullyDrawn();
+        NativePerformanceService.markFullyDrawn();
+
+        const drops = (Telemetry.increment as jest.Mock).mock.calls.filter(
+          ([name]) => name === 'startup_window_exceeded_total',
+        );
+        expect(drops).toHaveLength(1);
+      });
+    });
+
+    describe('the once-per-process guarantee', () => {
+      it('does not re-emit after a cleanup/remount cycle', () => {
+        // The regression: `cleanup()` reset the latch while the origin it is
+        // measured against (`__APP_START_TIMESTAMP`) is deliberately never
+        // cleared, so a remount — App unmount, Fast Refresh — emitted a second
+        // value covering minutes of session time, into a series documented as
+        // at most once per process.
+        NativePerformanceService.markFullyDrawn();
+        expect(Telemetry.histogram).toHaveBeenCalledWith(
+          'app_fully_drawn_ms',
+          2200,
+        );
+
+        NativePerformanceService.cleanup();
+        NativePerformanceService.initialize();
+        (Date.now as jest.Mock).mockReturnValue(START + 400_000);
+        NativePerformanceService.markFullyDrawn();
+
+        const reports = (Telemetry.histogram as jest.Mock).mock.calls.filter(
+          ([name]) => name === 'app_fully_drawn_ms',
+        );
+        expect(reports).toHaveLength(1);
+      });
+
+      it('keeps the interactive-gate suppression across a cleanup', () => {
+        // Clearing the flag in `cleanup()` additionally let a re-fired run
+        // report a launch that DID stop at sign-in as though it had not.
+        NativePerformanceService.noteInteractiveGate();
+        NativePerformanceService.cleanup();
+        NativePerformanceService.markFullyDrawn();
+
+        expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+          'app_fully_drawn_ms',
+          expect.anything(),
+        );
+      });
     });
   });
 

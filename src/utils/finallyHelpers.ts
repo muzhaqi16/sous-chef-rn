@@ -38,6 +38,27 @@ export async function executeRefreshWithFinally(
   await executeAsyncWithCleanup(refreshFn, () => setRefreshing(false), onError);
 }
 
+/**
+ * The same finalizer for a WRITE, with `onError` REQUIRED rather than optional.
+ *
+ * `executeRefreshWithFinally`'s swallow is safe for a refetch because the query
+ * it refreshes surfaces its own error state. A mutation has no such second
+ * surface: if it throws rather than resolving `{ success: false }` — a payload
+ * unwrap raising, or a network throw outside `errorPolicy: 'all'` — swallowing
+ * clears the spinner and reports nothing at all. Requiring the handler is what
+ * makes that omission a type error instead of a silent one, so this is not a
+ * convenience wrapper: prefer it for every write, and never widen the parameter
+ * back to optional.
+ */
+export async function executeWriteWithFinally(
+  writeFn: () => Promise<unknown>,
+  setPending: (value: boolean) => void,
+  onError: (error: unknown) => void,
+): Promise<void> {
+  setPending(true);
+  await executeAsyncWithCleanup(writeFn, () => setPending(false), onError);
+}
+
 /** Wraps an async operation with try-catch-finally where loading state is set externally
  *  before the call. Only provides catch + finally cleanup.
  *  `fn` may resolve to anything — the value is discarded, and `Promise<void>`

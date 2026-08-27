@@ -19,7 +19,8 @@ npm run codegen      # re-pull schema + regenerate types (run before lint if sch
 npm run typecheck    # app AND test tsconfig — run after every code change
 npm run lint         # ESLint, incl. every .graphql operation vs the pulled schema
 npm test             # full Jest suite (~15s) — always run unfiltered
-node scripts/check-compiler-bailouts.mjs         # nothing runs these two for you
+node scripts/check-compiler-bailouts.mjs         # also in pre-push
+node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
@@ -253,13 +254,18 @@ Mechanism and reasoning: `docs/session-and-transport.md`. The rules:
   `RootNavigator.Navigation` (React Navigation `Theme`), `TrendLineChart`
   (Skia draw calls), `RecipeMain`/`SortableShoppingList` (theme colors into
   data structures).
-- `babel-plugin-react-compiler` runs **before** the Unistyles babel plugin
-  (`babel.config.js`) — the reverse of the Unistyles docs, deliberately.
-  Unistyles' transform of `styles.useVariants(...)` emits an assignment the
-  compiler cannot lower, which fails the whole file and silently drops its
-  memoization. Verified vs `react-native-unistyles@3.3.0` +
-  `babel-plugin-react-compiler@1.0.0`. If theme updates ever go stale, suspect
-  this ordering first.
+- **Plugin order is Unistyles → `unistyles-scope-crawl` → React Compiler**
+  (`babel.config.js`), i.e. the documented order plus a crawl wedged between.
+  Unistyles' `useVariants` rewrite declares a shadowing binding without calling
+  `scope.crawl()`, so without the crawl the compiler cannot lower the function
+  and skips it. Running the compiler FIRST also compiles, but it then caches the
+  variant-resolved style on the wrong dependencies and the variant freezes at
+  its first-render value — memoized, zero bailouts, and silently wrong. Don't
+  reorder these three. Verified vs `react-native-unistyles@3.3.0` +
+  `babel-plugin-react-compiler@1.0.0` — re-check:
+  `node scripts/probe-unistyles-compiler-order.mjs`; mechanism and the measured
+  three-way table:
+  `docs/verified-library-behaviour.md#unistyles-usevariants-rewrite-needs-a-scope-re-crawl-before-the-compiler`.
 
 ### Pressable & gestures
 
@@ -439,6 +445,16 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   there is a regression to fix, not a licence to memoize. The
   lint rule is an error so the exception is written down:
   `// eslint-disable-next-line no-restricted-imports` + the reason.
+- **Never add `'use no memo'`.** The `noMemoOptOuts` list in
+  `scripts/check-compiler-bailouts.baseline.json` is EMPTY and the ratchet only
+  lets it shrink, so a new one fails the check. It used to be required for
+  components whose `styles.useVariants(...)` reads froze at their first-render
+  value; that was the inverted Babel plugin order, fixed at the root by
+  `scripts/babel/unistyles-scope-crawl.js`, and all four opt-outs were deleted.
+  Wanting one now means the plugin order or the crawl has regressed — run
+  `node scripts/probe-unistyles-compiler-order.mjs` and fix that instead of
+  opting a component out. `node scripts/check-unistyles-variant-staleness.mjs`
+  (baseline empty, runs in CI and pre-push) is what would catch it.
 - **Two `try` shapes bail the compiler out of the whole function**: a
   finalizer (`finally` with or without `catch`; also a catch-less `try`), and
   a value block (`?.`, `??`, `&&`, `||`, ternary) inside the `try` body. A
@@ -619,11 +635,18 @@ After code changes:
 
 ```bash
 npm run typecheck && npm run lint && npm test
-node scripts/check-compiler-bailouts.mjs   # separate — nothing runs it for you
+npm run check:compiler-bailouts && npm run check:unistyles-variants
 ```
 
-`check-compiler-bailouts` guards a file COUNT and, separately, WHICH function
-bails where a variant call was deliberately extracted into a leaf.
+`check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails
+where a variant call was deliberately extracted into a leaf; and separately
+again, the `'use no memo'` opt-out list — now EMPTY, which makes it an
+invariant rather than a tally: nobody should need the directive, so any entry
+is a regression in the Babel plugin ordering.
+`check-unistyles-variants` compiles each file to find a style read frozen at its
+first-render value — a defect neither ESLint nor tsc can see, because it exists
+only in the output of two Babel plugins composed in a particular order. Both run
+in `pre-push` now, so neither depends on being remembered.
 `check:version-sync` (pre-push) keeps `package.json` / `versionName` /
 `MARKETING_VERSION` aligned — a drifted platform silently loses the
 version-keyed cache purge and misreports `CLIENT_VERSION`; detail:

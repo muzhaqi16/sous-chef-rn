@@ -137,6 +137,12 @@ jest.mock('zustand/shallow', () => ({
   useShallow: jest.fn(<S,>(fn: S): S => fn),
 }));
 
+jest.mock('#services/performance/NativePerformanceService', () => ({
+  NativePerformanceService: {
+    noteInteractiveGate: jest.fn(),
+  },
+}));
+
 // Track mock state
 let mockIsHydrated = false;
 let mockUser: User | null = null;
@@ -363,6 +369,67 @@ describe('Navigation (RootNavigator)', () => {
     mockNavigationState = 'auth';
     render(<Navigation />);
     expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
+  });
+
+  describe('the app_fully_drawn_ms interactive gate', () => {
+    const { NativePerformanceService } = jest.requireMock(
+      '#services/performance/NativePerformanceService',
+    ) as { NativePerformanceService: { noteInteractiveGate: jest.Mock } };
+
+    it('does not suppress the metric when only the PERSISTED state was a gate', () => {
+      // The regression. `navigationState` is persisted and rehydrated before
+      // this launch resolves its own target, so a signed-in user whose last
+      // session ended on the sign-in screen relaunches straight into the app
+      // with zero human wait — and reading the store value latched a one-way,
+      // process-scoped suppression that no API clears. The flagship metric was
+      // silently lost on exactly the cold starts it exists to measure.
+      mockIsHydrated = true;
+      mockNavigationState = 'auth'; // left over from the previous session
+      mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        emailVerified: true,
+        onBoarded: true,
+      };
+
+      render(<Navigation />);
+
+      expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
+      expect(
+        NativePerformanceService.noteInteractiveGate,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('suppresses the metric when THIS launch resolves to a gate', () => {
+      // The pair that makes the negative above able to fail: with no user, the
+      // launch really does stop for sign-in, and that wait is the person's.
+      mockIsHydrated = true;
+      mockNavigationState = 'main_app'; // stale in the other direction
+      mockUser = null;
+
+      render(<Navigation />);
+
+      expect(mockSetNavigationState).toHaveBeenCalledWith('auth');
+      expect(
+        NativePerformanceService.noteInteractiveGate,
+      ).toHaveBeenCalledTimes(1);
+    });
+
+    it('suppresses on a verification gate too, not just sign-in', () => {
+      mockIsHydrated = true;
+      mockNavigationState = 'loading';
+      mockUser = {
+        id: '1',
+        email: 'test@example.com',
+        emailVerified: false,
+        onBoarded: false,
+      };
+
+      render(<Navigation />);
+
+      expect(mockSetNavigationState).toHaveBeenCalledWith('verification');
+      expect(NativePerformanceService.noteInteractiveGate).toHaveBeenCalled();
+    });
   });
 
   it('does not show biometric prompt when conditions are not met', () => {

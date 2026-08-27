@@ -139,9 +139,6 @@ function parseEnvFile(filePath) {
   return result;
 }
 
-/** A full 40-character commit sha — what CI records, never what `gitSha()` derives. */
-const FULL_SHA = /^[0-9a-f]{40}$/;
-
 /**
  * Build identity recorded in a previously generated `env.generated.ts`, kept
  * only where re-deriving it now would be a DOWNGRADE.
@@ -156,8 +153,9 @@ const FULL_SHA = /^[0-9a-f]{40}$/;
  *
  * Deliberately NOT a blanket "keep whatever was there": that would freeze a
  * local checkout's sha at its first value and stop `-dirty` from ever tracking
- * the tree again. Only these two keys, and GIT_SHA only when the recorded value
- * is strictly more precise than what this run can derive.
+ * the tree again — which is exactly what the precision test that used to guard
+ * this did, because it could never be false. Only these two keys, and GIT_SHA
+ * only when this tree can derive no sha at all.
  */
 function readExistingBuildIdentity() {
   const generatedPath = path.join(
@@ -185,14 +183,21 @@ function readExistingBuildIdentity() {
   const buildId = read('BUILD_ID');
   if (buildId) identity.BUILD_ID = buildId;
 
-  // Kept only against a less precise derivation — a local run re-deriving its
-  // own short sha must still see the tree's current state.
+  // Kept ONLY when this tree cannot describe itself at all.
+  //
+  // The condition here used to be `!FULL_SHA.test(gitSha() ?? '')`, which is
+  // unconditionally TRUE: `gitSha()` only ever returns a SHORT sha, so it never
+  // matches FULL_SHA and the recorded value was preserved on every subsequent
+  // run. One `GIT_SHA=$(git rev-parse HEAD) npm run ios:release` therefore
+  // pinned every later local build to that commit — `-dirty` never reappeared,
+  // and `check-build-provenance.mjs` did not notice because it only compares
+  // when `process.env.GIT_SHA` is set. That defeats the traceability the value
+  // exists for: the build reports a commit it was not built from.
+  //
+  // A tree that CAN derive a sha always wins, precise or not: describing the
+  // wrong commit is worse than describing this one less precisely.
   const recordedSha = read('GIT_SHA');
-  if (
-    recordedSha &&
-    FULL_SHA.test(recordedSha) &&
-    !FULL_SHA.test(gitSha() ?? '')
-  ) {
+  if (recordedSha && !gitSha()) {
     identity.GIT_SHA = recordedSha;
   }
 

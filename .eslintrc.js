@@ -404,6 +404,16 @@ module.exports = {
                   'file it bails out of (see scripts/check-compiler-bailouts.mjs). ' +
                   'When one of those applies, add an eslint-disable-next-line with the reason.',
               },
+              {
+                name: '@react-native-picker/picker',
+                message:
+                  'Use ModalPicker (#components/molecules/ModalPicker) instead. ' +
+                  'On Android the native picker opens an Activity-themed DIALOG: it ' +
+                  'follows the OS uiMode and ignores the in-app theme, and nothing ' +
+                  'reachable from RN retints it — so with the OS in dark mode and the ' +
+                  'app in light (or the reverse) the options are unreadable. Inside a ' +
+                  'bottom sheet, pass stackBehavior="push".',
+              },
             ],
             patterns: [
               {

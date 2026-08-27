@@ -80,11 +80,6 @@ output.js.map
 
 # Yarn
 .yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/sdks
-!.yarn/versions
 
 *.env
 .env.local
@@ -116,10 +111,6 @@ src/config/env.generated.ts
 # retractions of earlier readings that were artifacts. Untracked, each session
 # re-derives it and repeats the same mistakes.
 docs/audits/*
-!docs/audits/perf-offline-baseline-2026-08-24.md
-!docs/audits/perf-ios-baseline-2026-08-25.md
-!docs/audits/regression-triage-2026-08-26.md
-!docs/audits/perf-blank-window-2026-08-26.md
 
 # Reassure measurements. Per-run and per-machine — a baseline is only
 # comparable against a current measured on the SAME machine minutes later,

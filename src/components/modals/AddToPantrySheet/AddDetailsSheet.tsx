@@ -1,4 +1,12 @@
 import React, { useState, useRef } from 'react';
+import {
+  useForm,
+  useWatch,
+  type Resolver,
+  type Path,
+  type PathValue,
+} from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,6 +28,13 @@ import { StockSettingsPage } from './StockSettingsPage';
 import { Text } from '#components/atoms/Text';
 import { SheetFormHeader } from '#components/molecules/SheetFormHeader';
 import { makeIdNameHandler } from '../makeIdNameHandler';
+import { logValidationErrors } from '#/utils/validation/common';
+import {
+  addPantryItemSchema,
+  addPantryItemDefaults,
+  FIELD_PAGE,
+  type AddPantryItemFormData,
+} from './addPantryItemFormConfig';
 
 interface AddDetailsSheetProps {
   pantryId: string | undefined;
@@ -145,56 +160,114 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   // Page state
   const [currentPage, setCurrentPage] = useState(0);
 
-  // Form state - Page 1 (Main). This component is mounted fresh by the parent
-  // sheet each time the user enters the details step, so form fields initialize
-  // straight from props — no visibility-driven reset needed.
-  const [itemName, setItemName] = useState(prefilledItemName);
-  const [quantityInput, setQuantityInput] = useState('1');
-  const [unit, setUnit] = useState('');
-  const [unitId, setUnitId] = useState<string | null>(null);
-  const [storageState, setStorageState] = useState<StorageState>(
-    StorageState.Ambient,
-  );
-  const [category, setCategory] = useState('');
+  // ALL form state lives in react-hook-form: one source of truth, one schema,
+  // and validation that renders on the field instead of in a modal. Mounted
+  // fresh by the parent sheet each time the user enters the details step, so
+  // the defaults initialize straight from props — no reset needed.
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    trigger,
+    formState: { errors },
+  } = useForm<AddPantryItemFormData>({
+    resolver: yupResolver(
+      addPantryItemSchema,
+    ) as Resolver<AddPantryItemFormData>,
+    defaultValues: addPantryItemDefaults(prefilledItemName),
+    // Re-validates as the user edits, so a message retires on the keystroke
+    // that fixes it rather than surviving until the next submit.
+    mode: 'onChange',
+  });
 
-  // Form state - Package Details (on Page 2)
-  const [showPackageDetails, setShowPackageDetails] = useState(false);
-  const [packageSize, setPackageSize] = useState('');
-  const [contentUnit, setContentUnit] = useState('');
-  const [contentUnitId, setContentUnitId] = useState<string | null>(null);
-  const [itemNetWeight, setItemNetWeight] = useState('');
-  const [weightUnit, setWeightUnit] = useState('');
-  const [weightUnitId, setWeightUnitId] = useState<string | null>(null);
+  // Subscribed, because the pages render from these values.
+  const values = useWatch({ control }) as AddPantryItemFormData;
+  const {
+    itemName,
+    quantityInput,
+    unit,
+    unitId,
+    storageState,
+    category,
+    showPackageDetails,
+    packageSize,
+    contentUnit,
+    contentUnitId,
+    itemNetWeight,
+    weightUnit,
+    weightUnitId,
+    pantryNetWeight,
+    pantryNetWeightUnit,
+    pantryNetWeightUnitId,
+    expirationDate,
+    storageLocation,
+    selectedStorageLocationId,
+    storageNotes,
+    condition,
+    tags,
+    brand,
+    minQuantity,
+    restockQuantity,
+    storeName,
+    storeId,
+    costPerUnit,
+    acquisitionMethod,
+  } = values;
 
-  // Form state - Pantry Net Weight (on Page 2, always visible)
-  const [pantryNetWeight, setPantryNetWeight] = useState('');
-  const [pantryNetWeightUnit, setPantryNetWeightUnit] = useState('');
-  const [pantryNetWeightUnitId, setPantryNetWeightUnitId] = useState<
-    string | null
-  >(null);
+  /**
+   * Write a field the user did not type into directly — an autocomplete id, a
+   * segmented-control choice, a date. `shouldValidate` so picking a net-weight
+   * unit clears that message immediately.
+   */
+  const setField = <K extends Path<AddPantryItemFormData>>(
+    field: K,
+    value: PathValue<AddPantryItemFormData, K>,
+  ) => {
+    setValue(field, value, { shouldDirty: true, shouldValidate: true });
+    // `shouldValidate` re-runs the rule on THIS field only, and the
+    // all-or-nothing net-weight rule lives on `pantryNetWeightUnit` while its
+    // inputs are `pantryNetWeight` and `pantryNetWeightUnitId`.
+    if (field === 'pantryNetWeight' || field === 'pantryNetWeightUnitId') {
+      void trigger('pantryNetWeightUnit');
+    }
+  };
 
-  // Form state - Page 2 (Details)
-  const [expirationDate, setExpirationDate] = useState<Date | null>(null);
-
-  // Form state - Page 3 (Storage)
-  const [storageLocation, setStorageLocation] = useState('');
-  const [selectedStorageLocationId, setSelectedStorageLocationId] = useState<
-    string | null
-  >(null);
-  const [storageNotes, setStorageNotes] = useState('');
-  const [condition, setCondition] = useState<ItemCondition>(ItemCondition.Good);
-  const [tags, setTags] = useState('');
-  const [brand, setBrand] = useState('');
-
-  // Form state - Page 4 (Stock + Purchase)
-  const [minQuantity, setMinQuantity] = useState('');
-  const [restockQuantity, setRestockQuantity] = useState('');
-  const [storeName, setStoreName] = useState('');
-  const [storeId, setStoreId] = useState<string | null>(null);
-  const [costPerUnit, setCostPerUnit] = useState('');
-  const [acquisitionMethod, setAcquisitionMethod] = useState<AcquisitionMethod>(
-    AcquisitionMethod.Purchased,
-  );
+  // Setter-shaped adapters, so the four page components keep their existing
+  // `value` + `setValue` prop interfaces rather than each being rewritten.
+  const setItemName = (v: string) => setField('itemName', v);
+  const setQuantityInput = (v: string) => setField('quantityInput', v);
+  const setUnit = (v: string) => setField('unit', v);
+  const setUnitId = (v: string | null) => setField('unitId', v);
+  const setStorageState = (v: StorageState) => setField('storageState', v);
+  const setCategory = (v: string) => setField('category', v);
+  const setShowPackageDetails = (v: boolean) =>
+    setField('showPackageDetails', v);
+  const setPackageSize = (v: string) => setField('packageSize', v);
+  const setContentUnit = (v: string) => setField('contentUnit', v);
+  const setContentUnitId = (v: string | null) => setField('contentUnitId', v);
+  const setItemNetWeight = (v: string) => setField('itemNetWeight', v);
+  const setWeightUnit = (v: string) => setField('weightUnit', v);
+  const setWeightUnitId = (v: string | null) => setField('weightUnitId', v);
+  const setPantryNetWeight = (v: string) => setField('pantryNetWeight', v);
+  const setPantryNetWeightUnit = (v: string) =>
+    setField('pantryNetWeightUnit', v);
+  const setPantryNetWeightUnitId = (v: string | null) =>
+    setField('pantryNetWeightUnitId', v);
+  const setExpirationDate = (v: Date | null) => setField('expirationDate', v);
+  const setStorageLocation = (v: string) => setField('storageLocation', v);
+  const setSelectedStorageLocationId = (v: string | null) =>
+    setField('selectedStorageLocationId', v);
+  const setStorageNotes = (v: string) => setField('storageNotes', v);
+  const setCondition = (v: ItemCondition) => setField('condition', v);
+  const setTags = (v: string) => setField('tags', v);
+  const setBrand = (v: string) => setField('brand', v);
+  const setMinQuantity = (v: string) => setField('minQuantity', v);
+  const setRestockQuantity = (v: string) => setField('restockQuantity', v);
+  const setStoreName = (v: string) => setField('storeName', v);
+  const setStoreId = (v: string | null) => setField('storeId', v);
+  const setCostPerUnit = (v: string) => setField('costPerUnit', v);
+  const setAcquisitionMethod = (v: AcquisitionMethod) =>
+    setField('acquisitionMethod', v);
 
   // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
@@ -270,7 +343,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     costPerUnit,
     acquisitionMethod,
     onSuccess,
-    handlePageChange,
   });
 
   return (
@@ -280,7 +352,18 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         cancelLabel={t('labels.cancel')}
         saveLabel={loading ? t('labels.adding') : t('labels.add')}
         onCancel={onClose}
-        onSave={handleConfirm}
+        // `handleSubmit` runs the schema first: an invalid form renders its
+        // message on the offending field and jumps to that field's page, so
+        // the message is on screen rather than behind a tab the user has to
+        // find. Only a valid form reaches `handleConfirm`.
+        onSave={() => {
+          void handleSubmit(handleConfirm, formErrors => {
+            logValidationErrors(formErrors);
+            const firstField = Object.keys(formErrors)[0];
+            const page = FIELD_PAGE[firstField as keyof AddPantryItemFormData];
+            if (page !== undefined) handlePageChange(page);
+          })();
+        }}
         saving={loading}
         submitTestID="add-pantry-item-submit-button"
       />
@@ -304,6 +387,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         <MainDetailsPage
           itemName={itemName}
           setItemName={setItemName}
+          itemNameError={errors.itemName?.message}
           brand={brand}
           setBrand={setBrand}
           category={category}
@@ -319,6 +403,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         <DetailsPage
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
+          quantityError={errors.quantityInput?.message}
+          pantryNetWeightUnitError={errors.pantryNetWeightUnit?.message}
           unit={unit}
           setUnit={setUnit}
           handleUnitSelected={handleUnitSelected}
