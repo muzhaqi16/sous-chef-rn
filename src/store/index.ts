@@ -42,10 +42,6 @@ import {
   createBarcodeScannerSlice,
 } from './slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from './slices/appSlice';
-import {
-  createNotificationSlice,
-  NotificationState,
-} from './slices/notificationSlice';
 import { createUISlice, UIState } from './slices/uiSlice';
 import {
   createResetManager,
@@ -264,7 +260,6 @@ export type RootState = AuthState &
   PreferencesState &
   AppState &
   NavigationState &
-  NotificationState &
   BarcodeScannerState &
   UIState &
   TelemetryState &
@@ -417,7 +412,6 @@ export const useStore = create<RootState>()(
             ...createAppSlice(set, get, store),
             ...createNavigationSlice(set, get, store),
             ...createBarcodeScannerSlice(set, get, store),
-            ...createNotificationSlice(set, get, store),
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),

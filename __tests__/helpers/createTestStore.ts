@@ -12,7 +12,6 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import { createAuthSlice, AuthState } from '#store/slices/authSlice';
 import { createPreferencesSlice, PreferencesState } from '#store/slices/preferencesSlice';
 import { createNavigationSlice, NavigationState } from '#store/slices/navigationSlice';
-import { createNotificationSlice, NotificationState } from '#store/slices/notificationSlice';
 import { createUISlice, UIState } from '#store/slices/uiSlice';
 import { createBarcodeScannerSlice, BarcodeScannerState } from '#store/slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from '#store/slices/appSlice';
@@ -23,7 +22,6 @@ import { RootState } from '#store/index';
 type TestRootState = AuthState &
   PreferencesState &
   NavigationState &
-  NotificationState &
   UIState &
   BarcodeScannerState &
   AppState &
@@ -43,7 +41,6 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           ...createAuthSlice(set, get, api),
           ...createPreferencesSlice(set, get, api),
           ...createNavigationSlice(set, get, api),
-          ...createNotificationSlice(set, get, api),
           ...createUISlice(set, get, api),
           ...createBarcodeScannerSlice(set, get, api),
           ...createAppSlice(set, get, api),

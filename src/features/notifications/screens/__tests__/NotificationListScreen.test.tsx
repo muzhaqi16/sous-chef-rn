@@ -116,16 +116,6 @@ jest.mock('#features/notifications/utils/notificationGrouping', () => ({
   createSectionListData: jest.fn().mockReturnValue([]),
 }));
 
-jest.mock('#store/slices/notificationSlice', () => ({
-  // Spread the real slice so every export (isNotificationPayload,
-  // NOTIFICATION_CATEGORIES) stays present — a partial factory would silently
-  // drop them.
-  ...jest.requireActual('#store/slices/notificationSlice'),
-  // The footer loader pulls themedComponents → IconButton → the real store,
-  // whose index calls createNotificationSlice; provide a no-op so it builds.
-  createNotificationSlice: () => ({}),
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });

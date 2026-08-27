@@ -28,6 +28,7 @@
  *                   own `status` through.
  */
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   MarkNotificationAsReadDocument,
@@ -137,7 +138,7 @@ export function useNotificationSync() {
       restoreNotifications(cache, userId(), restore ? [restore] : []);
     } else {
       // The row is gone for good; drop its client-side enrichment with it.
-      useStore.getState().clearExpirationLink(id);
+      useNotificationStore.getState().clearExpirationLink(id);
     }
   };
 
@@ -190,7 +191,9 @@ export function useNotificationSync() {
     if (classifyCreateResult(result) === 'rejected') {
       restoreNotifications(cache, userId(), captured);
     } else {
-      ids.forEach(id => useStore.getState().clearExpirationLink(id));
+      ids.forEach(id =>
+        useNotificationStore.getState().clearExpirationLink(id),
+      );
     }
   };
 

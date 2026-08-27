@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { NOTIFICATION_CATEGORIES } from '#store/slices/notificationSlice';
+import { NOTIFICATION_CATEGORIES } from '#features/notifications/types';
 
 interface NotificationFiltersProps {
   selectedCategory: NotificationCategory | null;

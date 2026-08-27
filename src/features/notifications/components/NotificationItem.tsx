@@ -8,7 +8,7 @@ import type { DisplayNotification as NotificationType } from '#features/notifica
 import {
   getNotificationDisplayMessage,
   getNotificationIcon,
-} from '#utils/notifications/notificationHelpers';
+} from '#features/notifications/utils/notificationHelpers';
 import { safeParseDate } from '#utils/dateUtils';
 import { getDateFnsLocale } from '#utils/dateLocale';
 

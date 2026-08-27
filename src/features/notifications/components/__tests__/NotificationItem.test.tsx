@@ -6,7 +6,7 @@ import {
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
-import {} from '#store/slices/notificationSlice';
+import {} from '#features/notifications/types';
 import type { DisplayNotification as NotificationItemData } from '#features/notifications/utils/toDisplayNotification';
 
 jest.mock('#utils/iconUtils', () => {
@@ -18,7 +18,7 @@ jest.mock('#utils/iconUtils', () => {
   };
 });
 
-jest.mock('#utils/notifications/notificationHelpers', () => ({
+jest.mock('#features/notifications/utils/notificationHelpers', () => ({
   getNotificationIcon: jest.fn(() => 'notifications'),
   getNotificationDisplayMessage: jest.fn(
     (notification: { message: string }) => notification.message,

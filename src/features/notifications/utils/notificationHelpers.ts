@@ -3,7 +3,7 @@ import { Icon } from '#utils/iconUtils';
 import { format } from 'date-fns/format';
 import { safeParseDate } from '#utils/dateUtils';
 import { getDateFnsLocale } from '#utils/dateLocale';
-import type { NotificationPayload } from '#store/slices/notificationSlice';
+import type { NotificationPayload } from '#features/notifications/types';
 import type { Translate } from '#/i18n/types';
 
 type IconProps = React.ComponentProps<typeof Icon>;

@@ -37,6 +37,8 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: { clear: jest.fn() },
 }));
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
+import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
 /**
@@ -162,7 +164,6 @@ describe('a session end leaves no data belonging to the previous person', () => 
     await useStore.getState().resetStore('LOGOUT');
 
     const state = useStore.getState();
-    expect(state.pendingExpirationLinks).toEqual({});
     expect(state.recentlyScanned).toEqual([]);
     expect(state.cachedItemSuggestions).toEqual([]);
     expect(state.selectedHomeId).toBeNull();
@@ -170,6 +171,25 @@ describe('a session end leaves no data belonging to the previous person', () => 
     expect(state.selectedShoppingListId).toBeNull();
     expect(state.selectedMealPlanId).toBeNull();
     expect(state.user).toBeNull();
+  });
+
+  // A feature that owns its own store falls outside `PERSISTED_KEYS`, so the
+  // marker sweep above cannot reach it — exactly how `recipe-search-cache` and
+  // `recipe-suggestions-cache` came to survive a sign-out unnoticed. Feature
+  // stores register a reset instead; this asserts the registry is wired and
+  // that a populated feature store is actually emptied.
+  it('clears feature-owned stores, which the persisted-key sweep cannot see', async () => {
+    useNotificationStore
+      .getState()
+      .linkExpirationData('notif-1', { pantryItemName: 'previous person' });
+    expect(useNotificationStore.getState().pendingExpirationLinks).not.toEqual(
+      {},
+    );
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useNotificationStore.getState().pendingExpirationLinks).toEqual({});
+    expect(registeredSessionScopedStores()).toContain('notifications');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

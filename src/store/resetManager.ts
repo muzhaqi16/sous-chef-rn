@@ -1,7 +1,6 @@
 import { RootState } from './index';
 import { initialAppState } from './slices/appSlice';
 import { initialBarcodeScannerState } from './slices/barcodeScannerSlice';
-import { initialNotificationState } from './slices/notificationSlice';
 import { zustandStorage, STORAGE_KEY } from '#/storage/mmkv';
 import { storage } from '#/storage/mmkv';
 import {
@@ -11,6 +10,7 @@ import {
 import { cancelTokenRefresh } from '#/apollo/links/tokenScheduler';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { runSessionTeardown } from './sessionTeardown';
+import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 
 /**
@@ -105,7 +105,6 @@ const SESSION_SCOPED_STATE = {
   // items the item autocomplete offers as suggestions. The two slices are
   // spread whole from their own initial state, so a field added to either is
   // cleared here without anyone remembering to come back.
-  ...initialNotificationState,
   ...initialBarcodeScannerState,
   cachedItemSuggestions: initialAppState.cachedItemSuggestions,
 } satisfies Partial<RootState>;
@@ -133,6 +132,11 @@ export const createResetManager = (
       // with the session: `LOGOUT` sets `preferences: false`, so anything
       // filed there survives a sign-out on a shared device.
       Object.assign(newState, SESSION_SCOPED_STATE);
+
+      // `SESSION_SCOPED_STATE` only reaches the ROOT store. A feature that owns
+      // its own store registers its reset separately — without this, feature
+      // state would survive a sign-out exactly as the two recipe caches do.
+      resetSessionScopedStores();
     }
 
     // Reset UI state
@@ -157,11 +161,15 @@ export const createResetManager = (
       Object.assign(newState, {
         // Reset onboarding state
         onBoardingStep: null,
-        // Same two slices the auth branch clears — spread rather than
-        // re-listed, so the two branches cannot describe "empty" differently.
-        ...initialNotificationState,
+        // The same slice the auth branch clears — spread rather than re-listed,
+        // so the two branches cannot describe "empty" differently.
         ...initialBarcodeScannerState,
       });
+
+      // Idempotent, and deliberately in both branches: this is where the
+      // notification buffer used to be cleared by spreading its initial state,
+      // so ONBOARDING_RESET (auth: false, preferences: true) still empties it.
+      resetSessionScopedStores();
     }
 
     // Clear Apollo cache if requested

@@ -28,6 +28,7 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   },
 }));
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { RESET_SCENARIOS, createResetManager } from '../resetManager';
 import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
@@ -212,10 +213,12 @@ describe('resetManager', () => {
         });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.onBoardingStep).toBeNull();
-        // The feed moved to the Apollo cache; what the reset clears here is
-        // the expiration buffer that stayed behind.
-        expect(firstCall.pendingExpirationLinks).toEqual({});
         expect(firstCall.scannedBarcode).toBeNull();
+        // The notification buffer is a feature store now, cleared through the
+        // registry rather than by spreading its initial state into the root.
+        expect(useNotificationStore.getState().pendingExpirationLinks).toEqual(
+          {},
+        );
       });
 
       it('clears the persisted Apollo cache when clearApolloCache is true', async () => {

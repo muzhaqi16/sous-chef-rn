@@ -1,3 +1,4 @@
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient } from '@apollo/client/react';
@@ -5,7 +6,7 @@ import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { ExpirationAction } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
-import { readExpiryReminderFields } from '#utils/notifications/notificationHelpers';
+import { readExpiryReminderFields } from '#features/notifications/utils/notificationHelpers';
 import { GetExpirationNotificationsForPantryItemDocument } from '#features/notifications/graphql/expirationNotificationLookup.generated';
 import {
   InvitationAcceptanceModal,
@@ -50,7 +51,9 @@ export const NotificationActionHandler: React.FC<
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
   const currentUserId = useAppStore(state => state.user?.id);
-  const linkExpirationData = useAppStore(state => state.linkExpirationData);
+  const linkExpirationData = useNotificationStore(
+    state => state.linkExpirationData,
+  );
   const { syncDelete } = useNotificationSync();
   const showInvitationModal = (notification: NotificationItem) => {
     if (

@@ -13,6 +13,7 @@
  *
  */
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
@@ -46,7 +47,7 @@ export function useExpirationNotificationSync() {
   ) => {
     // The action is client-side enrichment and stays in the store; the row's
     // read-state is server state and goes to the cache.
-    useStore.getState().setExpirationAction(notificationId, action);
+    useNotificationStore.getState().setExpirationAction(notificationId, action);
     const markedRead = applyNotificationRead(
       client.cache,
       useStore.getState().user?.id,
@@ -74,7 +75,7 @@ export function useExpirationNotificationSync() {
     }
 
     if (classifyCreateResult(result) === 'rejected') {
-      useStore.getState().setExpirationAction(notificationId, '');
+      useNotificationStore.getState().setExpirationAction(notificationId, '');
       if (markedRead) {
         applyNotificationUnread(
           client.cache,

@@ -12,9 +12,9 @@
  * for a self-echo, a delete, or a row this device isn't holding.
  */
 
+import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
 import {
-  useAppStore,
   useIsHomeSelectionReady,
   useSelectedPantryId,
 } from '#store/useAppStore';
@@ -178,7 +178,7 @@ async function handleItemChanged(
 export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() || undefined;
   const isHomeSelectionReady = useIsHomeSelectionReady();
-  const linkExpirationData = useAppStore(state => state.linkExpirationData);
+  const linkExpirationData = useLinkExpirationData();
   const rejected = useSubscriptionRejected('PantryEvents');
 
   const expirationOnData = async (

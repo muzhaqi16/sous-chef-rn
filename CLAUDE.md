@@ -67,7 +67,13 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
   `src/store/` Zustand slices + reset manager · `src/i18n/` config + locales ·
   `src/services/`, `src/navigation/`, `src/theme/`, `src/utils/`.
 
-**Import aliases** (`tsconfig.json` `paths`): every top-level `src/` folder has
+**Import aliases** — `tsconfig.json` `paths` is the SINGLE source. `babel.config.js`
+and `jest.config.js` derive theirs from it through `scripts/lib/aliases.js`, and
+ESLint reads it via `import/resolver.typescript`. There used to be three
+hand-maintained lists with three different matching semantics (32 / 25 / 19
+entries) and nothing checking them against each other, so an alias added to
+`tsconfig` type-checked but failed to resolve at runtime. Add an alias in ONE
+place. Every top-level `src/` folder has
 a `#<name>` alias (`#components`, `#features`, `#hooks`, `#store`, …); the
 irregular ones are `#/*` → `src/*`, `#operations` → `src/graphql/operations`
 (preferred for operation imports), `#generated` → `src/graphql/generated`, and
@@ -96,6 +102,14 @@ tests are exempt. Canonical table and the deliberate `graphql/` asymmetry:
 `docs/architecture.md` § The public API boundary.
 
 ## State ownership
+
+**A feature may own its own store.** `src/features/notifications/store/` is the
+worked example: state nothing else reads lives with its feature rather than as a
+root slice. The catch is that `SESSION_SCOPED_STATE` only reaches the ROOT store,
+so a feature store MUST call `registerSessionScopedStore(name, reset)` — that is
+how `recipe-search-cache` and `recipe-suggestions-cache` came to survive a
+sign-out unnoticed. `sessionEndLeavesNoData.test.ts` asserts a populated feature
+store is emptied by `LOGOUT`.
 
 **If the server owns it, Apollo owns it; otherwise Zustand owns it** — read
 via the named hooks from `#store/useAppStore`, never by subscribing to the
@@ -763,6 +777,18 @@ changes. Measurement decides what to change; it is not the confirmation step.
 - **Judge an intermittent mode against a distribution, not a handful of samples.**
   Per-session counters plus lingering series also make cross-session aggregation
   (`sum(...) by (screen)`) untrustworthy — read per session.
+- **Match the instrument to the symptom, or you will fix the wrong thing.**
+  HITCHING (occasional long frames) is a re-render problem — read React commit
+  counts, or `flashlist_data_reference_changes`. A FRAME-RATE CEILING (every
+  frame uniformly over budget) is not; read
+  `adb shell dumpsys gfxinfo <pkg> framestats` on a DEVICE and decompose per
+  phase. On the pantry the UI thread — where per-row view count and Yoga layout
+  live — is 1.5 ms of a 17 ms frame, so "reduce views per row" measured out
+  false while React-render reasoning pointed the same wrong way. Emulator frame
+  stats cannot be used at all: its software GPU alone takes 16-20 ms per frame.
+- **Check the panel's refresh rate before calling a frame slow.**
+  `dumpsys display | grep mActiveModeId` → the mode's `vsyncRate`. The
+  SM-S908U1 runs at 96 Hz, so the budget is 10.4 ms, not 16.7 ms.
 
 Audit write-ups are scratch and untracked (`.gitignore`), so each rule above
 carries its own number and stands on its own. Treat every `app_fully_drawn_ms`

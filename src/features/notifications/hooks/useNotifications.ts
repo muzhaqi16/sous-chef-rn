@@ -27,11 +27,11 @@ import {
   getNotificationAction,
   getNotificationDisplayMessage,
   getNotificationTitle,
-} from '#utils/notifications/notificationHelpers';
+} from '#features/notifications/utils/notificationHelpers';
 import {
   isNotificationPayload,
   type NotificationPayload,
-} from '#store/slices/notificationSlice';
+} from '#features/notifications/types';
 import {
   handleSubscriptionError,
   clearAllRetryStates,

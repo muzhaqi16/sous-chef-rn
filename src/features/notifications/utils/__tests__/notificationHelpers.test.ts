@@ -2,9 +2,9 @@ import { NotificationType } from '#/graphql/generated/schemaTypes';
 import {
   getNotificationDisplayMessage,
   getNotificationIcon,
-} from '../notificationHelpers';
+} from '#features/notifications/utils/notificationHelpers';
 import { getI18n } from '#/i18n/config';
-import type { NotificationPayload } from '#store/slices/notificationSlice';
+import type { NotificationPayload } from '#features/notifications/types';
 
 // Real i18n instance (auto-initialized on config import) so the test exercises
 // the actual locale keys + interpolation rather than a stubbed translator.

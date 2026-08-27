@@ -12,26 +12,35 @@ import {
   NotificationType,
   Priority,
 } from '#/graphql/generated/schemaTypes';
-import {} from '#store/slices/notificationSlice';
 import type { DisplayNotification as NotificationItem } from '#features/notifications/utils/toDisplayNotification';
 import { NotificationActionHandler } from '../NotificationActionHandler';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
 const mockLinkExpirationData = jest.fn();
+jest.mock('#features/notifications/store/notificationStore', () => ({
+  useNotificationStore: Object.assign(
+    <T,>(selector: (s: { linkExpirationData: jest.Mock }) => T): T =>
+      selector({ linkExpirationData: mockLinkExpirationData }),
+    {
+      getState: () => ({ linkExpirationData: mockLinkExpirationData }),
+      setState: jest.fn(),
+      subscribe: jest.fn(),
+    },
+  ),
+}));
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: Object.assign(
     <T,>(
       selector: (state: {
         setHomeAndPantry: jest.Mock;
         removeNotification: jest.Mock;
-        linkExpirationData: jest.Mock;
       }) => T,
     ): T =>
       selector({
         setHomeAndPantry: jest.fn(),
         removeNotification: jest.fn(),
-        linkExpirationData: mockLinkExpirationData,
       }),
     { getState: () => ({}), setState: jest.fn(), subscribe: jest.fn() },
   ),

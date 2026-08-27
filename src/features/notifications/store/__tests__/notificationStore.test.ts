@@ -1,5 +1,5 @@
 /**
- * The notification slice holds the expiration-enrichment buffer and nothing
+ * The notification store holds the expiration-enrichment buffer and nothing
  * else.
  *
  * The feed itself — writes, counts, category selectors, eviction — lives in
@@ -8,12 +8,15 @@
  * notification and its expiration details independently, and either can arrive
  * first, so the details wait here until their notification shows up.
  */
-import { createTestStore } from '#/test-utils/createTestStore';
-import type { ExpirationLinkData } from '../notificationSlice';
+import { useNotificationStore } from '../notificationStore';
+import type { ExpirationLinkData } from '#features/notifications/types';
 
-// Mock authSlice dependencies
-jest.mock('../../../apollo/links/tokenScheduler');
-jest.mock('../../../apollo/links/refreshToken');
+// A feature store, so no root-store scaffolding is needed — the auth-slice
+// mocks this file used to carry went with the slice.
+const createTestStore = () => {
+  useNotificationStore.getState().resetNotifications();
+  return useNotificationStore;
+};
 
 const enrichment = (
   overrides: Partial<ExpirationLinkData> = {},

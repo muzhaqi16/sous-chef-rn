@@ -15,17 +15,20 @@ dispositioned at the end; the paths and numbers in it no longer matched the code
 |                         | Pantry (`PantryContent`)                                                                        | Shopping list (`SortableList`)                                                                                                      |
 | ----------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Query                   | `GetPantry`, one page, `itemsFirst: 100`                                                        | `GetShoppingListItemsFiltered` × 2 (unpurchased / purchased), `first: 25` (`PAGINATION.ITEMS_PAGE_SIZE`), cursor `fetchMore`        |
-| Growth on scroll        | Client-side window: `INITIAL_RENDER_WINDOW` 24, `RENDER_WINDOW_STEP` 24 — a `slice`, no network | Server page per `onEndReached`; each append runs cache merge → `useQuery` broadcast → `useConnectionData` → `wrapItems` → FlashList |
+| Growth on scroll        | None — `sortedItems` goes to FlashList whole. The old client render window was a SECOND virtualization on top of FlashList's own; growing it re-rendered every mounted cell | Server page per `onEndReached`; each append runs cache merge → `useQuery` broadcast → `useConnectionData` → `wrapItems` → FlashList |
 | Row objects             | Apollo nodes passed through; structural sharing keeps unchanged rows `===`                      | `wrapItems` caches rows **per node** (and per tab), so unchanged rows stay `===` across an append                                   |
 | Data → FlashList        | Direct. Never through `useDeferredValue` — see `flashlist-layout-index-race.md`                 | Same                                                                                                                                |
-| `drawDistance`          | 2× viewport (`DRAW_DISTANCE`)                                                                   | 2× viewport                                                                                                                         |
+| `drawDistance`          | **0.5× viewport** (`DRAW_DISTANCE`) — the ONLY bound on mounted cells now                       | 2× viewport                                                                                                                         |
 | `maxItemsInRecyclePool` | 15                                                                                              | 15 (`FLASHLIST_DEFAULTS.fullScreen`)                                                                                                |
 | `CellRendererComponent` | `useFlashListPerformance().CellRendererComponent` (tracks mounted cells, see below)             | Same                                                                                                                                |
 | Row component           | `PantryItemCard`: swipeable + `useFragment`                                                     | `SwipeableListItem`: swipeable + checkbox + image + `useFragment` + slide animation — heavier to mount                              |
 
 FlashList decides whether a cell re-renders by `item` identity (`ViewHolder`'s memo
-is `prevProps.item === nextProps.item`). Both lists now satisfy that, so an append
-renders only the cells it adds.
+is `prevProps.item === nextProps.item`) — but it re-renders EVERY mounted cell when
+its own `data`, `ListFooterComponent` or `onEndReached` prop changes identity, and it
+names them in its re-render reason. That, not row identity, was the pantry's cost:
+the client render window changed the data array AND `handleEndReached`'s identity on
+every growth. Both are gone; `onEndReached` is now ref-stable.
 
 ## Cache merge and the persisted connection
 
@@ -179,12 +182,53 @@ skip flag follows focus and that a blur/focus cycle costs no request;
   query/mutation timings. Reports print every 10 s while a list is active; the
   window that contains an append should add at most one long frame, and its size is
   the append's cost.
-- **`flashlist_initial_load_ms` is device-sensitive, and every number in this doc
-  is from an emulator.** Same screen (`PantryContent`), same release variant:
-  **40 ms** on the Pixel_9a emulator, **301-934 ms** on an SM-S908U1 (2026-08-25).
-  The reading that "the list is not the bottleneck" holds for the emulator and
-  does not transfer. Re-measure on hardware before drawing a conclusion from any
-  figure below.
+- **`flashlist_initial_load_ms` is device-sensitive; the figures in the sections
+  above are from an emulator.** Same screen (`PantryContent`), same release
+  variant: **40 ms** on the Pixel_9a emulator, **301-934 ms** on an SM-S908U1.
+  Re-measure on hardware before drawing a conclusion from any emulator figure.
+  Emulator FRAME stats are worse than useless: its software GPU alone takes
+  16-20 ms per frame, which swamps anything the app does.
+
+## Two different symptoms, two different instruments
+
+Scroll complaints split into two problems that need different tools. Getting
+this wrong costs a wasted refactor.
+
+**Hitching** — occasional long frames. Caused by something re-rendering the whole
+list. Instrument: the React profiler (commit count / duration), or
+`flashlist_data_reference_changes`, which already exists and is the cheapest
+early warning for this whole class.
+
+**A frame-rate ceiling** — every frame uniformly over budget, no hitches.
+Instrument: `adb shell dumpsys gfxinfo <pkg> framestats` on a real device, then
+decompose per phase. React commit counts do NOT track this and will mislead you.
+
+Measured on an SM-S908U1 (96 Hz panel → **10.4 ms budget**), localRelease, 92
+pantry items, thermal 0, warmed, 119 frames:
+
+| phase | median | p90 |
+| --- | --- | --- |
+| input + animation + layout (UI thread) | **1.5 ms** | 5.2 |
+| ↳ `PerformTraversals` | 0.1 ms | 0.4 |
+| sync UI→Render | 3.5 ms | 5.4 |
+| RenderThread issue draw | 4.9 ms | 7.8 |
+| swap→completed (GPU present) | **6.7 ms** | 8.1 |
+| TOTAL | 17.2 ms | 21.5 |
+
+**UI-thread work is 1.5 ms of a 17 ms frame.** Per-row view count and Yoga layout
+live there, so cutting views per row cannot move this number — a hypothesis that
+looked obvious and measured out false. The frame is spent on the GPU.
+
+The card shadow (`theme.shadows.card`, two layers, 20 px blur) is the largest
+single GPU cost, dose-response confirmed: two-layer **17.2 ms** → single-layer
+8 px **15.5 ms** → none **14.7 ms**, with the delta landing almost entirely in
+`swap→completed`. **Deliberately not changed**: `shadows.card` feeds 8 call sites
+(every card surface), and even removing it entirely leaves 14.7 ms — still 41%
+over budget. The lever cannot reach 96 Hz, so it does not justify an app-wide
+visual change.
+
+Net: the pantry's hitching is fixed; its frame-rate ceiling (~58 fps on a 96 Hz
+panel) is GPU-bound and unsolved.
 
 ## Disposition of the earlier investigation's issues
 
@@ -201,8 +245,11 @@ skip flag follows focus and that a blur/focus cycle costs no request;
 
 ## Still open
 
-- `SwipeableListItem` mount cost, if a release-build profile ever shows appends heavy
-  again — the rows are the structural difference from the pantry.
+- The pantry's frame-rate ceiling: ~4 ms must come out of RenderThread draw +
+  GPU present (image decode/upload, rounded-corner clipping, overdraw) to reach
+  10.4 ms. Nothing cheap found. Row REACT cost is not the lever —
+  `SlideAnimatedWrapper` measures 0.63 ms of render time per recycled row, and
+  the swipe action trays are already lazy.
 - `HomeEvents` / `MealPlanEvents` `no-cache` (see the rule above) — no symptom
   measured there yet.
 - Issues 3 and 4 above: mitigated / low, not re-measured.

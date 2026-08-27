@@ -18,6 +18,7 @@
  * them.
  */
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -25,7 +26,6 @@ import {
   type UseNotificationsOnLaunch_NotificationFragment,
 } from './useNotificationsOnLaunch.generated';
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
-import { useAppStore } from '#store/useAppStore';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   toDisplayNotification,
@@ -39,7 +39,7 @@ export function useNotificationHistory(
   enabled: boolean,
 ) {
   const client = useApolloClient();
-  const pendingExpirationLinks = useAppStore(
+  const pendingExpirationLinks = useNotificationStore(
     state => state.pendingExpirationLinks,
   );
 
