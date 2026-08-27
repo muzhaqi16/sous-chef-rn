@@ -40,10 +40,12 @@ import {
   type RecipeCreatedBy,
 } from './recipeCacheWriters';
 import { errorService } from '#/services/errorService';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 export const RecipeFormScreen: React.FC<
   StaticScreenProps<{ recipeId?: string } | undefined>
 > = ({ route }) => {
+  useScreenTransition('RecipeForm');
   const recipeId = route.params?.recipeId;
   const isEditMode = !!recipeId;
 

@@ -44,6 +44,7 @@ import {
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Text } from '#components/atoms/Text';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
   formatCurrency,
   formatNumberForInput,
@@ -79,6 +80,7 @@ export const ListSettings: React.FC<
     | undefined
   >
 > = ({ route }) => {
+  useScreenTransition('ListSettings');
   const { t } = useTranslation();
   const listId = route.params?.listId;
   const { toShareList, toHomeDetail, goBack } = useAppNavigation();
