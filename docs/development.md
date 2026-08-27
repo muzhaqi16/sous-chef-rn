@@ -389,9 +389,21 @@ counters on independent sequences, read by `getBuildNumber()`.
 
 | Hook | Runs |
 | --- | --- |
-| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files |
+| **pre-commit** | `lint-staged` — ESLint + Prettier + related Jest tests on staged files — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required |
-| **pre-push** | `typecheck`, `i18n:check`, `check:codegen-orphans`, `check:version-sync`, and a codegen drift check |
+| **pre-push** | `typecheck`, `check:compiler-bailouts` and `check:unistyles-variants` **concurrently**, then a codegen drift check |
+
+The split is by cost. The five sub-second checks run per commit so a broken
+locale key or a version drift surfaces at the commit that caused it. The three
+expensive ones are independent, so pre-push runs them at the same time — ~22s
+instead of the ~45s they cost in sequence — each into its own log so the output
+does not interleave.
+
+**A tag-only push skips the code gates entirely.** Git names every ref being
+pushed on the hook's stdin; when they are all `refs/tags/*` there are no new
+commits to check, and the gates would only be judging the working tree.
+`npm run tag:*` pushes twice — delete, then create — so this was previously the
+whole suite twice over, for an operation that ships no code.
 
 The codegen drift check is skipped when the working tree is dirty, so it never
 blocks a push mid-edit.

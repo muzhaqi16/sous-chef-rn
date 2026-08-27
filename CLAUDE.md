@@ -27,8 +27,10 @@ node scripts/check-bundled-secrets.mjs --self-test
 `npm run lint` validates `.graphql` files against
 `src/graphql/generated/schema.graphql` (`fields-on-correct-type` and
 `no-deprecated` are errors), surfacing API drift at lint time instead of as a
-codegen batch failure. Pre-push runs `typecheck`, `i18n:check`,
-`check:codegen-orphans`, `check:version-sync`, and a codegen drift check.
+codegen batch failure. Pre-commit runs `lint-staged` plus the five sub-second
+whole-tree checks; pre-push runs `typecheck`, `check:compiler-bailouts` and
+`check:unistyles-variants` concurrently, then a codegen drift check — and skips
+all of it for a tag-only push, which carries no new commits.
 Full command reference: `docs/development.md`.
 
 ## Repository map & imports
