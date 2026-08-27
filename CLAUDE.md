@@ -392,7 +392,7 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
   `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`
   (the companion `docs/audits/perf-blank-window-2026-08-26.md` was deleted in
-  `8a7c8c76`; recover with `git checkout f930bf3c -- docs/audits/`).
+  `8a7c8c76`; recover with `git checkout 8a7c8c76^ -- docs/audits/`).
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
   `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
@@ -696,7 +696,7 @@ changes. Measurement decides what to change; it is not the confirmation step.
 
 The protocol, the numbers and the retractions behind these rules lived in
 `docs/audits/`, deleted in `8a7c8c76` — recover with
-`git checkout f930bf3c -- docs/audits/` if you need the evidence. The rules
+`git checkout 8a7c8c76^ -- docs/audits/` if you need the evidence. The rules
 above stand on their own; treat every `app_fully_drawn_ms` figure recorded
 before 2026-08-26 as invalid regardless, since it predates both the 280 ms
 floor fix and the suppression fix.
