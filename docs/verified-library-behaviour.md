@@ -572,6 +572,38 @@ grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopi
 grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
 ```
 
+### FlashList v2 re-renders every mounted cell on a list-prop identity change
+
+**Claim:** `ViewHolder`'s memo (`prevProps.item === nextProps.item`) governs
+only whether an INDIVIDUAL cell re-renders. FlashList itself re-renders the
+whole mounted set when its own `data`, `ListFooterComponent` or `onEndReached`
+prop changes identity — and it names them verbatim in its re-render reason.
+Separately, **`drawDistance` is what bounds how many cells are mounted**; a
+short `data` array only caps it incidentally (25 entries cannot mount more than
+24 cells no matter how large `drawDistance` is), which makes a manual render
+window look like it is saving mount work when it is really just hiding
+`drawDistance`.
+
+**Verified against `@shopify/flash-list@2.3.2`**, on-device (SM-S908U1,
+`localRelease`, 92 items). The pantry kept a local render window
+(`slice(0, clientWindow)`) whose growth changed both the data array and
+`handleEndReached`'s identity: one growth cost **597 ms / 2203 fibers**,
+re-rendering all 24 mounted cells, and fired at 24/48/72 items. Removing the
+window and making `onEndReached` ref-stable took the worst scroll commit to
+**29 ms**. Removing it also doubled the mounted set (24 → 54 cells) until
+`DRAW_DISTANCE` was lowered, confirming the two were doing the same job.
+
+Note the mounted-cell count is a RE-RENDER multiplier, not a frame-time driver:
+UI-thread work is ~1.5 ms of a 17 ms frame on this screen
+(`docs/flashlist-performance-analysis.md` § Two different symptoms).
+
+Re-check:
+
+```
+grep -rn "prevProps.item === nextProps.item\|areEqual" node_modules/@shopify/flash-list/src/recyclerview/ViewHolder.tsx
+grep -rn "drawDistance" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
+```
+
 ### Unistyles' useVariants rewrite needs a scope re-crawl before the compiler
 
 **Claim:** `react-native-unistyles`' Babel plugin rewrites a component that
