@@ -175,3 +175,50 @@ export function parseFlags(options) {
     process.exit(2);
   }
 }
+
+/**
+ * Fail if `babel.config.js` no longer runs Unistyles → scope-crawl → compiler
+ * in that order.
+ *
+ * `check-unistyles-variant-staleness` rebuilds that pipeline to reproduce what
+ * the app is compiled with. Nothing connected the two, so reordering the real
+ * config left the check quietly measuring a pipeline the app no longer uses —
+ * and the order is exactly what that check exists to defend: running the
+ * compiler first also compiles, but caches the variant-resolved style on the
+ * wrong dependencies and freezes it at its first-render value.
+ *
+ * Read as text. Executing the config needs an `api` stub, and `api.env()` is
+ * called with different arguments in different branches, so a stub silently
+ * changes the plugin list it is supposed to be checking.
+ */
+export function assertMatchesBabelConfig() {
+  const config = readFileSync(fromRoot('babel.config.js'), 'utf8');
+  const ORDER = [
+    'react-native-unistyles/plugin',
+    './scripts/babel/unistyles-scope-crawl.js',
+    'babel-plugin-react-compiler',
+  ];
+
+  const positions = ORDER.map(name => ({
+    name,
+    at: config.indexOf(`'${name}'`),
+  }));
+  const missing = positions.filter(p => p.at === -1);
+  const outOfOrder = positions.some(
+    (p, i) => i > 0 && p.at < positions[i - 1].at,
+  );
+
+  if (missing.length || outOfOrder) {
+    console.error(
+      `\n✗ babel.config.js no longer declares the expected plugin order.\n\n` +
+        `  Expected, in this order:\n` +
+        ORDER.map(n => `    ${n}`).join('\n') +
+        (missing.length
+          ? `\n\n  Not found: ${missing.map(m => m.name).join(', ')}`
+          : '\n\n  Found, but out of order.') +
+        `\n\n  The checks that rebuild this pipeline are now measuring something\n` +
+        `  the app is not compiled with. Reconcile them before trusting either.\n`,
+    );
+    process.exit(2);
+  }
+}

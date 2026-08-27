@@ -50,6 +50,7 @@ import { join, relative } from 'node:path';
 import { createRequire } from 'node:module';
 
 import {
+  assertMatchesBabelConfig,
   baselineFile,
   filesUnder,
   REPO_ROOT,
@@ -260,6 +261,8 @@ const styles = StyleSheet.create(() => ({
 
 // The path filters go to the glob; the content grep cannot — it is what makes
 // this a scan of variant-using components rather than of every .tsx.
+assertMatchesBabelConfig();
+
 const scanned = filesUnder('src/**/*.tsx', {
   exclude: [
     /(^|\/)(__tests__|__mocks__|generated)(\/|$)/,
