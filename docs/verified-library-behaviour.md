@@ -540,3 +540,35 @@ terminated session) against 15:35:42 for `app_content_appeared_ms_count`,
 Same reason the audit says to read these per session and never aggregate: each
 cold start is a new process, so the transport's cumulative accumulator restarts
 and `_count` is 1 per launch.
+
+### FlashList v2 first-layout opacity gate
+
+**Claim:** FlashList v2 renders its initial cells progressively across
+multiple commits (~`initialDrawBatchSize` = 2 cells per
+commit→measure→setState pass) and holds the ENTIRE cell container —
+sticky-header sentinel rows included — at `opacity: 0` until the loop finishes
+and `commitLayout()` runs, while `ListHeaderComponent` renders outside the
+gated container and paints on the first commit. `onLoad` and
+`isFirstLayoutComplete` latch ONCE per mount, so a sentinel-only skeleton
+layout consumes them before real data arrives; the public
+`onCommitLayoutEffect` prop is the signal that re-fires — it is driven by a
+layout effect on the container's `renderId`, which `commitLayout()` increments
+at the end of EVERY settled layout pass, including the first one after a data
+change.
+
+**Verified against `@shopify/flash-list@2.3.2`**, and on-device
+(SM-S908U1, `localRelease`, 67 items): the gate is a 300–342 ms header-only
+blank frame between skeleton dismissal and rows, eliminated by releasing
+skeletons on the first `onCommitLayoutEffect` that lands with real content —
+numbers and protocol in
+[audits/perf-blank-window-2026-08-26.md](audits/perf-blank-window-2026-08-26.md).
+Consumed by `useFlashListPerformance`'s `hasContentLayout` latch.
+
+Re-check:
+
+```
+grep -n "opacity: renderId" node_modules/@shopify/flash-list/src/recyclerview/ViewHolderCollection.tsx
+grep -n "isFirstLayoutComplete = true\|initialDrawBatchSize" node_modules/@shopify/flash-list/src/recyclerview/RecyclerViewManager.ts
+grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview/RecyclerView.tsx
+```
+

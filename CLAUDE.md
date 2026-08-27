@@ -364,9 +364,28 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   fatal (`index out of bounds, not enough layouts`).
   `docs/flashlist-layout-index-race.md`.
 - **Every FlashList using `useFlashListPerformance` passes
-  `perfCallbacks.CellRendererComponent`** — that renderer is how blank cells
-  are counted; FlashList's own viewability is geometric and 250 ms-lagged.
+  `perfCallbacks.CellRendererComponent` AND `onCommitLayoutEffect`** — the
+  renderer is how blank cells are counted (FlashList's own viewability is
+  geometric and 250 ms-lagged), and the commit callback drives the
+  `hasContentLayout` latch. The renderer is per-SESSION sampled
+  (`flashListInstrumentationSampleRate`: dev 1.0, release 0.05) because the
+  per-cell `Animated.View` + layout effect costs ~30–60 ms of the device's
+  ~320 ms first-layout window; `undefined` in unsampled sessions is normal.
   `docs/flashlist-performance-analysis.md` § Reading the instrumentation.
+- **A skeleton over a mounting FlashList releases on `hasContentLayout`, never
+  on data-loading flags** — FlashList v2 holds EVERY cell (sticky sentinel
+  rows included) at `opacity: 0` until its progressive first layout commits,
+  so "data ready" precedes "rows visible" by 300 ms+ on a mid-range device
+  and a loading-flag release exposes a header-only blank frame. And the cover
+  itself must exist from the list's FIRST commit: anything whose mount waits
+  on a post-commit state update (`onLayout` measurement, a deferred flag) is
+  starved behind the row-mount storm it exists to hide — the pantry's cover
+  is an absolute flap inside `ListHeaderComponent` for exactly this reason
+  (`PantryListSkeletonOverlay.tsx`). `onLoad` cannot stand in for the latch:
+  it fires once per mount and a sentinel-only skeleton layout consumes it.
+  Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
+  `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`
+  + `docs/audits/perf-blank-window-2026-08-26.md`.
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
   `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:

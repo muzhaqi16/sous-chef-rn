@@ -78,6 +78,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   onScrollEndDrag,
   onMomentumScrollEnd,
   scrollEventThrottle,
+  onFirstContentLayout,
 }) => {
   useCommitTracking('SortableShoppingList');
   const flashListRef = useRef<FlashListRef<ShoppingListRowItem>>(null);
@@ -90,6 +91,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     // offer. Deliberately conservative: a launch landing here on an empty list
     // emits no `app_fully_drawn_ms` rather than timing an empty frame.
     hasRealContent: items.length > 0,
+    onFirstContentLayout,
   });
   useDataReferenceTracker(
     items,
@@ -192,6 +194,7 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
               onEndReachedThreshold={onEndReachedThreshold}
               onLoad={perfCallbacks.onLoad}
               onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+              onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
               drawDistance={DRAW_DISTANCE}
               maxItemsInRecyclePool={
                 FLASHLIST_DEFAULTS.fullScreen.maxItemsInRecyclePool

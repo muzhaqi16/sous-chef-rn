@@ -215,7 +215,7 @@ both sides.
 | `recipe_detail_errors_total` | | Error caught by the recipe-detail error boundary. |
 | `shopping_list_errors_total` | | Error caught by the shopping-list error boundary. |
 | `app_unhandled_exceptions_total` | `fatal` | Global JS exception handler. `fatal` is `"true"`/`"false"` as a string. |
-| `flashlist_blank_cells_total` | `component` | Blank EPISODES, not evaluations - a transition into "a visible index has no mounted cell". Counts from mounted cells since 2026-08-20; older blank percentages were a 250 ms viewability artifact and are not comparable. |
+| `flashlist_blank_cells_total` | `component` | Blank EPISODES, not evaluations - a transition into "a visible index has no mounted cell". Counts from mounted cells since 2026-08-20; older blank percentages were a 250 ms viewability artifact and are not comparable. Since 2026-08-26, emitted only by the ~5% of release sessions whose per-cell instrumentation sampling armed (`flashListInstrumentationSampleRate`) - the per-cell wrapper costs real mount time on the initial paint path. |
 | `flashlist_data_reference_changes` | `component` | The list's `data` array changed identity. Two trackers feed this per list (raw + sorted), so it counts both. |
 | `offline_queue_drain_started_total` | | A queue drain actually began. |
 | `offline_queue_drain_skipped_total` | `reason` | A drain was requested and declined - `already_processing`, no authenticated user, API unavailable. Pair with `_started_total` to see whether writes are replaying at all. |
@@ -255,8 +255,8 @@ both sides.
 | `cache_persist_extract_ms` | | `cache.extract()` cost |
 | `cache_persist_stringify_ms` | | Cache `JSON.stringify` cost |
 | `resort_edges_duration_ms` | | Cost of re-sorting a cached `itemsConnection` after a subscription event |
-| `flashlist_initial_load_ms` | `component` | FlashList `onLoad` - mount to first layout complete. Device-sensitive: measured 40 ms on the Pixel_9a emulator and 301-934 ms on an SM-S908U1. Do not read an emulator value as a device value. |
-| `flashlist_scroll_coverage_ratio` | `component` | Mounted cells / expected visible cells during scroll, custom bounds. 1.0 is full coverage. |
+| `flashlist_initial_load_ms` | `component` | FlashList `onLoad` - mount to first layout complete, measured to the rAF after layout settles. Device-sensitive: measured 40 ms on the Pixel_9a emulator and 301-934 ms on an SM-S908U1. Do not read an emulator value as a device value. Since 2026-08-26 the tail of the window also contains the skeleton-overlay teardown that the first-content-layout latch schedules at exactly that boundary (SortableShoppingList ~200 → ~300 ms from this alone) - compare within eras, not across them (`perf-blank-window-2026-08-26.md`). |
+| `flashlist_scroll_coverage_ratio` | `component` | Mounted cells / expected visible cells during scroll, custom bounds. 1.0 is full coverage. Since 2026-08-26, emitted only by sampled sessions - see `flashlist_blank_cells_total`. |
 | `flashlist_session_duration_ms` | `component` | How long a list stayed mounted, emitted on unmount. |
 | `offline_queue_oldest_age_ms` | | Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. |
 | `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. |

@@ -21,7 +21,10 @@ jest.mock('#/services/performance/NativePerformanceService', () => ({
 const markFullyDrawn = NativePerformanceService.markFullyDrawn as jest.Mock;
 
 /** Render the hook with a given content state, returning a rerender helper. */
-const renderWithContent = (hasRealContent: boolean) => {
+const renderWithContent = (
+  hasRealContent: boolean,
+  onFirstContentLayout?: () => void,
+) => {
   const ref = { current: null };
   return renderHook(
     (props: { hasRealContent: boolean }) =>
@@ -29,6 +32,7 @@ const renderWithContent = (hasRealContent: boolean) => {
         componentName: 'TestList',
         reportInterval: 0,
         hasRealContent: props.hasRealContent,
+        onFirstContentLayout,
       }),
     { initialProps: { hasRealContent } },
   );
@@ -87,6 +91,61 @@ describe('useFlashListPerformance — the fully-drawn latch', () => {
     rerender({ hasRealContent: false });
     rerender({ hasRealContent: true });
 
+    expect(markFullyDrawn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('useFlashListPerformance — the first-content-layout latch', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('does not latch on a commit that laid out only placeholders', () => {
+    // The sentinel-only skeleton layout runs a full commitLayout too — that
+    // commit fires onCommitLayoutEffect, but nothing on it is content, and a
+    // skeleton overlay released on it would expose the blank window.
+    const { result } = renderWithContent(false);
+
+    act(() => result.current.onCommitLayoutEffect());
+
+    expect(result.current.hasContentLayout).toBe(false);
+  });
+
+  it('latches on the first commit that lands with real content', () => {
+    const onFirstContentLayout = jest.fn();
+    const { result, rerender } = renderWithContent(false, onFirstContentLayout);
+
+    act(() => result.current.onCommitLayoutEffect());
+    rerender({ hasRealContent: true });
+    act(() => result.current.onCommitLayoutEffect());
+
+    expect(result.current.hasContentLayout).toBe(true);
+    expect(onFirstContentLayout).toHaveBeenCalledTimes(1);
+  });
+
+  it('is one-shot: later commits do not re-fire the callback', () => {
+    // FlashList re-fires onCommitLayoutEffect on every stable layout commit;
+    // an un-guarded setState there is the upstream-documented loop.
+    const onFirstContentLayout = jest.fn();
+    const { result } = renderWithContent(true, onFirstContentLayout);
+
+    act(() => result.current.onCommitLayoutEffect());
+    act(() => result.current.onCommitLayoutEffect());
+    act(() => result.current.onCommitLayoutEffect());
+
+    expect(result.current.hasContentLayout).toBe(true);
+    expect(onFirstContentLayout).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not disturb the fully-drawn latch', () => {
+    // The two latches ride different signals (commit layout vs onLoad) and
+    // must stay independent: fully-drawn fires from onLoad + content alone.
+    const { result } = renderWithContent(true);
+
+    act(() => result.current.onCommitLayoutEffect());
+    expect(markFullyDrawn).not.toHaveBeenCalled();
+
+    act(() => result.current.onLoad({ elapsedTimeInMs: 12 }));
     expect(markFullyDrawn).toHaveBeenCalledTimes(1);
   });
 });

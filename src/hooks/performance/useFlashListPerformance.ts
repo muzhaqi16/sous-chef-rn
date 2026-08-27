@@ -33,9 +33,10 @@ import type ViewToken from '@shopify/flash-list/dist/recyclerview/viewability/Vi
 import { FlashListDiagnostics } from '#/services/performance/FlashListDiagnostics';
 import { Telemetry } from '#/services/telemetry';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
-import type {
-  ScrollFrameMetric,
-  BlankRiskAssessment,
+import {
+  DEFAULT_PERFORMANCE_CONFIG,
+  type ScrollFrameMetric,
+  type BlankRiskAssessment,
 } from '#/services/performance/types';
 import {
   createMountedCellRenderer,
@@ -72,6 +73,14 @@ interface UseFlashListPerformanceOptions {
    * not "nothing to show".
    */
   hasRealContent: boolean;
+  /**
+   * Called once per mount, on the first FlashList layout commit that lands
+   * while `hasRealContent` is true — i.e. the commit whose frame actually
+   * shows content (or a settled empty state), not the sentinel/skeleton
+   * layout. For a parent above this hook's owner that gates its own skeleton
+   * overlay; the owner itself reads `hasContentLayout` instead.
+   */
+  onFirstContentLayout?: () => void;
 }
 
 interface UseFlashListPerformanceReturn {
@@ -80,14 +89,36 @@ interface UseFlashListPerformanceReturn {
     viewableItems: ViewToken<unknown>[];
     changed: ViewToken<unknown>[];
   }) => void;
+  /**
+   * Pass as the FlashList's `onCommitLayoutEffect`. FlashList holds every cell
+   * — the sticky sentinel included — at `opacity: 0` until its progressive
+   * first layout commits (`ViewHolderCollection`'s `renderId` gate), and this
+   * callback fires from exactly that commit, then again on every later stable
+   * layout commit (including the first one after a data change). `onLoad`
+   * cannot stand in for it: it latches once per mount, and a sentinel-only
+   * skeleton layout consumes it before real data arrives.
+   */
+  onCommitLayoutEffect: () => void;
+  /**
+   * True from the first layout commit that lands while `hasRealContent` is
+   * true — the earliest render in which the list's cells are actually
+   * visible. Latched once per mount. Gate a skeleton overlay on this rather
+   * than on the data being ready: between those two moments the list is
+   * mounted but transparent, which on a mid-range device is a 300 ms+
+   * header-only blank frame.
+   */
+  hasContentLayout: boolean;
   onDataReferenceChange: () => void;
   printReport: () => void;
   getBlankRisk: () => BlankRiskAssessment;
   /**
    * Pass as the FlashList's `CellRendererComponent`. It is how mounted cells
-   * are tracked; without it every visible row reads as blank.
+   * are tracked. `undefined` in sessions the per-cell instrumentation
+   * sampling left unarmed (see `flashListInstrumentationSampleRate`) —
+   * FlashList then uses its own plain-View cell container, and blank-state
+   * evaluation is skipped for the session.
    */
-  CellRendererComponent: MountedCellRenderer;
+  CellRendererComponent: MountedCellRenderer | undefined;
 }
 
 const noopRisk: BlankRiskAssessment = {
@@ -128,13 +159,41 @@ export function useFlashListPerformance<T>(
   // becomes true.
   const [hasFinishedLayout, setHasFinishedLayout] = useState(false);
 
+  // First layout commit with real content: state drives the owner's overlay,
+  // the ref guards the callback (read only inside the commit callback, never
+  // during render). One-shot per mount — FlashList warns that un-guarded
+  // setState in `onCommitLayoutEffect` can loop.
+  const [hasContentLayout, setHasContentLayout] = useState(false);
+  const hasContentLayoutRef = useRef(false);
+  const onCommitLayoutEffect = () => {
+    if (hasContentLayoutRef.current || !options.hasRealContent) return;
+    hasContentLayoutRef.current = true;
+    setHasContentLayout(true);
+    options.onFirstContentLayout?.();
+  };
+
+  // Per-SESSION sampling of the per-cell instrumentation: the cell wrapper is
+  // a Reanimated `Animated.View` + a layout effect around EVERY cell, and on
+  // the initial paint path that costs real mount time (~30-60 ms of a ~320 ms
+  // first-layout window on device — perf-blank-window-2026-08-26.md). Decided
+  // once at mount so the cell tree shape never flips mid-session. Unsampled
+  // sessions hand FlashList `CellRendererComponent: undefined`, falling back
+  // to its own plain-View cell container, and skip blank-state evaluation
+  // (which would otherwise read every visible cell as blank). `onLoad`,
+  // session duration, and the first-content-layout latch stay unsampled.
+  const [instrumentCells] = useState(
+    () =>
+      Math.random() <
+      DEFAULT_PERFORMANCE_CONFIG.flashListInstrumentationSampleRate,
+  );
+
   // Which indices currently have a committed cell. Written only by the cell
   // renderer's layout effects, read only from event handlers and effects. The
   // renderer is created once; it reaches the current blank check through
   // `cellRegistry.onChange`, re-pointed in an effect below.
   const [cellRegistry] = useState(() => new MountedCellRegistry());
   const [CellRendererComponent] = useState(() =>
-    createMountedCellRenderer(cellRegistry),
+    instrumentCells ? createMountedCellRenderer(cellRegistry) : undefined,
   );
 
   // DEV-only diagnostics instance
@@ -242,6 +301,9 @@ export function useFlashListPerformance<T>(
    * commits that change the registry and on viewability changes.
    */
   const evaluateBlankState = () => {
+    // Without the cell renderer nothing registers mounts, so every visible
+    // index would read as blank — the check is only meaningful when sampled.
+    if (!instrumentCells) return;
     const list = flashListRef.current;
     // Guarded as a function: test doubles of FlashList expose a bare instance.
     if (!list || typeof list.computeVisibleIndices !== 'function') return;
@@ -417,6 +479,8 @@ export function useFlashListPerformance<T>(
   return {
     onLoad,
     onViewableItemsChanged,
+    onCommitLayoutEffect,
+    hasContentLayout,
     onDataReferenceChange,
     printReport,
     getBlankRisk,
