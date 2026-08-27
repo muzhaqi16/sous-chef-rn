@@ -113,6 +113,25 @@ export const SavedRecipes: React.FC = () => {
   // Instrumented like PantryContent/SortableList so this list reports
   // `flashlist_initial_load_ms` and blank-cell episodes instead of being
   // invisible to every metric we have.
+  // Folder, tags and search can all empty this list while the library itself is
+  // full. Saying "you haven't saved any recipes" then would be false and would
+  // hide that a filter is what emptied it — `isEmpty` above reads the
+  // UNFILTERED list, so the two cases have to be told apart here.
+  const savedSearchTerm = searchQuery.trim();
+  const emptyProps =
+    recipes.length > 0
+      ? {
+          icon: 'search-outline',
+          title: savedSearchTerm
+            ? t('empty.noResultsFor', { query: savedSearchTerm })
+            : t('empty.noResults'),
+        }
+      : {
+          icon: 'bookmark-outline',
+          title: t('recipes.savedRecipesEmptyTitle'),
+          description: t('recipes.savedRecipesEmptyDescription'),
+        };
+
   const flashListRef = useRef<FlashListRef<SavedRecipeNode>>(null);
   const perfCallbacks = useFlashListPerformance(flashListRef, {
     componentName: 'SavedRecipes',
@@ -261,11 +280,7 @@ export const SavedRecipes: React.FC = () => {
         <DataStateView
           state={dataState === 'ready' ? 'empty' : dataState}
           onRetry={handleRefresh}
-          empty={{
-            icon: 'bookmark-outline',
-            title: t('recipes.savedRecipesEmptyTitle'),
-            description: t('recipes.savedRecipesEmptyDescription'),
-          }}
+          empty={emptyProps}
         />
       ) : (
         <FlashList

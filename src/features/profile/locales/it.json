@@ -43,8 +43,6 @@
     "slowestScreens": "Transizioni schermata più lente",
     "slowestScreensSubtitle": "Schermate con tempo medio interattivo più alto",
     "screen": "Schermata",
-    "maxInteractive": "Interattivo max",
-    "avgInteractive": "Interattivo medio",
     "memoryUsage": "Uso memoria",
     "current": "Attuale",
     "used": "Usato",

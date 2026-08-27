@@ -80,6 +80,28 @@ export const MyRecipes: React.FC = () => {
     isEmpty: myRecipes.length === 0,
   });
 
+  // A search that matches nothing is not an empty library. `isEmpty` above
+  // reads the UNFILTERED list, so without this branch a non-matching query left
+  // `dataState` at 'ready' and the list rendered an empty array — a blank
+  // screen with no explanation. Offering "create your first recipe" to someone
+  // who has ten would be the other half of the same mistake.
+  const searchTerm = searchQuery.trim();
+  const emptyProps =
+    myRecipes.length > 0
+      ? {
+          icon: 'search-outline',
+          title: t('empty.noResultsFor', { query: searchTerm }),
+        }
+      : {
+          icon: 'create-outline',
+          title: t('recipes.myRecipesEmptyTitle'),
+          description: t('recipes.myRecipesEmptyDescription'),
+          action: {
+            label: t('recipes.createRecipe'),
+            onPress: toRecipeCreate,
+          },
+        };
+
   const apolloClient = useApolloClient();
   const [deleteRecipeMutation] = useMutation(DeleteRecipeDocument);
 
@@ -171,19 +193,11 @@ export const MyRecipes: React.FC = () => {
           showSearchIcon
         />
       </View>
-      {dataState !== 'ready' ? (
+      {dataState !== 'ready' || filteredRecipes.length === 0 ? (
         <DataStateView
-          state={dataState}
+          state={dataState === 'ready' ? 'empty' : dataState}
           onRetry={handleRefresh}
-          empty={{
-            icon: 'create-outline',
-            title: t('recipes.myRecipesEmptyTitle'),
-            description: t('recipes.myRecipesEmptyDescription'),
-            action: {
-              label: t('recipes.createRecipe'),
-              onPress: toRecipeCreate,
-            },
-          }}
+          empty={emptyProps}
         />
       ) : (
         <FlashList
