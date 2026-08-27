@@ -28,6 +28,7 @@
  * variant not signed with the debug key is refused.
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { readGeneratedValue } from './generate-env.js';
 import { parseFlags } from './lib/tooling.mjs';
 
 const GENERATED = new URL('../src/config/env.generated.ts', import.meta.url);
@@ -189,10 +190,7 @@ if (!existsSync(GENERATED)) {
 
 const source = readFileSync(GENERATED, 'utf8');
 
-const value = key => {
-  const match = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
-  return match ? match[1] : undefined;
-};
+const value = key => readGeneratedValue(source, key);
 
 const enabled = value('ALLOW_LAUNCH_ARG_AUTH') === 'true';
 const nodeEnv = value('NODE_ENV');

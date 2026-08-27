@@ -21,6 +21,8 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+# shellcheck source=scripts/build-mode.sh
+. scripts/build-mode.sh
 
 MODE="${MODE:-debug}"
 
@@ -28,23 +30,10 @@ MODE="${MODE:-debug}"
 # same simulator and can be compared.
 DEVICE="${DEVICE:-$(node -e "console.log(require('./.detoxrc.js').devices.simulator.device.type)")}"
 
-# Build variants that target a deployed API read their own env file. Debug and
-# the release perf build fall through to `.env` — which is where NODE_ENV,
-# DEV_API_URL and the OTLP endpoints live. An ENVFILE already set in the
-# caller's environment always wins.
-case "$MODE" in
-  staging)    export ENVFILE="${ENVFILE:-.env.staging}" ;;
-  production) export ENVFILE="${ENVFILE:-.env.production}" ;;
-esac
-
-# The measuring builds accept an auth state from launch arguments so Detox can
-# skip the UI login. It is a named, default-off capability rather than something
-# inferred from NODE_ENV — see `Environment.allowsLaunchArgAuth`. Exported here
-# (never written into a committed env file) so only a build produced by this
-# script has it, and CI never does.
-case "$MODE" in
-  debug|release|localRelease) export ALLOW_LAUNCH_ARG_AUTH=true ;;
-esac
+resolve_envfile
+# Release is safe here because this script only builds for the simulator; see
+# the gate comment below.
+allow_launch_arg_auth "debug release localRelease"
 
 # This script only ever builds for the simulator (`--simulator` below), and a
 # simulator artifact cannot be installed on a phone — which is what makes the

@@ -464,6 +464,19 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 | `test` / `test:changed` | Jest |
 | `test:e2e*` | Detox |
 
+**Performance measurement**
+
+| Command | Description |
+| --- | --- |
+| `perf` / `perf:baseline` / `perf:stability` | Reassure render-time benchmarks |
+| `perf:ios:baseline` | n `simctl` cold launches, one metric set each, read back from Mimir into `e2e/artifacts/ios-baseline.json`. Drives the app directly rather than through Detox, which inflates the pre-JS window |
+| `perf:ios:frames` | Samples the simulator screen from launch and classifies frames by PNG size to time first real content. iOS has no OS-side fully-drawn marker, so this is the only cross-check available there |
+
+Both iOS tools need a release build installed and signed in, tutorials
+dismissed, and the local API plus OTLP collector up. Numbers from an iOS
+simulator OVERSTATE (it runs arm64 natively on the Mac's cores), so compare
+iOS to iOS, build over build — never against an Android device figure.
+
 **Build & analysis**
 
 | Command | Description |

@@ -117,6 +117,20 @@ function resolveEnvFileName() {
   return '.env';
 }
 
+/**
+ * Read one key out of a generated `env.generated.ts` source.
+ *
+ * Three-way on purpose: a string for a written value, `null` for a key written
+ * as `undefined`, and `undefined` for a key that is not there at all. The
+ * provenance check needs to tell "recorded as absent" from "never emitted".
+ */
+function readGeneratedValue(source, key) {
+  const defined = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
+  if (defined) return defined[1];
+  if (new RegExp(`^  ${key}: undefined,$`, 'm').test(source)) return null;
+  return undefined;
+}
+
 /** Minimal .env parser (KEY=VALUE lines; ignores comments/blanks; strips quotes). */
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return {};
@@ -172,10 +186,7 @@ function readExistingBuildIdentity() {
     return {};
   }
 
-  const read = key => {
-    const match = source.match(new RegExp(`^  ${key}: "([^"]*)",$`, 'm'));
-    return match ? match[1] : undefined;
-  };
+  const read = key => readGeneratedValue(source, key) ?? undefined;
 
   const identity = {};
   // Never derived, so a recorded value can only have come from an explicit
@@ -263,7 +274,7 @@ ${entries}
 // candidate set from it. Exporting the array — rather than having the checker
 // parse this file — keeps one source of truth without making the gate's
 // coverage depend on the punctuation of the comments above.
-module.exports = { generateEnv, KEYS };
+module.exports = { generateEnv, KEYS, parseEnvFile, readGeneratedValue };
 
 // Run when invoked directly (npm scripts, CI), not when required by metro.config.
 if (require.main === module) {

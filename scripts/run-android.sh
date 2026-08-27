@@ -14,6 +14,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 # shellcheck source=scripts/android-target.sh
 . scripts/android-target.sh
+# shellcheck source=scripts/build-mode.sh
+. scripts/build-mode.sh
 
 MODE="${MODE:-debug}"
 

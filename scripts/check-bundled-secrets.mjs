@@ -26,6 +26,9 @@
 import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, extname } from 'node:path';
 import { createRequire } from 'node:module';
+// The same parser the generator uses, so the scanner looks for exactly the
+// values the bundler inlined rather than a second interpretation of the file.
+const { parseEnvFile } = createRequire(import.meta.url)('./generate-env.js');
 
 /**
  * Env vars whose VALUE must never reach a bundle.
@@ -198,30 +201,13 @@ function isSearchable(value) {
   );
 }
 
-/** Parse a dotenv file into a plain object. Ignores comments and blanks. */
-function readEnvFile(file) {
-  if (!existsSync(file)) return {};
-  const out = {};
-  for (const line of readFileSync(file, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    out[trimmed.slice(0, eq).trim()] = trimmed
-      .slice(eq + 1)
-      .trim()
-      .replace(/^['"]|['"]$/g, '');
-  }
-  return out;
-}
-
 /**
  * The secret values to look for, from the same sources `generate-env.js` reads:
  * `process.env` wins over the active env file.
  */
 function collectSecrets() {
   const envFile = process.env.ENVFILE ? `.env.${process.env.ENVFILE}` : '.env';
-  const fromFile = readEnvFile(envFile);
+  const fromFile = parseEnvFile(envFile);
   const secrets = [];
   for (const key of SECRET_ENV_KEYS) {
     const value = process.env[key] ?? fromFile[key];
