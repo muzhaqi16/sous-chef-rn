@@ -43,7 +43,7 @@
     "slowestScreens": "Tranzicionet më të ngadalta të ekraneve",
     "slowestScreensSubtitle": "Ekranet me kohën mesatare më të lartë interaktive",
     "screen": "Ekrani",
-    "avgMount": "Mount mes.",
+    "maxInteractive": "Interaktiv maks.",
     "avgInteractive": "Interaktiv mes.",
     "memoryUsage": "Përdorimi i memories",
     "current": "Aktuale",

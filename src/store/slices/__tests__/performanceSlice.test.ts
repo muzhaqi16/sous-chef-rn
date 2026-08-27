@@ -94,28 +94,26 @@ describe('performanceSlice', () => {
   describe('recordScreenTransition', () => {
     it('records a new screen transition', () => {
       const store = createPerfStore({ isEnabled: true, trackScreens: true });
-      store.getState().recordScreenTransition('Home', 100, 200);
+      store.getState().recordScreenTransition('Home', 200);
       const metrics = store.getState().screenMetrics.get('Home');
       expect(metrics).toBeDefined();
       expect(metrics!.transitionCount).toBe(1);
-      expect(metrics!.lastMountTime).toBe(100);
       expect(metrics!.lastInteractiveTime).toBe(200);
     });
 
     it('updates existing screen metrics', () => {
       const store = createPerfStore({ isEnabled: true, trackScreens: true });
-      store.getState().recordScreenTransition('Home', 100, 200);
-      store.getState().recordScreenTransition('Home', 150, 250);
+      store.getState().recordScreenTransition('Home', 200);
+      store.getState().recordScreenTransition('Home', 250);
       const metrics = store.getState().screenMetrics.get('Home');
       expect(metrics!.transitionCount).toBe(2);
-      expect(metrics!.avgMountTime).toBe(125);
-      expect(metrics!.maxMountTime).toBe(150);
+      expect(metrics!.avgInteractiveTime).toBe(225);
       expect(metrics!.maxInteractiveTime).toBe(250);
     });
 
     it('does nothing when disabled', () => {
       const store = createPerfStore({ isEnabled: false });
-      store.getState().recordScreenTransition('Home', 100, 200);
+      store.getState().recordScreenTransition('Home', 200);
       expect(store.getState().screenMetrics.size).toBe(0);
     });
   });
@@ -167,8 +165,8 @@ describe('performanceSlice', () => {
 
     it('getSlowestScreens returns sorted screens', () => {
       const store = createPerfStore({ isEnabled: true, trackScreens: true });
-      store.getState().recordScreenTransition('Fast', 50, 100);
-      store.getState().recordScreenTransition('Slow', 50, 500);
+      store.getState().recordScreenTransition('Fast', 100);
+      store.getState().recordScreenTransition('Slow', 500);
       const slowest = store.getState().getSlowestScreens(1);
       expect(slowest[0].screenName).toBe('Slow');
     });
@@ -196,7 +194,7 @@ describe('performanceSlice', () => {
 
     it('getScreenMetrics returns specific screen', () => {
       const store = createPerfStore({ isEnabled: true, trackScreens: true });
-      store.getState().recordScreenTransition('Home', 100, 200);
+      store.getState().recordScreenTransition('Home', 200);
       expect(store.getState().getScreenMetrics('Home')).toBeDefined();
       expect(store.getState().getScreenMetrics('Unknown')).toBeUndefined();
     });
@@ -211,7 +209,7 @@ describe('performanceSlice', () => {
         trackMemory: true,
       });
       store.getState().recordComponentRender('Button', 5);
-      store.getState().recordScreenTransition('Home', 100, 200);
+      store.getState().recordScreenTransition('Home', 200);
       store
         .getState()
         .addMemorySnapshot({ timestamp: 1, usedBytes: 1, usagePercent: 1 });

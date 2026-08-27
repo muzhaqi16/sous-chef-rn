@@ -28,7 +28,6 @@ export interface PerformanceState {
   recordComponentRender: (componentName: string, renderTime: number) => void;
   recordScreenTransition: (
     screenName: string,
-    mountTime: number,
     interactiveTime: number,
   ) => void;
   addMemorySnapshot: (snapshot: MemorySnapshot) => void;
@@ -143,11 +142,7 @@ export const createPerformanceSlice: StateCreator<
       }
     }),
 
-  recordScreenTransition: (
-    screenName: string,
-    mountTime: number,
-    interactiveTime: number,
-  ) =>
+  recordScreenTransition: (screenName: string, interactiveTime: number) =>
     set(state => {
       if (!state.isEnabled || !state.trackScreens) {
         return;
@@ -159,15 +154,10 @@ export const createPerformanceSlice: StateCreator<
       if (existing) {
         // Update existing metrics
         existing.transitionCount += 1;
-        existing.lastMountTime = mountTime;
         existing.lastInteractiveTime = interactiveTime;
-        existing.totalMountTime += mountTime;
         existing.totalInteractiveTime += interactiveTime;
-        existing.avgMountTime =
-          existing.totalMountTime / existing.transitionCount;
         existing.avgInteractiveTime =
           existing.totalInteractiveTime / existing.transitionCount;
-        existing.maxMountTime = Math.max(existing.maxMountTime, mountTime);
         existing.maxInteractiveTime = Math.max(
           existing.maxInteractiveTime,
           interactiveTime,
@@ -178,13 +168,9 @@ export const createPerformanceSlice: StateCreator<
         const newMetrics: ScreenMetrics = {
           screenName,
           transitionCount: 1,
-          lastMountTime: mountTime,
           lastInteractiveTime: interactiveTime,
-          avgMountTime: mountTime,
           avgInteractiveTime: interactiveTime,
-          maxMountTime: mountTime,
           maxInteractiveTime: interactiveTime,
-          totalMountTime: mountTime,
           totalInteractiveTime: interactiveTime,
           lastTransitionTimestamp: now,
         };

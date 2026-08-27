@@ -137,20 +137,15 @@ function handleMeasure(entry: PerformanceEntry) {
     const screen = parts[1];
     const phase = parts[2];
 
-    switch (phase) {
-      case 'mount':
-        Telemetry.histogram('screen_mount_duration_ms', duration, { screen });
-        break;
-      case 'interactive':
-        Telemetry.histogram('screen_interactive_duration_ms', duration, {
-          screen,
-        });
-        break;
-      case 'transition':
-        Telemetry.histogram('screen_transition_duration_ms', duration, {
-          screen,
-        });
-        break;
+    // Only `interactive` is routed. `mount` and `transition` used to be too:
+    // `mount` timed two effects in the same commit and read ~0 on every screen,
+    // and `transition` was measured from the identical marks as `interactive`,
+    // so it was a duplicate series under a second name. See
+    // `useScreenTransition`.
+    if (phase === 'interactive') {
+      Telemetry.histogram('screen_interactive_duration_ms', duration, {
+        screen,
+      });
     }
     return;
   }

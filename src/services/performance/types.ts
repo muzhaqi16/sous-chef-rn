@@ -32,20 +32,12 @@ export interface ScreenMetrics {
   screenName: string;
   /** Number of times screen was visited */
   transitionCount: number;
-  /** Last mount time in milliseconds */
-  lastMountTime: number;
   /** Last interactive time in milliseconds */
   lastInteractiveTime: number;
-  /** Average time to mount in milliseconds */
-  avgMountTime: number;
   /** Average time to interactive in milliseconds */
   avgInteractiveTime: number;
-  /** Maximum mount time recorded */
-  maxMountTime: number;
   /** Maximum interactive time recorded */
   maxInteractiveTime: number;
-  /** Total mount time (for calculating average) */
-  totalMountTime: number;
   /** Total interactive time (for calculating average) */
   totalInteractiveTime: number;
   /** Timestamp of last transition */

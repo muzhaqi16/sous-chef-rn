@@ -50,34 +50,19 @@ describe('useScreenTransition', () => {
     expect(performance.mark).toHaveBeenCalledWith('screen:HomeScreen:focus');
   });
 
-  it('creates a mounted mark when enabled', () => {
-    renderHook(() => useScreenTransition('HomeScreen'));
-
-    expect(performance.mark).toHaveBeenCalledWith('screen:HomeScreen:mounted');
-  });
-
-  it('measures focus to mount time', () => {
-    renderHook(() => useScreenTransition('HomeScreen'));
-
-    expect(performance.measure).toHaveBeenCalledWith(
-      'screen:HomeScreen:mount',
-      'screen:HomeScreen:focus',
-      'screen:HomeScreen:mounted',
-    );
-  });
-
   it('does not create marks when enabled is false', () => {
     renderHook(() => useScreenTransition('HomeScreen', { enabled: false }));
 
     expect(performance.mark).not.toHaveBeenCalled();
   });
 
-  it('does not create mount mark when trackMount is false', () => {
-    renderHook(() => useScreenTransition('HomeScreen', { trackMount: false }));
+  it('never marks a mount — the measure it fed was removed', () => {
+    renderHook(() => useScreenTransition('HomeScreen'));
 
-    // Focus mark should still be created
+    // Focus mark is still created
     expect(performance.mark).toHaveBeenCalledWith('screen:HomeScreen:focus');
-    // But mount mark should not
+    // The mount mark is gone: it sat in the same commit as the focus mark, so
+    // the measure between them read ~0 on every screen.
     expect(performance.mark).not.toHaveBeenCalledWith(
       'screen:HomeScreen:mounted',
     );
@@ -102,9 +87,6 @@ describe('useScreenTransition', () => {
 
     expect(performance.clearMarks).toHaveBeenCalledWith(
       'screen:HomeScreen:focus',
-    );
-    expect(performance.clearMarks).toHaveBeenCalledWith(
-      'screen:HomeScreen:mounted',
     );
     expect(performance.clearMarks).toHaveBeenCalledWith(
       'screen:HomeScreen:interactiveEnd',
