@@ -81,7 +81,7 @@ jest.mock('#components/molecules/Header', () => ({
   },
 }));
 
-jest.mock('#components/molecules/NutritionSummary', () => ({
+jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 

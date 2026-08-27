@@ -51,7 +51,7 @@ jest.mock('#components/molecules/ClickableInfoPanel', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/NutritionSummary', () => ({
+jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({

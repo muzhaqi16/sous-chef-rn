@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { NutritionSummary } from '../NutritionSummary';
+import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 
 // Mock the nutritionUtils to control outputs
 jest.mock('#utils/nutritionUtils', () => ({

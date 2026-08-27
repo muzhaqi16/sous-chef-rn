@@ -3,23 +3,22 @@ import { t } from '#/i18n';
 import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 
-// Screen-relative draw distance: 2× viewport gives ~17 items of buffer at
-// ~95px/item. 1× narrows the per-append mount burst but is indistinguishable on
-// dropped-frame time in a release build, and noisier — the frame cost on device
-// is sustained Yoga layout and RenderThread draw work proportional to the number
-// of mounted views, not the size of any single append. Judge a change to this
-// number on a release build; a debug build overstates the append and an emulator
-// hides it behind GPU-transport wait.
-// Screen-relative draw distance. Since the local render window was removed
-// this is the ONLY thing bounding how many cells FlashList mounts, and every
-// full-list re-render pays per mounted cell. Measured: at 2x the mounted set
-// was 54 cells, at 1x it is 32 (it was 24 while the window still capped it).
+// Screen-relative draw distance. Since the local render window was removed this
+// is the ONLY thing bounding how many cells FlashList mounts, and on device the
+// SUSTAINED frame cost is Yoga layout + RenderThread draw over the mounted view
+// tree — roughly 43 views per row — so mounted-cell count sets the frame time.
 //
-// An earlier 2x-vs-1x A/B on COLD START read flat — consistent, because back
-// then the render window capped mounts regardless, so this constant could not
-// matter. It matters now. Verified on device: scroll's worst commit went from
-// 597 ms to 29 ms with the window gone and this at 1x.
-export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 1);
+// Measured on an SM-S908U1 (96 Hz panel, 10.4 ms budget), 92 items, thermal 0,
+// warmed, 2 trials each, identical 12-swipe gesture:
+//
+//   2x + render window (old): 9.63% janky, 99th 34 ms, 11 frames >=32 ms
+//   1x                      : 9.7-10.1%,   99th 30-31 ms, 6-9 frames
+//   0.5x  (this)            : 7.9%,        99th 27-28 ms, 3-6 frames
+//
+// 0.5x also survives six hard flings with no blank cells. Note the median frame
+// only moves 17 -> 16 ms: it stays above the 10.4 ms budget at every setting,
+// because that floor is per-row view count, not this constant.
+export const DRAW_DISTANCE = Math.round(Dimensions.get('window').height * 0.5);
 
 // Minimum height for structural empty states (no home / no home selected)
 // so EmptyState's justifyContent:'center' works inside FlashList footer

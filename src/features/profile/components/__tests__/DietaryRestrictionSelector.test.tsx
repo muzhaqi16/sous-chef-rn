@@ -4,7 +4,7 @@ import { render, screen, userEvent } from '@testing-library/react-native';
 import { Diet, Intolerance, HealthGoal } from '#/graphql/generated/schemaTypes';
 import type { RestrictionSectionProps } from '#/components/molecules/RestrictionSection/RestrictionSection';
 import type { MultiSelectChipSheetProps } from '#/components/molecules/MultiSelectChipSheet/MultiSelectChipSheet';
-import { DietaryRestrictionSelector } from '../DietaryRestrictionSelector';
+import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 
 jest.mock('#/utils/finallyHelpers');
 

@@ -1,11 +1,6 @@
 import type { StaticParamList } from '@react-navigation/native';
-import {
-  createNativeStackNavigator,
-  createNativeStackScreen,
-} from '@react-navigation/native-stack';
-import { NotificationListScreen } from '#features/notifications/screens/NotificationListScreen';
-import { NotificationDetailScreen } from '#features/notifications/screens/NotificationDetailScreen';
-import { NotificationSettingsScreen } from '#features/notifications/screens/NotificationSettingsScreen';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { notificationScreens } from '#features/notifications/screens/registration';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const NotificationStack = createNativeStackNavigator({
@@ -19,20 +14,7 @@ export const NotificationStack = createNativeStackNavigator({
     fullScreenGestureEnabled: true,
     contentStyle: { backgroundColor: theme.colors.background },
   }),
-  screens: {
-    NotificationList: createNativeStackScreen({
-      screen: NotificationListScreen,
-      linking: 'notifications',
-    }),
-    NotificationDetail: createNativeStackScreen({
-      screen: NotificationDetailScreen,
-      linking: 'notifications/:id',
-    }),
-    NotificationSettings: createNativeStackScreen({
-      screen: NotificationSettingsScreen,
-      linking: 'notifications/settings',
-    }),
-  },
+  screens: { ...notificationScreens },
 });
 
 export type NotificationStackParams = StaticParamList<typeof NotificationStack>;

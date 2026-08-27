@@ -52,10 +52,9 @@ Directory map and module walkthrough: `docs/architecture.md`. The short form:
   uses; a hook owned by one feature lives in that feature. Together they are
   the **kit** — the layer a sibling app reuses wholesale, so it must not import
   `#features/*`, own a `.graphql` document, or carry a file named after a
-  domain. Ratcheted by `node scripts/check-layer-purity.mjs`: the baseline is
-  down to 2 (`NutritionSummary`, `DietaryRestrictionSelector` — each shared by
-  two features and domain-named only), so a NEW coupling fails at commit.
-  Schema-type imports are counted, not failed.
+  domain. `node scripts/check-layer-purity.mjs` holds it: the baseline is EMPTY,
+  which makes it an invariant rather than a debt — it went 76 → 0, so any entry
+  is a regression to fix. Schema-type imports are counted, not failed.
 - `src/features/catalog/` — the grocery `Item`, its pickers, and storage
   locations. The one feature with a PUBLIC component directory (`ui/`): its
   pickers are domain UI that two features consume, so they belong in neither a
@@ -84,8 +83,9 @@ way (Detox reaches components by testID string, never by import) is covered by
 **Feature shape** — every feature has `manifest.ts` (its `id` equals the
 directory name), `screens/`, `hooks/` and `components/`, and one with more than
 one screen declares `screens/registration.ts`. Ratcheted by
-`node scripts/check-feature-shape.mjs`; 2 deviations are recorded. A `.graphql`
-document beside its consumer is the convention, NOT a deviation.
+`node scripts/check-feature-shape.mjs`, whose baseline is also EMPTY — every
+feature has the same shape. A `.graphql` document beside its consumer is the
+convention, NOT a deviation.
 
 **Feature API boundary** — public surface of a feature: `screens/`,
 `manifest.ts`, top-level `hooks/` files, and `<feature>Fragments.generated.ts`

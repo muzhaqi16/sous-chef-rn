@@ -136,6 +136,8 @@ file named after a domain. The recorded baseline is the backlog, and it may only
 shrink. Generated-schema-type imports are counted but do not fail — that coupling
 only costs when a sibling app has a different schema.
 
+Both baselines are empty, so both are invariants rather than backlogs.
+
 `scripts/check-feature-shape.mjs` ratchets the other half: every feature has
 `manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
 `components/`, and a feature with more than one screen declares

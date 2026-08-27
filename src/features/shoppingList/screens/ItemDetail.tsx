@@ -11,7 +11,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#utils/iconUtils';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';
 import { ClickableInfoPanel } from '#components/molecules/ClickableInfoPanel';
-import { NutritionSummary } from '#components/molecules/NutritionSummary';
+import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { FormattedItemSubtitle } from '#components/atoms/FormattedItemSubtitle';

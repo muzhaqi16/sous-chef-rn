@@ -44,7 +44,7 @@ import { getUnitDisplayText } from '#utils/formatQuantity';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
 import { parseNutritions, hasNutritionData } from '#utils/nutritionUtils';
-import { NutritionSummary } from '#components/molecules/NutritionSummary';
+import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
 import { CollapsingHeroDetail } from '#components/templates/CollapsingHeroDetail';

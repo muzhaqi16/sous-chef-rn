@@ -1,8 +1,5 @@
 {
-  "deviations": [
-    "barcode: registration — 2 screens, no screens/registration.ts",
-    "notifications: registration — 3 screens, no screens/registration.ts"
-  ],
+  "deviations": [],
   "features": [
     "barcode",
     "catalog",

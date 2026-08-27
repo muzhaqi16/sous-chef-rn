@@ -26,7 +26,7 @@ const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primary,
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
-import { DietaryRestrictionSelector } from '#/components/organisms/DietaryRestrictionSelector';
+import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 import { CookingPreferencesSheet } from '#/components/modals/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#/components/modals/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';

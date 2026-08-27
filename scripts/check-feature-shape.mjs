@@ -37,8 +37,11 @@
  * (`SortableShoppingList/SortableListThemeContext.tsx`). `context/` is where a
  * feature-WIDE context goes; a context scoped to one subtree belongs with it.
  *
- * Ratcheted like the other checks: the recorded deviations are the backlog, and
- * a new one fails.
+ * The baseline is EMPTY, which makes this an invariant rather than a backlog:
+ * every feature has the same shape, so any deviation is a regression. It got
+ * there from 3 — `profile` gained the `components/` its UI had been living
+ * outside of, and `barcode`/`notifications` took ownership of the screen lists
+ * their stacks had been declaring for them.
  *
  *   node scripts/check-feature-shape.mjs           # check
  *   node scripts/check-feature-shape.mjs --list    # print every deviation

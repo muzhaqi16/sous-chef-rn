@@ -3,7 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Header } from '#components/molecules/Header';
-import { NutritionSummary } from '#components/molecules/NutritionSummary';
+import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { commonStyles } from '#/styles/commonStyles';

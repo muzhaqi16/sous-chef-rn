@@ -33,6 +33,11 @@
  * finds 251 files, most of them a comment or a test fixture; a gate that noisy
  * gets disabled. A file NAMED `MoveToPantryModal.tsx` is not a judgement call.
  *
+ * The baseline is now EMPTY. That makes it an invariant rather than a debt
+ * being paid down: nobody should need a kit file that knows about a feature, so
+ * any entry is a regression to fix rather than a number to watch. It reached
+ * zero from 76.
+ *
  *   node scripts/check-layer-purity.mjs           # check
  *   node scripts/check-layer-purity.mjs --list    # print every finding
  *   node scripts/check-layer-purity.mjs --update  # re-baseline
