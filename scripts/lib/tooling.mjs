@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 export const REPO_ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -157,3 +158,20 @@ export const median = xs => {
     ? s[(s.length - 1) / 2]
     : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
 };
+
+/**
+ * `parseArgs` with the exit code these scripts use for "invoked wrongly".
+ *
+ * `strict` is what makes a valueless flag an error rather than an absent one,
+ * which for a gate means checking the wrong thing instead of failing. The
+ * throw becomes exit 2 — the code the checks use for "this check is broken",
+ * as distinct from 1, "this check found a problem".
+ */
+export function parseFlags(options) {
+  try {
+    return parseArgs({ options, strict: true }).values;
+  } catch (error) {
+    console.error(`\n✗ ${error.message}\n`);
+    process.exit(2);
+  }
+}

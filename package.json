@@ -52,6 +52,8 @@
     "perf": "reassure",
     "perf:baseline": "reassure --baseline",
     "perf:stability": "reassure check-stability",
+    "perf:ios:baseline": "node scripts/ios-capture-baseline.mjs",
+    "perf:ios:frames": "node scripts/ios-frame-sample.mjs",
     "test:changed": "jest --changedSince=main --bail",
     "test:e2e": "npm run e2e:prune --silent && detox test --configuration ios.sim.debug",
     "test:e2e:android:device": "npm run e2e:prune --silent && detox test --configuration android.att.debug",

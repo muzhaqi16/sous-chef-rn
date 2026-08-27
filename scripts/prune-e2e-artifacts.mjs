@@ -19,13 +19,11 @@
 import { readdirSync, statSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
+import { parseFlags } from './lib/tooling.mjs';
 
-const { values: flags } = parseArgs({
-  options: {
-    keep: { type: 'string', default: '5' },
-    'dry-run': { type: 'boolean', default: false },
-  },
+const flags = parseFlags({
+  keep: { type: 'string', default: '5' },
+  'dry-run': { type: 'boolean', default: false },
 });
 
 const KEEP = Number(flags.keep);

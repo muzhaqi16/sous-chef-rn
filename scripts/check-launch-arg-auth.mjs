@@ -28,7 +28,7 @@
  * variant not signed with the debug key is refused.
  */
 import { readFileSync, existsSync } from 'node:fs';
-import { parseArgs } from 'node:util';
+import { parseFlags } from './lib/tooling.mjs';
 
 const GENERATED = new URL('../src/config/env.generated.ts', import.meta.url);
 const BUILD_GRADLE = new URL('../android/app/build.gradle', import.meta.url);
@@ -37,12 +37,10 @@ const BUILD_GRADLE = new URL('../android/app/build.gradle', import.meta.url);
 // and drop the gate into post-hoc mode, judging the environment instead of the
 // artifact. For a gate whose failure mode is checking the wrong thing, an
 // explicit throw beats a silent fallback.
-const { values: flags } = parseArgs({
-  options: {
-    platform: { type: 'string' },
-    variant: { type: 'string' },
-    sdk: { type: 'string' },
-  },
+const flags = parseFlags({
+  platform: { type: 'string' },
+  variant: { type: 'string' },
+  sdk: { type: 'string' },
 });
 
 const platform = flags.platform;

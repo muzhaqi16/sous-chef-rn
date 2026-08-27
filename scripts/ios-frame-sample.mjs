@@ -46,16 +46,13 @@
  */
 import { mkdirSync, writeFileSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseArgs } from 'node:util';
-import { median, sh } from './lib/tooling.mjs';
+import { median, parseFlags, sh } from './lib/tooling.mjs';
 
-const { values: flags } = parseArgs({
-  options: {
-    device: { type: 'string', default: 'iPhone 17' },
-    bundle: { type: 'string', default: 'dev.souschef.app' },
-    seconds: { type: 'string', default: '12' },
-    out: { type: 'string' },
-  },
+const flags = parseFlags({
+  device: { type: 'string', default: 'iPhone 17' },
+  bundle: { type: 'string', default: 'dev.souschef.app' },
+  seconds: { type: 'string', default: '12' },
+  out: { type: 'string' },
 });
 
 const DEVICE = flags.device;

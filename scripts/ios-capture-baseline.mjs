@@ -37,19 +37,16 @@
  */
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { parseArgs } from 'node:util';
-import { median, sh } from './lib/tooling.mjs';
+import { median, parseFlags, sh } from './lib/tooling.mjs';
 
-const { values: flags } = parseArgs({
-  options: {
-    runs: { type: 'string', default: '5' },
-    device: { type: 'string', default: 'iPhone 17' },
-    bundle: { type: 'string', default: 'dev.souschef.app' },
-    items: { type: 'string', default: 'unrecorded' },
-    label: { type: 'string', default: 'warm-cache' },
-    mimir: { type: 'string' },
-    'self-test': { type: 'boolean', default: false },
-  },
+const flags = parseFlags({
+  runs: { type: 'string', default: '5' },
+  device: { type: 'string', default: 'iPhone 17' },
+  bundle: { type: 'string', default: 'dev.souschef.app' },
+  items: { type: 'string', default: 'unrecorded' },
+  label: { type: 'string', default: 'warm-cache' },
+  mimir: { type: 'string' },
+  'self-test': { type: 'boolean', default: false },
 });
 
 const RUNS = Number(flags.runs);
