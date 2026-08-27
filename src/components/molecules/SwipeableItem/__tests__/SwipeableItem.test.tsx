@@ -4,14 +4,18 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import { SwipeableItem } from '../SwipeableItem';
 import { Text } from '#components/atoms/Text';
 
+// Actions are descriptors now, so the tests build them the way callers do.
+const action = (
+  key: string,
+  onPress: () => void = jest.fn(),
+  labelKey = 'labels.edit',
+) => ({ key, icon: 'create-outline' as const, labelKey, onPress });
+
 type TestInstance = ReturnType<typeof screen.getByTestId>;
 
-jest.mock('../RightActions', () => ({
-  RightActions: () => null,
-}));
-
-jest.mock('../LeftActions', () => ({
-  LeftActions: () => null,
+jest.mock('../SwipeActions', () => ({
+  SwipeActions: () => null,
+  swipeTrayWidth: () => 80,
 }));
 
 jest.mock('../SwipeableContent', () => ({
@@ -97,21 +101,19 @@ describe('SwipeableItem', () => {
     expect(screen.getByText('Basic item')).toBeTruthy();
   });
 
-  it('renders with purchase toggle callback', () => {
+  it('renders with a single left action', () => {
     render(
-      <SwipeableItem onTogglePurchase={jest.fn()} isPurchased={false}>
+      <SwipeableItem leftActions={[action('togglePurchase')]}>
         <Text>Shopping item</Text>
       </SwipeableItem>,
     );
     expect(screen.getByText('Shopping item')).toBeTruthy();
   });
 
-  it('renders with pantry callbacks', () => {
+  it('renders with a three-action tray', () => {
     render(
       <SwipeableItem
-        onConsume={jest.fn()}
-        onWaste={jest.fn()}
-        onRestock={jest.fn()}
+        leftActions={[action('consume'), action('waste'), action('restock')]}
       >
         <Text>Pantry item</Text>
       </SwipeableItem>,
@@ -123,9 +125,8 @@ describe('SwipeableItem', () => {
     it('exposes available action callbacks as accessibilityActions', () => {
       render(
         <SwipeableItem
-          onEdit={jest.fn()}
-          onDelete={jest.fn()}
-          onConsume={jest.fn()}
+          leftActions={[action('consume')]}
+          rightActions={[action('edit'), action('delete')]}
         >
           <Text>Item</Text>
         </SwipeableItem>,
@@ -141,7 +142,7 @@ describe('SwipeableItem', () => {
 
     it('omits actions for callbacks not provided', () => {
       render(
-        <SwipeableItem onEdit={jest.fn()}>
+        <SwipeableItem rightActions={[action('edit')]}>
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -152,38 +153,26 @@ describe('SwipeableItem', () => {
       expect(actionNames).toEqual(['edit']);
     });
 
-    it('toggles label between purchased and unpurchased states', () => {
-      const { rerender } = render(
-        <SwipeableItem onTogglePurchase={jest.fn()} isPurchased={false}>
+    // The label now comes from the action's own `labelKey`, so a caller can
+    // vary it (purchased vs unpurchased) without this component knowing.
+    it('resolves each action label from its i18n key', () => {
+      render(
+        <SwipeableItem
+          rightActions={[action('delete', jest.fn(), 'labels.delete')]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );
-      const hostUnpurchased = findA11yActionHost(
-        screen.getByTestId('swipeable-content'),
-      );
-      const labelUnpurchased = hostUnpurchased.props.accessibilityActions.find(
-        (a: { name: string }) => a.name === 'togglePurchase',
-      ).label;
-      expect(labelUnpurchased).toBe('Mark as purchased');
-
-      rerender(
-        <SwipeableItem onTogglePurchase={jest.fn()} isPurchased>
-          <Text>Item</Text>
-        </SwipeableItem>,
-      );
-      const hostPurchased = findA11yActionHost(
-        screen.getByTestId('swipeable-content'),
-      );
-      const labelPurchased = hostPurchased.props.accessibilityActions.find(
-        (a: { name: string }) => a.name === 'togglePurchase',
-      ).label;
-      expect(labelPurchased).toBe('Mark as unpurchased');
+      const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(host.props.accessibilityActions[0].label).toBe('Delete');
     });
 
     it('fires the edit callback on edit action', () => {
       const onEdit = jest.fn();
       render(
-        <SwipeableItem onEdit={onEdit} onDelete={jest.fn()}>
+        <SwipeableItem
+          rightActions={[action('edit', onEdit), action('delete')]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -194,7 +183,9 @@ describe('SwipeableItem', () => {
     it('fires the delete callback on delete action', () => {
       const onDelete = jest.fn();
       render(
-        <SwipeableItem onEdit={jest.fn()} onDelete={onDelete}>
+        <SwipeableItem
+          rightActions={[action('edit'), action('delete', onDelete)]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -208,9 +199,11 @@ describe('SwipeableItem', () => {
       const onRestock = jest.fn();
       render(
         <SwipeableItem
-          onConsume={onConsume}
-          onWaste={onWaste}
-          onRestock={onRestock}
+          leftActions={[
+            action('consume', onConsume),
+            action('waste', onWaste),
+            action('restock', onRestock),
+          ]}
         >
           <Text>Item</Text>
         </SwipeableItem>,
@@ -226,7 +219,9 @@ describe('SwipeableItem', () => {
     it('fires togglePurchase callback when triggered', () => {
       const onTogglePurchase = jest.fn();
       render(
-        <SwipeableItem onTogglePurchase={onTogglePurchase} isPurchased={false}>
+        <SwipeableItem
+          leftActions={[action('togglePurchase', onTogglePurchase)]}
+        >
           <Text>Item</Text>
         </SwipeableItem>,
       );
@@ -237,7 +232,7 @@ describe('SwipeableItem', () => {
     it('ignores unknown action names without crashing', () => {
       const onEdit = jest.fn();
       render(
-        <SwipeableItem onEdit={onEdit}>
+        <SwipeableItem rightActions={[action('edit', onEdit)]}>
           <Text>Item</Text>
         </SwipeableItem>,
       );

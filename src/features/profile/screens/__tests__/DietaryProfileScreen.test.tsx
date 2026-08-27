@@ -90,7 +90,7 @@ jest.mock('#/components/organisms/DietaryRestrictionSelector', () => {
   };
 });
 
-jest.mock('#/components/organisms/CuisineSelector', () => {
+jest.mock('#features/profile/components/CuisineSelector', () => {
   const { View, Text } = require('react-native');
   return {
     CuisineSelector: ({ selectedCuisines }: { selectedCuisines: string[] }) => (

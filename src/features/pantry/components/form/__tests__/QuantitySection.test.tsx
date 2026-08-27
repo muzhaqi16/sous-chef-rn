@@ -36,28 +36,25 @@ jest.mock('#components/molecules/FractionInput', () => {
   };
 });
 
-jest.mock(
-  '#components/molecules/AutocompleteField/UnitAutocompleteField',
-  () => {
-    const { View, Text } = require('react-native');
-    return {
-      UnitAutocompleteField: ({
-        label,
-        value,
-        testID,
-      }: {
-        label: string;
-        value?: string;
-        testID?: string;
-      }) => (
-        <View testID={testID || 'unit-autocomplete'}>
-          <Text>{label}</Text>
-          {value ? <Text>{value}</Text> : null}
-        </View>
-      ),
-    };
-  },
-);
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
+  const { View, Text } = require('react-native');
+  return {
+    UnitAutocompleteField: ({
+      label,
+      value,
+      testID,
+    }: {
+      label: string;
+      value?: string;
+      testID?: string;
+    }) => (
+      <View testID={testID || 'unit-autocomplete'}>
+        <Text>{label}</Text>
+        {value ? <Text>{value}</Text> : null}
+      </View>
+    ),
+  };
+});
 
 jest.mock('#components/molecules/FieldRow', () => {
   const { View } = require('react-native');

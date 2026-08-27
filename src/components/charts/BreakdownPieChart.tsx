@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Pie, PolarChart } from 'victory-native';
 import { Text } from '#components/atoms/Text';
 
@@ -19,10 +19,22 @@ interface BreakdownPieChartProps {
   colorScale?: string[];
 }
 
-const DEFAULT_COLORS = [
-  '#FF8C42', // Primary orange
-  '#FFB347',
-  '#FFD699',
+/**
+ * Categorical slice colors, brand-first.
+ *
+ * The first three come from the theme's brand ramp, so a rebrand reaches the
+ * chart — they used to be literal hexes (`'#FF8C42' // Primary orange`), which
+ * meant a fork could change `appConfig.branding.primaryColor` and still get the
+ * old orange here. The remaining five are a fixed categorical set: they exist to
+ * be DISTINGUISHABLE from the brand and from each other, so deriving them from
+ * one hue would defeat the point.
+ */
+const brandFirstColors = (theme: {
+  colors: { primary: string; primaryLight: string; primaryDark: string };
+}) => [
+  theme.colors.primary,
+  theme.colors.primaryDark,
+  theme.colors.primaryLight,
   '#4ECDC4',
   '#45B7D1',
   '#96CEB4',
@@ -35,15 +47,20 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
   height = 220,
   title,
   showLegend = true,
-  colorScale = DEFAULT_COLORS,
+  colorScale,
 }) => {
   const { t } = useTranslation();
+  // `useUnistyles()` for theme colors is the documented exception for charts —
+  // the values are consumed as data by the charting library, not as styles, so
+  // there is no ShadowTree path for them (cf. TrendLineChart).
+  const { theme } = useUnistyles();
+  const colors = colorScale ?? brandFirstColors(theme);
   const chartData = (() => {
     if (!data || data.length === 0) return [];
     return data.map((item, index) => ({
       label: item.label,
       value: item.value,
-      color: colorScale[index % colorScale.length],
+      color: colors[index % colors.length],
     }));
   })();
 
@@ -89,7 +106,7 @@ export const BreakdownPieChart: React.FC<BreakdownPieChartProps> = ({
                 <View
                   style={[
                     styles.legendColor,
-                    { backgroundColor: colorScale[index % colorScale.length] },
+                    { backgroundColor: colors[index % colors.length] },
                   ]}
                 />
                 <View style={styles.legendTextContainer}>

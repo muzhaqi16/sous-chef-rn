@@ -1,0 +1,181 @@
+{
+  "inviteMembers": {
+    "title": "Fto familjen dhe miqtë",
+    "subtitleHasNeither": "Krijo më parë një shtëpi ose listë blerjesh për të ftuar të tjerë",
+    "subtitleHasBoth": "Fto të tjerë te shtëpia jote dhe listat e blerjeve (opsionale)",
+    "subtitleHasHome": "Fto të tjerë te shtëpia jote (opsionale)",
+    "subtitleHasList": "Fto të tjerë te lista jote e blerjeve (opsionale)",
+    "nothingToShare": "Asgjë për të ndarë ende",
+    "nothingToShareDesc": "Duhet të krijosh më parë një shtëpi ose listë blerjesh. Mund të ftosh më vonë nga cilësimet.",
+    "noInvitesYet": "Ende pa ftesa",
+    "noInvitesYetDesc": "Shto adresa email-i sipër për të ftuar anëtarë",
+    "invitingPersonSingular": "Ftuar {{count}} person:",
+    "invitingPersonPlural": "Ftuar {{count}} persona:",
+    "tip": "💡 Këshillë: Mund të ftosh më shumë njerëz më vonë nga cilësimet",
+    "sending": "Po dërgohen ftesat...",
+    "sendInviteSingular": "Dërgo {{count}} ftesë",
+    "sendInvitePlural": "Dërgo {{count}} ftesa",
+    "sendInviteZero": "Dërgo ftesat",
+    "invalidEmailTitle": "Email i pavlefshëm",
+    "duplicateEmailTitle": "Email i dyfishuar",
+    "duplicateEmailMessage": "Ky email është shtuar tashmë",
+    "cantInviteSelf": "Nuk mund ta ftosh veten",
+    "partialSuccessTitle": "Sukses i pjesshëm",
+    "partialSuccessMessage": "Disa ftesa mund të kenë dështuar. Mund të ftosh më shumë anëtarë më vonë nga cilësimet.",
+    "inviteHomeMessage": "{{name}} të ka ftuar t'i bashkohesh shtëpisë së tij/saj për të menaxhuar qilarin dhe listat së bashku!"
+  },
+  "inviteUser": {
+    "roleMemberLabel": "Anëtar",
+    "roleMemberDescription": "Mund të shtojë dhe modifikojë artikuj në qilar",
+    "roleAdminDescription": "Mund të menaxhojë anëtarët dhe cilësimet",
+    "roleGuestDescription": "Vetëm akses shikimi te shtëpia",
+    "roleOwnerLabel": "Pronar",
+    "roleOwnerDescription": "Kontroll i plotë mbi shtëpinë dhe të gjithë anëtarët",
+    "ownerWarning": "⚠️ Pronarët kanë kontroll të plotë",
+    "submit": "Dërgo ftesën",
+    "offlineError": "Nuk mund të dërgosh ftesë pa lidhje interneti",
+    "sendFailed": "Dërgimi i ftesës dështoi. Provo sërish.",
+    "emailLabel": "Adresa e email-it",
+    "emailPlaceholder": "Fut adresën e email-it"
+  },
+  "invitationAcceptance": {
+    "invalidInvitation": "Ftesë e pavlefshme",
+    "shoppingListAccepted": "Ftesa për listën e blerjeve u pranua!",
+    "homeAccepted": "Ftesa për shtëpinë u pranua!",
+    "unknownType": "Lloj ftese i panjohur",
+    "declineConfirm": "Vërtet dëshiron ta refuzosh këtë ftesë?",
+    "notFound": "Ftesa nuk u gjet ose ka skaduar",
+    "loadingDetails": "Duke ngarkuar detajet e ftesës...",
+    "invitedHeading": "Ke marrë një ftesë!",
+    "homeInviteText": "{{inviter}} të ka ftuar të bashkohesh",
+    "listInviteText": "{{inviter}} të ka ftuar të bashkëpunosh në",
+    "resourceHome": "Shtëpia",
+    "roleLabel": "Roli: {{role}}",
+    "descriptionLabel": "Përshkrim:",
+    "acceptFailed": "Pranimi i ftesës dështoi. Provo sërish.",
+    "declineFailed": "Refuzimi i ftesës dështoi. Provo sërish."
+  },
+  "homeManagement": {
+    "title": "Shtëpitë e Mia",
+    "modeCreate": "Krijo Shtëpi",
+    "modeJoin": "Bashkohu me Kod",
+    "join": "Bashkohu",
+    "errorNotMember": "Nuk je anëtar i kësaj shtëpie",
+    "errorNoInvitePermission": "Nuk ke leje për të ftuar anëtarë në këtë shtëpi",
+    "accessibilityHint": "Trokit për të parë detajet e shtëpisë",
+    "accessibilityDefaultSuffix": ", shtëpi parazgjedhur",
+    "statsHome_one": "Shtëpi",
+    "statsHome_other": "Shtëpi",
+    "statsMember_one": "Anëtar",
+    "statsMember_other": "Anëtarë",
+    "statsPantry_one": "Qilar",
+    "statsPantry_other": "Qilarë",
+    "cardDefault": "Parazgjedhur",
+    "cardInvite": "Fto",
+    "cardMembersSectionTitle": "Anëtarët"
+  },
+  "homeDetail": {
+    "shareLinkMessage": "Bashkohu me shtëpinë time",
+    "title": "Detajet e Shtëpisë",
+    "errorFailedToLoad": "Ngarkimi i detajeve të shtëpisë dështoi",
+    "sectionHomeInformation": "Informacioni i Shtëpisë",
+    "homeNameEmptyError": "Emri i shtëpisë nuk mund të jetë bosh",
+    "labelAllowJoinCode": "Lejo Kodin e Bashkimit",
+    "descriptionAllowJoinCode": "Lejo të tjerët të bashkohen në këtë shtëpi me një kod",
+    "labelJoinCode": "Kodi i Bashkimit",
+    "rotateJoinCodeTitle": "Rigjenero kodin e hyrjes",
+    "rotateJoinCodeMessage": "Kjo çvlerëson kodin aktual dhe çdo lidhje të ndarë. Anëtarët ekzistues mbeten. Vazhdo?",
+    "rotateJoinCodeConfirm": "Rigjenero",
+    "makeOwner": "Bëje pronar",
+    "changeRole": "Ndrysho rolin",
+    "transferOwnershipTitle": "Transfero pronësinë",
+    "transferOwnershipMessage": "Ta bësh {{name}} pronarin e kësaj shtëpie? Do të bëhesh anëtar i zakonshëm dhe vetëm ai mund ta rikthejë.",
+    "transferOwnershipConfirm": "Transfero",
+    "permissions": "Lejet",
+    "permViewPantry": "Mund të shohë qilarin",
+    "permEditPantry": "Mund të modifikojë qilarin",
+    "permInviteOthers": "Mund të ftojë të tjerë",
+    "permManageHome": "Mund të menaxhojë shtëpinë",
+    "sectionMembersInvites": "Anëtarët & Ftesat",
+    "youLabel": "Ti",
+    "storageLocationsSubtitle": "Menaxho ku ruhen artikujt",
+    "leaveHomeDescription": "Largimi nga kjo shtëpi do të heqë aksesin tënd në të gjitha qilarët, listat e blerjeve, planet e ushqimit dhe modelet e ndara.",
+    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë."
+  },
+  "joinHome": {
+    "homeFallback": "Shtëpia",
+    "enterCodeTitle": "Fut Kodin e Bashkimit",
+    "enterCodeDescription": "Fut kodin e bashkimit që more për t'u bashkuar me një shtëpi.",
+    "findHome": "Gjej Shtëpinë",
+    "notFoundDescription": "Nuk gjetëm një shtëpi për atë kod. Mund të jetë i pavlefshëm ose kodi mund të jetë çaktivizuar.",
+    "tryDifferentCode": "Provo një kod tjetër",
+    "invitedToJoin": "Ke marrë një ftesë për t’u bashkuar me",
+    "enterDifferentCode": "Fut një kod tjetër",
+    "joinFailed": "Bashkimi me shtëpinë dështoi. Kodi mund të jetë i pavlefshëm ose i skaduar.",
+    "memberCount_one": "{{count}} anëtar",
+    "memberCount_other": "{{count}} anëtarë",
+    "pantryCount_one": "{{count}} qilar",
+    "pantryCount_other": "{{count}} qilarë"
+  },
+  "joinLink": {
+    "title": "Hap lidhjen",
+    "invalidTitle": "Lidhja nuk u gjet",
+    "invalidDescription": "Kjo lidhje është e pavlefshme ose ka skaduar.",
+    "signInHome": "Hyr për t'u bashkuar me këtë shtëpi.",
+    "signInList": "Hyr për t'u bashkuar me këtë listë.",
+    "staleHome": "Ky link ftese për shtëpinë ka skaduar. Kërko një link të ri për t'u bashkuar.",
+    "staleList": "Ky link ftese për listën ka skaduar. Kërko një link të ri për t'u bashkuar."
+  },
+  "roles": {
+    "owner": "Pronar",
+    "member": "Anëtar"
+  },
+  "collaboratorRoles": {
+    "viewer": "Shikues",
+    "shopper": "Blerës",
+    "contributor": "Kontribues",
+    "editor": "Redaktor",
+    "owner": "Pronar",
+    "permissions": {
+      "viewItems": "Shiko artikujt",
+      "viewHistory": "Shiko historikun",
+      "exportList": "Eksporto listën",
+      "addItems": "Shto artikuj",
+      "editItems": "Modifiko artikuj",
+      "removeItems": "Hiq artikuj",
+      "markPurchased": "Shëno si të blerë",
+      "inviteOthers": "Fto të tjerë"
+    },
+    "descriptions": {
+      "viewer": "Mund të shohë listën e blerjeve",
+      "shopper": "Mund t'i shënojë artikujt si të blerë",
+      "contributor": "Mund të shtojë artikuj dhe t'i shënojë si të blerë",
+      "editor": "Mund të shtojë, të modifikojë dhe të heqë artikuj",
+      "admin": "Kontroll i plotë, përfshirë ftesën e të tjerëve",
+      "owner": "Kontroll i plotë mbi listën e blerjeve"
+    },
+    "permissionsTitle": "Lejet:"
+  },
+  "createHome": {
+    "allowJoinCode": "Lejo të tjerët të bashkohen me një kod",
+    "pantryFailedTitle": "Njoftim",
+    "pantryFailedBody": "Krijimi i qilarit dështoi, por mund ta krijosh më vonë te cilësimet.",
+    "skipPantryTitle": "Ta kapërcesh krijimin e qilarit?",
+    "skipPantryBody": "Ke një shtëpi, por jo një qilar. Mund ta krijosh më vonë te cilësimet."
+  },
+  "homeMembers": {
+    "noMembers": "Asnjë anëtar"
+  },
+  "collaborators": {
+    "editPermissions": "Modifiko lejet"
+  },
+  "home": {
+    "joinSuccessBody": "U bashkove me sukses me shtëpinë!",
+    "invalidHomeId": "ID e pavlefshme e shtëpisë",
+    "leaveBody": "Vërtet dëshiron të largohesh nga \"{{name}}\"? Do të humbasësh aksesin te kjo shtëpi dhe te qilarët e listat e blerjeve të saj."
+  },
+  "homeRoles": {
+    "owner": "Pronar",
+    "member": "Anëtar"
+  }
+}

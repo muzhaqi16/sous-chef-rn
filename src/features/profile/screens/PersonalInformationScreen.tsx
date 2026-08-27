@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { SettingsSection } from '#components/organisms/SettingsSection';
-import type {
-  SettingItem,
-  SettingOption,
-} from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/molecules/SettingRow';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { useProfileData } from '#features/profile/hooks/useProfileData';
 import { useUser } from '#store/useAppStore';
-import { PERSONAL_INFO_CONFIG } from '#/config/settingsConfig';
+import {
+  PERSONAL_INFO_CONFIG,
+  type SettingItemConfig,
+  type SettingOptionConfig,
+} from '#/config/settingsConfig';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
@@ -21,44 +22,6 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
-
-const SECTION_TITLE_KEYS: Record<string, string> = {
-  'Personal Information': 'labels.personalInformation',
-  'Privacy Settings': 'personalInformation.sectionPrivacySettings',
-};
-
-const FIELD_LABEL_KEYS: Record<string, string> = {
-  email: 'personalInformation.email',
-  firstName: 'personalInformation.firstName',
-  lastName: 'personalInformation.lastName',
-  displayName: 'personalInformation.displayName',
-  bio: 'personalInformation.bio',
-  phone: 'personalInformation.phone',
-  dateOfBirth: 'personalInformation.dateOfBirth',
-  gender: 'personalInformation.gender',
-  profileVisibility: 'personalInformation.profileVisibility',
-  showEmail: 'personalInformation.showEmail',
-  showPhone: 'personalInformation.showPhone',
-};
-
-const OPTION_LABEL_KEYS: Record<string, string> = {
-  Male: 'personalInformation.genderMale',
-  Female: 'personalInformation.genderFemale',
-  'Non-binary': 'personalInformation.genderNonBinary',
-  Other: 'itemType.OTHER',
-  'Prefer not to say': 'personalInformation.genderPreferNotToSay',
-  Public: 'personalInformation.visibilityPublic',
-  'Friends Only': 'personalInformation.visibilityFriendsOnly',
-  Private: 'personalInformation.visibilityPrivate',
-};
-
-// Shape of a single entry inside PERSONAL_INFO_CONFIG.
-interface SettingConfig {
-  key: string;
-  label: string;
-  type: string;
-  options?: SettingOption[];
-}
 
 export const PersonalInformationScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -104,22 +67,13 @@ export const PersonalInformationScreen: React.FC = () => {
     }
   };
 
-  const translateOptions = (
-    options?: Array<{ label: string; value: string }>,
-  ) =>
-    options?.map(opt => ({
-      ...opt,
-      label: OPTION_LABEL_KEYS[opt.label]
-        ? t(OPTION_LABEL_KEYS[opt.label])
-        : opt.label,
-    }));
+  const translateOptions = (options?: SettingOptionConfig[]) =>
+    options?.map(opt => ({ value: opt.value, label: t(opt.labelKey) }));
 
-  const createSettingItem = (config: SettingConfig): SettingItem => {
+  const createSettingItem = (config: SettingItemConfig): SettingItem => {
     const baseItem: SettingItem = {
       key: config.key,
-      label: FIELD_LABEL_KEYS[config.key]
-        ? t(FIELD_LABEL_KEYS[config.key])
-        : config.label,
+      label: t(config.labelKey),
       type: config.type,
     };
 
@@ -209,9 +163,7 @@ export const PersonalInformationScreen: React.FC = () => {
 
   const sections = (() => {
     return PERSONAL_INFO_CONFIG.map(configSection => ({
-      title: SECTION_TITLE_KEYS[configSection.title]
-        ? t(SECTION_TITLE_KEYS[configSection.title])
-        : configSection.title,
+      title: configSection.titleKey ? t(configSection.titleKey) : '',
       items: configSection.items.map(createSettingItem),
     }));
   })();

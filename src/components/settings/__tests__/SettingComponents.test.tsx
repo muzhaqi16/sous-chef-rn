@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { SettingSection } from '../SettingSection';
+import { SettingsSection } from '#components/organisms/SettingsSection';
 import { SettingSwitch } from '../SettingSwitch';
 
 jest.mock('#utils/iconUtils', () => {
@@ -37,39 +37,43 @@ jest.mock('#components/atoms/BaseSwitch', () => {
   };
 });
 
-describe('SettingSection', () => {
+describe('SettingsSection', () => {
   it('renders title', () => {
     render(
-      <SettingSection title="General">
+      <SettingsSection variant="inset" title="General">
         <Text>Content</Text>
-      </SettingSection>,
+      </SettingsSection>,
     );
     expect(screen.getByText('General')).toBeTruthy();
   });
 
   it('renders children', () => {
     render(
-      <SettingSection title="General">
+      <SettingsSection variant="inset" title="General">
         <Text>Child Content</Text>
-      </SettingSection>,
+      </SettingsSection>,
     );
     expect(screen.getByText('Child Content')).toBeTruthy();
   });
 
   it('renders description when provided', () => {
     render(
-      <SettingSection title="General" description="General settings">
+      <SettingsSection
+        variant="inset"
+        title="General"
+        description="General settings"
+      >
         <Text>Content</Text>
-      </SettingSection>,
+      </SettingsSection>,
     );
     expect(screen.getByText('General settings')).toBeTruthy();
   });
 
   it('does not render description when not provided', () => {
     render(
-      <SettingSection title="General">
+      <SettingsSection variant="inset" title="General">
         <Text>Content</Text>
-      </SettingSection>,
+      </SettingsSection>,
     );
     expect(screen.queryByText('General settings')).toBeNull();
   });

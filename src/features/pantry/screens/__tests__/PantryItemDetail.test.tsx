@@ -85,15 +85,15 @@ jest.mock('#components/molecules/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
 
-jest.mock('#components/molecules/ItemPhotoCarousel', () => ({
+jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
   ItemPhotoCarousel: () => null,
 }));
 
-jest.mock('#components/modals/AdjustQuantityModal', () => ({
+jest.mock('#features/pantry/components/modals/AdjustQuantityModal', () => ({
   AdjustQuantityModal: () => null,
 }));
 
-jest.mock('#components/modals/CorrectWeightModal', () => ({
+jest.mock('#features/pantry/components/modals/CorrectWeightModal', () => ({
   CorrectWeightModal: () => null,
 }));
 

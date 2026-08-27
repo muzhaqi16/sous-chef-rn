@@ -1,3 +1,4 @@
+import { pantrySwipeActions } from './pantrySwipeActions';
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { Dimensions } from 'react-native';
@@ -326,35 +327,42 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   };
 
   // Shared card content — used with or without slide animation wrapper
-  const renderCard = (onDelete?: () => void) => (
-    <BaseItemCard
-      itemId={id}
-      variant={cardVariant}
-      onPress={itemActions.onPress}
-      onEdit={itemActions.onEdit}
-      onDelete={onDelete}
-      onConsume={itemActions.onConsume}
-      onWaste={itemActions.onWaste}
-      onRestock={itemActions.onRestock}
-      onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
-      leftThreshold={80}
-      rightThreshold={80}
-      testID={`pantry-item-${id}`}
-      leftElement={leftElement}
-      rightElement={
-        <CardRightSlot
-          type="meta"
-          // Keyed by item id, matching the row's own `pantry-item-${id}` and
-          // shopping list's `shopping-list-item-${itemId}-quantity`.
-          testID={`pantry-item-${id}-quantity`}
-          primary={quantity}
-          secondary={rightSecondary}
-        />
-      }
-    >
-      <CardContent title={name} subtitle={getSubtitle()} />
-    </BaseItemCard>
-  );
+  const renderCard = (onDelete?: () => void) => {
+    const swipe = pantrySwipeActions({
+      onConsume: itemActions.onConsume,
+      onWaste: itemActions.onWaste,
+      onRestock: itemActions.onRestock,
+      onEdit: itemActions.onEdit,
+      onDelete,
+    });
+
+    return (
+      <BaseItemCard
+        itemId={id}
+        variant={cardVariant}
+        onPress={itemActions.onPress}
+        leftActions={swipe.left}
+        rightActions={swipe.right}
+        onSwipeableWillOpen={swipeable.onSwipeableWillOpen}
+        leftThreshold={80}
+        rightThreshold={80}
+        testID={`pantry-item-${id}`}
+        leftElement={leftElement}
+        rightElement={
+          <CardRightSlot
+            type="meta"
+            // Keyed by item id, matching the row's own `pantry-item-${id}` and
+            // shopping list's `shopping-list-item-${itemId}-quantity`.
+            testID={`pantry-item-${id}-quantity`}
+            primary={quantity}
+            secondary={rightSecondary}
+          />
+        }
+      >
+        <CardContent title={name} subtitle={getSubtitle()} />
+      </BaseItemCard>
+    );
+  };
 
   if (actions.onItemDelete) {
     return (

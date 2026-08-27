@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { mergedLocale } from '#/test-utils/mergedLocales';
 
 /**
  * Error and empty-state copy lives in one place.
@@ -21,7 +20,6 @@ import path from 'path';
  * The rule: if a feature namespace declares an error/empty-state string that
  * `errors.*` / `empty.*` / `labels.*` already has, use the canonical key.
  */
-const LOCALES_DIR = path.join(__dirname, '..', '..', 'src', 'i18n', 'locales');
 
 const CANONICAL_NAMESPACES = ['errors', 'empty', 'labels', 'dataState'];
 
@@ -74,7 +72,7 @@ const INTENTIONAL: ReadonlyArray<{ keys: readonly string[]; reason: string }> = 
       'belongs in the key rather than in a runtime parameter.',
   },
   {
-    keys: ['loading.loading', 'shoppingListScreens.loading', 'pantrySettings.loading', 'loadingOverlay.loading', 'listTemplate.loading'],
+    keys: ['loading.loading', 'shoppingListScreens.loading', 'pantrySettings.loading', 'listTemplate.loading'],
     reason:
       'Same string, but the keys are reached by different mechanisms ' +
       'and cannot be re-pointed at one another.',
@@ -593,9 +591,10 @@ const flatten = (obj: unknown, prefix = ''): Record<string, string> => {
   return out;
 };
 
-const en = flatten(
-  JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, 'en.json'), 'utf8')),
-);
+// The merged tree — core plus every feature's copy. Reading only the core file
+// would leave two thirds of the app's strings unchecked for duplication, which
+// is exactly the class of problem this test exists to catch.
+const en = flatten(mergedLocale('en'));
 
 const isCanonical = (key: string) =>
   CANONICAL_NAMESPACES.includes(key.split('.')[0]);

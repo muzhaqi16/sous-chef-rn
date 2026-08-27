@@ -148,97 +148,88 @@ jest.mock('#components/atoms/BaseInput/BaseInput', () => ({
     );
   },
 }));
+jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
+  ItemAutocompleteField: ({
+    label,
+    testID,
+    error,
+  }: {
+    label?: string;
+    testID?: string;
+    error?: string;
+  }) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID={testID}>
+        <Text>{label}</Text>
+        {error ? <Text>{error}</Text> : null}
+      </View>
+    );
+  },
+}));
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
+  // Renders the current `value` and offers a "pick" button that reproduces
+  // the real component's call ORDER: it writes the SYMBOL through
+  // `onChangeText` first, then reports the selection. A handler that writes
+  // the unit's `name` back in `onUnitSelected` therefore overwrites the
+  // symbol, which is the bug this stub exists to expose.
+  UnitAutocompleteField: ({
+    label,
+    testID,
+    value,
+    error,
+    onChangeText,
+    onUnitSelected,
+  }: {
+    label?: string;
+    testID?: string;
+    value?: string;
+    error?: string;
+    onChangeText?: (text: string) => void;
+    onUnitSelected?: (
+      id: string | null,
+      name: string | null,
+      type?: string | null,
+      symbol?: string | null,
+    ) => void;
+  }) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID={testID}>
+        <Text>{label}</Text>
+        <Text testID={`${testID}-value`}>{value}</Text>
+        {error ? <Text>{error}</Text> : null}
+        <Text
+          testID={`${testID}-pick`}
+          onPress={() => {
+            onChangeText?.('g');
+            onUnitSelected?.('unit-g', 'gram', 'WEIGHT', 'g');
+          }}
+        >
+          pick
+        </Text>
+      </View>
+    );
+  },
+}));
+jest.mock('#features/catalog/ui/autocomplete/BrandAutocompleteField', () => ({
+  BrandAutocompleteField: ({
+    label,
+    testID,
+  }: {
+    label?: string;
+    testID?: string;
+  }) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View testID={testID}>
+        <Text>{label}</Text>
+      </View>
+    );
+  },
+}));
 jest.mock(
-  '#components/molecules/AutocompleteField/ItemAutocompleteField',
-  () => ({
-    ItemAutocompleteField: ({
-      label,
-      testID,
-      error,
-    }: {
-      label?: string;
-      testID?: string;
-      error?: string;
-    }) => {
-      const { View, Text } = require('react-native');
-      return (
-        <View testID={testID}>
-          <Text>{label}</Text>
-          {error ? <Text>{error}</Text> : null}
-        </View>
-      );
-    },
-  }),
-);
-jest.mock(
-  '#components/molecules/AutocompleteField/UnitAutocompleteField',
-  () => ({
-    // Renders the current `value` and offers a "pick" button that reproduces
-    // the real component's call ORDER: it writes the SYMBOL through
-    // `onChangeText` first, then reports the selection. A handler that writes
-    // the unit's `name` back in `onUnitSelected` therefore overwrites the
-    // symbol, which is the bug this stub exists to expose.
-    UnitAutocompleteField: ({
-      label,
-      testID,
-      value,
-      error,
-      onChangeText,
-      onUnitSelected,
-    }: {
-      label?: string;
-      testID?: string;
-      value?: string;
-      error?: string;
-      onChangeText?: (text: string) => void;
-      onUnitSelected?: (
-        id: string | null,
-        name: string | null,
-        type?: string | null,
-        symbol?: string | null,
-      ) => void;
-    }) => {
-      const { View, Text } = require('react-native');
-      return (
-        <View testID={testID}>
-          <Text>{label}</Text>
-          <Text testID={`${testID}-value`}>{value}</Text>
-          {error ? <Text>{error}</Text> : null}
-          <Text
-            testID={`${testID}-pick`}
-            onPress={() => {
-              onChangeText?.('g');
-              onUnitSelected?.('unit-g', 'gram', 'WEIGHT', 'g');
-            }}
-          >
-            pick
-          </Text>
-        </View>
-      );
-    },
-  }),
-);
-jest.mock(
-  '#components/molecules/AutocompleteField/BrandAutocompleteField',
-  () => ({
-    BrandAutocompleteField: ({
-      label,
-      testID,
-    }: {
-      label?: string;
-      testID?: string;
-    }) => {
-      const { View, Text } = require('react-native');
-      return (
-        <View testID={testID}>
-          <Text>{label}</Text>
-        </View>
-      );
-    },
-  }),
-);
-jest.mock(
-  '#components/molecules/AutocompleteField/CategoryAutocompleteField',
+  '#features/catalog/ui/autocomplete/CategoryAutocompleteField',
   () => ({
     CategoryAutocompleteField: ({ label }: { label?: string }) => {
       const { View, Text } = require('react-native');

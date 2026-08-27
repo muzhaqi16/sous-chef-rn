@@ -1,3 +1,4 @@
+import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
@@ -21,8 +22,11 @@ interface ListTemplateProps<TItem extends { id: string } = { id: string }> {
   // type `TItem` is inferred from `items`/`customListComponent` at the call site.
   items?: TItem[];
   onItemPress?: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  /** Swipe actions for one row — see `ItemListActions.itemSwipeActions`. */
+  itemSwipeActions?: (id: string) => {
+    left?: SwipeAction[];
+    right?: SwipeAction[];
+  };
   onRefresh?: () => Promise<void>;
   emptyState?: EmptyStateConfig;
 
@@ -52,8 +56,10 @@ interface CustomListComponentProps<
 > {
   items: TItem[];
   onItemPress: (id: string) => void;
-  onItemEdit: (id: string) => void;
-  onItemDelete: (id: string) => void;
+  itemSwipeActions?: (id: string) => {
+    left?: SwipeAction[];
+    right?: SwipeAction[];
+  };
   onRefresh: () => Promise<void>;
   ListHeaderComponent?:
     | React.ComponentType<unknown>
@@ -71,8 +77,7 @@ interface CustomListComponentProps<
 export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   items = [],
   onItemPress = () => {},
-  onItemEdit = () => {},
-  onItemDelete = () => {},
+  itemSwipeActions,
   onRefresh = async () => {},
   emptyState,
 
@@ -90,10 +95,13 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   // Don't show loading state if custom component exists - let it handle its own loading
   const isLoading = loading && items.length === 0 && !CustomListComponent;
 
-  // Show loading empty state when loading with no items
+  // Show loading empty state when loading with no items.
+  // The icon falls back to a neutral placeholder, not `cube-outline` — that is
+  // a pantry-shaped box, and a generic template picking one feature's icon is
+  // how the shopping list ended up flashing a pantry glyph while loading.
   const effectiveEmptyState = isLoading
     ? {
-        icon: emptyState?.icon || 'cube-outline',
+        icon: emptyState?.icon || 'ellipsis-horizontal',
         title: t('listTemplate.loading'),
         description:
           emptyState?.loadingDescription || t('listTemplate.loadingItems'),
@@ -106,8 +114,7 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
         <CustomListComponent
           items={items || []}
           onItemPress={isLoading ? () => {} : onItemPress}
-          onItemEdit={isLoading ? () => {} : onItemEdit}
-          onItemDelete={isLoading ? () => {} : onItemDelete}
+          itemSwipeActions={isLoading ? undefined : itemSwipeActions}
           onRefresh={onRefresh}
           ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}
@@ -123,8 +130,7 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
             items as { id: string }[] as Parameters<typeof ItemList>[0]['items']
           }
           onItemPress={isLoading ? () => {} : onItemPress}
-          onItemEdit={isLoading ? () => {} : onItemEdit}
-          onItemDelete={isLoading ? () => {} : onItemDelete}
+          itemSwipeActions={isLoading ? undefined : itemSwipeActions}
           onRefresh={onRefresh}
           ListHeaderComponent={ListHeaderComponent}
           ListFooterComponent={ListFooterComponent}

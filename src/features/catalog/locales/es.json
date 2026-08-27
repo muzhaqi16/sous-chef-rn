@@ -1,0 +1,455 @@
+{
+  "storageLocations": {
+    "loading": "Cargando ubicaciones...",
+    "listView": "Vista de lista",
+    "treeView": "Vista de árbol",
+    "noLocations": "Sin ubicaciones",
+    "noLocationsDesc": "Crea ubicaciones para organizar los artículos según dónde se guardan.",
+    "cantDeleteDefaultTitle": "No se puede eliminar la ubicación predeterminada",
+    "cantDeleteDefaultMessage": "Primero establece otra ubicación como predeterminada.",
+    "cantDeleteTitle": "No se puede eliminar la ubicación",
+    "cantDeleteWithItems": "\"{{name}}\" tiene {{description}}. Muévelos o quítalos primero.",
+    "itemSingular": "{{count}} artículo",
+    "itemPlural": "{{count}} artículos",
+    "subLocationSingular": "{{count}} sububicación",
+    "subLocationPlural": "{{count}} sububicaciones",
+    "gotIt": "Entendido",
+    "deleteTitle": "Eliminar ubicación",
+    "offlineTitle": "Aún no se ha cargado",
+    "offlineDescription": "Tus ubicaciones de almacenamiento no se han cargado en este dispositivo. Vuelve a conectarte para verlas."
+  },
+  "storageLocationForm": {
+    "name": "Nombre",
+    "namePlaceholder": "p. ej., Refrigerador principal",
+    "type": "Tipo",
+    "parentLabel": "Ubicación principal (opcional)",
+    "parentNone": "Ninguna",
+    "parentHint": "Organiza las ubicaciones de forma jerárquica (p. ej., cajón dentro de la nevera)",
+    "descriptionLabel": "Descripción (opcional)",
+    "descriptionPlaceholder": "Notas sobre esta ubicación...",
+    "temperature": "Temperatura",
+    "colorLabel": "Color (opcional)",
+    "advancedSettings": "Ajustes avanzados",
+    "climateControlled": "Climatizado",
+    "capacity": "Capacidad",
+    "capacityPlaceholder": "p. ej., 100",
+    "unit": "Unidad",
+    "unitPlaceholder": "Seleccionar unidad",
+    "setAsDefault": "Establecer como ubicación predeterminada",
+    "typeRefrigerator": "Refrigerador",
+    "typeFreezer": "Congelador",
+    "typePantryShelf": "Estante de despensa",
+    "typeCabinet": "Armario",
+    "typeDrawer": "Cajón",
+    "typeCounter": "Encimera",
+    "typeBasement": "Sótano",
+    "typeGarage": "Garaje",
+    "typeCloset": "Armario empotrado",
+    "typeOutdoor": "Exterior",
+    "typeBoatStorage": "Almacenamiento de barco",
+    "typeRvStorage": "Almacenamiento de autocaravana",
+    "typeCustom": "Personalizado",
+    "tempNone": "Ninguna",
+    "tempAmbient": "Ambiente",
+    "tempRefrigerated": "Refrigerado",
+    "tempFrozen": "Congelado",
+    "colorRed": "Rojo",
+    "colorPink": "Rosa",
+    "colorPurple": "Morado",
+    "colorBlue": "Azul",
+    "colorTeal": "Verde azulado",
+    "colorGreen": "Verde",
+    "colorOrange": "Naranja",
+    "colorBrown": "Marrón",
+    "colorGrey": "Gris",
+    "colorIndigo": "Índigo",
+    "capacityLiters": "Litros",
+    "capacityGallons": "Galones",
+    "capacityCubicFeet": "Pies cúbicos",
+    "capacityCubicMeters": "Metros cúbicos",
+    "capacityItems": "Artículos"
+  },
+  "addStorageLocation": {
+    "createFailed": "No se pudo crear la ubicación",
+    "nameRequired": "El nombre de la ubicación es obligatorio",
+    "locationName": "Nombre de la ubicación",
+    "namePlaceholder": "p. ej., Armario de cocina, Estante del garaje",
+    "hintText": "Puedes editar los detalles más tarde en Ajustes > Ubicaciones de almacenamiento"
+  },
+  "addItemSheet": {
+    "addManually": "Añadir manualmente",
+    "more": "Más",
+    "allAdded": "Todo añadido",
+    "dismiss": "Descartar sugerencia",
+    "dismissed": "Se eliminó {{name}}",
+    "undo": "Deshacer",
+    "dismissFailed": "No se pudo quitar la sugerencia",
+    "undoFailed": "No se pudo deshacer",
+    "sections": {
+      "lowStock": "Pocas existencias",
+      "expiringSoon": "Por caducar",
+      "addAgain": "Añadir de nuevo",
+      "favorites": "Tus favoritos",
+      "popular": "Popular"
+    },
+    "noListTitle": "Ninguna lista seleccionada",
+    "noListBody": "Selecciona o crea primero una lista de compras.",
+    "createList": "Crear lista",
+    "searchPlaceholder": "Buscar o escanear artículo...",
+    "added": "Se añadió {{name}}",
+    "emptyTitle": "Aún no hay sugerencias",
+    "emptyPantrySubtext": "Añade artículos a tu despensa para recibir sugerencias personalizadas",
+    "emptyShoppingListSubtext": "Añade artículos a tu lista y aparecerán aquí para volver a añadirlos rápido",
+    "addToPantry": "Añadir a la despensa"
+  },
+  "storageLocationSheet": {
+    "editTitle": "Editar ubicación de almacenamiento",
+    "addTitle": "Añadir ubicación de almacenamiento"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Sugerencia enviada",
+    "sentBody": "Gracias: un administrador revisará tus cambios. La ficha permanecerá igual hasta que se aprueben.",
+    "duplicateTitle": "Ya lo sugeriste",
+    "duplicateBody": "Ya sugeriste exactamente estos cambios y siguen pendientes de revisión, así que conservamos el original.",
+    "pendingCapTitle": "5 sugerencias pendientes",
+    "pendingCapBody": "Tienes 5 sugerencias de edición pendientes de revisión, que es el límite. Cuando un administrador revise una, podrás enviar otra.",
+    "loadFailedTitle": "No se pudo cargar este artículo",
+    "loadFailedBody": "No pudimos cargar los datos actuales del artículo, y los necesitamos para saber qué cambiaste. Comprueba tu conexión e inténtalo de nuevo.",
+    "readOnlyTitle": "Este artículo no se puede editar",
+    "readOnlyBody": "No forma parte del catálogo público, así que aquí no hay nada que corregir. Solo los artículos del catálogo público se pueden editar o proponer para revisión.",
+    "noChangesTitle": "Nada que sugerir",
+    "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
+    "photosOnlyTitle": "Foto añadida",
+    "photosOnlyBody": "Tu foto ya está en el artículo. Cambia también un campo si hay algo más que corregir.",
+    "updatedTitle": "Artículo actualizado",
+    "updatedBody": "Tus cambios están publicados.",
+    "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
+    "photoNotice": "Las fotos se añaden de inmediato. Los demás cambios los revisa antes un administrador.",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "rejectedTitle": "No se pudo enviar",
+    "failedTitle": "No se pudo enviar",
+    "rateLimitedTitle": "Espera un momento"
+  },
+  "reportItem": {
+    "footer": "¿Algún dato incorrecto en estos?",
+    "title": "Informar de datos incorrectos",
+    "pickPrompt": "¿Qué artículo tiene datos incorrectos?",
+    "reasonLabel": "¿Qué está mal?",
+    "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
+    "reasonTooShort": "Añade al menos {{count}} caracteres para que un administrador sepa qué revisar.",
+    "submit": "Enviar informe",
+    "sentTitle": "Informe enviado",
+    "sentBody": "Gracias: un administrador revisará este artículo.",
+    "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
+    "alreadyReportedTitle": "Ya lo informaste",
+    "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
+    "notFoundTitle": "Artículo no encontrado",
+    "notFoundBody": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
+    "failedTitle": "No se pudo enviar",
+    "rejectedTitle": "No se pudo enviar",
+    "rateLimitedTitle": "Espera un momento"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Añadir artículo nuevo",
+        "subtitle": "Crea un artículo nuevo con la información básica",
+        "subtitleScanned": "Añade este artículo a la base de datos para futuros escaneos"
+      },
+      "edit": {
+        "subtitle": "Un administrador revisa tus cambios — la ficha permanece igual hasta entonces",
+        "button": "Enviar sugerencia"
+      },
+      "directEdit": {
+        "subtitle": "Tus cambios se publican de inmediato"
+      },
+      "variant": {
+        "title": "Crear versión nueva",
+        "subtitle": "Crea una versión nueva de este artículo para tu región",
+        "button": "Crear versión"
+      }
+    },
+    "tabs": {
+      "basics": "Básicos",
+      "product": "Producto"
+    },
+    "scanUpcA11y": "Escanear UPC con la cámara",
+    "fields": {
+      "name": {
+        "placeholder": "Introduce el nombre del artículo"
+      },
+      "description": {
+        "label": "Descripción",
+        "placeholder": "Introduce la descripción del artículo (opcional)"
+      },
+      "vendor": {
+        "label": "Marca/Proveedor",
+        "placeholder": "Introduce el nombre de la marca o del proveedor"
+      },
+      "type": {
+        "label": "Tipo de artículo"
+      },
+      "upc": {
+        "label": "UPC/Código de barras",
+        "placeholder": "Introduce el UPC/código de barras (opcional)"
+      },
+      "sku": {
+        "placeholder": "Introduce el SKU (opcional)"
+      },
+      "store": {
+        "label": "Tienda (para el SKU)",
+        "placeholder": "Busca una tienda"
+      },
+      "shelfLife": {
+        "label": "Vida útil (días)",
+        "placeholder": "Introduce la vida útil en días"
+      },
+      "shelfLifeOpened": {
+        "label": "Vida útil una vez abierto (días)",
+        "placeholder": "Introduce la vida útil una vez abierto"
+      },
+      "baseDimension": {
+        "label": "Dimensión base"
+      },
+      "consumeIncrement": {
+        "label": "Incremento de consumo predeterminado",
+        "placeholder": "p. ej., 1"
+      },
+      "consumeUnit": {
+        "label": "Unidad de consumo predeterminada",
+        "placeholder": "cdta., taza, etc."
+      },
+      "tags": {
+        "label": "Etiquetas",
+        "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
+      },
+      "foodStamp": {
+        "label": "Apto para cupones de alimentos"
+      },
+      "fsa": {
+        "label": "Apto para FSA"
+      },
+      "editNote": {
+        "label": "¿Qué hay que corregir?",
+        "placeholder": "Indica al revisor qué está mal (p. ej., el peso neto de la etiqueta es incorrecto)"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Bebida",
+    "FOOD": "Alimento",
+    "FOUNDATION": "Ingredientes básicos",
+    "HOUSEHOLD": "Hogar",
+    "OTHER": "Otro",
+    "PERSONAL_CARE": "Cuidado personal",
+    "PET": "Para mascotas",
+    "PRODUCT": "Productos no alimentarios",
+    "SUPPLEMENT": "Suplementos"
+  },
+  "itemValidation": {
+    "nameRequired": "El nombre del artículo es obligatorio",
+    "nameEmpty": "El nombre del artículo no puede estar vacío",
+    "nameMax": "El nombre del artículo no puede superar los {{count}} caracteres",
+    "nameChars": "El nombre del artículo solo puede contener letras, números, espacios y signos de puntuación comunes",
+    "descriptionMax": "La descripción no puede superar los {{count}} caracteres",
+    "upcDigits": "El UPC solo puede contener números",
+    "upcMin": "El UPC debe tener al menos {{count}} dígitos",
+    "upcMax": "El UPC no puede superar los {{count}} dígitos",
+    "skuMax": "El SKU no puede superar los {{count}} caracteres",
+    "urlInvalid": "Introduce una URL válida",
+    "wholeNumber": "Debe ser un número entero",
+    "shelfLifeMin": "La vida útil debe ser de al menos 1 día",
+    "shelfLifeMax": "La vida útil no puede superar los {{count}} años",
+    "shelfLifeOpenedMin": "La vida útil una vez abierto debe ser de al menos 1 día",
+    "shelfLifeOpenedMax": "La vida útil una vez abierto no puede superar los {{count}} años",
+    "displayPricePerUnitMax": "El precio por unidad mostrado no puede superar los {{count}} caracteres",
+    "unitQtyMin": "La cantidad por unidad debe ser mayor que 0",
+    "defaultUnitMax": "El símbolo de la unidad no puede superar los {{count}} caracteres",
+    "vendorMax": "El nombre del proveedor no puede superar los {{count}} caracteres",
+    "tagMax": "Cada etiqueta no puede superar los {{count}} caracteres",
+    "tagsMax": "No puedes tener más de {{count}} etiquetas",
+    "editReasonMax": "El motivo del cambio no puede superar los {{count}} caracteres",
+    "editReasonRequired": "Dinos qué hay que corregir",
+    "editReasonMin": "Añade un poco más de detalle (al menos {{count}} caracteres)",
+    "netWeightMin": "El peso neto debe ser mayor que 0",
+    "netWeightValueRequired": "El valor es obligatorio",
+    "netWeightUnitRequired": "La unidad es obligatoria",
+    "greaterThanZero": "Debe ser mayor que 0"
+  },
+  "imagePicker": {
+    "productImages": "Imágenes del producto",
+    "addPhoto": "Añadir foto",
+    "addPhotos": "Añadir fotos",
+    "addMore": "Añadir más",
+    "selectUpTo": "Selecciona hasta {{max}} imágenes",
+    "removeImage": "Eliminar imagen",
+    "changePerspective": "Cambiar la perspectiva de la imagen",
+    "selectPerspective": "Seleccionar perspectiva",
+    "cameraPermissionBody": "Se requiere permiso de cámara. Actívalo en los ajustes de tu dispositivo.",
+    "chooseFromLibrary": "Elegir de la galería"
+  },
+  "itemPhotos": {
+    "pendingReview": "Pendiente de revisión",
+    "viewPhoto": "Ver foto",
+    "viewPhotoLabeled": "Ver foto: {{perspective}}",
+    "counter": "{{current}} de {{total}}",
+    "setAsMain": "Establecer como foto principal",
+    "mainPhoto": "Foto principal",
+    "setPrimary": {
+      "notFoundTitle": "Foto no encontrada",
+      "notFoundBody": "Esta foto ya no está en el artículo; puede que se haya eliminado.",
+      "failedBody": "Algo salió mal al actualizar la foto principal. Inténtalo de nuevo.",
+      "rateLimitedTitle": "Espera un momento",
+      "rejectedTitle": "No se pudo establecer la foto",
+      "failedTitle": "No se pudo establecer la foto"
+    },
+    "perspective": {
+      "front": "Frente",
+      "back": "Reverso",
+      "left": "Izquierda",
+      "right": "Derecha",
+      "top": "Arriba",
+      "nutrition_label": "Nutrición",
+      "ingredient_list": "Ingredientes"
+    }
+  },
+  "itemForm": {
+    "itemInformation": "Información del artículo",
+    "storageDetails": "Detalles de almacenamiento",
+    "noPantrySelected": "No hay despensa seleccionada. Selecciona una despensa primero.",
+    "addFailed": "No se pudo añadir el artículo. Inténtalo de nuevo.",
+    "updateFailed": "No se pudo actualizar el artículo. Inténtalo de nuevo.",
+    "brandOptional": "Marca (opcional)",
+    "placeholderItemName": "p. ej., arroz, pasta",
+    "placeholderCategory": "p. ej., cereales, lácteos",
+    "tags": "Etiquetas",
+    "tagsPlaceholder": "Introduce etiquetas separadas por comas",
+    "location": "Ubicación",
+    "netWeightLocked": "El peso se bloquea tras su uso: corrígelo desde los detalles del artículo",
+    "locationPlaceholder": "p. ej., estante superior, cajón 2",
+    "storageNotes": "Notas de almacenamiento",
+    "notes": "Notas",
+    "addTitle": "Añadir artículo a la despensa",
+    "editTitle": "Editar artículo de la despensa",
+    "quantityUnit": "Cantidad y unidad",
+    "quantityStock": "Cantidad y existencias",
+    "quantityRequired": "Cantidad *",
+    "quantityCurrent": "Cantidad actual"
+  },
+  "folderPicker": {
+    "selectFolder": "Seleccionar carpeta",
+    "loading": "Cargando carpetas...",
+    "longPressHint": "Mantén pulsada una carpeta para editarla o eliminarla",
+    "searchPlaceholder": "Buscar carpetas...",
+    "duplicate": "Ya existe una carpeta llamada \"{{name}}\".",
+    "manageTitle": "Gestionar carpeta",
+    "deleteConfirm": "¿Eliminar esta carpeta?",
+    "deleteFolder": "Eliminar carpeta",
+    "deleteHint": "Las recetas se moverán a Sin carpeta",
+    "renamePlaceholder": "Introduce el nuevo nombre de la carpeta...",
+    "noMatches": "Ninguna carpeta coincide con \"{{query}}\"",
+    "deleteConfirmBody": "Las recetas de esta carpeta se moverán a \"{{folder}}\"."
+  },
+  "multiSelectChipSheet": {
+    "noItems": "No hay opciones disponibles",
+    "searchPlaceholder": "Buscar...",
+    "noMatches": "Ninguna opción coincide con \"{{query}}\""
+  },
+  "tagPicker": {
+    "filterByTags": "Filtrar por etiquetas",
+    "searchPlaceholder": "Buscar etiquetas...",
+    "loading": "Cargando etiquetas...",
+    "noTags": "No hay etiquetas disponibles",
+    "noMatches": "Ninguna etiqueta coincide con \"{{query}}\"",
+    "noneSelected": "Ninguna etiqueta seleccionada",
+    "selectedCount_one": "{{count}} etiqueta seleccionada",
+    "selectedCount_other": "{{count}} etiquetas seleccionadas"
+  },
+  "editableCounter": {
+    "decrease": "Reducir cantidad",
+    "increase": "Aumentar cantidad",
+    "hint": "Toca para editar manualmente o usa los botones para ajustar"
+  },
+  "autocomplete": {
+    "offlineTitle": "Búsqueda no disponible sin conexión",
+    "offlineSubtitle": "Aún puedes escribir un valor personalizado y pulsar Listo",
+    "selectStorageLocation": "Selecciona una ubicación de almacenamiento",
+    "storageLocationPlaceholder": "Seleccionar ubicación",
+    "storageLocationSearch": "Escribe para buscar ubicaciones...",
+    "noStorageLocations": "Aún no hay ubicaciones",
+    "noMatchingLocations": "No hay ubicaciones coincidentes",
+    "tapAddToCreate": "Toca \"Añadir\" abajo para crear \"{{term}}\"",
+    "typeToSearch": "Escribe al menos 2 caracteres para buscar o añadir uno nuevo",
+    "selectBrand": "Selecciona una marca",
+    "brandSearch": "Escribe para buscar marcas...",
+    "noBrands": "No se encontraron marcas",
+    "noMatchingBrands": "No hay marcas coincidentes",
+    "selectCategory": "Selecciona una categoría",
+    "categorySearch": "Escribe para buscar categorías...",
+    "noCategories": "No se encontraron categorías",
+    "selectItem": "Buscar un artículo",
+    "itemSearch": "Escribe para buscar artículos...",
+    "noItems": "No se encontraron artículos",
+    "selectStore": "Selecciona una tienda",
+    "storeSearch": "Escribe para buscar tiendas...",
+    "noStores": "No se encontraron tiendas",
+    "selectUnit": "Selecciona una unidad",
+    "noUnits": "No se encontraron unidades",
+    "typeMoreToAdd": "Sigue escribiendo para añadir «{{term}}»",
+    "typeMoreToAddBrand": "Sigue escribiendo para añadir «{{term}}» como marca personalizada",
+    "typeMoreToAddStore": "Sigue escribiendo para añadir «{{term}}» como tienda personalizada",
+    "typeAtLeastTwo": "Escribe al menos 2 caracteres para buscar",
+    "tryDifferentTerm": "Prueba con otro término de búsqueda"
+  },
+  "unitEntryList": {
+    "title": "Unidades",
+    "addUnit": "Añadir unidad",
+    "size": "Tamaño",
+    "unitDefaultLabel": "Unidad (predeterminada)",
+    "unitPlaceholder": "p. ej., kg, lb",
+    "contains": "Contiene"
+  },
+  "storageLocationCard": {
+    "default": "Predeterminada",
+    "insideParent": "Dentro de {{parent}}",
+    "itemCount_one": "{{count}} artículo",
+    "itemCount_other": "{{count}} artículos"
+  },
+  "itemSubtitle": {
+    "percentRemaining": "({{percent}}% restante)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} restante",
+    "contentUnitCount_one": "{{count}} {{unit}}",
+    "contentUnitCount_other": "{{count}} {{unit}}"
+  },
+  "fractionInput": {
+    "formatsHint": "Formatos: 1/4, 1 1/4, 0.75 o 2"
+  },
+  "tagInput": {
+    "maxTagsReached_one": "Máximo de {{count}} etiqueta alcanzado",
+    "maxTagsReached_other": "Máximo de {{count}} etiquetas alcanzado"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventario ajustado",
+    "COOKING": "Cocinado",
+    "GENERAL": "Consumido",
+    "MEAL_PREP": "Preparación de comidas",
+    "RESTOCK": "Reabastecido",
+    "TRANSFER": "Transferencia",
+    "WASTE": "Desperdiciado",
+    "GIFT": "Regalo",
+    "SNACK": "Tentempié"
+  },
+  "unitType": {
+    "AREA": "Área",
+    "COUNT": "Cantidad",
+    "LENGTH": "Longitud",
+    "TIME": "Tiempo",
+    "WEIGHT": "Peso",
+    "VOLUME": "Volumen"
+  },
+  "multiSelect": {
+    "noneSelected": "Ningún elemento seleccionado"
+  }
+}

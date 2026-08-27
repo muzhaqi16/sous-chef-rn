@@ -9,7 +9,7 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
-import { usePantrySubscriptions } from '../usePantrySubscriptions';
+import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { InMemoryCache } from '@apollo/client';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 

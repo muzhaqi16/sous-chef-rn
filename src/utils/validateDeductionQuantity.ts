@@ -4,7 +4,7 @@ import { getI18n } from '#/i18n/config';
 import { alertService } from '#/services/alertService';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { formatQuantity } from '#/utils/formatQuantity';
-import type { PantryActionSharedState } from '#components/modals/PantryActionModal';
+import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 
 /**
  * Validates a deduction quantity (consume or waste) against available stock.

@@ -45,7 +45,7 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
         label: t('labels.category'),
         placeholder: t('itemForm.placeholderCategory'),
         component: 'categoryAutocomplete',
-        onCategorySelected,
+        props: { onCategorySelected },
       },
       {
         name: 'brand',

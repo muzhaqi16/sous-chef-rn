@@ -9,7 +9,7 @@ const { __mockStore: mockStore } = jest.requireMock<{
 
 // Mock tutorials setting — enabled by default
 let mockTutorialsEnabled = true;
-jest.mock('#hooks/settings/useSettings', () => ({
+jest.mock('#hooks/settings/useShowTutorials', () => ({
   useShowTutorials: () => mockTutorialsEnabled,
 }));
 

@@ -18,7 +18,7 @@ import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { Header } from '#components/molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
+import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';

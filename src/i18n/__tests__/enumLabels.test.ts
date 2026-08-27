@@ -3,11 +3,24 @@ import {
   ItemType,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
+// These enum namespaces are split across the two features that own the
+// entities: `itemType` is the catalog's, `storageState` / `baseDimension` are
+// the pantry's. Imported and spread rather than read from the merged tree so a
+// missing namespace is a compile error here, not a runtime one.
 // Suffixed because a bare `it` import shadows Jest's `it()`.
-import enLocale from '../locales/en.json';
-import esLocale from '../locales/es.json';
-import itLocale from '../locales/it.json';
-import sqLocale from '../locales/sq.json';
+import catalogEn from '#features/catalog/locales/en.json';
+import catalogEs from '#features/catalog/locales/es.json';
+import catalogIt from '#features/catalog/locales/it.json';
+import catalogSq from '#features/catalog/locales/sq.json';
+import pantryEn from '#features/pantry/locales/en.json';
+import pantryEs from '#features/pantry/locales/es.json';
+import pantryIt from '#features/pantry/locales/it.json';
+import pantrySq from '#features/pantry/locales/sq.json';
+
+const enLocale = { ...catalogEn, ...pantryEn };
+const esLocale = { ...catalogEs, ...pantryEs };
+const itLocale = { ...catalogIt, ...pantryIt };
+const sqLocale = { ...catalogSq, ...pantrySq };
 
 /**
  * Every schema enum the UI renders as a label must have one in every locale.

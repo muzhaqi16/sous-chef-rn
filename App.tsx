@@ -19,9 +19,14 @@ import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#hooks/app/useAppLifecycle';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
-import { DataProvider } from '#/components/providers/DataProvider';
+import { DataProvider } from '#/app/providers/DataProvider';
+import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
+import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
 import { SubscriptionProvider } from '#/components/providers/SubscriptionProvider';
-import { OverlayBackdropProvider, GlobalBackdrop } from '#/components/providers/OverlayBackdropProvider';
+import {
+  OverlayBackdropProvider,
+  GlobalBackdrop,
+} from '#/components/providers/OverlayBackdropProvider';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { setupGlobalErrorHandler } from '#/utils/globalErrorHandler';
 import { setPushTokenProvider } from '#/services/push/pushTokenProvider';
@@ -60,12 +65,15 @@ const App = () => {
       <GestureHandlerRootView>
         <KeyboardProvider>
           <ApolloProvider client={client}>
-            <DataProvider>
-              <SubscriptionProvider>
-                <SafeAreaProvider initialMetrics={initialWindowMetrics}>
-                  <OverlayBackdropProvider>
-                    <BottomSheetModalProvider>
-                      {/* Render order matters for stacking (no zIndex used):
+            {/* Which named form fields exist is an app decision, not the form
+                renderer's — see `#components/molecules/fieldRenderers`. */}
+            <FieldRendererProvider renderers={catalogFieldRenderers}>
+              <DataProvider>
+                <SubscriptionProvider>
+                  <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+                    <OverlayBackdropProvider>
+                      <BottomSheetModalProvider>
+                        {/* Render order matters for stacking (no zIndex used):
                         1. App content. The top safe-area inset is NOT applied
                            here — it's applied per screen via `TopInsetLayout`
                            (so screens like Recipe Detail can draw their hero
@@ -77,23 +85,24 @@ const App = () => {
                            offline/online announcement toast once at the root.
                         3. GlobalBackdrop - covers everything including status bar
                         4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
-                      <ThemedStatusBar />
-                      <View style={styles.container}>
-                        <ToastProvider>
-                          <AlertProvider>
-                            <NotificationProvider>
-                              <Navigation />
-                            </NotificationProvider>
-                          </AlertProvider>
-                        </ToastProvider>
-                        <OfflineTransitionToaster />
-                      </View>
-                      <GlobalBackdrop />
-                    </BottomSheetModalProvider>
-                  </OverlayBackdropProvider>
-                </SafeAreaProvider>
-              </SubscriptionProvider>
-            </DataProvider>
+                        <ThemedStatusBar />
+                        <View style={styles.container}>
+                          <ToastProvider>
+                            <AlertProvider>
+                              <NotificationProvider>
+                                <Navigation />
+                              </NotificationProvider>
+                            </AlertProvider>
+                          </ToastProvider>
+                          <OfflineTransitionToaster />
+                        </View>
+                        <GlobalBackdrop />
+                      </BottomSheetModalProvider>
+                    </OverlayBackdropProvider>
+                  </SafeAreaProvider>
+                </SubscriptionProvider>
+              </DataProvider>
+            </FieldRendererProvider>
           </ApolloProvider>
         </KeyboardProvider>
       </GestureHandlerRootView>

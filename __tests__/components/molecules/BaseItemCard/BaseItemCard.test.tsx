@@ -91,7 +91,22 @@ describe('BaseItemCard', () => {
 
   it('uses SwipeableItem when swipe actions provided', () => {
     const { getByText } = render(
-      <BaseItemCard onEdit={jest.fn()} onDelete={jest.fn()}>
+      <BaseItemCard
+        rightActions={[
+          {
+            key: 'edit',
+            icon: 'create-outline',
+            labelKey: 'labels.edit',
+            onPress: jest.fn(),
+          },
+          {
+            key: 'delete',
+            icon: 'trash-outline',
+            labelKey: 'labels.delete',
+            onPress: jest.fn(),
+          },
+        ]}
+      >
         <Text>Swipeable</Text>
       </BaseItemCard>,
     );

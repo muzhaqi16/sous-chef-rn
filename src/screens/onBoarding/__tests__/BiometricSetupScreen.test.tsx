@@ -61,13 +61,6 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
   }),
 }));
 
-jest.mock('#components/organisms/modal/useTextInputModal', () => ({
-  useTextInputModal: () => ({
-    show: jest.fn(),
-    TextModalComponent: null,
-  }),
-}));
-
 jest.mock('#hooks/performance/useScreenTransition');
 
 jest.mock('#/storage/keychain', () => ({

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { EmptyState } from '#components/atoms/EmptyState';
-import { PantryScreenSkeleton } from '#components/atoms/Skeleton/PantryScreenSkeleton';
+import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { EMPTY_STATE_MIN_HEIGHT } from './pantryDisplay/constants';
 import type { PantryEmptyStateProps } from './pantryDisplay/types';
 

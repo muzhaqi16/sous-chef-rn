@@ -244,18 +244,6 @@ export class PantryScreen extends BaseScreen {
    * Also handles dismissing the feature hint overlay if it appears
    */
   async tapAddButton() {
-    // Try to dismiss feature hint overlay if it exists (appears once per session when items exist)
-    try {
-      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-        .toBeVisible()
-        .withTimeout(1000);
-      await element(by.id('feature-hint-overlay-dismiss')).tap();
-      await waitFor(element(by.id('feature-hint-overlay')))
-        .not.toBeVisible()
-        .withTimeout(2000);
-    } catch {
-      // Overlay not present, continue
-    }
 
     // Wait for add button to be visible and tap it
     await waitFor(element(by.id(this.addButton)))

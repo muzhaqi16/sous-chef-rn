@@ -16,12 +16,13 @@ import { TIMING } from '#constants/animations';
 import { Icon } from '#/utils/iconUtils';
 import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { Text } from '#components/atoms/Text';
+import type { TabIconPair } from './types';
 
-const TAB_ICON_MAP: Record<string, [string, string]> = {
-  Pantry: ['home', 'home-outline'],
-  ShoppingList: ['list', 'list-outline'],
-  Recipe: ['book', 'book-outline'],
-  MealPlan: ['calendar', 'calendar-outline'],
+/** Shown when a route arrives with no appearance entry — a wiring mistake, not
+ *  a state the app should reach, so it renders as one rather than crashing. */
+const UNKNOWN_TAB_ICON: TabIconPair = {
+  active: 'help-circle',
+  inactive: 'help-circle',
 };
 
 interface TabItemProps {
@@ -36,6 +37,8 @@ interface TabItemProps {
     'title' | 'tabBarAccessibilityLabel'
   >;
   onPress: () => void;
+  /** Icons for this tab, from the owning feature's manifest. */
+  icon?: TabIconPair;
   showLabel: boolean;
   activeTabIndex: SharedValue<number>;
   tabIndex: number;
@@ -46,6 +49,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   isFocused,
   options,
   onPress,
+  icon = UNKNOWN_TAB_ICON,
   showLabel,
   activeTabIndex,
   tabIndex,
@@ -92,16 +96,11 @@ export const TabItem: React.FC<TabItemProps> = ({
   // The manifest stores an i18n key in options.title; resolve it here so the
   // tab label re-renders on language change.
   const label = options.title ? t(options.title) : route.name;
-  const [activeIcon, inactiveIcon] = TAB_ICON_MAP[route.name] || [
-    'help-circle',
-    'help-circle',
-  ];
-
   // tone routes through withUnistyles(Ionicons) — only the Icon re-renders on
   // theme/brand-color changes, not the entire tab.
   const renderIcon = () => (
     <Icon
-      name={isFocused ? activeIcon : inactiveIcon}
+      name={isFocused ? icon.active : icon.inactive}
       size={24}
       tone={isFocused ? 'primary' : 'white'}
     />

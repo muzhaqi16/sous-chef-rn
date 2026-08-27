@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { TIMING } from '#constants/animations';
-import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
+import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { PantryStickyTabs } from './pantryDisplay/PantryStickyTabs';
 
 // Viewport-fill: the flap only ever covers the area below the header, so a

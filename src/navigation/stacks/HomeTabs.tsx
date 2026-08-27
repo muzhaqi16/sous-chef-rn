@@ -10,6 +10,7 @@ import { pantryFeature } from '#features/pantry/manifest';
 import { shoppingListFeature } from '#features/shoppingList/manifest';
 import { recipesFeature } from '#features/recipes/manifest';
 import { mealPlanFeature } from '#features/mealPlan/manifest';
+import { TAB_APPEARANCE } from '#features/registry';
 import { PantryStack } from '#navigation/stacks/PantryStack';
 import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
 import { RecipeStack } from '#navigation/stacks/RecipeStack';
@@ -32,13 +33,22 @@ const styles = StyleSheet.create(theme => ({
   },
 }));
 
-// Written as a literal object rather than built from the feature registry —
+// `screens` is a literal rather than a map built from the registry:
 // react-navigation's static typing only infers per-tab param types from a
-// literal `screens` shape, so each tab's stack keeps its own params (a
-// dynamically-built object collapses them all to one generic type). Titles
-// still read from each feature's manifest, the single source for the i18n key.
+// literal shape, and a dynamically-built object collapses all four stacks to
+// one generic type. Everything ELSE about a tab — its label key, icons, sort
+// order and reset-to-root target — comes from the owning feature's manifest.
+//
+// The literal is therefore the one place the registry cannot reach, so
+// `__tests__/HomeTabs.test.tsx` asserts its key set equals
+// `TAB_FEATURES.map(f => f.tab.screenName)`. Types force the duplication; the
+// test forbids the drift.
+//
+// `TAB_APPEARANCE` is passed DOWN to the tab bar because `FloatingTabBar` and
+// `TabItem` live in `src/components/` — the kit — and must not import a
+// feature. This file is the composition root and the only place that may.
 export const HomeTabs = createBottomTabNavigator({
-  tabBar: props => <FloatingTabBar {...props} />,
+  tabBar: props => <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />,
   layout: HomeTabsLayout,
   screenOptions: {
     headerShown: false,
@@ -55,19 +65,19 @@ export const HomeTabs = createBottomTabNavigator({
   screens: {
     Pantry: createBottomTabScreen({
       screen: PantryStack,
-      options: { title: pantryFeature.tab!.title },
+      options: { title: pantryFeature.tab!.titleKey },
     }),
     ShoppingList: createBottomTabScreen({
       screen: ShoppingListStack,
-      options: { title: shoppingListFeature.tab!.title },
+      options: { title: shoppingListFeature.tab!.titleKey },
     }),
     Recipe: createBottomTabScreen({
       screen: RecipeStack,
-      options: { title: recipesFeature.tab!.title },
+      options: { title: recipesFeature.tab!.titleKey },
     }),
     MealPlan: createBottomTabScreen({
       screen: MealPlanStack,
-      options: { title: mealPlanFeature.tab!.title },
+      options: { title: mealPlanFeature.tab!.titleKey },
     }),
   },
 });

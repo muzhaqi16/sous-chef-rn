@@ -57,7 +57,7 @@ export const ProfileScreen = () => {
     goBack,
   } = useAppNavigation();
   const { profile, user, loading } = useProfileData();
-  const { sections, BiometricModal } = useConfigurableSettings(profile);
+  const { sections, BiometricModal } = useConfigurableSettings();
   const { bottom: safeBottom } = useSafeAreaInsets();
   const actionTrayRef = useRef<ActionTrayRef>(null);
   const headerProgress = useSharedValue(0);

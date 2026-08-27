@@ -3,7 +3,7 @@ import React from 'react';
 import { screen, act, fireEvent, waitFor } from '@testing-library/react-native';
 import CollaboratorPermissionsBottomSheet, {
   type CollaboratorPermissionsBottomSheetRef,
-} from '../CollaboratorPermissionsBottomSheet';
+} from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import {
   CollaboratorRole,
   CollaboratorStatus,

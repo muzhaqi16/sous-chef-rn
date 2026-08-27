@@ -31,9 +31,10 @@ import {
 } from './PantryContent.generated';
 import { PantryAlertBar } from '#features/pantry/components/PantryAlertBar';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
-import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
+import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { preloadImages } from '#components/atoms/CachedImage';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
@@ -49,8 +50,7 @@ import {
   DRAW_DISTANCE,
   MVCP_DISABLED,
   getDefaultPantryTabs,
-  INITIAL_RENDER_WINDOW,
-  RENDER_WINDOW_STEP,
+  IMAGE_PRELOAD_COUNT,
 } from './pantryDisplay/constants';
 import {
   renderPantryListItem,
@@ -228,22 +228,13 @@ export const PantryContent = React.forwardRef<
     // render cannot be interrupted, so the shrink and the re-index are atomic.
     // See docs/flashlist-layout-index-race.md.
 
-    // Client-side render window: hand FlashList only a growing slice of the
-    // loaded set so it never mounts the whole load-all page (~100 cells) at once.
-    // Reset to the initial window whenever the view changes (tab / sort / search)
-    // so a fresh view starts light — done during render (no effect) so listData
-    // is correct on the same commit. Server pagination still drives `onEndReached`
-    // when there are more pages to fetch; otherwise we grow the window locally.
-    const [clientWindow, setClientWindow] = useState(INITIAL_RENDER_WINDOW);
-    const windowSignature = `${locationFilter}|${sortOption}|${sortDirection}|${searchQuery}`;
-    const [prevWindowSignature, setPrevWindowSignature] =
-      useState(windowSignature);
-    if (prevWindowSignature !== windowSignature) {
-      setPrevWindowSignature(windowSignature);
-      setClientWindow(INITIAL_RENDER_WINDOW);
-    }
-
-    const windowedItems = sortedItems.slice(0, clientWindow);
+    // `sortedItems` goes to FlashList whole. There is deliberately NO local
+    // render window here: FlashList already virtualizes, and the window that
+    // used to sit alongside it was a SECOND virtualization doing the same job.
+    // Growing it changed both the data array and `handleEndReached`'s identity,
+    // which re-rendered every mounted cell — measured at 597 ms / 2203 fibers
+    // per growth, twice per scroll-through. Bounding the mounted set is
+    // DRAW_DISTANCE's job alone (see pantryDisplay/constants.ts).
 
     // A tab switch whose new page is still fetching (server mode only): armed on
     // press, cleared once `fetching` transitions true→false. Cleared only on
@@ -296,9 +287,33 @@ export const PantryContent = React.forwardRef<
     // While skeletons show, hand the list only the sticky tabs so the chrome +
     // tabs stay visible with skeleton rows below (PantryEmptyState) — and any
     // stale rows from a previous tab don't flash through.
-    const bodyItems = showSkeletons ? [] : windowedItems;
-    const listData: PantryListItem[] = [STICKY_HEADER_SENTINEL, ...bodyItems];
+    const bodyItems = showSkeletons ? [] : sortedItems;
+    const nextListData: PantryListItem[] = [
+      STICKY_HEADER_SENTINEL,
+      ...bodyItems,
+    ];
     const isEmpty = bodyItems.length === 0;
+
+    // Hold the ROWS still while a sheet covers them. Every pantry write flips
+    // this array's identity and FlashList answers that by re-rendering every
+    // mounted cell — measured at ~2 full passes per quick-add, all of it behind
+    // the Add sheet where nothing is visible. Five adds in a row is what turns
+    // that into the freeze users report.
+    //
+    // Only the rows freeze: the header above the sheet (item count, filter
+    // tabs, alert bar) reads `bodyItems`/`stats` directly, so the count still
+    // ticks up live as items are added.
+    //
+    // Ordinary state, deliberately NOT `useDeferredValue`/`startTransition` —
+    // an interruptible render is what produces "index out of bounds, not enough
+    // layouts" (docs/flashlist-layout-index-race.md). This changes only WHEN
+    // the prop updates, never how.
+    const overlayCoversRows = useOverlayBackdropPresence();
+    const [heldListData, setHeldListData] = useState(nextListData);
+    if (!overlayCoversRows && heldListData !== nextListData) {
+      setHeldListData(nextListData);
+    }
+    const listData = overlayCoversRows ? heldListData : nextListData;
 
     // `hasRealContent` decides when `app_fully_drawn_ms` latches, and it reads
     // the UN-SMOOTHED `initialSkeletons` — never a presentation flag.
@@ -323,6 +338,19 @@ export const PantryContent = React.forwardRef<
       reportInterval: 10000,
       hasRealContent: !initialSkeletons,
     });
+    // FlashList re-renders EVERY mounted cell when this prop's identity changes
+    // (its own re-render reason names it), so it must never change. The live
+    // handler is read from a ref at call time — an event, never during render —
+    // because the prop itself flips between `screen.loadMore` and `undefined`
+    // as `hasMore` changes. Calling it with nothing to fetch no-ops.
+    const onEndReachedRef = useRef(onEndReached);
+    useEffect(() => {
+      onEndReachedRef.current = onEndReached;
+    }, [onEndReached]);
+    const handleEndReached = () => {
+      onEndReachedRef.current?.();
+    };
+
     useDataReferenceTracker(
       items,
       'PantryContent.items',
@@ -345,17 +373,6 @@ export const PantryContent = React.forwardRef<
     // End-reached: fetch the next server page if one exists, otherwise grow the
     // local window. `onEndReached` (prop) is defined only when the server has
     // more pages; below the load window it's undefined and we reveal locally.
-    const handleEndReached = () => {
-      if (onEndReached) {
-        onEndReached();
-        return;
-      }
-      if (clientWindow < sortedItems.length) {
-        setClientWindow(w =>
-          Math.min(w + RENDER_WINDOW_STEP, sortedItems.length),
-        );
-      }
-    };
 
     useDataReferenceTracker(
       sortedItems,
@@ -374,7 +391,7 @@ export const PantryContent = React.forwardRef<
         const urls: string[] = [];
         // Only preload images for the items actually rendered (the current
         // window), not the entire loaded set.
-        for (const node of sortedItems.slice(0, clientWindow)) {
+        for (const node of sortedItems.slice(0, IMAGE_PRELOAD_COUNT)) {
           const item =
             client.cache.readFragment<PantryContent_PantryItemFragment>({
               fragment: PantryContent_PantryItemFragmentDoc,
@@ -390,7 +407,7 @@ export const PantryContent = React.forwardRef<
         }
       });
       return () => cancelIdleCallback(handle);
-    }, [sortedItems, clientWindow, client]);
+    }, [sortedItems, client]);
 
     // Tab switch maintains the scroll position and swaps the rows below the
     // sticky tabs in place. The switch skeleton only applies to server-mode

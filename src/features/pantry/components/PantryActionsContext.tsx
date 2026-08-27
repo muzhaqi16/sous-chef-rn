@@ -1,12 +1,7 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
-import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
+import React, { createContext, useContext, type ReactNode } from 'react';
 import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
+import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 
 /**
  * Actions available for pantry items
@@ -27,104 +22,62 @@ export interface SwipeableCoordination {
   onSwipeableWillOpen: (ref: SwipeableRef) => void;
 }
 
-/**
- * Combined context value
- */
 interface PantryActionsContextValue {
   actions: PantryItemActions;
   swipeable: SwipeableCoordination;
 }
 
-const PantryActionsContext = createContext<PantryActionsContextValue | null>(
-  null,
+const actionsContext = createActionsContext<PantryItemActions>(
+  'PantryActionsProvider',
 );
 
-interface PantryActionsProviderProps {
-  children: ReactNode;
-  actions: PantryItemActions;
-}
+// Swipe coordination is stable for the provider's lifetime (it is ref-backed),
+// so it rides in its own context rather than being merged into the actions
+// value — merging would mean rebuilding that value to change either half.
+const SwipeableContext = createContext<SwipeableCoordination | null>(null);
 
 /**
- * PantryActionsProvider - Context provider for pantry item actions
+ * Provides pantry item actions and swipe coordination to the rows below.
  *
- * Eliminates prop drilling by providing item actions through context.
- * Also manages swipeable coordination to close other swipeables when one opens.
- *
- * @example
- * ```tsx
- * <PantryActionsProvider actions={{ onItemPress, onItemEdit, onItemDelete }}>
- *   <PantryItemList items={items} />
- * </PantryActionsProvider>
- * ```
+ * Callback stability comes from `createActionsContext`, and closing the
+ * previously-open row comes from `useSwipeableCoordinator` — both were
+ * hand-rolled here, the second one duplicating a kit hook verbatim.
  */
-export const PantryActionsProvider: React.FC<PantryActionsProviderProps> = ({
-  children,
-  actions,
-}) => {
-  const openSwipeableRef = useRef<SwipeableMethods | null>(null);
-
-  // Store latest actions in ref (effect updates — no re-renders)
-  const actionsRef = useRef(actions);
-  useEffect(() => {
-    actionsRef.current = actions;
-  });
-
-  // Stable delegating callbacks — compiler sees only ref captures (not reactive),
-  // so it auto-memoizes these with empty reactive deps. Context value stays stable.
-  const stableActions: PantryItemActions = {
-    onItemPress: (id: string) => actionsRef.current.onItemPress(id),
-    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
-    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-    onItemConsume: (id: string) => actionsRef.current.onItemConsume?.(id),
-    onItemWaste: (id: string) => actionsRef.current.onItemWaste?.(id),
-    onItemRestock: (id: string) => actionsRef.current.onItemRestock?.(id),
-  };
-
-  // swipeable only captures openSwipeableRef (a ref) — compiler auto-memoizes
-  const swipeable: SwipeableCoordination = {
-    onSwipeableWillOpen: (ref: SwipeableRef) => {
-      if (
-        openSwipeableRef.current &&
-        openSwipeableRef.current !== ref.current
-      ) {
-        openSwipeableRef.current?.close();
-      }
-      openSwipeableRef.current = ref.current;
-    },
-  };
-
-  // value only captures stableActions + swipeable (both auto-memoized) — stable
-  const value: PantryActionsContextValue = {
-    actions: stableActions,
-    swipeable,
-  };
+export const PantryActionsProvider: React.FC<{
+  children: ReactNode;
+  actions: PantryItemActions;
+}> = ({ children, actions }) => {
+  const { handleSwipeableWillOpen } = useSwipeableCoordinator();
 
   return (
-    <PantryActionsContext.Provider value={value}>
-      {children}
-    </PantryActionsContext.Provider>
+    <actionsContext.Provider actions={actions}>
+      <SwipeableContext.Provider
+        value={{ onSwipeableWillOpen: handleSwipeableWillOpen }}
+      >
+        {children}
+      </SwipeableContext.Provider>
+    </actionsContext.Provider>
   );
 };
 
 /**
- * Hook to access pantry item actions from context
+ * Pantry item actions and swipe coordination.
  *
- * @throws Error if used outside PantryActionsProvider
+ * @throws if used outside a PantryActionsProvider
  */
 export const usePantryActions = (): PantryActionsContextValue => {
-  const context = useContext(PantryActionsContext);
-  if (!context) {
-    throw new Error(
-      'usePantryActions must be used within a PantryActionsProvider',
-    );
+  const actions = actionsContext.useActions();
+  const swipeable = useContext(SwipeableContext);
+  if (!swipeable) {
+    throw new Error('PantryActionsProvider is missing its provider');
   }
-  return context;
+  return { actions, swipeable };
 };
 
-/**
- * Optional hook that returns null if outside provider
- */
+/** Same, but returns null outside the provider instead of throwing. */
 export const usePantryActionsOptional =
   (): PantryActionsContextValue | null => {
-    return useContext(PantryActionsContext);
+    const actions = actionsContext.useOptionalActions();
+    const swipeable = useContext(SwipeableContext);
+    return actions && swipeable ? { actions, swipeable } : null;
   };

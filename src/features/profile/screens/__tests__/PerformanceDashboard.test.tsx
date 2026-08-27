@@ -104,8 +104,8 @@ jest.mock('#components/settings/SettingSwitch', () => ({
   },
 }));
 
-jest.mock('#components/settings/SettingSection', () => ({
-  SettingSection: ({
+jest.mock('#components/organisms/SettingsSection', () => ({
+  SettingsSection: ({
     title,
     children,
   }: {

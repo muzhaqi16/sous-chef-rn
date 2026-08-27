@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
-import type { SwipeableRef } from '../SwipeableItem/types';
+import type { SwipeableRef, SwipeAction } from '../SwipeableItem/types';
 
 /**
  * Visual variant for the card
@@ -34,29 +34,19 @@ export interface BaseItemCardProps {
   /** Callback when card is pressed */
   onPress?: () => void;
 
-  // Swipe actions (all optional - only renders if provided)
-  /** Edit action handler */
-  onEdit?: () => void;
-  /** Delete action handler */
-  onDelete?: () => void;
-  /** Consume action handler (pantry) */
-  onConsume?: () => void;
-  /** Waste action handler (pantry) */
-  onWaste?: () => void;
-  /** Restock action handler (pantry) */
-  onRestock?: () => void;
-  /** Toggle purchase action handler (shopping list) */
-  onTogglePurchase?: () => void;
+  // Swipe actions. Descriptors rather than named handlers: which actions a row
+  // offers is the caller's decision, and this card used to enumerate one
+  // feature's verbs (consume/waste/restock) beside another's (togglePurchase).
+  /** Revealed by swiping right. */
+  leftActions?: SwipeAction[];
+  /** Revealed by swiping left. */
+  rightActions?: SwipeAction[];
 
   // Swipeable coordination
   /** Callback when swipeable begins to open */
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   /** Callback when swipeable closes */
   onSwipeableClose?: () => void;
-
-  // State
-  /** Whether item is purchased (for shopping list strikethrough) */
-  isPurchased?: boolean;
 
   // Swipe configuration
   /** Left swipe threshold in pixels */

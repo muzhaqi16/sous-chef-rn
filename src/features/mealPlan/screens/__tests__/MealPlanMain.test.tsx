@@ -219,7 +219,7 @@ jest.mock('#components/performance/DeferredScreen', () => ({
   DeferredScreen: (props: DeferredScreenMockProps) => mockDeferredScreen(props),
 }));
 
-jest.mock('#components/atoms/Skeleton/MealPlanSkeleton', () => {
+jest.mock('#features/mealPlan/components/skeletons/MealPlanSkeleton', () => {
   const { View } = require('react-native');
   return {
     MealPlanSkeleton: () => <View testID="meal-plan-skeleton" />,

@@ -22,12 +22,30 @@ jest.mock('react-native-gesture-handler/ReanimatedSwipeable', () => {
   };
 });
 
-jest.mock('../RightActions', () => ({ RightActions: () => null }));
-jest.mock('../LeftActions', () => ({ LeftActions: () => null }));
+jest.mock('../SwipeActions', () => ({
+  SwipeActions: () => null,
+  swipeTrayWidth: () => 80,
+}));
 
 const renderItem = (props: Record<string, unknown> = {}) =>
   render(
-    <SwipeableItem onEdit={jest.fn()} onDelete={jest.fn()} {...props}>
+    <SwipeableItem
+      rightActions={[
+        {
+          key: 'edit',
+          icon: 'create-outline',
+          labelKey: 'labels.edit',
+          onPress: jest.fn(),
+        },
+        {
+          key: 'delete',
+          icon: 'trash-outline',
+          labelKey: 'labels.delete',
+          onPress: jest.fn(),
+        },
+      ]}
+      {...props}
+    >
       <Text>Row</Text>
     </SwipeableItem>,
   );

@@ -7,7 +7,7 @@ import { View } from 'react-native';
 // separate gesture system and the tap fires both (edit quantity + row navigate).
 import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
+import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
@@ -21,7 +21,7 @@ interface QuantityBadgeProps {
   isPurchased?: boolean;
   // Optional theme override applied as inline style on top of the variant-based
   // stylesheet defaults (the stylesheet already gives theme-reactive colors).
-  themeColors?: SortableListThemeColors | null;
+  themeColors?: RowThemeColors | null;
 }
 
 /**

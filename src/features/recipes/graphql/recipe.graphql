@@ -61,6 +61,12 @@ query MyRecipes(
         id
         category
         difficulty
+        # Selected at the parent so the screen can filter the connection
+        # without materializing each masked node. Already fetched inside
+        # MyRecipeCard_recipe — this only keeps it visible after masking,
+        # so it costs nothing on the wire.
+        name
+        description
         savedDetails {
           id
           folder
@@ -125,6 +131,7 @@ query MySavedRecipes($folder: String, $first: Int, $after: String) {
             # SavedRecipeCard_savedRecipe — this only keeps it visible after
             # masking, so it costs nothing on the wire.
             name
+            description
           }
           ...SavedRecipeCard_savedRecipe
         }

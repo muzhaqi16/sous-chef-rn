@@ -1,0 +1,455 @@
+{
+  "storageLocations": {
+    "loading": "Po ngarkohen vendet e ruajtjes...",
+    "listView": "Pamja listë",
+    "treeView": "Pamja pemë",
+    "noLocations": "Pa vende të ruajtjes",
+    "noLocationsDesc": "Krijo vende ruajtjeje për të organizuar artikujt e qilarit sipas vendndodhjes.",
+    "cantDeleteDefaultTitle": "Nuk mund të fshihet vendi i parazgjedhur",
+    "cantDeleteDefaultMessage": "Cakto më parë një vend tjetër si të parazgjedhur.",
+    "cantDeleteTitle": "Nuk mund të fshihet vendi",
+    "cantDeleteWithItems": "\"{{name}}\" ka {{description}}. Lëvizi ose hiqi më parë.",
+    "itemSingular": "{{count}} artikull",
+    "itemPlural": "{{count}} artikuj",
+    "subLocationSingular": "{{count}} nën-vend",
+    "subLocationPlural": "{{count}} nën-vende",
+    "gotIt": "Kuptova",
+    "deleteTitle": "Fshi vendin e ruajtjes",
+    "offlineTitle": "Ende pa ngarkuar",
+    "offlineDescription": "Vendndodhjet e ruajtjes nuk janë ngarkuar në këtë pajisje. Rilidhu për t'i parë."
+  },
+  "storageLocationForm": {
+    "name": "Emri",
+    "namePlaceholder": "p.sh., Frigoriferi kryesor",
+    "type": "Lloji",
+    "parentLabel": "Vendndodhja kryesore (opsionale)",
+    "parentNone": "Asnjë",
+    "parentHint": "Organizo vendndodhjet në mënyrë hierarkike (p.sh., sirtar brenda frigoriferit)",
+    "descriptionLabel": "Përshkrim (opsional)",
+    "descriptionPlaceholder": "Shënime për këtë vendndodhje...",
+    "temperature": "Temperatura",
+    "colorLabel": "Ngjyra (opsionale)",
+    "advancedSettings": "Cilësime të avancuara",
+    "climateControlled": "Me kontroll klime",
+    "capacity": "Kapaciteti",
+    "capacityPlaceholder": "p.sh., 100",
+    "unit": "Njësia",
+    "unitPlaceholder": "Zgjidh njësinë",
+    "setAsDefault": "Cakto si vendndodhje të parazgjedhur",
+    "typeRefrigerator": "Frigorifer",
+    "typeFreezer": "Ngrirës",
+    "typePantryShelf": "Raft qilari",
+    "typeCabinet": "Bufe",
+    "typeDrawer": "Sirtar",
+    "typeCounter": "Banakë",
+    "typeBasement": "Bodrum",
+    "typeGarage": "Garazhi",
+    "typeCloset": "Dollap",
+    "typeOutdoor": "Jashtë",
+    "typeBoatStorage": "Depo varke",
+    "typeRvStorage": "Depo karavani",
+    "typeCustom": "I personalizuar",
+    "tempNone": "Asnjë",
+    "tempAmbient": "Mjedis",
+    "tempRefrigerated": "I ftohur",
+    "tempFrozen": "I ngrirë",
+    "colorRed": "E kuqe",
+    "colorPink": "Rozë",
+    "colorPurple": "Vjollcë",
+    "colorBlue": "Blu",
+    "colorTeal": "Bruz",
+    "colorGreen": "E gjelbër",
+    "colorOrange": "Portokalli",
+    "colorBrown": "Kafe",
+    "colorGrey": "Gri",
+    "colorIndigo": "Indigo",
+    "capacityLiters": "Litra",
+    "capacityGallons": "Gallon",
+    "capacityCubicFeet": "Këmbë kub",
+    "capacityCubicMeters": "Metra kub",
+    "capacityItems": "Artikuj"
+  },
+  "addStorageLocation": {
+    "createFailed": "Nuk u krijua dot vendndodhja",
+    "nameRequired": "Emri i vendndodhjes është i nevojshëm",
+    "locationName": "Emri i vendndodhjes",
+    "namePlaceholder": "p.sh. Dollapi i kuzhinës, Rafti i garazhit",
+    "hintText": "Mund t'i modifikosh detajet më vonë te Cilësimet > Vendndodhjet e ruajtjes"
+  },
+  "addItemSheet": {
+    "addManually": "Shto manualisht",
+    "more": "Më shumë",
+    "allAdded": "Të gjitha u shtuan",
+    "dismiss": "Hiq sugjerimin",
+    "dismissed": "U hoq {{name}}",
+    "undo": "Zhbëj",
+    "dismissFailed": "S'u hoq dot sugjerimi",
+    "undoFailed": "S'u zhbë dot",
+    "sections": {
+      "lowStock": "Stok i ulët",
+      "expiringSoon": "Skadon së shpejti",
+      "addAgain": "Shto sërish",
+      "favorites": "Të preferuarat e tua",
+      "popular": "Popullore"
+    },
+    "noListTitle": "Asnjë listë e zgjedhur",
+    "noListBody": "Zgjidh ose krijo më parë një listë blerjesh.",
+    "createList": "Krijo listë",
+    "searchPlaceholder": "Kërko ose skano artikull...",
+    "added": "U shtua {{name}}",
+    "emptyTitle": "Ende asnjë sugjerim",
+    "emptyPantrySubtext": "Shto artikuj në qilar për të marrë sugjerime të personalizuara",
+    "emptyShoppingListSubtext": "Shto artikuj në listë dhe do të shfaqen këtu për t’i shtuar shpejt sërish",
+    "addToPantry": "Shto në qilar"
+  },
+  "storageLocationSheet": {
+    "editTitle": "Modifiko vendndodhjen e ruajtjes",
+    "addTitle": "Shto vendndodhje ruajtjeje"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Sugjerimi u dërgua",
+    "sentBody": "Faleminderit — një administrator do t'i shqyrtojë ndryshimet e tua. Artikulli mbetet i pandryshuar derisa të miratohen.",
+    "duplicateTitle": "Tashmë e sugjeruar",
+    "duplicateBody": "I ke sugjeruar tashmë pikërisht këto ndryshime dhe janë ende në pritje të shqyrtimit, prandaj ruajtëm sugjerimin origjinal.",
+    "pendingCapTitle": "5 sugjerime në pritje",
+    "pendingCapBody": "Ke 5 sugjerime ndryshimi në pritje të shqyrtimit — ky është kufiri. Sapo një administrator të shqyrtojë njërin, mund të dërgosh një tjetër.",
+    "loadFailedTitle": "Ky artikull nuk u ngarkua dot",
+    "loadFailedBody": "Nuk arritëm t’i ngarkojmë të dhënat aktuale të artikullit, të cilat na duhen për të kuptuar çfarë ndryshove. Kontrollo lidhjen dhe provo përsëri.",
+    "readOnlyTitle": "Ky artikull nuk mund të redaktohet",
+    "readOnlyBody": "Ai nuk është pjesë e katalogut publik, prandaj këtu nuk ka çfarë të korrigjohet. Vetëm artikujt e katalogut publik mund të redaktohen ose të propozohen për shqyrtim.",
+    "noChangesTitle": "Asgjë për të sugjeruar",
+    "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
+    "photosOnlyTitle": "Fotoja u shtua",
+    "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
+    "updatedTitle": "Artikulli u përditësua",
+    "updatedBody": "Ndryshimet e tua janë publikuar.",
+    "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
+    "photoNotice": "Fotot shtohen menjëherë. Ndryshimet e tjera shqyrtohen më parë nga një administrator.",
+    "notFoundTitle": "Artikulli nuk u gjet",
+    "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
+    "rejectedTitle": "Nuk u dërgua dot",
+    "failedTitle": "Nuk u dërgua dot",
+    "rateLimitedTitle": "Prit një moment"
+  },
+  "reportItem": {
+    "footer": "Të dhëna të gabuara te ndonjë prej tyre?",
+    "title": "Raporto të dhëna të gabuara",
+    "pickPrompt": "Cili artikull ka të dhëna të gabuara?",
+    "reasonLabel": "Çfarë nuk shkon?",
+    "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
+    "reasonTooShort": "Shto të paktën {{count}} karaktere që administratori të dijë çfarë të shohë.",
+    "submit": "Dërgo raportin",
+    "sentTitle": "Raporti u dërgua",
+    "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
+    "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
+    "alreadyReportedTitle": "Tashmë e raportuar",
+    "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
+    "notFoundTitle": "Artikulli nuk u gjet",
+    "notFoundBody": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
+    "failedTitle": "Nuk u dërgua dot",
+    "rejectedTitle": "Nuk u dërgua dot",
+    "rateLimitedTitle": "Prit një moment"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Shto artikull të ri",
+        "subtitle": "Krijo një artikull të ri me informacionet bazë",
+        "subtitleScanned": "Shto këtë artikull në bazën e të dhënave për skanimet e ardhshme"
+      },
+      "edit": {
+        "subtitle": "Një administrator i shqyrton ndryshimet e tua — artikulli mbetet i pandryshuar deri atëherë",
+        "button": "Dërgo sugjerimin"
+      },
+      "directEdit": {
+        "subtitle": "Ndryshimet e tua publikohen menjëherë"
+      },
+      "variant": {
+        "title": "Krijo version të ri",
+        "subtitle": "Krijo një version të ri të këtij artikulli për rajonin tënd",
+        "button": "Krijo versionin"
+      }
+    },
+    "tabs": {
+      "basics": "Bazat",
+      "product": "Produkti"
+    },
+    "scanUpcA11y": "Skano UPC-në me kamerë",
+    "fields": {
+      "name": {
+        "placeholder": "Shkruaj emrin e artikullit"
+      },
+      "description": {
+        "label": "Përshkrimi",
+        "placeholder": "Shkruaj përshkrimin e artikullit (opsional)"
+      },
+      "vendor": {
+        "label": "Marka/Furnizuesi",
+        "placeholder": "Shkruaj emrin e markës ose të furnizuesit"
+      },
+      "type": {
+        "label": "Lloji i artikullit"
+      },
+      "upc": {
+        "label": "UPC/Barkodi",
+        "placeholder": "Shkruaj UPC-në/barkodin (opsional)"
+      },
+      "sku": {
+        "placeholder": "Shkruaj SKU-në (opsional)"
+      },
+      "store": {
+        "label": "Dyqani (për SKU-në)",
+        "placeholder": "Kërko dyqan"
+      },
+      "shelfLife": {
+        "label": "Afati i ruajtjes (ditë)",
+        "placeholder": "Shkruaj afatin e ruajtjes në ditë"
+      },
+      "shelfLifeOpened": {
+        "label": "Afati i ruajtjes pas hapjes (ditë)",
+        "placeholder": "Shkruaj afatin e ruajtjes pas hapjes"
+      },
+      "baseDimension": {
+        "label": "Dimensioni bazë"
+      },
+      "consumeIncrement": {
+        "label": "Rritja e parazgjedhur e konsumit",
+        "placeholder": "p.sh. 1"
+      },
+      "consumeUnit": {
+        "label": "Njësia e parazgjedhur e konsumit",
+        "placeholder": "lugë çaji, filxhan, etj."
+      },
+      "tags": {
+        "label": "Etiketa",
+        "placeholder": "Etiketa të ndara me presje (p.sh. organike, pa gluten)"
+      },
+      "foodStamp": {
+        "label": "E pranueshme për bonot ushqimore"
+      },
+      "fsa": {
+        "label": "E pranueshme për FSA"
+      },
+      "editNote": {
+        "label": "Çfarë duhet korrigjuar?",
+        "placeholder": "Tregoji shqyrtuesit çfarë nuk shkon (p.sh. pesha neto e gabuar në etiketë)"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Pije",
+    "FOOD": "Ushqim",
+    "FOUNDATION": "Përbërës bazë",
+    "HOUSEHOLD": "Shtëpiake",
+    "OTHER": "Tjetër",
+    "PERSONAL_CARE": "Kujdesi personal",
+    "PET": "Për kafshët",
+    "PRODUCT": "Produkte joushqimore",
+    "SUPPLEMENT": "Suplemente"
+  },
+  "itemValidation": {
+    "nameRequired": "Emri i artikullit është i detyrueshëm",
+    "nameEmpty": "Emri i artikullit nuk mund të jetë bosh",
+    "nameMax": "Emri i artikullit nuk mund të kalojë {{count}} karaktere",
+    "nameChars": "Emri i artikullit mund të përmbajë vetëm shkronja, numra, hapësira dhe shenja pikësimi të zakonshme",
+    "descriptionMax": "Përshkrimi nuk mund të kalojë {{count}} karaktere",
+    "upcDigits": "UPC-ja duhet të përmbajë vetëm numra",
+    "upcMin": "UPC-ja duhet të ketë të paktën {{count}} shifra",
+    "upcMax": "UPC-ja nuk mund të kalojë {{count}} shifra",
+    "skuMax": "SKU-ja nuk mund të kalojë {{count}} karaktere",
+    "urlInvalid": "Shkruaj një URL të vlefshme",
+    "wholeNumber": "Duhet të jetë numër i plotë",
+    "shelfLifeMin": "Afati i ruajtjes duhet të jetë të paktën 1 ditë",
+    "shelfLifeMax": "Afati i ruajtjes nuk mund të kalojë {{count}} vjet",
+    "shelfLifeOpenedMin": "Afati i ruajtjes pas hapjes duhet të jetë të paktën 1 ditë",
+    "shelfLifeOpenedMax": "Afati i ruajtjes pas hapjes nuk mund të kalojë {{count}} vjet",
+    "displayPricePerUnitMax": "Çmimi për njësi nuk mund të kalojë {{count}} karaktere",
+    "unitQtyMin": "Sasia e njësisë duhet të jetë më e madhe se 0",
+    "defaultUnitMax": "Simboli i njësisë nuk mund të kalojë {{count}} karaktere",
+    "vendorMax": "Emri i furnizuesit nuk mund të kalojë {{count}} karaktere",
+    "tagMax": "Çdo etiketë nuk mund të kalojë {{count}} karaktere",
+    "tagsMax": "Nuk mund të ketë më shumë se {{count}} etiketa",
+    "editReasonMax": "Arsyeja e ndryshimit nuk mund të kalojë {{count}} karaktere",
+    "editReasonRequired": "Na trego çfarë duhet korrigjuar",
+    "editReasonMin": "Shto pak më shumë detaje (të paktën {{count}} karaktere)",
+    "netWeightMin": "Pesha neto duhet të jetë më e madhe se 0",
+    "netWeightValueRequired": "Vlera është e detyrueshme",
+    "netWeightUnitRequired": "Njësia është e detyrueshme",
+    "greaterThanZero": "Duhet të jetë më e madhe se 0"
+  },
+  "imagePicker": {
+    "productImages": "Fotot e produktit",
+    "addPhoto": "Shto foto",
+    "addPhotos": "Shto foto",
+    "addMore": "Shto më shumë",
+    "selectUpTo": "Zgjidh deri në {{max}} foto",
+    "removeImage": "Hiq foton",
+    "changePerspective": "Ndrysho këndin e fotos",
+    "selectPerspective": "Zgjidh këndin",
+    "cameraPermissionBody": "Kërkohet leja e kamerës. Aktivizoje te cilësimet e pajisjes.",
+    "chooseFromLibrary": "Zgjidh nga galeria"
+  },
+  "itemPhotos": {
+    "pendingReview": "Në pritje të shqyrtimit",
+    "viewPhoto": "Shiko foton",
+    "viewPhotoLabeled": "Shiko foton: {{perspective}}",
+    "counter": "{{current}} nga {{total}}",
+    "setAsMain": "Vendos si foto kryesore",
+    "mainPhoto": "Foto kryesore",
+    "setPrimary": {
+      "notFoundTitle": "Fotoja nuk u gjet",
+      "notFoundBody": "Kjo foto nuk gjendet më te artikulli — mund të jetë hequr.",
+      "failedBody": "Diçka shkoi keq gjatë përditësimit të fotos kryesore. Provo përsëri.",
+      "rateLimitedTitle": "Prit një moment",
+      "rejectedTitle": "Fotoja nuk u vendos dot",
+      "failedTitle": "Fotoja nuk u vendos dot"
+    },
+    "perspective": {
+      "front": "Para",
+      "back": "Prapa",
+      "left": "Majtas",
+      "right": "Djathtas",
+      "top": "Lart",
+      "nutrition_label": "Ushqyesit",
+      "ingredient_list": "Përbërësit"
+    }
+  },
+  "itemForm": {
+    "itemInformation": "Informacioni i artikullit",
+    "storageDetails": "Detajet e ruajtjes",
+    "noPantrySelected": "Nuk është zgjedhur asnjë qilar. Zgjidh një qilar së pari.",
+    "addFailed": "Shtimi i artikullit dështoi. Provo përsëri.",
+    "updateFailed": "Përditësimi i artikullit dështoi. Provo përsëri.",
+    "brandOptional": "Marka (opsionale)",
+    "placeholderItemName": "p.sh., Oriz, Makarona",
+    "placeholderCategory": "p.sh., Drithëra, Bulmet",
+    "tags": "Etiketat",
+    "tagsPlaceholder": "Shkruaj etiketat të ndara me presje",
+    "location": "Vendndodhja",
+    "netWeightLocked": "Pesha kyçet pas përdorimit — korrigjoje te detajet e artikullit",
+    "locationPlaceholder": "p.sh., Rafti i sipërm, Sirtari 2",
+    "storageNotes": "Shënime ruajtjeje",
+    "notes": "Shënime",
+    "addTitle": "Shto artikull në qilar",
+    "editTitle": "Ndrysho artikullin e qilarit",
+    "quantityUnit": "Sasia dhe njësia",
+    "quantityStock": "Sasia dhe stoku",
+    "quantityRequired": "Sasia *",
+    "quantityCurrent": "Sasia aktuale"
+  },
+  "folderPicker": {
+    "selectFolder": "Zgjidh dosjen",
+    "loading": "Po ngarkohen dosjet...",
+    "longPressHint": "Shtyp gjatë një dosje për ta modifikuar ose fshirë",
+    "searchPlaceholder": "Kërko dosje...",
+    "duplicate": "Një dosje me emrin \"{{name}}\" ekziston tashmë.",
+    "manageTitle": "Menaxho dosjen",
+    "deleteConfirm": "Ta fshish këtë dosje?",
+    "deleteFolder": "Fshi dosjen",
+    "deleteHint": "Recetat do të zhvendosen te \"Pa dosje\"",
+    "renamePlaceholder": "Shkruaj emrin e ri të dosjes...",
+    "noMatches": "Asnjë dosje nuk përputhet me \"{{query}}\"",
+    "deleteConfirmBody": "Recetat në këtë dosje do të zhvendosen te \"{{folder}}\"."
+  },
+  "multiSelectChipSheet": {
+    "noItems": "Asnjë opsion i disponueshëm",
+    "searchPlaceholder": "Kërko...",
+    "noMatches": "Asnjë opsion nuk përputhet me \"{{query}}\""
+  },
+  "tagPicker": {
+    "filterByTags": "Filtro sipas etiketave",
+    "searchPlaceholder": "Kërko etiketa...",
+    "loading": "Po ngarkohen etiketat...",
+    "noTags": "Asnjë etiketë e disponueshme",
+    "noMatches": "Asnjë etiketë nuk përputhet me \"{{query}}\"",
+    "noneSelected": "Asnjë etiketë e zgjedhur",
+    "selectedCount_one": "{{count}} etiketë e zgjedhur",
+    "selectedCount_other": "{{count}} etiketa të zgjedhura"
+  },
+  "editableCounter": {
+    "decrease": "Zvogëlo sasinë",
+    "increase": "Rrit sasinë",
+    "hint": "Trokit për ta modifikuar manualisht ose përdor butonat për ta rregulluar"
+  },
+  "autocomplete": {
+    "offlineTitle": "Kërkimi nuk funksionon offline",
+    "offlineSubtitle": "Mund të shkruash gjithsesi një vlerë të personalizuar dhe të shtypësh \"U bë\"",
+    "selectStorageLocation": "Zgjidh një vendndodhje ruajtjeje",
+    "storageLocationPlaceholder": "Zgjidh vendndodhjen e ruajtjes",
+    "storageLocationSearch": "Shkruaj për të kërkuar vendndodhje ruajtjeje...",
+    "noStorageLocations": "Ende pa vendndodhje ruajtjeje",
+    "noMatchingLocations": "Asnjë vendndodhje që përputhet",
+    "tapAddToCreate": "Trokit \"Shto\" më poshtë për të krijuar \"{{term}}\"",
+    "typeToSearch": "Shkruaj të paktën 2 karaktere për të kërkuar ose për të shtuar një të ri",
+    "selectBrand": "Zgjidh një markë",
+    "brandSearch": "Shkruaj për të kërkuar marka...",
+    "noBrands": "Nuk u gjet asnjë markë",
+    "noMatchingBrands": "Asnjë markë përputhëse",
+    "selectCategory": "Zgjidh një kategori",
+    "categorySearch": "Shkruaj për të kërkuar kategori...",
+    "noCategories": "Nuk u gjet asnjë kategori",
+    "selectItem": "Kërko një artikull",
+    "itemSearch": "Shkruaj për të kërkuar artikuj...",
+    "noItems": "Nuk u gjet asnjë artikull",
+    "selectStore": "Zgjidh një dyqan",
+    "storeSearch": "Shkruaj për të kërkuar dyqane...",
+    "noStores": "Nuk u gjet asnjë dyqan",
+    "selectUnit": "Zgjidh një njësi",
+    "noUnits": "Nuk u gjet asnjë njësi",
+    "typeMoreToAdd": "Vazhdo të shkruash për të shtuar «{{term}}»",
+    "typeMoreToAddBrand": "Vazhdo të shkruash për të shtuar «{{term}}» si markë të personalizuar",
+    "typeMoreToAddStore": "Vazhdo të shkruash për të shtuar «{{term}}» si dyqan të personalizuar",
+    "typeAtLeastTwo": "Shkruaj të paktën 2 karaktere për të kërkuar",
+    "tryDifferentTerm": "Provo një term tjetër kërkimi"
+  },
+  "unitEntryList": {
+    "title": "Njësitë",
+    "addUnit": "Shto njësi",
+    "size": "Madhësia",
+    "unitDefaultLabel": "Njësia (parazgjedhur)",
+    "unitPlaceholder": "p.sh. kg, lb",
+    "contains": "Përmban"
+  },
+  "storageLocationCard": {
+    "default": "Parazgjedhur",
+    "insideParent": "Ndodhet te {{parent}}",
+    "itemCount_one": "{{count}} artikull",
+    "itemCount_other": "{{count}} artikuj"
+  },
+  "itemSubtitle": {
+    "percentRemaining": "({{percent}}% e mbetur)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} të mbetura",
+    "contentUnitCount_one": "{{count}} {{unit}}",
+    "contentUnitCount_other": "{{count}} {{unit}}"
+  },
+  "fractionInput": {
+    "formatsHint": "Formatet: 1/4, 1 1/4, 0.75 ose 2"
+  },
+  "tagInput": {
+    "maxTagsReached_one": "U arrit kufiri prej {{count}} etikete",
+    "maxTagsReached_other": "U arrit kufiri prej {{count}} etiketash"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventari u rregullua",
+    "COOKING": "Gatuar",
+    "GENERAL": "Konsumuar",
+    "MEAL_PREP": "Përgatitje vaktesh",
+    "RESTOCK": "Rifurnizuar",
+    "TRANSFER": "Transferim",
+    "WASTE": "Hedhur",
+    "GIFT": "Dhuratë",
+    "SNACK": "Meze"
+  },
+  "unitType": {
+    "AREA": "Sipërfaqe",
+    "COUNT": "Sasi",
+    "LENGTH": "Gjatësi",
+    "TIME": "Kohë",
+    "WEIGHT": "Peshë",
+    "VOLUME": "Vëllim"
+  },
+  "multiSelect": {
+    "noneSelected": "Asnjë element i zgjedhur"
+  }
+}

@@ -1,16 +1,9 @@
 import React from 'react';
-import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
-import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
-import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from './SavedRecipeCard.generated';
+import { RecipeCardView, type RecipeCardAction } from './RecipeCardView';
+import { recipeTotalMinutes } from '#features/recipes/utils/recipeTime';
 
 interface SavedRecipeCardProps {
   savedRecipeRef: FragmentType<typeof SavedRecipeCard_SavedRecipeFragmentDoc>;
@@ -23,7 +16,6 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
   onPress,
   onRemove,
 }) => {
-  const { t } = useTranslation();
   // Per-entity cache subscription: re-renders only when this SavedRecipe (or
   // its nested recipe scalars) change in the cache.
   const { data: saved, complete } = useFragment({
@@ -35,75 +27,26 @@ export const SavedRecipeCard: React.FC<SavedRecipeCardProps> = ({
   if (!complete) return null;
   const recipe = saved.recipe;
 
-  const totalTime =
-    recipe.totalTimeMinutes ??
-    (recipe.prepTimeMinutes && recipe.cookTimeMinutes
-      ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
-      : recipe.prepTimeMinutes ?? recipe.cookTimeMinutes ?? null);
+  const actions: RecipeCardAction[] = onRemove
+    ? [
+        {
+          key: 'remove',
+          icon: 'trash-outline',
+          tone: 'error',
+          labelKey: 'recipes.removeFromSavedA11y',
+          onPress: () => onRemove(recipe.id),
+        },
+      ]
+    : [];
 
   return (
-    <AppPressable
+    <RecipeCardView
+      name={recipe.name}
+      imageUrl={recipe.imageUrl}
+      servings={recipe.servings}
+      totalMinutes={recipeTotalMinutes(recipe)}
       onPress={() => onPress(recipe.id)}
-      style={styles.card}
-      accessibilityRole="button"
-      accessibilityLabel={recipe.name}
-    >
-      {!!recipe.imageUrl && (
-        <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage
-            uri={recipe.imageUrl}
-            style={commonStyles.listItemImageCompact}
-            displaySize={48}
-          />
-        </View>
-      )}
-      <View style={styles.body}>
-        <Text size="md" weight="medium" numberOfLines={1}>
-          {recipe.name}
-        </Text>
-        <Text size="sm" tone="secondary" numberOfLines={1}>
-          {t('recipes.servingsCount', { count: recipe.servings })}
-          {totalTime != null
-            ? ` • ${t('labels.min', { count: totalTime })}`
-            : ''}
-        </Text>
-      </View>
-      {!!onRemove && (
-        <Pressable
-          onPress={() => onRemove(recipe.id)}
-          hitSlop={8}
-          style={({ pressed }) => pressed && styles.pressed}
-          accessibilityLabel={t('recipes.removeFromSavedA11y')}
-        >
-          <Icon name="trash-outline" size={20} tone="error" />
-        </Pressable>
-      )}
-    </AppPressable>
+      actions={actions}
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
-    // Match the search bar inset so rows line up with it instead of going
-    // edge-to-edge — same floating-card treatment as BaseItemCard.
-    marginHorizontal: theme.spacing['3'],
-    marginBottom: theme.spacing['2.5'],
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.card,
-  },
-  body: {
-    flex: 1,
-    gap: 2,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));

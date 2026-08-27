@@ -25,7 +25,7 @@ import { Icon } from '#/utils/iconUtils';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { RecipeSkeleton } from '#components/atoms/Skeleton/RecipeSkeleton';
+import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSkeleton';
 import { PaginationFooter } from '#components/organisms/PaginationFooter';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import {

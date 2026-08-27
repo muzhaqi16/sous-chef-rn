@@ -83,19 +83,16 @@ jest.mock('#components/molecules/FormInput', () => ({
   },
 }));
 
-jest.mock(
-  '#components/molecules/AutocompleteField/UnitAutocompleteField',
-  () => ({
-    UnitAutocompleteField: ({ label }: { label?: string }) => {
-      const { Text, View } = require('react-native');
-      return (
-        <View testID="unit-autocomplete">
-          {label ? <Text>{label}</Text> : null}
-        </View>
-      );
-    },
-  }),
-);
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
+  UnitAutocompleteField: ({ label }: { label?: string }) => {
+    const { Text, View } = require('react-native');
+    return (
+      <View testID="unit-autocomplete">
+        {label ? <Text>{label}</Text> : null}
+      </View>
+    );
+  },
+}));
 
 jest.mock('#components/molecules/Header', () => ({
   Header: ({ title }: { title?: string }) => {

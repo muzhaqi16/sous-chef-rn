@@ -15,7 +15,7 @@ import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
-} from '#components/organisms/AddItemForm/AddItemForm';
+} from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useBottomSheetState } from '#store/useAppStore';

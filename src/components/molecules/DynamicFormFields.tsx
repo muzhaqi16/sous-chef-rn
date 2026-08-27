@@ -11,25 +11,9 @@ import {
 import { StyleSheet } from 'react-native-unistyles';
 
 // Import new unified autocomplete components
-import { ItemAutocompleteField } from './AutocompleteField/ItemAutocompleteField';
-import { BrandAutocompleteField } from './AutocompleteField/BrandAutocompleteField';
-import { UnitAutocompleteField } from './AutocompleteField/UnitAutocompleteField';
-import { CategoryAutocompleteField } from './AutocompleteField/CategoryAutocompleteField';
-import { StorageLocationAutocompleteField } from './AutocompleteField/StorageLocationAutocompleteField';
-import { StoreAutocompleteField } from './AutocompleteField/StoreAutocompleteField';
 import { FormInput } from './FormInput';
 import { Text } from '#components/atoms/Text';
-import type {
-  ItemSuggestion,
-  StorageLocation,
-} from '#/graphql/generated/schemaTypes';
-
-const MemoizedItemAutocomplete = ItemAutocompleteField;
-const MemoizedBrandAutocomplete = BrandAutocompleteField;
-const MemoizedUnitsAutocomplete = UnitAutocompleteField;
-const MemoizedCategoryAutocomplete = CategoryAutocompleteField;
-const MemoizedStorageLocationAutocomplete = StorageLocationAutocompleteField;
-const MemoizedStoreAutocomplete = StoreAutocompleteField;
+import { useFieldRenderers } from './fieldRenderers';
 
 export type FieldDef<T extends FieldValues> = {
   name: Path<T>;
@@ -38,14 +22,10 @@ export type FieldDef<T extends FieldValues> = {
   // Dynamic dispatch: the component is rendered with a prop bag assembled at
   // runtime (value/onChangeText/error/...). `React.ElementType` accepts any
   // component while keeping the JSX spread type-checkable without `any`.
-  component?:
-    | React.ElementType
-    | 'itemAutocomplete'
-    | 'brandAutocomplete'
-    | 'unitAutocomplete'
-    | 'categoryAutocomplete'
-    | 'storageLocationAutocomplete'
-    | 'storeAutocomplete';
+  // A component, or the NAME of one registered via `FieldRendererProvider`.
+  // A name rather than a closed union: which named field types exist is the
+  // app's decision, not this component's.
+  component?: React.ElementType | string;
   props?: Record<string, unknown>;
   // For select fields
   options?: Array<{ label: string; value: string }>;
@@ -57,17 +37,6 @@ export type FieldDef<T extends FieldValues> = {
   transformValue?: (value: unknown) => unknown;
   // Transform only on blur, not on every keystroke
   transformOnBlur?: boolean;
-  // Autocomplete specific props
-  onSelectItem?: (item: ItemSuggestion) => void;
-  onUnitSelected?: (unitId: string | null, unitName: string | null) => void;
-  onCategorySelected?: (categoryId: string | null) => void;
-  onStorageLocationSelected?: (
-    locationId: string | null,
-    location: StorageLocation | null,
-  ) => void;
-  onStoreSelected?: (storeId: string | null, storeName: string | null) => void;
-  onAddNewLocation?: (name: string) => void;
-  storageLocations?: StorageLocation[];
   testID?: string;
 };
 
@@ -94,6 +63,7 @@ export function DynamicFormFields<T extends FieldValues>({
   // fields needs a handle on each one. Populated by callback refs at commit,
   // read only from the return-key handler.
   const inputRefs = useRef<Array<TextInput | null>>([]);
+  const renderers = useFieldRenderers();
   // Memoize the field components to prevent recreation
   const memoizedFields = (() => {
     return fields.map(
@@ -109,13 +79,6 @@ export function DynamicFormFields<T extends FieldValues>({
           renderValue,
           transformValue,
           transformOnBlur,
-          onSelectItem,
-          onUnitSelected,
-          onCategorySelected,
-          onStorageLocationSelected,
-          onStoreSelected,
-          onAddNewLocation,
-          storageLocations,
           testID,
         },
         idx,
@@ -130,13 +93,6 @@ export function DynamicFormFields<T extends FieldValues>({
         renderValue,
         transformValue,
         transformOnBlur,
-        onSelectItem,
-        onUnitSelected,
-        onCategorySelected,
-        onStorageLocationSelected,
-        onStoreSelected,
-        onAddNewLocation,
-        storageLocations,
         testID,
         key: `${String(name)}-${idx}`,
       }),
@@ -157,13 +113,6 @@ export function DynamicFormFields<T extends FieldValues>({
             renderValue,
             transformValue,
             transformOnBlur,
-            onSelectItem,
-            onUnitSelected,
-            onCategorySelected,
-            onStorageLocationSelected,
-            onStoreSelected,
-            onAddNewLocation,
-            storageLocations,
             testID,
             key,
           },
@@ -195,102 +144,29 @@ export function DynamicFormFields<T extends FieldValues>({
                 // Handle value rendering (e.g., for tags array)
                 const displayValue = renderValue ? renderValue(value) : value;
 
-                // Handle autocomplete components by string identifier
-                if (Input === 'itemAutocomplete') {
-                  return (
-                    <MemoizedItemAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={Boolean(props?.required)}
-                      error={errors[name]?.message?.toString()}
-                      onSelectItem={onSelectItem}
-                      testID={testID}
-                      {...props}
-                    />
-                  );
-                }
-
-                if (Input === 'brandAutocomplete') {
-                  return (
-                    <MemoizedBrandAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={Boolean(props?.required)}
-                      error={errors[name]?.message?.toString()}
-                      {...props}
-                    />
-                  );
-                }
-
-                if (Input === 'unitAutocomplete') {
-                  return (
-                    <MemoizedUnitsAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      onUnitSelected={onUnitSelected}
-                      testID={testID}
-                      {...props}
-                    />
-                  );
-                }
-
-                if (Input === 'categoryAutocomplete') {
-                  return (
-                    <MemoizedCategoryAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={Boolean(props?.required)}
-                      error={errors[name]?.message?.toString()}
-                      onCategorySelected={onCategorySelected}
-                      {...props}
-                    />
-                  );
-                }
-
-                if (Input === 'storageLocationAutocomplete') {
-                  return (
-                    <MemoizedStorageLocationAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={Boolean(props?.required)}
-                      error={errors[name]?.message?.toString()}
-                      storageLocations={storageLocations || []}
-                      onStorageLocationSelected={onStorageLocationSelected}
-                      onAddNewLocation={onAddNewLocation}
-                      {...props}
-                    />
-                  );
-                }
-
-                if (Input === 'storeAutocomplete') {
-                  return (
-                    <MemoizedStoreAutocomplete
-                      variant="modal"
-                      label={label}
-                      value={displayValue || ''}
-                      onChangeText={handleChange}
-                      placeholder={placeholder}
-                      required={Boolean(props?.required)}
-                      error={errors[name]?.message?.toString()}
-                      onStoreSelected={onStoreSelected}
-                      {...props}
-                    />
-                  );
+                // A string `component` names a renderer registered by the app
+                // (see `FieldRendererProvider`). The form knows nothing about
+                // what those renderers are — that is the whole point.
+                if (typeof Input === 'string') {
+                  const entry = renderers[Input];
+                  if (entry) {
+                    // Wrapped: `Controller` requires an element, while a
+                    // renderer is free to return null.
+                    return (
+                      <>
+                        {entry.render({
+                          label,
+                          placeholder,
+                          value: displayValue || '',
+                          onChangeText: handleChange,
+                          required: Boolean(props?.required),
+                          error: errors[name]?.message?.toString(),
+                          testID,
+                          props: props ?? {},
+                        })}
+                      </>
+                    );
+                  }
                 }
 
                 // Handle regular components
@@ -391,11 +267,9 @@ export function DynamicFormFields<T extends FieldValues>({
             {!!errors[name] &&
               props?.componentType !== 'checkbox' &&
               Input !== FormInput &&
-              Input !== 'itemAutocomplete' &&
-              Input !== 'brandAutocomplete' &&
-              Input !== 'unitAutocomplete' &&
-              Input !== 'categoryAutocomplete' &&
-              Input !== 'storeAutocomplete' && (
+              !(
+                typeof Input === 'string' && renderers[Input]?.ownsErrorDisplay
+              ) && (
                 <Text
                   size="sm"
                   tone="error"

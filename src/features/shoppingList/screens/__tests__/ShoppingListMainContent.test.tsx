@@ -163,13 +163,6 @@ jest.mock(
 );
 
 jest.mock(
-  '#components/organisms/InteractiveSwipeHint/InteractiveSwipeHint',
-  () => ({
-    InteractiveSwipeHint: () => null,
-  }),
-);
-
-jest.mock(
   '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark',
   () => ({
     SpotlightCoachMark: ({ title }: { title: string }) => {

@@ -40,7 +40,7 @@ import type { LocationFilter } from '#features/pantry/utils/pantryFilters';
 import { PantryErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { PantryScreenSkeleton } from '#components/atoms/Skeleton/PantryScreenSkeleton';
+import { PantryScreenSkeleton } from '#features/pantry/components/skeletons/PantryScreenSkeleton';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabs } from '#components/molecules/FilterTabs/FilterTabs';

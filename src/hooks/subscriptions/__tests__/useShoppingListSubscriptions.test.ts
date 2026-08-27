@@ -2,7 +2,7 @@
 
 import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
-import { useShoppingListSubscriptions } from '../useShoppingListSubscriptions';
+import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
 import { InMemoryCache } from '@apollo/client';
 import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {

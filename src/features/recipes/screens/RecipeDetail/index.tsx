@@ -1,3 +1,4 @@
+import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import React, { useState } from 'react';
 import { View, ActivityIndicator, Linking, ScrollView } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -15,11 +16,11 @@ const SuccessActivityIndicator = withUnistyles(ActivityIndicator, theme => ({
 
 import { FolderPicker } from '#components/molecules/FolderPicker';
 import { RecipeDetailErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
-import { MarkCookedModal } from '#/components/modals/MarkCookedModal';
-import { IngredientMatchingSheet } from '#/components/modals/IngredientMatchingSheet';
-import { SaveRecipeSheet } from '#/components/modals/SaveRecipeSheet/SaveRecipeSheet';
-import { ManageRecipeSheet } from '#/components/modals/ManageRecipeSheet/ManageRecipeSheet';
-import { AddToMealPlanSheet } from '#components/modals/AddToMealPlanSheet/AddToMealPlanSheet';
+import { MarkCookedModal } from '#components/modals/MarkCookedModal';
+import { IngredientMatchingSheet } from '#features/recipes/components/modals/IngredientMatchingSheet';
+import { SaveRecipeSheet } from '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet';
+import { ManageRecipeSheet } from '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet';
+import { useAddToMealPlanSheet } from '#features/mealPlan/hooks/useAddToMealPlanSheet';
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
@@ -139,7 +140,7 @@ const RecipeDetailScreen: React.FC = () => {
   // State for save/manage recipe sheets
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
-  const [showAddToMealPlanSheet, setShowAddToMealPlanSheet] = useState(false);
+  const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
 
   // Handle heart icon press - quick save to Favorites or manage if already in Favorites
   const handleHeartPress = () => {
@@ -193,7 +194,7 @@ const RecipeDetailScreen: React.FC = () => {
       ? [
           {
             icon: 'calendar-outline',
-            onPress: () => setShowAddToMealPlanSheet(true),
+            onPress: addToMealPlan.open,
             variant: 'primary',
             accessibilityLabel: t('recipes.addToMealPlanA11y'),
             testID: 'recipe-mealplan-button',
@@ -567,6 +568,9 @@ const RecipeDetailScreen: React.FC = () => {
         onSelect={handleUpdateFolder}
         onCancel={() => setShowFolderPicker(false)}
         loading={updatingFolderTags}
+        // The server-managed folder every saved recipe falls into; renaming or
+        // deleting it is not the user's to do.
+        protectedFolders={PROTECTED_RECIPE_FOLDERS}
       />
 
       {/* Save Recipe Sheet - Bottom sheet for saving new recipe with folder, tags, and notes */}
@@ -580,12 +584,9 @@ const RecipeDetailScreen: React.FC = () => {
         recipeName={displayData?.title}
       />
 
-      {/* Add to Meal Plan Sheet */}
-      <AddToMealPlanSheet
-        visible={showAddToMealPlanSheet}
-        onClose={() => setShowAddToMealPlanSheet(false)}
-        recipeId={recipeId ?? ''}
-      />
+      {/* Add to Meal Plan Sheet — owned by mealPlan, reached through its
+          public hook rather than by importing the component. */}
+      {addToMealPlan.element}
 
       {/* Manage Recipe Sheet - Bottom sheet for managing saved recipes */}
       <ManageRecipeSheet

@@ -114,15 +114,6 @@ describe('Login', () => {
         throw error;
       }
 
-      // Dismiss feature hint overlay if it appears (has 2s delay after pantry loads)
-      try {
-        await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-          .toBeVisible()
-          .withTimeout(5000);
-        await element(by.id('feature-hint-overlay-dismiss')).tap();
-      } catch {
-        // Hint may not appear (already dismissed or not on pantry)
-      }
 
       await device.takeScreenshot('after-login');
     });
@@ -135,15 +126,6 @@ describe('Login', () => {
 
       await device.takeScreenshot('after-reload');
 
-      // Dismiss feature hint overlay if it reappears after reload
-      try {
-        await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-          .toBeVisible()
-          .withTimeout(3000);
-        await element(by.id('feature-hint-overlay-dismiss')).tap();
-      } catch {
-        // Overlay may not reappear
-      }
 
       // The one assertion that the session survived the reload — a dropped
       // session lands back on the landing/login screen with no tab bar, and
@@ -307,14 +289,6 @@ describe('Login', () => {
       // The credentials are valid, so extra taps must not prevent the login
       // from completing — one session, no wedged state. "Logged in OR still on
       // login" accepted the exact failure the test is named for.
-      try {
-        await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-          .toBeVisible()
-          .withTimeout(3000);
-        await element(by.id('feature-hint-overlay-dismiss')).tap();
-      } catch {
-        // Hint may not appear (already dismissed, or not on pantry).
-      }
       await waitFor(element(by.id('tab-bar')))
         .toExist()
         .withTimeout(TIMEOUTS.NETWORK);

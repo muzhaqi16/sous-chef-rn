@@ -24,7 +24,6 @@ import {
   MAX_SCROLL_SPEED,
 } from '../drag';
 import { SKILL_LEVELS, DIETARY_LIMITS } from '../dietary';
-import { LANGUAGE_OPTIONS } from '../languages';
 import { PAGINATION } from '../shoppingList';
 import { HIT_SLOP, HIT_SLOP_SM, HIT_SLOP_LG } from '../touch';
 import { getTabBarBottomPadding } from '../layout';
@@ -111,17 +110,6 @@ describe('dietary constants', () => {
     expect(DIETARY_LIMITS.prepTime).toEqual({ min: 0, max: 480 });
     expect(DIETARY_LIMITS.calories).toEqual({ min: 0, max: 10000 });
     expect(DIETARY_LIMITS.protein).toEqual({ min: 0, max: 500 });
-  });
-});
-
-describe('languages constants', () => {
-  it('exports LANGUAGE_OPTIONS with all four bundled locales', () => {
-    expect(LANGUAGE_OPTIONS).toEqual([
-      { value: 'en', label: 'English' },
-      { value: 'it', label: 'Italiano' },
-      { value: 'es', label: 'Español' },
-      { value: 'sq', label: 'Shqip' },
-    ]);
   });
 });
 

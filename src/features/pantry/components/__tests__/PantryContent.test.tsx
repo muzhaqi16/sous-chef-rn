@@ -6,7 +6,6 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import { PantryItem, StorageState } from '#/graphql/generated/schemaTypes';
 import type { EmptyStateProps } from '#components/atoms/EmptyState';
-import type { SectionHeaderProps } from '#components/molecules/SectionHeader';
 import type {
   FilterTabConfig,
   FilterTabsProps,
@@ -152,6 +151,11 @@ jest.mock('#hooks/performance/useDeferredRender', () => ({
   useDeferredRender: jest.fn(() => true),
 }));
 
+let mockOverlayPresent = false;
+jest.mock('#components/providers/OverlayBackdropProvider', () => ({
+  useOverlayBackdropPresence: () => mockOverlayPresent,
+}));
+
 jest.mock('#hooks/performance/useCommitTracking', () => ({
   useCommitTracking: jest.fn(),
 }));
@@ -169,7 +173,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: () => null,
 }));
 
-jest.mock('#components/atoms/Skeleton/PantryScreenSkeleton', () => ({
+jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
   PantryScreenSkeleton: () => {
     const { View } = require('react-native');
     return <View testID="pantry-skeleton" />;
@@ -281,28 +285,6 @@ jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
             <Text>{tab.label}</Text>
           </Pressable>
         ))}
-      </View>
-    );
-  },
-}));
-
-jest.mock('#components/molecules/SectionHeader', () => ({
-  SectionHeader: ({
-    title,
-    actionLabel,
-    onActionPress,
-    testID,
-  }: Pick<
-    SectionHeaderProps,
-    'title' | 'actionLabel' | 'onActionPress' | 'testID'
-  >) => {
-    const { Text, Pressable, View } = require('react-native');
-    return (
-      <View>
-        <Text>{title}</Text>
-        <Pressable testID={testID} onPress={onActionPress}>
-          <Text>{actionLabel}</Text>
-        </Pressable>
       </View>
     );
   },
@@ -538,12 +520,12 @@ describe('PantryContent', () => {
     expect(screen.getByText('Eggs')).toBeTruthy();
   });
 
-  describe('client-side render windowing', () => {
+  describe('list data and end-reached', () => {
     const manyItems = Array.from({ length: 30 }, (_, i) =>
       createMockPantryItem({ id: String(i + 1), itemName: `Item-${i + 1}` }),
     );
 
-    it('hands the list only the initial window (not the whole loaded set)', () => {
+    it('hands FlashList the whole loaded set, not a slice', () => {
       render(
         <PantryContent
           {...defaultProps}
@@ -551,27 +533,12 @@ describe('PantryContent', () => {
           locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
         />,
       );
-      // data = sticky-header sentinel + first 24 items (INITIAL_RENDER_WINDOW)
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
-    });
-
-    it('grows the window on end-reached until the loaded set is exhausted', () => {
-      render(
-        <PantryContent
-          {...defaultProps}
-          items={manyItems}
-          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
-        />,
-      );
-      act(() => {
-        screen.getByTestId('pantry-list').props.onEndReached?.();
-      });
-      // window grows by RENDER_WINDOW_STEP (24), capped at the 30 loaded items
-      // (+1 for the sticky-header sentinel at index 0)
+      // There is deliberately no local render window: FlashList mounts by
+      // `drawDistance`, not by `data.length`. data = sentinel + all 30 items.
       expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
     });
 
-    it('prefers server pagination over growing the local window', () => {
+    it('forwards end-reached to server pagination', () => {
       const onEndReached = jest.fn();
       render(
         <PantryContent
@@ -585,10 +552,82 @@ describe('PantryContent', () => {
       act(() => {
         screen.getByTestId('pantry-list').props.onEndReached?.();
       });
-      // server fetch fired; local window stays at the initial size
-      // (sentinel + 24 items)
       expect(onEndReached).toHaveBeenCalledTimes(1);
-      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(25);
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(31);
+    });
+
+    it('keeps onEndReached identity stable across re-renders', () => {
+      // Load-bearing: FlashList re-renders every mounted cell when this prop's
+      // identity changes, and the incoming prop flips to `undefined` once there
+      // is nothing left to fetch.
+      const { rerender } = render(
+        <PantryContent
+          {...defaultProps}
+          items={manyItems}
+          hasMore
+          onEndReached={jest.fn()}
+          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      const first = screen.getByTestId('pantry-list').props.onEndReached;
+      rerender(
+        <PantryContent
+          {...defaultProps}
+          items={manyItems}
+          onEndReached={undefined}
+          locationCounts={{ all: 30, fridge: 0, freezer: 0, pantry: 0 }}
+        />,
+      );
+      expect(screen.getByTestId('pantry-list').props.onEndReached).toBe(first);
+    });
+  });
+
+  describe('rows held still behind a sheet', () => {
+    const twoItems = [
+      createMockPantryItem({ id: '1', itemName: 'One' }),
+      createMockPantryItem({ id: '2', itemName: 'Two' }),
+    ];
+
+    afterEach(() => {
+      mockOverlayPresent = false;
+    });
+
+    it('keeps FlashList data identical while an overlay covers the rows', () => {
+      // A pantry write behind the Add sheet used to re-render every mounted
+      // cell for a list nobody can see — ~2 full passes per quick-add.
+      mockOverlayPresent = true;
+      const { rerender } = render(
+        <PantryContent {...defaultProps} items={twoItems} />,
+      );
+      const before = screen.getByTestId('pantry-list').props.data;
+
+      rerender(
+        <PantryContent
+          {...defaultProps}
+          items={[
+            ...twoItems,
+            createMockPantryItem({ id: '3', itemName: 'Three' }),
+          ]}
+        />,
+      );
+      expect(screen.getByTestId('pantry-list').props.data).toBe(before);
+    });
+
+    it('picks the new rows up as soon as the overlay clears', () => {
+      mockOverlayPresent = true;
+      const { rerender } = render(
+        <PantryContent {...defaultProps} items={twoItems} />,
+      );
+      const threeItems = [
+        ...twoItems,
+        createMockPantryItem({ id: '3', itemName: 'Three' }),
+      ];
+      rerender(<PantryContent {...defaultProps} items={threeItems} />);
+
+      mockOverlayPresent = false;
+      rerender(<PantryContent {...defaultProps} items={threeItems} />);
+      // sentinel + 3 rows
+      expect(screen.getByTestId('pantry-list').props.data).toHaveLength(4);
     });
   });
 

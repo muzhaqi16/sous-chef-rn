@@ -36,6 +36,8 @@ export interface EmptyStateProps {
   secondaryAction?: {
     label: string;
     onPress: () => void;
+    /** Optional leading icon, mirroring `action`. */
+    icon?: IconName;
   };
 
   /** Icon size */
@@ -159,6 +161,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           onPress={secondaryAction.onPress}
           variant="outline"
           size="medium"
+          icon={secondaryAction.icon}
         >
           {secondaryAction.label}
         </Button>

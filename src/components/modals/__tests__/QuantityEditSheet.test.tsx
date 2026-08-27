@@ -1,7 +1,7 @@
 import React from 'react';
 import type { ViewProps } from 'react-native';
 import { render, screen } from '@testing-library/react-native';
-import { QuantityEditSheet } from '../QuantityEditSheet/QuantityEditSheet';
+import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -54,19 +54,16 @@ jest.mock('#/components/molecules/Header', () => {
   };
 });
 
-jest.mock(
-  '#/components/molecules/AutocompleteField/UnitAutocompleteField',
-  () => {
-    const RN = require('react-native');
-    return {
-      UnitAutocompleteField: (props: Record<string, unknown>) =>
-        require('react').createElement(RN.View, {
-          testID: 'unit-autocomplete',
-          ...props,
-        }),
-    };
-  },
-);
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
+  const RN = require('react-native');
+  return {
+    UnitAutocompleteField: (props: Record<string, unknown>) =>
+      require('react').createElement(RN.View, {
+        testID: 'unit-autocomplete',
+        ...props,
+      }),
+  };
+});
 
 jest.mock('#/components/atoms/Chip', () => {
   const RN = require('react-native');

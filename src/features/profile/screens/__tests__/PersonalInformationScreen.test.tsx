@@ -40,22 +40,57 @@ jest.mock('#utils/dateUtils', () => ({
   extractDateString: jest.fn((val: string) => val || ''),
 }));
 
+// Mirrors the real PERSONAL_INFO_CONFIG: i18n KEYS, a stable section id, and
+// `options` carrying keys too. The assertions below therefore check that the
+// screen RESOLVES those keys, which is the behaviour that regressed when the
+// translation lived in a lookup map keyed on the English title.
 jest.mock('#/config/settingsConfig', () => ({
   PERSONAL_INFO_CONFIG: [
     {
-      title: 'Basic Info',
+      id: 'personalInformation',
+      titleKey: 'labels.personalInformation',
       items: [
-        { key: 'email', label: 'Email', type: 'text' },
-        { key: 'firstName', label: 'First Name', type: 'editable' },
-        { key: 'lastName', label: 'Last Name', type: 'editable' },
-        { key: 'displayName', label: 'Display Name', type: 'editable' },
+        { key: 'email', labelKey: 'personalInformation.email', type: 'text' },
+        {
+          key: 'firstName',
+          labelKey: 'personalInformation.firstName',
+          type: 'editable',
+        },
+        {
+          key: 'lastName',
+          labelKey: 'personalInformation.lastName',
+          type: 'editable',
+        },
+        {
+          key: 'displayName',
+          labelKey: 'personalInformation.displayName',
+          type: 'editable',
+        },
+        {
+          key: 'gender',
+          labelKey: 'personalInformation.gender',
+          type: 'modal',
+          options: [
+            { labelKey: 'personalInformation.genderMale', value: 'male' },
+            { labelKey: 'personalInformation.genderFemale', value: 'female' },
+          ],
+        },
       ],
     },
     {
-      title: 'Privacy',
+      id: 'privacy',
+      titleKey: 'personalInformation.sectionPrivacySettings',
       items: [
-        { key: 'showEmail', label: 'Show Email', type: 'toggle' },
-        { key: 'showPhone', label: 'Show Phone', type: 'toggle' },
+        {
+          key: 'showEmail',
+          labelKey: 'personalInformation.showEmail',
+          type: 'toggle',
+        },
+        {
+          key: 'showPhone',
+          labelKey: 'personalInformation.showPhone',
+          type: 'toggle',
+        },
       ],
     },
   ],
@@ -87,7 +122,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
     SettingsSection: ({ title, items }: SettingsSectionProps) => (
       <View testID={`section-${title}`}>
         <Text>{title}</Text>
-        {items.map(item => (
+        {items?.map(item => (
           <View key={item.key} testID={`setting-${item.key}`}>
             <Text>{item.label}</Text>
             {item.value !== undefined && (
@@ -107,17 +142,30 @@ describe('PersonalInformationScreen', () => {
 
   it('renders the screen with correct title', () => {
     renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByText('Personal Information')).toBeTruthy();
+    // Twice: the screen header and the first section share
+    // `labels.personalInformation`, exactly as the real config does.
+    expect(screen.getAllByText('Personal Information')).toHaveLength(2);
   });
 
-  it('renders Basic Info section', () => {
+  // Section titles come from `titleKey`, resolved here. They used to be looked
+  // up in a map keyed on the English title, so a renamed section rendered its
+  // English name in every language with nothing failing.
+  it('resolves section titles from their i18n keys', () => {
     renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByText('Basic Info')).toBeTruthy();
+    expect(screen.getAllByText('Personal Information').length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.getByText('Privacy Settings')).toBeTruthy();
   });
 
-  it('renders Privacy section', () => {
+  it('resolves field labels and modal option labels from their i18n keys', () => {
     renderWithApollo(<PersonalInformationScreen />);
-    expect(screen.getByText('Privacy')).toBeTruthy();
+    // A field label…
+    expect(screen.getByText('First Name')).toBeTruthy();
+    // …and an option label inside a modal field, which travelled through a
+    // second English-keyed map of its own.
+    const gender = screen.getByTestId('setting-gender');
+    expect(gender).toBeTruthy();
   });
 
   it('displays email value', () => {

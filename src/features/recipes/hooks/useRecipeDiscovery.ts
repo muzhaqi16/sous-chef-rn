@@ -86,7 +86,7 @@ function transformRandomRecipe(recipe: RecipeInformation): DiscoveryItem {
     id: String(recipe.id),
     title: recipe.title,
     subtitle: subtitleParts.join(' \u2022 '),
-    badge: { text: t('recipes.suggested') },
+    badge: { text: t('labels.suggested') },
     imageUrl: recipe.image,
     spoonacularId: recipe.id,
   };

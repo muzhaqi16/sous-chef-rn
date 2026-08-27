@@ -1,3 +1,4 @@
+import { mergedLocale } from '#/test-utils/mergedLocales';
 import fs from 'fs';
 import path from 'path';
 
@@ -26,7 +27,6 @@ import path from 'path';
  * an explicit fallback. Comments are skipped too — see `stripComments`.
  */
 const SRC = path.join(__dirname, '..', '..', 'src');
-const EN = path.join(SRC, 'i18n', 'locales', 'en.json');
 
 const SKIP_DIR = /(__tests__|__mocks__|[/\\]generated[/\\]|\.generated\.)/;
 
@@ -109,7 +109,7 @@ function indexKeys(
 }
 
 describe('i18n keys referenced in source', () => {
-  const english: unknown = JSON.parse(fs.readFileSync(EN, 'utf8'));
+  const english: unknown = mergedLocale('en');
   const entries = indexKeys(english);
 
   /** The ~163 namespaces rule 2 anchors on, read from en.json rather than listed. */

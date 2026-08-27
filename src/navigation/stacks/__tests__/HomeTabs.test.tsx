@@ -38,18 +38,52 @@ jest.mock('#components/navigation/FloatingTabBar/FloatingTabBar', () => ({
 }));
 
 import '../HomeTabs';
+import { TAB_APPEARANCE, TAB_FEATURES } from '#features/registry';
 
 describe('HomeTabs', () => {
   const screenOptions = () => mockNavigatorConfig?.screenOptions ?? {};
   const screens = () => mockNavigatorConfig?.screens ?? {};
 
-  it('registers the four tabs', () => {
-    expect(Object.keys(screens())).toEqual([
-      'Pantry',
-      'ShoppingList',
-      'Recipe',
-      'MealPlan',
-    ]);
+  // The `screens` literal is the one thing the registry cannot build, because
+  // react-navigation infers per-tab param types only from a literal shape. So
+  // the literal and the registry are asserted to agree here — including ORDER,
+  // which is what `tab.order` decides — rather than hoping nobody adds a tab to
+  // one and not the other.
+  it('registers exactly the enabled tab features, in manifest order', () => {
+    expect(Object.keys(screens())).toEqual(
+      TAB_FEATURES.map(f => f.tab.screenName),
+    );
+  });
+
+  it('labels each tab with its manifest i18n key', () => {
+    const titles = Object.fromEntries(
+      Object.entries(screens()).map(([name, config]) => [
+        name,
+        config.options?.title,
+      ]),
+    );
+    expect(titles).toEqual(
+      Object.fromEntries(
+        TAB_FEATURES.map(f => [f.tab.screenName, f.tab.titleKey]),
+      ),
+    );
+  });
+
+  // The tab bar gets its icons and reset-to-root targets from here, so a
+  // manifest that forgets one would silently render a `help-circle` tab.
+  it('derives tab appearance from every tab feature', () => {
+    expect(TAB_APPEARANCE).toEqual(
+      Object.fromEntries(
+        TAB_FEATURES.map(f => [
+          f.tab.screenName,
+          { icon: f.tab.icon, mainScreen: f.tab.mainScreen },
+        ]),
+      ),
+    );
+    for (const { tab } of TAB_FEATURES) {
+      expect(tab.mainScreen).toMatch(/Main$/);
+      expect(tab.icon.inactive).toBe(`${tab.icon.active}-outline`);
+    }
   });
 
   // `'pause'` (React.Activity) tears down every layout effect in the blurred

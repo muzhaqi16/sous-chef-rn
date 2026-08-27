@@ -1,0 +1,25 @@
+{
+  "barcodeScanner": {
+    "closeScanner": "Chiudi scanner",
+    "flashOn": "Attiva flash",
+    "flashOff": "Disattiva flash"
+  },
+  "barcodeInfo": {
+    "format": "Formato"
+  },
+  "scanner": {
+    "noHomeTitle": "Nessuna casa selezionata",
+    "noHomeBody": "Devi essere membro di una casa per scansionare gli articoli.",
+    "manageHomes": "Gestisci case"
+  },
+  "barcode": {
+    "itemNotFound": "Articolo non trovato",
+    "noItemWithCode": "Nessun articolo trovato con il codice a barre: {{barcode}}",
+    "addItemHint": "Puoi aggiungere questo articolo al database toccando il pulsante qui sotto.",
+    "newVersion": "Nuova versione",
+    "barcodeValue": "Codice a barre: {{barcode}}",
+    "formatValue": "Formato: {{format}}",
+    "upc": "UPC/Codice a barre",
+    "added": "Aggiunto"
+  }
+}

@@ -57,7 +57,7 @@ jest.mock('../../hooks/useBarcodeOutput', () => ({
   useBarcodeOutput: jest.fn(() => ({})),
 }));
 
-jest.mock('#components/organisms/BarcodeMask', () => 'BarcodeMask');
+jest.mock('#features/barcode/components/BarcodeMask', () => 'BarcodeMask');
 
 jest.mock('#components/atoms/Button', () => ({
   Button: ({

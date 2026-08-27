@@ -1,11 +1,24 @@
 #!/usr/bin/env node
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOCALES_DIR = join(__dirname, '..', 'src', 'i18n', 'locales');
+const FEATURES_DIR = join(__dirname, '..', 'src', 'features');
 const REFERENCE = 'en.json';
+
+/**
+ * Feature directories that ship their own copy.
+ *
+ * A feature's strings live with the feature, so parity has to be checked over
+ * core PLUS every feature — checking `src/i18n/locales` alone would compare a
+ * third of the app's copy and report it consistent.
+ */
+const featureLocaleDirs = () =>
+  readdirSync(FEATURES_DIR)
+    .filter(name => existsSync(join(FEATURES_DIR, name, 'locales')))
+    .sort();
 
 function flatten(obj, prefix = '', out = new Map()) {
   for (const [k, v] of Object.entries(obj)) {
@@ -19,8 +32,16 @@ function flatten(obj, prefix = '', out = new Map()) {
   return out;
 }
 
+/** Core copy plus every feature's, for one locale file (e.g. `en.json`). */
 function load(file) {
-  return JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8'));
+  const merged = JSON.parse(readFileSync(join(LOCALES_DIR, file), 'utf8'));
+  for (const feature of featureLocaleDirs()) {
+    const path = join(FEATURES_DIR, feature, 'locales', file);
+    if (existsSync(path)) {
+      Object.assign(merged, JSON.parse(readFileSync(path, 'utf8')));
+    }
+  }
+  return merged;
 }
 
 const files = readdirSync(LOCALES_DIR).filter(f => f.endsWith('.json'));

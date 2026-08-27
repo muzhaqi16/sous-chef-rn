@@ -168,7 +168,7 @@ jest.mock('#components/molecules/SwipeableItem/SwipeableItem', () => ({
     return <Pressable onPress={onPress}>{children}</Pressable>;
   },
 }));
-jest.mock('#components/atoms/Skeleton/PantryItemSkeleton', () => ({
+jest.mock('#features/pantry/components/skeletons/PantryItemSkeleton', () => ({
   PantryItemSkeleton: () => null,
 }));
 jest.mock('#/styles/commonStyles', () => ({

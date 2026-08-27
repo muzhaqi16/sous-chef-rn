@@ -3,7 +3,7 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import type { AnimatedChip as AnimatedChipComponent } from '../../../src/components/atoms/AnimatedChip';
-import { CuisineSelector } from '../../../src/components/organisms/CuisineSelector';
+import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');

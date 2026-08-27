@@ -95,7 +95,8 @@ imports:
 | `manifest.ts`                     | ✅      | Wired into `FEATURE_REGISTRY`                                           |
 | `hooks/` (top-level files only)   | ✅      | Cross-feature consumers may import these                                |
 | `<feature>Fragments.generated.ts` | ✅      | Type imports only, when composing your own fragments                    |
-| `components/`                     | ⚠️      | Shared UI belongs in `src/components/`; feature-private cards stay here |
+| `components/`                     | 🔒      | A component two features want is a KIT component — promote it to `src/components/` |
+| `ui/` (catalog only)              | ✅      | The catalog's public UI. Its pickers are domain UI two features consume, so they can go in neither a domain-free kit nor one consumer |
 | `context/`                        | 🔒      | Internal                                                                |
 | `graphql/`                        | 🔒      | Compose your own operations instead                                     |
 | `hooks/mutations/`, deeper hooks  | 🔒      | Internal lifecycle primitives                                           |
@@ -111,6 +112,35 @@ up — it doesn't get imported sideways, and it doesn't get imported *downwards*
 either: a hook owned by one feature lives in that feature, and `src/hooks/` holds
 only what more than one feature uses. Both directions are enforced by
 `import/no-restricted-paths` zones.
+
+A zone's `from` may name a directory that does not exist yet, and 18 do. That is
+deliberate: the boundary around `mealPlan/context/` is declared before anyone
+creates it, so the first import into it is blocked rather than grandfathered.
+
+`src/config/appConfig.ts` is the fork-point: identity, deep links, brand colour,
+the keychain namespace, which locales ship, and `features` — a per-feature
+`false` that drops it from `FEATURE_REGISTRY`'s enabled set without touching the
+feature. The keychain strings are pinned by
+`src/storage/__tests__/keychainServiceNames.test.ts`: the OS keychain is keyed by
+service name, so changing one on a shipped app signs every user out silently.
+
+`src/app/` is the composition root: the modules whose whole job is to know which
+features exist — the provider that mounts each feature's subscriptions, the
+offline tab preloader. They are not reusable and a sibling app writes its own, so
+they sit outside the kit rather than being excused from its rule.
+
+`src/components/` and `src/hooks/` together are the **kit** — the layer a sibling
+app reuses wholesale. `scripts/check-layer-purity.mjs` ratchets what the kit knows
+about a feature: an import of `#features/…`, a colocated `.graphql` document, or a
+file named after a domain. The recorded baseline is the backlog, and it may only
+shrink. Generated-schema-type imports are counted but do not fail — that coupling
+only costs when a sibling app has a different schema.
+
+`scripts/check-feature-shape.mjs` ratchets the other half: every feature has
+`manifest.ts` (whose `id` equals its directory name), `screens/`, `hooks/` and
+`components/`, and a feature with more than one screen declares
+`screens/registration.ts`. A `.graphql` document beside its consumer is the
+convention, not a deviation — see § Fragments.
 
 One asymmetry in those zones is deliberate: `graphql/` is absent from the
 shared-layer zone (while feature-to-feature zones do block it). The offline

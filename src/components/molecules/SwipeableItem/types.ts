@@ -8,12 +8,40 @@ export type SwipeableRef = React.RefObject<ComponentRef<
 > | null>;
 
 /**
- * Swipe mode controls the behavior of swipe actions:
- * - 'shopping': Left swipe = Edit, Right swipe = Delete (checkbox handles purchase toggle)
- * - 'pantry': Left swipe = Consume/Waste/Restock, Right swipe = Edit + Delete
- * - undefined/default: Original behavior based on provided callbacks
+ * One revealed action on a swipeable row.
+ *
+ * A descriptor rather than a named callback: this component used to take seven
+ * (`onConsume`, `onWaste`, `onRestock`, `onTogglePurchase`, …) plus a
+ * `swipeMode: 'shopping' | 'pantry'`, with the icon for each verb hardcoded in
+ * the action components. Adding an action to a new screen — or a new app — meant
+ * editing this molecule. Now the caller says what its actions are.
  */
-export type SwipeMode = 'shopping' | 'pantry';
+export interface SwipeAction {
+  /** Stable identity. Doubles as the accessibility action name. */
+  key: string;
+  icon: React.ComponentProps<typeof Icon>['name'];
+  /** i18n KEY for the accessibility label, resolved at render. */
+  labelKey: string;
+  onPress: () => void;
+  testID?: string;
+  /**
+   * Fire a light haptic before the press. Defaults to true.
+   *
+   * The pantry's consume/waste/restock actions pass `false` — they have never
+   * buzzed, unlike edit/delete/toggle-purchase. Preserved as a per-action
+   * choice rather than silently unified.
+   */
+  haptic?: boolean;
+  /**
+   * This action removes the row, so a card that animates removals should slide
+   * out before running it.
+   *
+   * Read by the ROW renderer (`ItemCard`, `SortableItem`), not by
+   * `SwipeableItem` — the swipe molecule has no opinion about what an action
+   * does to the list around it.
+   */
+  removesRow?: boolean;
+}
 
 export interface SwipeableItemProps {
   children: React.ReactNode;
@@ -21,13 +49,10 @@ export interface SwipeableItemProps {
   itemId?: string;
   onPress?: () => void;
   onLongPress?: () => void;
-  onDelete?: () => void;
-  onEdit?: () => void;
-  onTogglePurchase?: () => void;
-  onConsume?: () => void;
-  onWaste?: () => void;
-  onRestock?: () => void;
-  isPurchased?: boolean;
+  /** Revealed by swiping right (they sit on the row's left edge). */
+  leftActions?: SwipeAction[];
+  /** Revealed by swiping left (they sit on the row's right edge). */
+  rightActions?: SwipeAction[];
 
   leftThreshold?: number;
   rightThreshold?: number;
@@ -35,8 +60,6 @@ export interface SwipeableItemProps {
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
   testIDPrefix?: string;
-  /** Controls swipe action layout - 'shopping' puts edit on left, 'pantry' uses original layout */
-  swipeMode?: SwipeMode;
   /** Disables swipe gestures when false (e.g. during tutorial spotlight steps) */
   enabled?: boolean;
   /**
@@ -58,17 +81,9 @@ export interface ActionButtonProps {
 }
 
 export interface SwipeActionsProps {
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onTogglePurchase?: () => void;
-  onConsume?: () => void;
-  onWaste?: () => void;
-  onRestock?: () => void;
-  isPurchased?: boolean;
-  onActionPress?: (action: 'edit' | 'delete') => void;
+  actions: SwipeAction[];
+  /** Which edge these sit on — decides the container style only. */
+  side: 'left' | 'right';
   swipeableRef?: SwipeableRef;
-  testIDPrefix?: string;
   progress?: SharedValue<number>;
-  /** Controls swipe action layout */
-  swipeMode?: SwipeMode;
 }

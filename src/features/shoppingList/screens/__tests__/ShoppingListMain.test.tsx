@@ -71,9 +71,12 @@ jest.mock(
     FilterTabBar: () => null,
   }),
 );
-jest.mock('#components/atoms/Skeleton/ShoppingListSkeleton', () => ({
-  ShoppingListSkeleton: () => null,
-}));
+jest.mock(
+  '#features/shoppingList/components/skeletons/ShoppingListSkeleton',
+  () => ({
+    ShoppingListSkeleton: () => null,
+  }),
+);
 
 describe('ShoppingListMain', () => {
   beforeEach(() => jest.clearAllMocks());

@@ -5,7 +5,7 @@ import { useUser } from '#store/useAppStore';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
-import { useCreateStorageLocation } from '#/hooks/storageLocation/useCreateStorageLocation';
+import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { useShallow } from 'zustand/shallow';
 import {
@@ -17,7 +17,7 @@ import {
 import { PAGE_SIZE } from '#/constants/pagination';
 import { logger } from '#/utils/environment';
 import type { FilterTabConfig } from '#components/molecules/FilterTabs/types';
-import { StorageLocationIcon } from '#components/atoms/StorageLocationIcon';
+import { StorageLocationIcon } from '#features/catalog/ui/StorageLocationIcon';
 import { PREFERENCE_DEFAULTS } from '#store/slices/preferenceTypes';
 import type {
   PantrySortOption,

@@ -1,74 +1,45 @@
 import React from 'react';
-import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#utils/iconUtils';
-import { Button } from '#components/atoms/Button';
-import { Text } from '#components/atoms/Text';
+import { EmptyState } from '#components/atoms/EmptyState';
 
 interface MealPlanEmptyStateProps {
   onCreatePlan: () => void;
   onCreateFromTemplate?: () => void;
 }
 
+/**
+ * The meal-plan tab's empty state.
+ *
+ * A thin wrapper over `EmptyState`. It used to reimplement it — its own icon,
+ * title, subtitle and two buttons, with its own stylesheet — which is why the
+ * spacing drifted from every other empty state in the app.
+ */
 export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   onCreatePlan,
   onCreateFromTemplate,
 }) => {
   const { t } = useTranslation();
+
   return (
-    <View style={styles.container}>
-      <Icon name="calendar-outline" size={64} tone="textTertiary" />
-      <Text size="xl" weight="bold" style={styles.title}>
-        {t('mealPlanEmpty.title')}
-      </Text>
-      <Text size="md" tone="secondary" align="center" style={styles.subtitle}>
-        {t('mealPlanEmpty.subtitle')}
-      </Text>
-      <View style={styles.actions}>
-        <Button
-          variant="primary"
-          icon="add"
-          title={t('mealPlanEmpty.createFirst')}
-          onPress={onCreatePlan}
-          style={styles.button}
-        />
-        {!!onCreateFromTemplate && (
-          <Button
-            variant="outline"
-            icon="document-text-outline"
-            title={t('mealPlanEmpty.createFromTemplate')}
-            onPress={onCreateFromTemplate}
-            style={styles.button}
-          />
-        )}
-      </View>
-    </View>
+    <EmptyState
+      icon="calendar-outline"
+      iconSize={64}
+      title={t('mealPlanEmpty.title')}
+      description={t('mealPlanEmpty.subtitle')}
+      action={{
+        label: t('mealPlanEmpty.createFirst'),
+        onPress: onCreatePlan,
+        icon: 'add',
+      }}
+      secondaryAction={
+        onCreateFromTemplate
+          ? {
+              label: t('mealPlanEmpty.createFromTemplate'),
+              onPress: onCreateFromTemplate,
+              icon: 'document-text-outline',
+            }
+          : undefined
+      }
+    />
   );
 };
-
-MealPlanEmptyState.displayName = 'MealPlanEmptyState';
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
-  },
-  title: {
-    marginTop: theme.spacing.lg,
-  },
-  subtitle: {
-    marginTop: theme.spacing.sm,
-    lineHeight: 22,
-  },
-  actions: {
-    marginTop: theme.spacing.xl,
-    alignItems: 'center',
-    gap: theme.spacing.lg,
-  },
-  button: {
-    paddingHorizontal: theme.spacing.xl,
-  },
-}));

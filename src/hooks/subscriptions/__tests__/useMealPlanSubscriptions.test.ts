@@ -5,7 +5,7 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
-import { useMealPlanSubscriptions } from '../useMealPlanSubscriptions';
+import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 
 type CapturedOnData = (data: unknown, client: unknown) => void;
 

@@ -1,3 +1,7 @@
+import {
+  deleteAction,
+  editAction,
+} from '#components/molecules/SwipeableItem/commonActions';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -470,8 +474,14 @@ export const ShoppingListMainContent: React.FC<
         onItemPress={id =>
           toShoppingListItemDetail({ listId: currentListId, itemId: id })
         }
-        onItemEdit={id => toEditItem({ listId: currentListId, itemId: id })}
-        onItemDelete={handleDeleteItem}
+        itemSwipeActions={id => ({
+          left: [
+            editAction(() => toEditItem({ listId: currentListId, itemId: id })),
+          ],
+          right: [
+            { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },
+          ],
+        })}
         onRefresh={handleRefresh}
         testIDPrefix="shopping-list-item"
         emptyState={emptyStateConfig}

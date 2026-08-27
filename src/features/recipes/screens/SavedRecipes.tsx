@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { FlashList } from '@shopify/flash-list';
-import { useFragment } from '@apollo/client/react';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { StyleSheet } from 'react-native-unistyles';
 import { Header } from '#components/molecules/Header';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -13,7 +12,6 @@ import { TagPicker } from '#components/molecules/TagPicker';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import { SavedRecipeCard } from '#features/recipes/components/SavedRecipeCard';
-import { SavedRecipeCard_SavedRecipeFragmentDoc } from '#features/recipes/components/SavedRecipeCard.generated';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import {
@@ -28,45 +26,12 @@ import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/rec
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
 import { alertService } from '#/services/alertService';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 
 const keyExtractor = (item: SavedRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
-
-/**
- * Inline cell adapter — calls `useFragment` to read `name`/`description` for
- * search filtering, then delegates rendering to `<SavedRecipeCard>` which
- * subscribes via its own `useFragment`.
- */
-const SavedRecipeRow: React.FC<{
-  savedRecipe: SavedRecipeNode;
-  searchQuery: string;
-  onPress: (recipeId: string) => void;
-  onRemove: (recipeId: string) => void;
-}> = ({ savedRecipe, searchQuery, onPress, onRemove }) => {
-  const { data, complete } = useFragment({
-    fragment: SavedRecipeCard_SavedRecipeFragmentDoc,
-    fragmentName: 'SavedRecipeCard_savedRecipe',
-    from: savedRecipe,
-  });
-
-  if (!complete) return null;
-
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    const name = (data.recipe.name ?? '').toLowerCase();
-    const description = (data.recipe.description ?? '').toLowerCase();
-    if (!name.includes(q) && !description.includes(q)) return null;
-  }
-
-  return (
-    <SavedRecipeCard
-      savedRecipeRef={savedRecipe}
-      onPress={onPress}
-      onRemove={onRemove}
-    />
-  );
-};
 
 export const SavedRecipes: React.FC = () => {
   useScreenTransition('SavedRecipes');
@@ -114,7 +79,11 @@ export const SavedRecipes: React.FC = () => {
     RemoveRecipeFromFavoritesDocument,
   );
 
-  // Filter recipes by folder + tags (search query filtering happens per-row).
+  // Folder, tags AND search all filter here, never inside the cell: a
+  // virtualized list cannot absorb rows that return null — the cell, its
+  // layout slot and its fragment subscription all survive. `recipe.name` and
+  // `recipe.description` are selected on the query's node for exactly this
+  // (see recipe.graphql).
   const filteredRecipes = (() => {
     let result = recipes;
 
@@ -129,8 +98,31 @@ export const SavedRecipes: React.FC = () => {
       });
     }
 
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      result = result.filter(saved => {
+        const name = (saved.recipe.name ?? '').toLowerCase();
+        const description = (saved.recipe.description ?? '').toLowerCase();
+        return name.includes(q) || description.includes(q);
+      });
+    }
+
     return result;
   })();
+
+  // Instrumented like PantryContent/SortableList so this list reports
+  // `flashlist_initial_load_ms` and blank-cell episodes instead of being
+  // invisible to every metric we have.
+  const flashListRef = useRef<FlashListRef<SavedRecipeNode>>(null);
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'SavedRecipes',
+    hasRealContent: filteredRecipes.length > 0,
+  });
+  useDataReferenceTracker(
+    filteredRecipes,
+    'SavedRecipes.items',
+    perfCallbacks.onDataReferenceChange,
+  );
 
   // Clear all filters
   const handleClearFilters = () => {
@@ -246,9 +238,8 @@ export const SavedRecipes: React.FC = () => {
   })();
 
   const renderItem = ({ item }: { item: SavedRecipeNode }) => (
-    <SavedRecipeRow
-      savedRecipe={item}
-      searchQuery={searchQuery}
+    <SavedRecipeCard
+      savedRecipeRef={item}
       onPress={handleItemPress}
       onRemove={handleRemoveRecipe}
     />
@@ -278,6 +269,11 @@ export const SavedRecipes: React.FC = () => {
         />
       ) : (
         <FlashList
+          ref={flashListRef}
+          CellRendererComponent={perfCallbacks.CellRendererComponent}
+          onLoad={perfCallbacks.onLoad}
+          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
           data={filteredRecipes}
           keyExtractor={keyExtractor}
           getItemType={getItemType}

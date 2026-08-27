@@ -1,0 +1,22 @@
+{
+  "files": [
+    "src/components/molecules/NutritionSummary.tsx",
+    "src/components/organisms/DietaryRestrictionSelector.tsx"
+  ],
+  "schemaTypeImporters": [
+    "src/components/analytics/DateRangeFilter.tsx",
+    "src/components/atoms/FormattedItemSubtitle.tsx",
+    "src/components/charts/TrendLineChart.tsx",
+    "src/components/molecules/ItemSuggestionsList.tsx",
+    "src/components/molecules/QuantityDisplay.tsx",
+    "src/components/molecules/UnitPicker.tsx",
+    "src/components/molecules/unitPickerTypes.ts",
+    "src/components/organisms/DietaryRestrictionSelector.tsx",
+    "src/components/organisms/InviteUserModal.tsx",
+    "src/hooks/subscriptions/useUserSubscriptions.ts",
+    "src/hooks/useDataPreloading.ts",
+    "src/hooks/useImageUpload.ts",
+    "src/hooks/useInviteUserModal.tsx"
+  ],
+  "scannedFiles": 308
+}

@@ -5,7 +5,7 @@ import { Control, Controller, FieldErrors } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/molecules/FormInput';
 import { FractionInput } from '#components/molecules/FractionInput';
-import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { Text } from '#components/atoms/Text';
 import type { PantryItemFormData } from './PantryItemForm';

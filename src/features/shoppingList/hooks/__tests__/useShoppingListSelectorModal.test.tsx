@@ -119,7 +119,7 @@ jest.mock('#utils/iconUtils', () => ({
   Icon: 'Icon',
 }));
 
-jest.mock('#components/atoms/ShoppingListAvatar', () => ({
+jest.mock('#features/shoppingList/components/ShoppingListAvatar', () => ({
   ShoppingListAvatar: 'ShoppingListAvatar',
 }));
 

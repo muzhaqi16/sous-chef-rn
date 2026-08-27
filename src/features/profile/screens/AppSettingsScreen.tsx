@@ -4,7 +4,7 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
-import { SettingSection } from '#components/settings/SettingSection';
+import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import {
   useAppSettings,
@@ -178,7 +178,7 @@ export const AppSettingsScreen: React.FC = () => {
       title={t('labels.appSettings')}
       testID="settings-screen"
     >
-      <SettingSection title={t('settings.unitsSection')}>
+      <SettingsSection variant="inset" title={t('settings.unitsSection')}>
         <AppPressable
           haptic
           testID="settings-unit-system-picker"
@@ -206,9 +206,9 @@ export const AppSettingsScreen: React.FC = () => {
           }}
           onCancel={() => setUnitPickerVisible(false)}
         />
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('settings.syncOffline')}>
+      <SettingsSection variant="inset" title={t('settings.syncOffline')}>
         <SettingSwitch
           testID="settings-auto-sync-switch"
           title={t('settings.autoSync')}
@@ -223,9 +223,9 @@ export const AppSettingsScreen: React.FC = () => {
           value={offlineModeEnabled}
           onValueChange={handleOfflineModeChange}
         />
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('settings.features')}>
+      <SettingsSection variant="inset" title={t('settings.features')}>
         <SettingSwitch
           testID="settings-show-tutorials-switch"
           title={t('settings.showTutorials')}
@@ -248,9 +248,9 @@ export const AppSettingsScreen: React.FC = () => {
             </View>
           </View>
         )}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('settings.experience')}>
+      <SettingsSection variant="inset" title={t('settings.experience')}>
         <SettingSwitch
           testID="settings-haptic-feedback-switch"
           title={t('settings.hapticFeedback')}
@@ -281,9 +281,9 @@ export const AppSettingsScreen: React.FC = () => {
           value={userConsent ?? true}
           onValueChange={handleConsentChange}
         />
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('settings.resetSection')}>
+      <SettingsSection variant="inset" title={t('settings.resetSection')}>
         <SettingSwitch
           title={t('settings.resetToDefaults')}
           description={t('settings.resetToDefaultsDesc')}
@@ -291,7 +291,7 @@ export const AppSettingsScreen: React.FC = () => {
           onValueChange={handleResetToDefaults}
           loading={updating === 'reset'}
         />
-      </SettingSection>
+      </SettingsSection>
     </ProfileScreenWrapper>
   );
 };

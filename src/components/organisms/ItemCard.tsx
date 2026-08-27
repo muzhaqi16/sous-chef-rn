@@ -2,7 +2,10 @@ import React from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
-import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import type {
+  SwipeAction,
+  SwipeableRef,
+} from '#components/molecules/SwipeableItem/types';
 import { ListItem } from '../molecules/ListItem';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
@@ -24,11 +27,10 @@ interface ItemCardProps {
   title: string;
   subtitle: string;
   onPress: () => void;
-  onEdit?: () => void;
-  onDelete?: () => void;
-  onConsume?: () => void;
-  onWaste?: () => void;
-  onRestock?: () => void;
+  /** Revealed by swiping right. Actions flagged `removesRow` slide the row out. */
+  leftActions?: SwipeAction[];
+  /** Revealed by swiping left. Actions flagged `removesRow` slide the row out. */
+  rightActions?: SwipeAction[];
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   badge?: {
     text: string;
@@ -53,11 +55,8 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
   title,
   subtitle,
   onPress,
-  onEdit,
-  onDelete,
-  onConsume,
-  onWaste,
-  onRestock,
+  leftActions,
+  rightActions,
   onSwipeableWillOpen,
   badge,
   rightElement,
@@ -75,15 +74,15 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     opacityTarget: SLIDE_PRESETS.exitWithFade.opacityTarget,
   });
 
-  const handleDelete = () => {
-    if (onDelete) triggerSlide(1, onDelete);
-  };
-  const handleConsume = () => {
-    if (onConsume) triggerSlide(1, onConsume);
-  };
-  const handleWaste = () => {
-    if (onWaste) triggerSlide(1, onWaste);
-  };
+  // An action that removes the row slides it off screen first. Previously this
+  // was hardcoded for delete/consume/waste and, by omission, not for restock —
+  // now each action says whether it removes the row.
+  const withSlideOut = (actions?: SwipeAction[]) =>
+    actions?.map(action =>
+      action.removesRow
+        ? { ...action, onPress: () => triggerSlide(1, action.onPress) }
+        : action,
+    );
 
   return (
     <Animated.View
@@ -92,11 +91,8 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
     >
       <SwipeableItem
         onPress={onPress}
-        onEdit={onEdit}
-        onDelete={onDelete ? handleDelete : undefined}
-        onConsume={onConsume ? handleConsume : undefined}
-        onWaste={onWaste ? handleWaste : undefined}
-        onRestock={onRestock}
+        leftActions={withSlideOut(leftActions)}
+        rightActions={withSlideOut(rightActions)}
         onSwipeableWillOpen={onSwipeableWillOpen}
         testIDPrefix={testID}
       >
@@ -117,24 +113,15 @@ const ItemCardComponent: React.FC<ItemCardProps> = props => {
     title,
     subtitle,
     onPress,
-    onEdit,
-    onDelete,
-    onConsume,
-    onWaste,
-    onRestock,
+    leftActions,
+    rightActions,
     badge,
     rightElement,
     leftElement,
     testID,
   } = props;
 
-  const hasSwipeActions = !!(
-    onEdit ||
-    onDelete ||
-    onConsume ||
-    onWaste ||
-    onRestock
-  );
+  const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
 
   // Lightweight path: a row with no swipe actions can never slide, so skip the
   // per-row reanimated machinery (3 shared values + an animated style worklet)

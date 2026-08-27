@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeOut } from 'react-native-reanimated';
 import { TIMING } from '#constants/animations';
 import { SkeletonList } from '#components/atoms/Skeleton/SkeletonList';
-import { ShoppingListItemSkeleton } from '#components/atoms/Skeleton/ShoppingListItemSkeleton';
+import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton';
 import { EmptyState } from '#components/atoms/EmptyState';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
 import { useMinimumVisible } from '#hooks/ui/useMinimumVisible';

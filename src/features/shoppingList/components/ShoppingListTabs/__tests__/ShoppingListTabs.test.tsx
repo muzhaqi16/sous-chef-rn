@@ -98,9 +98,12 @@ jest.mock('#components/atoms/Skeleton/SkeletonList', () => ({
   },
 }));
 
-jest.mock('#components/atoms/Skeleton/ShoppingListItemSkeleton', () => ({
-  ShoppingListItemSkeleton: () => null,
-}));
+jest.mock(
+  '#features/shoppingList/components/skeletons/ShoppingListItemSkeleton',
+  () => ({
+    ShoppingListItemSkeleton: () => null,
+  }),
+);
 
 jest.mock('react-native-tab-view', () => {
   const { View } = require('react-native');

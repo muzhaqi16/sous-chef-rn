@@ -8,12 +8,11 @@ import {
 } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { type SharedValue } from 'react-native-reanimated';
-import { RightActions } from './RightActions';
-import { LeftActions } from './LeftActions';
+import { SwipeActions, swipeTrayWidth } from './SwipeActions';
 import { SwipeableContent } from './SwipeableContent';
 import { useSwipeableActions } from './hooks/useSwipeableActions';
 import { styles } from './styles';
-import { SwipeableItemProps } from './types';
+import type { SwipeAction, SwipeableItemProps } from './types';
 
 // Matches marginLeft/marginRight: -12 in actionsContainer/leftActionsContainer styles.
 // Placeholders must include the same margin so the Swipeable measures the same layout
@@ -28,161 +27,104 @@ const CARD_EDGE_EXTENSION = 12;
 // horizontal gesture nested in a vertical scroller.
 const DEFAULT_DRAG_OFFSET = 16;
 
-const LEFT_PLACEHOLDER_STYLES: Record<number, ViewStyle> = {
-  80: { width: 80, marginRight: -CARD_EDGE_EXTENSION },
-  120: { width: 120, marginRight: -CARD_EDGE_EXTENSION },
-  180: { width: 180, marginRight: -CARD_EDGE_EXTENSION },
-};
-const getLeftPlaceholderStyle = (count: number) =>
-  LEFT_PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
-
-const RIGHT_PLACEHOLDER_STYLES: Record<number, ViewStyle> = {
-  80: { width: 80, marginLeft: -CARD_EDGE_EXTENSION },
-  120: { width: 120, marginLeft: -CARD_EDGE_EXTENSION },
-  180: { width: 180, marginLeft: -CARD_EDGE_EXTENSION },
-};
-const getRightPlaceholderStyle = (count: number) =>
-  RIGHT_PLACEHOLDER_STYLES[count <= 1 ? 80 : count === 2 ? 120 : 180];
+// Reserves the tray's width before the real one mounts, so the card cannot open
+// past its own action background during the placeholder→actual swap. The margin
+// mirrors the -12 in the action container styles.
+const placeholderStyle = (
+  count: number,
+  side: 'left' | 'right',
+): ViewStyle => ({
+  width: swipeTrayWidth(count),
+  ...(side === 'left'
+    ? { marginRight: -CARD_EDGE_EXTENSION }
+    : { marginLeft: -CARD_EDGE_EXTENSION }),
+});
 
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
   itemId,
   onPress,
   onLongPress,
-  onDelete,
-  onEdit,
-  onTogglePurchase,
-  onConsume,
-  onWaste,
-  onRestock,
-  isPurchased,
-
+  leftActions = [],
+  rightActions = [],
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1.5,
   onSwipeableWillOpen,
   onSwipeableClose,
   testIDPrefix,
-  swipeMode,
   enabled = true,
   dragOffset = DEFAULT_DRAG_OFFSET,
 }) => {
   const { t } = useTranslation();
-  // Calculate thresholds based on number of actions
-  // Fewer actions = smaller threshold for more natural swipe feel
-  const leftActionCount = [
-    onTogglePurchase,
-    onConsume,
-    onWaste,
-    onRestock,
-  ].filter(Boolean).length;
-  const rightActionCount = [onEdit, onDelete].filter(Boolean).length;
-  const computedLeftThreshold = leftActionCount <= 1 ? 60 : leftThreshold;
-  const computedRightThreshold = rightActionCount <= 1 ? 60 : rightThreshold;
+  // Fewer actions = smaller threshold, for a more natural swipe.
+  const computedLeftThreshold = leftActions.length <= 1 ? 60 : leftThreshold;
+  const computedRightThreshold = rightActions.length <= 1 ? 60 : rightThreshold;
 
   const {
     swipeableRef,
-    handleActionPress,
     handleSwipeableWillOpen,
     handleSwipeableClose,
     hasSwipeStarted,
     handleSwipeOpenStartDrag,
   } = useSwipeableActions({
     itemId,
-    onEdit,
-    onDelete,
-
     onSwipeableWillOpen,
     onSwipeableClose,
   });
 
-  // In shopping mode, LeftActions renders only edit (1 btn) and RightActions
-  // renders only delete (1 btn), regardless of how many callbacks are provided.
-  const leftButtonCount =
-    swipeMode === 'shopping' ? (onEdit ? 1 : 0) : leftActionCount;
-  const rightButtonCount =
-    swipeMode === 'shopping' ? (onDelete ? 1 : 0) : rightActionCount;
+  // Actions inherit the row's testID as a prefix unless they set their own, so
+  // a pantry row's edit button stays `pantry-item-<id>-edit` without every call
+  // site threading the prefix into every action it builds.
+  const withTestIDs = (actions: SwipeAction[]): SwipeAction[] =>
+    testIDPrefix
+      ? actions.map(action =>
+          action.testID
+            ? action
+            : { ...action, testID: `${testIDPrefix}-${action.key}` },
+        )
+      : actions;
 
-  const renderRightActions = (progress: SharedValue<number>) => {
-    if (!hasSwipeStarted && rightButtonCount > 0) {
-      return <View style={getRightPlaceholderStyle(rightButtonCount)} />;
-    }
-    return (
-      <RightActions
-        onEdit={onEdit}
-        onDelete={onDelete}
-        onActionPress={handleActionPress}
-        testIDPrefix={testIDPrefix}
-        progress={progress}
-        swipeMode={swipeMode}
-      />
-    );
-  };
-
-  const renderLeftActions = (progress: SharedValue<number>) => {
-    if (!hasSwipeStarted && leftButtonCount > 0) {
-      return <View style={getLeftPlaceholderStyle(leftButtonCount)} />;
-    }
-    return (
-      <LeftActions
-        onTogglePurchase={onTogglePurchase}
-        onConsume={onConsume}
-        onWaste={onWaste}
-        onRestock={onRestock}
-        isPurchased={isPurchased}
+  // Two named renderers rather than one curried builder: react-navigation calls
+  // these per side, and a function produced during render reads to ESLint as an
+  // inline component definition.
+  const renderLeftTray = (progress: SharedValue<number>) =>
+    !hasSwipeStarted ? (
+      <View style={placeholderStyle(leftActions.length, 'left')} />
+    ) : (
+      <SwipeActions
+        actions={withTestIDs(leftActions)}
+        side="left"
         swipeableRef={swipeableRef}
         progress={progress}
-        swipeMode={swipeMode}
-        onEdit={onEdit}
-        testIDPrefix={testIDPrefix}
-        onActionPress={handleActionPress}
       />
     );
-  };
 
-  // Build accessibility actions from available callbacks so VoiceOver/TalkBack
-  // users can discover swipe actions without swiping
-  const accessibilityActions = (() => {
-    const actions: AccessibilityActionInfo[] = [];
-    if (onEdit) actions.push({ name: 'edit', label: t('labels.edit') });
-    if (onDelete) actions.push({ name: 'delete', label: t('labels.delete') });
-    if (onTogglePurchase)
-      actions.push({
-        name: 'togglePurchase',
-        label: isPurchased
-          ? t('swipeActions.markUnpurchased')
-          : t('labels.markAsPurchased'),
-      });
-    if (onConsume)
-      actions.push({ name: 'consume', label: t('swipeActions.consume') });
-    if (onWaste)
-      actions.push({ name: 'waste', label: t('swipeActions.recordWaste') });
-    if (onRestock)
-      actions.push({ name: 'restock', label: t('swipeActions.restock') });
-    return actions;
-  })();
+  const renderRightTray = (progress: SharedValue<number>) =>
+    !hasSwipeStarted ? (
+      <View style={placeholderStyle(rightActions.length, 'right')} />
+    ) : (
+      <SwipeActions
+        actions={withTestIDs(rightActions)}
+        side="right"
+        swipeableRef={swipeableRef}
+        progress={progress}
+      />
+    );
+
+  // Every swipe action is also an accessibility action, so VoiceOver/TalkBack
+  // users can reach it without swiping. Derived from the same list rather than
+  // a parallel one — the two used to be separate `if` chains, and an action
+  // added to one could silently miss the other.
+  const allActions = [...leftActions, ...rightActions];
+  const accessibilityActions: AccessibilityActionInfo[] = allActions.map(
+    action => ({ name: action.key, label: t(action.labelKey) }),
+  );
 
   const handleAccessibilityAction = (event: AccessibilityActionEvent) => {
-    switch (event.nativeEvent.actionName) {
-      case 'edit':
-        onEdit?.();
-        break;
-      case 'delete':
-        onDelete?.();
-        break;
-      case 'togglePurchase':
-        onTogglePurchase?.();
-        break;
-      case 'consume':
-        onConsume?.();
-        break;
-      case 'waste':
-        onWaste?.();
-        break;
-      case 'restock':
-        onRestock?.();
-        break;
-    }
+    allActions
+      .find(action => action.key === event.nativeEvent.actionName)
+      ?.onPress();
   };
 
   // No wrapper view: the accessibility actions live on SwipeableContent's own
@@ -197,8 +139,8 @@ const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
       friction={friction}
       leftThreshold={computedLeftThreshold}
       rightThreshold={computedRightThreshold}
-      renderLeftActions={leftButtonCount > 0 ? renderLeftActions : undefined}
-      renderRightActions={rightButtonCount > 0 ? renderRightActions : undefined}
+      renderLeftActions={leftActions.length > 0 ? renderLeftTray : undefined}
+      renderRightActions={rightActions.length > 0 ? renderRightTray : undefined}
       onSwipeableWillOpen={handleSwipeableWillOpen}
       onSwipeableClose={handleSwipeableClose}
       onSwipeableOpenStartDrag={handleSwipeOpenStartDrag}

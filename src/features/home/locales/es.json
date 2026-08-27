@@ -1,0 +1,181 @@
+{
+  "inviteMembers": {
+    "title": "Invita a familia y amigos",
+    "subtitleHasNeither": "Primero crea un hogar o una lista para poder invitar a otros",
+    "subtitleHasBoth": "Invita a otros a tu hogar y listas de la compra (opcional)",
+    "subtitleHasHome": "Invita a otros a tu hogar (opcional)",
+    "subtitleHasList": "Invita a otros a tu lista de la compra (opcional)",
+    "nothingToShare": "Nada que compartir aún",
+    "nothingToShareDesc": "Necesitas crear un hogar o una lista de la compra para poder invitar. Puedes invitar más tarde desde ajustes.",
+    "noInvitesYet": "Aún no hay invitaciones",
+    "noInvitesYetDesc": "Añade direcciones de email arriba para invitar a miembros",
+    "invitingPersonSingular": "Invitando a {{count}} persona:",
+    "invitingPersonPlural": "Invitando a {{count}} personas:",
+    "tip": "💡 Consejo: Siempre puedes invitar a más gente más tarde desde ajustes",
+    "sending": "Enviando invitaciones...",
+    "sendInviteSingular": "Enviar {{count}} invitación",
+    "sendInvitePlural": "Enviar {{count}} invitaciones",
+    "sendInviteZero": "Enviar invitaciones",
+    "invalidEmailTitle": "Email inválido",
+    "duplicateEmailTitle": "Email duplicado",
+    "duplicateEmailMessage": "Este email ya se ha añadido",
+    "cantInviteSelf": "No puedes invitarte a ti mismo",
+    "partialSuccessTitle": "Éxito parcial",
+    "partialSuccessMessage": "Algunas invitaciones pueden haber fallado. Puedes invitar a más miembros desde ajustes.",
+    "inviteHomeMessage": "¡{{name}} te ha invitado a unirte a su hogar para gestionar la despensa y las listas juntos!"
+  },
+  "inviteUser": {
+    "roleMemberLabel": "Miembro",
+    "roleMemberDescription": "Puede añadir y editar artículos de la despensa",
+    "roleAdminDescription": "Puede gestionar miembros y ajustes",
+    "roleGuestDescription": "Acceso solo de lectura al hogar",
+    "roleOwnerLabel": "Propietario",
+    "roleOwnerDescription": "Control total del hogar y de todos los miembros",
+    "ownerWarning": "⚠️ Los propietarios tienen control total",
+    "submit": "Enviar invitación",
+    "offlineError": "No se puede enviar la invitación sin conexión",
+    "sendFailed": "No se pudo enviar la invitación. Inténtalo de nuevo.",
+    "emailLabel": "Correo electrónico",
+    "emailPlaceholder": "Introduce un correo electrónico"
+  },
+  "invitationAcceptance": {
+    "invalidInvitation": "Invitación no válida",
+    "shoppingListAccepted": "¡Invitación a la lista de la compra aceptada!",
+    "homeAccepted": "¡Invitación al hogar aceptada!",
+    "unknownType": "Tipo de invitación desconocido",
+    "declineConfirm": "¿Seguro que quieres rechazar esta invitación?",
+    "notFound": "Invitación no encontrada o caducada",
+    "loadingDetails": "Cargando detalles de la invitación...",
+    "invitedHeading": "¡Has recibido una invitación!",
+    "homeInviteText": "{{inviter}} te ha invitado a unirte",
+    "listInviteText": "{{inviter}} te ha invitado a colaborar en",
+    "resourceHome": "Hogar",
+    "roleLabel": "Rol: {{role}}",
+    "descriptionLabel": "Descripción:",
+    "acceptFailed": "No se pudo aceptar la invitación. Inténtalo de nuevo.",
+    "declineFailed": "No se pudo rechazar la invitación. Inténtalo de nuevo."
+  },
+  "homeManagement": {
+    "title": "Mis Hogares",
+    "modeCreate": "Crear hogar",
+    "modeJoin": "Unirse con Código",
+    "join": "Unirse",
+    "errorNotMember": "No eres miembro de este hogar",
+    "errorNoInvitePermission": "No tienes permiso para invitar miembros a este hogar",
+    "accessibilityHint": "Toca para ver los detalles del hogar",
+    "accessibilityDefaultSuffix": ", hogar predeterminado",
+    "statsHome_one": "Hogar",
+    "statsHome_other": "Hogares",
+    "statsMember_one": "Miembro",
+    "statsMember_other": "Miembros",
+    "statsPantry_one": "Despensa",
+    "statsPantry_other": "Despensas",
+    "cardDefault": "Predeterminado",
+    "cardInvite": "Invitar",
+    "cardMembersSectionTitle": "Miembros"
+  },
+  "homeDetail": {
+    "shareLinkMessage": "Únete a mi hogar",
+    "title": "Detalles del Hogar",
+    "errorFailedToLoad": "No se pudieron cargar los detalles del hogar",
+    "sectionHomeInformation": "Información del Hogar",
+    "homeNameEmptyError": "El nombre del hogar no puede estar vacío",
+    "labelAllowJoinCode": "Permitir Código de Acceso",
+    "descriptionAllowJoinCode": "Permite a otros unirse a este hogar con un código",
+    "labelJoinCode": "Código de Acceso",
+    "rotateJoinCodeTitle": "Regenerar código de acceso",
+    "rotateJoinCodeMessage": "Esto invalida el código actual y cualquier enlace compartido. Los miembros actuales permanecen. ¿Continuar?",
+    "rotateJoinCodeConfirm": "Regenerar",
+    "makeOwner": "Hacer propietario",
+    "changeRole": "Cambiar rol",
+    "transferOwnershipTitle": "Transferir propiedad",
+    "transferOwnershipMessage": "¿Hacer a {{name}} propietario de este hogar? Pasarás a ser miembro normal y solo esa persona podrá devolverlo.",
+    "transferOwnershipConfirm": "Transferir",
+    "permissions": "Permisos",
+    "permViewPantry": "Puede ver la despensa",
+    "permEditPantry": "Puede editar la despensa",
+    "permInviteOthers": "Puede invitar a otros",
+    "permManageHome": "Puede gestionar el hogar",
+    "sectionMembersInvites": "Miembros e Invitaciones",
+    "youLabel": "Tú",
+    "storageLocationsSubtitle": "Gestiona dónde se guardan los artículos",
+    "leaveHomeDescription": "Salir de este hogar eliminará tu acceso a todas las despensas, listas de compras, planes de comida y plantillas compartidas.",
+    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar."
+  },
+  "joinHome": {
+    "homeFallback": "Hogar",
+    "enterCodeTitle": "Introduce el Código",
+    "enterCodeDescription": "Introduce el código de acceso que recibiste para unirte a un hogar.",
+    "findHome": "Buscar Hogar",
+    "notFoundDescription": "No pudimos encontrar un hogar para ese código. Puede que no sea válido o que el código se haya desactivado.",
+    "tryDifferentCode": "Probar otro código",
+    "invitedToJoin": "Te han invitado a unirte a",
+    "enterDifferentCode": "Introducir otro código",
+    "joinFailed": "No se pudo unir al hogar. El código puede no ser válido o haber caducado.",
+    "memberCount_one": "{{count}} miembro",
+    "memberCount_other": "{{count}} miembros",
+    "pantryCount_one": "{{count}} despensa",
+    "pantryCount_other": "{{count}} despensas"
+  },
+  "joinLink": {
+    "title": "Abrir enlace",
+    "invalidTitle": "Enlace no encontrado",
+    "invalidDescription": "Este enlace no es válido o ha caducado.",
+    "signInHome": "Inicia sesión para unirte a este hogar.",
+    "signInList": "Inicia sesión para unirte a esta lista.",
+    "staleHome": "Este enlace de invitación al hogar ha caducado. Pide un nuevo enlace para unirte.",
+    "staleList": "Este enlace de invitación a la lista ha caducado. Pide un nuevo enlace para unirte."
+  },
+  "roles": {
+    "owner": "Propietario",
+    "member": "Miembro"
+  },
+  "collaboratorRoles": {
+    "viewer": "Visor",
+    "shopper": "Comprador",
+    "contributor": "Colaborador",
+    "editor": "Editor",
+    "owner": "Propietario",
+    "permissions": {
+      "viewItems": "Ver artículos",
+      "viewHistory": "Ver historial",
+      "exportList": "Exportar lista",
+      "addItems": "Añadir artículos",
+      "editItems": "Editar artículos",
+      "removeItems": "Quitar artículos",
+      "markPurchased": "Marcar como comprado",
+      "inviteOthers": "Invitar a otros"
+    },
+    "descriptions": {
+      "viewer": "Puede ver la lista de compras",
+      "shopper": "Puede marcar artículos como comprados",
+      "contributor": "Puede añadir artículos y marcarlos como comprados",
+      "editor": "Puede añadir, editar y quitar artículos",
+      "admin": "Control total, incluida la invitación a otros",
+      "owner": "Control total sobre la lista de compras"
+    },
+    "permissionsTitle": "Permisos:"
+  },
+  "createHome": {
+    "allowJoinCode": "Permitir que otros se unan con un código",
+    "pantryFailedTitle": "Aviso",
+    "pantryFailedBody": "No se pudo crear la despensa, pero puedes crearla más tarde desde ajustes.",
+    "skipPantryTitle": "¿Omitir la creación de la despensa?",
+    "skipPantryBody": "Tienes un hogar pero ninguna despensa. Puedes crear una más tarde desde ajustes."
+  },
+  "homeMembers": {
+    "noMembers": "Sin miembros"
+  },
+  "collaborators": {
+    "editPermissions": "Editar permisos"
+  },
+  "home": {
+    "joinSuccessBody": "¡Te has unido al hogar!",
+    "invalidHomeId": "ID de hogar no válido",
+    "leaveBody": "¿Seguro que quieres abandonar \"{{name}}\"? Perderás acceso a este hogar y a sus despensas y listas de compras."
+  },
+  "homeRoles": {
+    "owner": "Propietario",
+    "member": "Miembro"
+  }
+}

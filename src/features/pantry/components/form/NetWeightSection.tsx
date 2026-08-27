@@ -5,7 +5,7 @@ import { Controller, type Control } from 'react-hook-form';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { FormInput } from '#components/molecules/FormInput';
-import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { FieldRow } from '#components/molecules/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
 import { localizeNumericHint } from '#/utils/formatters/number';

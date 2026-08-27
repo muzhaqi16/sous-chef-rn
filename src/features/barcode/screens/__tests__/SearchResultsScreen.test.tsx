@@ -93,7 +93,7 @@ jest.mock('#components/molecules/Header', () => ({
   },
 }));
 
-jest.mock('#components/organisms/AddItemForm/AddItemForm', () => {
+jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => {
   const { View } = require('react-native');
   return { __esModule: true, default: () => <View /> };
 });
