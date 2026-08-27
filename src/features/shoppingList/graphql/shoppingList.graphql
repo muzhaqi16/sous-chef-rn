@@ -177,6 +177,11 @@ query GetShoppingListItemsFiltered(
         cursor
         node {
           id
+          # Parent list — see ShoppingListItemDisplayFragment for why every
+          # writer of this entity has to carry it.
+          shoppingList {
+            id
+          }
           itemName
           quantity
           quantityInput

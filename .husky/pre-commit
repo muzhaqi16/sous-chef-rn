@@ -21,3 +21,12 @@ node scripts/check-codegen-orphans.mjs || exit 1
 node scripts/check-version-sync.mjs || exit 1
 node scripts/check-startup-origin.mjs || exit 1
 node scripts/check-launch-arg-auth.mjs || exit 1
+
+# The kit (src/components, src/hooks) is what a sibling app reuses wholesale,
+# and a feature is only liftable while every feature keeps the same shape. Both
+# drift one file at a time and neither is visible in a diff, so both are
+# ratchets against a recorded baseline — the baseline is the backlog, and a new
+# entry fails here rather than being discovered during an extraction.
+node scripts/check-layer-purity.mjs || exit 1
+node scripts/check-feature-shape.mjs || exit 1
+node scripts/check-dead-modules.mjs || exit 1

@@ -78,11 +78,6 @@ jest.mock('#utils/notifications/localNotificationHelper', () => ({
   showLocalNotification: jest.fn(),
 }));
 
-jest.mock('#store/slices/notificationSlice', () => ({
-  isNotificationPayload: (value: unknown): boolean =>
-    typeof value === 'object' && value !== null && !Array.isArray(value),
-}));
-
 jest.mock('#utils/subscriptionErrorHandler', () => ({
   handleSubscriptionError: jest.fn(),
   clearAllRetryStates: jest.fn(),

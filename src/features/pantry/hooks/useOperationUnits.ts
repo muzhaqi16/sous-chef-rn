@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
+import type { PickableUnit } from '#components/molecules/unitPickerTypes';
 import {
   ConsumptionUnitsForItemDocument,
   RestockUnitsForItemDocument,
@@ -22,15 +23,12 @@ export enum PantryOperation {
   Restock = 'RESTOCK',
 }
 
-export interface SelectedUnitInfo {
-  unitId: string;
-  unitSymbol: string;
-  unitName: string;
-  unitType: UnitType;
-  isTrackingUnit: boolean;
-  conversionRatio: number | null;
-  conversionConfidence: number | null;
-}
+/**
+ * What this hook selects, and exactly what `UnitPicker` accepts. The shape is
+ * the kit's — see `#components/molecules/unitPickerTypes` for why the
+ * dependency points that way.
+ */
+export type SelectedUnitInfo = PickableUnit;
 
 export interface RankedUnitInfo {
   unitId: string;

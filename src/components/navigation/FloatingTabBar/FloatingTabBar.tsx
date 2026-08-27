@@ -17,6 +17,7 @@ import {
   useOverlayBackdropPresence,
 } from '#components/providers/OverlayBackdropProvider';
 import { toastService } from '#/services/toastService';
+import { useTranslation } from '#/i18n';
 import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { TabItem } from './TabItem';
@@ -35,21 +36,13 @@ export const TAB_BAR_HEIGHT = 65;
 // refracts softly through it. Static — the bar is dark in both themes.
 const GLASS_TINT = 'rgba(28, 27, 32, 0.4)';
 
-// Each tab's own Main screen, for the reset-to-root on re-tapping the active
-// tab. A no-op while every tab stack holds a single screen, but it keeps the
-// standard platform gesture correct if a tab ever nests screens again.
-const TAB_MAIN_SCREENS: Record<string, string> = {
-  Pantry: 'PantryMain',
-  ShoppingList: 'ShoppingListMain',
-  Recipe: 'RecipeMain',
-  MealPlan: 'MealPlanMain',
-};
-
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   state,
   descriptors,
   navigation,
+  tabs,
 }) => {
+  const { t } = useTranslation();
   const {
     onAddPress,
     showAddButton,
@@ -76,8 +69,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const handleAddPress = () => {
     if (isAddButtonDisabled) {
       toastService.info(
-        addButtonDisabledMessage ||
-          "You don't have permission to perform this action",
+        addButtonDisabledMessage || t('errors.codes.forbidden'),
       );
       return;
     }
@@ -174,7 +166,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
     });
 
     if (!event.defaultPrevented) {
-      const mainScreen = TAB_MAIN_SCREENS[route.name];
+      const mainScreen = tabs[route.name]?.mainScreen;
 
       // Dispatched as a normal (not startTransition) update: as a low-priority
       // transition this update had no scheduling deadline, so a steady stream
@@ -228,6 +220,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
               isFocused={isFocused}
               options={options}
               onPress={() => handleTabPress(route, isFocused, index)}
+              icon={tabs[route.name]?.icon}
               showLabel={showNavigationLabels}
               activeTabIndex={activeTabIndex}
               tabIndex={index}
@@ -279,6 +272,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
               isFocused={isFocused}
               options={options}
               onPress={() => handleTabPress(route, isFocused, actualIndex)}
+              icon={tabs[route.name]?.icon}
               showLabel={showNavigationLabels}
               activeTabIndex={activeTabIndex}
               tabIndex={actualIndex}

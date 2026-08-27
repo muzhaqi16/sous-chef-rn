@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { CorrectWeightModal } from '../../../src/components/modals/CorrectWeightModal';
+import { CorrectWeightModal } from '#features/pantry/components/modals/CorrectWeightModal';
 import {
   renderWithApollo,
   seedCache,
@@ -42,7 +42,7 @@ jest.mock('../../../src/components/molecules/FormInput', () => ({
   },
 }));
 jest.mock(
-  '../../../src/components/molecules/AutocompleteField/UnitAutocompleteField',
+  '#features/catalog/ui/autocomplete/UnitAutocompleteField',
   () => ({
     UnitAutocompleteField: () => null,
   }),

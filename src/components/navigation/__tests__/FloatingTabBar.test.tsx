@@ -19,7 +19,7 @@ jest.mock('#context/TabBarActionsContext', () => ({
   })),
 }));
 
-jest.mock('#hooks/settings/useSettings', () => ({
+jest.mock('#hooks/settings/useShowTutorials', () => ({
   useShowNavigationLabels: jest.fn(() => true),
 }));
 

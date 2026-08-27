@@ -33,6 +33,7 @@ import {
   type BottomTabBarProps,
 } from '@react-navigation/bottom-tabs';
 import { FloatingTabBar, TAB_BAR_HEIGHT } from '../FloatingTabBar';
+import type { TabAppearance } from '../types';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -76,7 +77,7 @@ jest.mock('#services/haptic/HapticService', () => ({
 }));
 
 // Mock useShowNavigationLabels
-jest.mock('#hooks/settings/useSettings', () => ({
+jest.mock('#hooks/settings/useShowTutorials', () => ({
   useShowNavigationLabels: jest.fn(() => true),
 }));
 
@@ -138,6 +139,31 @@ jest.mock('../TabItem', () => {
 
 const DEFAULT_ROUTES = ['Pantry', 'ShoppingList', 'Recipe', 'MealPlan'];
 
+// A fixture rather than the real `TAB_APPEARANCE`: importing `#features/registry`
+// pulls in every tab's stack and therefore every screen in the app, which is
+// both slow and circular here. That the real map matches the manifests is
+// asserted in `src/navigation/stacks/__tests__/HomeTabs.test.tsx`, which
+// already mounts the navigator; this suite is about the bar's behaviour given
+// an appearance map, whatever it contains.
+const TAB_APPEARANCE: TabAppearance = {
+  Pantry: {
+    icon: { active: 'home', inactive: 'home-outline' },
+    mainScreen: 'PantryMain',
+  },
+  ShoppingList: {
+    icon: { active: 'list', inactive: 'list-outline' },
+    mainScreen: 'ShoppingListMain',
+  },
+  Recipe: {
+    icon: { active: 'book', inactive: 'book-outline' },
+    mainScreen: 'RecipeMain',
+  },
+  MealPlan: {
+    icon: { active: 'calendar', inactive: 'calendar-outline' },
+    mainScreen: 'MealPlanMain',
+  },
+};
+
 const Tab = createBottomTabNavigator();
 
 // Each screen renders identifiable text so navigation results are observable.
@@ -167,7 +193,7 @@ function renderTabBar(
         screenListeners={options.screenListeners}
         tabBar={props => {
           tabBarNavigation = props.navigation;
-          return <FloatingTabBar {...props} />;
+          return <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />;
         }}
       >
         {routeNames.map(name => (

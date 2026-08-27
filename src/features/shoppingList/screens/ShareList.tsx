@@ -19,7 +19,7 @@ import {
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import CollaboratorPermissionsBottomSheet, {
   CollaboratorPermissionsBottomSheetRef,
-} from '#/components/organisms/CollaboratorPermissionsBottomSheet';
+} from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import { useUser } from '#store/useAppStore';
 import { Button } from '#components/atoms/Button';
 import { OfflineGate } from '#components/atoms/OfflineGate';

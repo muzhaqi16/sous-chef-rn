@@ -18,18 +18,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { SPRING, TIMING } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { type UnitType } from '#/graphql/generated/schemaTypes';
-import type { SelectedUnitInfo } from '#features/pantry/hooks/useOperationUnits';
-
-/** Minimal interface for any unit renderable in the picker */
-export interface PickableUnit {
-  unitId: string;
-  unitName: string;
-  unitSymbol: string;
-  unitType: UnitType;
-  isTrackingUnit: boolean;
-  conversionRatio: number | null;
-  conversionConfidence: number | null;
-}
+import type { PickableUnit } from './unitPickerTypes';
 
 export interface PickableUnitGroup {
   type: UnitType;
@@ -41,7 +30,7 @@ interface UnitPickerProps {
   label: string;
   groups: PickableUnitGroup[];
   selectedUnitId: string | undefined;
-  onSelect: (unit: SelectedUnitInfo) => void;
+  onSelect: (unit: PickableUnit) => void;
   loading: boolean;
 }
 
@@ -90,7 +79,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
     !selectedUnit.isTrackingUnit;
 
   // Auto-collapse after selecting a different unit
-  const handleSelect = (unit: SelectedUnitInfo) => {
+  const handleSelect = (unit: PickableUnit) => {
     if (unit.unitId !== selectedUnitId) {
       onSelect(unit);
       setExpanded(false);

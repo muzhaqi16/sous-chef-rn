@@ -1,56 +1,43 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from 'react';
+import React, { createContext, useContext, type ReactNode } from 'react';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
 
-interface InviteActionsContextValue {
+interface InviteActions {
   handleAcceptInvite: (token: string) => void;
   handleDeclineInvite: (token: string, homeName: string) => void;
+}
+
+interface InviteActionsContextValue extends InviteActions {
   accepting: boolean;
 }
 
-const InviteActionsContext = createContext<InviteActionsContextValue | null>(
-  null,
+const actionsContext = createActionsContext<InviteActions>(
+  'InviteActionsProvider',
 );
+
+// `accepting` is reactive — cards must re-render when it flips — so it cannot
+// live in the stable actions value, whose whole purpose is never to change.
+const AcceptingContext = createContext<boolean | null>(null);
 
 export const InviteActionsProvider: React.FC<{
   children: ReactNode;
   handleAcceptInvite: (token: string) => void;
   handleDeclineInvite: (token: string, homeName: string) => void;
   accepting: boolean;
-}> = ({ children, handleAcceptInvite, handleDeclineInvite, accepting }) => {
-  const acceptRef = useRef(handleAcceptInvite);
-  useEffect(() => {
-    acceptRef.current = handleAcceptInvite;
-  });
-
-  const declineRef = useRef(handleDeclineInvite);
-  useEffect(() => {
-    declineRef.current = handleDeclineInvite;
-  });
-
-  const value: InviteActionsContextValue = {
-    handleAcceptInvite: token => acceptRef.current(token),
-    handleDeclineInvite: (token, homeName) =>
-      declineRef.current(token, homeName),
-    accepting,
-  };
-
-  return (
-    <InviteActionsContext.Provider value={value}>
+}> = ({ children, handleAcceptInvite, handleDeclineInvite, accepting }) => (
+  <actionsContext.Provider
+    actions={{ handleAcceptInvite, handleDeclineInvite }}
+  >
+    <AcceptingContext.Provider value={accepting}>
       {children}
-    </InviteActionsContext.Provider>
-  );
-};
+    </AcceptingContext.Provider>
+  </actionsContext.Provider>
+);
 
 export const useInviteActions = (): InviteActionsContextValue => {
-  const ctx = useContext(InviteActionsContext);
-  if (!ctx)
-    throw new Error(
-      'useInviteActions must be used within InviteActionsProvider',
-    );
-  return ctx;
+  const actions = actionsContext.useActions();
+  const accepting = useContext(AcceptingContext);
+  if (accepting === null) {
+    throw new Error('InviteActionsProvider is missing its provider');
+  }
+  return { ...actions, accepting };
 };

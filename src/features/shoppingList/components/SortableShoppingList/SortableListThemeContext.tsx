@@ -1,18 +1,12 @@
 import { createContext, useContext } from 'react';
+import type { RowThemeColors } from '#components/atoms/rowTheme';
 
 /**
- * Theme colors needed for shopping list items
- * Extracted once at list level, shared via context to all items
+ * Theme colors needed for shopping list items, extracted once at list level and
+ * shared via context. The shape is the kit's — the row components that consume
+ * it are kit components, so they cannot depend on this file.
  */
-export interface SortableListThemeColors {
-  primary: string;
-  textPrimary: string;
-  textSecondary: string;
-  surfaceVariant: string;
-  surface: string;
-  border: string;
-  screenWidth: number;
-}
+export type SortableListThemeColors = RowThemeColors;
 
 export const SortableListThemeContext =
   createContext<SortableListThemeColors | null>(null);

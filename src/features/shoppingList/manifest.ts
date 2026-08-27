@@ -5,8 +5,10 @@ export const shoppingListFeature: FeatureManifest = {
   id: 'shoppingList',
   tab: {
     screenName: 'ShoppingList',
-    title: 'navigation.tabs.shoppingList',
+    titleKey: 'navigation.tabs.shoppingList',
     order: 20,
+    icon: { active: 'list', inactive: 'list-outline' },
+    mainScreen: 'ShoppingListMain',
     stack: ShoppingListStack,
   },
 };

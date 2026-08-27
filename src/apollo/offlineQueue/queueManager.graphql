@@ -6,6 +6,10 @@
 # for any subsequent reader (list cells, item detail, etc.).
 fragment queueManager_syncItem on ShoppingListItem {
   id
+  # Carried so a replayed row stays readable by the NEXT replay's backfill.
+  shoppingList {
+    id
+  }
   itemName
   quantity
   quantityInput

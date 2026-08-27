@@ -6,7 +6,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#utils/iconUtils';
 import { StyleSheet } from 'react-native-unistyles';
 import { Badge } from '#components/atoms/Badge';
-import type { SortableListThemeColors } from '#features/shoppingList/components/SortableShoppingList/SortableListThemeContext';
+import type { RowThemeColors } from '#components/atoms/rowTheme';
 import { Text } from '#components/atoms/Text';
 
 interface ListItemProps {
@@ -31,7 +31,7 @@ interface ListItemProps {
   isPurchased?: boolean; // For strikethrough styling
   // Optional theme override forwarded to `withUnistyles(Icon)` via uniProps;
   // when null, the wrapped Icon falls back to its theme-reactive default.
-  themeColors?: SortableListThemeColors | null;
+  themeColors?: RowThemeColors | null;
 }
 
 const ListItemComponent: React.FC<ListItemProps> = ({

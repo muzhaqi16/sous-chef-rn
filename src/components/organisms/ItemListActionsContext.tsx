@@ -1,16 +1,25 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
-import type { SwipeableRef } from '#components/molecules/SwipeableItem/types';
+import type {
+  SwipeAction,
+  SwipeableRef,
+} from '#components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for item list items
  */
 export interface ItemListActions {
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onItemConsume?: (id: string) => void;
-  onItemWaste?: (id: string) => void;
-  onItemRestock?: (id: string) => void;
+  /**
+   * The swipe actions for one row, built by the caller.
+   *
+   * A factory rather than five named handlers (`onItemEdit`, `onItemConsume`,
+   * `onItemWaste`, …): those were one feature's verbs sitting in a shared list,
+   * and a list that wanted a sixth had to add it here.
+   */
+  itemSwipeActions?: (id: string) => {
+    left?: SwipeAction[];
+    right?: SwipeAction[];
+  };
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   testIDPrefix?: string;
 }

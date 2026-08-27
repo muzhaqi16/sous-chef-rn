@@ -1,21 +1,7 @@
-import React from 'react';
 import type { StaticParamList } from '@react-navigation/native';
-import {
-  createNativeStackNavigator,
-  createNativeStackScreen,
-} from '@react-navigation/native-stack';
-import { SearchResultsScreen } from '#features/barcode/screens/SearchResultsScreen';
-import {
-  topInsetScreenLayout,
-  noInsetScreenLayout,
-} from '#navigation/layouts/TopInsetLayout';
-
-// Lazy-load camera-heavy screens to defer vision-camera JS loading
-const BarcodeScannerScreen = React.lazy(() =>
-  import('#features/barcode/screens/BarcodeScannerScreen').then(m => ({
-    default: m.BarcodeScannerScreen,
-  })),
-);
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { barcodeScreens } from '#features/barcode/screens/registration';
+import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 
 export const BarcodeStack = createNativeStackNavigator({
   screenOptions: ({ theme }) => ({
@@ -31,17 +17,7 @@ export const BarcodeStack = createNativeStackNavigator({
   // full-bleed camera that hides the status bar (useHiddenStatusBar) while
   // focused.
   screenLayout: topInsetScreenLayout,
-  screens: {
-    BarcodeScanner: createNativeStackScreen({
-      screen: BarcodeScannerScreen,
-      linking: 'scan',
-      layout: noInsetScreenLayout,
-    }),
-    SearchResults: createNativeStackScreen({
-      screen: SearchResultsScreen,
-      linking: 'scan/result',
-    }),
-  },
+  screens: { ...barcodeScreens },
 });
 
 export type BarcodeStackParams = StaticParamList<typeof BarcodeStack>;

@@ -1,0 +1,181 @@
+{
+  "inviteMembers": {
+    "title": "Invite family & friends",
+    "subtitleHasNeither": "Create a home or shopping list first to invite others",
+    "subtitleHasBoth": "Invite others to your home and shopping lists (optional)",
+    "subtitleHasHome": "Invite others to your home (optional)",
+    "subtitleHasList": "Invite others to your shopping list (optional)",
+    "nothingToShare": "Nothing to share yet",
+    "nothingToShareDesc": "You need to create a home or shopping list first to invite others. You can invite people later from settings.",
+    "noInvitesYet": "No invitations added yet",
+    "noInvitesYetDesc": "Add email addresses above to invite members",
+    "invitingPersonSingular": "Inviting {{count}} person:",
+    "invitingPersonPlural": "Inviting {{count}} people:",
+    "tip": "💡 Tip: You can always invite more people later from your settings",
+    "sending": "Sending Invites...",
+    "sendInviteSingular": "Send {{count}} Invite",
+    "sendInvitePlural": "Send {{count}} Invites",
+    "sendInviteZero": "Send Invites",
+    "invalidEmailTitle": "Invalid Email",
+    "duplicateEmailTitle": "Duplicate Email",
+    "duplicateEmailMessage": "This email has already been added",
+    "cantInviteSelf": "You can't invite yourself",
+    "partialSuccessTitle": "Partial Success",
+    "partialSuccessMessage": "Some invitations may have failed. You can invite more members later from settings.",
+    "inviteHomeMessage": "{{name}} has invited you to join their home for managing pantry and shopping lists together!"
+  },
+  "inviteUser": {
+    "roleMemberLabel": "Member",
+    "roleMemberDescription": "Can add and edit items in pantry",
+    "roleAdminDescription": "Can manage members and settings",
+    "roleGuestDescription": "View-only access to home",
+    "roleOwnerLabel": "Owner",
+    "roleOwnerDescription": "Full control over home and all members",
+    "ownerWarning": "⚠️ Owners have full control",
+    "submit": "Send Invite",
+    "offlineError": "Cannot send invite while offline",
+    "sendFailed": "Failed to send invite. Please try again.",
+    "emailLabel": "Email Address",
+    "emailPlaceholder": "Enter email address"
+  },
+  "invitationAcceptance": {
+    "invalidInvitation": "Invalid invitation",
+    "shoppingListAccepted": "Shopping list invitation accepted!",
+    "homeAccepted": "Home invitation accepted!",
+    "unknownType": "Unknown invitation type",
+    "declineConfirm": "Are you sure you want to decline this invitation?",
+    "notFound": "Invitation not found or expired",
+    "loadingDetails": "Loading invitation details...",
+    "invitedHeading": "You've been invited!",
+    "homeInviteText": "{{inviter}} has invited you to join",
+    "listInviteText": "{{inviter}} has invited you to collaborate on",
+    "resourceHome": "Home",
+    "roleLabel": "Role: {{role}}",
+    "descriptionLabel": "Description:",
+    "acceptFailed": "Failed to accept invitation. Please try again.",
+    "declineFailed": "Failed to decline invitation. Please try again."
+  },
+  "homeManagement": {
+    "title": "My Homes",
+    "modeCreate": "Create Home",
+    "modeJoin": "Join with Code",
+    "join": "Join",
+    "errorNotMember": "You are not a member of this home",
+    "errorNoInvitePermission": "You do not have permission to invite members to this home",
+    "accessibilityHint": "Tap to view home details",
+    "accessibilityDefaultSuffix": ", default home",
+    "statsHome_one": "Home",
+    "statsHome_other": "Homes",
+    "statsMember_one": "Member",
+    "statsMember_other": "Members",
+    "statsPantry_one": "Pantry",
+    "statsPantry_other": "Pantries",
+    "cardDefault": "Default",
+    "cardInvite": "Invite",
+    "cardMembersSectionTitle": "Members"
+  },
+  "homeDetail": {
+    "shareLinkMessage": "Join my home",
+    "title": "Home Details",
+    "errorFailedToLoad": "Failed to load home details",
+    "sectionHomeInformation": "Home Information",
+    "homeNameEmptyError": "Home name cannot be empty",
+    "labelAllowJoinCode": "Allow Join Code",
+    "descriptionAllowJoinCode": "Let others join this home using a code",
+    "labelJoinCode": "Join Code",
+    "rotateJoinCodeTitle": "Regenerate Join Code",
+    "rotateJoinCodeMessage": "This invalidates the current code and any shared link. Members already in the home stay. Continue?",
+    "rotateJoinCodeConfirm": "Regenerate",
+    "makeOwner": "Make Owner",
+    "changeRole": "Change Role",
+    "transferOwnershipTitle": "Transfer Ownership",
+    "transferOwnershipMessage": "Make {{name}} the owner of this home? You'll become a regular member and only they can transfer it back.",
+    "transferOwnershipConfirm": "Transfer",
+    "permissions": "Permissions",
+    "permViewPantry": "Can view pantry",
+    "permEditPantry": "Can edit pantry",
+    "permInviteOthers": "Can invite others",
+    "permManageHome": "Can manage home",
+    "sectionMembersInvites": "Members & Invites",
+    "youLabel": "You",
+    "storageLocationsSubtitle": "Manage where items are stored",
+    "leaveHomeDescription": "Leaving this home will remove your access to all shared pantries, shopping lists, meal plans, and templates.",
+    "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home."
+  },
+  "joinHome": {
+    "homeFallback": "Home",
+    "enterCodeTitle": "Enter Join Code",
+    "enterCodeDescription": "Enter the join code you received to join a home.",
+    "findHome": "Find Home",
+    "notFoundDescription": "We couldn't find a home for that code. It may be invalid or the code may have been turned off.",
+    "tryDifferentCode": "Try a different code",
+    "invitedToJoin": "You've been invited to join",
+    "enterDifferentCode": "Enter a different code",
+    "joinFailed": "Failed to join home. The code may be invalid or expired.",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "pantryCount_one": "{{count}} pantry",
+    "pantryCount_other": "{{count}} pantries"
+  },
+  "joinLink": {
+    "title": "Open link",
+    "invalidTitle": "Link not found",
+    "invalidDescription": "This link is invalid or has expired.",
+    "signInHome": "Sign in to join this home.",
+    "signInList": "Sign in to join this list.",
+    "staleHome": "This home invite link expired. Ask for a new link to join.",
+    "staleList": "This list invite link expired. Ask for a new link to join."
+  },
+  "roles": {
+    "owner": "Owner",
+    "member": "Member"
+  },
+  "collaboratorRoles": {
+    "viewer": "Viewer",
+    "shopper": "Shopper",
+    "contributor": "Contributor",
+    "editor": "Editor",
+    "owner": "Owner",
+    "permissions": {
+      "viewItems": "View items",
+      "viewHistory": "View history",
+      "exportList": "Export list",
+      "addItems": "Add items",
+      "editItems": "Edit items",
+      "removeItems": "Remove items",
+      "markPurchased": "Mark purchased",
+      "inviteOthers": "Invite others"
+    },
+    "descriptions": {
+      "viewer": "Can view the shopping list",
+      "shopper": "Can mark items as purchased",
+      "contributor": "Can add items and mark as purchased",
+      "editor": "Can add, edit, and remove items",
+      "admin": "Full control including inviting others",
+      "owner": "Full control over the shopping list"
+    },
+    "permissionsTitle": "Permissions:"
+  },
+  "createHome": {
+    "allowJoinCode": "Allow others to join with a code",
+    "pantryFailedTitle": "Notice",
+    "pantryFailedBody": "Pantry creation failed but you can create it later from settings.",
+    "skipPantryTitle": "Skip Pantry Creation?",
+    "skipPantryBody": "You have a home but no pantry. You can create one later from settings."
+  },
+  "homeMembers": {
+    "noMembers": "No members"
+  },
+  "collaborators": {
+    "editPermissions": "Edit Permissions"
+  },
+  "home": {
+    "joinSuccessBody": "You have successfully joined the home!",
+    "invalidHomeId": "Invalid home ID",
+    "leaveBody": "Are you sure you want to leave \"{{name}}\"? You will lose access to this home and its pantries and shopping lists."
+  },
+  "homeRoles": {
+    "owner": "Owner",
+    "member": "Member"
+  }
+}

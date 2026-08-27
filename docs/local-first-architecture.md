@@ -190,6 +190,17 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 
 ### Two-tier replay (`convertToSyncMutation`)
 
+`src/apollo/offlineQueue/convertToSyncMutation.ts` is the dispatch only: it composes one op-name → builder
+table per participating feature (`src/features/<name>/offline/syncBuilders.ts`) and picks the builder for a
+queued op. The builders live with the feature because only the feature knows what its mutation's input
+means, and each reads the Apollo cache directly — the fragment that backfills a field the queued input omits
+(`PantryItem.pantryId`, a shopping row's `@oneOf` catalog ref) sits beside the builder that needs it.
+`src/apollo/offlineQueue/syncBuilder.ts` holds the contract both sides share: `SyncBuilder`,
+`SyncConversion`, the loose `QueuedInput` shape, and the `getQueuedInput` / `getClientId` helpers. The
+kernel's imports are static, not registered lazily, because the queue must know every replayable op before
+the first mutation. `offline/` is public to the queue and closed to other features (an
+`import/no-restricted-paths` zone).
+
 The `clientId` for replay is the client-minted cuid, read off the queued input (`input.id`, or `itemId`
 for qty/move). Replay is single-arg with `clientId` **inside** `input` (the 1-arg sync API).
 
@@ -210,11 +221,11 @@ materialized item), and the batch is N items; their server create path is itself
 re-sending the original is safe.
 
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`) — passed
-through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`. `convertToSyncMutation`
+through directly, no `unitId` wrapper. Pantry quantity is a plain `Float`. The shopping builder
 normalizes the **unit** into the `unit: UnitSpecInput` object the `Sync*` inputs expect — folding a flat
 `unitId`/`unitName` (sent by `UpdateShoppingListItem(Quantity)`) into it so an offline unit change isn't
-dropped on replay, and folding `UpdatePantryItem`'s flat `itemName` into `item: { name }` while backfilling
-the required `pantryId` from cache.
+dropped on replay — and the pantry builder folds `UpdatePantryItem`'s flat `itemName` into `item: { name }`
+while backfilling the required `pantryId` from cache.
 
 ## 6. Persistence — two mechanisms
 
@@ -453,7 +464,9 @@ parent exists — ordering is correct by construction, no special-casing.
 | Client id generator | `src/utils/generateEntityId.ts` |
 | Queue intercept | `src/apollo/offlineQueue/queueLink.ts` |
 | Queue store (MMKV) | `src/apollo/offlineQueue/queueStore.ts` |
-| Replay + `convertToSyncMutation` | `src/apollo/offlineQueue/queueManager.ts` |
+| Replay | `src/apollo/offlineQueue/queueManager.ts` |
+| Sync-builder dispatch + contract | `src/apollo/offlineQueue/convertToSyncMutation.ts`, `src/apollo/offlineQueue/syncBuilder.ts` |
+| Sync builders (per feature) | `src/features/pantry/offline/syncBuilders.ts`, `src/features/shoppingList/offline/syncBuilders.ts` |
 | Replay payload classification + retry error policy | `src/apollo/offlineQueue/queueErrorPolicy.ts` |
 | Pending-changes count (banner) | `src/hooks/offline/usePendingMutationCount.ts` |
 | Queue triggers / failure toast | `src/hooks/app/useOnlineQueueSync.ts` |

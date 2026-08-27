@@ -1,5 +1,5 @@
 import { useConversionPreview } from './useConversionPreview';
-import type { PantryActionSharedState } from '#components/modals/PantryActionModal';
+import type { PantryActionSharedState } from '#features/pantry/components/modals/PantryActionModal';
 
 interface QuantityFeedbackResult {
   /** Conversion preview (text, loading state, raw converted value) */

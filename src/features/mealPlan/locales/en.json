@@ -1,0 +1,203 @@
+{
+  "mealPlan": {
+    "name": "Name",
+    "namePlaceholder": "e.g., Week 8 Plan",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional description...",
+    "planType": "Plan Type",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "budgetAmount": "Budget (optional)",
+    "budgetPlaceholder": "No budget",
+    "shareWith": "Share With",
+    "personal": "Personal",
+    "orCreateFromTemplate": "Or create from a template",
+    "nameRequiredTitle": "Name Required",
+    "nameRequiredMessage": "Please enter a name for your meal plan.",
+    "startDateRequiredTitle": "Start Date Required",
+    "startDateRequiredMessage": "Please select a start date.",
+    "failedToCreate": "Failed to create meal plan."
+  },
+  "addMealSheet": {
+    "searchPlaceholder": "Search recipes or add a custom meal...",
+    "addCustom": "Add \"{{query}}\" as custom meal",
+    "yourRecipes": "Your Recipes",
+    "servings": "{{count}} servings",
+    "noSavedRecipes": "No saved recipes yet",
+    "noResults": "No recipes match your search",
+    "addRecipeFailed": "Failed to add recipe. Please try again.",
+    "dietVegan": "Vegan",
+    "dietVegetarian": "Vegetarian",
+    "dietGlutenFree": "GF",
+    "dietDairyFree": "DF"
+  },
+  "emptyDay": {
+    "title": "No meals planned"
+  },
+  "mealPlanEmpty": {
+    "title": "Plan Your Meals",
+    "subtitle": "Create a meal plan to organize your weekly or monthly meals, track nutrition, and generate shopping lists.",
+    "createFirst": "Create Your First Meal Plan",
+    "createFromTemplate": "Create from Template"
+  },
+  "calendarToggle": {
+    "collapseToWeek": "Collapse to week view",
+    "expandToMonth": "Expand to month view"
+  },
+  "mealPlanItem": {
+    "unnamedMeal": "Unnamed meal",
+    "pantryUpdated": "Pantry updated",
+    "servings": "{{count}} servings",
+    "calories": "{{count}} cal"
+  },
+  "mealPlanSettings": {
+    "deleteTitle": "Delete Meal Plan",
+    "planSettings": "Plan Settings",
+    "sharedWith": "Shared with {{name}}",
+    "createdBy": "Created by {{name}}",
+    "actionsLabel": "Actions",
+    "generateShoppingListDesc": "Create a list from this plan's recipes",
+    "duplicatePlanDesc": "Copy this plan to a new date range",
+    "viewNutrition": "View Nutrition",
+    "hideNutrition": "Hide Nutrition",
+    "viewNutritionDesc": "Calories, macros, and goal progress",
+    "budgetSpent": "Spent {{spent}} of {{budget}}",
+    "spentAmount": "Spent {{spent}}",
+    "nutritionTrackingOn": "Nutrition tracking on",
+    "trackNutritionDesc": "Compare this plan against your dietary profile",
+    "generatedLists": "Generated Lists",
+    "deletePlanLabel": "Delete Plan",
+    "deletingLabel": "Deleting...",
+    "deletePlanDesc": "Permanently remove this meal plan"
+  },
+  "addToMealPlan": {
+    "title": "Add to Meal Plan",
+    "dateLabel": "Date"
+  },
+  "duplicatePlan": {
+    "duplicating": "Duplicating...",
+    "duplicate": "Duplicate",
+    "copySuffix": "{{name}} (Copy)",
+    "currentPlanLabel": "Current Plan",
+    "newNameLabel": "New Plan Name",
+    "newNamePlaceholder": "Enter plan name",
+    "infoText": "All meals will be copied to the new date range with the same structure.",
+    "endDateSubtext": "to {{date}}"
+  },
+  "generateShoppingList": {
+    "generating": "Generating...",
+    "generate": "Generate",
+    "sharedWithHome": "The shopping list will be shared with {{name}}",
+    "checkPantry": "Check pantry availability",
+    "checkPantryDesc": "Deduct items you already have in your pantry",
+    "destination": "Destination",
+    "newList": "New List",
+    "existingList": "Existing List",
+    "listNameLabel": "List Name (optional)",
+    "listNamePlaceholder": "Defaults to meal plan name",
+    "selectListLabel": "Select a list",
+    "noLists": "No shopping lists found",
+    "generatingMessage": "Generating shopping list...",
+    "itemsCount": "{{count}} items",
+    "readyNothingToAdd": "\"{{name}}\" is ready — nothing to add.",
+    "createdSuccess_one": "Shopping list \"{{name}}\" created with {{count}} item{{shared}}",
+    "createdSuccess_other": "Shopping list \"{{name}}\" created with {{count}} items{{shared}}",
+    "sharedSuffix": " (shared with {{homeName}})",
+    "generateFailed": "Failed to generate shopping list"
+  },
+  "saveAsTemplate": {
+    "sharedWithHome": "This template will be shared with {{name}}",
+    "templateNamePlaceholder": "e.g., My Weekly Dinner Plan",
+    "templateNameSuffix": "{{name}} Template",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What's special about this template?",
+    "tagsLabel": "Tags (comma-separated)",
+    "tagsPlaceholder": "e.g., healthy, quick, budget",
+    "categoryWeekly": "Weekly",
+    "categoryMonthly": "Monthly",
+    "categoryHoliday": "Holiday",
+    "categorySpecialDiet": "Special Diet",
+    "categoryCustom": "Custom"
+  },
+  "templateBrowser": {
+    "title": "Browse Templates",
+    "searchPlaceholder": "Search templates...",
+    "noTemplates": "No templates found",
+    "categoryAll": "All",
+    "offline": "Templates aren't available offline. Reconnect to browse them."
+  },
+  "templateCard": {
+    "usedTimes": "Used {{count}}x",
+    "durationDays": "{{count}} days",
+    "servings": "{{count}} servings"
+  },
+  "templatePreview": {
+    "configuration": "Configuration",
+    "planNameLabel": "Plan Name (optional)",
+    "preview": "Preview",
+    "emptyPreview": "No meals in this template",
+    "day": "Day {{day}}",
+    "customMeal": "Custom",
+    "metaLine": "{{days}} days · {{servings}} servings"
+  },
+  "mealPlanMain": {
+    "label": "Plan your meals",
+    "generateShoppingListLabel": "Generate shopping list",
+    "saveAsTemplateLabel": "Save as template",
+    "planSettingsLabel": "Plan settings",
+    "deleteMealPlanFailed": "Failed to delete meal plan",
+    "mealPlanDeleted": "Meal plan deleted"
+  },
+  "mealTemplateBuilder": {
+    "namePlaceholder": "e.g. Weeknight Dinners",
+    "description": "Description",
+    "descriptionPlaceholder": "Optional notes",
+    "tags": "Tags",
+    "mealsSection": "Meals",
+    "noMeals": "No meals added yet",
+    "mealName": "Meal",
+    "mealNamePlaceholder": "e.g. Spaghetti Bolognese",
+    "dayNumber": "Day",
+    "addMeal": "Add Meal",
+    "updateMeal": "Update Meal",
+    "itemSummary": "Day {{day}} · {{meal}} · {{servings}} servings",
+    "nameRequiredTitle": "Name required",
+    "nameRequiredMessage": "Give your template a name.",
+    "itemNameRequiredTitle": "Meal name required",
+    "itemNameRequiredMessage": "Give the meal a name.",
+    "failedToCreate": "Failed to create template",
+    "failedToSave": "Failed to save template",
+    "failedToAddItem": "Failed to add meal",
+    "failedToSaveItem": "Failed to save meal",
+    "failedToRemoveItem": "Failed to remove meal"
+  },
+  "mealPlanSelector": {
+    "title": "Select Meal Plan",
+    "emptyMessage": "No meal plans available",
+    "createFromTemplate": "Template",
+    "searchPlaceholder": "Search plans",
+    "filterActive": "Active",
+    "personalSubtitle": "Personal"
+  },
+  "macroTargets": {
+    "caloriesRange": "Calories must be between {{min}} and {{max}}",
+    "proteinRange": "Protein must be between {{min}}g and {{max}}g",
+    "carbsRange": "Carbs must be between {{min}}g and {{max}}g",
+    "fatRange": "Fat must be between {{min}}g and {{max}}g",
+    "updateFailed": "Failed to update macro targets",
+    "title": "Macro Targets",
+    "subtitle": "Set your daily nutrition goals (optional)",
+    "dailyCalories": "Daily Calories (kcal)",
+    "caloriesPlaceholder": "e.g., 2000",
+    "proteinPlaceholder": "e.g., 150",
+    "carbsPlaceholder": "e.g., 200",
+    "fat": "Fat (g)",
+    "fatPlaceholder": "e.g., 70"
+  },
+  "mealTemplateActions": {
+    "planCreated": "Meal plan created from template!",
+    "savedAsTemplate": "Meal plan saved as template!",
+    "templateDeleted": "Template deleted",
+    "templateDuplicated": "Template duplicated!"
+  }
+}

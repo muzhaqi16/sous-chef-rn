@@ -13,12 +13,20 @@ import {
 import { jwtDecode } from 'jwt-decode';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
+import { appConfig } from '#/config/appConfig';
 
-const DEFAULT_SERVICE = 'dev.souschef.app.credentials';
-const CREDENTIALS_INDICATOR_SERVICE = 'dev.souschef.app.credentials.indicator';
-const TEMP_REGISTRATION_SERVICE = 'dev.souschef.app.temp.registration';
-const SESSION_TOKENS_SERVICE = 'dev.souschef.app.session.tokens';
-const LAST_BIOMETRIC_EMAIL_KEY = 'souschefrn-email';
+// Derived from `appConfig.identity.keychainNamespace` so a fork sets it once,
+// in one file. The values must stay byte-identical for THIS app: the OS keychain
+// is keyed by service name, so a changed string makes every stored credential
+// unreachable and signs everyone out. `__tests__/keychainServiceNames.test.ts`
+// pins them.
+const NAMESPACE = appConfig.identity.keychainNamespace;
+export const DEFAULT_SERVICE = `${NAMESPACE}.credentials`;
+export const CREDENTIALS_INDICATOR_SERVICE = `${NAMESPACE}.credentials.indicator`;
+export const TEMP_REGISTRATION_SERVICE = `${NAMESPACE}.temp.registration`;
+export const SESSION_TOKENS_SERVICE = `${NAMESPACE}.session.tokens`;
+export const LAST_BIOMETRIC_EMAIL_KEY =
+  appConfig.identity.lastBiometricEmailKey;
 
 // Simple queue to prevent concurrent keychain access on Android
 let isOperationInProgress = false;

@@ -1,6 +1,5 @@
-import { createContext, useContext, useRef, useEffect, useState } from 'react';
-import type React from 'react';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
 
 /**
  * Action callbacks for shopping list item interactions.
@@ -23,58 +22,9 @@ export interface ShoppingListTabsActions {
   onSwipeableClose?: () => void;
 }
 
-const ShoppingListTabsActionsContext =
-  createContext<ShoppingListTabsActions | null>(null);
+const context = createActionsContext<ShoppingListTabsActions>(
+  'ShoppingListTabsActionsProvider',
+);
 
-interface ProviderProps {
-  children: React.ReactNode;
-  actions: ShoppingListTabsActions;
-}
-
-export const ShoppingListTabsActionsProvider: React.FC<ProviderProps> = ({
-  children,
-  actions,
-}) => {
-  // Store latest actions in ref — updated via effect, doesn't trigger re-renders
-  const actionsRef = useRef(actions);
-  useEffect(() => {
-    actionsRef.current = actions;
-  });
-
-  // One-time stable callbacks that delegate to ref
-  // Uses useState initializer (not useMemo, which is banned by ESLint)
-  const [stableActions] = useState<ShoppingListTabsActions>(() => ({
-    onItemPress: (id: string) => actionsRef.current.onItemPress(id),
-    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
-    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
-    onTogglePurchase: (id: string, opts?: { withDetails?: boolean }) =>
-      actionsRef.current.onTogglePurchase?.(id, opts),
-    onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
-    onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
-    onSortOrderUpdate: (
-      itemId: string,
-      afterItemId: string | null,
-      beforeItemId: string | null,
-    ) =>
-      actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-    onSwipeableWillOpen: (ref: SwipeableRef) =>
-      actionsRef.current.onSwipeableWillOpen?.(ref),
-    onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
-  }));
-
-  return (
-    <ShoppingListTabsActionsContext.Provider value={stableActions}>
-      {children}
-    </ShoppingListTabsActionsContext.Provider>
-  );
-};
-
-export function useShoppingListTabsActions(): ShoppingListTabsActions {
-  const ctx = useContext(ShoppingListTabsActionsContext);
-  if (!ctx) {
-    throw new Error(
-      'useShoppingListTabsActions must be used within ShoppingListTabsActionsProvider',
-    );
-  }
-  return ctx;
-}
+export const ShoppingListTabsActionsProvider = context.Provider;
+export const useShoppingListTabsActions = context.useActions;

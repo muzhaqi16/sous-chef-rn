@@ -1,0 +1,25 @@
+{
+  "barcodeScanner": {
+    "closeScanner": "Mbyll skanerin",
+    "flashOn": "Ndiz blicin",
+    "flashOff": "Fik blicin"
+  },
+  "barcodeInfo": {
+    "format": "Formati"
+  },
+  "scanner": {
+    "noHomeTitle": "Nuk është zgjedhur shtëpi",
+    "noHomeBody": "Duhet të jesh anëtar i një shtëpie për të skanuar artikuj.",
+    "manageHomes": "Menaxho shtëpitë"
+  },
+  "barcode": {
+    "itemNotFound": "Artikulli nuk u gjet",
+    "noItemWithCode": "Nuk u gjet asnjë artikull me barkodin: {{barcode}}",
+    "addItemHint": "Mund ta shtosh këtë artikull në bazën e të dhënave duke trokitur butonin më poshtë.",
+    "newVersion": "Version i ri",
+    "barcodeValue": "Barkodi: {{barcode}}",
+    "formatValue": "Formati: {{format}}",
+    "upc": "UPC/Barkod",
+    "added": "U shtua"
+  }
+}

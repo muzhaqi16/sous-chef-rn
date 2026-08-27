@@ -9,7 +9,7 @@ import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { useNavigation } from '@react-navigation/native';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
-import { SettingSection } from '#components/settings/SettingSection';
+import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import {
   useNotificationSettings,
@@ -436,11 +436,11 @@ export const NotificationSettingsScreen: React.FC = () => {
         />
       )}
 
-      <SettingSection title={t('notifications.general')}>
+      <SettingsSection variant="inset" title={t('notifications.general')}>
         {renderSettings(CHANNEL_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.pantry')}>
+      <SettingsSection variant="inset" title={t('notifications.pantry')}>
         <SettingSwitch
           title={t('notifications.expirationAlerts')}
           description={t('notifications.expirationAlertsDesc')}
@@ -507,25 +507,31 @@ export const NotificationSettingsScreen: React.FC = () => {
         )}
 
         {renderSettings(PANTRY_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.shopping')}>
+      <SettingsSection variant="inset" title={t('notifications.shopping')}>
         {renderSettings(SHOPPING_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.social')}>
+      <SettingsSection variant="inset" title={t('notifications.social')}>
         {renderSettings(SOCIAL_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.recipesMealPlanning')}>
+      <SettingsSection
+        variant="inset"
+        title={t('notifications.recipesMealPlanning')}
+      >
         {renderSettings(RECIPE_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.digestsReports')}>
+      <SettingsSection
+        variant="inset"
+        title={t('notifications.digestsReports')}
+      >
         {renderSettings(DIGEST_SETTINGS, settings, handleSettingChange, t)}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.quietHours')}>
+      <SettingsSection variant="inset" title={t('notifications.quietHours')}>
         {renderSettings(QUIET_HOURS_SETTINGS, settings, handleSettingChange, t)}
         {!!settings.quietHoursEnabled && (
           <View style={styles.quietHoursInfo}>
@@ -540,9 +546,9 @@ export const NotificationSettingsScreen: React.FC = () => {
             </Text>
           </View>
         )}
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('notifications.testSection')}>
+      <SettingsSection variant="inset" title={t('notifications.testSection')}>
         <SettingSwitch
           title={t('notifications.sendTestNotification')}
           description={t('notifications.sendTestNotificationDesc')}
@@ -550,9 +556,9 @@ export const NotificationSettingsScreen: React.FC = () => {
           onValueChange={handleSendTest}
           loading={updating === 'test'}
         />
-      </SettingSection>
+      </SettingsSection>
 
-      <SettingSection title={t('settings.resetSection')}>
+      <SettingsSection variant="inset" title={t('settings.resetSection')}>
         <SettingSwitch
           title={t('settings.resetToDefaults')}
           description={t('notifications.resetToDefaultsDesc')}
@@ -560,7 +566,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           onValueChange={handleResetToDefaults}
           loading={updating === 'reset'}
         />
-      </SettingSection>
+      </SettingsSection>
     </ProfileScreenWrapper>
   );
 };

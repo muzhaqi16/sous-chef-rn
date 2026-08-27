@@ -1,0 +1,25 @@
+{
+  "barcodeScanner": {
+    "closeScanner": "Close scanner",
+    "flashOn": "Turn flash on",
+    "flashOff": "Turn flash off"
+  },
+  "barcodeInfo": {
+    "format": "Format"
+  },
+  "scanner": {
+    "noHomeTitle": "No Home Selected",
+    "noHomeBody": "You need to be a member of a home to scan items.",
+    "manageHomes": "Manage Homes"
+  },
+  "barcode": {
+    "itemNotFound": "Item Not Found",
+    "noItemWithCode": "No item found with barcode: {{barcode}}",
+    "addItemHint": "You can add this item to the database by tapping the button below.",
+    "newVersion": "New Version",
+    "barcodeValue": "Barcode: {{barcode}}",
+    "formatValue": "Format: {{format}}",
+    "upc": "UPC/Barcode",
+    "added": "Added"
+  }
+}

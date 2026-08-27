@@ -8,7 +8,7 @@ import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabBar } from '#features/shoppingList/components/ShoppingListTabs/FilterTabBar';
 import { ShoppingListErrorBoundary } from '#/components/providers/ScreenErrorBoundary';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { ShoppingListSkeleton } from '#components/atoms/Skeleton/ShoppingListSkeleton';
+import { ShoppingListSkeleton } from '#features/shoppingList/components/skeletons/ShoppingListSkeleton';
 import { TabMainScreen } from '#components/templates/TabMainScreen';
 
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';

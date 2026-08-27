@@ -16,11 +16,11 @@ import { ItemSuggestion, CategoryType } from '#/graphql/generated/schemaTypes';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
 import { FormModal } from '#components/organisms/FormModal';
 import { FormInput } from '#components/molecules/FormInput';
-import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
-import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
-import { CategoryAutocompleteField } from '#components/molecules/AutocompleteField/CategoryAutocompleteField';
-import { BrandAutocompleteField } from '#components/molecules/AutocompleteField/BrandAutocompleteField';
-import { StoreAutocompleteField } from '#components/molecules/AutocompleteField/StoreAutocompleteField';
+import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
+import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
+import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/CategoryAutocompleteField';
+import { BrandAutocompleteField } from '#features/catalog/ui/autocomplete/BrandAutocompleteField';
+import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
@@ -268,6 +268,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         const netWeightValue = parseNetWeightInput();
         const brandName = brand.trim();
         const optimisticItem = createOptimisticShoppingListItem(id, {
+          shoppingListId: listId,
           itemName,
           quantity: parseDecimalInput(quantityInput) || 1,
           quantityInput,

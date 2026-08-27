@@ -37,15 +37,7 @@ import {
   PreferencesState,
 } from './slices/preferencesSlice';
 import { FontScalePreference } from './slices/preferenceTypes';
-import {
-  BarcodeScannerState,
-  createBarcodeScannerSlice,
-} from './slices/barcodeScannerSlice';
 import { createAppSlice, AppState } from './slices/appSlice';
-import {
-  createNotificationSlice,
-  NotificationState,
-} from './slices/notificationSlice';
 import { createUISlice, UIState } from './slices/uiSlice';
 import {
   createResetManager,
@@ -264,8 +256,6 @@ export type RootState = AuthState &
   PreferencesState &
   AppState &
   NavigationState &
-  NotificationState &
-  BarcodeScannerState &
   UIState &
   TelemetryState &
   NetworkState &
@@ -327,11 +317,6 @@ const PERSISTED_KEYS = classifyKeys(
   'selectedMealPlanId',
   'navigationState',
   'userNavigationStates',
-
-  // Notification inbox
-
-  // Scanner history (the live scan/search state is transient)
-  'recentlyScanned',
 
   // Offline reference caches + freshness stamps (autocomplete warmth)
   'cachedUnits',
@@ -416,8 +401,6 @@ export const useStore = create<RootState>()(
             ...createPreferencesSlice(set, get, store),
             ...createAppSlice(set, get, store),
             ...createNavigationSlice(set, get, store),
-            ...createBarcodeScannerSlice(set, get, store),
-            ...createNotificationSlice(set, get, store),
             ...createUISlice(set, get, store),
             ...createTelemetrySlice(set, get, store),
             ...createNetworkSlice(set, get, store),
@@ -432,7 +415,7 @@ export const useStore = create<RootState>()(
       ),
       {
         name: STORAGE_KEY,
-        version: 13,
+        version: 14,
         storage: createJSONStorage(() => zustandStorage),
         // Do store migrations here
         migrate: (persistedState: unknown, version: number) => {
@@ -464,18 +447,22 @@ export const useStore = create<RootState>()(
             }
           }
 
-          // Migration → v13: partialize was inverted from a blocklist to the
-          // PERSISTED_KEYS allowlist after derived/session state kept leaking
-          // into the blob and overriding fresh defaults on hydration — the
-          // bug struck three times: `apiReachable` froze the app in a
-          // permanent "server unreachable" state (v11), the env-derived
-          // telemetry flags baked in a stale `enableLogs: false` that
-          // silently killed log shipping (v12), and `isHydrated` plus
-          // auth/scanner lifecycle flags rode along undetected (v13). One
-          // sweep enforces the allowlist on every older blob, subsuming the
-          // per-key v11/v12 deletes. The keychain-fallback token pair is the
-          // only sanctioned passenger outside the allowlist.
-          if (version < 13) {
+          // Migration → v14: partialize is the PERSISTED_KEYS allowlist, and
+          // this sweep enforces it over any older blob — subsuming the per-key
+          // v11/v12 deletes. It runs on every version bump that changes the
+          // allowlist, because a key REMOVED from it otherwise sits in the blob
+          // unreachable and uncleared until the next root write happens to
+          // replace it. The keychain-fallback token pair is the only sanctioned
+          // passenger outside the allowlist.
+          //
+          // What drove the inversion: derived/session state kept leaking into
+          // the blob and overriding fresh defaults on hydration — `apiReachable`
+          // froze the app in a permanent "server unreachable" state (v11), the
+          // env-derived telemetry flags baked in a stale `enableLogs: false`
+          // that silently killed log shipping (v12), and `isHydrated` plus the
+          // auth/scanner lifecycle flags rode along undetected (v13). v14 moved
+          // the scanner's own state out of this store entirely.
+          if (version < 14) {
             const state = persistedState as Record<string, unknown> | null;
             if (state) {
               for (const key of Object.keys(state)) {
@@ -526,4 +513,4 @@ export const useStore = create<RootState>()(
 export const storeApi = useStore;
 
 // Standalone stores are exported directly from their own files:
-// import { useRecipeSuggestionsStore } from '#store/useRecipeSuggestionsStore';
+// import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';

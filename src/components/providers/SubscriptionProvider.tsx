@@ -6,8 +6,8 @@ import {
   enableAutoReconnect,
   disableAutoReconnect,
 } from '#/apollo/links/wsLink';
-import { AuthenticatedSubscriptions } from './AuthenticatedSubscriptions';
-import { AuthenticatedDataProvider } from './AuthenticatedDataProvider';
+import { AuthenticatedSubscriptions } from '#/app/providers/AuthenticatedSubscriptions';
+import { AuthenticatedDataProvider } from '#/app/providers/AuthenticatedDataProvider';
 import { ListAnimationProvider } from '#/context/ListAnimationContext';
 
 interface SubscriptionProviderProps {

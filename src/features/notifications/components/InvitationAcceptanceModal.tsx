@@ -26,7 +26,7 @@ import {
 } from '#/apollo/utils/cacheUpdaters';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useUser } from '#store/useAppStore';
-import type { NotificationPayload } from '#store/slices/notificationSlice';
+import type { NotificationPayload } from '#features/notifications/types';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 

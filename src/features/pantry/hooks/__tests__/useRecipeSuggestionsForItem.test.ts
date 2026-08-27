@@ -7,7 +7,7 @@ import type { RecipeInformation } from '#/services/recipeApi/types';
 const mockGetCachedSuggestions = jest.fn();
 const mockSetCachedSuggestions = jest.fn();
 
-jest.mock('#store/useRecipeSuggestionsStore', () => ({
+jest.mock('#features/recipes/store/useRecipeSuggestionsStore', () => ({
   useRecipeSuggestionsStore: () => ({
     getCachedSuggestions: mockGetCachedSuggestions,
     setCachedSuggestions: mockSetCachedSuggestions,

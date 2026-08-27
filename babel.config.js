@@ -1,3 +1,5 @@
+const { babelAliases } = require('./scripts/lib/aliases');
+
 /** @type {import('react-native-worklets/plugin').PluginOptions} */
 // https://docs.swmansion.com/react-native-worklets/docs/
 const workletsPluginOptions = {
@@ -41,34 +43,10 @@ module.exports = api => {
             '.js',
             '.json',
           ],
-          alias: {
-            '#/test-utils': './__tests__/helpers',
-            '#': './src',
-            '#assets': './src/assets',
-            '#components': './src/components',
-            '#constants': './src/constants',
-            '#config': './src/config',
-            '#context': './src/context',
-            '#context/*': './src/context/*',
-            '#features': './src/features',
-            '#features/*': './src/features/*',
-            '#generated': './src/graphql/generated',
-            '#graphql': './src/graphql',
-            '#operations': './src/graphql/operations',
-            '#hooks': './src/hooks',
-            '#hooks/*': './src/hooks/*',
-            '#navigation': './src/navigation',
-            '#screens': './src/screens',
-            '#screens/*': './src/screens/*',
-            '#services': './src/services',
-            '#services/*': './src/services/*',
-            '#storage': './src/storage',
-            '#storage/*': './src/storage/*',
-            '#store': './src/store',
-            '#styles': './src/styles',
-            '#types': './src/types',
-            '#utils': './src/utils',
-          },
+          // Derived from tsconfig.json — see scripts/lib/aliases.js. This list
+          // used to be maintained by hand alongside two others that disagreed
+          // with it and with each other.
+          alias: babelAliases(),
         },
       ],
 

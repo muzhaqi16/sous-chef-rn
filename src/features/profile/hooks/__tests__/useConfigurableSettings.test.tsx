@@ -7,20 +7,16 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import { createMockProfile } from '#/test-utils/mockFactories';
 import { findByKey } from '#/test-utils/findByKey';
-import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
-import {
-  UpdateUserProfileDocument,
-  UpdateUserPreferencesDocument,
-} from '#operations/auth/user.generated';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
 import { useConfigurableSettings } from '../useConfigurableSettings';
 import { logger } from '#/utils/environment';
 
 // Shape of a single section entry in PROFILE_SETTINGS_CONFIG.
 interface ConfigSection {
-  title: string;
+  id: string;
+  titleKey: string;
   items: SettingItem[];
 }
 
@@ -94,32 +90,43 @@ jest.mock('#hooks/navigation/useAuthPreferences', () => ({
   })),
 }));
 
+// Mirrors the real PROFILE_SETTINGS_CONFIG's SHAPE — navigation, modal, switch
+// and action rows. It deliberately contains no personal-information fields:
+// those live in PERSONAL_INFO_CONFIG and are rendered by
+// PersonalInformationScreen, so a fixture that put them here would test a path
+// production cannot reach. It previously did, and eleven unreachable branches
+// in the hook survived because of it.
 jest.mock('#/config/settingsConfig', () => ({
   PROFILE_SETTINGS_CONFIG: [
     {
-      title: 'Personal Information',
+      id: 'appearanceAndLanguage',
+      titleKey: 'profile.sections.appearanceAndLanguage',
       items: [
-        { key: 'firstName', label: 'First Name', type: 'text' },
-        { key: 'lastName', label: 'Last Name', type: 'text' },
-        { key: 'displayName', label: 'Display Name', type: 'text' },
+        {
+          key: 'appearance',
+          labelKey: 'labels.appearance',
+          type: 'navigation',
+        },
+        { key: 'language', labelKey: 'labels.language', type: 'modal' },
       ],
     },
     {
-      title: 'Appearance',
+      id: 'security',
+      titleKey: 'labels.security',
       items: [
-        { key: 'appearance', label: 'Appearance', type: 'navigation' },
-        { key: 'language', label: 'Language', type: 'modal' },
+        {
+          key: 'biometricAuthentication',
+          labelKey: 'profile.labels.biometricAuthentication',
+          type: 'switch',
+        },
       ],
     },
     {
-      title: 'Security',
+      id: 'logout',
+      titleKey: '',
       items: [
-        { key: 'biometricAuthentication', label: 'Biometric', type: 'switch' },
+        { key: 'logout', labelKey: 'profile.labels.logout', type: 'action' },
       ],
-    },
-    {
-      title: 'Account',
-      items: [{ key: 'logout', label: 'Logout', type: 'action' }],
     },
   ],
 }));
@@ -144,49 +151,13 @@ jest.mock('#/services/alertService', () => ({
   alertService: { alert: jest.fn() },
 }));
 
-const mockProfile = createMockProfile({
-  firstName: 'John',
-  lastName: 'Doe',
-  displayName: 'johndoe',
-  bio: 'Test bio',
-  phone: '555-1234',
-  website: 'https://example.com',
-  showEmail: true,
-  showPhone: false,
-  profileVisibility: ProfileVisibility.Public,
-});
-
+/**
+ * The settings mutation this hook still fires (language + preference writes).
+ *
+ * It used to also mock `UpdateUserProfileDocument`; the hook no longer writes
+ * profile fields, so that mock went with the branches that did.
+ */
 function buildMocks() {
-  const profile = recordMock(UpdateUserProfileDocument, {
-    data: {
-      updateProfile: {
-        __typename: 'UpdateProfilePayload',
-        success: true,
-        message: '',
-        code: 'SUCCESS',
-        userProfile: {
-          __typename: 'UserProfile',
-          id: 'profile-1',
-          userId: 'user-1',
-          firstName: 'John',
-          lastName: 'Doe',
-          displayName: 'johndoe',
-          bio: 'Test bio',
-          avatar: null,
-          coverImage: null,
-          phone: '555-1234',
-          website: 'https://example.com',
-          dateOfBirth: null,
-          gender: null,
-          profileVisibility: 'PUBLIC',
-          showEmail: true,
-          showPhone: false,
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        },
-      },
-    },
-  });
   const settings = recordMock(UpdateUserPreferencesDocument, {
     data: {
       updateSettings: {
@@ -222,8 +193,23 @@ function buildMocks() {
       },
     },
   });
-  return { profile, settings };
+  return { settings };
 }
+
+/**
+ * Sections by their stable id rather than by position.
+ *
+ * These assertions used to index `sections[1]` / `sections[3]`, so removing one
+ * section from the fixture silently re-pointed nine tests at the wrong section.
+ */
+const sectionById = (
+  sections: ReturnType<typeof useConfigurableSettings>['sections'],
+  id: string,
+) => {
+  const found = sections.find(s => s.key === id);
+  if (!found) throw new Error(`no section with id "${id}"`);
+  return found;
+};
 
 describe('useConfigurableSettings', () => {
   beforeEach(() => {
@@ -231,68 +217,41 @@ describe('useConfigurableSettings', () => {
   });
 
   it('returns sections from config', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
 
-    expect(result.current.sections).toHaveLength(4);
-    expect(result.current.sections[0].title).toBe('Personal Information');
-    expect(result.current.sections[1].title).toBe('Appearance');
+    expect(result.current.sections).toHaveLength(3);
+    // `key` is the section's stable id; `title` is the resolved i18n key. The
+    // two are asserted together because the screen branches on the former and
+    // renders the latter, and they used to be the same English string.
+    expect(result.current.sections.map(s => s.key)).toEqual([
+      'appearanceAndLanguage',
+      'security',
+      'logout',
+    ]);
+    expect(result.current.sections[0].title).toBe('Appearance & Language');
   });
 
   it('returns BiometricModal element', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
     expect(result.current.BiometricModal).toBeDefined();
   });
 
-  it('creates firstName setting with value from profile', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-
-    const personalSection = result.current.sections[0];
-    const firstNameItem = findByKey(personalSection.items, 'firstName');
-
-    expect(firstNameItem).toBeDefined();
-    expect(firstNameItem.value).toBe('John');
-    expect(firstNameItem.type).toBe('text');
-  });
-
-  it('calls updateProfile when firstName is saved', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-
-    const firstNameItem = findByKey(
-      result.current.sections[0].items,
-      'firstName',
-    );
-
-    act(() => {
-      firstNameItem.onSave?.('Jane');
+  it('creates appearance navigation entry', () => {
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
     });
 
-    expect(profile.fired).toContainEqual({ input: { firstName: 'Jane' } });
-  });
-
-  it('creates appearance navigation entry', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
+    const appearanceSection = sectionById(
+      result.current.sections,
+      'appearanceAndLanguage',
     );
-
-    const appearanceSection = result.current.sections[1];
     const appearanceItem = findByKey(appearanceSection.items, 'appearance');
 
     expect(appearanceItem).toBeDefined();
@@ -300,13 +259,12 @@ describe('useConfigurableSettings', () => {
   });
 
   it('signs out through authService when the logout action is pressed', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
 
-    const accountSection = result.current.sections[3];
+    const accountSection = sectionById(result.current.sections, 'logout');
     const logoutItem = findByKey(accountSection.items, 'logout');
 
     act(() => {
@@ -320,13 +278,15 @@ describe('useConfigurableSettings', () => {
     // Deliberate sign-out deletes the queue, so anything waiting to replay is
     // destroyed. This path used to do it silently.
     mockPendingCount.mockReturnValue(3);
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
 
-    const logoutItem = findByKey(result.current.sections[3].items, 'logout');
+    const logoutItem = findByKey(
+      sectionById(result.current.sections, 'logout').items,
+      'logout',
+    );
 
     act(() => {
       logoutItem.onPress?.();
@@ -348,13 +308,12 @@ describe('useConfigurableSettings', () => {
   });
 
   it('biometric setting shows not available when device lacks biometrics', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
 
-    const securitySection = result.current.sections[2];
+    const securitySection = sectionById(result.current.sections, 'security');
     const biometricItem = findByKey(
       securitySection.items,
       'biometricAuthentication',
@@ -364,93 +323,29 @@ describe('useConfigurableSettings', () => {
     expect(biometricItem.disabled).toBe(true);
   });
 
-  it('handles empty profile gracefully', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(null),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-
-    const firstNameItem = findByKey(
-      result.current.sections[0].items,
-      'firstName',
-    );
-    expect(firstNameItem.value).toBe('');
-  });
-
-  it('creates lastName setting with value from profile', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-    const lastNameItem = findByKey(
-      result.current.sections[0].items,
-      'lastName',
-    );
-    expect(lastNameItem.value).toBe('Doe');
-  });
-
-  it('calls updateProfile when lastName is saved', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-    const lastNameItem = findByKey(
-      result.current.sections[0].items,
-      'lastName',
-    );
-    act(() => {
-      lastNameItem.onSave?.('Smith');
-    });
-    expect(profile.fired).toContainEqual({ input: { lastName: 'Smith' } });
-  });
-
-  it('creates displayName setting with value from profile', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-    const item = findByKey(result.current.sections[0].items, 'displayName');
-    expect(item.value).toBe('johndoe');
-  });
-
-  it('calls updateProfile when displayName is saved', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
-    const item = findByKey(result.current.sections[0].items, 'displayName');
-    act(() => {
-      item.onSave?.('newdisplay');
-    });
-    expect(profile.fired).toContainEqual({
-      input: { displayName: 'newdisplay' },
-    });
-  });
-
   it('creates language setting as modal with correct options', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const langItem = findByKey(
+      sectionById(result.current.sections, 'appearanceAndLanguage').items,
+      'language',
     );
-    const langItem = findByKey(result.current.sections[1].items, 'language');
     expect(langItem).toBeDefined();
     expect(langItem.value).toBe('en');
     expect(langItem.options).toBeDefined();
   });
 
   it('calls setLanguage and updateSettings when language is saved', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+    const langItem = findByKey(
+      sectionById(result.current.sections, 'appearanceAndLanguage').items,
+      'language',
     );
-    const langItem = findByKey(result.current.sections[1].items, 'language');
     act(() => {
       langItem.onSave?.('es');
     });
@@ -467,10 +362,10 @@ describe('useConfigurableSettings', () => {
     });
     mockCheckStoredCredentials.mockResolvedValue(false);
 
-    const { profile, settings } = buildMocks();
+    const { settings } = buildMocks();
     const { result, rerender } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
+      () => useConfigurableSettings(),
+      { operationMocks: [settings.mock] },
     );
     // Wait for biometric info to load
     await act(async () => {
@@ -479,7 +374,7 @@ describe('useConfigurableSettings', () => {
     rerender(undefined);
 
     const biometricItem = findByKey(
-      result.current.sections[2].items,
+      sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
     expect(biometricItem.disabled).toBe(false);
@@ -488,13 +383,12 @@ describe('useConfigurableSettings', () => {
 
   it('biometric loading state shows checking message', () => {
     // The initial biometricLoading is true when user has email
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
     const biometricItem = findByKey(
-      result.current.sections[2].items,
+      sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
     // biometricLoading starts as true when user?.email is set
@@ -511,350 +405,27 @@ describe('useConfigurableSettings', () => {
       biometricDeclinedPermanently: true,
     });
 
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
     await act(async () => {
       await new Promise(resolve => setTimeout(resolve, 0));
     });
 
     const biometricItem = findByKey(
-      result.current.sections[2].items,
+      sectionById(result.current.sections, 'security').items,
       'biometricAuthentication',
     );
     expect(biometricItem.subtitle).toContain('Tap to enable');
   });
 
   it('returns biometricLoading state', () => {
-    const { profile, settings } = buildMocks();
-    const { result } = renderHookWithApollo(
-      () => useConfigurableSettings(mockProfile),
-      { operationMocks: [profile.mock, settings.mock] },
-    );
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
     expect(typeof result.current.biometricLoading).toBe('boolean');
-  });
-
-  // ========== Additional branch/function coverage tests ==========
-
-  describe('profile field settings', () => {
-    it('creates bio setting with value from profile', () => {
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      // bio is not in the mocked config, so add it to config for testing
-      // Instead, we test with the existing config items
-      expect(result.current.sections).toBeDefined();
-    });
-
-    it('creates phone setting with value from profile (needs config)', () => {
-      // Re-mock config to include phone
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [
-          { key: 'phone', label: 'Phone', type: 'text' },
-          { key: 'website', label: 'Website', type: 'text' },
-          { key: 'bio', label: 'Bio', type: 'text' },
-          { key: 'dateOfBirth', label: 'Date of Birth', type: 'text' },
-        ],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const phoneItem = findByKey(result.current.sections[0].items, 'phone');
-      expect(phoneItem.value).toBe('555-1234');
-
-      const websiteItem = findByKey(
-        result.current.sections[0].items,
-        'website',
-      );
-      expect(websiteItem.value).toBe('https://example.com');
-
-      const bioItem = findByKey(result.current.sections[0].items, 'bio');
-      expect(bioItem.value).toBe('Test bio');
-
-      const dobItem = findByKey(
-        result.current.sections[0].items,
-        'dateOfBirth',
-      );
-      expect(dobItem).toBeDefined();
-
-      // Restore config
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('calls updateProfile when phone is saved', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'phone', label: 'Phone', type: 'text' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const phoneItem = findByKey(result.current.sections[0].items, 'phone');
-      act(() => {
-        phoneItem.onSave?.('555-9999');
-      });
-      expect(profile.fired).toContainEqual({ input: { phone: '555-9999' } });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('calls updateProfile when website is saved', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'website', label: 'Website', type: 'text' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'website');
-      act(() => {
-        item.onSave?.('https://new.com');
-      });
-      expect(profile.fired).toContainEqual({
-        input: { website: 'https://new.com' },
-      });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('calls updateProfile when bio is saved', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'bio', label: 'Bio', type: 'text' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'bio');
-      act(() => {
-        item.onSave?.('New bio');
-      });
-      expect(profile.fired).toContainEqual({ input: { bio: 'New bio' } });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('calls updateProfile when dateOfBirth is saved with ISO conversion', () => {
-      const { dateStringToISO } = require('#utils/dateUtils');
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'dateOfBirth', label: 'Date of Birth', type: 'text' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'dateOfBirth');
-      act(() => {
-        item.onSave?.('1990-01-01');
-      });
-      expect(dateStringToISO).toHaveBeenCalledWith('1990-01-01');
-      expect(profile.fired.length).toBeGreaterThan(0);
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-  });
-
-  describe('gender setting', () => {
-    it('creates gender modal setting with options and onSave', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'gender', label: 'Gender', type: 'modal' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings({ ...mockProfile, gender: 'male' }),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'gender');
-      expect(item.value).toBe('male');
-      expect(item.options).toBeDefined();
-      expect(item.options?.length).toBe(5);
-
-      act(() => {
-        item.onSave?.('female');
-      });
-      expect(profile.fired).toContainEqual({ input: { gender: 'female' } });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('uses empty string when profile has no gender', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Personal',
-        items: [{ key: 'gender', label: 'Gender', type: 'modal' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings({ ...mockProfile, gender: null }),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'gender');
-      expect(item.value).toBe('');
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-  });
-
-  describe('privacy settings', () => {
-    it('creates profileVisibility modal setting', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Privacy',
-        items: [
-          {
-            key: 'profileVisibility',
-            label: 'Profile Visibility',
-            type: 'modal',
-          },
-        ],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(
-        result.current.sections[0].items,
-        'profileVisibility',
-      );
-      expect(item.value).toBe('PUBLIC');
-      expect(item.options).toBeDefined();
-
-      act(() => {
-        item.onSave?.('PRIVATE');
-      });
-      expect(profile.fired).toContainEqual({
-        input: { profileVisibility: 'PRIVATE' },
-      });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('creates showEmail switch setting', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Privacy',
-        items: [{ key: 'showEmail', label: 'Show Email', type: 'switch' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'showEmail');
-      expect(item.value).toBe(true); // mockProfile.showEmail is true
-
-      act(() => {
-        item.onPress?.();
-      });
-      expect(profile.fired).toContainEqual({ input: { showEmail: false } });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
-
-    it('creates showPhone switch setting', () => {
-      const { PROFILE_SETTINGS_CONFIG } = require('#/config/settingsConfig');
-      const original = [...PROFILE_SETTINGS_CONFIG];
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      PROFILE_SETTINGS_CONFIG.push({
-        title: 'Privacy',
-        items: [{ key: 'showPhone', label: 'Show Phone', type: 'switch' }],
-      });
-
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
-      const item = findByKey(result.current.sections[0].items, 'showPhone');
-      expect(item.value).toBe(false); // mockProfile.showPhone is false
-
-      act(() => {
-        item.onPress?.();
-      });
-      expect(profile.fired).toContainEqual({ input: { showPhone: true } });
-
-      PROFILE_SETTINGS_CONFIG.length = 0;
-      original.forEach((item: ConfigSection) =>
-        PROFILE_SETTINGS_CONFIG.push(item),
-      );
-    });
   });
 
   describe('navigation items', () => {
@@ -891,11 +462,10 @@ describe('useConfigurableSettings', () => {
         ],
       });
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       const items = result.current.sections[0].items;
 
       items.forEach((item: SettingItem) => {
@@ -935,11 +505,10 @@ describe('useConfigurableSettings', () => {
         ],
       });
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       const items = result.current.sections[0].items;
 
       expect(findByKey(items, 'personalInformation').testID).toBe(
@@ -979,13 +548,16 @@ describe('useConfigurableSettings', () => {
       const original = [...PROFILE_SETTINGS_CONFIG];
       PROFILE_SETTINGS_CONFIG.length = 0;
       PROFILE_SETTINGS_CONFIG.push({
-        title: 'Unknown',
-        items: [{ key: 'unknownKey', label: 'Unknown', type: 'text' }],
+        id: 'unknown',
+        titleKey: '',
+        items: [
+          { key: 'unknownKey', labelKey: 'labels.unknown', type: 'text' },
+        ],
       });
 
-      const { profile, settings } = buildMocks();
-      renderHookWithApollo(() => useConfigurableSettings(mockProfile), {
-        operationMocks: [profile.mock, settings.mock],
+      const { settings } = buildMocks();
+      renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
       });
       expect(logger.warn).toHaveBeenCalledWith(
         'Unhandled setting key: unknownKey',
@@ -1006,17 +578,16 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
@@ -1035,17 +606,16 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
@@ -1064,17 +634,16 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
@@ -1096,17 +665,16 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
@@ -1134,17 +702,16 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(true);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
 
@@ -1173,11 +740,10 @@ describe('useConfigurableSettings', () => {
       );
       storeModule.useUser.mockReturnValue({ id: 'user-1', email: '' });
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       expect(result.current.biometricLoading).toBe(false);
 
       // Restore mock
@@ -1214,18 +780,17 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
       // Trigger the modal open
       const biometricItem = findByKey(
-        result.current.sections[2].items,
+        sectionById(result.current.sections, 'security').items,
         'biometricAuthentication',
       );
       await act(async () => {
@@ -1252,11 +817,10 @@ describe('useConfigurableSettings', () => {
       });
       mockCheckStoredCredentials.mockResolvedValue(false);
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
@@ -1278,11 +842,10 @@ describe('useConfigurableSettings', () => {
     it('finishes loading and reports biometrics unavailable when the keychain read fails', async () => {
       mockGetBiometricInfo.mockRejectedValueOnce(new Error('keychain locked'));
 
-      const { profile, settings } = buildMocks();
-      const { result } = renderHookWithApollo(
-        () => useConfigurableSettings(mockProfile),
-        { operationMocks: [profile.mock, settings.mock] },
-      );
+      const { settings } = buildMocks();
+      const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+        operationMocks: [settings.mock],
+      });
       await act(async () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });

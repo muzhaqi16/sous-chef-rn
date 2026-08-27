@@ -14,7 +14,7 @@ import {
   isNotificationPayload,
   type ExpirationLinkData,
   type NotificationPayload,
-} from '#store/slices/notificationSlice';
+} from '#features/notifications/types';
 import {
   NotificationCategory,
   NotificationStatus,
@@ -24,7 +24,7 @@ import {
 import {
   getNotificationAction,
   getNotificationTitle,
-} from '#utils/notifications/notificationHelpers';
+} from '#features/notifications/utils/notificationHelpers';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 
 /**

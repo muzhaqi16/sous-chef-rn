@@ -16,7 +16,7 @@ import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
-import { useOfflineTabPreloading } from '../useOfflineTabPreloading';
+import { useOfflineTabPreloading } from '#/app/useOfflineTabPreloading';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 

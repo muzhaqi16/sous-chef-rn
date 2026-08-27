@@ -127,25 +127,37 @@ jest.mock('#components/molecules/FolderPicker', () => ({
   FolderPicker: () => null,
 }));
 
-jest.mock('#/components/modals/MarkCookedModal', () => ({
+jest.mock('#components/modals/MarkCookedModal', () => ({
   MarkCookedModal: () => null,
 }));
 
-jest.mock('#/components/modals/IngredientMatchingSheet', () => ({
-  IngredientMatchingSheet: () => null,
-}));
+jest.mock(
+  '#features/recipes/components/modals/IngredientMatchingSheet',
+  () => ({
+    IngredientMatchingSheet: () => null,
+  }),
+);
 
-jest.mock('#/components/modals/SaveRecipeSheet/SaveRecipeSheet', () => ({
-  SaveRecipeSheet: () => null,
-}));
+jest.mock(
+  '#features/recipes/components/modals/SaveRecipeSheet/SaveRecipeSheet',
+  () => ({
+    SaveRecipeSheet: () => null,
+  }),
+);
 
-jest.mock('#/components/modals/ManageRecipeSheet/ManageRecipeSheet', () => ({
-  ManageRecipeSheet: () => null,
-}));
+jest.mock(
+  '#features/recipes/components/modals/ManageRecipeSheet/ManageRecipeSheet',
+  () => ({
+    ManageRecipeSheet: () => null,
+  }),
+);
 
-jest.mock('#components/modals/AddToMealPlanSheet/AddToMealPlanSheet', () => ({
-  AddToMealPlanSheet: () => null,
-}));
+jest.mock(
+  '#features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet',
+  () => ({
+    AddToMealPlanSheet: () => null,
+  }),
+);
 
 jest.mock('#features/recipes/components/ReviewSection', () => ({
   ReviewSection: () => null,

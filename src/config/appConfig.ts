@@ -25,11 +25,46 @@ export interface AppConfig {
       /** Universal/app-link hosts, without protocol. */
       hosts: string[];
     };
+    /**
+     * Reverse-DNS namespace for keychain entries (`<namespace>.credentials`,
+     * `.session.tokens`, …).
+     *
+     * **Changing this on a shipped app orphans every existing user's stored
+     * credentials and session** — the OS keychain is keyed by service name, so
+     * the old entries become unreachable and everyone is silently signed out
+     * with biometrics no longer enrolled. Set it once, when forking.
+     * `src/storage/__tests__/keychainServiceNames.test.ts` pins the derived
+     * strings so a rename cannot happen by accident.
+     */
+    keychainNamespace: string;
+    /**
+     * Keychain key holding the last email used for biometric login.
+     *
+     * Deliberately NOT derived from `keychainNamespace`: it predates that
+     * convention and re-deriving it would strand the stored value, with the
+     * same consequence as above.
+     */
+    lastBiometricEmailKey: string;
   };
   assets: {
     /** Primary app logo used on landing/auth screens. */
     logo: ImageSourcePropType;
   };
+  /**
+   * Which features this app ships.
+   *
+   * Absent means shipped. A `false` here drops the feature from
+   * `FEATURE_REGISTRY`'s enabled set without touching the feature itself — the
+   * fork-level switch, where a manifest's own `enabled` is the feature-owner's.
+   * A tabbed feature also needs its entry removed from `HomeTabs`' literal;
+   * `HomeTabs.test.tsx` says so when it does not.
+   */
+  features: Partial<Record<string, boolean>>;
+  /**
+   * Locales this app bundles, in menu order. Must match the JSON files
+   * registered in `src/i18n/config.ts`.
+   */
+  locales: string[];
   branding: {
     /**
      * Brand primary color in hex. Single source of truth for the theme's
@@ -51,7 +86,11 @@ export const appConfig: AppConfig = {
       scheme: 'souschef',
       hosts: ['app.souschef.dev'],
     },
+    keychainNamespace: 'dev.souschef.app',
+    lastBiometricEmailKey: 'souschefrn-email',
   },
+  features: {},
+  locales: ['en', 'it', 'es', 'sq'],
   assets: {
     logo: require('../assets/images/logo.png'),
   },

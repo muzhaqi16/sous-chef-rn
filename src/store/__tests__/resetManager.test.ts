@@ -28,6 +28,8 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   },
 }));
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
+import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
 import { RESET_SCENARIOS, createResetManager } from '../resetManager';
 import type { RootState } from '#store/index';
 import { storage } from '#/storage/mmkv';
@@ -204,6 +206,15 @@ describe('resetManager', () => {
       });
 
       it('resets preferences when preferences option is true', async () => {
+        // Seeded, or the feature-store assertions below pass on an already-empty
+        // store and prove nothing.
+        useNotificationStore
+          .getState()
+          .linkExpirationData('n1', { pantryItemName: 'Milk' });
+        useBarcodeScannerStore
+          .getState()
+          .addToRecentlyScanned({ id: 's1', name: 'Milk', upc: '01' });
+
         await resetManager.resetStore({
           auth: false,
           ui: false,
@@ -212,10 +223,13 @@ describe('resetManager', () => {
         });
         const firstCall = mockSet.mock.calls[0][0];
         expect(firstCall.onBoardingStep).toBeNull();
-        // The feed moved to the Apollo cache; what the reset clears here is
-        // the expiration buffer that stayed behind.
-        expect(firstCall.pendingExpirationLinks).toEqual({});
-        expect(firstCall.scannedBarcode).toBeNull();
+        // Feature stores are cleared through the session-scoped registry rather
+        // than by spreading their initial state into the root — and on this
+        // branch too, so ONBOARDING_RESET still empties them.
+        expect(useNotificationStore.getState().pendingExpirationLinks).toEqual(
+          {},
+        );
+        expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
       });
 
       it('clears the persisted Apollo cache when clearApolloCache is true', async () => {

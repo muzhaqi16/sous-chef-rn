@@ -1,0 +1,181 @@
+{
+  "inviteMembers": {
+    "title": "Invita famiglia e amici",
+    "subtitleHasNeither": "Crea prima una casa o una lista per poter invitare altri",
+    "subtitleHasBoth": "Invita altri alla tua casa e alle liste della spesa (opzionale)",
+    "subtitleHasHome": "Invita altri alla tua casa (opzionale)",
+    "subtitleHasList": "Invita altri alla tua lista della spesa (opzionale)",
+    "nothingToShare": "Niente da condividere ancora",
+    "nothingToShareDesc": "Devi creare prima una casa o una lista della spesa. Puoi invitare in seguito dalle impostazioni.",
+    "noInvitesYet": "Nessun invito aggiunto",
+    "noInvitesYetDesc": "Aggiungi email sopra per invitare membri",
+    "invitingPersonSingular": "Invito {{count}} persona:",
+    "invitingPersonPlural": "Invito {{count}} persone:",
+    "tip": "💡 Suggerimento: Puoi sempre invitare altre persone in seguito dalle impostazioni",
+    "sending": "Invio inviti...",
+    "sendInviteSingular": "Invia {{count}} invito",
+    "sendInvitePlural": "Invia {{count}} inviti",
+    "sendInviteZero": "Invia inviti",
+    "invalidEmailTitle": "Email non valida",
+    "duplicateEmailTitle": "Email duplicata",
+    "duplicateEmailMessage": "Questa email è già stata aggiunta",
+    "cantInviteSelf": "Non puoi invitare te stesso",
+    "partialSuccessTitle": "Successo parziale",
+    "partialSuccessMessage": "Alcuni inviti potrebbero essere falliti. Puoi invitare altri dalle impostazioni.",
+    "inviteHomeMessage": "{{name}} ti ha invitato a unirti alla sua casa per gestire la dispensa e le liste insieme!"
+  },
+  "inviteUser": {
+    "roleMemberLabel": "Membro",
+    "roleMemberDescription": "Può aggiungere e modificare elementi nella dispensa",
+    "roleAdminDescription": "Può gestire membri e impostazioni",
+    "roleGuestDescription": "Accesso in sola lettura alla casa",
+    "roleOwnerLabel": "Proprietario",
+    "roleOwnerDescription": "Controllo totale della casa e di tutti i membri",
+    "ownerWarning": "⚠️ I proprietari hanno il controllo totale",
+    "submit": "Invia invito",
+    "offlineError": "Impossibile inviare l'invito offline",
+    "sendFailed": "Impossibile inviare l'invito. Riprova.",
+    "emailLabel": "Indirizzo email",
+    "emailPlaceholder": "Inserisci indirizzo email"
+  },
+  "invitationAcceptance": {
+    "invalidInvitation": "Invito non valido",
+    "shoppingListAccepted": "Invito alla lista della spesa accettato!",
+    "homeAccepted": "Invito alla casa accettato!",
+    "unknownType": "Tipo di invito sconosciuto",
+    "declineConfirm": "Vuoi davvero rifiutare questo invito?",
+    "notFound": "Invito non trovato o scaduto",
+    "loadingDetails": "Caricamento dettagli dell'invito...",
+    "invitedHeading": "Hai ricevuto un invito!",
+    "homeInviteText": "{{inviter}} ti ha invitato a unirti",
+    "listInviteText": "{{inviter}} ti ha invitato a collaborare a",
+    "resourceHome": "Casa",
+    "roleLabel": "Ruolo: {{role}}",
+    "descriptionLabel": "Descrizione:",
+    "acceptFailed": "Impossibile accettare l'invito. Riprova.",
+    "declineFailed": "Impossibile rifiutare l'invito. Riprova."
+  },
+  "homeManagement": {
+    "title": "Le Mie Case",
+    "modeCreate": "Crea casa",
+    "modeJoin": "Unisciti con Codice",
+    "join": "Unisciti",
+    "errorNotMember": "Non sei un membro di questa casa",
+    "errorNoInvitePermission": "Non hai il permesso di invitare membri in questa casa",
+    "accessibilityHint": "Tocca per visualizzare i dettagli della casa",
+    "accessibilityDefaultSuffix": ", casa predefinita",
+    "statsHome_one": "Casa",
+    "statsHome_other": "Case",
+    "statsMember_one": "Membro",
+    "statsMember_other": "Membri",
+    "statsPantry_one": "Dispensa",
+    "statsPantry_other": "Dispense",
+    "cardDefault": "Predefinita",
+    "cardInvite": "Invita",
+    "cardMembersSectionTitle": "Membri"
+  },
+  "homeDetail": {
+    "shareLinkMessage": "Unisciti alla mia casa",
+    "title": "Dettagli Casa",
+    "errorFailedToLoad": "Caricamento dei dettagli della casa non riuscito",
+    "sectionHomeInformation": "Informazioni Casa",
+    "homeNameEmptyError": "Il nome della casa non può essere vuoto",
+    "labelAllowJoinCode": "Consenti Codice di Accesso",
+    "descriptionAllowJoinCode": "Permetti ad altri di unirsi a questa casa con un codice",
+    "labelJoinCode": "Codice di Accesso",
+    "rotateJoinCodeTitle": "Rigenera codice di accesso",
+    "rotateJoinCodeMessage": "Questo invalida il codice attuale e ogni link condiviso. I membri già presenti restano. Continuare?",
+    "rotateJoinCodeConfirm": "Rigenera",
+    "makeOwner": "Rendi proprietario",
+    "changeRole": "Cambia ruolo",
+    "transferOwnershipTitle": "Trasferisci proprietà",
+    "transferOwnershipMessage": "Rendere {{name}} proprietario di questa casa? Diventerai un membro normale e solo lui potrà ritrasferirla.",
+    "transferOwnershipConfirm": "Trasferisci",
+    "permissions": "Permessi",
+    "permViewPantry": "Può vedere la dispensa",
+    "permEditPantry": "Può modificare la dispensa",
+    "permInviteOthers": "Può invitare altri",
+    "permManageHome": "Può gestire la casa",
+    "sectionMembersInvites": "Membri e Inviti",
+    "youLabel": "Tu",
+    "storageLocationsSubtitle": "Gestisci dove vengono conservati gli articoli",
+    "leaveHomeDescription": "Lasciare questa casa rimuoverà il tuo accesso a tutte le dispense, liste della spesa, piani pasti e modelli condivisi.",
+    "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa."
+  },
+  "joinHome": {
+    "homeFallback": "Casa",
+    "enterCodeTitle": "Inserisci il Codice",
+    "enterCodeDescription": "Inserisci il codice di accesso che hai ricevuto per unirti a una casa.",
+    "findHome": "Trova Casa",
+    "notFoundDescription": "Non abbiamo trovato una casa per quel codice. Potrebbe non essere valido o il codice potrebbe essere stato disattivato.",
+    "tryDifferentCode": "Prova un altro codice",
+    "invitedToJoin": "Hai ricevuto un invito a unirti a",
+    "enterDifferentCode": "Inserisci un altro codice",
+    "joinFailed": "Impossibile unirsi alla casa. Il codice potrebbe non essere valido o scaduto.",
+    "memberCount_one": "{{count}} membro",
+    "memberCount_other": "{{count}} membri",
+    "pantryCount_one": "{{count}} dispensa",
+    "pantryCount_other": "{{count}} dispense"
+  },
+  "joinLink": {
+    "title": "Apri link",
+    "invalidTitle": "Link non trovato",
+    "invalidDescription": "Questo link non è valido o è scaduto.",
+    "signInHome": "Accedi per unirti a questa casa.",
+    "signInList": "Accedi per unirti a questa lista.",
+    "staleHome": "Questo link di invito alla casa è scaduto. Richiedi un nuovo link per unirti.",
+    "staleList": "Questo link di invito alla lista è scaduto. Richiedi un nuovo link per unirti."
+  },
+  "roles": {
+    "owner": "Proprietario",
+    "member": "Membro"
+  },
+  "collaboratorRoles": {
+    "viewer": "Visualizzatore",
+    "shopper": "Acquirente",
+    "contributor": "Collaboratore",
+    "editor": "Editore",
+    "owner": "Proprietario",
+    "permissions": {
+      "viewItems": "Vedere gli articoli",
+      "viewHistory": "Vedere la cronologia",
+      "exportList": "Esportare la lista",
+      "addItems": "Aggiungere articoli",
+      "editItems": "Modificare articoli",
+      "removeItems": "Rimuovere articoli",
+      "markPurchased": "Segnare come acquistato",
+      "inviteOthers": "Invitare altri"
+    },
+    "descriptions": {
+      "viewer": "Può vedere la lista della spesa",
+      "shopper": "Può segnare gli articoli come acquistati",
+      "contributor": "Può aggiungere articoli e segnarli come acquistati",
+      "editor": "Può aggiungere, modificare e rimuovere articoli",
+      "admin": "Controllo totale, inclusa la possibilità di invitare altri",
+      "owner": "Controllo totale sulla lista della spesa"
+    },
+    "permissionsTitle": "Permessi:"
+  },
+  "createHome": {
+    "allowJoinCode": "Consenti ad altri di unirsi con un codice",
+    "pantryFailedTitle": "Avviso",
+    "pantryFailedBody": "Creazione della dispensa non riuscita, ma puoi crearla più tardi dalle impostazioni.",
+    "skipPantryTitle": "Saltare la creazione della dispensa?",
+    "skipPantryBody": "Hai una casa ma nessuna dispensa. Puoi crearne una più tardi dalle impostazioni."
+  },
+  "homeMembers": {
+    "noMembers": "Nessun membro"
+  },
+  "collaborators": {
+    "editPermissions": "Modifica permessi"
+  },
+  "home": {
+    "joinSuccessBody": "Ti sei unito alla casa!",
+    "invalidHomeId": "ID casa non valido",
+    "leaveBody": "Vuoi davvero lasciare \"{{name}}\"? Perderai l'accesso a questa casa e alle sue dispense e liste della spesa."
+  },
+  "homeRoles": {
+    "owner": "Proprietario",
+    "member": "Membro"
+  }
+}

@@ -1,3 +1,7 @@
+import {
+  deleteAction,
+  editAction,
+} from '#components/molecules/SwipeableItem/commonActions';
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -199,11 +203,8 @@ export const ShoppingListMainContent: React.FC<
   };
 
   // --- Batch Move to Pantry Hook ---
-  const {
-    batchMoveToPantry,
-    loading: batchMoveToPantryLoading,
-    isApiUnavailable: batchMoveToPantryUnavailable,
-  } = useBatchMoveToPantry({ currentListId });
+  const { batchMoveToPantry, loading: batchMoveToPantryLoading } =
+    useBatchMoveToPantry({ currentListId, purchasedItems: rawPurchasedItems });
 
   // --- Reordering Hook ---
   const { handleSortOrderUpdate: reorderItem } = useItemReordering({
@@ -354,7 +355,6 @@ export const ShoppingListMainContent: React.FC<
     disabled: !!searchQuery.trim(),
     isTransitioning,
     batchMoveToPantryLoading,
-    batchMoveToPantryUnavailable,
     // Data
     unpurchasedItems,
     purchasedItems,
@@ -470,8 +470,14 @@ export const ShoppingListMainContent: React.FC<
         onItemPress={id =>
           toShoppingListItemDetail({ listId: currentListId, itemId: id })
         }
-        onItemEdit={id => toEditItem({ listId: currentListId, itemId: id })}
-        onItemDelete={handleDeleteItem}
+        itemSwipeActions={id => ({
+          left: [
+            editAction(() => toEditItem({ listId: currentListId, itemId: id })),
+          ],
+          right: [
+            { ...deleteAction(() => handleDeleteItem(id)), removesRow: true },
+          ],
+        })}
         onRefresh={handleRefresh}
         testIDPrefix="shopping-list-item"
         emptyState={emptyStateConfig}

@@ -8,7 +8,7 @@ const { __mockStore: mockStore } = jest.requireMock<{
   __mockStore: Map<string, boolean | string | number | ArrayBuffer>;
 }>('#/storage/mmkv');
 
-jest.mock('#hooks/settings/useSettings', () => ({
+jest.mock('#hooks/settings/useShowTutorials', () => ({
   useShowTutorials: () => true,
 }));
 

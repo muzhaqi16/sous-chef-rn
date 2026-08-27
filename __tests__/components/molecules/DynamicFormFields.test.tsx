@@ -8,19 +8,19 @@ import { DynamicFormFields, FieldDef } from '../../../src/components/molecules/D
 jest.mock('../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../src/apollo/links/refreshToken');
 
-jest.mock('../../../src/components/molecules/AutocompleteField/ItemAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/ItemAutocompleteField', () => ({
   ItemAutocompleteField: () => null,
 }));
-jest.mock('../../../src/components/molecules/AutocompleteField/BrandAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/BrandAutocompleteField', () => ({
   BrandAutocompleteField: () => null,
 }));
-jest.mock('../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   UnitAutocompleteField: () => null,
 }));
-jest.mock('../../../src/components/molecules/AutocompleteField/CategoryAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/CategoryAutocompleteField', () => ({
   CategoryAutocompleteField: () => null,
 }));
-jest.mock('../../../src/components/molecules/AutocompleteField/StorageLocationAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/StorageLocationAutocompleteField', () => ({
   StorageLocationAutocompleteField: () => null,
 }));
 jest.mock('../../../src/components/molecules/FormInput', () => ({

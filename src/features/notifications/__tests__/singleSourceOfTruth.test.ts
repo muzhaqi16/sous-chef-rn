@@ -169,7 +169,7 @@ describe('the notification feed has one source of truth', () => {
  * nothing else. If a server field reappears there, the second source of truth
  * is back, and this fails.
  */
-describe('the notification slice holds no server state', () => {
+describe('the notification store holds no server state', () => {
   const SERVER_STATE = [
     'notifications',
     'unreadCount',
@@ -191,10 +191,7 @@ describe('the notification slice holds no server state', () => {
 
   it('declares none of the fields that mirror the server feed', () => {
     const source = require('fs').readFileSync(
-      require('path').resolve(
-        __dirname,
-        '../../../store/slices/notificationSlice.ts',
-      ),
+      require('path').resolve(__dirname, '../store/notificationStore.ts'),
       'utf8',
     );
     const declared = SERVER_STATE.filter(name =>

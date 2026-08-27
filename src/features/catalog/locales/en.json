@@ -1,0 +1,455 @@
+{
+  "storageLocations": {
+    "loading": "Loading storage locations...",
+    "listView": "List View",
+    "treeView": "Tree View",
+    "noLocations": "No Storage Locations",
+    "noLocationsDesc": "Create storage locations to organize your pantry items by where they're stored.",
+    "cantDeleteDefaultTitle": "Cannot Delete Default Location",
+    "cantDeleteDefaultMessage": "Set another location as default first.",
+    "cantDeleteTitle": "Cannot Delete Location",
+    "cantDeleteWithItems": "\"{{name}}\" has {{description}}. Move or remove them first.",
+    "itemSingular": "{{count}} item",
+    "itemPlural": "{{count}} items",
+    "subLocationSingular": "{{count}} sub-location",
+    "subLocationPlural": "{{count}} sub-locations",
+    "gotIt": "Got It",
+    "deleteTitle": "Delete Storage Location",
+    "offlineTitle": "Not loaded yet",
+    "offlineDescription": "Your storage locations haven't been loaded on this device. Reconnect to see them."
+  },
+  "storageLocationForm": {
+    "name": "Name",
+    "namePlaceholder": "e.g., Main Refrigerator",
+    "type": "Type",
+    "parentLabel": "Parent Location (Optional)",
+    "parentNone": "None",
+    "parentHint": "Organize locations hierarchically (e.g., drawer inside fridge)",
+    "descriptionLabel": "Description (Optional)",
+    "descriptionPlaceholder": "Notes about this location...",
+    "temperature": "Temperature",
+    "colorLabel": "Color (Optional)",
+    "advancedSettings": "Advanced Settings",
+    "climateControlled": "Climate Controlled",
+    "capacity": "Capacity",
+    "capacityPlaceholder": "e.g., 100",
+    "unit": "Unit",
+    "unitPlaceholder": "Select unit",
+    "setAsDefault": "Set as Default Location",
+    "typeRefrigerator": "Refrigerator",
+    "typeFreezer": "Freezer",
+    "typePantryShelf": "Pantry Shelf",
+    "typeCabinet": "Cabinet",
+    "typeDrawer": "Drawer",
+    "typeCounter": "Counter",
+    "typeBasement": "Basement",
+    "typeGarage": "Garage",
+    "typeCloset": "Closet",
+    "typeOutdoor": "Outdoor",
+    "typeBoatStorage": "Boat Storage",
+    "typeRvStorage": "RV Storage",
+    "typeCustom": "Custom",
+    "tempNone": "None",
+    "tempAmbient": "Ambient",
+    "tempRefrigerated": "Refrigerated",
+    "tempFrozen": "Frozen",
+    "colorRed": "Red",
+    "colorPink": "Pink",
+    "colorPurple": "Purple",
+    "colorBlue": "Blue",
+    "colorTeal": "Teal",
+    "colorGreen": "Green",
+    "colorOrange": "Orange",
+    "colorBrown": "Brown",
+    "colorGrey": "Grey",
+    "colorIndigo": "Indigo",
+    "capacityLiters": "Liters",
+    "capacityGallons": "Gallons",
+    "capacityCubicFeet": "Cubic Feet",
+    "capacityCubicMeters": "Cubic Meters",
+    "capacityItems": "Items"
+  },
+  "addStorageLocation": {
+    "createFailed": "Failed to create location",
+    "nameRequired": "Location name is required",
+    "locationName": "Location Name",
+    "namePlaceholder": "e.g., Kitchen Cabinet, Garage Shelf",
+    "hintText": "You can edit details later in Settings > Storage Locations"
+  },
+  "addItemSheet": {
+    "addManually": "Add Manually",
+    "more": "More",
+    "allAdded": "All added",
+    "dismiss": "Dismiss suggestion",
+    "dismissed": "Removed {{name}}",
+    "undo": "Undo",
+    "dismissFailed": "Couldn't remove suggestion",
+    "undoFailed": "Couldn't undo",
+    "sections": {
+      "lowStock": "Low Stock",
+      "expiringSoon": "Expiring Soon",
+      "addAgain": "Add Again",
+      "favorites": "Your Favorites",
+      "popular": "Popular"
+    },
+    "noListTitle": "No List Selected",
+    "noListBody": "Please select or create a shopping list first.",
+    "createList": "Create List",
+    "searchPlaceholder": "Search or scan item...",
+    "added": "Added {{name}}",
+    "emptyTitle": "No suggestions yet",
+    "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
+    "emptyShoppingListSubtext": "Add items to your list and they'll appear here for quick re-adding",
+    "addToPantry": "Add to Pantry"
+  },
+  "storageLocationSheet": {
+    "editTitle": "Edit Storage Location",
+    "addTitle": "Add Storage Location"
+  },
+  "suggestItemEdit": {
+    "sentTitle": "Suggestion sent",
+    "sentBody": "Thanks — an admin will review your changes. The listing stays as it is until they're approved.",
+    "duplicateTitle": "Already suggested",
+    "duplicateBody": "You've already suggested these exact changes and they're still waiting for review, so we kept your original one.",
+    "pendingCapTitle": "5 suggestions pending",
+    "pendingCapBody": "You have 5 edit suggestions waiting for review — that's the limit. Once an admin reviews one, you can send another.",
+    "loadFailedTitle": "Couldn't load this item",
+    "loadFailedBody": "We couldn't load the item's current details, and we need them to work out what you changed. Check your connection and try again.",
+    "readOnlyTitle": "This item can't be edited",
+    "readOnlyBody": "It isn't part of the public catalog, so there's nothing to correct here. Only public catalog items can be edited or suggested for review.",
+    "noChangesTitle": "Nothing to suggest",
+    "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
+    "photosOnlyTitle": "Photo added",
+    "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
+    "updatedTitle": "Item updated",
+    "updatedBody": "Your changes are live.",
+    "failedBody": "Something went wrong sending your suggestion. Please try again.",
+    "photoNotice": "Photos are added right away. Other changes are reviewed by an admin first.",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "rejectedTitle": "Couldn't send that",
+    "failedTitle": "Couldn't send that",
+    "rateLimitedTitle": "Slow down a moment"
+  },
+  "reportItem": {
+    "footer": "Wrong details on one of these?",
+    "title": "Report wrong details",
+    "pickPrompt": "Which item has wrong details?",
+    "reasonLabel": "What's wrong with it?",
+    "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
+    "reasonTooShort": "Please add at least {{count}} characters so an admin knows what to look at.",
+    "submit": "Send report",
+    "sentTitle": "Report sent",
+    "sentBody": "Thanks — an admin will take a look at this item.",
+    "failedBody": "Something went wrong sending your report. Please try again.",
+    "alreadyReportedTitle": "Already reported",
+    "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
+    "notFoundTitle": "Item not found",
+    "notFoundBody": "This item isn't in the catalog any more — it may have been removed.",
+    "failedTitle": "Couldn't send that",
+    "rejectedTitle": "Couldn't send that",
+    "rateLimitedTitle": "Slow down a moment"
+  },
+  "addItemForm": {
+    "modes": {
+      "create": {
+        "title": "Add New Item",
+        "subtitle": "Create a new item with basic information",
+        "subtitleScanned": "Add this item to the database for future scans"
+      },
+      "edit": {
+        "subtitle": "An admin reviews your changes — the listing stays as it is until then",
+        "button": "Submit Suggestion"
+      },
+      "directEdit": {
+        "subtitle": "Your changes go live right away"
+      },
+      "variant": {
+        "title": "Create New Version",
+        "subtitle": "Create a new version of this item for your region",
+        "button": "Create Version"
+      }
+    },
+    "tabs": {
+      "basics": "Basics",
+      "product": "Product"
+    },
+    "scanUpcA11y": "Scan UPC with camera",
+    "fields": {
+      "name": {
+        "placeholder": "Enter item name"
+      },
+      "description": {
+        "label": "Description",
+        "placeholder": "Enter item description (optional)"
+      },
+      "vendor": {
+        "label": "Brand/Vendor",
+        "placeholder": "Enter brand or vendor name"
+      },
+      "type": {
+        "label": "Item Type"
+      },
+      "upc": {
+        "label": "UPC/Barcode",
+        "placeholder": "Enter UPC/Barcode (optional)"
+      },
+      "sku": {
+        "placeholder": "Enter SKU (optional)"
+      },
+      "store": {
+        "label": "Store (for SKU)",
+        "placeholder": "Search for store"
+      },
+      "shelfLife": {
+        "label": "Shelf Life (Days)",
+        "placeholder": "Enter shelf life in days"
+      },
+      "shelfLifeOpened": {
+        "label": "Shelf Life Once Opened (Days)",
+        "placeholder": "Enter shelf life once opened"
+      },
+      "baseDimension": {
+        "label": "Base Dimension"
+      },
+      "consumeIncrement": {
+        "label": "Default Consume Increment",
+        "placeholder": "e.g., 1"
+      },
+      "consumeUnit": {
+        "label": "Default Consume Unit",
+        "placeholder": "tsp, cup, etc."
+      },
+      "tags": {
+        "label": "Tags",
+        "placeholder": "Comma-separated tags (e.g., organic, gluten-free)"
+      },
+      "foodStamp": {
+        "label": "Food Stamp Eligible"
+      },
+      "fsa": {
+        "label": "FSA Eligible"
+      },
+      "editNote": {
+        "label": "What needs fixing?",
+        "placeholder": "Tell the reviewer what is wrong (e.g., wrong net weight on the label)"
+      }
+    }
+  },
+  "itemType": {
+    "DRINK": "Drink",
+    "FOOD": "Food",
+    "FOUNDATION": "Staples",
+    "HOUSEHOLD": "Household",
+    "OTHER": "Other",
+    "PERSONAL_CARE": "Personal Care",
+    "PET": "Pet Supplies",
+    "PRODUCT": "Non-Food Goods",
+    "SUPPLEMENT": "Supplements"
+  },
+  "itemValidation": {
+    "nameRequired": "Item name is required",
+    "nameEmpty": "Item name cannot be empty",
+    "nameMax": "Item name cannot exceed {{count}} characters",
+    "nameChars": "Item name can only contain letters, numbers, spaces, and common punctuation",
+    "descriptionMax": "Description cannot exceed {{count}} characters",
+    "upcDigits": "UPC must contain only numbers",
+    "upcMin": "UPC must be at least {{count}} digits",
+    "upcMax": "UPC cannot exceed {{count}} digits",
+    "skuMax": "SKU cannot exceed {{count}} characters",
+    "urlInvalid": "Please enter a valid URL",
+    "wholeNumber": "Must be a whole number",
+    "shelfLifeMin": "Shelf life must be at least 1 day",
+    "shelfLifeMax": "Shelf life cannot exceed {{count}} years",
+    "shelfLifeOpenedMin": "Opened shelf life must be at least 1 day",
+    "shelfLifeOpenedMax": "Opened shelf life cannot exceed {{count}} years",
+    "displayPricePerUnitMax": "Display price per unit cannot exceed {{count}} characters",
+    "unitQtyMin": "Unit quantity must be greater than 0",
+    "defaultUnitMax": "Unit symbol cannot exceed {{count}} characters",
+    "vendorMax": "Vendor name cannot exceed {{count}} characters",
+    "tagMax": "Each tag cannot exceed {{count}} characters",
+    "tagsMax": "Cannot have more than {{count}} tags",
+    "editReasonMax": "Edit reason cannot exceed {{count}} characters",
+    "editReasonRequired": "Tell us what needs fixing",
+    "editReasonMin": "Please add a little more detail (at least {{count}} characters)",
+    "netWeightMin": "Net weight must be greater than 0",
+    "netWeightValueRequired": "Value is required",
+    "netWeightUnitRequired": "Unit is required",
+    "greaterThanZero": "Must be greater than 0"
+  },
+  "imagePicker": {
+    "productImages": "Product Images",
+    "addPhoto": "Add Photo",
+    "addPhotos": "Add Photos",
+    "addMore": "Add More",
+    "selectUpTo": "Select up to {{max}} images",
+    "removeImage": "Remove image",
+    "changePerspective": "Change image perspective",
+    "selectPerspective": "Select Perspective",
+    "cameraPermissionBody": "Camera permission is required. Please enable it in your device settings.",
+    "chooseFromLibrary": "Choose from Library"
+  },
+  "itemPhotos": {
+    "pendingReview": "Pending review",
+    "viewPhoto": "View photo",
+    "viewPhotoLabeled": "View {{perspective}} photo",
+    "counter": "{{current}} of {{total}}",
+    "setAsMain": "Set as main photo",
+    "mainPhoto": "Main photo",
+    "setPrimary": {
+      "notFoundTitle": "Photo not found",
+      "notFoundBody": "This photo isn't on the item any more — it may have been removed.",
+      "failedBody": "Something went wrong updating the main photo. Please try again.",
+      "rateLimitedTitle": "Slow down a moment",
+      "rejectedTitle": "Couldn't set that photo",
+      "failedTitle": "Couldn't set that photo"
+    },
+    "perspective": {
+      "front": "Front",
+      "back": "Back",
+      "left": "Left",
+      "right": "Right",
+      "top": "Top",
+      "nutrition_label": "Nutrition",
+      "ingredient_list": "Ingredients"
+    }
+  },
+  "itemForm": {
+    "itemInformation": "Item Information",
+    "storageDetails": "Storage Details",
+    "noPantrySelected": "No pantry selected. Please select a pantry first.",
+    "addFailed": "Failed to add pantry item. Please try again.",
+    "updateFailed": "Failed to update pantry item. Please try again.",
+    "brandOptional": "Brand (optional)",
+    "placeholderItemName": "e.g., Rice, Pasta",
+    "placeholderCategory": "e.g., Grains, Dairy",
+    "tags": "Tags",
+    "tagsPlaceholder": "Enter tags separated by commas",
+    "location": "Location",
+    "netWeightLocked": "Weight locked after use — correct from item details",
+    "locationPlaceholder": "e.g., Top shelf, Drawer 2",
+    "storageNotes": "Storage Notes",
+    "notes": "Notes",
+    "addTitle": "Add Pantry Item",
+    "editTitle": "Edit Pantry Item",
+    "quantityUnit": "Quantity & Unit",
+    "quantityStock": "Quantity & Stock",
+    "quantityRequired": "Quantity *",
+    "quantityCurrent": "Current Quantity"
+  },
+  "folderPicker": {
+    "selectFolder": "Select Folder",
+    "loading": "Loading folders...",
+    "longPressHint": "Long press a folder to edit or delete",
+    "searchPlaceholder": "Search folders...",
+    "duplicate": "A folder named \"{{name}}\" already exists.",
+    "manageTitle": "Manage Folder",
+    "deleteConfirm": "Delete this folder?",
+    "deleteFolder": "Delete Folder",
+    "deleteHint": "Recipes will be moved to No Folder",
+    "renamePlaceholder": "Enter new folder name...",
+    "noMatches": "No folders match \"{{query}}\"",
+    "deleteConfirmBody": "Recipes in this folder will be moved to \"{{folder}}\"."
+  },
+  "multiSelectChipSheet": {
+    "noItems": "No items available",
+    "searchPlaceholder": "Search...",
+    "noMatches": "No items match \"{{query}}\""
+  },
+  "tagPicker": {
+    "filterByTags": "Filter by Tags",
+    "searchPlaceholder": "Search tags...",
+    "loading": "Loading tags...",
+    "noTags": "No tags available",
+    "noMatches": "No tags match \"{{query}}\"",
+    "noneSelected": "No tags selected",
+    "selectedCount_one": "{{count}} tag selected",
+    "selectedCount_other": "{{count}} tags selected"
+  },
+  "editableCounter": {
+    "decrease": "Decrease quantity",
+    "increase": "Increase quantity",
+    "hint": "Tap to edit manually or use buttons to adjust"
+  },
+  "autocomplete": {
+    "offlineTitle": "Search unavailable offline",
+    "offlineSubtitle": "You can still type a custom value and press done",
+    "selectStorageLocation": "Select a storage location",
+    "storageLocationPlaceholder": "Select storage location",
+    "storageLocationSearch": "Type to search storage locations...",
+    "noStorageLocations": "No storage locations yet",
+    "noMatchingLocations": "No matching locations",
+    "tapAddToCreate": "Tap \"Add\" below to create \"{{term}}\"",
+    "typeToSearch": "Type at least 2 characters to search or add new",
+    "selectBrand": "Select a brand",
+    "brandSearch": "Type to search brands...",
+    "noBrands": "No brands found",
+    "noMatchingBrands": "No matching brands",
+    "selectCategory": "Select a category",
+    "categorySearch": "Type to search categories...",
+    "noCategories": "No categories found",
+    "selectItem": "Search for an item",
+    "itemSearch": "Type to search items...",
+    "noItems": "No items found",
+    "selectStore": "Select a store",
+    "storeSearch": "Type to search stores...",
+    "noStores": "No stores found",
+    "selectUnit": "Select a unit",
+    "noUnits": "No units found",
+    "typeMoreToAdd": "Continue typing to add \"{{term}}\"",
+    "typeMoreToAddBrand": "Continue typing to add \"{{term}}\" as a custom brand",
+    "typeMoreToAddStore": "Continue typing to add \"{{term}}\" as a custom store",
+    "typeAtLeastTwo": "Type at least 2 characters to search",
+    "tryDifferentTerm": "Try a different search term"
+  },
+  "unitEntryList": {
+    "title": "Units",
+    "addUnit": "Add Unit",
+    "size": "Size",
+    "unitDefaultLabel": "Unit (Default)",
+    "unitPlaceholder": "e.g., kg, lbs",
+    "contains": "Contains"
+  },
+  "storageLocationCard": {
+    "default": "Default",
+    "insideParent": "Inside {{parent}}",
+    "itemCount_one": "{{count}} item",
+    "itemCount_other": "{{count}} items"
+  },
+  "itemSubtitle": {
+    "percentRemaining": "({{percent}}% remaining)",
+    "weight": "{{weight}} {{unit}}",
+    "weightRemaining": "{{weight}} {{unit}} remaining",
+    "contentUnitCount_one": "{{count}} {{unit}}",
+    "contentUnitCount_other": "{{count}} {{unit}}"
+  },
+  "fractionInput": {
+    "formatsHint": "Formats: 1/4, 1 1/4, 0.75, or 2"
+  },
+  "tagInput": {
+    "maxTagsReached_one": "Maximum {{count}} tag reached",
+    "maxTagsReached_other": "Maximum {{count}} tags reached"
+  },
+  "usagePurpose": {
+    "ADJUSTMENT": "Inventory adjusted",
+    "COOKING": "Cooking",
+    "GENERAL": "Consumed",
+    "MEAL_PREP": "Meal prep",
+    "RESTOCK": "Restocked",
+    "TRANSFER": "Transfer",
+    "WASTE": "Wasted",
+    "GIFT": "Gift",
+    "SNACK": "Snack"
+  },
+  "unitType": {
+    "AREA": "Area",
+    "COUNT": "Count",
+    "LENGTH": "Length",
+    "TIME": "Time",
+    "WEIGHT": "Weight",
+    "VOLUME": "Volume"
+  },
+  "multiSelect": {
+    "noneSelected": "No items selected"
+  }
+}

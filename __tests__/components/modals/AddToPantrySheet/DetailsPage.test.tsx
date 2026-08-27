@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { DetailsPage } from '../../../../src/components/modals/AddToPantrySheet/DetailsPage';
+import { DetailsPage } from '#features/pantry/components/modals/AddToPantrySheet/DetailsPage';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
 jest.mock('../../../../src/apollo/links/refreshToken');
@@ -26,7 +26,7 @@ jest.mock('../../../../src/components/molecules/EditableCounter', () => ({
     return <Text>{props.label}</Text>;
   },
 }));
-jest.mock('../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField', () => ({
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   UnitAutocompleteField: (props: { label?: string }) => {
     const { Text } = require('react-native');
     return <Text>{props.label}</Text>;

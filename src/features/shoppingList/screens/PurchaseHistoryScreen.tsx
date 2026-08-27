@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useQuery } from '@apollo/client/react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { FlashList, type ListRenderItemInfo } from '@shopify/flash-list';
+import {
+  FlashList,
+  type ListRenderItemInfo,
+  type FlashListRef,
+} from '@shopify/flash-list';
 import {
   GetItemPurchaseHistoryDocument,
   type GetItemPurchaseHistoryQuery,
@@ -17,6 +21,8 @@ import { ThemedBackButton } from '#components/atoms/themedComponents';
 import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState } from '#hooks/data/useDataState';
 import {
@@ -248,6 +254,21 @@ export const PurchaseHistoryScreen: React.FC<
   const connection = data?.shoppingListItem?.purchasesConnection;
   const purchases: PurchaseItem[] =
     connection?.edges?.map(edge => edge.node) ?? [];
+
+  // Instrumented like PantryContent/SortableList: this is a full screen,
+  // so `flashlist_initial_load_ms` and blank-cell episodes are worth the
+  // per-cell wrapper's cost (sampled 5% in release).
+  const flashListRef = useRef<FlashListRef<PurchaseItem>>(null);
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'PurchaseHistoryScreen',
+    hasRealContent: purchases.length > 0,
+  });
+  useDataReferenceTracker(
+    purchases,
+    'PurchaseHistoryScreen.items',
+    perfCallbacks.onDataReferenceChange,
+  );
+
   const totalCount = connection?.totalCount ?? purchases.length;
   const hasNextPage = connection?.pageInfo?.hasNextPage ?? false;
   const endCursor = connection?.pageInfo?.endCursor ?? null;
@@ -327,6 +348,11 @@ export const PurchaseHistoryScreen: React.FC<
       ) : (
         <PurchaseHistoryProvider value={{ totalCount }}>
           <FlashList
+            ref={flashListRef}
+            CellRendererComponent={perfCallbacks.CellRendererComponent}
+            onLoad={perfCallbacks.onLoad}
+            onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+            onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
             data={purchases}
             keyExtractor={keyExtractor}
             renderItem={(info: ListRenderItemInfo<PurchaseItem>) => (

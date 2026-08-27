@@ -40,6 +40,7 @@ import { shoppingListDetailScreens } from '#features/shoppingList/screens/regist
 import { mealPlanDetailScreens } from '#features/mealPlan/screens/registration';
 import { profileScreens } from '#features/profile/screens/registration';
 import { homeManagementScreens } from '#features/home/screens/registration';
+import { catalogScreens } from '#features/catalog/screens/registration';
 
 import {
   NavigationErrorBoundary,
@@ -167,6 +168,7 @@ const RootStack = createNativeStackNavigator({
         ...mealPlanDetailScreens,
         ...profileScreens,
         ...homeManagementScreens,
+        ...catalogScreens,
       },
     },
     // Placed last so the active conditional group's first screen is the

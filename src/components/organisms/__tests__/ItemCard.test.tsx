@@ -82,12 +82,38 @@ describe('ItemCard', () => {
   });
 
   it('renders SwipeableItem when edit action is provided', () => {
-    render(<ItemCard {...defaultProps} onEdit={jest.fn()} testID="item" />);
+    render(
+      <ItemCard
+        {...defaultProps}
+        rightActions={[
+          {
+            key: 'edit',
+            icon: 'create-outline',
+            labelKey: 'labels.edit',
+            onPress: jest.fn(),
+          },
+        ]}
+        testID="item"
+      />,
+    );
     expect(screen.getByTestId('item-swipeable')).toBeTruthy();
   });
 
   it('renders SwipeableItem when delete action is provided', () => {
-    render(<ItemCard {...defaultProps} onDelete={jest.fn()} testID="item" />);
+    render(
+      <ItemCard
+        {...defaultProps}
+        rightActions={[
+          {
+            key: 'delete',
+            icon: 'trash-outline',
+            labelKey: 'labels.delete',
+            onPress: jest.fn(),
+          },
+        ]}
+        testID="item"
+      />,
+    );
     expect(screen.getByTestId('item-swipeable')).toBeTruthy();
   });
 
@@ -104,7 +130,20 @@ describe('ItemCard', () => {
   });
 
   it('mounts the reanimated slide hook only when a swipe action is provided', () => {
-    render(<ItemCard {...defaultProps} onDelete={jest.fn()} testID="item" />);
+    render(
+      <ItemCard
+        {...defaultProps}
+        rightActions={[
+          {
+            key: 'delete',
+            icon: 'trash-outline',
+            labelKey: 'labels.delete',
+            onPress: jest.fn(),
+          },
+        ]}
+        testID="item"
+      />,
+    );
     expect(mockUseSlideAnimation).toHaveBeenCalledTimes(1);
   });
 

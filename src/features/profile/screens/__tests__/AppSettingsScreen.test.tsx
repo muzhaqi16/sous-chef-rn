@@ -116,10 +116,10 @@ jest.mock('#components/settings/SettingSwitch', () => {
   };
 });
 
-jest.mock('#components/settings/SettingSection', () => {
+jest.mock('#components/organisms/SettingsSection', () => {
   const { View, Text } = require('react-native');
   return {
-    SettingSection: ({
+    SettingsSection: ({
       title,
       children,
     }: {

@@ -6,7 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#utils/iconUtils';
 import { Text } from '#components/atoms/Text';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
-import { getNotificationDisplayMessage } from '#utils/notifications/notificationHelpers';
+import { getNotificationDisplayMessage } from '#features/notifications/utils/notificationHelpers';
 import { getDateFnsLocale } from '#utils/dateLocale';
 
 import { format } from 'date-fns/format';

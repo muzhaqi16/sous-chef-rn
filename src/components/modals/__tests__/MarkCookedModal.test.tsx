@@ -4,7 +4,7 @@ import type { BottomSheetFormScrollView as BottomSheetFormScrollViewComponent } 
 import type { BottomSheetHeader as BottomSheetHeaderComponent } from '#components/atoms/BottomSheetHeader';
 import type { FractionInput as FractionInputComponent } from '#components/molecules/FractionInput';
 import type { FormInput as FormInputComponent } from '#components/molecules/FormInput';
-import { MarkCookedModal } from '../MarkCookedModal';
+import { MarkCookedModal } from '#components/modals/MarkCookedModal';
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({

@@ -23,11 +23,11 @@ jest.mock(
 );
 
 jest.mock(
-  '../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField',
+  '#features/catalog/ui/autocomplete/ItemAutocompleteField',
   () => ({
     ItemAutocompleteField: (
       props: React.ComponentProps<
-        typeof import('../../../../../src/components/molecules/AutocompleteField/ItemAutocompleteField').ItemAutocompleteField
+        typeof import('#features/catalog/ui/autocomplete/ItemAutocompleteField').ItemAutocompleteField
       >,
     ) => {
       const { Text } = require('react-native');
@@ -36,11 +36,11 @@ jest.mock(
   }),
 );
 jest.mock(
-  '../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField',
+  '#features/catalog/ui/autocomplete/UnitAutocompleteField',
   () => ({
     UnitAutocompleteField: (
       props: React.ComponentProps<
-        typeof import('../../../../../src/components/molecules/AutocompleteField/UnitAutocompleteField').UnitAutocompleteField
+        typeof import('#features/catalog/ui/autocomplete/UnitAutocompleteField').UnitAutocompleteField
       >,
     ) => {
       const { Text } = require('react-native');

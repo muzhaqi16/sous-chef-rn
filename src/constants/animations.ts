@@ -129,14 +129,10 @@ export const TIMING = {
  * ```tsx
  * import { SLIDE_PRESETS } from '#/constants/animations';
  *
- * // Full exit (shopping list checkbox toggle)
- * <AnimatedListItem slideConfig={SLIDE_PRESETS.fullExit} />
- *
- * // Subtle feedback slide
- * <AnimatedListItem slideConfig={SLIDE_PRESETS.subtle} />
- *
- * // Exit with fade (for deletions)
- * <AnimatedListItem slideConfig={SLIDE_PRESETS.exitWithFade} />
+ * const { animatedSlideStyle, triggerSlide } = useSlideAnimation({
+ *   itemId,
+ *   ...SLIDE_PRESETS.exitWithFade, // or .fullExit / .subtle
+ * });
  * ```
  */
 export const SLIDE_PRESETS = {

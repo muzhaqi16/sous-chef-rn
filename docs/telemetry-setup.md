@@ -242,9 +242,7 @@ both sides.
 | `app_startup_duration_ms` | | Full app startup time |
 | `app_native_launch_ms` | | Native platform init time |
 | `app_js_bundle_load_ms` | | Hermes bytecode load time |
-| `screen_mount_duration_ms` | `screen` | Screen mount time |
-| `screen_interactive_duration_ms` | `screen` | Time to interactive |
-| `screen_transition_duration_ms` | `screen` | Full transition time |
+| `screen_interactive_duration_ms` | `screen` | Navigation focus -> one frame after the screen's effects run. The ONLY screen-timing metric; its floor is a frame, so an already-mounted screen reads ~15-20 ms and only real mount work rises above that. `screen_mount_duration_ms` and `screen_transition_duration_ms` were removed: the first timed two effects in the same commit and read ~0 on every screen, the second was measured from the identical marks as this one. |
 | `component_commit_gap_ms` | `component` | Wall time since the component's previous commit. NOT render cost - it includes idle time. |
 | `http_request_duration_ms` | `host` | HTTP request duration |
 | `graphql_request_duration_ms` | `name` | GraphQL operation duration |
@@ -260,7 +258,7 @@ both sides.
 | `flashlist_scroll_coverage_ratio` | `component` | Mounted cells / expected visible cells during scroll, custom bounds. 1.0 is full coverage. Since 2026-08-26, emitted only by sampled sessions - see `flashlist_blank_cells_total`. |
 | `flashlist_session_duration_ms` | `component` | How long a list stayed mounted, emitted on unmount. |
 | `offline_queue_oldest_age_ms` | | Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. |
-| `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. |
+| `component_render_duration_ms` | `component` | True render duration. NO PRODUCER TODAY - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from `ReactFabric-prod.js`. The name is kept for what it would carry; use `component_render_count` for churn. | **No producer** - nothing emits a `component:*:render` measure, because React strips `<Profiler onRender>` from ReactFabric-prod. Never appears in Mimir; do not dashboard it. `component_commit_gap_ms` is the weaker stand-in that is actually emitted.
 
 All metrics automatically include `env` (environment), `platform` (ios/android)
 and `version` (the app version) labels.

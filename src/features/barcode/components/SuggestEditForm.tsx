@@ -6,9 +6,9 @@ import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { ErrorState } from '#components/atoms/ErrorState';
 import AddItemForm, {
   type AddItemSubmitPayload,
-} from '#components/organisms/AddItemForm/AddItemForm';
-import { useItemForEdit } from '#hooks/items/useItemForEdit';
-import { useSuggestItemEdit } from '#hooks/items/useSuggestItemEdit';
+} from '#features/catalog/ui/AddItemForm/AddItemForm';
+import { useItemForEdit } from '#features/catalog/hooks/useItemForEdit';
+import { useSuggestItemEdit } from '#features/catalog/hooks/useSuggestItemEdit';
 import { buildInitialDataFromSnapshot } from '#utils/items/suggestItemChanges';
 
 interface SuggestEditFormProps {

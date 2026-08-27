@@ -87,18 +87,6 @@ export class ShoppingListScreen extends BaseScreen {
    * Also handles dismissing the feature hint overlay if it appears
    */
   async tapAddButton() {
-    // Try to dismiss feature hint overlay if it exists (appears once per session when items exist)
-    try {
-      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-        .toBeVisible()
-        .withTimeout(1000);
-      await element(by.id('feature-hint-overlay-dismiss')).tap();
-      await waitFor(element(by.id('feature-hint-overlay')))
-        .not.toBeVisible()
-        .withTimeout(2000);
-    } catch {
-      // Overlay not present, continue
-    }
 
     await this.tapByID(this.addButton);
   }
@@ -480,18 +468,6 @@ export class ShoppingListScreen extends BaseScreen {
       .not.toBeVisible()
       .withTimeout(15000);
 
-    // Dismiss feature hint overlay if it appears (shown after first item added)
-    try {
-      await waitFor(element(by.id('feature-hint-overlay-dismiss')))
-        .toBeVisible()
-        .withTimeout(2000);
-      await element(by.id('feature-hint-overlay-dismiss')).tap();
-      await waitFor(element(by.id('feature-hint-overlay')))
-        .not.toBeVisible()
-        .withTimeout(2000);
-    } catch {
-      // Overlay not present, continue
-    }
 
     // Wait for screen to navigate back to shopping list main
     await waitFor(element(by.id('shopping-list-screen')))

@@ -13,13 +13,11 @@ import {
   useAuthTokens,
   useAuthActions,
   usePostLoginState,
-  useBottomSheetState,
   usePantryState,
   useShoppingListState,
   useHomeState,
   usePreferences,
   useNavigationUtils,
-  useSearchState,
   useSetHomeAndPantry,
   useSetIsHomeSelectionReady,
   useSetIsPantryQueryComplete,
@@ -241,13 +239,6 @@ describe('grouped hooks', () => {
     );
   });
 
-  it('useBottomSheetState returns scanner bottom sheet state', () => {
-    const { result } = renderHook(() => useBottomSheetState());
-    expect(result.current.scannerSheetVisible).toBe(false);
-    expect(result.current.isSearching).toBe(false);
-    expect(result.current.hideBottomSheet).toBe(mockState.hideBottomSheet);
-  });
-
   it('usePantryState returns pantry-related state', () => {
     const { result } = renderHook(() => usePantryState());
     expect(result.current.selectedPantryId).toBe('pantry-1');
@@ -281,12 +272,5 @@ describe('grouped hooks', () => {
       mockState.getUserNavigationState,
     );
     expect(result.current.setOnBoardingStep).toBe(mockState.setOnBoardingStep);
-  });
-
-  it('useSearchState returns search state', () => {
-    const { result } = renderHook(() => useSearchState());
-    expect(result.current.searchResults).toEqual([]);
-    expect(result.current.isSearching).toBe(false);
-    expect(result.current.clearSearch).toBe(mockState.clearSearch);
   });
 });

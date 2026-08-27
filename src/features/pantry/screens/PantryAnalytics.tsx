@@ -10,12 +10,14 @@ import { TabView, TabRoute } from '#components/molecules/TabView/TabView';
 import { DateRangeFilter } from '#components/analytics/DateRangeFilter';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { UsageTab, WasteTab, LedgerTab } from './PantryAnalyticsTabs';
+import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 
 type PantryAnalyticsProps = StaticScreenProps<{
   pantryId: string;
 }>;
 
 export const PantryAnalytics: React.FC<PantryAnalyticsProps> = ({ route }) => {
+  useScreenTransition('PantryAnalytics');
   const { t } = useTranslation();
   const { pantryId } = route.params;
   const { goBack } = useAppNavigation();

@@ -7,7 +7,7 @@ import React, {
   type ReactNode,
 } from 'react';
 import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings/useSettings';
+import { useShowTutorials } from '#hooks/settings/useShowTutorials';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';

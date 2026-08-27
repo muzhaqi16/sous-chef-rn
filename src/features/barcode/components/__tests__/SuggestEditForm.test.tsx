@@ -8,12 +8,12 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { SuggestEditForm } from '../SuggestEditForm';
-import { GetItemForEditDocument } from '#hooks/items/useItemForEdit.generated';
+import { GetItemForEditDocument } from '#features/catalog/hooks/useItemForEdit.generated';
 import { ItemType, StorageState } from '#/graphql/generated/schemaTypes';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,
 // image picker). This suite is about what SuggestEditForm renders *around* it.
-jest.mock('#components/organisms/AddItemForm/AddItemForm', () => ({
+jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => ({
   __esModule: true,
   default: ({ mode }: { mode: string }) => {
     const { Text } = jest.requireActual('react-native');

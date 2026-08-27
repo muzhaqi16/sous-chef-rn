@@ -1,3 +1,7 @@
+import {
+  deleteAction,
+  editAction,
+} from '#components/molecules/SwipeableItem/commonActions';
 import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
@@ -406,15 +410,23 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             ? () => onItemPress(itemId)
             : undefined
         }
-        onEdit={
-          canEditItems && onItemEdit ? () => onItemEdit(itemId) : undefined
-        }
-        onDelete={
-          canRemoveItems && onItemDelete
-            ? () => onItemDelete(itemId)
+        // Edit on the left, delete on the right — what `swipeMode="shopping"`
+        // used to mean inside the swipe molecule.
+        leftActions={
+          canEditItems && onItemEdit
+            ? [editAction(() => onItemEdit(itemId))]
             : undefined
         }
-        isPurchased={isPurchased}
+        rightActions={
+          canRemoveItems && onItemDelete
+            ? [
+                {
+                  ...deleteAction(() => onItemDelete(itemId)),
+                  removesRow: true,
+                },
+              ]
+            : undefined
+        }
         friction={1}
         onSwipeableWillOpen={ref => {
           onSwipeableWillOpen?.(ref);
@@ -424,7 +436,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           }
         }}
         onSwipeableClose={onSwipeableClose}
-        swipeMode="shopping"
         enabled={swipeEnabled}
       >
         <ListItem

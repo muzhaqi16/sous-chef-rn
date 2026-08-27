@@ -37,6 +37,14 @@ jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
   apolloCachePersistence: { clear: jest.fn() },
 }));
 
+import { useNotificationStore } from '#features/notifications/store/notificationStore';
+import { useBarcodeScannerStore } from '#features/barcode/store/barcodeScannerStore';
+import {
+  useRecipeCacheStore,
+  textSearchCacheKey,
+} from '#features/recipes/store/useRecipeCacheStore';
+import { useRecipeSuggestionsStore } from '#features/recipes/store/useRecipeSuggestionsStore';
+import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
 /**
@@ -150,7 +158,6 @@ describe('a session end leaves no data belonging to the previous person', () => 
           pantryItemName: 'Insulin pens',
         },
       },
-      recentlyScanned: [{ id: 's1', name: 'Pregnancy test' }],
       cachedItemSuggestions: [{ id: 'i1', name: 'Insulin pens' }],
       selectedHomeId: 'home-1',
       selectedPantryId: 'pantry-1',
@@ -162,14 +169,69 @@ describe('a session end leaves no data belonging to the previous person', () => 
     await useStore.getState().resetStore('LOGOUT');
 
     const state = useStore.getState();
-    expect(state.pendingExpirationLinks).toEqual({});
-    expect(state.recentlyScanned).toEqual([]);
     expect(state.cachedItemSuggestions).toEqual([]);
     expect(state.selectedHomeId).toBeNull();
     expect(state.selectedPantryId).toBeNull();
     expect(state.selectedShoppingListId).toBeNull();
     expect(state.selectedMealPlanId).toBeNull();
     expect(state.user).toBeNull();
+  });
+
+  // A feature that owns its own store falls outside `PERSISTED_KEYS`, so the
+  // marker sweep above cannot reach it — exactly how `recipe-search-cache` and
+  // `recipe-suggestions-cache` came to survive a sign-out unnoticed. Feature
+  // stores register a reset instead; this asserts the registry is wired and
+  // that a populated feature store is actually emptied.
+  it('clears feature-owned stores, which the persisted-key sweep cannot see', async () => {
+    useNotificationStore
+      .getState()
+      .linkExpirationData('notif-1', { pantryItemName: 'previous person' });
+    expect(useNotificationStore.getState().pendingExpirationLinks).not.toEqual(
+      {},
+    );
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useNotificationStore.getState().pendingExpirationLinks).toEqual({});
+    expect(registeredSessionScopedStores()).toContain('notifications');
+  });
+
+  it('clears the scanner history, which names what the previous person bought', async () => {
+    useBarcodeScannerStore
+      .getState()
+      .addToRecentlyScanned({ id: 's1', name: 'Pregnancy test', upc: '0123' });
+    expect(useBarcodeScannerStore.getState().recentlyScanned).toHaveLength(1);
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useBarcodeScannerStore.getState().recentlyScanned).toEqual([]);
+    expect(registeredSessionScopedStores()).toContain('barcodeScanner');
+  });
+
+  it('clears the recipe caches, which name what the last person cooked', async () => {
+    // These two are the registry's own motivating example — `recipe-search-cache`
+    // and `recipe-suggestions-cache` are how a feature store was first found
+    // surviving a sign-out. Asserted here so they cannot regress to that again.
+    useRecipeCacheStore
+      .getState()
+      .setCached(textSearchCacheKey('chicken'), [
+        { id: 1, title: 'Roast chicken', image: '', imageType: 'jpg' },
+      ]);
+    useRecipeSuggestionsStore
+      .getState()
+      .setCachedSuggestions('insulin pens', []);
+    expect(Object.keys(useRecipeCacheStore.getState().cache)).not.toEqual([]);
+
+    await useStore.getState().resetStore('LOGOUT');
+
+    expect(useRecipeCacheStore.getState().cache).toEqual({});
+    expect(useRecipeSuggestionsStore.getState().cache).toEqual({});
+    expect(registeredSessionScopedStores()).toEqual(
+      expect.arrayContaining([
+        'useRecipeCacheStore',
+        'useRecipeSuggestionsStore',
+      ]),
+    );
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

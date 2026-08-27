@@ -337,19 +337,35 @@ describe('NativePerformanceService', () => {
   });
 
   describe('measure observer', () => {
-    it('routes screen:Home:mount to Telemetry.histogram', () => {
+    it('routes screen:Home:interactive to Telemetry.histogram', () => {
       NativePerformanceService.initialize();
       const measObserver = observers[1];
 
       measObserver._callback({
-        getEntries: () => [{ name: 'screen:Home:mount', duration: 120 }],
+        getEntries: () => [{ name: 'screen:Home:interactive', duration: 120 }],
       });
 
       expect(Telemetry.histogram).toHaveBeenCalledWith(
-        'screen_mount_duration_ms',
+        'screen_interactive_duration_ms',
         120,
         { screen: 'Home' },
       );
+    });
+
+    it('drops the removed mount and transition phases', () => {
+      NativePerformanceService.initialize();
+      const measObserver = observers[1];
+
+      measObserver._callback({
+        getEntries: () => [
+          { name: 'screen:Home:mount', duration: 120 },
+          { name: 'screen:Home:transition', duration: 120 },
+        ],
+      });
+
+      // `mount` timed two effects in the same commit and read ~0 on every
+      // screen; `transition` came from the identical marks as `interactive`.
+      expect(Telemetry.histogram).not.toHaveBeenCalled();
     });
 
     it('routes component:MyList:render to component_render_duration_ms histogram', () => {

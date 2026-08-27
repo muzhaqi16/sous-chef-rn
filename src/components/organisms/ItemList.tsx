@@ -15,6 +15,7 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
+import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { EmptyState } from '#components/atoms/EmptyState';
 import { ItemCard } from './ItemCard';
@@ -56,16 +57,9 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   index,
 }) => {
   const { actions } = useItemListActions();
-  const {
-    onItemPress,
-    onItemEdit,
-    onItemDelete,
-    onItemConsume,
-    onItemWaste,
-    onItemRestock,
-    onSwipeableWillOpen,
-    testIDPrefix,
-  } = actions;
+  const { onItemPress, itemSwipeActions, onSwipeableWillOpen, testIDPrefix } =
+    actions;
+  const swipe = itemSwipeActions?.(item.id);
 
   // Render CachedImage from imageUrl data — avoids creating JSX in parent transforms
   const leftElement =
@@ -89,11 +83,8 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
       leftElement={leftElement}
       rightElement={item.rightElement}
       onPress={() => onItemPress(item.id)}
-      onEdit={onItemEdit ? () => onItemEdit(item.id) : undefined}
-      onDelete={onItemDelete ? () => onItemDelete(item.id) : undefined}
-      onConsume={onItemConsume ? () => onItemConsume(item.id) : undefined}
-      onWaste={onItemWaste ? () => onItemWaste(item.id) : undefined}
-      onRestock={onItemRestock ? () => onItemRestock(item.id) : undefined}
+      leftActions={swipe?.left}
+      rightActions={swipe?.right}
       onSwipeableWillOpen={onSwipeableWillOpen}
       testID={testIDPrefix ? `${testIDPrefix}-${index}` : undefined}
     />
@@ -116,11 +107,13 @@ const MVCP_DISABLED = { disabled: true };
 interface ItemListProps {
   items: Item[];
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
-  onItemConsume?: (id: string) => void;
-  onItemWaste?: (id: string) => void;
-  onItemRestock?: (id: string) => void;
+  /** Swipe actions for one row — see `ItemListActions.itemSwipeActions`. */
+  itemSwipeActions?: (id: string) => {
+    left?: SwipeAction[];
+    right?: SwipeAction[];
+  };
+  /** Called before a row-removing action runs, to prepare the layout animation. */
+  onBeforeItemRemoved?: () => void;
   onRefresh?: () => Promise<void>;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onEndReached?: () => void;
@@ -155,11 +148,8 @@ interface ItemListProps {
 export const ItemList: React.FC<ItemListProps> = ({
   items,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
-  onItemConsume,
-  onItemWaste,
-  onItemRestock,
+  itemSwipeActions,
+  onBeforeItemRemoved,
   onRefresh,
   onSwipeableWillOpen,
   onEndReached,
@@ -232,24 +222,38 @@ export const ItemList: React.FC<ItemListProps> = ({
   };
 
   // Bundle actions for context provider
+  // A row-removing action needs FlashList told before it fires, or the removal
+  // animates from the wrong layout. Applied here to every action the caller
+  // flagged `removesRow`, rather than only to a handler named `onItemDelete`.
   const actions: ItemListActions = {
     onItemPress,
-    onItemEdit,
-    onItemDelete: onItemDelete
+    itemSwipeActions: itemSwipeActions
       ? (id: string) => {
-          flashListRef.current?.prepareForLayoutAnimationRender();
-          onItemDelete(id);
+          const prepare = (list?: SwipeAction[]) =>
+            list?.map(action =>
+              action.removesRow
+                ? {
+                    ...action,
+                    onPress: () => {
+                      flashListRef.current?.prepareForLayoutAnimationRender();
+                      onBeforeItemRemoved?.();
+                      action.onPress();
+                    },
+                  }
+                : action,
+            );
+          const built = itemSwipeActions(id);
+          return { left: prepare(built.left), right: prepare(built.right) };
         }
       : undefined,
-    onItemConsume,
-    onItemWaste,
-    onItemRestock,
     onSwipeableWillOpen,
     testIDPrefix,
   };
 
-  // extraData encodes action availability — FlashList re-renders items when this changes
-  const extraData = `${!!onItemEdit}-${!!onItemDelete}-${!!onItemConsume}-${!!onItemWaste}-${!!onItemRestock}`;
+  // extraData encodes whether rows have swipe actions at all — FlashList
+  // re-renders items when it changes. The per-row action list is built inside
+  // the row, so its contents do not need to appear here.
+  const extraData = String(!!itemSwipeActions);
 
   if (items.length === 0 && emptyState) {
     return (

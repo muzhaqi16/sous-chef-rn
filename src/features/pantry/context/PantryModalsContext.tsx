@@ -8,11 +8,11 @@ import React, {
 } from 'react';
 import { type StorageType } from '#/graphql/generated/schemaTypes';
 import { usePantryItemActions } from '#features/pantry/hooks/usePantryItemActions';
-import { ConsumePantryItemModal } from '#/components/modals/ConsumePantryItemModal';
-import { RecordWastePantryItemModal } from '#/components/modals/RecordWastePantryItemModal';
-import { RestockPantryItemModal } from '#/components/modals/RestockPantryItemModal';
-import { AddToPantrySheet } from '#/components/modals/AddToPantrySheet/AddToPantrySheet';
-import { AddStorageLocationSheet } from '#/components/modals/AddStorageLocationSheet/AddStorageLocationSheet';
+import { ConsumePantryItemModal } from '#features/pantry/components/modals/ConsumePantryItemModal';
+import { RecordWastePantryItemModal } from '#features/pantry/components/modals/RecordWastePantryItemModal';
+import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
+import { AddToPantrySheet } from '#features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet';
+import { AddStorageLocationSheet } from '#features/catalog/ui/AddStorageLocationSheet/AddStorageLocationSheet';
 
 /**
  * Context value for pantry modals.

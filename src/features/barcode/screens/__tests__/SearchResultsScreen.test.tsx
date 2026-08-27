@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import type { RootState } from '#store/index';
 import { SearchResultsScreen } from '../SearchResultsScreen';
 
 type ScreenProps = React.ComponentProps<typeof SearchResultsScreen>;
@@ -15,17 +14,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 const mockHideBottomSheet = jest.fn();
 const mockShowBottomSheet = jest.fn();
 
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn(
-    <T,>(selector: (s: RootState) => T): T =>
-      selector({
-        scannerSheetVisible: false,
-        searchError: null,
-        isSearching: false,
-        hideBottomSheet: mockHideBottomSheet,
-        showBottomSheet: mockShowBottomSheet,
-      } as Partial<RootState> as RootState),
-  ),
+jest.mock('#features/barcode/store/barcodeScannerStore', () => ({
   useBottomSheetState: jest.fn(() => ({
     scannerSheetVisible: false,
     searchError: null,
@@ -33,10 +22,6 @@ jest.mock('#store/useAppStore', () => ({
     hideBottomSheet: mockHideBottomSheet,
     showBottomSheet: mockShowBottomSheet,
   })),
-}));
-
-jest.mock('zustand/react/shallow', () => ({
-  useShallow: <T,>(fn: T): T => fn,
 }));
 
 jest.mock('#hooks/useStandardBottomSheet', () => ({
@@ -93,7 +78,7 @@ jest.mock('#components/molecules/Header', () => ({
   },
 }));
 
-jest.mock('#components/organisms/AddItemForm/AddItemForm', () => {
+jest.mock('#features/catalog/ui/AddItemForm/AddItemForm', () => {
   const { View } = require('react-native');
   return { __esModule: true, default: () => <View /> };
 });
@@ -109,17 +94,7 @@ jest.mock('#components/atoms/BottomSheetKeyboardAwareScrollView', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   // Restore default mock implementations after clearAllMocks
-  const storeModule = require('#store/useAppStore');
-  storeModule.useAppStore.mockImplementation(
-    <T,>(selector: (s: RootState) => T): T =>
-      selector({
-        scannerSheetVisible: false,
-        searchError: null,
-        isSearching: false,
-        hideBottomSheet: mockHideBottomSheet,
-        showBottomSheet: mockShowBottomSheet,
-      } as Partial<RootState> as RootState),
-  );
+  const storeModule = require('#features/barcode/store/barcodeScannerStore');
   storeModule.useBottomSheetState.mockReturnValue({
     scannerSheetVisible: false,
     searchError: null,
@@ -190,17 +165,7 @@ describe('SearchResultsScreen', () => {
   });
 
   it('shows error state when search error exists', () => {
-    const storeModule = require('#store/useAppStore');
-    storeModule.useAppStore.mockImplementation(
-      <T,>(selector: (s: RootState) => T): T =>
-        selector({
-          scannerSheetVisible: false,
-          searchError: 'Network error',
-          isSearching: false,
-          hideBottomSheet: mockHideBottomSheet,
-          showBottomSheet: mockShowBottomSheet,
-        } as Partial<RootState> as RootState),
-    );
+    const storeModule = require('#features/barcode/store/barcodeScannerStore');
     storeModule.useBottomSheetState.mockReturnValue({
       scannerSheetVisible: false,
       searchError: 'Network error',

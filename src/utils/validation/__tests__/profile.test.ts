@@ -5,6 +5,7 @@ import {
   profileSchema,
   getProfileValidationSchema,
 } from '../profile';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 const validate = async (schema: Schema, data: Record<string, unknown>) => {
   try {
@@ -154,7 +155,7 @@ describe('profile validation', () => {
   describe('profileVisibility', () => {
     const schema = profileFieldSchemas.profileVisibility;
 
-    it.each(['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'])(
+    it.each(Object.values(ProfileVisibility))(
       'accepts "%s"',
       async visibility => {
         expect(

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { StorageLocationSheet } from '../../../../src/components/modals/StorageLocationSheet/StorageLocationSheet';
+import { StorageLocationSheet } from '#features/catalog/ui/StorageLocationSheet/StorageLocationSheet';
 import { StorageType } from '../../../../src/graphql/generated/schemaTypes';
 
 jest.mock('../../../../src/apollo/links/tokenScheduler');
@@ -16,7 +16,7 @@ jest.mock('../../../../src/hooks/useStandardBottomSheet', () => ({
   }),
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
-jest.mock('../../../../src/components/organisms/storageLocation/StorageLocationForm', () => {
+jest.mock('#features/catalog/ui/StorageLocationForm', () => {
   const { forwardRef } = require('react');
   return {
     StorageLocationForm: forwardRef(() => null),

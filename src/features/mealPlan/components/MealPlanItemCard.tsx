@@ -1,3 +1,4 @@
+import { deleteAction } from '#components/molecules/SwipeableItem/commonActions';
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
@@ -120,9 +121,12 @@ export const MealPlanItemCard: React.FC<MealPlanItemCardProps> = ({
     <View style={styles.rowWrapper}>
       <SwipeableItem
         itemId={item.id}
-        swipeMode="shopping"
         onPress={onPress ? () => onPress(item.id) : undefined}
-        onDelete={onDelete ? () => onDelete(item.id) : undefined}
+        rightActions={
+          onDelete
+            ? [{ ...deleteAction(() => onDelete(item.id)), removesRow: true }]
+            : undefined
+        }
         onSwipeableWillOpen={onSwipeableWillOpen}
         onSwipeableClose={onSwipeableClose}
       >

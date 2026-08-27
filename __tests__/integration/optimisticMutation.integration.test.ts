@@ -71,6 +71,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
   const data: ShoppingListItemDisplayFragment = {
     __typename: 'ShoppingListItem',
     id: ITEM_ID,
+    shoppingList: { __typename: 'ShoppingList', id: LIST_ID },
     itemName: 'Milk',
     quantity: 1,
     quantityInput: '1',

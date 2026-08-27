@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { StyleSheet } from 'react-native-unistyles';
-import { useApolloClient, useFragment } from '@apollo/client/react';
+import { useApolloClient } from '@apollo/client/react';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Header } from '#components/molecules/Header';
 import { DataStateView } from '#components/molecules/DataStateView';
@@ -17,7 +17,6 @@ import {
   type MyRecipesQuery,
 } from '#features/recipes/graphql/recipe.generated';
 import { MyRecipeCard } from '#features/recipes/components/MyRecipeCard';
-import { MyRecipeCard_RecipeFragmentDoc } from '#features/recipes/components/MyRecipeCard.generated';
 import {
   useRecipeManagement,
   type MyRecipeNode,
@@ -26,50 +25,12 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { alertService } from '#services/alertService';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 
 const keyExtractor = (item: MyRecipeNode) => item.id;
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
-
-/**
- * Inline cell adapter — the filter helper passes the node ref straight through.
- * The cell needs to consult fields from `MyRecipeCard_recipe` (notably `name`
- * and `description`) for search filtering, so it wraps `MyRecipeCard` with a
- * pre-flight `useFragment` peek used to honor the search query.
- */
-const MyRecipeRow: React.FC<{
-  recipe: MyRecipeNode;
-  searchQuery: string;
-  onPress: (id: string) => void;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-}> = ({ recipe, searchQuery, onPress, onEdit, onDelete }) => {
-  // Pre-flight cache read for the search filter — same fragment the card
-  // subscribes to, so this is free at runtime.
-  const { data, complete } = useFragment({
-    fragment: MyRecipeCard_RecipeFragmentDoc,
-    fragmentName: 'MyRecipeCard_recipe',
-    from: recipe,
-  });
-
-  if (!complete) return null;
-
-  if (searchQuery.trim()) {
-    const q = searchQuery.toLowerCase();
-    const name = (data.name ?? '').toLowerCase();
-    const description = (data.description ?? '').toLowerCase();
-    if (!name.includes(q) && !description.includes(q)) return null;
-  }
-
-  return (
-    <MyRecipeCard
-      recipeRef={recipe}
-      onPress={onPress}
-      onEdit={onEdit}
-      onDelete={onDelete}
-    />
-  );
-};
 
 export const MyRecipes: React.FC = () => {
   useScreenTransition('MyRecipes');
@@ -82,6 +43,34 @@ export const MyRecipes: React.FC = () => {
     state: { recipes: myRecipes, loading, error, hasResult, skipped },
     actions: { refetch },
   } = useRecipeManagement();
+
+  // Filtered at the parent, never inside the cell: a virtualized list cannot
+  // absorb rows that return null — the cell, its layout slot and its fragment
+  // subscription all survive. `name`/`description` are selected on the query's
+  // node for exactly this (see recipe.graphql).
+  const filteredRecipes = (() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return myRecipes;
+    return myRecipes.filter(
+      recipe =>
+        (recipe.name ?? '').toLowerCase().includes(q) ||
+        (recipe.description ?? '').toLowerCase().includes(q),
+    );
+  })();
+
+  // Instrumented like PantryContent/SortableList so this list reports
+  // `flashlist_initial_load_ms` and blank-cell episodes instead of being
+  // invisible to every metric we have.
+  const flashListRef = useRef<FlashListRef<MyRecipeNode>>(null);
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'MyRecipes',
+    hasRealContent: filteredRecipes.length > 0,
+  });
+  useDataReferenceTracker(
+    filteredRecipes,
+    'MyRecipes.items',
+    perfCallbacks.onDataReferenceChange,
+  );
 
   const dataState = useDataState({
     loading,
@@ -163,9 +152,8 @@ export const MyRecipes: React.FC = () => {
   };
 
   const renderItem = ({ item }: { item: MyRecipeNode }) => (
-    <MyRecipeRow
-      recipe={item}
-      searchQuery={searchQuery}
+    <MyRecipeCard
+      recipeRef={item}
       onPress={handleItemPress}
       onEdit={handleEditRecipe}
       onDelete={handleDeleteRecipe}
@@ -199,7 +187,12 @@ export const MyRecipes: React.FC = () => {
         />
       ) : (
         <FlashList
-          data={myRecipes}
+          ref={flashListRef}
+          CellRendererComponent={perfCallbacks.CellRendererComponent}
+          onLoad={perfCallbacks.onLoad}
+          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
+          data={filteredRecipes}
           keyExtractor={keyExtractor}
           getItemType={getItemType}
           renderItem={renderItem}

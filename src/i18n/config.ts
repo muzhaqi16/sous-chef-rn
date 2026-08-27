@@ -20,6 +20,7 @@
  * `completePluralCategories` below — so a new locale needing `few`, `many` or
  * `zero` does not need those forms written by hand before it works.
  */
+import { appConfig } from '#/config/appConfig';
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -27,6 +28,7 @@ import en from './locales/en.json';
 import sq from './locales/sq.json';
 import it from './locales/it.json';
 import es from './locales/es.json';
+import { mergeFeatureLocales } from './featureLocales';
 
 type ResourceNode = { [key: string]: string | ResourceNode };
 
@@ -104,11 +106,14 @@ function neededPluralCategories(locale: string): readonly string[] {
   return rules.resolvedOptions().pluralCategories;
 }
 
+// Core copy plus each feature's own, so a feature's strings live with the
+// feature and travel with it. `mergeFeatureLocales` is the only place the two
+// halves meet; `scripts/check-i18n.mjs` checks parity across the merged trees.
 const resources = completePluralCategories({
-  en: en as ResourceNode,
-  sq: sq as ResourceNode,
-  it: it as ResourceNode,
-  es: es as ResourceNode,
+  en: mergeFeatureLocales('en', en) as ResourceNode,
+  sq: mergeFeatureLocales('sq', sq) as ResourceNode,
+  it: mergeFeatureLocales('it', it) as ResourceNode,
+  es: mergeFeatureLocales('es', es) as ResourceNode,
 });
 
 if (!i18next.isInitialized) {
@@ -128,6 +133,11 @@ if (!i18next.isInitialized) {
     interpolation: {
       // React Native renders text directly; React handles XSS escaping itself.
       escapeValue: false,
+      // The product name reaches copy as `{{appName}}` rather than being typed
+      // into each translation. It appeared literally in six strings per locale,
+      // so a rebrand meant editing all four locale files and hoping none was
+      // missed — and a missed one shows the OLD product name to users.
+      defaultVariables: { appName: appConfig.identity.displayName },
     },
     react: {
       // The app does not wrap consumers in <Suspense>; defer-render-until-loaded

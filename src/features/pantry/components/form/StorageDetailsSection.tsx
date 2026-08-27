@@ -82,9 +82,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
       label: t('itemForm.location'),
       placeholder: t('itemForm.locationPlaceholder'),
       component: 'storageLocationAutocomplete',
-      storageLocations,
-      onStorageLocationSelected,
-      onAddNewLocation,
+      props: { storageLocations, onStorageLocationSelected, onAddNewLocation },
     },
   ];
 

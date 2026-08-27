@@ -11,74 +11,34 @@ import {
 } from '#store/useAppStore';
 import { authService } from '#/services/authService';
 import { useCredentialStorage } from '#hooks/auth/useCredentialStorage';
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  UpdateUserProfileDocument,
-  UpdateUserPreferencesDocument,
-  type GetUserProfileQuery,
-} from '#operations/auth/user.generated';
-import {
-  ProfileVisibility,
-  type UpdateProfileInput,
-  type UpdateSettingsInput,
-} from '#/graphql/generated/schemaTypes';
+import { useMutation } from '@apollo/client/react';
+import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
+import { type UpdateSettingsInput } from '#/graphql/generated/schemaTypes';
 import { alertIfRejected } from '#/apollo/utils/alertRejectedMutation';
-import { optimisticFieldUpdate } from '#/apollo/utils/optimisticFieldUpdate';
-import type {
-  SettingItem,
-  SettingOption,
-} from '#components/molecules/SettingRow';
+import type { SettingItem } from '#components/molecules/SettingRow';
 
-import { PROFILE_SETTINGS_CONFIG } from '#/config/settingsConfig';
+import {
+  PROFILE_SETTINGS_CONFIG,
+  type SettingItemConfig,
+} from '#/config/settingsConfig';
 import { SUPPORTED_LANGUAGES } from '#/i18n/config';
-import { dateStringToISO, extractDateString } from '#utils/dateUtils';
 import { BiometricSetupModal } from '#components/organisms/BiometricSetupModal';
 import { errorService } from '#/services/errorService';
 import { useAuthPreferences } from '#hooks/navigation/useAuthPreferences';
 
 // Map PROFILE_SETTINGS_CONFIG section titles (the config's canonical English
 // keys) → translation keys under the `profile.sections` namespace.
-const SECTION_TITLE_KEYS: Record<string, string> = {
-  'Personal Information': 'labels.personalInformation',
-  'Appearance & Language': 'profile.sections.appearanceAndLanguage',
-  Notifications: 'labels.notifications',
-  'Dietary Profile': 'profile.sections.dietaryProfile',
-  'App Settings': 'labels.appSettings',
-  Security: 'labels.security',
-  Developer: 'profile.sections.developer',
-};
-
-// Map PROFILE_SETTINGS_CONFIG item.key → translation key under `profile.labels`.
-const ITEM_LABEL_KEYS: Record<string, string> = {
-  personalInformation: 'labels.personalInformation',
-  appearance: 'labels.appearance',
-  language: 'labels.language',
-  notifications: 'labels.notifications',
-  dietaryProfile: 'profile.labels.dietaryProfile',
-  appSettings: 'labels.appSettings',
-  biometricAuthentication: 'profile.labels.biometricAuthentication',
-  changePassword: 'labels.changePassword',
-  debugInfo: 'labels.debugInfo',
-  performanceDashboard: 'labels.performanceDashboard',
-  logout: 'profile.labels.logout',
-};
-
-type UserProfile = NonNullable<
-  NonNullable<GetUserProfileQuery['me']>['profile']
->;
-
 // Shape of a single entry inside PROFILE_SETTINGS_CONFIG.
-interface SettingConfig {
-  key: string;
-  label: string;
-  type: string;
-  subtitle?: string;
-  options?: SettingOption[];
-}
-
-export const useConfigurableSettings = (profile: UserProfile | null) => {
+/**
+ * Builds the profile screen's setting rows.
+ *
+ * Takes no profile: every row here navigates, toggles biometrics, changes
+ * language or signs out — none of them renders a UserProfile field. It used to
+ * take one, for eleven personal-information branches that PROFILE_SETTINGS_CONFIG
+ * never reached; those live in PersonalInformationScreen.
+ */
+export const useConfigurableSettings = () => {
   const { t } = useTranslation();
-  const client = useApolloClient();
   const user = useUser();
   const { getUserNavigationState } = useNavigationUtils();
   const { language, setLanguage } = usePreferences();
@@ -94,7 +54,6 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
   // queued replay is safe; a real rejection restores the pre-edit values.
   // Error/rejection handling lives in updateProfile/updateUserPreferences below
   // (via alertIfRejected) so there is exactly one alerter — no mutation onError.
-  const [updateProfileMutation] = useMutation(UpdateUserProfileDocument);
 
   // ===== MUTATION 2: Update User Preferences =====
   // No optimistic response — UserSettings has many required fields that are hard
@@ -166,38 +125,6 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     }
   };
 
-  const updateProfile = async (input: UpdateProfileInput) => {
-    const cacheId = profile
-      ? client.cache.identify({ __typename: 'UserProfile', id: profile.id })
-      : undefined;
-    const { revert } = optimisticFieldUpdate(
-      client.cache,
-      cacheId,
-      profile,
-      input,
-      'Update Profile',
-    );
-
-    let result;
-    try {
-      result = await updateProfileMutation({
-        variables: { input },
-        context: { localFirst: true },
-      });
-    } catch (error) {
-      // Throw path (rare under errorPolicy:'all'): revert + surface. The common
-      // resolved-error path is handled by alertIfRejected below.
-      revert();
-      handleMutationError(error, { operation: 'Update Profile' });
-    }
-
-    // Rejection (resolved non-success payload) → surface + restore the snapshot.
-    // Queued (null payload, no error) keeps the write; the replay is idempotent.
-    if (alertIfRejected(result, t('errors.codes.genericRetry'))) {
-      revert();
-    }
-  };
-
   const updateUserPreferences = async (input: UpdateSettingsInput) => {
     // No optimisticResponse here (UserSettings input is nested and doesn't map
     // 1:1 onto the flat cached entity), so there's nothing to tear down —
@@ -217,7 +144,7 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
     alertIfRejected(result, t('errors.codes.genericRetry'));
   };
 
-  const createSettingItem = (config: SettingConfig): SettingItem => {
+  const createSettingItem = (config: SettingItemConfig): SettingItem => {
     // ==== TEST IDs for Detox ====
     const testIDMap: Record<string, string> = {
       personalInformation: 'profile-menu-personalInformation',
@@ -237,125 +164,20 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
 
     // Translate well-known labels (Profile screen entries) via i18next; fall
     // back to the config's English string for unmapped keys.
-    const translatedLabel = ITEM_LABEL_KEYS[config.key]
-      ? t(ITEM_LABEL_KEYS[config.key])
-      : config.label;
-
     const baseItem: SettingItem = {
       key: config.key,
-      label: translatedLabel,
+      label: t(config.labelKey),
       type: config.type,
       ...(testIDMap[config.key] ? { testID: testIDMap[config.key] } : {}),
     };
 
     // Map configuration keys to actual implementation
     switch (config.key) {
-      // Personal Information fields
-      case 'firstName':
-        return {
-          ...baseItem,
-          value: profile?.firstName || '',
-          onSave: (v: string) => updateProfile({ firstName: v }),
-        };
-
-      case 'lastName':
-        return {
-          ...baseItem,
-          value: profile?.lastName || '',
-          onSave: (v: string) => updateProfile({ lastName: v }),
-        };
-
-      case 'displayName':
-        return {
-          ...baseItem,
-          value: profile?.displayName || '',
-          onSave: (v: string) => updateProfile({ displayName: v }),
-        };
-
-      case 'bio':
-        return {
-          ...baseItem,
-          value: profile?.bio || '',
-          onSave: (v: string) => updateProfile({ bio: v }),
-        };
-
-      case 'phone':
-        return {
-          ...baseItem,
-          value: profile?.phone || '',
-          onSave: (v: string) => updateProfile({ phone: v }),
-        };
-
-      case 'website':
-        return {
-          ...baseItem,
-          value: profile?.website || '',
-          onSave: (v: string) => updateProfile({ website: v }),
-        };
-
-      case 'dateOfBirth':
-        return {
-          ...baseItem,
-          value: extractDateString(profile?.dateOfBirth),
-          onSave: (v: string) => {
-            const isoValue = dateStringToISO(v);
-            updateProfile({ dateOfBirth: isoValue });
-          },
-        };
-
-      case 'gender':
-        if (config.type === 'modal') {
-          return {
-            ...baseItem,
-            value: profile?.gender || '',
-            options: config.options || [
-              { label: 'Male', value: 'male' },
-              { label: 'Female', value: 'female' },
-              { label: 'Non-binary', value: 'non-binary' },
-              { label: 'Other', value: 'other' },
-              { label: 'Prefer not to say', value: 'prefer-not-to-say' },
-            ],
-            onSave: (v: string) => updateProfile({ gender: v }),
-          };
-        }
-        break;
-
-      // Privacy Settings
-      case 'profileVisibility':
-        if (config.type === 'modal') {
-          return {
-            ...baseItem,
-            value: profile?.profileVisibility || ProfileVisibility.Public,
-            options: config.options || [
-              { label: 'Public', value: ProfileVisibility.Public },
-              { label: 'Friends Only', value: ProfileVisibility.Friends },
-              { label: 'Private', value: ProfileVisibility.Private },
-            ],
-            onSave: (v: string) =>
-              updateProfile({ profileVisibility: v as ProfileVisibility }),
-          };
-        }
-        break;
-
-      case 'showEmail':
-        if (config.type === 'switch') {
-          return {
-            ...baseItem,
-            value: profile?.showEmail || false,
-            onPress: () => updateProfile({ showEmail: !profile?.showEmail }),
-          };
-        }
-        break;
-
-      case 'showPhone':
-        if (config.type === 'switch') {
-          return {
-            ...baseItem,
-            value: profile?.showPhone || false,
-            onPress: () => updateProfile({ showPhone: !profile?.showPhone }),
-          };
-        }
-        break;
+      // The personal-information fields (firstName, gender, showEmail, …) are
+      // NOT handled here. They belong to PERSONAL_INFO_CONFIG, which
+      // PersonalInformationScreen renders with its own builder; this hook only
+      // ever sees PROFILE_SETTINGS_CONFIG. Eleven such cases sat here
+      // unreachable, two of them carrying untranslated English option lists.
 
       case 'language':
         if (config.type === 'modal') {
@@ -507,12 +329,9 @@ export const useConfigurableSettings = (profile: UserProfile | null) => {
 
   const sections = (() => {
     return PROFILE_SETTINGS_CONFIG.map(configSection => ({
-      // Stable English/canonical key — safe to use for filtering/lookup across
-      // locales without depending on the user-visible (translated) title.
-      key: configSection.title,
-      title: SECTION_TITLE_KEYS[configSection.title]
-        ? t(SECTION_TITLE_KEYS[configSection.title])
-        : configSection.title,
+      // Stable id, independent of the user-visible (translated) title.
+      key: configSection.id,
+      title: configSection.titleKey ? t(configSection.titleKey) : '',
       items: configSection.items.map(createSettingItem),
     }));
   })();

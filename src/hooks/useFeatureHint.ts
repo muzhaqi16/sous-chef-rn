@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { storage } from '#/storage/mmkv';
-import { useShowTutorials } from '#hooks/settings/useSettings';
+import { useShowTutorials } from '#hooks/settings/useShowTutorials';
 import { useUserId } from '#store/useAppStore';
 import { useStore } from '#store';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
@@ -71,7 +71,7 @@ export interface UseFeatureHintReturn {
  * return (
  *   <>
  *     {swipeHint.isVisible && (
- *       <FeatureHintOverlay onDismiss={swipeHint.actions.dismiss} />
+ *       <YourHintOverlay onDismiss={swipeHint.actions.dismiss} />
  *     )}
  *   </>
  * );

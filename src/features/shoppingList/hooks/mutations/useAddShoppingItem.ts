@@ -109,6 +109,7 @@ export function useAddShoppingItem({
     };
 
     const optimisticItem = createOptimisticShoppingListItem(id, {
+      shoppingListId: listId,
       itemName: input.itemName ?? '',
       quantity: optimisticQuantity,
       quantityInput: input.quantityInput ?? null,

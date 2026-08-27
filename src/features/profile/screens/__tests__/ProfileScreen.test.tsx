@@ -173,7 +173,7 @@ jest.mock('#components/organisms/SettingsSection', () => {
     }) => (
       <View testID={`settings-section-${title || 'actions'}`}>
         {title ? <Text>{title}</Text> : null}
-        {items.map(item => (
+        {items?.map(item => (
           <Pressable
             key={item.key}
             testID={item.testID || `setting-${item.key}`}

@@ -1,0 +1,14 @@
+{
+  "deviations": [],
+  "features": [
+    "barcode",
+    "catalog",
+    "home",
+    "mealPlan",
+    "notifications",
+    "pantry",
+    "profile",
+    "recipes",
+    "shoppingList"
+  ]
+}

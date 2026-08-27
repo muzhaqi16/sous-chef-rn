@@ -188,17 +188,6 @@ export async function dismissBiometricPromptIfPresent() {
     3000,
   );
 
-  // Try to dismiss feature hint overlay (appears with 2s delay in PantryMain)
-  await waitIfPresent(
-    element(by.id('feature-hint-overlay-dismiss')),
-    async () => {
-      console.log('💡 Dismissing feature hint overlay...');
-      await element(by.id('feature-hint-overlay-dismiss')).tap();
-      console.log('✅ Feature hint dismissed');
-    },
-    2500, // Allow 2.5s for the overlay to appear (has 2s delay)
-  );
-
   console.log('✅ All post-login flows handled');
 }
 

@@ -1,4 +1,4 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
@@ -13,7 +13,8 @@ import {
   type ConnectionData,
 } from '#/apollo/utils/cacheUpdaters';
 import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 /**
  * Cache side of a batch move-to-pantry: drop the moved rows from the purchased
@@ -24,6 +25,56 @@ import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
  * the entire hook when one appears inside a try/catch — leaving the caller's try
  * body a single plain call. See scripts/probe-compiler-try-forms.mjs.
  */
+/**
+ * Take the purchased rows out of the list WITHOUT evicting them.
+ *
+ * Separate from {@link applyBatchMoveCacheUpdate}, which runs on the server
+ * response and evicts: eviction is right once the move is confirmed, but a row
+ * evicted before the server answers cannot be restored if it refuses. Restoring
+ * is `restorePurchasedCount` plus a refetch — the edges themselves come back
+ * from the server, and offline there is nothing to refuse in the first place.
+ */
+function removePurchasedEdges(
+  cache: ApolloCache,
+  currentListId: string,
+  ids: string[],
+): void {
+  if (ids.length === 0) return;
+  const removing = new Set(ids);
+
+  const parentCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: currentListId,
+  });
+  if (!parentCacheId) return;
+
+  cache.modify({
+    id: parentCacheId,
+    fields: {
+      itemsConnection(
+        existing: ConnectionData | undefined,
+        { readField, storeFieldName },
+      ) {
+        if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
+          return existing;
+        return {
+          ...existing,
+          edges: existing.edges.filter(
+            edge => !removing.has(readField<string>('id', edge?.node)!),
+          ),
+          totalCount: Math.max(0, (existing.totalCount || 0) - ids.length),
+        };
+      },
+      totalItems(existing: number = 0) {
+        return Math.max(0, existing - ids.length);
+      },
+      completedItems(existing: number = 0) {
+        return Math.max(0, existing - ids.length);
+      },
+    },
+  });
+}
+
 function applyBatchMoveCacheUpdate(
   cache: ApolloCache,
   currentListId: string,
@@ -80,19 +131,30 @@ function applyBatchMoveCacheUpdate(
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
+  /**
+   * The purchased rows, from the screen that already renders them.
+   *
+   * Passed in rather than re-read from cache: minting a client id per line
+   * needs the exact set the user is looking at, and reconstructing it here
+   * would mean matching the filtered connection's cached field key — which,
+   * got subtly wrong, yields silently NO hints offline rather than a visible
+   * failure.
+   */
+  purchasedItems: readonly { id: string }[];
   onSuccess?: () => void;
 }
 
 interface UseBatchMoveToPantryReturn {
   batchMoveToPantry: () => Promise<void>;
   loading: boolean;
-  isApiUnavailable: boolean;
 }
 
 export function useBatchMoveToPantry({
   currentListId,
+  purchasedItems,
   onSuccess,
 }: UseBatchMoveToPantryOptions): UseBatchMoveToPantryReturn {
+  const client = useApolloClient();
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
     {
@@ -119,32 +181,68 @@ export function useBatchMoveToPantry({
     },
   );
 
-  const isApiUnavailable = useIsApiUnavailable();
-
   const batchMoveToPantry = async () => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
-      return;
-    }
-
     if (!currentListId) {
       toastService.error(t('moveToPantry.noListSelected'));
       return;
     }
 
+    // One client-minted pantry-row id per purchased line. The server still
+    // decides which lines are actually purchased — a hint for a line that is
+    // no longer purchased is ignored, and a line with no hint gets a
+    // server-minted id — so this is a hint, not an instruction.
+    const idHints = purchasedItems.map(item => ({
+      shoppingListItemId: item.id,
+      pantryItemId: generateEntityId(),
+      idempotencyKey: generateEntityId(),
+    }));
+    const movingIds = idHints.map(hint => hint.shoppingListItemId);
+
+    // Only the shopping side is written eagerly. The pantry side cannot be:
+    // this mutation takes no `pantryId`, so the client does not know which
+    // pantry the rows will land in. They appear when the move syncs.
+    try {
+      removePurchasedEdges(client.cache, currentListId, movingIds);
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Batch move to pantry (optimistic)',
+      });
+    }
+
+    // Built outside the try: a `&&` spread is a value block, and one inside a
+    // try body bails this whole hook out of the React Compiler.
+    const moveInput =
+      idHints.length > 0
+        ? { shoppingListId: currentListId, pantryItemIds: idHints }
+        : { shoppingListId: currentListId };
+
     let result;
     try {
       result = await movePurchasedMutation({
-        variables: { input: { shoppingListId: currentListId } },
+        variables: { input: moveInput },
+        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
         operation: 'Batch move to pantry error:',
       });
     }
-    if (!result) return;
 
-    const payload = result.data?.movePurchasedItemsToPantry;
+    const payload = result?.data?.movePurchasedItemsToPantry;
+
+    // Queued (offline / API down): no summary to report, so speak from the
+    // local count. The rows are already gone from the list.
+    if (classifyCreateResult(result) === 'queued') {
+      toastService.success(
+        getI18n().t('moveToPantry.movedItems', {
+          count: movingIds.length,
+          skipped: '',
+        }),
+      );
+      onSuccess?.();
+      return;
+    }
+
     if (payload?.__typename !== 'MovePurchasedItemsToPantryPayload') {
       // A resolved `*Error` union member doesn't throw under errorPolicy:'all',
       // so the mutation `onError` never fired for it. Surface it here — guarded
@@ -181,6 +279,5 @@ export function useBatchMoveToPantry({
   return {
     batchMoveToPantry,
     loading,
-    isApiUnavailable,
   };
 }

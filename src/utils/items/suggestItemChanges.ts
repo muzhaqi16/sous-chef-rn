@@ -7,9 +7,9 @@ import type {
   StorageState,
   SuggestibleItemChangesInput,
 } from '#/graphql/generated/schemaTypes';
-import type { UseItemForEdit_ItemFragment } from '#hooks/items/useItemForEdit.generated';
+import type { UseItemForEdit_ItemFragment } from '#features/catalog/hooks/useItemForEdit.generated';
 import type { AddItemFormData } from './createItemMapping';
-import type { AddItemFormInitialData } from '#/components/organisms/AddItemForm/AddItemForm';
+import type { AddItemFormInitialData } from '#features/catalog/ui/AddItemForm/AddItemForm';
 
 /**
  * The pre-edit original — the only thing `buildSuggestibleItemChanges` diffs

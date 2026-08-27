@@ -67,8 +67,8 @@ jest.mock('#components/settings/SettingSwitch', () => ({
   SettingSwitch: ({ title }: { title: string }) => title,
 }));
 
-jest.mock('#components/settings/SettingSection', () => ({
-  SettingSection: ({ children }: { children: React.ReactNode }) => children,
+jest.mock('#components/organisms/SettingsSection', () => ({
+  SettingsSection: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 jest.mock('#components/templates/ProfileScreenWrapper', () => ({

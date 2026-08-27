@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { Icon } from '#utils/iconUtils';
-import { ShoppingListAvatar } from '#components/atoms/ShoppingListAvatar';
+import { ShoppingListAvatar } from '#features/shoppingList/components/ShoppingListAvatar';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import { IconLibrary } from '#/utils/iconUtils';
 import { useStore } from '#store';

@@ -1,0 +1,203 @@
+{
+  "mealPlan": {
+    "name": "Nome",
+    "namePlaceholder": "es. Piano settimana 8",
+    "description": "Descrizione",
+    "descriptionPlaceholder": "Descrizione opzionale...",
+    "planType": "Tipo di piano",
+    "weekly": "Settimanale",
+    "monthly": "Mensile",
+    "budgetAmount": "Budget (opzionale)",
+    "budgetPlaceholder": "Nessun budget",
+    "shareWith": "Condividi con",
+    "personal": "Personale",
+    "orCreateFromTemplate": "O crea da un modello",
+    "nameRequiredTitle": "Nome richiesto",
+    "nameRequiredMessage": "Inserisci un nome per il piano dei pasti.",
+    "startDateRequiredTitle": "Data di inizio richiesta",
+    "startDateRequiredMessage": "Seleziona una data di inizio.",
+    "failedToCreate": "Impossibile creare il piano dei pasti."
+  },
+  "addMealSheet": {
+    "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",
+    "addCustom": "Aggiungi «{{query}}» come pasto personalizzato",
+    "yourRecipes": "Le tue ricette",
+    "servings": "{{count}} porzioni",
+    "noSavedRecipes": "Nessuna ricetta salvata",
+    "noResults": "Nessuna ricetta corrisponde alla tua ricerca",
+    "addRecipeFailed": "Impossibile aggiungere la ricetta. Riprova.",
+    "dietVegan": "Vegano",
+    "dietVegetarian": "Vegetariano",
+    "dietGlutenFree": "SG",
+    "dietDairyFree": "SL"
+  },
+  "emptyDay": {
+    "title": "Nessun pasto pianificato"
+  },
+  "mealPlanEmpty": {
+    "title": "Pianifica i tuoi pasti",
+    "subtitle": "Crea un piano pasti per organizzare i pasti settimanali o mensili, monitorare la nutrizione e generare liste della spesa.",
+    "createFirst": "Crea il tuo primo piano pasti",
+    "createFromTemplate": "Crea da modello"
+  },
+  "calendarToggle": {
+    "collapseToWeek": "Riduci a vista settimanale",
+    "expandToMonth": "Espandi a vista mensile"
+  },
+  "mealPlanItem": {
+    "unnamedMeal": "Pasto senza nome",
+    "pantryUpdated": "Dispensa aggiornata",
+    "servings": "{{count}} porzioni",
+    "calories": "{{count}} cal"
+  },
+  "mealPlanSettings": {
+    "deleteTitle": "Elimina piano pasti",
+    "planSettings": "Impostazioni piano",
+    "sharedWith": "Condiviso con {{name}}",
+    "createdBy": "Creato da {{name}}",
+    "actionsLabel": "Azioni",
+    "generateShoppingListDesc": "Crea una lista dalle ricette di questo piano",
+    "duplicatePlanDesc": "Copia questo piano in un nuovo intervallo di date",
+    "viewNutrition": "Mostra nutrizione",
+    "hideNutrition": "Nascondi nutrizione",
+    "viewNutritionDesc": "Calorie, macro e progresso degli obiettivi",
+    "budgetSpent": "Spesi {{spent}} di {{budget}}",
+    "spentAmount": "Spesi {{spent}}",
+    "nutritionTrackingOn": "Monitoraggio nutrizionale attivo",
+    "trackNutritionDesc": "Confronta questo piano con il tuo profilo dietetico",
+    "generatedLists": "Liste generate",
+    "deletePlanLabel": "Elimina piano",
+    "deletingLabel": "Eliminazione in corso...",
+    "deletePlanDesc": "Rimuovi definitivamente questo piano pasti"
+  },
+  "addToMealPlan": {
+    "title": "Aggiungi al piano pasti",
+    "dateLabel": "Data"
+  },
+  "duplicatePlan": {
+    "duplicating": "Duplicazione in corso...",
+    "duplicate": "Duplica",
+    "copySuffix": "{{name}} (Copia)",
+    "currentPlanLabel": "Piano attuale",
+    "newNameLabel": "Nome nuovo piano",
+    "newNamePlaceholder": "Inserisci il nome del piano",
+    "infoText": "Tutti i pasti verranno copiati nel nuovo intervallo di date con la stessa struttura.",
+    "endDateSubtext": "al {{date}}"
+  },
+  "generateShoppingList": {
+    "generating": "Generazione in corso...",
+    "generate": "Genera",
+    "sharedWithHome": "La lista della spesa sarà condivisa con {{name}}",
+    "checkPantry": "Verifica disponibilità in dispensa",
+    "checkPantryDesc": "Sottrai gli articoli che hai già in dispensa",
+    "destination": "Destinazione",
+    "newList": "Nuova lista",
+    "existingList": "Lista esistente",
+    "listNameLabel": "Nome lista (facoltativo)",
+    "listNamePlaceholder": "Per impostazione predefinita, il nome del piano",
+    "selectListLabel": "Seleziona una lista",
+    "noLists": "Nessuna lista della spesa trovata",
+    "generatingMessage": "Generazione lista della spesa...",
+    "itemsCount": "{{count}} articoli",
+    "readyNothingToAdd": "\"{{name}}\" è pronta — niente da aggiungere.",
+    "createdSuccess_one": "Lista della spesa \"{{name}}\" creata con {{count}} articolo{{shared}}",
+    "createdSuccess_other": "Lista della spesa \"{{name}}\" creata con {{count}} articoli{{shared}}",
+    "sharedSuffix": " (condivisa con {{homeName}})",
+    "generateFailed": "Impossibile generare la lista della spesa"
+  },
+  "saveAsTemplate": {
+    "sharedWithHome": "Questo modello sarà condiviso con {{name}}",
+    "templateNamePlaceholder": "es. Il mio piano cene settimanale",
+    "templateNameSuffix": "Modello {{name}}",
+    "descriptionLabel": "Descrizione",
+    "descriptionPlaceholder": "Cosa rende speciale questo modello?",
+    "tagsLabel": "Tag (separati da virgola)",
+    "tagsPlaceholder": "es. sano, veloce, economico",
+    "categoryWeekly": "Settimanale",
+    "categoryMonthly": "Mensile",
+    "categoryHoliday": "Festività",
+    "categorySpecialDiet": "Dieta speciale",
+    "categoryCustom": "Personalizzata"
+  },
+  "templateBrowser": {
+    "title": "Sfoglia modelli",
+    "searchPlaceholder": "Cerca modelli...",
+    "noTemplates": "Nessun modello trovato",
+    "categoryAll": "Tutti",
+    "offline": "I modelli non sono disponibili offline. Riconnettiti per sfogliarli."
+  },
+  "templateCard": {
+    "usedTimes": "Usato {{count}} volte",
+    "durationDays": "{{count}} giorni",
+    "servings": "{{count}} porzioni"
+  },
+  "templatePreview": {
+    "configuration": "Configurazione",
+    "planNameLabel": "Nome del piano (facoltativo)",
+    "preview": "Anteprima",
+    "emptyPreview": "Nessun pasto in questo modello",
+    "day": "Giorno {{day}}",
+    "customMeal": "Personalizzato",
+    "metaLine": "{{days}} giorni · {{servings}} porzioni"
+  },
+  "mealPlanMain": {
+    "label": "Pianifica i tuoi pasti",
+    "generateShoppingListLabel": "Genera lista della spesa",
+    "saveAsTemplateLabel": "Salva come modello",
+    "planSettingsLabel": "Impostazioni piano",
+    "deleteMealPlanFailed": "Impossibile eliminare il piano pasti",
+    "mealPlanDeleted": "Piano pasti eliminato"
+  },
+  "mealTemplateBuilder": {
+    "namePlaceholder": "es. Cene infrasettimanali",
+    "description": "Descrizione",
+    "descriptionPlaceholder": "Note facoltative",
+    "tags": "Tag",
+    "mealsSection": "Pasti",
+    "noMeals": "Nessun pasto aggiunto",
+    "mealName": "Pasto",
+    "mealNamePlaceholder": "es. Spaghetti alla bolognese",
+    "dayNumber": "Giorno",
+    "addMeal": "Aggiungi pasto",
+    "updateMeal": "Aggiorna pasto",
+    "itemSummary": "Giorno {{day}} · {{meal}} · {{servings}} porzioni",
+    "nameRequiredTitle": "Nome obbligatorio",
+    "nameRequiredMessage": "Assegna un nome al modello.",
+    "itemNameRequiredTitle": "Nome del pasto obbligatorio",
+    "itemNameRequiredMessage": "Assegna un nome al pasto.",
+    "failedToCreate": "Impossibile creare il modello",
+    "failedToSave": "Impossibile salvare il modello",
+    "failedToAddItem": "Impossibile aggiungere il pasto",
+    "failedToSaveItem": "Impossibile salvare il pasto",
+    "failedToRemoveItem": "Impossibile rimuovere il pasto"
+  },
+  "mealPlanSelector": {
+    "title": "Seleziona piano pasti",
+    "emptyMessage": "Nessun piano pasti disponibile",
+    "createFromTemplate": "Modello",
+    "searchPlaceholder": "Cerca piani",
+    "filterActive": "Attivi",
+    "personalSubtitle": "Personale"
+  },
+  "macroTargets": {
+    "caloriesRange": "Le calorie devono essere tra {{min}} e {{max}}",
+    "proteinRange": "Le proteine devono essere tra {{min}}g e {{max}}g",
+    "carbsRange": "I carboidrati devono essere tra {{min}}g e {{max}}g",
+    "fatRange": "I grassi devono essere tra {{min}}g e {{max}}g",
+    "updateFailed": "Impossibile aggiornare gli obiettivi nutrizionali",
+    "title": "Obiettivi nutrizionali",
+    "subtitle": "Imposta i tuoi obiettivi nutrizionali giornalieri (opzionale)",
+    "dailyCalories": "Calorie giornaliere (kcal)",
+    "caloriesPlaceholder": "es., 2000",
+    "proteinPlaceholder": "es., 150",
+    "carbsPlaceholder": "es., 200",
+    "fat": "Grassi (g)",
+    "fatPlaceholder": "es., 70"
+  },
+  "mealTemplateActions": {
+    "planCreated": "Piano dei pasti creato dal modello!",
+    "savedAsTemplate": "Piano dei pasti salvato come modello!",
+    "templateDeleted": "Modello eliminato",
+    "templateDuplicated": "Modello duplicato!"
+  }
+}

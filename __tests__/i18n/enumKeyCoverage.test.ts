@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { mergedLocale } from '#/test-utils/mergedLocales';
 import {
   BaseDimension,
   Cuisine,
@@ -38,15 +37,6 @@ import {
  * namespace may carry keys that are not enum members. `baseDimension.none` is
  * the "unset" option the picker offers alongside the three real dimensions.
  */
-const EN = path.join(
-  __dirname,
-  '..',
-  '..',
-  'src',
-  'i18n',
-  'locales',
-  'en.json',
-);
 
 /** The enum value as it appears in the composed key. */
 type KeyFragment = (value: string) => string;
@@ -192,7 +182,10 @@ function flatten(node: unknown, prefix = ''): Set<string> {
   return keys;
 }
 
-const available = flatten(JSON.parse(fs.readFileSync(EN, 'utf8')));
+// The merged tree: these namespaces are spread across the features that own
+// the entities (itemType is the catalog's, storageState the pantry's), so
+// reading the core file alone would report every one of them missing.
+const available = flatten(mergedLocale('en'));
 
 const cases = CASES.map(({ enumName, members, namespace, keyFragment }) => ({
   enumName,

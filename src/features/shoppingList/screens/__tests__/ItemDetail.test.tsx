@@ -51,10 +51,10 @@ jest.mock('#components/molecules/ClickableInfoPanel', () => ({
     );
   },
 }));
-jest.mock('#components/molecules/NutritionSummary', () => ({
+jest.mock('#features/catalog/ui/NutritionSummary', () => ({
   NutritionSummary: () => null,
 }));
-jest.mock('#components/molecules/ItemPhotoCarousel', () => ({
+jest.mock('#features/catalog/ui/ItemPhotoCarousel', () => ({
   ItemPhotoCarousel: () => null,
 }));
 jest.mock('#components/atoms/FormattedItemSubtitle', () => ({

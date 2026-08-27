@@ -9,7 +9,7 @@ import { Pressable } from 'react-native-gesture-handler';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/native';
 import { alertService } from '#/services/alertService';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { StyleSheet } from 'react-native-unistyles';
 import { differenceInCalendarDays } from 'date-fns';
@@ -18,11 +18,12 @@ import { Icon } from '#utils/iconUtils';
 import { SwipeableItem } from '#components/molecules/SwipeableItem/SwipeableItem';
 import { Header } from '#components/molecules/Header';
 import type { HeaderAction } from '#components/atoms/HeaderActionIcon';
-import { PantryItemSkeleton } from '#components/atoms/Skeleton/PantryItemSkeleton';
+import { PantryItemSkeleton } from '#features/pantry/components/skeletons/PantryItemSkeleton';
 import { DataStateView } from '#components/molecules/DataStateView';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#/components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
+import type { PantryItemFilters } from '#/graphql/generated/schemaTypes';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from './FilteredPantryItems.generated';
@@ -46,6 +47,8 @@ import {
 import { commonStyles } from '#/styles/commonStyles';
 
 import { FLASHLIST_DEFAULTS } from '#utils/flashListDefaults';
+import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
+import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import {
   FilteredItemsActionsProvider,
   useFilteredItemsActions,
@@ -81,6 +84,23 @@ interface ModeConfig {
   title: string;
   emptyMessage: string;
   emptyIcon: string;
+  /**
+   * Server-side narrowing, so the screen never has to hold the WHOLE pantry to
+   * filter it. That matters because `itemsConnection` caps its cached edges at
+   * `MAX_WINDOW_EDGES` (100) while `pageInfo.hasNextPage` reports the last
+   * FETCHED page — above 100 items the connection claims completeness while
+   * holding a subset, `hasMore` goes false, and a client-only filter silently
+   * reports "none" over whatever 100 edges survived.
+   *
+   * A non-null value also re-keys the cache entry (`keyArgs: ['filters', …]`),
+   * so these screens get their own small connection instead of sharing the
+   * capped one.
+   *
+   * Non-nullable on purpose: a mode that declares no narrowing is a mode that
+   * silently breaks above 100 items, which is how the expiring list came to
+   * report "none" against a pantry that had some.
+   */
+  serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
   sort?: (a: FilteredItem, b: FilteredItem) => number;
   subtitle: (item: FilteredItem) => string;
@@ -108,6 +128,13 @@ function buildModeConfig(
       title: t('filteredPantry.lowStockTitle'),
       emptyMessage: t('filteredPantry.lowStockEmpty'),
       emptyIcon: 'cube-outline',
+      // `lowStock` is quantity <= 0, or <= minQuantity when a minimum is set —
+      // exactly what `PantryStats.lowStockCount` counts and `PantryItem
+      // .isLowStock` reports, so the badge and this list cannot disagree.
+      // NOT the `lowStockAlert` opt-in, which only records whether the user
+      // wants notifying; the suggestion and shopping-list paths gate on that
+      // one instead, and answer a different question.
+      serverFilters: { lowStock: true },
       filter: item => item.isLowStock,
       subtitle: item =>
         t('filteredPantry.remaining', {
@@ -134,6 +161,16 @@ function buildModeConfig(
       title: t('filteredPantry.expiringTitle'),
       emptyMessage: t('filteredPantry.expiringEmpty'),
       emptyIcon: 'time-outline',
+      // `expiringSoon` is `expiresAt <= now + expirationDays AND quantity > 0`
+      // server-side — note it has NO lower bound, so it returns already-expired
+      // items too. That superset is exactly what both this mode and `expired`
+      // need; the predicate below splits it.
+      //
+      // We deliberately do NOT pass `expirationDays`. It defaults to 7, and
+      // `PantryStats.expiringCount` is ALWAYS a 7-day window regardless of it —
+      // so the filter and the badge line up arithmetically only at the default.
+      // Widening the horizon here would list items the badge never counted.
+      serverFilters: { expiringSoon: true },
       // Mirrors server `PantryStats.expiringCount`: expiring within 7 days but
       // NOT yet expired (now ≤ expiresAt ≤ now + 7d, quantity > 0). Already-
       // expired items live in the `expired` mode below — the two are mutually
@@ -159,6 +196,9 @@ function buildModeConfig(
       title: t('filteredPantry.expiredTitle'),
       emptyMessage: t('filteredPantry.expiredEmpty'),
       emptyIcon: 'alert-circle-outline',
+      // Same superset as `expiring` (see above) — `expiringSoon` has no lower
+      // bound, so past-dated items are included and the predicate keeps them.
+      serverFilters: { expiringSoon: true },
       // Mirrors server `PantryStats.expiredCount`: past expiresAt, quantity > 0.
       filter: item => {
         if (!item.expiresAt || item.quantity <= 0) return false;
@@ -348,7 +388,9 @@ export const FilteredPantryItems: React.FC<
       isLoadingMore,
     },
     actions: { refetch, loadMore },
-  } = usePantryManagement(pantry?.id);
+  } = usePantryManagement(pantry?.id, {
+    filters: config.serverFilters,
+  });
 
   // Classified on the fetched set. The client-side filter narrowing to nothing
   // is the genuine empty case; a fetch that never returned is not.
@@ -387,6 +429,20 @@ export const FilteredPantryItems: React.FC<
     return filtered;
   })();
 
+  // Instrumented like PantryContent/SortableList: a full screen, so
+  // `flashlist_initial_load_ms` and blank-cell episodes are worth the
+  // per-cell wrapper's cost (per-session sampled, 5% in release).
+  const flashListRef = useRef<FlashListRef<FilteredItem>>(null);
+  const perfCallbacks = useFlashListPerformance(flashListRef, {
+    componentName: 'FilteredPantryItems',
+    hasRealContent: filteredItems.length > 0,
+  });
+  useDataReferenceTracker(
+    filteredItems,
+    'FilteredPantryItems.items',
+    perfCallbacks.onDataReferenceChange,
+  );
+
   // ── Tutorial measurement state ──
   const [itemCartRect, setItemCartRect] = useState<LayoutRect | null>(null);
   const [headerCartRect, setHeaderCartRect] = useState<LayoutRect | null>(null);
@@ -424,6 +480,7 @@ export const FilteredPantryItems: React.FC<
         client.cache,
         selectedShoppingListId,
         createOptimisticShoppingListItem(id, {
+          shoppingListId: selectedShoppingListId,
           itemName: display.itemName,
           unitId: display.unitId,
         }),
@@ -506,6 +563,11 @@ export const FilteredPantryItems: React.FC<
 
       <FilteredItemsActionsProvider actions={actions}>
         <FlashList
+          ref={flashListRef}
+          CellRendererComponent={perfCallbacks.CellRendererComponent}
+          onLoad={perfCallbacks.onLoad}
+          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
           renderScrollComponent={SwipeAwareScrollComponent}
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}

@@ -9,8 +9,8 @@ import {
   useStandardBottomSheet,
 } from '#hooks/useStandardBottomSheet';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
-import { ItemAutocompleteField } from '#components/molecules/AutocompleteField/ItemAutocompleteField';
-import { UnitAutocompleteField } from '#components/molecules/AutocompleteField/UnitAutocompleteField';
+import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
+import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { FormInput } from '#components/molecules/FormInput';
 import { EditableCounter } from '#components/molecules/EditableCounter';
 import { FieldRow } from '#components/molecules/FieldRow';

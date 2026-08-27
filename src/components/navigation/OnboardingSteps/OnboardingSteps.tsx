@@ -94,7 +94,7 @@ const styles = StyleSheet.create(theme => ({
   progressFill: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.colors.primaryLight || '#DBEAFE',
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
   },

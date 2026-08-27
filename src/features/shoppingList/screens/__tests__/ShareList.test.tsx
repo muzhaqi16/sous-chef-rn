@@ -172,15 +172,20 @@ jest.mock('#components/molecules/AlertBanner', () => ({
     return <Text>{title}</Text>;
   },
 }));
-jest.mock('#/components/organisms/CollaboratorPermissionsBottomSheet', () => {
-  const { forwardRef, useImperativeHandle } = require('react');
-  const { View } = require('react-native');
-  const comp = forwardRef((_: object, ref: React.Ref<{ open: () => void }>) => {
-    useImperativeHandle(ref, () => ({ open: jest.fn() }));
-    return <View testID="permissions-sheet" />;
-  });
-  return { __esModule: true, default: comp };
-});
+jest.mock(
+  '#features/shoppingList/components/CollaboratorPermissionsBottomSheet',
+  () => {
+    const { forwardRef, useImperativeHandle } = require('react');
+    const { View } = require('react-native');
+    const comp = forwardRef(
+      (_: object, ref: React.Ref<{ open: () => void }>) => {
+        useImperativeHandle(ref, () => ({ open: jest.fn() }));
+        return <View testID="permissions-sheet" />;
+      },
+    );
+    return { __esModule: true, default: comp };
+  },
+);
 
 describe('ShareList', () => {
   const route = { params: { listId: 'sl1' } };

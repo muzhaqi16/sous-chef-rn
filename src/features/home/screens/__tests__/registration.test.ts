@@ -3,7 +3,7 @@ jest.mock('@react-navigation/native-stack', () => ({
 }));
 jest.mock('../HomeManagement', () => ({ HomeManagement: () => null }));
 jest.mock('../HomeDetailScreen', () => ({ HomeDetailScreen: () => null }));
-jest.mock('../StorageLocationsScreen', () => ({
+jest.mock('#features/catalog/screens/StorageLocationsScreen', () => ({
   StorageLocationsScreen: () => null,
 }));
 
@@ -15,7 +15,6 @@ describe('homeManagementScreens', () => {
     expect(Object.keys(homeManagementScreens).sort()).toEqual([
       'HomeDetail',
       'HomeManagement',
-      'StorageLocations',
     ]);
   });
 

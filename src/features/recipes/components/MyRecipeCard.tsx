@@ -1,16 +1,9 @@
 import React from 'react';
-import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { type FragmentType } from '@apollo/client/masking';
-import { Pressable } from '#components/atoms/themedComponents';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
-import { CachedImage } from '#components/atoms/CachedImage';
-import { Icon } from '#utils/iconUtils';
-import { Text } from '#components/atoms/Text';
-import { commonStyles } from '#/styles/commonStyles';
 import { MyRecipeCard_RecipeFragmentDoc } from './MyRecipeCard.generated';
+import { RecipeCardView, type RecipeCardAction } from './RecipeCardView';
+import { recipeTotalMinutes } from '#features/recipes/utils/recipeTime';
 
 interface MyRecipeCardProps {
   recipeRef: FragmentType<typeof MyRecipeCard_RecipeFragmentDoc>;
@@ -25,7 +18,6 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const { t } = useTranslation();
   // Per-entity cache subscription: this card re-renders only when this Recipe's
   // MyRecipeCard_recipe fields change.
   const { data: recipe, complete } = useFragment({
@@ -36,92 +28,34 @@ export const MyRecipeCard: React.FC<MyRecipeCardProps> = ({
 
   if (!complete) return null;
 
-  const totalTime =
-    recipe.totalTimeMinutes ??
-    (recipe.prepTimeMinutes && recipe.cookTimeMinutes
-      ? recipe.prepTimeMinutes + recipe.cookTimeMinutes
-      : recipe.prepTimeMinutes ?? recipe.cookTimeMinutes ?? null);
+  const actions: RecipeCardAction[] = [];
+  if (onEdit) {
+    actions.push({
+      key: 'edit',
+      icon: 'create-outline',
+      tone: 'textSecondary',
+      labelKey: 'recipes.editRecipeA11y',
+      onPress: () => onEdit(recipe.id),
+    });
+  }
+  if (onDelete) {
+    actions.push({
+      key: 'delete',
+      icon: 'trash-outline',
+      tone: 'error',
+      labelKey: 'recipes.deleteRecipeA11y',
+      onPress: () => onDelete(recipe.id),
+    });
+  }
 
   return (
-    <AppPressable
+    <RecipeCardView
+      name={recipe.name}
+      imageUrl={recipe.imageUrl}
+      servings={recipe.servings}
+      totalMinutes={recipeTotalMinutes(recipe)}
       onPress={() => onPress(recipe.id)}
-      style={styles.card}
-      accessibilityRole="button"
-      accessibilityLabel={recipe.name}
-    >
-      {!!recipe.imageUrl && (
-        <View style={commonStyles.listItemImageContainerCompact}>
-          <CachedImage
-            uri={recipe.imageUrl}
-            style={commonStyles.listItemImageCompact}
-            displaySize={48}
-          />
-        </View>
-      )}
-      <View style={styles.body}>
-        <Text size="md" weight="medium" numberOfLines={1}>
-          {recipe.name}
-        </Text>
-        <Text size="sm" tone="secondary" numberOfLines={1}>
-          {t('recipes.servingsCount', { count: recipe.servings })}
-          {totalTime != null
-            ? ` • ${t('labels.min', { count: totalTime })}`
-            : ''}
-        </Text>
-      </View>
-      <View style={styles.actions}>
-        {!!onEdit && (
-          <Pressable
-            onPress={() => onEdit(recipe.id)}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel={t('recipes.editRecipeA11y')}
-          >
-            <Icon name="create-outline" size={20} tone="textSecondary" />
-          </Pressable>
-        )}
-        {!!onDelete && (
-          <Pressable
-            onPress={() => onDelete(recipe.id)}
-            hitSlop={8}
-            style={({ pressed }) => pressed && styles.pressed}
-            accessibilityLabel={t('recipes.deleteRecipeA11y')}
-          >
-            <Icon name="trash-outline" size={20} tone="error" />
-          </Pressable>
-        )}
-      </View>
-    </AppPressable>
+      actions={actions}
+    />
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-    padding: theme.spacing['3'],
-    // Match the search bar inset so rows line up with it instead of going
-    // edge-to-edge — same floating-card treatment as BaseItemCard.
-    marginHorizontal: theme.spacing['3'],
-    marginBottom: theme.spacing['2.5'],
-    borderRadius: theme.radii.xl,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: 'transparent',
-    backgroundColor: theme.colors.surface,
-    ...theme.shadows.card,
-  },
-  body: {
-    flex: 1,
-    gap: 2,
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-}));

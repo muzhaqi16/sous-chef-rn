@@ -5,8 +5,11 @@ export const mealPlanFeature: FeatureManifest = {
   id: 'mealPlan',
   tab: {
     screenName: 'MealPlan',
-    title: 'labels.mealPlan',
+    // `labels.mealPlan` for the same reason as recipes — see that manifest.
+    titleKey: 'labels.mealPlan',
     order: 40,
+    icon: { active: 'calendar', inactive: 'calendar-outline' },
+    mainScreen: 'MealPlanMain',
     stack: MealPlanStack,
   },
 };

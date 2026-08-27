@@ -21,6 +21,9 @@ npm run lint         # ESLint, incl. every .graphql operation vs the pulled sche
 npm test             # full Jest suite (~15s) — always run unfiltered
 node scripts/check-compiler-bailouts.mjs         # also in pre-push
 node scripts/check-unistyles-variant-staleness.mjs   # also in pre-push
+node scripts/check-layer-purity.mjs              # also in pre-commit
+node scripts/check-feature-shape.mjs             # also in pre-commit
+node scripts/check-dead-modules.mjs              # also in pre-commit
 node scripts/check-bundled-secrets.mjs --self-test
 ```
 
@@ -38,23 +41,63 @@ Full command reference: `docs/development.md`.
 Directory map and module walkthrough: `docs/architecture.md`. The short form:
 
 - `src/features/<name>/` — feature modules (screens, hooks, graphql, context,
-  utils) + `registry.ts`. `src/screens/` is auth/onboarding flows only.
+  utils) + `manifest.ts`, assembled by `src/features/registry.ts`.
+  `src/screens/` is auth/onboarding flows only.
 - `src/components/` — shared UI in four buckets: `atoms/`, `molecules/`,
   `organisms/`, `templates/` (plus `charts/`, `modals/`, `navigation/`,
   `providers/`, `settings/`). There is no `base/`. Feature-private UI stays in
   `src/features/<name>/components/` (e.g. the pantry form lives in
   `src/features/pantry/components/form/`).
 - `src/hooks/` and `src/components/` hold ONLY what more than one feature
-  uses; a hook owned by one feature lives in that feature.
+  uses; a hook owned by one feature lives in that feature. Together they are
+  the **kit** — the layer a sibling app reuses wholesale, so it must not import
+  `#features/*`, own a `.graphql` document, or carry a file named after a
+  domain. `node scripts/check-layer-purity.mjs` holds it: the baseline is EMPTY,
+  which makes it an invariant rather than a debt — it went 76 → 0, so any entry
+  is a regression to fix. Schema-type imports are counted, not failed. The same
+  script also scans the **kernel** (`src/apollo/`, `src/store/`, `src/utils/`, …)
+  for modules NAMED after a feature, under a separate NON-empty baseline that may
+  only shrink — a worklist, not an invariant. Only the name test runs there: the
+  kernel's feature imports are load-bearing (offline queue, i18n bundling, the
+  subscription layer) and are governed by the `.eslintrc.js` zone instead.
+  Per-feature nav stacks are exempt by design.
+- `src/features/catalog/` — the grocery `Item`, its pickers, and storage
+  locations. The one feature with a PUBLIC component directory (`ui/`): its
+  pickers are domain UI that two features consume, so they belong in neither a
+  domain-free kit nor in one consumer. `components/` there is private as
+  usual.
+- `src/app/` — the composition root: the modules that exist to know the feature
+  list (the provider mounting every feature's subscriptions, the offline tab
+  preloader). Not kit, not reusable, and exempt from the rule above by design.
 - `src/apollo/` client, links, offline queue, cache persistence ·
   `src/store/` Zustand slices + reset manager · `src/i18n/` config + locales ·
   `src/services/`, `src/navigation/`, `src/theme/`, `src/utils/`.
 
-**Import aliases** (`tsconfig.json` `paths`): every top-level `src/` folder has
+**Import aliases** — `tsconfig.json` `paths` is the SINGLE source. `babel.config.js`
+and `jest.config.js` derive theirs from it through `scripts/lib/aliases.js`, and
+ESLint reads it via `import/resolver.typescript`. There used to be three
+hand-maintained lists with three different matching semantics (32 / 25 / 19
+entries) and nothing checking them against each other, so an alias added to
+`tsconfig` type-checked but failed to resolve at runtime. Add an alias in ONE
+place. Every top-level `src/` folder has
 a `#<name>` alias (`#components`, `#features`, `#hooks`, `#store`, …); the
 irregular ones are `#/*` → `src/*`, `#operations` → `src/graphql/operations`
 (preferred for operation imports), `#generated` → `src/graphql/generated`, and
 `#/test-utils/*` → `__tests__/helpers/*`. Use aliases over relative paths.
+
+**No dead modules.** A module under `src/` with no PRODUCTION importer fails
+`node scripts/check-dead-modules.mjs`. An import inside a test does not count,
+and neither does a `jest.mock()` — a test for dead code is dead with it, so
+delete both. The baseline is empty and stays empty. A module reached some other
+way (Detox reaches components by testID string, never by import) is covered by
+`__tests__/harness/e2eTestIdsExist.test.ts`.
+
+**Feature shape** — every feature has `manifest.ts` (its `id` equals the
+directory name), `screens/`, `hooks/` and `components/`, and one with more than
+one screen declares `screens/registration.ts`. Ratcheted by
+`node scripts/check-feature-shape.mjs`, whose baseline is also EMPTY — every
+feature has the same shape. A `.graphql` document beside its consumer is the
+convention, NOT a deviation.
 
 **Feature API boundary** — public surface of a feature: `screens/`,
 `manifest.ts`, top-level `hooks/` files, and `<feature>Fragments.generated.ts`
@@ -65,6 +108,14 @@ tests are exempt. Canonical table and the deliberate `graphql/` asymmetry:
 `docs/architecture.md` § The public API boundary.
 
 ## State ownership
+
+**A feature may own its own store.** `src/features/notifications/store/` is the
+worked example: state nothing else reads lives with its feature rather than as a
+root slice. The catch is that `SESSION_SCOPED_STATE` only reaches the ROOT store,
+so a feature store MUST call `registerSessionScopedStore(name, reset)` — that is
+how `recipe-search-cache` and `recipe-suggestions-cache` came to survive a
+sign-out unnoticed. `sessionEndLeavesNoData.test.ts` asserts a populated feature
+store is emptied by `LOGOUT`.
 
 **If the server owns it, Apollo owns it; otherwise Zustand owns it** — read
 via the named hooks from `#store/useAppStore`, never by subscribing to the
@@ -406,7 +457,7 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   for the dataset. Decision rule: complete reference set → `localFirst: true`
   (units); bounded slice of a larger catalog → `localFirst: !isOnline`
   (stores/brands/categories warm ~100 rows; items keep a seen-items LRU).
-  Current assignments: `grep -rn "localFirst" src/hooks/autocomplete`.
+  Current assignments: `grep -rn "localFirst" src/features/catalog/hooks`.
 - Stale-result display is handled centrally (the `lastFiredTerm` guard) —
   consumer hooks do not implement their own relevance checks.
 - Inline vs modal picker inside a sheet: pick by result set, not by host.
@@ -420,6 +471,31 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   RN `zIndex` orders siblings only, and Android view flattening prunes
   layout-only wrappers — a missed level paints the dropdown UNDER later
   inputs, on device only, invisible to typecheck/lint/jest.
+
+### Row actions
+
+- **A swipeable row takes `leftActions` / `rightActions`, never named verbs.**
+  `SwipeAction` (`src/components/molecules/SwipeableItem/types.ts`) is
+  `{ key, icon, labelKey, onPress, haptic?, removesRow? }`; the same descriptors
+  flow through `BaseItemCard`, `ItemCard` and `ItemList`. `key` doubles as the
+  accessibility action name, so a swipe action and its VoiceOver/TalkBack
+  equivalent cannot drift apart, and `testID` defaults to
+  `${testIDPrefix}-${key}`.
+- Edit and delete are the only universal verbs and have builders in
+  `SwipeableItem/commonActions.ts`. Anything domain-flavoured belongs to its
+  feature — see `src/features/pantry/components/pantrySwipeActions.ts`.
+- `removesRow: true` tells the row renderer to slide out and to call
+  FlashList's `prepareForLayoutAnimationRender()` first. `SwipeableItem` itself
+  ignores it — the swipe molecule has no opinion about the list around it.
+
+### Dynamic forms
+
+- **`DynamicFormFields` renders a `component` NAME through a registry**, not a
+  closed union. The app supplies the registry once at the composition root
+  (`FieldRendererProvider` in `App.tsx`, fed by
+  `src/features/catalog/ui/catalogFieldRenderers.tsx`); field-specific callbacks
+  travel in the field's `props` bag, which the form forwards without reading.
+  An entry sets `ownsErrorDisplay` when it renders its own validation message.
 
 ### Forms & validation
 
@@ -544,6 +620,20 @@ arguments).
 
 ## i18n
 
+- **A feature owns its copy.** `src/features/<name>/locales/{en,es,it,sq}.json`
+  holds that feature's namespaces; `src/i18n/locales/` holds only what is shared
+  (`errors`, `labels`, `empty`, `auth`, `navigation`, …). They are merged at
+  init by `src/i18n/featureLocales.ts`, which imports the JSON DIRECTLY rather
+  than through `FEATURE_REGISTRY` — the registry pulls in every screen, and
+  `i18n/config` is imported near the top of `index.js`. Adding a feature's
+  locales means one entry there; `scripts/check-i18n.mjs` and
+  `#/test-utils/mergedLocales` walk the merged tree, so a gate that read only
+  the core file would silently check a third of the copy.
+- **The product name is `{{appName}}`, never typed into a translation** — fed by
+  `interpolation.defaultVariables` from `appConfig.identity.displayName`. It was
+  literal in six strings per locale, so a rebrand meant editing all four files
+  and hoping none was missed. `__tests__/i18n/appNameInterpolation.test.ts`
+  fails on a re-introduced literal AND on a `{{appName}}` that renders raw.
 - `useTranslation()` from `#/i18n` in components and hooks; module-scope `t`
   from `#/i18n` in services/utilities. The module-scope `t` does NOT subscribe
   to language changes; lint enforces the hook in `src/**/*.tsx`, and a file
@@ -693,6 +783,18 @@ changes. Measurement decides what to change; it is not the confirmation step.
 - **Judge an intermittent mode against a distribution, not a handful of samples.**
   Per-session counters plus lingering series also make cross-session aggregation
   (`sum(...) by (screen)`) untrustworthy — read per session.
+- **Match the instrument to the symptom, or you will fix the wrong thing.**
+  HITCHING (occasional long frames) is a re-render problem — read React commit
+  counts, or `flashlist_data_reference_changes`. A FRAME-RATE CEILING (every
+  frame uniformly over budget) is not; read
+  `adb shell dumpsys gfxinfo <pkg> framestats` on a DEVICE and decompose per
+  phase. On the pantry the UI thread — where per-row view count and Yoga layout
+  live — is 1.5 ms of a 17 ms frame, so "reduce views per row" measured out
+  false while React-render reasoning pointed the same wrong way. Emulator frame
+  stats cannot be used at all: its software GPU alone takes 16-20 ms per frame.
+- **Check the panel's refresh rate before calling a frame slow.**
+  `dumpsys display | grep mActiveModeId` → the mode's `vsyncRate`. The
+  SM-S908U1 runs at 96 Hz, so the budget is 10.4 ms, not 16.7 ms.
 
 Audit write-ups are scratch and untracked (`.gitignore`), so each rule above
 carries its own number and stands on its own. Treat every `app_fully_drawn_ms`
@@ -706,6 +808,8 @@ After code changes:
 ```bash
 npm run typecheck && npm run lint && npm test
 npm run check:compiler-bailouts && npm run check:unistyles-variants
+npm run check:layer-purity && npm run check:feature-shape
+npm run check:dead-modules
 ```
 
 `check-compiler-bailouts` guards a file COUNT; separately, WHICH function bails

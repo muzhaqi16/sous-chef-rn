@@ -9,6 +9,7 @@ const makeItem = (
 ): ShoppingListItemDisplayFragment => ({
   __typename: 'ShoppingListItem',
   id: 'item-1',
+  shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
   itemName: 'Milk',
   quantity: 2,
   quantityInput: '2',

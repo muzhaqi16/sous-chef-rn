@@ -2,13 +2,25 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { getI18n } from '#/i18n/config';
 import en from '#/i18n/locales/en.json';
+// profileValidation and itemValidation moved to the features that own them.
+// Imported directly, like `en`, so removing a namespace is a compile error.
+import profileEn from '#features/profile/locales/en.json';
+import catalogEn from '#features/catalog/locales/en.json';
 import {
   PRIORITY_OPTIONS,
   PRIORITY_OPTION_BY_VALUE,
   priorityLabelKey,
 } from '#features/shoppingList/utils/priority';
 
-const HOOKS_DIR = join(__dirname, '..', '..', 'src', 'hooks', 'items');
+const HOOKS_DIR = join(
+  __dirname,
+  '..',
+  '..',
+  'src',
+  'features',
+  'catalog',
+  'hooks',
+);
 
 /**
  * Namespaces whose keys are composed at runtime — `t(`${ns}.${key}`)` — and so
@@ -29,12 +41,15 @@ const HOOKS_DIR = join(__dirname, '..', '..', 'src', 'hooks', 'items');
 // Indexed directly rather than through a string lookup, so removing a namespace
 // from en.json fails to compile here instead of silently skipping it.
 const cases = [
-  { namespace: 'profileValidation', keys: Object.keys(en.profileValidation) },
+  {
+    namespace: 'profileValidation',
+    keys: Object.keys(profileEn.profileValidation),
+  },
   {
     namespace: 'onboardingValidation',
     keys: Object.keys(en.onboardingValidation),
   },
-  { namespace: 'itemValidation', keys: Object.keys(en.itemValidation) },
+  { namespace: 'itemValidation', keys: Object.keys(catalogEn.itemValidation) },
   { namespace: 'toasts', keys: Object.keys(en.toasts) },
 ];
 
@@ -58,7 +73,7 @@ describe('runtime-composed i18n namespaces', () => {
 });
 
 /**
- * `alertMutationFailure` (src/hooks/items/alertMutationFailure.ts) picks its
+ * `alertMutationFailure` (src/features/catalog/hooks/alertMutationFailure.ts) picks its
  * copy by composing `${keyPrefix}.${suffix}` from the mutation's payload
  * typename. Every prefix a caller passes must therefore carry the full suffix
  * set, and no static scan can see that — the keys never appear as literals.

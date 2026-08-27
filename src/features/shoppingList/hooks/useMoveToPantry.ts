@@ -1,16 +1,23 @@
 import { gql, type ApolloCache } from '@apollo/client';
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { Telemetry } from '#/services/telemetry';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { errorService } from '#/services/errorService';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { toastService } from '#/services/toastService';
-import { t } from '#/i18n';
+import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import {
+  addToPantryItemsCache,
+  removeFromPantryItemsCache,
+} from '#/apollo/utils/pantryCacheUpdaters';
+import {
+  addOptimisticShoppingListItem,
+  removeItemFromShoppingListForMoveToPantry,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
+import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -127,6 +134,30 @@ function applyMoveToPantryCacheUpdate(
   }
 }
 
+/**
+ * Undo an optimistic move after the server refuses it: drop the pantry row we
+ * invented and put the shopping row back.
+ *
+ * Module-level for the same reason as {@link applyMoveToPantryCacheUpdate} —
+ * the `&&` guard is a value block, and the React Compiler bails out of the
+ * whole hook when one appears inside a try body.
+ */
+function revertOptimisticMove(
+  cache: ApolloCache,
+  args: {
+    pantryId: string;
+    pantryItemId: string;
+    currentListId: string | undefined;
+    removeFromList: boolean;
+    item: ShoppingListItemDisplayFragment;
+  },
+): void {
+  removeFromPantryItemsCache(cache, args.pantryId, args.pantryItemId);
+  if (args.removeFromList && args.currentListId) {
+    addOptimisticShoppingListItem(cache, args.currentListId, args.item);
+  }
+}
+
 export function useMoveToPantry({
   currentListId,
   onSuccess,
@@ -172,18 +203,61 @@ export function useMoveToPantry({
     },
   );
 
-  /**
-   * Move a shopping list item to pantry
-   */
-  const isApiUnavailable = useIsApiUnavailable();
+  const client = useApolloClient();
 
+  /**
+   * Move a shopping list item to the pantry (local-first).
+   *
+   * The pantry row's id is minted here and sent as `input.pantryItemId`, so the
+   * row written to the cache before firing and the row the server writes are the
+   * SAME entity — which is what lets the move happen with no network. The write
+   * is permanent rather than an `optimisticResponse`, because the offline queue
+   * completes a queued mutation with a null result and Apollo would tear an
+   * optimistic layer down at that moment.
+   *
+   * **The minted id is honoured only on the CREATE branch.** If the target
+   * pantry already holds an active stack of the same catalog item, the server
+   * restocks that stack and the payload comes back carrying that EXISTING row's
+   * id instead. The client cannot always predict which branch it will get — its
+   * pantry cache can be stale — so it reconciles on the response: a returned id
+   * that differs from the minted one means the optimistic row was never real,
+   * and it is evicted before the server's row is added.
+   */
   const moveToPantry = async (
     item: ShoppingListItemDisplayFragment,
     input: MoveToPantryInput,
   ) => {
-    if (isApiUnavailable) {
-      toastService.error(t('errors.notAvailableOffline'));
-      return false;
+    const pantryItemId = generateEntityId();
+
+    // Built before the try: `?.`/`??` are value blocks, and the React Compiler
+    // bails out of the whole hook when one appears inside a try body.
+    const optimisticPantryItem = buildOptimisticPantryItem(
+      pantryItemId,
+      {
+        pantryId: input.pantryId,
+        itemName: item.itemName ?? '',
+        quantity: input.actualQuantity,
+        itemId: item.item?.id,
+        unitId: input.actualUnitId,
+        storageState: input.storageState,
+        expiresAt: input.expiresAt,
+      },
+      client.cache,
+    );
+
+    try {
+      addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
+      applyMoveToPantryCacheUpdate(client.cache, {
+        pantryId: input.pantryId,
+        shoppingListItemId: item.id,
+        removeFromList: input.removeFromList,
+        currentListId,
+        pantryItem: optimisticPantryItem,
+      });
+    } catch (cacheError) {
+      errorService.reportError(cacheError, {
+        operation: 'Move Item to Pantry (optimistic)',
+      });
     }
 
     let result;
@@ -193,6 +267,8 @@ export function useMoveToPantry({
           input: {
             shoppingListItemId: item.id,
             pantryId: input.pantryId,
+            pantryItemId,
+            idempotencyKey: generateEntityId(),
             actualQuantity: input.actualQuantity,
             actualUnitId: input.actualUnitId,
             storageState: input.storageState,
@@ -202,6 +278,7 @@ export function useMoveToPantry({
             notes: input.notes,
           },
         },
+        context: { localFirst: true },
       });
     } catch (error) {
       errorService.reportError(error, {
@@ -209,20 +286,50 @@ export function useMoveToPantry({
       });
     }
 
-    // `errorPolicy: 'all'` resolves a refusal as DATA (a non-success union
-    // member) and a transport failure as `{ data: undefined, error }` — neither
-    // rejects. Keying success off `result` alone reported a failed move as a
-    // success, telemetry included.
-    if (
-      result?.data?.moveShoppingItemToPantry?.__typename !==
-      'MoveShoppingItemToPantryPayload'
-    ) {
+    const outcome = classifyCreateResult(result);
+
+    if (outcome === 'rejected') {
+      // Put both sides back: drop the pantry row we invented, and restore the
+      // shopping row we removed. Position within the list is not restored — the
+      // next fetch settles it, and this path only runs on a real refusal.
+      try {
+        revertOptimisticMove(client.cache, {
+          pantryId: input.pantryId,
+          pantryItemId,
+          currentListId,
+          removeFromList: input.removeFromList,
+          item,
+        });
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Revert rejected move to pantry',
+        });
+      }
       if (result?.error) {
         errorService.reportError(result.error, {
           operation: 'Failed to move item to pantry:',
         });
       }
       return false;
+    }
+
+    // The server may have restocked an existing stack instead of creating the
+    // row we minted. Its payload then carries that row's id, and our optimistic
+    // entity is a ghost — evict it so the pantry does not show the item twice.
+    // The mutation's `update` callback adds the server's row.
+    const payload = result?.data?.moveShoppingItemToPantry;
+    const serverId =
+      payload?.__typename === 'MoveShoppingItemToPantryPayload'
+        ? payload.pantryItem.id
+        : undefined;
+    if (serverId && serverId !== pantryItemId) {
+      try {
+        removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Evict superseded optimistic pantry row',
+        });
+      }
     }
 
     Telemetry.trackEvent('shopping_item_moved_to_pantry', {
@@ -237,6 +344,5 @@ export function useMoveToPantry({
   return {
     moveToPantry,
     loading,
-    isApiUnavailable,
   };
 }

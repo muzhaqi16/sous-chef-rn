@@ -1,0 +1,203 @@
+{
+  "mealPlan": {
+    "name": "Emri",
+    "namePlaceholder": "p.sh. Plani i javës 8",
+    "description": "Përshkrim",
+    "descriptionPlaceholder": "Përshkrim opsional...",
+    "planType": "Lloji i planit",
+    "weekly": "Javor",
+    "monthly": "Mujor",
+    "budgetAmount": "Buxheti (opsional)",
+    "budgetPlaceholder": "Pa buxhet",
+    "shareWith": "Ndaj me",
+    "personal": "Personale",
+    "orCreateFromTemplate": "Ose krijo nga një shabllon",
+    "nameRequiredTitle": "Kërkohet emri",
+    "nameRequiredMessage": "Shkruaj një emër për planin e vakteve.",
+    "startDateRequiredTitle": "Kërkohet data e fillimit",
+    "startDateRequiredMessage": "Zgjidh një datë fillimi.",
+    "failedToCreate": "Nuk u krijua dot plani i vakteve."
+  },
+  "addMealSheet": {
+    "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
+    "addCustom": "Shto «{{query}}» si vakt të personalizuar",
+    "yourRecipes": "Recetat e tua",
+    "servings": "{{count}} racione",
+    "noSavedRecipes": "Asnjë recetë e ruajtur",
+    "noResults": "Asnjë recetë nuk përputhet me kërkimin tënd",
+    "addRecipeFailed": "Shtimi i recetës dështoi. Provo sërish.",
+    "dietVegan": "Vegan",
+    "dietVegetarian": "Vegjetarian",
+    "dietGlutenFree": "PG",
+    "dietDairyFree": "PB"
+  },
+  "emptyDay": {
+    "title": "Asnjë vakt i planifikuar"
+  },
+  "mealPlanEmpty": {
+    "title": "Planifiko vaktet e tua",
+    "subtitle": "Krijo një plan vaktesh për të organizuar vaktet javore ose mujore, për të ndjekur ushqyerjen dhe për të krijuar lista blerjesh.",
+    "createFirst": "Krijo planin tënd të parë të vakteve",
+    "createFromTemplate": "Krijo nga modeli"
+  },
+  "calendarToggle": {
+    "collapseToWeek": "Mbyll te pamja javore",
+    "expandToMonth": "Zgjero te pamja mujore"
+  },
+  "mealPlanItem": {
+    "unnamedMeal": "Vakt pa emër",
+    "pantryUpdated": "Qilari u përditësua",
+    "servings": "{{count}} racione",
+    "calories": "{{count}} kal"
+  },
+  "mealPlanSettings": {
+    "deleteTitle": "Fshi planin e vakteve",
+    "planSettings": "Cilësimet e planit",
+    "sharedWith": "Ndarë me {{name}}",
+    "createdBy": "Krijuar nga {{name}}",
+    "actionsLabel": "Veprimet",
+    "generateShoppingListDesc": "Krijo një listë nga recetat e këtij plani",
+    "duplicatePlanDesc": "Kopjo këtë plan në një interval të ri datash",
+    "viewNutrition": "Shiko ushqyerjen",
+    "hideNutrition": "Fshih ushqyerjen",
+    "viewNutritionDesc": "Kalori, makro dhe përparimi i objektivave",
+    "budgetSpent": "Shpenzuar {{spent}} nga {{budget}}",
+    "spentAmount": "Shpenzuar {{spent}}",
+    "nutritionTrackingOn": "Ndjekja ushqimore aktive",
+    "trackNutritionDesc": "Krahaso këtë plan me profilin tënd dietik",
+    "generatedLists": "Listat e gjeneruara",
+    "deletePlanLabel": "Fshi planin",
+    "deletingLabel": "Po fshihet...",
+    "deletePlanDesc": "Hiq përgjithmonë këtë plan vaktesh"
+  },
+  "addToMealPlan": {
+    "title": "Shto në planin e vakteve",
+    "dateLabel": "Data"
+  },
+  "duplicatePlan": {
+    "duplicating": "Po dublohet...",
+    "duplicate": "Dublo",
+    "copySuffix": "{{name}} (Kopje)",
+    "currentPlanLabel": "Plani aktual",
+    "newNameLabel": "Emri i ri i planit",
+    "newNamePlaceholder": "Fut emrin e planit",
+    "infoText": "Të gjitha vaktet do të kopjohen në intervalin e ri të datave me të njëjtën strukturë.",
+    "endDateSubtext": "deri më {{date}}"
+  },
+  "generateShoppingList": {
+    "generating": "Po gjenerohet...",
+    "generate": "Gjenero",
+    "sharedWithHome": "Lista e blerjeve do të ndahet me {{name}}",
+    "checkPantry": "Kontrollo disponueshmërinë në qilar",
+    "checkPantryDesc": "Hiq artikujt që i ke tashmë në qilar",
+    "destination": "Destinacioni",
+    "newList": "Listë e re",
+    "existingList": "Listë ekzistuese",
+    "listNameLabel": "Emri i listës (opsional)",
+    "listNamePlaceholder": "Si parazgjedhje, emri i planit",
+    "selectListLabel": "Zgjidh një listë",
+    "noLists": "Nuk u gjet asnjë listë blerjesh",
+    "generatingMessage": "Po gjenerohet lista e blerjeve...",
+    "itemsCount": "{{count}} artikuj",
+    "readyNothingToAdd": "\"{{name}}\" është gati — asgjë për të shtuar.",
+    "createdSuccess_one": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikull{{shared}}",
+    "createdSuccess_other": "Lista e blerjeve \"{{name}}\" u krijua me {{count}} artikuj{{shared}}",
+    "sharedSuffix": " (e ndarë me {{homeName}})",
+    "generateFailed": "Krijimi i listës së blerjeve dështoi"
+  },
+  "saveAsTemplate": {
+    "sharedWithHome": "Ky model do të ndahet me {{name}}",
+    "templateNamePlaceholder": "p.sh., Plani im javor i darkave",
+    "templateNameSuffix": "Modeli {{name}}",
+    "descriptionLabel": "Përshkrimi",
+    "descriptionPlaceholder": "Çfarë e bën të veçantë këtë model?",
+    "tagsLabel": "Etiketat (të ndara me presje)",
+    "tagsPlaceholder": "p.sh., e shëndetshme, e shpejtë, ekonomike",
+    "categoryWeekly": "Javore",
+    "categoryMonthly": "Mujore",
+    "categoryHoliday": "Festë",
+    "categorySpecialDiet": "Dietë speciale",
+    "categoryCustom": "E personalizuar"
+  },
+  "templateBrowser": {
+    "title": "Shfleto modelet",
+    "searchPlaceholder": "Kërko modele...",
+    "noTemplates": "Nuk u gjet asnjë model",
+    "categoryAll": "Të gjitha",
+    "offline": "Modelet nuk janë të disponueshme jashtë linje. Rilidhu për t'i shfletuar."
+  },
+  "templateCard": {
+    "usedTimes": "Përdorur {{count}} herë",
+    "durationDays": "{{count}} ditë",
+    "servings": "{{count}} racione"
+  },
+  "templatePreview": {
+    "configuration": "Konfigurimi",
+    "planNameLabel": "Emri i planit (opsional)",
+    "preview": "Pamja paraprake",
+    "emptyPreview": "Asnjë vakt në këtë model",
+    "day": "Dita {{day}}",
+    "customMeal": "I personalizuar",
+    "metaLine": "{{days}} ditë · {{servings}} racione"
+  },
+  "mealPlanMain": {
+    "label": "Planifiko vaktet e tua",
+    "generateShoppingListLabel": "Gjenero listën e blerjeve",
+    "saveAsTemplateLabel": "Ruaj si model",
+    "planSettingsLabel": "Cilësimet e planit",
+    "deleteMealPlanFailed": "Fshirja e planit të vakteve dështoi",
+    "mealPlanDeleted": "Plani i vakteve u fshi"
+  },
+  "mealTemplateBuilder": {
+    "namePlaceholder": "p.sh. Darka të javës",
+    "description": "Përshkrimi",
+    "descriptionPlaceholder": "Shënime opsionale",
+    "tags": "Etiketa",
+    "mealsSection": "Vaktet",
+    "noMeals": "Ende pa vakte",
+    "mealName": "Vakt",
+    "mealNamePlaceholder": "p.sh. Spageti Bolonjeze",
+    "dayNumber": "Dita",
+    "addMeal": "Shto vakt",
+    "updateMeal": "Përditëso vaktin",
+    "itemSummary": "Dita {{day}} · {{meal}} · {{servings}} racione",
+    "nameRequiredTitle": "Emri i detyrueshëm",
+    "nameRequiredMessage": "Vendos një emër për modelin.",
+    "itemNameRequiredTitle": "Emri i vaktit i detyrueshëm",
+    "itemNameRequiredMessage": "Vendos një emër për vaktin.",
+    "failedToCreate": "Modeli nuk u krijua",
+    "failedToSave": "Modeli nuk u ruajt",
+    "failedToAddItem": "Vakti nuk u shtua",
+    "failedToSaveItem": "Vakti nuk u ruajt",
+    "failedToRemoveItem": "Vakti nuk u hoq"
+  },
+  "mealPlanSelector": {
+    "title": "Zgjidh planin e vakteve",
+    "emptyMessage": "Asnjë plan vaktesh i disponueshëm",
+    "createFromTemplate": "Modeli",
+    "searchPlaceholder": "Kërko plane",
+    "filterActive": "Aktivë",
+    "personalSubtitle": "Personal"
+  },
+  "macroTargets": {
+    "caloriesRange": "Kaloritë duhet të jenë midis {{min}} dhe {{max}}",
+    "proteinRange": "Proteinat duhet të jenë midis {{min}}g dhe {{max}}g",
+    "carbsRange": "Karbohidratet duhet të jenë midis {{min}}g dhe {{max}}g",
+    "fatRange": "Yndyrnat duhet të jenë midis {{min}}g dhe {{max}}g",
+    "updateFailed": "Nuk u përditësuan dot objektivat e makrove",
+    "title": "Objektivat e makrove",
+    "subtitle": "Cakto objektivat e tua ditore të ushqyerjes (opsionale)",
+    "dailyCalories": "Kalori ditore (kcal)",
+    "caloriesPlaceholder": "p.sh. 2000",
+    "proteinPlaceholder": "p.sh. 150",
+    "carbsPlaceholder": "p.sh. 200",
+    "fat": "Yndyrna (g)",
+    "fatPlaceholder": "p.sh. 70"
+  },
+  "mealTemplateActions": {
+    "planCreated": "Plani i vakteve u krijua nga modeli!",
+    "savedAsTemplate": "Plani i vakteve u ruajt si model!",
+    "templateDeleted": "Modeli u fshi",
+    "templateDuplicated": "Modeli u dyfishua!"
+  }
+}

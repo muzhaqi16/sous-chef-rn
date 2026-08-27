@@ -1030,6 +1030,7 @@ describe('removeItemFromShoppingListForMoveToPantry', () => {
 describe('createOptimisticShoppingListItem', () => {
   it('bakes the passed client id straight into the entity (no temp- prefix)', () => {
     const entity = createOptimisticShoppingListItem('c-abc123', {
+      shoppingListId: 'list-1',
       itemName: 'Milk',
     });
     expect(entity.id).toBe('c-abc123');
@@ -1038,6 +1039,7 @@ describe('createOptimisticShoppingListItem', () => {
 
   it('defaults quantity to 1, optional fields to null, displayFormat to AUTO', () => {
     const entity = createOptimisticShoppingListItem('c-1', {
+      shoppingListId: 'list-1',
       itemName: 'Bread',
     });
     expect(entity.quantity).toBe(1);
@@ -1057,6 +1059,7 @@ describe('createOptimisticShoppingListItem', () => {
 
   it('uses provided optional fields', () => {
     const entity = createOptimisticShoppingListItem('c-2', {
+      shoppingListId: 'list-1',
       itemName: 'Milk',
       quantity: 2,
       quantityInput: '2',
@@ -1071,6 +1074,7 @@ describe('createOptimisticShoppingListItem', () => {
 
   it('builds item ref from itemId and unit ref from unitId', () => {
     const entity = createOptimisticShoppingListItem('c-3', {
+      shoppingListId: 'list-1',
       itemName: 'Milk',
       itemId: 'item-456',
       unitId: 'unit-789',

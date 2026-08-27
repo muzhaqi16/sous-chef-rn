@@ -9,6 +9,7 @@
 > | `useRenderTime` | Renamed to `useCommitTracking` (`src/hooks/performance/useCommitTracking.ts`). It reports the gap BETWEEN commits, not render cost. |
 > | `useMemoryMonitor` | Deleted. Only the `MemoryMonitor` service survives. |
 > | `useFilterTransition` | Deleted. |
+> | `useDeferredSearch` "uses `useDeferredValue`" | It does NOT, deliberately. It debounces (150 ms). A deferred render is interruptible, which is exactly what produces `index out of bounds, not enough layouts` when the result feeds a FlashList — see `flashlist-layout-index-race.md`. |
 >
 > The metric list below is also incomplete — `docs/telemetry-setup.md`
 > § Metric Reference is the contract, and
@@ -91,7 +92,8 @@ This document describes the performance monitoring infrastructure added to the S
 ### 7. Deferred Search
 - **Hook**: `useDeferredSearch(options)`
 - **Features**:
-  - Responsive search-as-you-type with `useDeferredValue`
+  - Responsive search-as-you-type via a 150 ms DEBOUNCE — deliberately not
+    `useDeferredValue`, whose interruptible render breaks FlashList
   - `isStale` flag when query changed but results haven't caught up
   - Configurable minimum query length
   - Extended variant `useDeferredSearchWithSort` for combined search + sort
@@ -159,7 +161,7 @@ src/
 │       ├── useFPSMonitor.ts      # Frame rate monitoring (DEV only)
 │       ├── useScreenTelemetry.ts # One-time screen view tracking
 │       ├── useFilterTransition.ts # Non-blocking filter transitions
-│       ├── useDeferredSearch.ts  # Responsive search with deferred value
+│       ├── useDeferredSearch.ts  # Responsive search (debounced, NOT deferred)
 │       ├── useDeferredCallback.ts # Deferred background work execution
 │       ├── useDeferredRender.ts  # Deferred render until idle
 │       └── useAfterInteraction.ts # Run callback via requestIdleCallback

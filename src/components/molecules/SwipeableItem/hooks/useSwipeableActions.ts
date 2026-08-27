@@ -7,17 +7,12 @@ type SwipeableRef = React.RefObject<ComponentRef<typeof Swipeable> | null>;
 interface UseSwipeableActionsProps {
   /** Item ID for FlashList recycling reset */
   itemId?: string;
-  onEdit?: () => void;
-  onDelete?: () => void;
-
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
 }
 
 export const useSwipeableActions = ({
   itemId,
-  onEdit,
-  onDelete,
   onSwipeableWillOpen,
   onSwipeableClose,
 }: UseSwipeableActionsProps) => {
@@ -33,16 +28,6 @@ export const useSwipeableActions = ({
       swipeableRef.current?.close();
     },
   );
-
-  const handleActionPress = (action: 'edit' | 'delete') => {
-    swipeableRef.current?.close();
-
-    if (action === 'edit') {
-      onEdit?.();
-    } else if (action === 'delete') {
-      onDelete?.();
-    }
-  };
 
   const handleSwipeableWillOpen = () => {
     // Notify parent that this swipeable is about to open
@@ -62,7 +47,6 @@ export const useSwipeableActions = ({
 
   return {
     swipeableRef,
-    handleActionPress,
     handleSwipeableWillOpen,
     handleSwipeableClose,
     hasSwipeStarted,

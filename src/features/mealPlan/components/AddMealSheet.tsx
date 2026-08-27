@@ -37,7 +37,7 @@ import { useRecipePreload } from '#features/recipes/hooks/useRecipePreload';
 import {
   useRecipeCacheStore,
   textSearchCacheKey,
-} from '#store/useRecipeCacheStore';
+} from '#features/recipes/store/useRecipeCacheStore';
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import type { SearchRecipesResult } from '#/services/recipeApi/types';

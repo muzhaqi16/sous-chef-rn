@@ -82,12 +82,12 @@ describe('store persist options', () => {
       expect(keys).not.toContain('enableLogs');
       expect(keys).not.toContain('enableConsoleInDev');
       expect(keys).toContain('userConsent');
-      // v13 — hydration gate + auth/scanner lifecycle flags
+      // v13 — hydration gate + auth lifecycle flags
       expect(keys).not.toContain('isHydrated');
       expect(keys).not.toContain('isAutoLoggingIn');
       expect(keys).not.toContain('isPantryQueryComplete');
-      expect(keys).not.toContain('isScanning');
-      expect(keys).not.toContain('scannedBarcode');
+      // v14 — the scanner owns its state, and its own persisted key
+      expect(keys).not.toContain('recentlyScanned');
     });
 
     it('keeps the token pair in the blob only while the keychain copy is unconfirmed', () => {
@@ -167,6 +167,24 @@ describe('store persist options', () => {
       expect(migrated).not.toHaveProperty('enableConsoleInDev');
       expect(migrated.userConsent).toBe(true);
       expect(migrated.selectedHomeId).toBe('home-1');
+    });
+
+    it('sweeps a key that LEFT the allowlist, which no earlier version covers', async () => {
+      // The reverse direction of the sweep, and the one with no natural
+      // trigger: a v13 blob is otherwise migration-free, so `recentlyScanned`
+      // would sit unreachable — and uncleared by a sign-out — until some
+      // unrelated write happened to replace the blob.
+      const { migrate } = useStore.persist.getOptions();
+      const migrated = (await migrate!(
+        {
+          recentlyScanned: [{ id: 's1', name: 'Pregnancy test', upc: '01' }],
+          theme: 'dark',
+        },
+        13,
+      )) as Record<string, unknown>;
+
+      expect(migrated).not.toHaveProperty('recentlyScanned');
+      expect(migrated.theme).toBe('dark');
     });
 
     it('sweeps every non-allowlisted key from v12 blobs, including legacy unknowns', async () => {

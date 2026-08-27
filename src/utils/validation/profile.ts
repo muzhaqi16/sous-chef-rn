@@ -1,6 +1,7 @@
 import { object, string } from 'yup';
 import { nameRule, normalizeSmartPunctuation } from './common';
 import { getI18n } from '#/i18n/config';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 /**
  * Schemas are built once at module scope, so a message resolved eagerly would
@@ -79,10 +80,11 @@ const genderRule = string().oneOf(
   'Please select a valid gender',
 );
 
-// profile visibility rule
+// profile visibility rule — derived from the schema so a hand-typed member can
+// never drift out of the enum the server accepts.
 const profileVisibilityRule = string().oneOf(
-  ['PUBLIC', 'FRIENDS_ONLY', 'PRIVATE'],
-  'Please select a valid visibility option',
+  Object.values(ProfileVisibility),
+  msg('invalidVisibility'),
 );
 
 // ----------------------------------------------------------------------------

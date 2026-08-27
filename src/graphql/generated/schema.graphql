@@ -114,19 +114,22 @@ Mark a mutation that a client never queues offline, so it needs no
 
 The offline-replay coverage rule requires a key on the cumulative-write verbs
 (restock, waste, adjust, consume, record, increment, convert, open), because a
-queued write replayed after a flaky connection must not apply twice. Two kinds
-of operation carry one of those verbs without carrying that risk:
+queued write replayed after a flaky connection must not apply twice. The one
+class of operation that carries such a verb without carrying that risk is the
+**server-recorded event** — the server writes it in response to something that
+already happened, so no client queue holds a copy to replay.
 
-- **Server-recorded events** — the server writes them in response to something
-  that already happened, so no client queue holds a copy to replay.
-- **Set-to-absolute corrections** — replaying writes the same value, so the
-  operation is idempotent by construction rather than by a key.
+That is not visible in the SDL, so it is DECLARED here rather than derived —
+beside the operation it describes, where a reviewer reading the mutation sees
+it, and with a mandatory reason.
 
-Neither is visible in the SDL: a set-to-absolute input
-(`netWeight: Float!`) and a cumulative one (`quantity: Float!`) have the same
-shape. The distinction is semantic, so it is DECLARED here rather than derived
-— beside the operation it describes, where a reviewer reading the mutation
-sees it, and with a mandatory reason.
+**A set-to-absolute value is NOT a reason to exempt.** Writing the same
+absolute value twice converges, but that says nothing about whether the second
+write is ACCEPTED: an input carrying `version` refuses every replay with a
+version conflict, because the first application bumped the row's version. Such
+an operation is not offline-replayable no matter how idempotent its value is —
+it needs a key, claimed before the version check inside the write transaction,
+so the replay surfaces as `IDEMPOTENT_REPLAY` instead.
 
 It is NOT an authorization posture and grants nothing. Its only effect is to
 tell the operation-conventions check that this mutation's missing
@@ -134,9 +137,9 @@ tell the operation-conventions check that this mutation's missing
 
 Example:
   type Mutation {
-    adjustPantryItemWeight(input: AdjustPantryItemWeightInput!): AdjustPantryItemWeightResult!
+    recordPriceObservation(input: RecordPriceObservationInput!): RecordPriceObservationResult!
       @auth
-      @offlineReplayExempt(reason: "set-to-absolute weight correction")
+      @offlineReplayExempt(reason: "server-recorded observation, not client-queued")
   }
 """
 directive @offlineReplayExempt(
@@ -537,6 +540,15 @@ union AddRestrictionResult = AddRestrictionPayload | ConflictError | ForbiddenEr
 input AddTemplateItemInput {
   dayOffset: Int!
   """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  Persisted as the template item's primary key; when omitted the server
+  generates one. Replaying an add with the same id returns a ConflictError
+  carrying code IDEMPOTENT_REPLAY (treat it as already-applied). A different
+  meal sent to an already-filled dayOffset/mealType slot is a genuine
+  CONFLICT.
+  """
+  id: ID
+  """
   Meal reference: exactly one of a recipe id or a custom meal name (@oneOf).
   """
   meal: MealRefInput!
@@ -638,6 +650,7 @@ Recalculates remainingNetWeight proportionally and derives new quantity.
 """
 input AdjustPantryItemWeightInput {
   id: ID!
+  idempotencyKey: ID
   """The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar)"""
   netWeight: Float!
   """
@@ -2345,7 +2358,7 @@ input CreateRecipeInput {
   name: String!
   notes: String
   nutrition: NutritionInfoInput
-  source: String
+  source: ExternalSource
   status: RecipeStatus
   tags: [String!]
   timing: TimeEstimatesInput
@@ -3032,8 +3045,18 @@ Always include a __typename so the variant can be discriminated.
 union DeletePantryItemResult = ConflictError | DeletePantryItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type DeletePantryPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the pantry was
+  already deleted) — a no-op success that did NOT re-delete or re-publish.
+  The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
-  pantry: Pantry!
+  """
+  The deleted pantry, or null when it was already deleted — an idempotent
+  replay (or second device) that converged as success. See converged.
+  """
+  pantry: Pantry
 }
 
 """
@@ -3065,6 +3088,12 @@ input DeleteRecipeFolderInput {
 }
 
 type DeleteRecipeFolderPayload {
+  """
+  True when this call CONVERGED on a pre-existing state — no saved recipe
+  carried the label, so the folder did not exist and nothing moved. A no-op
+  success. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The deleted folder label (folders are string labels, not entities)."""
   folder: String!
   """How many saved recipes were moved out of the folder."""
@@ -3162,8 +3191,19 @@ input DeleteStorageLocationInput {
 }
 
 type DeleteStorageLocationPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the location was
+  already deleted) — a no-op success that did NOT re-delete. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
-  storageLocation: StorageLocation!
+  """
+  The deleted storage location, or null when it was already deleted — an
+  idempotent replay (or second device) that converged as success. See
+  converged.
+  """
+  storageLocation: StorageLocation
 }
 
 """
@@ -6381,6 +6421,12 @@ type MealTemplateItem {
 input MealTemplateItemInput {
   dayOffset: Int!
   """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  Persisted as the template item's primary key; when omitted the server
+  generates one.
+  """
+  id: ID
+  """
   Meal reference: exactly one of a recipe id or a custom meal name (@oneOf).
   """
   meal: MealRefInput!
@@ -6564,6 +6610,12 @@ enum ModerationStatus {
 }
 
 input MovePurchasedItemsToPantryInput {
+  """
+  Optional per-line id hints. The server still decides which lines are
+  purchased; a line with no hint gets a server-minted id, and a hint for a
+  line that is no longer purchased is ignored.
+  """
+  pantryItemIds: [MoveToPantryIdHintInput!]
   shoppingListId: ID!
 }
 
@@ -6605,6 +6657,19 @@ input MoveShoppingItemToPantryInput {
   """ID of the target pantry"""
   pantryId: ID!
   """
+  Optional client-generated permanent ID (CUID2) for the pantry row this move
+  creates. Offline-first clients mint it so the optimistic local row and the
+  server row are the same entity. When omitted, the server generates one via
+  @default(cuid(2)).
+  
+  Honoured only when the move CREATES a pantry entry. When the target pantry
+  already holds an active stack of the same catalog item, the move restocks
+  that stack instead and the payload returns that existing row's id — compare
+  pantryItem.id against the id you sent to tell the two apart. Replaying an id
+  that already exists returns IDEMPOTENT_REPLAY.
+  """
+  pantryItemId: ID
+  """
   Whether to remove the item from the shopping list after moving (default: true)
   """
   removeFromList: Boolean
@@ -6645,6 +6710,22 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union MoveShoppingListItemResult = ConflictError | ForbiddenError | MoveShoppingListItemPayload | NotFoundError | ValidationError
+
+"""
+A client-minted permanent id for the pantry row one purchased line will create.
+
+Same create-branch-only semantics as MoveShoppingItemToPantryInput.pantryItemId:
+a line that restocks an existing stack returns that stack's id instead.
+"""
+input MoveToPantryIdHintInput {
+  idempotencyKey: ID
+  """
+  Client-generated permanent ID (CUID2) for the pantry row that line creates.
+  """
+  pantryItemId: ID!
+  """The purchased shopping list item this hint applies to."""
+  shoppingListItemId: ID!
+}
 
 """
 Info about a successfully moved item (the per-element entity of
@@ -8231,6 +8312,14 @@ type PantryItem {
   expiresAt: DateTime
   id: ID!
   isComposted: Boolean!
+  """
+  Whether this item is low on stock: quantity at or below zero, or at or below
+  minQuantity when a minimum is set. The same definition
+  PantryStats.lowStockCount counts and the lowStock filter on
+  PantryItemFilters selects.
+  
+  Not lowStockAlert, which records only whether the user wants to be notified.
+  """
   isLowStock: Boolean!
   isRecycled: Boolean!
   item: Item!
@@ -8408,8 +8497,36 @@ type PantryItemEdge implements Edge {
 input PantryItemFilters {
   condition: ItemCondition
   expirationDays: Int
+  """
+  Only items expiring within expirationDays (default 7), and only items you
+  still have — an item whose quantity is zero is not expiring.
+  
+  Has NO lower bound, so ALREADY-EXPIRED items are included. This is a
+  deliberate superset of PantryStats.expiringCount, which bounds at the
+  present moment and therefore reports a smaller number than this filter
+  returns; PantryStats.expiredCount covers the difference. Clients that want
+  both an Expiring and an Expired section split this one page by date.
+  """
   expiringSoon: Boolean
   itemId: ID
+  """
+  Only items that are low on stock: quantity at or below zero, or at or below
+  minQuantity when a minimum is set. Exactly the definition
+  PantryStats.lowStockCount counts and PantryItem.isLowStock reports, so a
+  filtered page and the count cannot disagree.
+  
+  NOT the lowStockAlert column, which records whether the user wants to be
+  notified: a well-stocked item with alerts on is not low, and a depleted item
+  with alerts off is.
+  
+  A false or null value means UNFILTERED, matching every other field of this
+  input. There is no only-well-stocked mode.
+  
+  Combines with expiringSoon. Since expiringSoon already excludes items you
+  have none of, the intersection is items you still have, at or below their
+  minimum, expiring within the horizon.
+  """
+  lowStock: Boolean
   search: String
   storageLocationId: ID
   storageState: StorageState
@@ -10076,8 +10193,19 @@ input RemoveTemplateItemInput {
 }
 
 type RemoveTemplateItemPayload {
+  """
+  True when this call CONVERGED on a pre-existing state (the item was already
+  removed) — a no-op success that did NOT re-remove. The canonical, API-wide
+  replay flag.
+  """
+  converged: Boolean!
   mealTemplate: MealTemplate
-  mealTemplateItem: MealTemplateItem!
+  """
+  The removed template item, or null when it was already removed — an
+  idempotent replay (or second device) that converged as success. See
+  converged.
+  """
+  mealTemplateItem: MealTemplateItem
 }
 
 """

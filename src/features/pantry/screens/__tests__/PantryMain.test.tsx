@@ -265,7 +265,7 @@ jest.mock(
     SpotlightCoachMark: () => null,
   }),
 );
-jest.mock('#components/atoms/Skeleton/PantryScreenSkeleton', () => ({
+jest.mock('#features/pantry/components/skeletons/PantryScreenSkeleton', () => ({
   PantryScreenSkeleton: () => null,
 }));
 jest.mock('#components/molecules/TabScreenHeader', () => ({
@@ -274,9 +274,6 @@ jest.mock('#components/molecules/TabScreenHeader', () => ({
 jest.mock('#components/molecules/SearchBar', () => ({ SearchBar: () => null }));
 jest.mock('#components/molecules/FilterTabs/FilterTabs', () => ({
   FilterTabs: () => null,
-}));
-jest.mock('#components/molecules/SectionHeader', () => ({
-  SectionHeader: () => null,
 }));
 
 // --- Per-test mock override helper ---

@@ -74,14 +74,12 @@ export const MealTemplateBuilderScreen: React.FC<
     removeItem,
     creating,
     updating,
-    itemEditsUnavailable,
   } = useMealTemplateEditor();
 
   // Only EDIT mode touches the server per item; in create mode the rows are
   // local drafts flushed with the template itself, which is local-first. So
   // being offline blocks editing an existing template's items, and nothing at
   // all about building a new one.
-  const itemActionsDisabled = isEdit && itemEditsUnavailable;
 
   const { data } = useQuery(GetMealTemplateForEditDocument, {
     variables: { id: templateId ?? '' },
@@ -204,7 +202,7 @@ export const MealTemplateBuilderScreen: React.FC<
 
   const handleRemoveItem = (item: DraftItem) => {
     if (isEdit && item.serverId) {
-      removeItem(item.serverId);
+      removeItem(item.serverId, templateId);
     } else {
       setDraftItems(prev => prev.filter(it => it.key !== item.key));
     }
@@ -317,7 +315,6 @@ export const MealTemplateBuilderScreen: React.FC<
         items.map(item => {
           // Only a row that exists on the server needs a network call to
           // remove; a local draft row is removed from state either way.
-          const removeDisabled = itemActionsDisabled && !!item.serverId;
           return (
             <View key={item.key} style={styles.itemRow}>
               <Pressable
@@ -338,14 +335,9 @@ export const MealTemplateBuilderScreen: React.FC<
               <Pressable
                 onPress={() => handleRemoveItem(item)}
                 hitSlop={8}
-                disabled={removeDisabled}
                 testID={`remove-item-${item.key}`}
               >
-                <Icon
-                  name="close-circle"
-                  size={22}
-                  tone={removeDisabled ? 'secondary' : 'error'}
-                />
+                <Icon name="close-circle" size={22} tone="error" />
               </Pressable>
             </View>
           );
@@ -392,7 +384,6 @@ export const MealTemplateBuilderScreen: React.FC<
             pressed && styles.pressed,
           ]}
           onPress={handleSubmitItem}
-          disabled={itemActionsDisabled}
           testID="submit-item-button"
         >
           <Icon

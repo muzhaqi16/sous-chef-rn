@@ -5,8 +5,10 @@ export const pantryFeature: FeatureManifest = {
   id: 'pantry',
   tab: {
     screenName: 'Pantry',
-    title: 'navigation.tabs.pantry',
+    titleKey: 'navigation.tabs.pantry',
     order: 10,
+    icon: { active: 'home', inactive: 'home-outline' },
+    mainScreen: 'PantryMain',
     stack: PantryStack,
   },
 };

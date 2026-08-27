@@ -6,7 +6,7 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { SettingSwitch } from '#components/settings/SettingSwitch';
-import { SettingSection } from '#components/settings/SettingSection';
+import { SettingsSection } from '#components/organisms/SettingsSection';
 import { ProfileScreenWrapper } from '#components/templates/ProfileScreenWrapper';
 import { usePerformanceStore } from '#/store/performanceStore';
 import { Environment } from '#/utils/environment';
@@ -292,7 +292,7 @@ export const PerformanceDashboard: React.FC = () => {
           </Text>
         </View>
 
-        <SettingSection title={t('performance.tracking')}>
+        <SettingsSection variant="inset" title={t('performance.tracking')}>
           <SettingSwitch
             title={t('performance.enableTracking')}
             description={t('performance.enableTrackingDesc')}
@@ -320,7 +320,7 @@ export const PerformanceDashboard: React.FC = () => {
             onValueChange={setTrackScreens}
             disabled={!isEnabled}
           />
-        </SettingSection>
+        </SettingsSection>
 
         {/* FPS Monitor (DEV only) — isolated component to avoid 10/sec re-renders of parent */}
         {!!__DEV__ && <FPSSection />}
@@ -521,7 +521,7 @@ export const PerformanceDashboard: React.FC = () => {
                   align="right"
                   style={styles.tableHeaderAvg}
                 >
-                  {t('performance.avgMount')}
+                  {t('performance.maxInteractive')}
                 </Text>
                 <Text
                   size="xs"
@@ -552,7 +552,7 @@ export const PerformanceDashboard: React.FC = () => {
                     {metric.screenName}
                   </Text>
                   <Text size="sm" align="right" style={styles.tableCellAvg}>
-                    {formatTime(metric.avgMountTime)}
+                    {formatTime(metric.maxInteractiveTime)}
                   </Text>
                   <Text size="sm" align="right" style={styles.tableCellMax}>
                     {formatTime(metric.avgInteractiveTime)}

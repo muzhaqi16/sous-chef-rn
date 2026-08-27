@@ -26,7 +26,6 @@ import { FolderListItem } from './FolderPicker/FolderListItem';
 import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
 
 /** Protected folders that cannot be renamed or deleted */
-const PROTECTED_FOLDERS = ['Favorites'];
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -46,6 +45,13 @@ export interface FolderPickerProps {
   onDeleteFolder?: (folderName: string) => Promise<boolean>;
   /** Loading state for folder actions */
   folderActionLoading?: boolean;
+  /**
+   * Folders that cannot be renamed or deleted.
+   *
+   * A prop rather than a constant: this picker had `['Favorites']` hardcoded,
+   * which is a recipes concept sitting in a generic component.
+   */
+  protectedFolders?: string[];
 }
 
 export const FolderPicker: React.FC<FolderPickerProps> = ({
@@ -58,6 +64,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   allowCreate = true,
   onRenameFolder,
   onDeleteFolder,
+  protectedFolders = [],
   folderActionLoading = false,
 }) => {
   const { t } = useTranslation();
@@ -117,7 +124,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
 
   // Check if a folder is protected
   const isProtectedFolder = (folder: string) => {
-    return PROTECTED_FOLDERS.includes(folder);
+    return protectedFolders.includes(folder);
   };
 
   const filteredFolders = (() => {

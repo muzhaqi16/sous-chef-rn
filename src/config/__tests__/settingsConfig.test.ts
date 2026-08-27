@@ -2,6 +2,7 @@ import {
   PERSONAL_INFO_CONFIG,
   PROFILE_SETTINGS_CONFIG,
 } from '../settingsConfig';
+import { ProfileVisibility } from '#/graphql/generated/schemaTypes';
 
 describe('settingsConfig', () => {
   describe('PERSONAL_INFO_CONFIG', () => {
@@ -12,22 +13,20 @@ describe('settingsConfig', () => {
 
     it('has a Personal Information section', () => {
       const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Personal Information',
+        s => s.id === 'personalInformation',
       );
       expect(section).toBeDefined();
       expect(section!.items.length).toBeGreaterThan(0);
     });
 
     it('has a Privacy Settings section', () => {
-      const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Privacy Settings',
-      );
+      const section = PERSONAL_INFO_CONFIG.find(s => s.id === 'privacy');
       expect(section).toBeDefined();
     });
 
     it('Personal Information section contains expected fields', () => {
       const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Personal Information',
+        s => s.id === 'personalInformation',
       )!;
       const keys = section.items.map(item => item.key);
       expect(keys).toContain('email');
@@ -38,7 +37,7 @@ describe('settingsConfig', () => {
 
     it('email field is type info (read-only)', () => {
       const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Personal Information',
+        s => s.id === 'personalInformation',
       )!;
       const emailItem = section.items.find(i => i.key === 'email');
       expect(emailItem!.type).toBe('info');
@@ -46,7 +45,7 @@ describe('settingsConfig', () => {
 
     it('gender field has options', () => {
       const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Personal Information',
+        s => s.id === 'personalInformation',
       )!;
       const genderItem = section.items.find(i => i.key === 'gender');
       expect(genderItem!.type).toBe('modal');
@@ -56,20 +55,42 @@ describe('settingsConfig', () => {
     });
 
     it('profileVisibility field has options', () => {
-      const section = PERSONAL_INFO_CONFIG.find(
-        s => s.title === 'Privacy Settings',
-      )!;
+      const section = PERSONAL_INFO_CONFIG.find(s => s.id === 'privacy')!;
       const visibilityItem = section.items.find(
         i => i.key === 'profileVisibility',
       );
       expect(visibilityItem!.type).toBe('modal');
       if (visibilityItem && 'options' in visibilityItem) {
         expect(visibilityItem.options).toEqual([
-          { label: 'Public', value: 'PUBLIC' },
-          { label: 'Friends Only', value: 'FRIENDS_ONLY' },
-          { label: 'Private', value: 'PRIVATE' },
+          {
+            labelKey: 'personalInformation.visibilityPublic',
+            value: ProfileVisibility.Public,
+          },
+          {
+            labelKey: 'personalInformation.visibilityFriendsOnly',
+            value: ProfileVisibility.Friends,
+          },
+          {
+            labelKey: 'personalInformation.visibilityPrivate',
+            value: ProfileVisibility.Private,
+          },
         ]);
       }
+    });
+
+    // The options are the wire values, not labels. FRIENDS_ONLY shipped here
+    // for a schema that only has FRIENDS: the server refused every selection
+    // and the optimistic write reverted with nothing shown to the user.
+    it('offers only profileVisibility values the schema defines', () => {
+      const section = PERSONAL_INFO_CONFIG.find(s => s.id === 'privacy')!;
+      const visibilityItem = section.items.find(
+        i => i.key === 'profileVisibility',
+      )!;
+      const allowed: string[] = Object.values(ProfileVisibility);
+
+      expect(visibilityItem.options!.map(o => o.value).sort()).toEqual(
+        [...allowed].sort(),
+      );
     });
   });
 
@@ -81,16 +102,14 @@ describe('settingsConfig', () => {
 
     it('each section has a title and items array', () => {
       for (const section of PROFILE_SETTINGS_CONFIG) {
-        expect(typeof section.title).toBe('string');
+        expect(typeof section.titleKey).toBe('string');
         expect(Array.isArray(section.items)).toBe(true);
         expect(section.items.length).toBeGreaterThan(0);
       }
     });
 
     it('has a Security section with biometric and change password', () => {
-      const security = PROFILE_SETTINGS_CONFIG.find(
-        s => s.title === 'Security',
-      );
+      const security = PROFILE_SETTINGS_CONFIG.find(s => s.id === 'security');
       expect(security).toBeDefined();
       const keys = security!.items.map(i => i.key);
       expect(keys).toContain('biometricAuthentication');
@@ -99,7 +118,7 @@ describe('settingsConfig', () => {
 
     it('has an Appearance & Language section with appearance and language entries', () => {
       const section = PROFILE_SETTINGS_CONFIG.find(
-        s => s.title === 'Appearance & Language',
+        s => s.id === 'appearanceAndLanguage',
       );
       expect(section).toBeDefined();
       const appearanceItem = section!.items.find(i => i.key === 'appearance');
@@ -113,12 +132,12 @@ describe('settingsConfig', () => {
       expect(logoutSection).toBeDefined();
       const logoutItem = logoutSection!.items.find(i => i.key === 'logout');
       expect(logoutItem!.type).toBe('action');
-      expect(logoutItem!.label).toBe('Log Out');
+      expect(logoutItem!.labelKey).toBe('profile.labels.logout');
     });
 
     it('has Developer section with debugInfo and performanceDashboard', () => {
       const devSection = PROFILE_SETTINGS_CONFIG.find(
-        s => s.title === 'Developer',
+        s => s.id === 'developer',
       );
       expect(devSection).toBeDefined();
       const keys = devSection!.items.map(i => i.key);

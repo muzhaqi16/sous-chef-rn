@@ -17,6 +17,12 @@ interface SheetFormHeaderProps {
   onCancel: () => void;
   onSave: () => void;
   saving?: boolean;
+  /**
+   * Save is unavailable because the form is incomplete — distinct from
+   * `saving`, which means a submission is in flight. Both dim and disable the
+   * button; only `saving` is the caller's cue to swap in a progress label.
+   */
+  disabled?: boolean;
   submitTestID?: string;
 }
 
@@ -34,6 +40,7 @@ export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
   onCancel,
   onSave,
   saving = false,
+  disabled = false,
   submitTestID,
   cancelTestID,
 }) => {
@@ -65,9 +72,12 @@ export const SheetFormHeader: React.FC<SheetFormHeaderProps> = ({
         {title}
       </Text>
       <AppPressable
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        style={[
+          styles.saveButton,
+          (saving || disabled) && styles.saveButtonDisabled,
+        ]}
         onPress={onSave}
-        disabled={saving}
+        disabled={saving || disabled}
         testID={submitTestID}
       >
         <Text size="md" weight="semibold" style={styles.saveButtonText}>

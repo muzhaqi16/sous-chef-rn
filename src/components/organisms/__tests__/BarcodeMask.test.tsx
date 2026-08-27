@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import BarcodeMask from '../BarcodeMask';
+import BarcodeMask from '#features/barcode/components/BarcodeMask';
 
 jest.mock('#/apollo/links/tokenScheduler');
 jest.mock('#/apollo/links/refreshToken');

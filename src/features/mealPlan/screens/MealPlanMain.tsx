@@ -49,7 +49,7 @@ import { useGenerateShoppingList } from '#features/mealPlan/hooks/useGenerateSho
 import { useDuplicateMealPlan } from '#features/mealPlan/hooks/useDuplicateMealPlan';
 import { useMealPlanPermissions } from '#features/mealPlan/hooks/useMealPlanPermissions';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
-import { MealPlanSkeleton } from '#components/atoms/Skeleton/MealPlanSkeleton';
+import { MealPlanSkeleton } from '#features/mealPlan/components/skeletons/MealPlanSkeleton';
 import { useAppStore } from '#store/useAppStore';
 import {
   MealType,

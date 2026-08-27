@@ -30,7 +30,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { SPRING, TIMING } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
-import { useShowTutorials } from '#hooks/settings/useSettings';
+import { useShowTutorials } from '#hooks/settings/useShowTutorials';
 import {
   HOLE_PADDING,
   TOOLTIP_MARGIN,

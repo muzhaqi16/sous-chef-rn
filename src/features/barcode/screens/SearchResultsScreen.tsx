@@ -15,13 +15,13 @@ import { Header } from '#components/molecules/Header';
 import AddItemForm, {
   type AddItemFormMode,
   type AddItemFormInitialData,
-} from '#components/organisms/AddItemForm/AddItemForm';
+} from '#features/catalog/ui/AddItemForm/AddItemForm';
 import { SuggestEditForm } from '../components/SuggestEditForm';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { useBottomSheetState } from '#store/useAppStore';
+import { useBottomSheetState } from '#features/barcode/store/barcodeScannerStore';
 import { useSearchResults } from '../hooks/useSearchResults';
 import type { BarcodeSource } from '#/types/navigation';
-import type { ScannedItem } from '#store/slices/barcodeScannerSlice';
+import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {

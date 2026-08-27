@@ -688,10 +688,33 @@ module.exports = {
     // Each feature under src/features/<name>/ exposes a public surface
     // (screens/, manifest.ts, top-level hooks/) and keeps everything else
     // private. Reaching across features into another feature's internals
-    // (context/, hooks/mutations/, utils/, graphql/) is blocked here.
+    // (context/, hooks/mutations/, utils/, graphql/, components/) is blocked
+    // here.
     //
     // Allowed cross-feature reach: screens, manifest, top-level hooks, and
     // <feature>Fragments.generated.ts type imports (via the `except` clause).
+    //
+    // components/ is private. A component two features want is normally a KIT
+    // component — promote it to src/components/ rather than reaching for it,
+    // which is the difference between a shared layer and a shortcut.
+    //
+    // The catalog is the exception that rule needs: its pickers ARE domain UI,
+    // so they cannot go in a domain-free kit, and two features consume them.
+    // It therefore keeps a second, PUBLIC component directory — `ui/` — which
+    // is simply absent from its zone below. Anything in `src/features/catalog/ui/`
+    // is an API; `components/` there is private like everywhere else. See
+    // src/features/catalog/README.md.
+    //
+    // A `from` path may name a directory that does not exist yet — 18 do.
+    // That is the point: the boundary is declared for mealPlan/context/ before
+    // anyone creates it, so the first import into it is blocked rather than
+    // grandfathered. Do not prune them for tidiness.
+    //
+    // The SHARED-layer direction (src/components, src/hooks reaching into a
+    // feature) is not enforced here for graphql/ and top-level hooks/: it has
+    // 76 existing edges, and expressing that as `except` clauses would be a
+    // rule that excuses more than it forbids. `scripts/check-layer-purity.mjs`
+    // ratchets those instead — baselined, and only allowed to shrink.
     //
     // One zone is needed per feature because "same feature" cannot be
     // expressed as a glob — each zone enumerates what's PRIVATE in that
@@ -714,9 +737,11 @@ module.exports = {
               './src/features/pantry/context',
               './src/features/pantry/hooks/mutations',
               './src/features/pantry/utils',
+              './src/features/pantry/components',
+              './src/features/pantry/offline',
             ],
             message:
-              'Cross-feature import into pantry internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/pantry/hooks/.',
+              "Cross-feature import into pantry internals (context/, hooks/mutations/, utils/, components/, offline/) is not allowed. Use a public hook from src/features/pantry/hooks/. offline/ is the offline queue's surface, not another feature's.",
           },
           // shoppingList
           {
@@ -732,9 +757,11 @@ module.exports = {
               './src/features/shoppingList/context',
               './src/features/shoppingList/hooks/mutations',
               './src/features/shoppingList/utils',
+              './src/features/shoppingList/components',
+              './src/features/shoppingList/offline',
             ],
             message:
-              'Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/shoppingList/hooks/.',
+              "Cross-feature import into shoppingList internals (context/, hooks/mutations/, utils/, components/, offline/) is not allowed. Use a public hook from src/features/shoppingList/hooks/. offline/ is the offline queue's surface, not another feature's.",
           },
           // recipes
           {
@@ -750,9 +777,10 @@ module.exports = {
               './src/features/recipes/context',
               './src/features/recipes/hooks/mutations',
               './src/features/recipes/utils',
+              './src/features/recipes/components',
             ],
             message:
-              'Cross-feature import into recipes internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/recipes/hooks/.',
+              'Cross-feature import into recipes internals (context/, hooks/mutations/, utils/, components/) is not allowed. Use a public hook from src/features/recipes/hooks/.',
           },
           // mealPlan
           {
@@ -768,9 +796,10 @@ module.exports = {
               './src/features/mealPlan/context',
               './src/features/mealPlan/hooks/mutations',
               './src/features/mealPlan/utils',
+              './src/features/mealPlan/components',
             ],
             message:
-              'Cross-feature import into mealPlan internals (context/, hooks/mutations/, utils/) is not allowed. Use a public hook from src/features/mealPlan/hooks/.',
+              'Cross-feature import into mealPlan internals (context/, hooks/mutations/, utils/, components/) is not allowed. Use a public hook from src/features/mealPlan/hooks/.',
           },
           // barcode
           {
@@ -780,9 +809,22 @@ module.exports = {
               './src/features/barcode/hooks/mutations',
               './src/features/barcode/utils',
               './src/features/barcode/graphql',
+              './src/features/barcode/components',
             ],
             message:
-              'Cross-feature import into barcode internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/barcode/hooks/, or compose your own GraphQL operation.',
+              'Cross-feature import into barcode internals (context/, hooks/mutations/, utils/, graphql/, components/) is not allowed. Use a public hook from src/features/barcode/hooks/, or compose your own GraphQL operation.',
+          },
+          // catalog
+          {
+            target: './src/features/!(catalog)/**',
+            from: [
+              './src/features/catalog/context',
+              './src/features/catalog/hooks/mutations',
+              './src/features/catalog/utils',
+              './src/features/catalog/components',
+            ],
+            message:
+              'Cross-feature import into catalog internals (context/, hooks/mutations/, utils/, components/) is not allowed. The catalog exposes UI through src/features/catalog/ui/ and behaviour through its top-level hooks/ — see src/features/catalog/README.md.',
           },
           // notifications
           {
@@ -792,9 +834,10 @@ module.exports = {
               './src/features/notifications/hooks/mutations',
               './src/features/notifications/utils',
               './src/features/notifications/graphql',
+              './src/features/notifications/components',
             ],
             message:
-              'Cross-feature import into notifications internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/notifications/hooks/, or compose your own GraphQL operation.',
+              'Cross-feature import into notifications internals (context/, hooks/mutations/, utils/, graphql/, components/) is not allowed. Use a public hook from src/features/notifications/hooks/, or compose your own GraphQL operation.',
           },
           // profile
           {
@@ -804,9 +847,10 @@ module.exports = {
               './src/features/profile/hooks/mutations',
               './src/features/profile/utils',
               './src/features/profile/graphql',
+              './src/features/profile/components',
             ],
             message:
-              'Cross-feature import into profile internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/profile/hooks/, or compose your own GraphQL operation.',
+              'Cross-feature import into profile internals (context/, hooks/mutations/, utils/, graphql/, components/) is not allowed. Use a public hook from src/features/profile/hooks/, or compose your own GraphQL operation.',
           },
           // home
           {
@@ -816,9 +860,10 @@ module.exports = {
               './src/features/home/hooks/mutations',
               './src/features/home/utils',
               './src/features/home/graphql',
+              './src/features/home/components',
             ],
             message:
-              'Cross-feature import into home internals (context/, hooks/mutations/, utils/, graphql/) is not allowed. Use a public hook from src/features/home/hooks/, or compose your own GraphQL operation.',
+              'Cross-feature import into home internals (context/, hooks/mutations/, utils/, graphql/, components/) is not allowed. Use a public hook from src/features/home/hooks/, or compose your own GraphQL operation.',
           },
 
           // ── The other direction: the SHARED layer reaching into a feature ──
@@ -840,6 +885,14 @@ module.exports = {
           // excuses more than it forbids. Generated operation documents are
           // typed and side-effect-free; treating them as a feature's data
           // contract is the honest reading.
+          //
+          // `offline/` is likewise not listed, and for the same reason read the
+          // other way: it exists ONLY for the queue. A feature's sync builders
+          // say what its queued mutation's input means, which nothing but the
+          // replayer needs — so the kernel imports it (one static import per
+          // participating feature, because the queue must know every replayable
+          // op before the first mutation) and the feature-to-feature zones
+          // above forbid it to everyone else.
           //
           // context/, utils/ and hooks/mutations/ ARE private: they carry
           // behaviour, and a shared module reaching for them is the case this

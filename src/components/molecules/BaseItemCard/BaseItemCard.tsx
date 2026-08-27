@@ -80,15 +80,10 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
   variant = 'normal',
   containerStyle,
   onPress,
-  onEdit,
-  onDelete,
-  onConsume,
-  onWaste,
-  onRestock,
-  onTogglePurchase,
+  leftActions,
+  rightActions,
   onSwipeableWillOpen,
   onSwipeableClose,
-  isPurchased,
   leftThreshold = 80,
   rightThreshold = 80,
   itemId,
@@ -119,28 +114,17 @@ export const BaseItemCard: React.FC<BaseItemCardProps> = ({
     </CardSurface>
   );
 
-  // Check if we have any swipe actions
-  const hasSwipeActions =
-    onEdit || onDelete || onConsume || onWaste || onRestock || onTogglePurchase;
+  const hasSwipeActions = !!leftActions?.length || !!rightActions?.length;
 
   if (hasSwipeActions) {
     return (
       <View style={styles.swipeableWrapper}>
         <SwipeableItem
           itemId={itemId}
-          // Without this, `RightActions` renders its buttons with
-          // `testID={undefined}` — every swipe action in the app was
-          // unreachable from a test. The row's own testID is the natural
-          // prefix, so a pantry row gives `pantry-item-<id>-delete` / `-edit`.
           testIDPrefix={testID}
           onPress={onPress}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onConsume={onConsume}
-          onWaste={onWaste}
-          onRestock={onRestock}
-          onTogglePurchase={onTogglePurchase}
-          isPurchased={isPurchased}
+          leftActions={leftActions}
+          rightActions={rightActions}
           onSwipeableWillOpen={onSwipeableWillOpen}
           onSwipeableClose={onSwipeableClose}
           leftThreshold={leftThreshold}

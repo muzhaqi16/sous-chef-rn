@@ -1,9 +1,9 @@
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { type ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { MoveToPantryModal } from '#/components/modals/MoveToPantryModal';
-import { AddToShoppingListSheet } from '#/components/modals/AddToShoppingListSheet/AddToShoppingListSheet';
-import { QuantityEditSheet } from '#/components/modals/QuantityEditSheet/QuantityEditSheet';
-import { PurchaseAmountSheet } from '#/components/modals/PurchaseAmountSheet/PurchaseAmountSheet';
+import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
+import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
+import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
+import { PurchaseAmountSheet } from '#features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet';
 import {
   useAddItemSheet,
   type UseAddItemSheetResult,
@@ -177,7 +177,6 @@ export function ShoppingListModalsProvider({
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}
         onConfirm={moveToPantry.confirm}
-        confirmDisabled={moveToPantry.isApiUnavailable}
       />
 
       {/* Add to Shopping List Sheet */}
