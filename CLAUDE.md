@@ -391,7 +391,8 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   it fires once per mount and a sentinel-only skeleton layout consumes it.
   Verified 2026-08-26 vs `@shopify/flash-list@2.3.2`, on-device evidence:
   `docs/verified-library-behaviour.md#flashlist-v2-first-layout-opacity-gate`
-  + `docs/audits/perf-blank-window-2026-08-26.md`.
+  (the companion `docs/audits/perf-blank-window-2026-08-26.md` was deleted in
+  `8a7c8c76`; recover with `git checkout f930bf3c -- docs/audits/`).
 - **Never use `InteractionManager`** — in the installed RN 0.86.3 it is a
   no-op stub (`runAfterInteractions` is `setImmediate`). Use
   `requestIdleCallback` for deferring non-urgent work. Verified 2026-08-24:
@@ -419,6 +420,39 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   RN `zIndex` orders siblings only, and Android view flattening prunes
   layout-only wrappers — a missed level paints the dropdown UNDER later
   inputs, on device only, invisible to typecheck/lint/jest.
+
+### Forms & validation
+
+- **A field the user can fix is reported ON the field, never through
+  `alertService.alert`.** A modal covers the form, has to be dismissed before
+  the field can be corrected, and once dismissed no longer says which field —
+  or, in a paged sheet, which page — it meant. Alerts remain correct for
+  SUBMISSION failures (a server refusal, a network throw): those are not a
+  field the user can edit.
+- **Validation lives in a yup schema next to the form**, resolved through
+  `yupResolver` on `useForm`; fields render through `Controller` and Save goes
+  through `handleSubmit(onValid, logValidationErrors)`. The submit hook does
+  not validate — reaching it means the form is already valid. Schemas:
+  `shoppingItemFormConfig.ts` (shared by the AddEditItem screen and the
+  AddToShoppingList sheet), `addPantryItemFormConfig.ts`,
+  `pantryItemFormConfig.ts` (the edit form).
+- **Schema messages resolve LAZILY** — `const msg = key => () => t(key)`. A
+  schema is built once at module scope, so an eagerly-resolved message freezes
+  whichever language was active at import time; yup calls the function when the
+  rule fails, which lands after any language change. Never hardcode the
+  English string. Pattern: `src/utils/validation/common.ts`.
+- **A cross-field rule needs an explicit `trigger()`.**
+  `setValue(field, v, { shouldValidate: true })` re-validates THAT field only.
+  The all-or-nothing net-weight rule lives on the *unit* while its inputs are
+  the weight and the unit id, so without
+  `trigger('netWeightUnit')` typing a weight never raised the message and
+  picking a unit never cleared it. Verified on device 2026-08-26.
+- **A paged form maps field → page** (`FIELD_PAGE` in
+  `addPantryItemFormConfig.ts`) and navigates before reporting, so the message
+  is on screen instead of behind a tab the user has to find.
+- **`dirtyFields` OMITS clean fields** — react-hook-form does not set them
+  `false`. Read for truthiness (`if (dirtyFields.itemName)`), and assert
+  `toBeUndefined()`, not `toBe(false)`.
 
 ### Navigation
 
@@ -559,7 +593,18 @@ Full patterns and examples: `docs/development.md` § Testing.
 - Helper shortcuts: `recordMock()` (captures every variables payload Apollo
   observed), `seedCache()` (pre-writes entities for `cache.readFragment`).
 - `Environment` and `logger` are auto-mocked globally — override per-suite
-  with `mockReturnValue`, never replace the module with a partial factory.
+  with `mockReturnValue`, never replace the module with a partial factory. Its
+  `allowsLaunchArgAuth` default is `true`, matching what the REAL function
+  returns under Jest (`__DEV__` is true) — a double that inverts the thing it
+  stands in for silently disables coverage everywhere.
+- **A react-hook-form form cannot be stubbed with a plain object** — fields
+  render through `Controller control={control}` and `control` has no
+  plain-object equivalent. Delegate to the real hook
+  (`jest.requireActual(...)`, seeded via `initialState`) and spy on the writes;
+  the test then exercises the real schema, so a case expecting a refusal gets
+  one for the real reason. `jest.clearAllMocks()` does NOT reset a spy's
+  implementation — a `mockImplementation` in one test leaks its seeded form
+  into every test after it, so pair it with `jest.restoreAllMocks()`.
 
 ## Bundled credentials
 
@@ -570,6 +615,16 @@ gains, not whether it can be extracted: `PUBLIC_BY_DESIGN` requires write-only
 or identity-only, individually revocable, and rate-limited server-side; an
 infrastructure credential never qualifies. Decisions:
 `docs/bundled-credentials-decision.md`.
+
+**Launch-argument auth is gated on the ARTIFACT, not the environment.**
+`ALLOW_LAUNCH_ARG_AUTH` lets a build take a session from launch arguments, and
+`MODE=release npm run android` resolves to a development `NODE_ENV` *and* signs
+with the distribution key — so an environment test passes while the APK is one
+you could hand to someone. `scripts/check-launch-arg-auth.mjs --platform
+android --variant <name>` reads the variant's `signingConfig` out of
+`build.gradle` and refuses anything not debug-signed; `run-android.sh` grants
+the flag to `debug|localRelease` only, and both run-scripts invoke the gate on
+the build path itself, not just in pre-push.
 
 ## Git & PR conventions
 
@@ -611,7 +666,21 @@ changes. Measurement decides what to change; it is not the confirmation step.
   (no API accepts an app-declared signal), so the two-method agreement that backs
   `app_fully_drawn_ms` on Android does not carry over —
   `scripts/ios-frame-sample.mjs` is the only cross-check there is.
-  `docs/audits/perf-ios-baseline-2026-08-25.md`.
+- **A startup metric is BOUNDED, and the drop is counted.**
+  `app_fully_drawn_ms` latches on the first instrumented list showing real
+  content, and `HomeTabs` is lazy — only the Pantry tab mounts at cold start,
+  so the other two lists can only latch after a navigation. Past
+  `STARTUP_WINDOW_MS` (10 s, `startupProfiling.ts`, shared with the profiler's
+  own fallback) nothing is emitted and `startup_window_exceeded_total`
+  increments instead, so an EXCLUDED launch stays distinguishable from an
+  unmeasured one. The bound is not defended by argument: a non-trivial rate on
+  that counter is the evidence for changing it.
+- **A metric's terminating condition reads the UN-SMOOTHED signal.** The
+  pantry's skeletons pass through a 280 ms `useMinimumVisible` anti-flicker
+  hold; reading it put that hold under `app_fully_drawn_ms` as a floor, so any
+  improvement below 280 ms was structurally unmeasurable — the same defect as
+  reading a threshold-gated `slow_*_total`. Measurement takes
+  `initialSkeletons`, presentation keeps `showSkeletons`.
 - **State the instrument's resolution.** A difference smaller than one sample is
   not a result — 450 ms screenshot sampling cannot resolve a 100 ms change, and a
   series that returns the same value for two different builds is not measuring
@@ -625,8 +694,12 @@ changes. Measurement decides what to change; it is not the confirmation step.
   Per-session counters plus lingering series also make cross-session aggregation
   (`sum(...) by (screen)`) untrustworthy — read per session.
 
-Protocol, numbers, and the retractions behind these rules:
-`docs/audits/perf-offline-baseline-2026-08-24.md`.
+The protocol, the numbers and the retractions behind these rules lived in
+`docs/audits/`, deleted in `8a7c8c76` — recover with
+`git checkout f930bf3c -- docs/audits/` if you need the evidence. The rules
+above stand on their own; treat every `app_fully_drawn_ms` figure recorded
+before 2026-08-26 as invalid regardless, since it predates both the 280 ms
+floor fix and the suppression fix.
 
 ## Verification
 
