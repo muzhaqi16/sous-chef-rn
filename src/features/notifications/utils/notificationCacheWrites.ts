@@ -3,10 +3,9 @@
  *
  * Two callers apply the same transitions from different directions: the user
  * acting locally (`useNotificationSync`) and the server pushing an event
- * (`useNotificationListener`). They used to be separate — the sync hook wrote
- * Zustand, the subscription wrote Zustand differently — which is how a
- * mark-read from this device and a `READ` event from another could leave the
- * row and the badge disagreeing. Both now go through here.
+ * (`useNotificationListener`). Both go through here, so a mark-read from this
+ * device and a `READ` event from another cannot leave the row and the badge
+ * disagreeing.
  *
  * Every transition moves the row AND `User.unreadNotificationCount` together,
  * because they are one fact read two ways. The count is only ever adjusted when

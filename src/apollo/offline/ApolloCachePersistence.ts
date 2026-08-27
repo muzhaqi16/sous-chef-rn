@@ -8,12 +8,10 @@ const CACHE_VERSION_KEY = 'apollo-cache-version';
 /**
  * Identifies the SHAPE of a persisted blob, not the app that wrote it.
  *
- * This used to be `getVersion()`, so every store update and every OTA purged
- * the cache. Now that restore actually works, that meant a user's first launch
- * after an update — offline, on a plane, in a basement — was an empty app. The
- * queue survived the purge; nothing they could read did.
- *
- * App version was never the right key. A persisted blob is a raw
+ * App version is not the right key: keying on it purges the cache on every
+ * store update and every OTA, so a user's first launch after an update —
+ * offline, on a plane, in a basement — is an empty app, the queue surviving
+ * while nothing they can read does. A persisted blob is a raw
  * `NormalizedCacheObject` of field keys produced by `src/apollo/cache.ts`'s
  * type policies, so what makes an old blob unsafe is a change to THOSE, not a
  * version bump. Most such changes are harmless anyway — a changed `keyArgs`

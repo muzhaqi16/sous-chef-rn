@@ -133,13 +133,6 @@ const supersedes = (older: ToastOptions, newer: ToastOptions) =>
  * `GestureDetector` re-attached, and stored a fresh closure on the
  * module-level dispatch singleton, on each of the several provider renders per
  * toast (show, the render-phase `setDisplayed`, auto-dismiss, queue pop).
- *
- * This component previously carried `'use no memo'`: its container style was
- * cached on values that did not move when `type` did, so a success toast drew
- * the DEFAULT near-white container behind correctly-tinted green text. That was
- * the inverted Babel plugin order, fixed at the root in
- * `scripts/babel/unistyles-scope-crawl.js`; the directive is gone and the
- * component is compiled and memoized like any other.
  */
 function ToastCard({
   message,

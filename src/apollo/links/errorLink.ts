@@ -35,8 +35,7 @@ import { useStore } from '#store';
 // doesn't have, so it is deliberately absent from the refreshable set. It is
 // the single authorization code, emitted on both channels: as a mutation
 // result-union member (errors-as-data) and as the top-level `extensions.code`
-// on rejected reads. The AUTHZ_* family that used to be checked alongside it is
-// retired and no longer emitted by any path.
+// on rejected reads.
 const isResourceAccessError = (code: string) => code === ErrorCode.Forbidden;
 
 // The @auth directive rejects EVERY field for a suspended, banned, or deleted
@@ -55,9 +54,9 @@ const isAccountInactiveError = (code: string, reason: string) =>
 // The key travels in the `x-api-key` header and is baked into the build, so
 // every code here is a build/config fault rather than anything the session can
 // recover from. Matched on the exact codes the API documents (docs/api/errors.md
-// "API Key Errors"); an earlier version also substring-matched "api key" in the
-// message, which let a refusal whose wording happened to differ fall through to
-// the auth branch below and trigger a pointless token refresh.
+// "API Key Errors") — never the message text, which would let a refusal whose
+// wording merely differs fall through to the auth branch below and trigger a
+// pointless token refresh.
 // API_KEY_RATE_LIMITED is in the API's internal registry but absent from the
 // published TopLevelErrorCode enum, which admits only codes that have an
 // emitter — so it stays a literal and is retained defensively rather than

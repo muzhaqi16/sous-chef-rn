@@ -61,8 +61,7 @@ export function getTopLevelGraphQLError(
 // (e.g. a collaborator on a list that became home-linked; collaborators are
 // ignored on home-linked lists). FORBIDDEN is the single authorization code and
 // travels on both channels — the top-level `extensions.code` on rejected reads,
-// and the mutation result-union member's code. The AUTHZ_FORBIDDEN literal that
-// used to sit alongside it is retired and emitted by nothing.
+// and the mutation result-union member's code.
 // A missing record is NOT here, and never arrives as an error on this channel:
 // a by-id QUERY reports a miss as null data, so callers detect that case via a
 // null field. RESOURCE_NOT_FOUND is the MUTATION spelling of the same

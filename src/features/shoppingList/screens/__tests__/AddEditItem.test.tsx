@@ -32,11 +32,11 @@ const mockNav = (
 
 // Delegates to the REAL hook, recording writes on the way through.
 //
-// It used to be a hand-rolled stateful stub of the old API. That is no longer
-// possible: the screen renders its fields through `Controller control={control}`
-// and react-hook-form's `control` is not something a plain object can stand in
-// for. Delegating also means these tests exercise the real yup schema, which is
-// what gates Save — a stub would let an invalid form submit.
+// Not a hand-rolled stub: the screen renders its fields through
+// `Controller control={control}` and react-hook-form's `control` is not
+// something a plain object can stand in for. Delegating also means these tests
+// exercise the real yup schema, which is what gates Save — a stub would let an
+// invalid form submit.
 const mockSetFieldValue = jest.fn();
 jest.mock('#features/shoppingList/hooks/useShoppingListItemForm', () => ({
   useShoppingListItemForm: (

@@ -705,8 +705,8 @@ describe('useImageUpload', () => {
       );
     });
 
-    // 'Upload failed' is an internal signal, not copy. It used to be alerted
-    // verbatim; an uncoded failure now gets translated text.
+    // 'Upload failed' is an internal signal, not copy — an uncoded failure gets
+    // translated text.
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
       'Something went wrong uploading your image. Please try again.',

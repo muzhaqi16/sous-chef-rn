@@ -206,11 +206,10 @@ function setupCachePersistence(client: ApolloClient) {
   // (generic) cache methods. `evict` is non-generic, so it stays fully typed
   // via Parameters<>.
   //
-  // These used to also report the written id as "dirty", which the persistence
-  // layer took as the complete set of things that could have changed. It never
-  // was: a query result reports only `ROOT_QUERY` while normalizing new field
-  // values into any number of entities. Change detection now scans the whole
-  // extracted cache by object identity, so there is nothing to report.
+  // These report nothing as "dirty": a written id is never the complete set of
+  // what changed — a query result names only `ROOT_QUERY` while normalizing new
+  // field values into any number of entities. Change detection scans the whole
+  // extracted cache by object identity instead.
   cache.write = function <
     TData = unknown,
     TVariables extends OperationVariables = OperationVariables,

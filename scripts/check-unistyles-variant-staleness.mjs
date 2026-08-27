@@ -2,59 +2,34 @@
  * Fails when more components can render a STALE `styles.useVariants(...)` value
  * than the recorded baseline allows.
  *
- * ## The mechanism — and why this is now a REGRESSION guard, not a tally
+ * ## The mechanism
  *
- * This defect was systemic while `babel.config.js` ran the compiler BEFORE the
- * Unistyles plugin. That order was chosen because the documented one made the
- * compiler bail out of every file using variants — which turned out to be an
- * upstream scope bug, not an incompatibility. `scripts/babel/
- * unistyles-scope-crawl.js` fixes the binding, so the documented order now
- * compiles AND keeps the variant read in the compiler's cache key.
- *
- * Measured across the 53 files that were flagged under the old order: all 53
- * compile, none loses memoization, and the findings drop to 2 — both key-name
- * collisions between two stylesheets in one file, not real staleness. So a
- * finding here should now be rare and worth reading closely, rather than one
- * more entry in a long accepted list.
- *
- * The historical mechanism, kept because it is what the patterns below match.
  * The Unistyles plugin rewrites
  *
  *     styles.useVariants({ disabled });
  *     return <Pressable style={[styles.button, style]} />;
  *
- * into a shadowed local that carries the resolved variants:
- *
- *     const _styles = styles;
- *     { const _styles2 = _styles.useVariants({ disabled });
- *       return <Pressable style={[_styles2.button, style]} />; }
- *
- * But the compiler has already run. It saw `styles` as a stable module global,
- * so it wrapped the style read in a cache block keyed on the OTHER values in
- * the expression:
+ * into a shadowed local carrying the resolved variants. If the compiler cannot
+ * see that local as a dependency, it caches the style read against the OTHER
+ * values in the expression:
  *
  *     if ($[3] !== style) { t2 = [_styles2.button, style]; $[4] = t2; }
- *     else { t2 = $[4]; }          // ← `style` never changes, so this wins
+ *     else { t2 = $[4]; }          // `style` never changes, so this wins
  *
- * `_styles2` is rebuilt every render; `_styles2.button` is not re-read. The
- * variant freezes at whatever it resolved to on the render that filled the
- * cache. A button that mounts disabled keeps the disabled opacity after the
- * prop clears; a toast that mounts with no type keeps the default background
- * after it becomes a success. The worst form is a read cached against
- * `Symbol.for("react.memo_cache_sentinel")` — read exactly once, ever.
+ * The shadow is rebuilt every render; the read off it is not. The variant then
+ * freezes at whatever it resolved to on the render that filled the cache. The
+ * worst form is a read cached against `Symbol.for("react.memo_cache_sentinel")`
+ * — read exactly once, ever.
  *
- * ## What a finding means now
+ * `scripts/babel/unistyles-scope-crawl.js` is what keeps the read in the cache
+ * key, so the baseline is empty and a finding here is a regression: something
+ * defeated that, most likely the plugin order in `babel.config.js` or a shape
+ * the guard-aware check below does not recognise. Read the compiled output
+ * before acting, and check `node scripts/probe-unistyles-compiler-order.mjs`.
  *
- * With the crawl plugin in place the compiler puts the style read in its own
- * cache key, so a hit here means something defeated that — most likely a shape
- * the guard-aware check below does not recognise, or a genuinely new pattern.
- * Read the compiled output before acting.
- *
- * `'use no memo'` is NO LONGER the answer. It was the per-component workaround
- * while the ordering was inverted, and it bought correctness by giving up that
- * component's auto-memoization. All four opt-outs were removed when the
- * ordering was fixed; reaching for it again means the plugin order or the
- * crawl has regressed, and that is what to investigate.
+ * `'use no memo'` is not the answer — it buys correctness by giving up that
+ * component's memoization, and the opt-out ratchet in
+ * `check-compiler-bailouts.mjs` is empty on purpose.
  *
  * ## Why a script and not a lint rule
  *

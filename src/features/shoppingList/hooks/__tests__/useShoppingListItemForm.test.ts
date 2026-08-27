@@ -524,8 +524,8 @@ describe('useShoppingListItemForm', () => {
 
     it('reports a net weight typed with no unit on the UNIT field', async () => {
       // All-or-nothing: the API rejects a weight with no unit. The rule lives
-      // in the yup schema now (it used to be a `netWeightNeedsUnit` boolean the
-      // screens turned into an alert), so it surfaces as a field error.
+      // in the yup schema, so it surfaces as a field error rather than an
+      // alert the screen has to raise.
       const result = seed({ netWeight: null, netWeightUnit: null });
       act(() => {
         result.current.setFieldValue('netWeight', '250');

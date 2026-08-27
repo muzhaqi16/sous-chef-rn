@@ -222,8 +222,8 @@ export function buildSuggestibleItemChanges(
   // The unit picker leaves `unitId` undefined when the user free-types a unit
   // the catalog doesn't have, so fall back to the by-name twin, which the
   // server resolves find-or-create. An explicit id always wins. Sending the
-  // name was previously accepted and then dropped on approval, which is why
-  // only the id used to be diffed — a free-typed unit change vanished silently.
+  // name is accepted and then dropped on approval, so diffing only the id would
+  // let a free-typed unit change vanish silently.
   const unitName = norm(netWeight?.unitName);
   if (netWeight?.unitId) {
     if (netWeight.unitId !== original.displayUnitId) {

@@ -35,11 +35,6 @@ const isPartialObject = (value: unknown): value is Record<string, unknown> =>
  * about to replay. Preferring the server's value there would drop the edit the
  * person made and still expect to see.
  *
- * (The guard that used to sit here compared a `version` key among the persisted
- * fields against a `VersionCheck on Node` fragment read. It never ran: no call
- * site persists a `version` field, and the schema has no `Node` interface, so
- * both halves of the condition were permanently false.)
- *
  * @param entityTypes - Array of GraphQL typenames
  * @param enabled - Whether restoration is enabled (default: true)
  *

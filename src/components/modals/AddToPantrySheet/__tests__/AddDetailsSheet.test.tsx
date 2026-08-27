@@ -167,9 +167,8 @@ describe('AddDetailsSheet', () => {
   });
 
   it('does NOT submit an empty form, and says so on the name field', async () => {
-    // The item name is required. This used to be an `alertService.alert` that
-    // covered the form; it is a field message now, and `handleSubmit` gates
-    // the mutation on it.
+    // The item name is required. It reports as a field message rather than an
+    // alert covering the form, and `handleSubmit` gates the mutation on it.
     const user = userEvent.setup();
     const mockHandleConfirm = jest.fn();
     const usePantryItemSubmission =

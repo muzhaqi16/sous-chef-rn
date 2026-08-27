@@ -286,9 +286,8 @@ export const PantryContent = React.forwardRef<
     // Data handoff is gated on the UN-SMOOTHED loading signal: the moment items
     // exist they go to FlashList, which needs its 300 ms+ progressive first
     // layout before any cell is visible anyway (see the overlay below). The
-    // anti-flash minimum that used to sit here now lives on the overlay, so a
-    // fast load can no longer be delayed by presentation smoothing while the
-    // list sits idle. The switch overlay (`switching && fetching`) keeps its
+    // anti-flash minimum lives on the overlay, not here, so a fast load is not
+    // delayed by presentation smoothing while the list sits idle. The switch overlay (`switching && fetching`) keeps its
     // own arm/lift timing so a freshly fetched tab/sort isn't held back.
     const initialSkeletons = awaitingItems || (!hasShownContent && loading);
     const switchSkeletons = switching && fetching;

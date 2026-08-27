@@ -2,12 +2,9 @@
  * The notification slice holds the expiration-enrichment buffer and nothing
  * else.
  *
- * This file used to be 678 lines covering `addNotification`,
- * `markAllAsRead`, `updateUnreadCount`, `setServerNotificationCounts`, the
- * category selectors and the eviction policy — a whole feed implementation
- * duplicating the one in the Apollo cache. All of that moved to
- * `notificationCacheWrites.ts`, which is tested against a real cache. What
- * remains is the only part that could not: two subscriptions deliver a
+ * The feed itself — writes, counts, category selectors, eviction — lives in
+ * `notificationCacheWrites.ts` against the Apollo cache, not in a slice. What
+ * belongs here is the part that cannot: two subscriptions deliver a
  * notification and its expiration details independently, and either can arrive
  * first, so the details wait here until their notification shows up.
  */

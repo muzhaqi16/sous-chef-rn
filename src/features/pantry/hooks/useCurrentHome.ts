@@ -15,9 +15,9 @@ export type CurrentHomeNode = {
  *
  * Split out of `useCurrentPantry` so consumers that only need the home — most
  * notably `usePantryPermissions` — don't also run that hook's pantry-resolution
- * effect, which writes `selectedPantryId` to the store. Both hooks used to be
- * mounted on every pantry screen (`usePantryScreen` + `usePantryPermissions`),
- * so that reconciliation effect ran twice per screen against identical inputs.
+ * effect, which writes `selectedPantryId` to the store. Mounting both on one
+ * pantry screen runs that reconciliation effect twice against identical
+ * inputs.
  *
  * Reads `cache-only`: `useDefaultHome` owns the network fetch and populates the
  * cache, so querying here would duplicate a request during startup.

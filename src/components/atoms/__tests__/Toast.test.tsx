@@ -262,9 +262,9 @@ describe('ToastProvider', () => {
     });
 
     it('honours an explicit duration shorter than the default', () => {
-      // The hold used to be an equality check against AUTO_DISMISS_LONG, so
-      // every other value — including a deliberately short one — silently held
-      // for AUTO_DISMISS_SHORT instead.
+      // An equality check against AUTO_DISMISS_LONG would make every other
+      // value — including a deliberately short one — silently hold for
+      // AUTO_DISMISS_SHORT instead.
       const short = 500;
       showToastNow({ message: 'Saved', type: 'success', duration: short });
 

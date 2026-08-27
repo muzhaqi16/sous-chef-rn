@@ -80,10 +80,9 @@ export const RESET_SCENARIOS = {
  * signed in. Clearing them would cost offline autocomplete for no privacy gain.
  */
 const SESSION_SCOPED_STATE = {
-  // `pendingEmail` / `pendingPassword` used to be cleared here. They are not
-  // fields of `RootState` and the persist migration sweeps every
-  // non-allowlisted key, so they cannot be in a current blob; the entries here
-  // were doing nothing, which an untyped `Object.assign` never revealed.
+  // `pendingEmail` / `pendingPassword` are deliberately absent: they are not
+  // fields of `RootState`, and the persist migration sweeps every
+  // non-allowlisted key, so they cannot be in a blob to clear.
   user: null,
   accessToken: null,
   refreshToken: null,

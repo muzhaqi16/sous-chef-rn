@@ -118,9 +118,9 @@ describe('QueueStore', () => {
     });
 
     it('evicts an AUTH_ERROR at capacity rather than wedging the queue', () => {
-      // AUTH_ERROR used to be excluded from the terminal set: it was neither
-      // aged out nor evictable, so 100 accumulated auth failures wedged the
-      // queue permanently — every later offline write threw QueueCapacityError
+      // AUTH_ERROR belongs in the terminal set. Excluded, it is neither aged
+      // out nor evictable, so 100 accumulated auth failures wedge the queue
+      // permanently — every later offline write throwing QueueCapacityError
       // with no way back short of a reinstall.
       for (let i = 0; i < 100; i++) {
         store.addMutation(
@@ -595,8 +595,8 @@ describe('QueueStore', () => {
     });
 
     it('ages out FAILED and AUTH_ERROR, not only SUCCESS', () => {
-      // These used to be kept forever: the filter matched SUCCESS only, so a
-      // terminal failure occupied queue capacity for the life of the install.
+      // A filter matching SUCCESS only keeps these forever, so a terminal
+      // failure occupies queue capacity for the life of the install.
       const twoDaysAgo = Date.now() - 48 * 60 * 60 * 1000;
       store.addMutation(
         makeMutation({

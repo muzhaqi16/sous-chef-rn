@@ -8,12 +8,10 @@ import {
 /**
  * The validation rules for the Add-to-Pantry sheet.
  *
- * These used to live inside `usePantryItemSubmission` as three
- * `alertService.alert` calls: a modal that covered the form, had to be
- * dismissed before the field could be corrected, and once dismissed no longer
- * said which of the four pages the offending input was on. They are a schema
- * now, reported on the field, and this is where the rules themselves are
- * pinned.
+ * A schema, reported on the field, rather than `alertService.alert` calls: a
+ * modal covers the form, has to be dismissed before the field can be corrected,
+ * and once dismissed no longer says which of the four pages the offending input
+ * was on. This is where the rules themselves are pinned.
  */
 
 /** Validate and return the message for `field`, or undefined when it passed. */

@@ -167,8 +167,8 @@ describe('errorLink helpers', () => {
       expect(isApiKeyError('UNAUTHENTICATED')).toBe(false);
     });
 
-    // The message is no longer consulted: a refusal whose wording merely
-    // mentioned an API key used to be swallowed here regardless of its code.
+    // The message is not consulted: a refusal whose wording merely mentions an
+    // API key must not be swallowed here regardless of its code.
     it('ignores the message entirely', () => {
       expect(isApiKeyError('')).toBe(false);
     });

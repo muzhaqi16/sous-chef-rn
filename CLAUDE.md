@@ -447,14 +447,13 @@ ThemedTextInput` — as `FormInput`, `FractionInput`, `EditableCounter` and
   `// eslint-disable-next-line no-restricted-imports` + the reason.
 - **Never add `'use no memo'`.** The `noMemoOptOuts` list in
   `scripts/check-compiler-bailouts.baseline.json` is EMPTY and the ratchet only
-  lets it shrink, so a new one fails the check. It used to be required for
-  components whose `styles.useVariants(...)` reads froze at their first-render
-  value; that was the inverted Babel plugin order, fixed at the root by
-  `scripts/babel/unistyles-scope-crawl.js`, and all four opt-outs were deleted.
-  Wanting one now means the plugin order or the crawl has regressed — run
-  `node scripts/probe-unistyles-compiler-order.mjs` and fix that instead of
-  opting a component out. `node scripts/check-unistyles-variant-staleness.mjs`
-  (baseline empty, runs in CI and pre-push) is what would catch it.
+  lets it shrink, so a new one fails the check. Needing one means the Babel
+  plugin order or `scripts/babel/unistyles-scope-crawl.js` has regressed and a
+  component's `styles.useVariants(...)` reads are freezing at their
+  first-render value — run `node scripts/probe-unistyles-compiler-order.mjs`
+  and fix that, rather than opting the component out.
+  `node scripts/check-unistyles-variant-staleness.mjs` (baseline empty, runs in
+  CI and pre-push) is what catches it.
 - **Two `try` shapes bail the compiler out of the whole function**: a
   finalizer (`finally` with or without `catch`; also a catch-less `try`), and
   a value block (`?.`, `??`, `&&`, `||`, ternary) inside the `try` body. A

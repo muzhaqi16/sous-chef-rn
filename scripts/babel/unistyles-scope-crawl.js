@@ -9,13 +9,9 @@
  * `path.node.body` directly and never calls `path.scope.crawl()`, so Babel's
  * scope table has no binding for the declaration it just created.
  *
- * babel-plugin-react-compiler then cannot resolve that binding and aborts the
- * whole function with `(BuildHIR::lowerAssignment) Could not find binding for
- * declaration` — which is why the plugin order was previously reversed, running
- * the compiler first. That order compiles, but the compiler sees the ORIGINAL
- * source, where `styles` is a stable module global, so it caches the
- * variant-resolved style read on unrelated dependencies and the variant freezes
- * at its first-render value.
+ * babel-plugin-react-compiler cannot resolve that binding and aborts the whole
+ * function with `(BuildHIR::lowerAssignment) Could not find binding for
+ * declaration`.
  *
  * Crawling here restores the binding, so the documented order works and the
  * style read lands in the compiler's cache key:

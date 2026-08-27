@@ -280,10 +280,10 @@ describe('usePantryItemDetailActions', () => {
 
     it('still deletes when no pantry is selected', async () => {
       // `selectedPantryId` is genuinely nullable — `navigationSlice` starts it
-      // at null and `authSlice` resets it on logout. It used to be coerced to
-      // `''`, which the shared `removeItem` treats as its "no pantry" guard and
-      // returns early from — while `goBack()` still ran. The user watched the
-      // screen dismiss with the item untouched on the server.
+      // at null and `authSlice` resets it on logout. Coercing it to `''` trips
+      // the shared `removeItem`'s "no pantry" guard, which returns early while
+      // `goBack()` still runs — the screen dismissing with the item untouched
+      // on the server.
       const deleteMock = recordMock(DeletePantryItemDocument, {
         data: {
           deletePantryItem: {

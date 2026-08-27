@@ -111,8 +111,7 @@ export class ErrorService {
     AUTH_ACCOUNT_SUSPENDED: 'accountSuspended',
     AUTH_EMAIL_NOT_VERIFIED: 'emailNotVerified',
 
-    // Authorization Errors. FORBIDDEN is the only code here — the AUTHZ_*
-    // family it used to sit alongside was retired and never emitted.
+    // Authorization Errors. FORBIDDEN is the only code here.
     FORBIDDEN: 'forbidden',
 
     // API Key Errors. All of these are build/config faults the user can do

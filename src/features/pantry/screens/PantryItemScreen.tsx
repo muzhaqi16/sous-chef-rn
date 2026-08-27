@@ -10,10 +10,9 @@ type PantryItemScreenParams = {
 /**
  * Edits one pantry item.
  *
- * `itemId` is required. It used to be optional, and its absence selected an
- * `add` mode on the form — a second create path nothing could reach: this
- * route registers with `linking: null`, and both callers of `toPantryItem`
- * pass an id. Adding goes through `AddToPantrySheet` → `AddDetailsSheet`.
+ * `itemId` is required — this route registers with `linking: null` and both
+ * callers of `toPantryItem` pass one. Adding goes through `AddToPantrySheet`
+ * → `AddDetailsSheet`.
  */
 export const PantryItemScreen: React.FC<
   StaticScreenProps<PantryItemScreenParams>
