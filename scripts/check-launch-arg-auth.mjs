@@ -28,17 +28,24 @@
  * variant not signed with the debug key is refused.
  */
 import { readFileSync, existsSync } from 'node:fs';
+import { parseArgs } from 'node:util';
 
 const GENERATED = new URL('../src/config/env.generated.ts', import.meta.url);
 const BUILD_GRADLE = new URL('../android/app/build.gradle', import.meta.url);
 
-const argv = process.argv.slice(2);
-const arg = name => {
-  const i = argv.indexOf(`--${name}`);
-  return i === -1 ? undefined : argv[i + 1];
-};
+// `strict` matters here: a `--platform` with no value used to read as absent
+// and drop the gate into post-hoc mode, judging the environment instead of the
+// artifact. For a gate whose failure mode is checking the wrong thing, an
+// explicit throw beats a silent fallback.
+const { values: flags } = parseArgs({
+  options: {
+    platform: { type: 'string' },
+    variant: { type: 'string' },
+    sdk: { type: 'string' },
+  },
+});
 
-const platform = arg('platform');
+const platform = flags.platform;
 
 /**
  * Maps every Android build type to the signing config it declares.
@@ -83,7 +90,7 @@ if (platform) {
   const enabled = process.env.ALLOW_LAUNCH_ARG_AUTH === 'true';
 
   if (platform === 'android') {
-    const variant = arg('variant');
+    const variant = flags.variant;
     if (!variant) {
       console.error('✗ --platform android requires --variant <name>.');
       process.exit(2);
@@ -135,7 +142,7 @@ if (platform) {
   }
 
   if (platform === 'ios') {
-    const sdk = arg('sdk');
+    const sdk = flags.sdk;
     if (!enabled) {
       console.log(
         `✓ Launch-argument authentication is off for ios (sdk ${

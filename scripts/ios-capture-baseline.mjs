@@ -35,26 +35,33 @@
  *     measured window and its state persists once skipped
  *   - the local API and the OTLP collector up
  */
-import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { parseArgs } from 'node:util';
+import { median, sh } from './lib/tooling.mjs';
 
-const args = process.argv.slice(2);
-const arg = (n, d) => {
-  const i = args.indexOf(`--${n}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : d;
-};
+const { values: flags } = parseArgs({
+  options: {
+    runs: { type: 'string', default: '5' },
+    device: { type: 'string', default: 'iPhone 17' },
+    bundle: { type: 'string', default: 'dev.souschef.app' },
+    items: { type: 'string', default: 'unrecorded' },
+    label: { type: 'string', default: 'warm-cache' },
+    mimir: { type: 'string' },
+    'self-test': { type: 'boolean', default: false },
+  },
+});
 
-const RUNS = Number(arg('runs', '5'));
-const DEVICE = arg('device', 'iPhone 17');
-const BUNDLE = arg('bundle', 'dev.souschef.app');
-const ITEMS = arg('items', 'unrecorded');
-const LABEL = arg('label', 'warm-cache');
+const RUNS = Number(flags.runs);
+const DEVICE = flags.device;
+const BUNDLE = flags.bundle;
+const ITEMS = flags.items;
+const LABEL = flags.label;
 // Where to READ the metrics back from. Not derived from OTLP_METRICS_ENDPOINT:
 // that is the write path (`<base>/otlp` + `/v1/metrics`), while queries go to
 // `<base>/prometheus/api/v1/...` — same host, different path, so deriving one
 // from the other would only look right.
-const MIMIR = arg('mimir', process.env.MIMIR_URL ?? 'http://localhost:9009');
+const MIMIR = flags.mimir ?? process.env.MIMIR_URL ?? 'http://localhost:9009';
 
 const METRICS = [
   'app_native_launch_ms',
@@ -67,7 +74,6 @@ const METRICS = [
   'flashlist_initial_load_ms',
 ];
 
-const sh = (c, a) => execFileSync(c, a, { encoding: 'utf8', stdio: 'pipe' });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 let promql = async query => {
@@ -138,13 +144,6 @@ const readFreshMetric = async (metric, beforeSeconds) => {
   };
 };
 
-const median = xs => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s.length % 2
-    ? s[(s.length - 1) / 2]
-    : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-};
-
 // --- self-test -------------------------------------------------------------
 // The freshness gate decides whether a recorded number belongs to the launch it
 // is filed under, and it is only ever exercised against a live Mimir — where a
@@ -152,7 +151,7 @@ const median = xs => {
 // drives `readFreshMetric` against a stubbed query layer instead.
 //
 //   node scripts/ios-capture-baseline.mjs --self-test
-if (args.includes('--self-test')) {
+if (flags['self-test']) {
   const stub = (values, writes) => {
     promql = async query => (query.startsWith('timestamp(') ? writes : values);
   };

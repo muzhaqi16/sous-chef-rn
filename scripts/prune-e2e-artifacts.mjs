@@ -19,18 +19,20 @@
 import { readdirSync, statSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
-const args = process.argv.slice(2);
-const arg = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-};
+const { values: flags } = parseArgs({
+  options: {
+    keep: { type: 'string', default: '5' },
+    'dry-run': { type: 'boolean', default: false },
+  },
+});
 
-const KEEP = Number(arg('keep', '5'));
-const DRY_RUN = args.includes('--dry-run');
+const KEEP = Number(flags.keep);
+const DRY_RUN = flags['dry-run'];
 
 if (!Number.isInteger(KEEP) || KEEP < 1) {
-  console.error(`✗ --keep must be a positive integer (got "${arg('keep')}").`);
+  console.error(`✗ --keep must be a positive integer (got "${flags.keep}").`);
   process.exit(2);
 }
 

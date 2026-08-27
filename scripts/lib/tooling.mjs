@@ -5,6 +5,7 @@
  * `check-bundled-secrets` run in CI jobs that skip `npm ci`, so anything they
  * reach must resolve with no install.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync, globSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -140,3 +141,19 @@ export function diffSets(current, baseline) {
     removed: baseline.filter(x => !present.has(x)),
   };
 }
+
+/**
+ * Capture a subprocess's stdout. The measurement scripts drive `xcrun simctl`
+ * and read its output; `stdio: 'pipe'` keeps a non-zero exit throwing rather
+ * than leaking the tool's stderr into a captured timeline.
+ */
+export const sh = (cmd, args, options = {}) =>
+  execFileSync(cmd, args, { encoding: 'utf8', stdio: 'pipe', ...options });
+
+/** Median, not mean: startup samples have outliers that a mean hides. */
+export const median = xs => {
+  const s = [...xs].sort((a, b) => a - b);
+  return s.length % 2
+    ? s[(s.length - 1) / 2]
+    : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
+};

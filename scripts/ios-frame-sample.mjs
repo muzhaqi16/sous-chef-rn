@@ -44,30 +44,24 @@
  *     pass first (`reinstallApp: false` keeps the session), then this.
  *   - Run it against a RELEASE build. Debug numbers are not comparable.
  */
-import { execFileSync } from 'node:child_process';
 import { mkdirSync, writeFileSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseArgs } from 'node:util';
+import { median, sh } from './lib/tooling.mjs';
 
-const args = process.argv.slice(2);
-const arg = (name, fallback) => {
-  const i = args.indexOf(`--${name}`);
-  return i !== -1 && args[i + 1] ? args[i + 1] : fallback;
-};
+const { values: flags } = parseArgs({
+  options: {
+    device: { type: 'string', default: 'iPhone 17' },
+    bundle: { type: 'string', default: 'dev.souschef.app' },
+    seconds: { type: 'string', default: '12' },
+    out: { type: 'string' },
+  },
+});
 
-const DEVICE = arg('device', 'iPhone 17');
-const BUNDLE = arg('bundle', 'dev.souschef.app');
-const SECONDS = Number(arg('seconds', '12'));
-const OUT = arg('out', join('e2e', 'artifacts', 'ios-frames'));
-
-const sh = (cmd, cmdArgs, opts = {}) =>
-  execFileSync(cmd, cmdArgs, { encoding: 'utf8', stdio: 'pipe', ...opts });
-
-const median = xs => {
-  const s = [...xs].sort((a, b) => a - b);
-  return s.length % 2
-    ? s[(s.length - 1) / 2]
-    : (s[s.length / 2 - 1] + s[s.length / 2]) / 2;
-};
+const DEVICE = flags.device;
+const BUNDLE = flags.bundle;
+const SECONDS = Number(flags.seconds);
+const OUT = flags.out ?? join('e2e', 'artifacts', 'ios-frames');
 
 // ── Prepare ────────────────────────────────────────────────────────────────
 rmSync(OUT, { recursive: true, force: true });
