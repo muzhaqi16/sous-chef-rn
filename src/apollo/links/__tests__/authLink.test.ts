@@ -32,6 +32,7 @@ jest.mock('../refreshToken', () => ({
 }));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { Observable, of } from 'rxjs';
 import { authLink } from '../authLink';
 import { LogoutCleanup } from '../../logoutCleanup';
@@ -62,6 +63,9 @@ const makeToken = (expiresInSeconds: number): string => {
 const client = new ApolloClient({
   cache: new InMemoryCache(),
   link: ApolloLink.empty(),
+  // Same defaults as the app, so a test client cannot behave differently
+  // from production (notably `errorPolicy: 'all'`).
+  defaultOptions: APOLLO_DEFAULT_OPTIONS,
 });
 
 type Headers = Record<string, string>;

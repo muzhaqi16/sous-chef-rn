@@ -1,4 +1,5 @@
 import React, { type ReactNode } from 'react';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { renderHook, act } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
@@ -38,7 +39,7 @@ function renderConvert(
   const client = new ApolloClient({
     cache: new InMemoryCache(),
     link: ApolloLink.from([tapLink, new MockLink(mocks)]),
-    defaultOptions: { mutate: { errorPolicy: 'all' } },
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
   const wrapper = ({ children }: { children: ReactNode }) =>
     React.createElement(ApolloProvider, { client, children });

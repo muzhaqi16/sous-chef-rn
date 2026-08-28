@@ -26,10 +26,6 @@ import { incrementLoginCount } from '#/hooks/useFeatureHint';
 import {
   LoginDocument,
   RegisterDocument,
-  type LoginMutation,
-  type LoginMutationVariables,
-  type RegisterMutation,
-  type RegisterMutationVariables,
 } from '#operations/auth/auth.generated';
 import {
   LoginUserFragmentDoc,
@@ -37,11 +33,7 @@ import {
 } from '#operations/auth/userFragments.generated';
 import {
   RegisterDeviceDocument,
-  type RegisterDeviceMutation,
-  type RegisterDeviceMutationVariables,
   UpdateDeviceDocument,
-  type UpdateDeviceMutation,
-  type UpdateDeviceMutationVariables,
 } from '#operations/auth/device.generated';
 import {
   type LoginInput,
@@ -257,7 +249,7 @@ async function pushRotatedTokenToServer(
   pushToken: string,
 ): Promise<void> {
   try {
-    await client.mutate<UpdateDeviceMutation, UpdateDeviceMutationVariables>({
+    await client.mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, pushToken } },
     });
@@ -278,7 +270,7 @@ function deregisterDeviceOnLogout(): void {
   const deviceId = registeredDeviceId;
   if (!deviceId) return;
   void client
-    .mutate<UpdateDeviceMutation, UpdateDeviceMutationVariables>({
+    .mutate({
       mutation: UpdateDeviceDocument,
       variables: { input: { id: deviceId, delete: true } },
     })
@@ -305,10 +297,7 @@ async function registerDeviceOnce(): Promise<boolean> {
     const pushToken =
       notificationStatus === 'granted' ? await acquirePushToken() : null;
 
-    const result = await client.mutate<
-      RegisterDeviceMutation,
-      RegisterDeviceMutationVariables
-    >({
+    const result = await client.mutate({
       mutation: RegisterDeviceDocument,
       variables: { input: buildDeviceInput(deviceInfo, pushToken) },
     });
@@ -691,7 +680,7 @@ async function login(
   store.setAuthIsLoading(true);
 
   try {
-    const result = await client.mutate<LoginMutation, LoginMutationVariables>({
+    const result = await client.mutate({
       mutation: LoginDocument,
       variables: { input },
     });
@@ -749,10 +738,7 @@ async function register(
   store.setAuthIsLoading(true);
 
   try {
-    const result = await client.mutate<
-      RegisterMutation,
-      RegisterMutationVariables
-    >({
+    const result = await client.mutate({
       mutation: RegisterDocument,
       variables: { input },
     });
@@ -915,7 +901,7 @@ async function autoLogin(): Promise<boolean> {
     }
 
     logger.info('Attempting auto-login with stored credentials');
-    const result = await client.mutate<LoginMutation, LoginMutationVariables>({
+    const result = await client.mutate({
       mutation: LoginDocument,
       variables: {
         input: { email: credentials.email, password: credentials.password },

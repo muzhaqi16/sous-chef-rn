@@ -17,7 +17,6 @@ import {
   InvitationAcceptanceModalAcceptShoppingListInviteDocument,
   InvitationAcceptanceModalDeclineShoppingListInviteDocument,
   MyShoppingListInvitesDocument,
-  type MyShoppingListInvitesQuery,
 } from './InvitationAcceptanceModal.generated';
 import {
   createAddToQueryConnectionUpdater,
@@ -158,7 +157,7 @@ export const InvitationAcceptanceModal: React.FC<
   const resolveToken = async (): Promise<string | undefined> => {
     let token = invitation?.token;
     if (!token && invitation?.type === 'SHOPPING_LIST_INVITE') {
-      const result = await client.query<MyShoppingListInvitesQuery>({
+      const result = await client.query({
         query: MyShoppingListInvitesDocument,
         fetchPolicy: 'network-only',
       });

@@ -1,6 +1,8 @@
 # Local copy of GetShoppingListsLite per the Feature API Boundary Convention.
 # The shoppingList feature's graphql/ folder is internal to that feature.
-query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
+# Locally-named copy per the Feature API Boundary Convention; the name must
+# be unique across the document set (see useRecipeDetail.graphql).
+query GetShoppingListsLiteForMealPlan($homeId: ID, $first: Int, $after: String) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
       cursor

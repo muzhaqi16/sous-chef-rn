@@ -12,6 +12,7 @@ import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { isStorageReady } from '#storage/mmkv';
 import { CLIENT_NAME, CLIENT_VERSION } from './clientIdentity';
+import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
 
 // Lazy histogram emit — defers loading of the telemetry singleton (which
 // touches Environment + device ID at module init) so this module remains
@@ -116,23 +117,7 @@ function initializeClient() {
       version: CLIENT_VERSION,
     },
     dataMasking: true,
-    defaultOptions: {
-      query: {
-        fetchPolicy: 'network-only', // Always fetch fresh data for one-time queries
-        errorPolicy: 'all', // Return both data and errors for observability
-      },
-      mutate: {
-        errorPolicy: 'all', // Mutations need full error info for handling
-      },
-      watchQuery: {
-        // cache-and-network: Fetch from cache immediately, then update from network
-        // Provides instant UI while ensuring data freshness
-        fetchPolicy: 'cache-and-network',
-        // After first fetch, use cache-first to reduce network calls
-        nextFetchPolicy: 'cache-first',
-        errorPolicy: 'all', // Return both cached data and errors for observability
-      },
-    },
+    defaultOptions: APOLLO_DEFAULT_OPTIONS,
     queryDeduplication: true,
   });
 
@@ -167,8 +152,13 @@ export function flushCachePersistence() {
 /**
  * Set up automatic cache persistence
  *
- * Wraps cache methods to persist after each operation
- * Approach from apollo3-cache-persist - cleanest way to persist cache
+ * Wraps cache methods to persist after each operation.
+ *
+ * Deliberately hand-rolled on `cache.extract()` / `cache.restore()` rather than
+ * using `apollo3-cache-persist`: that package is pinned to
+ * `@apollo/client ^3.7.17`, has no Apollo Client 4 support and is unmaintained.
+ * It was only ever a debounce plus a storage adapter over these same two
+ * methods, which is what `ApolloCachePersistence` provides against MMKV.
  */
 function setupCachePersistence(client: ApolloClient) {
   // Helper to schedule cache persistence

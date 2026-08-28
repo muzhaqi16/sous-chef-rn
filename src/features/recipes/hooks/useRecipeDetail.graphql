@@ -30,7 +30,13 @@ mutation AddItemsToShoppingListFromRecipe($input: AddItemsToShoppingListInput!) 
   }
 }
 
-query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
+# Locally-named copy per the Feature API Boundary Convention — the
+# shoppingList feature's graphql/ folder is internal. The NAME must be
+# unique across the document set: three copies shared `GetShoppingListsLite`,
+# which codegen now emits only once (breaking the other importers) and which
+# the persisted-query manifest keys by, so it held one entry for three
+# definitions.
+query GetShoppingListsLiteForRecipe($homeId: ID, $first: Int, $after: String) {
   shoppingLists(filters: { homeId: $homeId }, first: $first, after: $after) {
     edges {
       cursor
@@ -64,7 +70,8 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
   }
 }
 
-mutation CreateShoppingList($input: CreateShoppingListInput!) {
+# Locally-named copy — see the note above.
+mutation CreateShoppingListForRecipe($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
     ... on CreateShoppingListPayload {
