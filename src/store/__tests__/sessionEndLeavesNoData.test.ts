@@ -14,6 +14,19 @@
  * test fails until someone decides which it is — which is the mechanism the
  * original defect existed for lack of, not a list of the fields that were
  * wrong that day.
+ *
+ * ## What this file cannot see
+ *
+ * It static-imports the four feature stores below, and importing one is what
+ * runs its `registerSessionScopedStore` call — so for the REGISTRY it supplies
+ * the very condition it then asserts. That makes it a valid check of the loaded
+ * case and no check at all of the unloaded one, which is the case that actually
+ * leaked: under Metro's `inlineRequires` a user who never opens the scanner
+ * never evaluates its module, so nothing registers and a registration-based
+ * reset clears nothing.
+ *
+ * The unloaded case, and the completeness of the persisted-key list, live in
+ * `sessionEndClearsPersistedFeatureStores.test.ts`, which imports none of them.
  */
 
 // authSlice transitively imports tokenScheduler/refreshToken, which need

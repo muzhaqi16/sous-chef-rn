@@ -140,6 +140,51 @@ describe('SwipeableItem', () => {
       );
     });
 
+    // The production shape: most rows pass no actions at all, so the component
+    // renders through its default parameters. A fixture that always passes an
+    // explicit list never exercises that path.
+    it('exposes no accessibility actions when both lists are omitted', () => {
+      render(
+        <SwipeableItem>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      const host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(host.props.accessibilityActions).toEqual([]);
+    });
+
+    it('tracks the action set when it changes', () => {
+      const { rerender } = render(
+        <SwipeableItem rightActions={[action('edit')]}>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      let host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(
+        host.props.accessibilityActions.map((a: { name: string }) => a.name),
+      ).toEqual(['edit']);
+
+      rerender(
+        <SwipeableItem rightActions={[action('edit'), action('delete')]}>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(
+        host.props.accessibilityActions.map((a: { name: string }) => a.name),
+      ).toEqual(['edit', 'delete']);
+
+      // ...and back to none, so the assistive surface cannot outlive the swipe
+      // surface it mirrors.
+      rerender(
+        <SwipeableItem>
+          <Text>Item</Text>
+        </SwipeableItem>,
+      );
+      host = findA11yActionHost(screen.getByTestId('swipeable-content'));
+      expect(host.props.accessibilityActions).toEqual([]);
+    });
+
     it('omits actions for callbacks not provided', () => {
       render(
         <SwipeableItem rightActions={[action('edit')]}>

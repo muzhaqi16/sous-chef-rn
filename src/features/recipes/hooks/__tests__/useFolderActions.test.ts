@@ -191,3 +191,120 @@ describe('useFolderActions', () => {
     expect(result.current.loading).toBe(false);
   });
 });
+
+describe('folder actions move the recipes, not just the folder list', () => {
+  const { gql } = require('@apollo/client');
+  const {
+    SavedRecipeFoldersDocument,
+  } = require('#features/recipes/graphql/recipe.generated');
+
+  const SAVED_RECIPE = gql`
+    fragment SeedSavedRecipe on SavedRecipe {
+      id
+      folder
+    }
+  `;
+
+  function seed(cache: InMemoryCache) {
+    cache.writeQuery({
+      query: SavedRecipeFoldersDocument,
+      data: {
+        __typename: 'Query',
+        savedRecipeFolders: ['Weeknight', 'Favorites'],
+      },
+    });
+    for (const id of ['saved-1', 'saved-2']) {
+      cache.writeFragment({
+        id: `SavedRecipe:${id}`,
+        fragment: SAVED_RECIPE,
+        data: { __typename: 'SavedRecipe', id, folder: 'Weeknight' },
+      });
+    }
+    // A recipe in another folder must not be touched.
+    cache.writeFragment({
+      id: 'SavedRecipe:saved-3',
+      fragment: SAVED_RECIPE,
+      data: { __typename: 'SavedRecipe', id: 'saved-3', folder: 'Favorites' },
+    });
+  }
+
+  const readFolder = (cache: InMemoryCache, id: string) =>
+    (
+      cache.readFragment({
+        id: `SavedRecipe:${id}`,
+        fragment: SAVED_RECIPE,
+      }) as { folder: string | null } | null
+    )?.folder;
+
+  // Queued: the response that would reconcile `savedRecipes` never arrives,
+  // so the local write is all the user has. This is the offline case.
+  const queued = () =>
+    recordMock(DeleteRecipeFolderDocument, {
+      data: { deleteRecipeFolder: null },
+    });
+
+  it('carries the recipes to the new folder name on rename', async () => {
+    const cache = makeCacheWithPossibleTypes();
+    seed(cache);
+    const mock = queued();
+
+    const { result } = renderHookWithApollo(() => useFolderActions(), {
+      cache,
+      operationMocks: [mock.mock],
+    });
+
+    await act(async () => {
+      await result.current.renameFolder('Weeknight', 'Weeknight Dinners');
+    });
+
+    // The screen filters `recipe.folder === selectedFolder`, so without this
+    // the renamed folder renders empty under a success toast.
+    expect(readFolder(cache, 'saved-1')).toBe('Weeknight Dinners');
+    expect(readFolder(cache, 'saved-2')).toBe('Weeknight Dinners');
+    expect(readFolder(cache, 'saved-3')).toBe('Favorites');
+  });
+
+  it('unfolders the recipes on delete', async () => {
+    const cache = makeCacheWithPossibleTypes();
+    seed(cache);
+    const mock = queued();
+
+    const { result } = renderHookWithApollo(() => useFolderActions(), {
+      cache,
+      operationMocks: [mock.mock],
+    });
+
+    await act(async () => {
+      await result.current.deleteFolder('Weeknight');
+    });
+
+    expect(readFolder(cache, 'saved-1')).toBeNull();
+    expect(readFolder(cache, 'saved-3')).toBe('Favorites');
+  });
+
+  it('puts the recipes back when the rename is refused', async () => {
+    const cache = makeCacheWithPossibleTypes();
+    seed(cache);
+    const refused = recordMock(DeleteRecipeFolderDocument, {
+      data: {
+        deleteRecipeFolder: {
+          __typename: 'ValidationError',
+          message: 'nope',
+          code: 'VALIDATION_ERROR',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(() => useFolderActions(), {
+      cache,
+      operationMocks: [refused.mock],
+    });
+
+    await act(async () => {
+      await result.current.renameFolder('Weeknight', 'Weeknight Dinners');
+    });
+
+    expect(readFolder(cache, 'saved-1')).toBe('Weeknight');
+    expect(readFolder(cache, 'saved-2')).toBe('Weeknight');
+  });
+});

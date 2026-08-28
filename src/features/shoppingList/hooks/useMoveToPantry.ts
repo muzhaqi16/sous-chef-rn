@@ -10,6 +10,7 @@ import { errorService } from '#/services/errorService';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import {
   addToPantryItemsCache,
+  adjustPantryItemCount,
   removeFromPantryItemsCache,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { removeItemFromShoppingListForMoveToPantry } from '#/apollo/utils/shoppingListCacheUpdaters';
@@ -227,6 +228,12 @@ export function useMoveToPantry({
     // with the mutation's `update` callback, which runs only on a real payload.
     try {
       addToPantryItemsCache(client.cache, input.pantryId, optimisticPantryItem);
+      // The count travels with the row. Offline the mutation's `update` never
+      // runs, so nothing else corrects it and the pantry header would keep
+      // reporting the pre-move total over the rows the user can see.
+      // `usePantryScreen` also branches on this value to pick server vs client
+      // sorting, so a stale one can select the wrong mode as well.
+      adjustPantryItemCount(client.cache, input.pantryId, 1);
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Move Item to Pantry (optimistic)',
@@ -265,6 +272,7 @@ export function useMoveToPantry({
       // Only the pantry row needs undoing — the shopping row was never touched.
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        adjustPantryItemCount(client.cache, input.pantryId, -1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Revert rejected move to pantry',
@@ -290,6 +298,7 @@ export function useMoveToPantry({
     if (serverId && serverId !== pantryItemId) {
       try {
         removeFromPantryItemsCache(client.cache, input.pantryId, pantryItemId);
+        adjustPantryItemCount(client.cache, input.pantryId, -1);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
           operation: 'Evict superseded optimistic pantry row',

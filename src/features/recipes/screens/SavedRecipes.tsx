@@ -21,6 +21,7 @@ import {
 import { useRecipeFolders } from '#features/recipes/hooks/useRecipeFolders';
 import { useRecipeTags } from '#features/recipes/hooks/useRecipeTags';
 import { useFolderActions } from '#features/recipes/hooks/useFolderActions';
+import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RemoveRecipeFromFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
 import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
@@ -311,6 +312,9 @@ export const SavedRecipes: React.FC = () => {
         }}
         onCancel={() => setShowFolderPicker(false)}
         allowCreate={false}
+        // This is the picker that offers rename and delete, so it is the one
+        // that must say what those actions may not touch.
+        protectedFolders={PROTECTED_RECIPE_FOLDERS}
         onRenameFolder={async (oldName, newName) => {
           const success = await renameFolder(oldName, newName);
           if (success && selectedFolder === oldName) {

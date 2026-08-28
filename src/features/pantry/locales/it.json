@@ -226,7 +226,8 @@
     "skippedSuffix": " ({{skippedCount}} saltati)",
     "noItemsMoved": "Nessun articolo è stato spostato in dispensa",
     "noPantryTitle": "Nessuna dispensa disponibile",
-    "noPantryBody": "Crea prima una dispensa nella tua casa."
+    "noPantryBody": "Crea prima una dispensa nella tua casa.",
+    "queued": "In coda: gli articoli verranno spostati in dispensa quando tornerai online"
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",

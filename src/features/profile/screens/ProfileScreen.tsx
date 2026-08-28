@@ -22,6 +22,7 @@ import { Icon } from '#/utils/iconUtils';
 import { Telemetry } from '#/services/telemetry';
 import { useEffect } from 'react';
 import { Environment } from '#/utils/environment';
+import { DEVELOPER_SECTION_ID } from '#/config/settingsConfig';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { ProfileSkeleton } from '#components/atoms/Skeleton/ProfileSkeleton';
 import {
@@ -167,8 +168,11 @@ export const ProfileScreen = () => {
           .filter(section => {
             // Filter out Developer section if debug features are not enabled.
             // Compare against the stable `key` so the filter still works in
-            // non-English locales where `title` is translated.
-            if (section.key === 'Developer') {
+            // non-English locales where `title` is translated. The id is
+            // imported rather than spelled out, so a rename cannot leave the
+            // comparison matching nothing while the section renders to
+            // everyone.
+            if (section.key === DEVELOPER_SECTION_ID) {
               return (
                 Environment.shouldEnableDebugFeatures() || canAccessDevTools
               );

@@ -6,7 +6,10 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type {
+  SwipeableRef,
+  SwipeAction,
+} from '#/components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for list items.
@@ -14,8 +17,20 @@ import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
  */
 export interface SortableListActions {
   onItemPress?: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  /**
+   * Swipe actions for one row, as descriptors.
+   *
+   * Named verbs (`onItemEdit`, `onItemDelete`) used to travel this chain. They
+   * were replaced by the descriptor factory the shared list template already
+   * injects, so the screen supplies its row actions the same way whether the
+   * list is the default one or this custom one.
+   */
+  itemSwipeActions?: (id: string) =>
+    | {
+        left?: SwipeAction[];
+        right?: SwipeAction[];
+      }
+    | undefined;
   /**
    * Toggle an item's purchased state. A plain call marks it purchased with
    * default values (or un-purchases). Passing `{ withDetails: true }` (from a
@@ -121,8 +136,7 @@ export const SortableListActionsProvider: React.FC<
   // useState initializer guarantees a single stable object across all renders
   const [stableActions] = useState<SortableListActions>(() => ({
     onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
-    onItemEdit: (id: string) => actionsRef.current.onItemEdit?.(id),
-    onItemDelete: (id: string) => actionsRef.current.onItemDelete?.(id),
+    itemSwipeActions: (id: string) => actionsRef.current.itemSwipeActions?.(id),
     onTogglePurchase: (id: string, opts?: { withDetails?: boolean }) =>
       actionsRef.current.onTogglePurchase?.(id, opts),
     onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),

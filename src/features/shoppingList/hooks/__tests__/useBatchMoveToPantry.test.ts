@@ -287,7 +287,7 @@ describe('useBatchMoveToPantry', () => {
    * the batch move was online-only and a null result could only mean something
    * had gone wrong.
    */
-  it('treats a null payload as queued: reports the local count and succeeds', async () => {
+  it('treats a null payload as queued: reports pending, not a count, and succeeds', async () => {
     const mockOnSuccess = jest.fn();
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
       data: { movePurchasedItemsToPantry: null },
@@ -309,6 +309,15 @@ describe('useBatchMoveToPantry', () => {
 
     expect(mockOnSuccess).toHaveBeenCalled();
     expect(mockAlert).not.toHaveBeenCalled();
+    // The client cannot know how many rows the server will move: the input
+    // carries only the list id, while `purchasedItems` is the slice on screen.
+    // Claiming a count here was right only when the whole list was loaded.
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      expect.stringMatching(/back online/i),
+    );
+    expect(mockToastSuccess).not.toHaveBeenCalledWith(
+      expect.stringMatching(/\b1 item\b/i),
+    );
   });
 
   describe('when the API is unavailable', () => {
@@ -376,5 +385,114 @@ describe('useBatchMoveToPantry', () => {
         2,
       );
     });
+  });
+});
+
+describe('counters are adjusted exactly once', () => {
+  /**
+   * Every test above passes `purchasedItems: []`, which takes an early return
+   * before reaching the code under test. These pass a real slice.
+   *
+   * The hook used to remove the purchased edges eagerly AND let the mutation's
+   * `update` callback remove them again on the response. Filtering edges twice
+   * is idempotent; subtracting the count twice is not.
+   */
+  const { gql } = require('@apollo/client');
+  const COUNTS = gql`
+    fragment ShoppingListCounts on ShoppingList {
+      id
+      totalItems
+      completedItems
+    }
+  `;
+
+  function seededCache() {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'ShoppingList:list-1',
+      fragment: COUNTS,
+      data: {
+        __typename: 'ShoppingList',
+        id: 'list-1',
+        totalItems: 10,
+        completedItems: 4,
+      },
+    });
+    return cache;
+  }
+
+  function readCounts(cache: { readFragment: Function }) {
+    return cache.readFragment({
+      id: 'ShoppingList:list-1',
+      fragment: COUNTS,
+    }) as { totalItems: number; completedItems: number } | null;
+  }
+
+  const purchased = [
+    { id: 'item-1' },
+    { id: 'item-2' },
+    { id: 'item-3' },
+    { id: 'item-4' },
+  ];
+
+  it('subtracts the moved count once from totalItems and completedItems', async () => {
+    const cache = seededCache();
+    const move = moveMock({
+      movedCount: 4,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1', 'item-2', 'item-3', 'item-4'],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({
+          currentListId: 'list-1',
+          purchasedItems: purchased,
+        }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // 10 - 4 and 4 - 4. Applied twice these read 2 and 0, and the header then
+    // says "2 items" over 6 visible rows.
+    expect(readCounts(cache)).toEqual(
+      expect.objectContaining({ totalItems: 6, completedItems: 0 }),
+    );
+  });
+
+  it('leaves the counters untouched when the server refuses', async () => {
+    const cache = seededCache();
+    const refused = recordMock(MovePurchasedItemsToPantryDocument, {
+      data: {
+        movePurchasedItemsToPantry: {
+          __typename: 'ValidationError',
+          message: 'nope',
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({
+          currentListId: 'list-1',
+          purchasedItems: purchased,
+        }),
+      { operationMocks: [refused.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // Nothing was written ahead of the response, so there is nothing to restore
+    // — which is why this hook no longer needs a restore path it did not have.
+    expect(readCounts(cache)).toEqual(
+      expect.objectContaining({ totalItems: 10, completedItems: 4 }),
+    );
   });
 });

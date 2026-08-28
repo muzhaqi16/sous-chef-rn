@@ -182,7 +182,8 @@
     "totalPrice": "Çmimi total",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
-    "perUnitHint": "{{price}} për njësi"
+    "perUnitHint": "{{price}} për njësi",
+    "quantityRequired": "Shkruaj një sasi më të madhe se zero"
   },
   "addToShoppingListSheet": {
     "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar",

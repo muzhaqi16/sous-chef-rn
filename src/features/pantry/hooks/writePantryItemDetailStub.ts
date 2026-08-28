@@ -20,6 +20,8 @@
  */
 
 import { type ApolloCache } from '@apollo/client';
+import type { TypedDocumentNode } from '@graphql-typed-document-node/core';
+import type { Unmasked } from '@apollo/client/masking';
 import type {
   AcquisitionMethod,
   ItemCondition,
@@ -58,32 +60,74 @@ export interface PantryItemDetailStubFields {
 }
 
 /**
- * Write `data` onto `Item:<id>` only when `fragment` cannot already be read.
+ * Fill in the fields of `fragment` that `Item:<id>` does not already have.
  *
- * `readFragment` returns null on a PARTIAL entity exactly as on a missing one,
- * so a successful read means every field of that group is present and must be
- * left alone. This is what keeps a neutral default from overwriting real
- * catalog data on an item the user picked from the catalog.
+ * Presence is decided per FIELD, not per fragment. A plain `readFragment`
+ * returns null on a PARTIAL entity exactly as on a missing one, so treating a
+ * failed read as "nothing is here" defaults the whole group — and destroys real
+ * catalog data that a narrower query already fetched. `ItemByUpcFilter` is the
+ * case that bites: after a scan the `Item` holds `imageUrl`, `shelfLifeDays`,
+ * `shelfLifeOpenedDays` and `categories`, but neither `images` nor
+ * `nutritions`, so both of those groups read as absent and every real value in
+ * them was overwritten with a neutral one. Offline that never heals.
+ *
+ * Grouping the fragments narrows that blast radius; it cannot remove it, because
+ * the boundary just moves to the group. Reading with partial data tolerated and
+ * letting every present field win removes it.
+ *
+ * Types come from the generated fragment docs — `TypedDocumentNode<TFragment>`
+ * carries the shape, so `data`, the read and the write are all checked against
+ * the codegen'd type rather than an erasing `Record<string, unknown>`.
+ * `Unmasked<>` appears here against the usual convention (optimisticResponse
+ * returns) because it is the parameter type `cache.writeFragment` declares; the
+ * alternative is the erasure this helper exists to remove.
  */
-function topUpItemGroup(
+function topUpItemGroup<TFragment extends { __typename: 'Item'; id: string }>(
   cache: ApolloCache,
   itemCacheId: string,
-  fragment: Parameters<ApolloCache['readFragment']>[0]['fragment'],
+  fragment: TypedDocumentNode<TFragment, unknown>,
   fragmentName: string,
-  data: Record<string, unknown>,
+  data: Unmasked<TFragment>,
 ): void {
   const existing = cache.readFragment({
     id: itemCacheId,
     fragment,
     fragmentName,
+    returnPartialData: true,
   });
-  if (existing) return;
+
+  // What the cache actually holds. `undefined` means the field is not cached;
+  // `null` is a real value the server supplied and must be kept.
+  const cached = definedFields(existing);
+  const hasAbsentField = Object.keys(data).some(key => !(key in cached));
+
+  // Every field already present: nothing to supply, and writing would only risk
+  // re-normalizing what is already correct.
+  if (!hasAbsentField) return;
+
   cache.writeFragment({
     id: itemCacheId,
     fragment,
     fragmentName,
-    data: { __typename: 'Item', ...data },
+    // Neutral values first, so anything already cached wins.
+    data: { ...data, ...cached },
   });
+}
+
+/**
+ * The fields of a partially-read fragment that the cache actually holds.
+ *
+ * `Object.fromEntries` has no way to preserve the key/value relationship, so
+ * the assertion below is where that is restated — the runtime filter keeps only
+ * keys of `T`, and their values are `T`'s.
+ */
+function definedFields<T extends object>(
+  source: T | null | undefined,
+): Partial<T> {
+  if (!source) return {};
+  return Object.fromEntries(
+    Object.entries(source).filter(([, value]) => value !== undefined),
+  ) as Partial<T>;
 }
 
 /**

@@ -40,13 +40,24 @@ const placeholderStyle = (
     : { marginLeft: -CARD_EDGE_EXTENSION }),
 });
 
+/**
+ * Module-level so an omitted action list keeps ONE identity for the life of the
+ * app. `leftActions = []` as an inline default allocates a fresh array on every
+ * render, and the React Compiler cannot cache anything derived from a value
+ * that changes identity every time — which, for this component, is the action
+ * list, the accessibility actions (one `t()` per action), the action handler
+ * and both tray renderers. Rows are the most re-rendered surface in the app,
+ * and most of them pass no actions at all.
+ */
+const EMPTY_ACTIONS: SwipeAction[] = [];
+
 const SwipeableItemComponent: React.FC<SwipeableItemProps> = ({
   children,
   itemId,
   onPress,
   onLongPress,
-  leftActions = [],
-  rightActions = [],
+  leftActions = EMPTY_ACTIONS,
+  rightActions = EMPTY_ACTIONS,
   leftThreshold = 120,
   rightThreshold = 120,
   friction = 1.5,

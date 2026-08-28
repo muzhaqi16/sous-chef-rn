@@ -71,11 +71,12 @@ fragment writePantryItemDetailStub_itemRef on PantryItem {
   }
 }
 
-# Per-group top-ups for the catalog `Item`, read before they are written so a
-# group already present is never overwritten with a neutral default. Grouped
-# rather than written as one object because `readFragment` is all-or-nothing:
-# one absent field would otherwise default the whole set and clobber, e.g.,
-# a real `imageUrl` on the way to supplying `photos`.
+# Per-group top-ups for the catalog `Item`. `topUpItemGroup` reads each group
+# tolerating partial data and writes only the fields genuinely absent, so a
+# value another query already fetched is never replaced by a neutral default.
+# The grouping is for readability; correctness does not depend on it, because
+# `readFragment` being all-or-nothing would otherwise default a whole group
+# whenever one of its fields was missing.
 
 fragment writePantryItemDetailStub_itemIdentity on Item {
   id

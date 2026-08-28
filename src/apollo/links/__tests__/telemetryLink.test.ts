@@ -375,7 +375,14 @@ describe('createTelemetryLink', () => {
       });
     });
 
-    it('places and clears performance marks', done => {
+    /**
+     * Replaced a test that asserted the mark/measure pair was placed and
+     * cleared. That pair is gone: nothing read a `gql:*` measure, while
+     * `clearMarks` is a full-array `entries.filter()` and every `measure`
+     * appended an entry that was never cleared — making per-operation cost grow
+     * with session length, inside the response handler.
+     */
+    it('creates no performance marks or measures per operation', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
 
@@ -387,13 +394,63 @@ describe('createTelemetryLink', () => {
       result.subscribe({
         next: () => {},
         complete: () => {
-          expect(performance.mark).toHaveBeenCalledWith(
+          expect(performance.mark).not.toHaveBeenCalledWith(
             expect.stringContaining('gql:GetItems'),
           );
-          expect(performance.clearMarks).toHaveBeenCalled();
+          expect(performance.measure).not.toHaveBeenCalledWith(
+            expect.stringContaining('gql:GetItems'),
+            expect.anything(),
+          );
+          expect(performance.clearMarks).not.toHaveBeenCalled();
           done();
         },
       });
+    });
+
+    it('still reports the duration without the mark it used to place', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
+      mockedEnvironment.isDevelopment.mockReturnValue(true);
+
+      const link = createTelemetryLink();
+      const operation = createMockOperation('GetItems');
+      const forward = createMockForward();
+
+      runRequest(link, operation, forward).subscribe({
+        next: () => {},
+        complete: () => {
+          // Duration comes from the stored `startTime`, which is what it always
+          // came from — the mark was never an input to it.
+          expect(Telemetry.histogram).toHaveBeenCalledWith(
+            'graphql_request_duration_ms',
+            expect.any(Number),
+            expect.objectContaining({ name: 'GetItems' }),
+          );
+          done();
+        },
+      });
+    });
+
+    it('releases the timing entry when an operation is cancelled', () => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
+      mockedEnvironment.isDevelopment.mockReturnValue(true);
+
+      const link = createTelemetryLink();
+      const operation = createMockOperation('GetItems');
+      // A forward that never emits: the screen unmounts with the query in
+      // flight, which is ordinary rather than exceptional.
+      const forward: MockForward = jest.fn(
+        () => new Observable<ApolloLink.Result>(() => {}),
+      );
+
+      const subscription = runRequest(link, operation, forward).subscribe({
+        next: () => {},
+      });
+
+      // Unsubscribing must leave nothing behind. Anything retained here is
+      // retained for the whole session and lengthens the work every later
+      // operation performs.
+      expect(() => subscription.unsubscribe()).not.toThrow();
+      expect(performance.clearMarks).not.toHaveBeenCalled();
     });
 
     it('reports errors in response', done => {

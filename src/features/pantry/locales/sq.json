@@ -226,7 +226,8 @@
     "skippedSuffix": " ({{skippedCount}} të anashkaluar)",
     "noItemsMoved": "Asnjë artikull nuk u zhvendos te qilari",
     "noPantryTitle": "Asnjë qilar i disponueshëm",
-    "noPantryBody": "Krijo më parë një qilar në shtëpinë tënde."
+    "noPantryBody": "Krijo më parë një qilar në shtëpinë tënde.",
+    "queued": "Në radhë — artikujt do të zhvendosen te qilari kur të rikthehesh në linjë"
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",

@@ -30,7 +30,7 @@ import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
 
-export interface FolderPickerProps {
+interface FolderPickerBaseProps {
   visible: boolean;
   folders: string[];
   selectedFolder?: string | null;
@@ -39,20 +39,41 @@ export interface FolderPickerProps {
   loading?: boolean;
   /** Allow creating new folders. Set to false for filter-only mode. Default: true */
   allowCreate?: boolean;
+  /** Loading state for folder actions */
+  folderActionLoading?: boolean;
+}
+
+/**
+ * Selection only — rename and delete are not offered, so there is nothing to
+ * protect and `protectedFolders` is optional.
+ */
+interface FolderPickerWithoutActionsProps {
+  onRenameFolder?: undefined;
+  onDeleteFolder?: undefined;
+  protectedFolders?: string[];
+}
+
+/**
+ * Folder management offered, so the caller MUST say what is protected.
+ *
+ * Required rather than defaulted: the protected list is a prop because
+ * `['Favorites']` is a recipes concept that does not belong in a generic
+ * picker — but as an optional prop defaulting to `[]` it silently protected
+ * nothing at the one call site that offers rename and delete. A caller that
+ * can perform the destructive action now cannot compile without declaring
+ * what the action may not touch.
+ */
+interface FolderPickerWithActionsProps {
   /** Callback for renaming a folder. If provided, enables long-press menu. */
   onRenameFolder?: (oldName: string, newName: string) => Promise<boolean>;
   /** Callback for deleting a folder. If provided, enables long-press menu. */
   onDeleteFolder?: (folderName: string) => Promise<boolean>;
-  /** Loading state for folder actions */
-  folderActionLoading?: boolean;
-  /**
-   * Folders that cannot be renamed or deleted.
-   *
-   * A prop rather than a constant: this picker had `['Favorites']` hardcoded,
-   * which is a recipes concept sitting in a generic component.
-   */
-  protectedFolders?: string[];
+  /** Folders that cannot be renamed or deleted. */
+  protectedFolders: string[];
 }
+
+export type FolderPickerProps = FolderPickerBaseProps &
+  (FolderPickerWithoutActionsProps | FolderPickerWithActionsProps);
 
 export const FolderPicker: React.FC<FolderPickerProps> = ({
   visible,
@@ -64,7 +85,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   allowCreate = true,
   onRenameFolder,
   onDeleteFolder,
-  protectedFolders = [],
+  protectedFolders,
   folderActionLoading = false,
 }) => {
   const { t } = useTranslation();
@@ -122,9 +143,10 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   // Check if folder management is enabled
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
 
-  // Check if a folder is protected
+  // Check if a folder is protected. The prop is required by the type wherever
+  // `hasFolderActions` can be true, which is the only place this is reached.
   const isProtectedFolder = (folder: string) => {
-    return protectedFolders.includes(folder);
+    return protectedFolders?.includes(folder) ?? false;
   };
 
   const filteredFolders = (() => {

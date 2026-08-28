@@ -43,6 +43,7 @@ import {
   addTemplateItemToCache,
   removeTemplateItemFromCache,
   readTemplateItem,
+  readRecipeRef,
 } from '#features/mealPlan/utils/optimisticTemplateItem';
 import { useUser } from '#store/useAppStore';
 import {
@@ -329,9 +330,20 @@ export function useMealTemplateEditor() {
     const previousItem = readTemplateItem(client.cache, id);
     // `meal` is an @oneOf ref, not a flat field — the row shows it as
     // `customMealName` / `recipe`, so map it rather than writing it through.
+    //
+    // BOTH fields move together. The input can only name one of them, but the
+    // entity carries both, so writing only the named one leaves the row holding
+    // the value it was supposed to replace: renaming a recipe-backed row to a
+    // custom name kept the old recipe, and picking a recipe left the row with
+    // neither a name nor a recipe. Offline no response arrives to reconcile it.
     const updates = {
       ...flatFields,
-      ...(meal ? { customMealName: meal.customMealName ?? null } : {}),
+      ...(meal
+        ? {
+            customMealName: meal.customMealName ?? null,
+            recipe: readRecipeRef(client.cache, meal.recipeId),
+          }
+        : {}),
     };
 
     const { persisted, result } = await updateEntityFieldsLocalFirst({

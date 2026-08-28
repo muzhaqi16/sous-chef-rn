@@ -12,8 +12,7 @@ import {
 describe('SortableListActionsContext', () => {
   const defaultActions: SortableListActions = {
     onItemPress: jest.fn(),
-    onItemEdit: jest.fn(),
-    onItemDelete: jest.fn(),
+    itemSwipeActions: jest.fn(),
     onTogglePurchase: jest.fn(),
     onMoveToPantry: jest.fn(),
     onQuantityPress: jest.fn(),
@@ -72,16 +71,16 @@ describe('SortableListActionsContext', () => {
     expect(defaultActions.onItemPress).toHaveBeenCalledWith('item-1');
   });
 
-  it('delegates onItemDelete to the provided action', () => {
+  it('delegates itemSwipeActions to the provided factory', () => {
     const { result } = renderHook(() => useSortableListActions(), {
       wrapper: wrapper(),
     });
 
     act(() => {
-      result.current.actions.onItemDelete?.('item-2');
+      result.current.actions.itemSwipeActions?.('item-2');
     });
 
-    expect(defaultActions.onItemDelete).toHaveBeenCalledWith('item-2');
+    expect(defaultActions.itemSwipeActions).toHaveBeenCalledWith('item-2');
   });
 
   it('delegates onTogglePurchase to the provided action', () => {
@@ -189,7 +188,7 @@ describe('SortableListActionsContext', () => {
     expect(() => {
       act(() => {
         result.current.actions.onItemPress?.('item-1');
-        result.current.actions.onItemDelete?.('item-1');
+        result.current.actions.itemSwipeActions?.('item-1');
         result.current.actions.onSwipeableClose?.();
       });
     }).not.toThrow();

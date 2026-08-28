@@ -9,6 +9,7 @@ import {
   type ListRenderItemInfo,
 } from '@shopify/flash-list';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
+import type { SwipeAction } from '#components/molecules/SwipeableItem/types';
 import { ThemedRefreshControl } from '#components/atoms/themedComponents';
 import type { SortableShoppingListProps, ShoppingListRowItem } from './types';
 import { SwipeableListItem } from './SortableItem';
@@ -52,8 +53,7 @@ const renderItem = (info: ListRenderItemInfo<ShoppingListRowItem>) => {
 const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   items,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
+  itemSwipeActions,
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
@@ -123,14 +123,37 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
   const handleSwipeableClose =
     externalOnSwipeableClose ?? internalCoordinator.handleSwipeableClose;
 
+  // A row-removing action must arm FlashList's layout animation before it runs.
+  // `SwipeableItem` deliberately ignores `removesRow` — the swipe molecule has
+  // no opinion about the list around it — so the list is what honours it. This
+  // is where the old `onItemDelete` wrapper did the same job.
+  const prepareRemovals = (
+    actionList: SwipeAction[] | undefined,
+  ): SwipeAction[] | undefined =>
+    actionList?.map(action =>
+      action.removesRow
+        ? {
+            ...action,
+            onPress: () => {
+              flashListRef.current?.prepareForLayoutAnimationRender();
+              action.onPress();
+            },
+          }
+        : action,
+    );
+
   // Actions for context — wrap delete/toggle to prepare FlashList for layout animation
   const actions: SortableListActions = {
     onItemPress,
-    onItemEdit,
-    onItemDelete: onItemDelete
+    itemSwipeActions: itemSwipeActions
       ? (id: string) => {
-          flashListRef.current?.prepareForLayoutAnimationRender();
-          onItemDelete(id);
+          const swipe = itemSwipeActions(id);
+          return swipe
+            ? {
+                left: prepareRemovals(swipe.left),
+                right: prepareRemovals(swipe.right),
+              }
+            : undefined;
         }
       : undefined,
     onTogglePurchase: onTogglePurchase

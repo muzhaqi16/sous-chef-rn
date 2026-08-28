@@ -217,30 +217,82 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
-    // The input's field names ARE the StorageLocation field names, so the
-    // change can be written straight onto the cached entity and rolled back
-    // from the pre-edit values if the server refuses.
     const current = locations.find(location => location.id === id);
+
+    // Most input field names ARE the StorageLocation field names, so they can be
+    // written straight onto the cached entity. `parentLocationId` is the
+    // exception: the edit sheet is seeded with the flat id, but the query
+    // selects only the nested `parentLocation`, and that is what the tree
+    // builder and the delete guard read. Writing the flat field alone moved
+    // nothing on screen while reporting success — and offline no response ever
+    // arrives to correct it.
+    const { parentLocationId, ...directFields } = input;
+    const nextParent =
+      parentLocationId === undefined
+        ? undefined
+        : locations.find(location => location.id === parentLocationId) ?? null;
+
+    const updates = {
+      ...directFields,
+      ...(nextParent === undefined
+        ? {}
+        : {
+            parentLocation: nextParent
+              ? {
+                  __typename: 'StorageLocation',
+                  id: nextParent.id,
+                  name: nextParent.name,
+                }
+              : null,
+          }),
+    };
+
+    // Snapshot the fields being changed, INCLUDING ones the cached entity does
+    // not carry — a key filtered out here is a key a refusal cannot restore.
     const previous = Object.fromEntries(
-      Object.keys(input)
-        .filter(key => key in (current ?? {}))
-        .map(key => [key, (current as Record<string, unknown>)[key]]),
+      Object.keys(updates).map(key => [
+        key,
+        (current as Record<string, unknown> | undefined)?.[key] ?? null,
+      ]),
     );
+
+    // `isDefault` is exclusive. `setDefaultLocation` clears the previous holder
+    // for exactly this reason; ticking Default in the EDIT sheet has to as well,
+    // or two rows read as default until the next fetch.
+    const displacedDefault =
+      input.isDefault === true
+        ? locations.find(location => location.isDefault && location.id !== id)
+        : undefined;
 
     const { persisted, result } = await updateEntityFieldsLocalFirst({
       cache: client.cache,
       entity: current ? { __typename: 'StorageLocation', id } : undefined,
-      updates: input,
+      updates,
       previous,
       logLabel: 'Update Storage Location',
-      mutate: () =>
-        updateMutation({
+      mutate: () => {
+        if (displacedDefault) {
+          writeEntityFields(
+            client.cache,
+            { __typename: 'StorageLocation', id: displacedDefault.id },
+            { isDefault: false },
+          );
+        }
+        return updateMutation({
           variables: { input: { ...input, id } },
           context: { localFirst: true },
-        }),
+        });
+      },
     });
 
     if (!persisted) {
+      if (displacedDefault) {
+        writeEntityFields(
+          client.cache,
+          { __typename: 'StorageLocation', id: displacedDefault.id },
+          { isDefault: true },
+        );
+      }
       toastResolvedError(
         (result?.data as { updateStorageLocation?: unknown } | undefined)
           ?.updateStorageLocation as Parameters<typeof toastResolvedError>[0],

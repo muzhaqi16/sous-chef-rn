@@ -226,7 +226,8 @@
     "skippedSuffix": " ({{skippedCount}} omitidos)",
     "noItemsMoved": "No se pudo mover ningún artículo a la despensa",
     "noPantryTitle": "No hay despensa disponible",
-    "noPantryBody": "Primero crea una despensa en tu hogar."
+    "noPantryBody": "Primero crea una despensa en tu hogar.",
+    "queued": "En cola: los artículos se moverán a tu despensa cuando vuelvas a estar en línea"
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",

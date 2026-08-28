@@ -113,8 +113,21 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
       ? unitPriceFromTotal(parsedTotal, parsedQty)
       : null;
 
+  // A quantity the user cannot see is not a quantity of zero. `?? 0` sent an
+  // empty or unparseable field through as a real measurement, and
+  // `unitPriceFromTotal`'s zero-guard then returned the total UN-divided — so
+  // the server recorded `purchasedPrice x 0`, marking the item purchased at
+  // quantity 0 for nothing and discarding the amount the shopper typed.
+  const quantityIsUsable = parsedQty != null && parsedQty > 0;
+  // Reported on the field, never through an alert: a modal covers the form and,
+  // once dismissed, no longer says which field it meant.
+  const quantityError = quantityIsUsable
+    ? null
+    : t('purchaseAmountSheet.quantityRequired');
+
   const handleConfirm = () => {
-    onConfirm(parsedQty ?? 0, parsedTotal);
+    if (!quantityIsUsable || parsedQty == null) return;
+    onConfirm(parsedQty, parsedTotal);
   };
 
   return (
@@ -128,7 +141,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             icon: 'checkmark',
             onPress: handleConfirm,
             variant: 'primary',
-            disabled: loading,
+            disabled: loading || !quantityIsUsable,
             loading,
           },
         ]}
@@ -171,6 +184,16 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               </Text>
             ) : null}
           </View>
+          {quantityError ? (
+            <Text
+              size="sm"
+              tone="error"
+              style={styles.fieldError}
+              testID="purchase-quantity-error"
+            >
+              {quantityError}
+            </Text>
+          ) : null}
         </View>
 
         {/* Price Section */}
@@ -234,6 +257,9 @@ const styles = StyleSheet.create(theme => ({
   },
   sectionLabel: {
     marginBottom: theme.spacing.sm,
+  },
+  fieldError: {
+    marginTop: theme.spacing.xs,
   },
   inputRow: {
     flexDirection: 'row',

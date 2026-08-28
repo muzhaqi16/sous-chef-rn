@@ -32,6 +32,55 @@ function writeFolders(cache: ApolloCache, folders: string[]): void {
 }
 
 /**
+ * Move every cached `SavedRecipe` out of `from` and into `to`.
+ *
+ * The folder LIST and the recipes' own `folder` field are two separate pieces
+ * of cache state, and the Saved Recipes screen filters on the second
+ * (`recipe.folder === selectedFolder`). Rewriting only the list renamed the
+ * chip and left every recipe pointing at the old name, so the folder the user
+ * had just renamed rendered empty under a success toast. `DeleteRecipeFolderPayload`
+ * returns no recipe nodes, and this hook has no `refetchQueries`, so nothing
+ * else repairs it — and under `localFirst` there is no response at all until
+ * the queue replays.
+ *
+ * Returns the ids it changed so a refusal can put them back.
+ */
+function rewriteSavedRecipeFolders(
+  cache: ApolloCache,
+  from: string,
+  to: string | null,
+): string[] {
+  // `extract()` is typed as `unknown` on the base ApolloCache; the normalized
+  // store is a flat map keyed by `TypeName:id`, which is what the loop needs.
+  const snapshot = cache.extract() as Record<
+    string,
+    { folder?: string | null } | undefined
+  >;
+  const changed: string[] = [];
+
+  for (const cacheId of Object.keys(snapshot)) {
+    if (!cacheId.startsWith('SavedRecipe:')) continue;
+    if (snapshot[cacheId]?.folder !== from) continue;
+
+    changed.push(cacheId);
+    cache.modify({ id: cacheId, fields: { folder: () => to } });
+  }
+
+  return changed;
+}
+
+/** Put back what {@link rewriteSavedRecipeFolders} moved. */
+function restoreSavedRecipeFolders(
+  cache: ApolloCache,
+  cacheIds: string[],
+  folder: string | null,
+): void {
+  for (const cacheId of cacheIds) {
+    cache.modify({ id: cacheId, fields: { folder: () => folder } });
+  }
+}
+
+/**
  * Hook for folder management actions (rename, delete)
  * Uses the deleteRecipeFolder mutation which handles both operations:
  * - Delete: deleteRecipeFolder(folder) - recipes become unfoldered
@@ -71,6 +120,11 @@ export function useFolderActions() {
         previousFolders.map(f => (f === oldName ? newName : f)),
       );
     }
+    const movedRecipes = rewriteSavedRecipeFolders(
+      client.cache,
+      oldName,
+      newName,
+    );
 
     let result;
     try {
@@ -86,6 +140,7 @@ export function useFolderActions() {
 
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
+      restoreSavedRecipeFolders(client.cache, movedRecipes, oldName);
       const rejected = result?.data?.deleteRecipeFolder;
       const reason =
         rejected && 'message' in rejected ? rejected.message : null;
@@ -113,6 +168,12 @@ export function useFolderActions() {
         previousFolders.filter(f => f !== folderName),
       );
     }
+    // Deleting a folder unfolders its recipes — same field, same defect.
+    const unfoldered = rewriteSavedRecipeFolders(
+      client.cache,
+      folderName,
+      null,
+    );
 
     let result;
     try {
@@ -128,6 +189,7 @@ export function useFolderActions() {
 
     if (classifyCreateResult(result) === 'rejected') {
       if (previousFolders) writeFolders(client.cache, previousFolders);
+      restoreSavedRecipeFolders(client.cache, unfoldered, folderName);
       const rejected = result?.data?.deleteRecipeFolder;
       const reason =
         rejected && 'message' in rejected ? rejected.message : null;

@@ -226,7 +226,8 @@
     "skippedSuffix": " ({{skippedCount}} skipped)",
     "noItemsMoved": "No items could be moved to pantry",
     "noPantryTitle": "No Pantry Available",
-    "noPantryBody": "Please create a pantry in your home first."
+    "noPantryBody": "Please create a pantry in your home first.",
+    "queued": "Queued — items will move to your pantry when you're back online"
   },
   "pantryAction": {
     "useByDefault": "Use by",

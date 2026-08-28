@@ -96,6 +96,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     expect(
@@ -178,6 +179,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     // Manage folder sheet content should show
@@ -185,13 +187,25 @@ describe('FolderPicker', () => {
   });
 
   it('renders Rename section when onRenameFolder is provided', () => {
-    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onRenameFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     // "Rename" appears as both section label and button text
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders Delete Folder button when onDeleteFolder is provided', () => {
-    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(screen.getByText('Delete Folder')).toBeTruthy();
     expect(screen.getByText('Recipes will be moved to No Folder')).toBeTruthy();
   });
@@ -336,6 +350,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
@@ -343,13 +358,25 @@ describe('FolderPicker', () => {
   });
 
   it('renders only rename section when only onRenameFolder is provided', () => {
-    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onRenameFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(screen.getAllByText('Rename').length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByText('Delete Folder')).toBeNull();
   });
 
   it('renders only delete section when only onDeleteFolder is provided', () => {
-    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(screen.queryByText('Rename')).toBeNull();
     expect(screen.getByText('Delete Folder')).toBeTruthy();
   });
@@ -360,6 +387,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     // The delete confirmation is toggled via showDeleteConfirm state
@@ -376,7 +404,13 @@ describe('FolderPicker', () => {
   });
 
   it('shows hint when hasFolderActions is true and filteredFolders exist', () => {
-    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onRenameFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(
       screen.getByText('Long press a folder to edit or delete'),
     ).toBeTruthy();
@@ -388,6 +422,7 @@ describe('FolderPicker', () => {
         {...defaultProps}
         folders={[]}
         onRenameFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     expect(
@@ -407,20 +442,33 @@ describe('FolderPicker', () => {
         {...defaultProps}
         onRenameFolder={jest.fn()}
         onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
       />,
     );
     expect(screen.getByText('Manage Folder')).toBeTruthy();
   });
 
   it('renders the rename input with placeholder', () => {
-    render(<FolderPicker {...defaultProps} onRenameFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onRenameFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(
       screen.getByPlaceholderText('Enter new folder name...'),
     ).toBeTruthy();
   });
 
   it('renders delete description text', () => {
-    render(<FolderPicker {...defaultProps} onDeleteFolder={jest.fn()} />);
+    render(
+      <FolderPicker
+        {...defaultProps}
+        onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
     expect(screen.getByText('Recipes will be moved to No Folder')).toBeTruthy();
   });
 
@@ -434,5 +482,34 @@ describe('FolderPicker', () => {
     render(<FolderPicker {...defaultProps} visible={false} />);
     // BottomSheetModal is mocked as View, so content still renders
     expect(screen.getByText('Select Folder')).toBeTruthy();
+  });
+});
+
+describe('FolderPicker protected folders', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  // The long-press path that consults `protectedFolders` sits inside
+  // BottomSheetFlatList's renderItem, and that list is globally mocked as a
+  // View, so no test here can reach it. The guard for the defect this fixes —
+  // a call site offering rename/delete without declaring what is protected —
+  // is the props type: `FolderPickerWithActionsProps` makes the omission a
+  // compile error, which is checked on every run of `npm run typecheck`.
+
+  it('treats an empty protected list as protecting nothing', () => {
+    render(
+      <FolderPicker
+        {...defaultProps}
+        folders={['Favorites']}
+        onRenameFolder={jest.fn()}
+        onDeleteFolder={jest.fn()}
+        protectedFolders={[]}
+      />,
+    );
+
+    // An explicitly empty list is a deliberate declaration, not a default —
+    // the type makes a caller offering these actions state one.
+    expect(screen.getByText('Manage Folder')).toBeTruthy();
   });
 });

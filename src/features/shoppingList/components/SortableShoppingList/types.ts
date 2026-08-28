@@ -3,7 +3,10 @@ import type { ScrollViewProps } from 'react-native';
 import type { FlashListProps } from '@shopify/flash-list';
 import type { FragmentType } from '@apollo/client/masking';
 import type { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
-import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import type {
+  SwipeableRef,
+  SwipeAction,
+} from '#/components/molecules/SwipeableItem/types';
 
 // Positions type for drag-and-drop animation
 export type Positions = Record<number, number>;
@@ -43,8 +46,13 @@ export interface SortableShoppingListProps
   extends Omit<ScrollViewProps, 'data' | 'renderItem' | 'keyExtractor'> {
   items: ShoppingListRowItem[];
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  /** Swipe actions for one row — see `SortableListActions.itemSwipeActions`. */
+  itemSwipeActions?: (id: string) =>
+    | {
+        left?: SwipeAction[];
+        right?: SwipeAction[];
+      }
+    | undefined;
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void; // Opens quantity edit sheet

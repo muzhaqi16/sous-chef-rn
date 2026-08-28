@@ -29,13 +29,22 @@ type AnyAction = (...args: never[]) => unknown;
  *
  * ## Two constraints this encodes
  *
- * - The wrappers are built in a `useState` initializer, not during render.
- *   `ref.current` must not be read or written while rendering (CLAUDE.md), and
- *   `useMemo` is lint-banned here because the React Compiler owns memoization.
- * - The wrapper set is fixed from the FIRST `actions` object. A key added later
- *   would have no wrapper. That matches what the hand-written versions did —
- *   they listed their keys as literals — and every actions bag in this app has a
- *   fixed shape.
+ * - A wrapper exists only for a key whose value is DEFINED. Building one for
+ *   every key of `actions` hands consumers a truthy function for a handler that
+ *   is `undefined`, and consumers gate their affordances on truthiness
+ *   (`canEditItems && onItemEdit`) — so the control renders and the tap does
+ *   nothing. That is a dead button, not a disabled one.
+ * - The wrapper set follows the CURRENT actions bag. It is rebuilt when the set
+ *   of defined keys changes, and only then, so the context value keeps a stable
+ *   identity across the renders where nothing became available or unavailable.
+ *   Freezing it at the first render loses a key that arrives later:
+ *   `FilteredPantryItems` spreads its cart action in behind
+ *   `showCartAction && permissions.canAddItems`, and permissions arrive from a
+ *   query after the provider's first render.
+ *
+ * The rebuild uses the adjusting-state-during-render pattern rather than
+ * `useMemo` (lint-banned here — the React Compiler owns memoization) and never
+ * reads `latest.current` during render, only closes over it.
  *
  * ## What it does not cover
  *
@@ -63,17 +72,39 @@ export function createActionsContext<TActions extends object>(
       latest.current = actions;
     });
 
-    const [stable] = useState(() =>
+    // Only keys carrying a real handler get a wrapper; see the header comment.
+    const definedKeys = Object.keys(actions).filter(
+      key => (actions as ActionBag)[key] !== undefined,
+    );
+    // Identity of the available set, so a rebuild happens when a handler
+    // appears or disappears and at no other time.
+    const signature = [...definedKeys].sort().join(',');
+
+    const buildWrappers = () =>
       Object.fromEntries(
-        Object.keys(actions).map(key => [
+        definedKeys.map(key => [
           key,
           (...args: never[]) => (latest.current as ActionBag)[key]?.(...args),
         ]),
-      ),
-    );
+      );
+
+    const [derived, setDerived] = useState(() => ({
+      signature,
+      wrappers: buildWrappers(),
+    }));
+
+    // Adjusting state during render: React re-runs this component with the new
+    // state immediately, and `current` keeps THIS pass from using the stale set.
+    let current = derived;
+    if (derived.signature !== signature) {
+      current = { signature, wrappers: buildWrappers() };
+      setDerived(current);
+    }
 
     return (
-      <Context.Provider value={stable as TActions}>{children}</Context.Provider>
+      <Context.Provider value={current.wrappers as TActions}>
+        {children}
+      </Context.Provider>
     );
   };
 

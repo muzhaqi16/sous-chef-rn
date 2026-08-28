@@ -182,7 +182,8 @@
     "totalPrice": "Total price",
     "currencySymbol": "$",
     "pricePlaceholder": "0.00",
-    "perUnitHint": "{{price}} per unit"
+    "perUnitHint": "{{price}} per unit",
+    "quantityRequired": "Enter a quantity greater than zero"
   },
   "addToShoppingListSheet": {
     "tutorialTapPlus": "Tap + next to an item to add it",

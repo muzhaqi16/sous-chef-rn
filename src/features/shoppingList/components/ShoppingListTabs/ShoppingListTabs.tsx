@@ -50,8 +50,7 @@ interface ShoppingListTabsProps {
   totalCountUnpurchased?: number;
   totalCountPurchased?: number;
   onItemPress: (id: string) => void;
-  onItemEdit?: (id: string) => void;
-  onItemDelete?: (id: string) => void;
+  itemSwipeActions?: ShoppingListTabsActions['itemSwipeActions'];
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
@@ -126,8 +125,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   totalCountUnpurchased,
   totalCountPurchased,
   onItemPress,
-  onItemEdit,
-  onItemDelete,
+  itemSwipeActions,
   onTogglePurchase,
   onMoveToPantry,
   onQuantityPress,
@@ -244,8 +242,7 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
   const tabActions: ShoppingListTabsActions = {
     onItemPress,
-    onItemEdit,
-    onItemDelete,
+    itemSwipeActions,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,

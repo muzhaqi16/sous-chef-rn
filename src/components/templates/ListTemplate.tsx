@@ -71,8 +71,17 @@ interface CustomListComponentProps<
     | null;
   testIDPrefix?: string;
   emptyState?: EmptyStateConfig;
-  [key: string]: unknown;
 }
+/*
+ * This prop set used to end in `[key: string]: unknown`, which let a custom
+ * list component be typed against props the template never injects. Removing it
+ * stops untyped props flowing through the typed slot — caller extras go in
+ * `customListProps` — but it does NOT catch the defect that motivated it: a
+ * component reading a renamed prop declares it OPTIONAL, and an unused optional
+ * prop stays assignable either way. The guard for that is behavioural, in
+ * `SortableItem.test.tsx` § "swipe actions reach the row", which asserts the
+ * descriptors the screen supplies actually reach the row's swipe props.
+ */
 
 export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   items = [],

@@ -31,7 +31,7 @@ const TemplateItemRecipeFragment = gql`
   }
 `;
 
-function readRecipeRef(
+export function readRecipeRef(
   cache: ApolloCache,
   recipeId: string | null | undefined,
 ): MealTemplateItemFragment['recipe'] {

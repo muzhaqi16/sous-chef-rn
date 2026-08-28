@@ -310,11 +310,33 @@ volume at any rate. **`graphql_request_duration_ms` is deliberately NOT
 weighted** — quantiles are scale-invariant — so its `_count`/`_sum` reflect only
 observed operations. Never divide one family by the other.
 
-The rate is **1.0** today: the fleet is small enough that full capture costs
-nothing, and 10% sampling was leaving the duration histogram on a tenth of the
+The rate is **1.0** today: the fleet is small enough that full capture is
+affordable, and 10% sampling was leaving the duration histogram on a tenth of the
 sample its neighbouring request-rate panel implied. Lower it (e.g. `0.1`) when
 volume makes full capture costly; it is a build-time env var, so the change
 needs a native rebuild, not a code edit.
+
+**"Costs nothing" was not true when the rate was raised.** The link placed a
+`performance.mark` per operation and cleared it on completion, plus a
+`performance.measure` that was never cleared. `clearMarks` is implemented as a
+full-array `entries.filter()` with a fresh allocation, and the uncleared
+measures grew that array without bound — so operation *k* walked *k* entries
+synchronously inside the GraphQL response handler, making the link's cost
+QUADRATIC in session length. Measured against the real
+`react-native-performance` buffer semantics: 500 operations cost 1.9 ms, 5,000
+cost 100.4 ms — ten times the operations for ~53 times the cost, before Hermes.
+Going 0.1 → 1.0 therefore did not cost 10× more, it cost ~50× more.
+
+The mark/measure pair has been removed. Nothing read a `gql:*` measure (the
+Performance Dashboard reads `react-native-mark` and `resource` entries), and the
+duration was always computed from the stored `startTime`, never from the mark.
+The same operations now cost 0.5 ms at 5,000 and retain nothing. The Observable
+teardown also deletes the operation's timing entry, so a query cancelled by an
+unmount — ordinary, not exceptional — no longer leaks one per occurrence.
+
+Those numbers are *shape* measurements (quadratic vs linear) taken against the
+library's real buffer implementation, not device latencies; per this repo's
+measurement rules an absolute figure needs a release build on hardware.
 
 **Counters recorded before 2026-08-28 are ×10 estimates** taken at a rate of
 0.1; after it they are exact counts. A panel spanning that boundary shows an

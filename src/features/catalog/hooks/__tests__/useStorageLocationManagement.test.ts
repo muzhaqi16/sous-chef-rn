@@ -486,3 +486,128 @@ describe('useStorageLocationManagement', () => {
     expect(typeof result.current.refetch).toBe('function');
   });
 });
+
+describe('updateLocation writes what consumers read', () => {
+  /**
+   * The edit sheet is seeded with the FLAT `parentLocationId` (read off
+   * `location.parentLocation?.id`), but `GetStorageLocations` selects only the
+   * NESTED `parentLocation { id name }` — and that nested field is what
+   * `buildTreeFromFlatList` and the delete guard read. Writing the input bag
+   * straight onto the entity therefore set a field nothing reads and left the
+   * one everything reads pointing at the old parent.
+   */
+  it('re-parents the node, not just the flat id', async () => {
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+          ?.id,
+      ).toBe('loc-1'),
+    );
+
+    // And the tree the screen renders must actually move it.
+    const roots = result.current.tree;
+    expect(roots.find(node => node.id === 'loc-2')).toBeUndefined();
+    expect(
+      roots
+        .find(node => node.id === 'loc-1')
+        ?.childLocations.map(child => child.id),
+    ).toContain('loc-2');
+  });
+
+  it('clears the previous default when the edit sets one', async () => {
+    // The server answers with the location that was EDITED. The shared mock
+    // always echoes loc-1, which would re-normalize the very flag under test.
+    const updatedLoc2: MockedResponse = {
+      request: { query: UpdateStorageLocationDocument, variables: () => true },
+      result: {
+        data: {
+          updateStorageLocation: {
+            __typename: 'UpdateStorageLocationPayload',
+            home: null,
+            storageLocation: buildLocationNode({
+              id: 'loc-2',
+              name: 'Pantry',
+              sortOrder: 2,
+              isDefault: true,
+            }),
+          },
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
+
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), updatedLoc2] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    // loc-1 is the seeded default.
+    expect(
+      result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
+    ).toBe(true);
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', { isDefault: true });
+    });
+
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
+      ).toBe(true),
+    );
+    // Default is exclusive. Two rows badged Default is the visible symptom.
+    expect(
+      result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
+    ).toBe(false);
+  });
+
+  it('reverts a re-parent the server refuses', async () => {
+    const refusal: MockedResponse = {
+      request: { query: UpdateStorageLocationDocument, variables: () => true },
+      result: {
+        data: {
+          updateStorageLocation: {
+            __typename: 'ValidationError',
+            message: 'nope',
+          },
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    };
+
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), refusal] },
+    );
+
+    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.updateLocation('loc-2', {
+        parentLocationId: 'loc-1',
+      });
+    });
+
+    // The pre-edit value was absent from the entity's own keys, so a snapshot
+    // filtered by `key in current` could not restore it.
+    await waitFor(() =>
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation,
+      ).toBeNull(),
+    );
+  });
+});

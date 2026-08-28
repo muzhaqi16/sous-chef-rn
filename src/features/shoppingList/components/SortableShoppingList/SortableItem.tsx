@@ -1,7 +1,3 @@
-import {
-  deleteAction,
-  editAction,
-} from '#components/molecules/SwipeableItem/commonActions';
 import React, { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 // RNGH's Pressable (not AppPressable/RN) for the archive button: it's nested in
@@ -101,8 +97,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
-    onItemEdit,
-    onItemDelete,
+    itemSwipeActions,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
@@ -128,6 +123,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // before the cache propagates.
   const isPurchased = rowItem?.isPurchased ?? false;
   const itemId = rowItem?.id ?? '';
+  const swipeActions = itemSwipeActions?.(itemId);
 
   // Derive display data from the fragment. On cache miss before first paint
   // we fall back to safe defaults instead of returning null so the cell still
@@ -411,22 +407,11 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             : undefined
         }
         // Edit on the left, delete on the right — what `swipeMode="shopping"`
-        // used to mean inside the swipe molecule.
-        leftActions={
-          canEditItems && onItemEdit
-            ? [editAction(() => onItemEdit(itemId))]
-            : undefined
-        }
-        rightActions={
-          canRemoveItems && onItemDelete
-            ? [
-                {
-                  ...deleteAction(() => onItemDelete(itemId)),
-                  removesRow: true,
-                },
-              ]
-            : undefined
-        }
+        // used to mean inside the swipe molecule. The descriptors come from the
+        // screen; the permission flags decide whether this row may show them,
+        // which is why the gate stays here rather than at the source.
+        leftActions={canEditItems ? swipeActions?.left : undefined}
+        rightActions={canRemoveItems ? swipeActions?.right : undefined}
         friction={1}
         onSwipeableWillOpen={ref => {
           onSwipeableWillOpen?.(ref);

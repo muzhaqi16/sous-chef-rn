@@ -186,3 +186,102 @@ describe('useMealTemplateEditor', () => {
     expect(ok).toBe(false);
   });
 });
+
+describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
+  const {
+    MealTemplateItemFragmentDoc,
+  } = require('#features/mealPlan/graphql/mealPlanFragments.generated');
+  const {
+    UpdateTemplateItemDocument,
+  } = require('#features/mealPlan/graphql/mealTemplate.generated');
+
+  const RECIPE = {
+    __typename: 'Recipe',
+    id: 'recipe-1',
+    name: 'Carbonara',
+    imageUrl: null,
+    servings: 4,
+    totalTimeMinutes: 25,
+  };
+
+  const RECIPE_BACKED_ITEM = {
+    __typename: 'MealTemplateItem',
+    id: 'item-1',
+    dayOffset: 0,
+    mealType: MealType.Dinner,
+    customMealName: null,
+    servings: 2,
+    notes: null,
+    recipe: RECIPE,
+  };
+
+  const CUSTOM_ITEM = {
+    ...RECIPE_BACKED_ITEM,
+    id: 'item-2',
+    customMealName: 'Leftovers',
+    recipe: null,
+  };
+
+  const readItem = (cache: ReturnType<typeof seedCache>, id: string) =>
+    cache.readFragment({
+      id: cache.identify({ __typename: 'MealTemplateItem', id }),
+      fragment: MealTemplateItemFragmentDoc,
+      fragmentName: 'MealTemplateItemFragment',
+    });
+
+  // Queued: no server response arrives, so whatever the local write left is
+  // what the user sees — which is the whole point of the finding.
+  const queuedUpdate = {
+    request: { query: UpdateTemplateItemDocument, variables: () => true },
+    result: { data: { updateTemplateItem: null } },
+    maxUsageCount: Number.POSITIVE_INFINITY,
+  };
+
+  it('clears the recipe when the row becomes a custom meal', async () => {
+    const cache = seedCache([RECIPE, RECIPE_BACKED_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [queuedUpdate],
+    });
+
+    await act(async () => {
+      await result.current.updateItem({
+        id: 'item-1',
+        meal: { customMealName: 'Leftovers' },
+      });
+    });
+
+    const item = readItem(cache, 'item-1') as {
+      customMealName: string | null;
+      recipe: unknown;
+    } | null;
+    expect(item?.customMealName).toBe('Leftovers');
+    // The recipe it replaced must not survive, or a consumer preferring
+    // `recipe.name` still shows the old meal.
+    expect(item?.recipe).toBeNull();
+  });
+
+  it('sets the recipe when the row becomes recipe-backed', async () => {
+    const cache = seedCache([RECIPE, CUSTOM_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [queuedUpdate],
+    });
+
+    await act(async () => {
+      await result.current.updateItem({
+        id: 'item-2',
+        meal: { recipeId: 'recipe-1' },
+      });
+    });
+
+    const item = readItem(cache, 'item-2') as {
+      customMealName: string | null;
+      recipe: { id: string; name: string } | null;
+    } | null;
+    expect(item?.customMealName).toBeNull();
+    // Without this the row has neither a name nor a recipe.
+    expect(item?.recipe?.id).toBe('recipe-1');
+    expect(item?.recipe?.name).toBe('Carbonara');
+  });
+});
