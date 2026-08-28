@@ -130,15 +130,56 @@ describe('wsLink.ts', () => {
       expect(mockDispose).toHaveBeenCalled();
     });
 
-    it('handles dispose throwing an error', () => {
+    it('handles dispose throwing synchronously', async () => {
       mockDispose.mockImplementationOnce(() => {
         throw new Error('dispose failed');
       });
       expect(() => wsLinkModule.disposeWebSocket()).not.toThrow();
+      await Promise.resolve();
+      await Promise.resolve();
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('disposing WebSocket'),
+        expect.stringContaining('dispose failed'),
         expect.any(Object),
       );
+    });
+
+    // The real production failure. graphql-ws's `dispose()` is async and awaits
+    // its internal `connecting` promise, which the library rejects with the RAW
+    // WebSocket event — a bare `Event` on a failed upgrade, a `CloseEvent` on a
+    // close. Neither has a `message`, so an escaped one surfaced as
+    // "Unhandled Promise Rejection: Unknown error (Event; props: …)" with the
+    // close code stranded. A synchronous try/catch could never see it: the
+    // promise leaves the frame the moment dispose() returns.
+    it('owns the rejection when dispose() rejects', async () => {
+      // Stands in for RN's `new Event('error')`: no `message`, which is why an
+      // escaped one logged as "Unknown error (Event; props: …)".
+      const rawEvent = { _type: 'error', _defaultPrevented: false };
+      mockDispose.mockImplementationOnce(() => Promise.reject(rawEvent));
+
+      expect(() => wsLinkModule.disposeWebSocket()).not.toThrow();
+
+      // Flush the microtask queue. A `.catch` having run is precisely what
+      // stops Hermes' tracker reporting this as unhandled — asserting the log
+      // is asserting that the handler is attached.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('dispose failed'),
+        expect.any(Object),
+      );
+    });
+
+    it('still drops the client reference when dispose() rejects', async () => {
+      mockDispose.mockImplementationOnce(() =>
+        Promise.reject({ _type: 'close' }),
+      );
+      wsLinkModule.disposeWebSocket();
+      await Promise.resolve();
+      // A disposed graphql-ws client is one-way, so the reference must go
+      // whatever dispose does — otherwise the next sign-in gets a socket that
+      // connects once and then goes quiet.
+      expect(wsLinkModule.getWebSocketState().hasClient).toBe(false);
     });
   });
 
