@@ -810,39 +810,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         error
         item {
           id
-          itemName
-          quantity
-          quantityInput
-          displayFormat
-          purchaseInfo {
-            isPurchased
-          }
-          version
-          updatedAt
-          category
-          notes
-          unitName
-          unit {
-            id
-            name
-            symbol
-          }
-          sortOrder
-          item {
-            id
-            imageUrl
-            images {
-              url
-              kind
-            }
-          }
-          shoppingList {
-            id
-            totalItems
-            completedItems
-            remainingItems
-            completionRate
-          }
+          ...AddedShoppingListItemFields
         }
       }
     }

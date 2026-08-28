@@ -31,7 +31,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         error
         item {
           id
-          ...SearchResults_shoppingListItem
+          ...AddedShoppingListItemFields
         }
       }
     }

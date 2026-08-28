@@ -44,12 +44,15 @@ import { convertToSyncMutation } from '#/apollo/offlineQueue/convertToSyncMutati
 import { QueueStatus } from '#/apollo/offlineQueue/types';
 import {
   GetPantryDocument,
+  GetPantryItemDocument,
+  GetPantryItemBatchesDocument,
   CreatePantryItemDocument,
   SyncPantryItemDocument,
   type GetPantryQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   GetShoppingListItemsFilteredDocument,
+  GetShoppingListDetailsDocument,
   GetShoppingListsLiteDocument,
   type GetShoppingListItemsFilteredQuery,
   type GetShoppingListsLiteQuery,
@@ -61,6 +64,7 @@ import {
 } from '#features/recipes/graphql/recipe.generated';
 import { writeOptimisticRecipe } from '#features/recipes/screens/RecipeForm/recipeCacheWriters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
 import {
   addOptimisticShoppingListItem,
@@ -293,6 +297,170 @@ describe('optimistic entity completeness', () => {
 
       expectCompletePantry(readPantry(cache));
     });
+
+    // The LIST cases above are the only completeness this file ever asserted,
+    // which is exactly why the DETAIL gap survived: an optimistic item was
+    // list-complete and detail-incomplete, so tapping a freshly created row
+    // sent `GetPantryItem` to a server that had no such id yet. Offline that
+    // has no recovery at all.
+    describe('detail queries', () => {
+      it('keeps GetPantryItem complete after an optimistic add', async () => {
+        const cache = await seedPantryCache();
+        addToPantryItemsCache(
+          cache,
+          'pantry-1',
+          buildOptimisticPantryItem(
+            'client-cuid-detail',
+            {
+              pantryId: 'pantry-1',
+              itemName: 'Offline Milk',
+              quantity: 2,
+            },
+            cache,
+          ),
+        );
+        writePantryItemDetailStub(cache, 'client-cuid-detail', {
+          itemName: 'Offline Milk',
+          quantity: 2,
+        });
+
+        const diff = cache.diff({
+          query: GetPantryItemDocument,
+          variables: { id: 'client-cuid-detail' },
+          optimistic: true,
+          returnPartialData: true,
+        });
+        expect(describeMissing(diff.missing)).toBe('none');
+        expect(diff.complete).toBe(true);
+      });
+
+      it('keeps GetPantryItemBatches complete after an optimistic add', async () => {
+        const cache = await seedPantryCache();
+        addToPantryItemsCache(
+          cache,
+          'pantry-1',
+          buildOptimisticPantryItem(
+            'client-cuid-batches',
+            { pantryId: 'pantry-1', itemName: 'Offline Milk', quantity: 1 },
+            cache,
+          ),
+        );
+        writePantryItemDetailStub(cache, 'client-cuid-batches', {
+          itemName: 'Offline Milk',
+          quantity: 1,
+        });
+
+        const diff = cache.diff({
+          query: GetPantryItemBatchesDocument,
+          variables: { pantryItemId: 'client-cuid-batches' },
+          optimistic: true,
+          returnPartialData: true,
+        });
+        expect(describeMissing(diff.missing)).toBe('none');
+        expect(diff.complete).toBe(true);
+      });
+
+      // The stub supplies neutral values for catalog fields the client cannot
+      // know. It must never supply them for an item that HAS them: the user
+      // usually picks from the catalog, and defaulting `photos`/`nutritions`
+      // onto a real `Item` would blank the detail screen's carousel and
+      // nutrition panel until a refetch. Group-at-a-time reads are what make
+      // that safe, so this is the test that keeps the grouping honest.
+      it('never overwrites catalog fields an Item already has', async () => {
+        const cache = await seedPantryCache();
+        const realItem = {
+          __typename: 'Item' as const,
+          id: 'catalog-item-1',
+          name: 'Whole Milk',
+          canEdit: true,
+          imageUrl: 'https://example.test/milk.png',
+          images: [
+            { __typename: 'ItemImage' as const, url: 'https://a', kind: null },
+          ],
+          photos: [
+            {
+              __typename: 'ItemPhoto' as const,
+              id: 'photo-1',
+              url: 'https://p',
+              perspective: 'FRONT',
+              isPrimary: true,
+              status: 'READY',
+              variants: [],
+            },
+          ],
+          shelfLifeDays: 7,
+          shelfLifeOpenedDays: 3,
+          nutritions: { calories: 42 },
+          categories: [
+            {
+              __typename: 'ItemCategory' as const,
+              isPrimary: true,
+              category: {
+                __typename: 'Category' as const,
+                id: 'cat-1',
+                name: 'Dairy',
+              },
+            },
+          ],
+        };
+        cache.writeFragment({
+          id: cache.identify(realItem),
+          fragment: gql`
+            fragment _SeedCatalogItem on Item {
+              id
+              name
+              canEdit
+              imageUrl
+              images { url kind }
+              photos { id url perspective isPrimary status variants { url kind } }
+              shelfLifeDays
+              shelfLifeOpenedDays
+              nutritions
+              categories { isPrimary category { id name } }
+            }
+          `,
+          data: realItem,
+        });
+
+        addToPantryItemsCache(
+          cache,
+          'pantry-1',
+          buildOptimisticPantryItem(
+            'client-cuid-catalog',
+            {
+              pantryId: 'pantry-1',
+              itemName: 'Whole Milk',
+              itemId: 'catalog-item-1',
+              quantity: 1,
+            },
+            cache,
+          ),
+        );
+        writePantryItemDetailStub(cache, 'client-cuid-catalog', {
+          itemId: 'catalog-item-1',
+          itemName: 'Whole Milk',
+        });
+
+        const diff = cache.diff<{
+          pantryItem: { item: typeof realItem } | null;
+        }>({
+          query: GetPantryItemDocument,
+          variables: { id: 'client-cuid-catalog' },
+          optimistic: true,
+          returnPartialData: true,
+        });
+        expect(diff.complete).toBe(true);
+
+        const readItem = diff.result?.pantryItem?.item;
+        expect(readItem?.name).toBe('Whole Milk');
+        expect(readItem?.canEdit).toBe(true);
+        expect(readItem?.imageUrl).toBe('https://example.test/milk.png');
+        expect(readItem?.photos).toHaveLength(1);
+        expect(readItem?.shelfLifeDays).toBe(7);
+        expect(readItem?.nutritions).toEqual({ calories: 42 });
+        expect(readItem?.categories?.[0]?.category?.name).toBe('Dairy');
+      });
+    });
   });
 
   describe('shopping list', () => {
@@ -424,6 +592,35 @@ describe('optimistic entity completeness', () => {
       const diff = cache.diff({
         query: GetShoppingListsLiteDocument,
         variables: vars,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
+
+    // The overview fragment and the DETAIL query select different things, and
+    // an optimistic row used to satisfy only the first: the list appeared and
+    // then dead-ended when opened, because Apollo serves no partial data and
+    // went to the network for an id the server did not have yet. 22 fields
+    // (status, the recurring/template/reminder/budget groups, canMoveToPantry,
+    // shareLink, collaboratorsConnection) now come from the detail stub in
+    // `addOptimisticShoppingList`.
+    it('keeps GetShoppingListDetails complete after an optimistic list create', async () => {
+      const cache = makeCache();
+      addOptimisticShoppingList(
+        cache,
+        buildOptimisticShoppingList(
+          cache,
+          'client-list-detail',
+          { name: 'Offline list', homeId: 'home-1' },
+          { id: 'user-1', email: 'user@example.com' },
+        ),
+      );
+
+      const diff = cache.diff({
+        query: GetShoppingListDetailsDocument,
+        variables: { id: 'client-list-detail' },
         optimistic: true,
         returnPartialData: true,
       });

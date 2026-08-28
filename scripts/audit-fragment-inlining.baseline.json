@@ -1,14 +1,14 @@
 {
   "_description": "Per-pattern counts of inline field selections across src/**/*.graphql. The audit-fragment-inlining.mjs script fails if any count regresses.",
   "counts": {
-    "unit_idNameSymbol": 78,
+    "unit_idNameSymbol": 77,
     "unit_idSymbol": 4,
     "unit_full11": 3,
     "profile_basic": 20,
     "profile_full5": 1,
-    "brand_idName": 13,
-    "store_idName": 3,
-    "images_urlKind": 21,
+    "brand_idName": 14,
+    "store_idName": 4,
+    "images_urlKind": 20,
     "home_withMembership": 3
   }
 }

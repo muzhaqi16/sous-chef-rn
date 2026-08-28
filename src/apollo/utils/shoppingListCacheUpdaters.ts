@@ -17,6 +17,8 @@ import {
   type ShoppingListItemDisplayFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import { ShoppingListCacheUpdaters_ListDetailFragmentDoc } from './shoppingListCacheUpdaters.generated';
+import { NEUTRAL_SHOPPING_LIST_DETAIL } from './shoppingListDetailNeutral.generated';
 import { createOptimisticEntity } from './createOptimisticResponse';
 import { classifyCreateResult } from './classifyCreateResult';
 import { errorService } from '#/services/errorService';
@@ -1056,7 +1058,25 @@ export function addOptimisticShoppingList(
     });
   }
 
-  // 3. Edge into the lists overview (every cached filter variant).
+  // 3. Detail-shape the same entity so opening the list offline renders from
+  //    cache instead of a wire read the server cannot answer yet.
+  cache.writeFragment({
+    id: cache.identify(list),
+    fragment: ShoppingListCacheUpdaters_ListDetailFragmentDoc,
+    fragmentName: 'shoppingListCacheUpdaters_listDetail',
+    data: {
+      // Neutral base derived from the SDL (see
+      // scripts/generate-optimistic-fillers.mjs) so a field added to the
+      // fragment cannot be forgotten here — that omission is invisible until
+      // the detail screen blanks offline. A brand-new list is neutral in every
+      // one of these: no template, no recurrence, no reminder, nothing spent,
+      // no collaborators, and nothing to move to a pantry until it has items.
+      ...NEUTRAL_SHOPPING_LIST_DETAIL,
+      id: list.id,
+    },
+  });
+
+  // 4. Edge into the lists overview (every cached filter variant).
   addShoppingListToQueryCache(cache, list);
 }
 
