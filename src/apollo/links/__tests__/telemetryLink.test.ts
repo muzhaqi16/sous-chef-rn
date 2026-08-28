@@ -3,16 +3,9 @@ import performance from 'react-native-performance';
 import { Telemetry } from '#/services/telemetry';
 import { Environment } from '#/utils/environment';
 
-// Mock dependencies
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    debug: jest.fn(),
-    error: jest.fn(),
-    warn: jest.fn(),
-    increment: jest.fn(),
-    histogram: jest.fn(),
-  },
-}));
+// Telemetry uses the shared mock from `src/services/telemetry/__mocks__/`
+// (applied globally in jest.setup.js), whose `isLevelEnabled` defaults to true
+// so the guarded debug breadcrumbs still reach `Telemetry.debug` here.
 
 // Environment is auto-mocked via jest.setup.js. Tests below override
 // `shouldEnableAnalytics` / `isDevelopment` per-suite via `mockReturnValue`.
@@ -180,38 +173,78 @@ describe('createTelemetryLink', () => {
   });
 
   describe('sampling', () => {
-    it('skips telemetry in production when random exceeds sample rate', () => {
+    // The rate is read from `GRAPHQL_TELEMETRY_SAMPLE_RATE` at module scope, so
+    // a test that needs a different rate must re-import the link with a
+    // different env. Returns a freshly-evaluated `createTelemetryLink`.
+    const linkFactoryWithRate = (
+      rate: string | undefined,
+    ): typeof createTelemetryLink => {
+      let factory!: typeof createTelemetryLink;
+      jest.isolateModules(() => {
+        jest.doMock('#/config/env', () => ({
+          env: { GRAPHQL_TELEMETRY_SAMPLE_RATE: rate },
+        }));
+        factory = require('../telemetryLink').createTelemetryLink;
+      });
+      return factory;
+    };
+
+    afterEach(() => {
+      jest.spyOn(Math, 'random').mockRestore();
+      jest.dontMock('#/config/env');
+    });
+
+    it('skips telemetry in production when random exceeds a reduced sample rate', () => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
       mockedEnvironment.isDevelopment.mockReturnValue(false);
+      jest.spyOn(Math, 'random').mockReturnValue(0.5); // 0.5 > 0.1
 
-      // Math.random() returns 0.5 > PRODUCTION_SAMPLE_RATE (0.1)
-      jest.spyOn(Math, 'random').mockReturnValue(0.5);
-
-      const link = createTelemetryLink();
+      const link = linkFactoryWithRate('0.1')();
       const operation = createMockOperation('TestQuery');
       const forward = createMockForward();
 
       runRequest(link, operation, forward);
 
       expect(forward).toHaveBeenCalledWith(operation);
-      // Telemetry should not be invoked since sampled out
       expect(Telemetry.debug).not.toHaveBeenCalled();
+    });
 
-      jest.spyOn(Math, 'random').mockRestore();
+    it('samples nothing out at the default rate of 1.0', done => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
+      mockedEnvironment.isDevelopment.mockReturnValue(false);
+      // Math.random() is never > 1, so even the worst draw is captured.
+      jest.spyOn(Math, 'random').mockReturnValue(0.999999);
+
+      const link = linkFactoryWithRate('1.0')();
+      const result = runRequest(
+        link,
+        createMockOperation('TestQuery'),
+        createMockForward(),
+      );
+      result.subscribe({
+        next: () => {},
+        complete: () => {
+          expect(Telemetry.increment).toHaveBeenCalledWith(
+            'graphql_requests_total',
+            1, // weight 1: an exact count, not a x10 estimate
+            expect.objectContaining({ type: 'query', name: 'TestQuery' }),
+          );
+          done();
+        },
+      });
     });
 
     it('always records telemetry in development regardless of sampling', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
-
-      // Even with high random value, dev mode should always record
       jest.spyOn(Math, 'random').mockReturnValue(0.99);
 
-      const link = createTelemetryLink();
-      const operation = createMockOperation('TestQuery');
-      const forward = createMockForward();
-
-      const result = runRequest(link, operation, forward);
+      const link = linkFactoryWithRate('0.1')();
+      const result = runRequest(
+        link,
+        createMockOperation('TestQuery'),
+        createMockForward(),
+      );
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -219,21 +252,19 @@ describe('createTelemetryLink', () => {
           done();
         },
       });
-
-      jest.spyOn(Math, 'random').mockRestore();
     });
 
-    it('weights counters by 1/sampleRate in production so totals are not under-counted', done => {
+    it('weights counters by 1/sampleRate so totals are not under-counted', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
       mockedEnvironment.isDevelopment.mockReturnValue(false);
-      // Sampled in (0.05 < 0.1). Each sampled op stands for 10 real ones.
-      jest.spyOn(Math, 'random').mockReturnValue(0.05);
+      jest.spyOn(Math, 'random').mockReturnValue(0.05); // sampled in at 0.1
 
-      const link = createTelemetryLink();
-      const operation = createMockOperation('TestQuery');
-      const forward = createMockForward();
-
-      const result = runRequest(link, operation, forward);
+      const link = linkFactoryWithRate('0.1')();
+      const result = runRequest(
+        link,
+        createMockOperation('TestQuery'),
+        createMockForward(),
+      );
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -242,28 +273,28 @@ describe('createTelemetryLink', () => {
             10,
             expect.objectContaining({ type: 'query', name: 'TestQuery' }),
           );
-          jest.spyOn(Math, 'random').mockRestore();
           done();
         },
       });
     });
 
-    it('weights graphql_errors_total by errors.length / sampleRate in production', done => {
+    it('weights graphql_errors_total by errors.length / sampleRate', done => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
       mockedEnvironment.isDevelopment.mockReturnValue(false);
-      jest.spyOn(Math, 'random').mockReturnValue(0.05); // sampled in
+      jest.spyOn(Math, 'random').mockReturnValue(0.05);
 
-      const link = createTelemetryLink();
-      const operation = createMockOperation('FailQuery');
-      const forward = createMockForward({
-        data: null,
-        errors: [
-          { message: 'e1', path: ['a'] },
-          { message: 'e2', path: ['b'] },
-        ],
-      });
-
-      const result = runRequest(link, operation, forward);
+      const link = linkFactoryWithRate('0.1')();
+      const result = runRequest(
+        link,
+        createMockOperation('FailQuery'),
+        createMockForward({
+          data: null,
+          errors: [
+            { message: 'e1', path: ['a'] },
+            { message: 'e2', path: ['b'] },
+          ],
+        }),
+      );
       result.subscribe({
         next: () => {},
         complete: () => {
@@ -273,9 +304,46 @@ describe('createTelemetryLink', () => {
             20,
             expect.objectContaining({ name: 'FailQuery' }),
           );
-          jest.spyOn(Math, 'random').mockRestore();
           done();
         },
+      });
+    });
+
+    // An unset or malformed rate must fall back to FULL capture. Defaulting the
+    // other way would silently discard most of production's telemetry the first
+    // time the key went missing from an env file.
+    const invalidRates: Array<[string, string | undefined]> = [
+      ['unset', undefined],
+      ['empty', ''],
+      ['non-numeric', 'all'],
+      ['zero', '0'],
+      ['negative', '-0.5'],
+      ['above 1', '7'],
+    ];
+
+    invalidRates.forEach(([label, rate]) => {
+      it(`captures everything when the rate is ${label}`, done => {
+        mockedEnvironment.shouldEnableAnalytics.mockReturnValue(true);
+        mockedEnvironment.isDevelopment.mockReturnValue(false);
+        jest.spyOn(Math, 'random').mockReturnValue(0.999999);
+
+        const link = linkFactoryWithRate(rate)();
+        const result = runRequest(
+          link,
+          createMockOperation('TestQuery'),
+          createMockForward(),
+        );
+        result.subscribe({
+          next: () => {},
+          complete: () => {
+            expect(Telemetry.increment).toHaveBeenCalledWith(
+              'graphql_requests_total',
+              1,
+              expect.objectContaining({ name: 'TestQuery' }),
+            );
+            done();
+          },
+        });
       });
     });
   });

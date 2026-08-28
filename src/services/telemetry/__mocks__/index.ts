@@ -42,6 +42,10 @@ export const Telemetry = {
   warn: jest.fn(),
   error: jest.fn(),
   debug: jest.fn(),
+  // Defaults to true so a guarded breadcrumb still reaches `Telemetry.debug`
+  // under test — a suite asserting on the guarded call would otherwise pass
+  // vacuously. Override per-test to exercise the suppressed path.
+  isLevelEnabled: jest.fn().mockReturnValue(true),
   increment: jest.fn(),
   gauge: jest.fn(),
   histogram: jest.fn(),

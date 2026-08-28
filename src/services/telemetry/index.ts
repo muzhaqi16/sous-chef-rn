@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { env as buildEnv } from '#/config/env';
 import { TelemetryService } from './TelemetryService';
-import { TelemetryConfig } from './types';
+import { LogEntry, TelemetryConfig } from './types';
 import { getVersion } from 'react-native-device-info';
 import { Environment } from '#/utils/environment';
 
@@ -85,6 +85,14 @@ export const Telemetry = {
 
   debug: (message: string, extra?: Record<string, unknown>) =>
     getService().log('debug', message, extra),
+
+  /**
+   * Would a log at this level survive `minLogLevel`? Guard a hot-path
+   * breadcrumb with it so the payload is not built only to be discarded —
+   * production's floor is `warn`, so every `debug` call there is pure waste.
+   */
+  isLevelEnabled: (level: LogEntry['level']) =>
+    getService().isLevelEnabled(level),
 
   increment: (name: string, value = 1, labels: Record<string, string> = {}) =>
     getService().incrementCounter(name, value, labels),

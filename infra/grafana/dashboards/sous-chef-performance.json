@@ -142,9 +142,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -202,9 +200,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -287,9 +283,7 @@
       "options": {
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -327,9 +321,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -387,9 +379,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -478,10 +468,7 @@
       "id": 31,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -562,10 +549,7 @@
       "id": 37,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -638,10 +622,7 @@
       "id": 41,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -813,7 +794,7 @@
         "type": "loki",
         "uid": "${DS_LOKI}"
       },
-      "description": "Log volume by level",
+      "description": "Log volume by level. Only warn and error exist outside development: minLogLevel is 'warn' in production and 'info' in staging (src/services/telemetry/index.ts), so debug/info are dropped before the buffer and were charted as permanently-flat lines.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -884,16 +865,6 @@
           "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"warn\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
           "refId": "B",
           "legendFormat": "Warnings"
-        },
-        {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"info\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
-          "refId": "C",
-          "legendFormat": "Info"
-        },
-        {
-          "expr": "sum(rate({service_name=\"sous-chef-app\"} | json | level=\"debug\" | env=~\"$environment\" | platform=~\"$platform\" [5m]))",
-          "refId": "D",
-          "legendFormat": "Debug"
         }
       ],
       "title": "Log Volume by Level",
@@ -935,9 +906,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1011,9 +980,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1036,7 +1003,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time since last metric was ingested",
+      "description": "Seconds since the last app_events_total sample, over a 24h lookback. The bare timestamp() form used before is stamped at evaluation time while the series is inside the lookback window, so it read ~0 and then went to No Data - it could never reach these thresholds.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1076,9 +1043,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1088,7 +1053,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "time() - max(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}))",
+          "expr": "time() - max(max_over_time(timestamp(app_events_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})[24h:5m]))",
           "refId": "A",
           "legendFormat": "Last Seen"
         }
@@ -1158,10 +1123,7 @@
       "id": 50,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -1287,7 +1249,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Median (P50) end-to-end app startup time",
+      "description": "Median (P50) of app_startup_duration_ms, split by version and device_type. Emulator and physical devices differ by 1.4-2x on startup marks, so a combined number tracks the sample mix rather than the app.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1327,9 +1289,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1339,12 +1299,12 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
           "legendFormat": "Avg Startup {{version}} {{device_type}}"
         }
       ],
-      "title": "Avg Startup Time",
+      "title": "Median Startup Time",
       "type": "stat"
     },
     {
@@ -1392,9 +1352,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1404,7 +1362,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_native_launch_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
           "legendFormat": "Native Launch P95 {{version}} {{device_type}}"
         }
@@ -1457,9 +1415,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1469,7 +1425,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_js_bundle_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
           "legendFormat": "Bundle Load P95 {{version}} {{device_type}}"
         }
@@ -1522,9 +1478,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1534,7 +1488,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.95, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
           "refId": "A",
           "legendFormat": "Startup P95 {{version}} {{device_type}}"
         }
@@ -1599,15 +1553,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 52
+        "y": 56
       },
       "id": 56,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -1676,9 +1627,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1736,9 +1685,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1797,9 +1744,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1858,9 +1803,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -1884,7 +1827,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 56
+        "y": 64
       },
       "id": 61,
       "panels": [],
@@ -1896,7 +1839,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Time to first render of each FlashList (P50/P95)",
+      "description": "FlashList onLoad: mount to first layout complete. Split by device_type because the same screen measured 40 ms on an emulator and 301-934 ms on an SM-S908U1 - a combined percentile is meaningless. Emitted by 100% of sessions.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1940,15 +1883,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 57
+        "y": 65
       },
       "id": 62,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -1959,14 +1899,14 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(flashlist_initial_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_initial_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "A",
-          "legendFormat": "{{component}} P50"
+          "legendFormat": "{{component}} {{device_type}} P50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(flashlist_initial_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.95, sum(rate(flashlist_initial_load_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "B",
-          "legendFormat": "{{component}} P95"
+          "legendFormat": "{{component}} {{device_type}} P95"
         }
       ],
       "title": "FlashList Initial Load (P50/P95)",
@@ -2021,15 +1961,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 57
+        "y": 65
       },
       "id": 63,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2040,14 +1977,14 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(flashlist_session_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_session_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "A",
-          "legendFormat": "{{component}} P50"
+          "legendFormat": "{{component}} {{device_type}} P50"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(flashlist_session_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.95, sum(rate(flashlist_session_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "B",
-          "legendFormat": "{{component}} P95"
+          "legendFormat": "{{component}} {{device_type}} P95"
         }
       ],
       "title": "FlashList Session Duration (P50/P95)",
@@ -2058,7 +1995,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Fraction of scrolled distance with rendered cells (1.0 = no blank cells). P05 is the worst-case tail; P50 the median. Uses per-metric 0-1 bounds.",
+      "description": "Mounted cells / expected visible cells during scroll; 1.0 is full coverage. SAMPLED: emitted only by the ~5% of release sessions where per-cell instrumentation armed (flashListInstrumentationSampleRate), because the per-cell wrapper costs ~30-60 ms of a ~320 ms first-layout window. Read it as a shape, not a rate.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2112,15 +2049,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 65
+        "y": 73
       },
       "id": 64,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "min"
-          ],
+          "calcs": ["mean", "min"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2131,14 +2065,14 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.05, sum(rate(flashlist_scroll_coverage_ratio_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.05, sum(rate(flashlist_scroll_coverage_ratio_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "A",
-          "legendFormat": "{{component}} P05 (worst)"
+          "legendFormat": "{{component}} {{device_type}} P05 (worst)"
         },
         {
-          "expr": "histogram_quantile(0.5, sum(rate(flashlist_scroll_coverage_ratio_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le, component))",
+          "expr": "histogram_quantile(0.5, sum(rate(flashlist_scroll_coverage_ratio_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, component, device_type))",
           "refId": "B",
-          "legendFormat": "{{component}} P50"
+          "legendFormat": "{{component}} {{device_type}} P50"
         }
       ],
       "title": "FlashList Scroll Coverage (P05/P50)",
@@ -2149,7 +2083,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Blank-cell occurrences and data-reference churn per minute, by list",
+      "description": "NOTE: the two series have different denominators. Blank cells are emitted only by the ~5% of release sessions where per-cell instrumentation armed (flashListInstrumentationSampleRate); data-reference changes are emitted by 100% of sessions. The blank-cell line therefore reads ~20x lower for structural reasons, not behavioural ones - do not compare their heights.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2193,15 +2127,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 65
+        "y": 73
       },
       "id": 65,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2212,14 +2143,14 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "sum(rate(flashlist_blank_cells_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component) * 60",
+          "expr": "sum(rate(flashlist_blank_cells_total{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (component, device_type) * 60",
           "refId": "A",
-          "legendFormat": "{{component}} blank cells/min"
+          "legendFormat": "{{component}} {{device_type}} blank cells/min"
         },
         {
-          "expr": "sum(rate(flashlist_data_reference_changes{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (component) * 60",
+          "expr": "sum(rate(flashlist_data_reference_changes{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (component, device_type) * 60",
           "refId": "B",
-          "legendFormat": "{{component}} data changes/min"
+          "legendFormat": "{{component}} {{device_type}} data changes/min"
         }
       ],
       "title": "FlashList Blank Cells & Data Churn (per min)",
@@ -2231,7 +2162,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 81
       },
       "id": 66,
       "panels": [],
@@ -2287,15 +2218,12 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 74
+        "y": 82
       },
       "id": 67,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2335,7 +2263,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 82
+        "y": 90
       },
       "id": 68,
       "panels": [],
@@ -2352,15 +2280,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 83
+        "y": 91
       },
       "id": 69,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2389,15 +2314,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 83
+        "y": 91
       },
       "id": 70,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2426,15 +2348,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 91
+        "y": 99
       },
       "id": 71,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2469,15 +2388,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 91
+        "y": 99
       },
       "id": 72,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2553,15 +2469,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 99
+        "y": 107
       },
       "id": 73,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2572,13 +2485,13 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
-          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.5, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "legendFormat": "p50 {{version}} {{device_type}}",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
-          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(app_content_appeared_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "legendFormat": "p95 {{version}} {{device_type}}",
           "refId": "B"
         }
       ],
@@ -2642,15 +2555,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 99
+        "y": 107
       },
       "id": 74,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "max"
-          ],
+          "calcs": ["mean", "max"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -2661,13 +2571,13 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
-          "legendFormat": "p50",
+          "expr": "histogram_quantile(0.5, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "legendFormat": "p50 {{version}} {{device_type}}",
           "refId": "A"
         },
         {
-          "expr": "histogram_quantile(0.95, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
-          "legendFormat": "p95",
+          "expr": "histogram_quantile(0.95, sum(rate(app_fully_drawn_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le, version, device_type))",
+          "legendFormat": "p95 {{version}} {{device_type}}",
           "refId": "B"
         }
       ],
@@ -2680,7 +2590,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 107
+        "y": 115
       },
       "id": 75,
       "panels": [],
@@ -2719,7 +2629,7 @@
         "h": 4,
         "w": 6,
         "x": 0,
-        "y": 108
+        "y": 116
       },
       "id": 76,
       "options": {
@@ -2728,9 +2638,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2782,7 +2690,7 @@
         "h": 4,
         "w": 6,
         "x": 6,
-        "y": 108
+        "y": 116
       },
       "id": 77,
       "options": {
@@ -2791,9 +2699,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2845,7 +2751,7 @@
         "h": 4,
         "w": 6,
         "x": 12,
-        "y": 108
+        "y": 116
       },
       "id": 78,
       "options": {
@@ -2854,9 +2760,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2908,7 +2812,7 @@
         "h": 4,
         "w": 6,
         "x": 18,
-        "y": 108
+        "y": 116
       },
       "id": 79,
       "options": {
@@ -2917,9 +2821,7 @@
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": ["lastNotNull"],
           "fields": "",
           "values": false
         },
@@ -2988,15 +2890,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 112
+        "y": 120
       },
       "id": 80,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -3068,15 +2967,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 112
+        "y": 120
       },
       "id": 81,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -3107,6 +3003,85 @@
       ],
       "type": "timeseries",
       "title": "Queue Drain Activity (per min)"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "description": "Age of the oldest PENDING queue entry at drain time. Growing across drains means writes are not syncing. This is the metric to read now that the per-drain log breadcrumbs are debug-level: only a drain that finds real work logs at warn ('Queue drain replaying pending mutations'), so silence in Loki means an idle queue, and this panel is what distinguishes idle from stuck.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "ms"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 128
+      },
+      "id": 84,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "lastNotNull"],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "pluginVersion": "9.0.0",
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${DS_PROMETHEUS}"
+          },
+          "editorMode": "code",
+          "expr": "max(offline_queue_oldest_age_ms{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"})",
+          "legendFormat": "oldest pending entry",
+          "range": true
+        }
+      ],
+      "type": "timeseries",
+      "title": "Offline Queue Oldest Pending Age"
     },
     {
       "datasource": {
@@ -3157,15 +3132,12 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 120
+        "y": 136
       },
       "id": 82,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -3246,15 +3218,12 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 120
+        "y": 136
       },
       "id": 83,
       "options": {
         "legend": {
-          "calcs": [
-            "mean",
-            "lastNotNull"
-          ],
+          "calcs": ["mean", "lastNotNull"],
           "displayMode": "list",
           "placement": "bottom"
         },
@@ -3315,7 +3284,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       },
       {
         "current": {
@@ -3342,7 +3312,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       },
       {
         "current": {
@@ -3370,7 +3341,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       },
       {
         "current": {
@@ -3398,7 +3370,8 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
-        "type": "query"
+        "type": "query",
+        "allValue": ".*"
       }
     ]
   },

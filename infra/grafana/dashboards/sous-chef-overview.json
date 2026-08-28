@@ -47,6 +47,18 @@
       "id": "gauge",
       "name": "Gauge",
       "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "timeseries",
+      "name": "Time series",
+      "version": ""
+    },
+    {
+      "type": "panel",
+      "id": "logs",
+      "name": "Logs",
+      "version": ""
     }
   ],
   "annotations": {
@@ -178,7 +190,11 @@
       ],
       "title": "GraphQL Requests/min",
       "type": "stat",
-      "unit": "rpm"
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqpm"
+        }
+      }
     },
     {
       "datasource": {
@@ -212,9 +228,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "unit": "percent",
@@ -264,9 +289,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "noValue": "0"
@@ -297,9 +331,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "red", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "green", "value": 90 }
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "green",
+                "value": 90
+              }
             ]
           },
           "unit": "percent"
@@ -361,9 +404,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 70 },
-              { "color": "red", "value": 90 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
             ]
           },
           "unit": "percent",
@@ -408,9 +460,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 1 },
-              { "color": "red", "value": 5 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
             ]
           },
           "noValue": "0"
@@ -452,7 +513,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Active app instances reporting metrics",
+      "description": "Distinct platform x app-version combinations reporting metrics. NOT a device count: service.instance.id is deliberately coarse ('android_4.4.1') because a per-device metric label is unbounded cardinality. Device identity travels on logs as device_id instead.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -461,7 +522,12 @@
           "mappings": [],
           "thresholds": {
             "mode": "absolute",
-            "steps": [{ "color": "green", "value": null }]
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           }
         }
       },
@@ -493,7 +559,7 @@
           "legendFormat": "Active Instances"
         }
       ],
-      "title": "Active Instances",
+      "title": "Reporting Build Variants",
       "type": "stat"
     },
     {
@@ -501,7 +567,7 @@
         "type": "prometheus",
         "uid": "${DS_PROMETHEUS}"
       },
-      "description": "Median (P50) end-to-end app startup time",
+      "description": "Median app_startup_duration_ms. Scope it with the App version / Device type pickers: emulator and physical sessions differ by 1.4-2x, so the unscoped number tracks the sample mix. Per-build comparison lives on the Performance dashboard.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -511,9 +577,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "green", "value": null },
-              { "color": "yellow", "value": 2000 },
-              { "color": "red", "value": 4000 }
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 2000
+              },
+              {
+                "color": "red",
+                "value": 4000
+              }
             ]
           },
           "unit": "ms"
@@ -542,7 +617,7 @@
       "pluginVersion": "9.0.0",
       "targets": [
         {
-          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\"}[5m])) by (le))",
+          "expr": "histogram_quantile(0.5, sum(rate(app_startup_duration_ms_bucket{job=\"sous-chef-app\",env=~\"$environment\",platform=~\"$platform\",version=~\"$version\",device_type=~\"$device_type\"}[5m])) by (le))",
           "refId": "A",
           "legendFormat": "Median Startup"
         }
@@ -746,6 +821,56 @@
           "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, platform)",
           "refId": "StandardVariableQuery"
         },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, version)",
+        "allValue": ".*",
+        "hide": 0,
+        "includeAll": true,
+        "label": "App version",
+        "multi": true,
+        "name": "version",
+        "options": [],
+        "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, version)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "current": {
+          "selected": true,
+          "text": ["All"],
+          "value": ["$__all"]
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "definition": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, device_type)",
+        "allValue": ".*",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Device type",
+        "multi": true,
+        "name": "device_type",
+        "options": [],
+        "query": "label_values({job=\"sous-chef-app\",env=~\"$environment\"}, device_type)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

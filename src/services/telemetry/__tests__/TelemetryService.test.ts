@@ -300,6 +300,67 @@ describe('TelemetryService', () => {
       );
     });
 
+    // `isLevelEnabled` exists so a hot-path caller can skip BUILDING a payload
+    // that `log` would discard on the next line. If it ever inverted, those
+    // call sites would go silent in development with nothing failing, so both
+    // directions are pinned here.
+    describe('isLevelEnabled', () => {
+      const prodLike = () =>
+        new TelemetryService({
+          enabled: true,
+          enableLogs: true,
+          minLogLevel: 'warn',
+        });
+
+      it('reports the floor that log() actually enforces', () => {
+        const service = prodLike();
+        expect(service.isLevelEnabled('debug')).toBe(false);
+        expect(service.isLevelEnabled('info')).toBe(false);
+        expect(service.isLevelEnabled('warn')).toBe(true);
+        expect(service.isLevelEnabled('error')).toBe(true);
+      });
+
+      it('agrees with log() for every level', async () => {
+        const service = prodLike();
+        for (const level of ['debug', 'info', 'warn', 'error'] as const) {
+          mockSendLogs.mockClear();
+          service.log(level, `msg-${level}`);
+          await service.flush();
+          expect(mockSendLogs.mock.calls.length > 0).toBe(
+            service.isLevelEnabled(level),
+          );
+        }
+      });
+
+      it('is false when logging is off entirely, whatever the level', () => {
+        expect(
+          new TelemetryService({
+            enabled: false,
+            enableLogs: true,
+            minLogLevel: 'debug',
+          }).isLevelEnabled('error'),
+        ).toBe(false);
+        expect(
+          new TelemetryService({
+            enabled: true,
+            enableLogs: false,
+            minLogLevel: 'debug',
+          }).isLevelEnabled('error'),
+        ).toBe(false);
+      });
+
+      it('is false once the user has denied consent', () => {
+        mockUserConsent = false;
+        expect(
+          new TelemetryService({
+            enabled: true,
+            enableLogs: true,
+            minLogLevel: 'debug',
+          }).isLevelEnabled('error'),
+        ).toBe(false);
+      });
+    });
+
     it('emits nothing when the user has denied consent', async () => {
       mockUserConsent = false;
       const service = new TelemetryService({

@@ -6,9 +6,11 @@ import {
   gql,
 } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createOfflineModeLink } from '../offlineModeLink';
 import { useStore } from '#store';
 import { getI18n } from '#/i18n/config';
+import { Telemetry } from '#/services/telemetry';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
@@ -53,7 +55,11 @@ function makeOperation(
     extensions: {},
     // The offline short-circuit reads the query back out of the cache via
     // operation.client.cache, so the operation needs a real client + cache.
-    client: new ApolloClient({ cache, link: ApolloLink.empty() }),
+    client: new ApolloClient({
+      cache,
+      link: ApolloLink.empty(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    }),
   };
 }
 
@@ -205,6 +211,53 @@ describe('createOfflineModeLink', () => {
     const forward = makeForward();
     link.request(makeOperation(GET_USER_SETTINGS, 'GetUserSettings'), forward);
     expect(forward).toHaveBeenCalled();
+  });
+
+  // Each branch of this link is a distinct answer to "did offline work?", and
+  // until these counters existed none of them were visible in release —
+  // `logger` is console-only. The mapping is asserted per branch because a
+  // counter on the wrong branch is worse than none: it would report the
+  // offline promise holding at exactly the moment it broke.
+  describe('telemetry', () => {
+    it('counts a cache hit as served', () => {
+      mockedGetState.mockReturnValue({
+        offlineModeEnabled: true,
+        isOnline: true,
+      });
+      const cache = new InMemoryCache();
+      cache.writeQuery({ query: MOCK_QUERY, data: { items: [] } });
+      observe(
+        link.request(
+          makeOperation(MOCK_QUERY, 'GetItems', cache),
+          makeForward(),
+        ),
+      );
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'offline_reads_served_total',
+        1,
+        { operation: 'GetItems' },
+      );
+    });
+
+    it('counts a blocked cache miss — the one the user feels', () => {
+      mockedGetState.mockReturnValue({
+        offlineModeEnabled: true,
+        isOnline: true,
+      });
+      observe(
+        link.request(makeOperation(MOCK_QUERY, 'GetItems'), makeForward()),
+      );
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'offline_reads_blocked_total',
+        1,
+        { operation: 'GetItems' },
+      );
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'offline_reads_served_total',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 
   it('lets mutations through when offline (queueLink handles queuing)', () => {

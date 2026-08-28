@@ -773,6 +773,62 @@ Handle offline gracefully via the existing defaults instead — `errorPolicy: 'a
 keeps cached data on network failures, and `usePreservedArrayData` preserves
 the last good array across refetch errors.
 
+#### Why NOT `client.prioritizeCacheValues`
+
+Apollo 4.2 added `client.prioritizeCacheValues`, which looks like a built-in
+replacement for `offlineModeLink`. It is not, and the reasons are non-obvious
+from its docstring — recorded here so the question is not re-litigated.
+
+It **rewrites `network-only` and `cache-and-network` to `cache-first`** and
+nothing else (`core/QueryManager.js`, `fetchObservableWithInfo`). It is a
+*freshness* knob; `offlineModeLink` is a *network gate*. They overlap only on
+the cache-HIT branch, which already works.
+
+Four specifics that make adoption a regression:
+
+- **`cache-first` on a cache MISS still goes to the network.** The miss cases are
+  the entire point of the link — the localized "not available offline yet" error,
+  the organic probe when the breaker is open, and the `ALWAYS_ALLOW` list.
+- **No per-operation escape hatch.** `GetUserSettings` is allow-listed precisely
+  so the server-side offline-mode toggle can be synced off. Rewritten to
+  `cache-first` and served from a complete cache, it never reaches the server —
+  the toggle becomes a one-way door.
+- **`refetch()` gets rewritten** (it forces `network-only`), so pull-to-refresh
+  silently serves cache and reports success. **`fetchMore` does not** (it is
+  `no-cache`), so pagination still fires doomed requests offline.
+- **It is not reactive.** It is a plain mutable field with no notification path,
+  so flipping it mid-session does not affect anything already mounted. Note the
+  symmetry with the paragraph above: `useOfflinePresetPolicy` was removed for
+  being *too* reactive (the cascade); this fails for not being reactive at all.
+  Neither is a network gate.
+
+#### Why NOT `extensions`-based provenance in the connection merge
+
+`src/apollo/cache.ts`'s `preservePendingEdges` / `mergeArrayByIdIntelligent` call
+`queueStore.getPendingClientIds()` from inside a field policy. Apollo 4.1's
+`extensions` option on `cache.write*` looks like the way to pass that in as
+provenance instead. It cannot work:
+
+- **Category mismatch.** `extensions` is one value per write; the guard needs a
+  per-edge predicate over a set the writer does not own — those edges came from
+  an earlier, unrelated transaction. Inverting it ("preserve unless tagged
+  authoritative") breaks cross-device deletion, which arrives as an ordinary
+  authoritative page.
+- **The channel is absent where it matters.** The triggering write is Apollo's
+  own watched-query write, which passes the SERVER's `result.extensions`; there
+  is no per-query cache-write extensions option. `writeFragment` — used by the
+  optimistic seeding paths — has no `extensions` option at all.
+- **Staleness.** The guard exists for the race where a refetch lands *after* an
+  offline create was enqueued. Read at merge time it is always current; any set
+  marshalled into `extensions` is snapshotted before that enqueue.
+
+If the import direction (`cache.ts` → `offlineQueue/`) is worth removing, the
+change that actually helps is dependency injection — `makeCache({ getPendingIds })`
+wired from `client.ts` — which keeps the read-time call and makes the merge
+testable with a plain closure. Note the testability argument is weaker than it
+looks: four of the six tests covering this merge already run without the queue,
+via a one-line `jest.spyOn`.
+
 ### `nextFetchPolicy` — String vs Function Form
 
 Apollo Client 4.x supports both a string and a function for `nextFetchPolicy`.

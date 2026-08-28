@@ -6,6 +6,7 @@ import {
   blocksCacheMissQueries,
 } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
+import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 
 /**
@@ -47,7 +48,15 @@ const ALWAYS_ALLOW = ['RefreshToken', 'GetUserSettings'];
  * device is offline), so a transient unknown state doesn't wrongly block.
  *
  * This approach avoids the query cascade issue caused by dynamic fetchPolicy
- * changes (see docs/apollo-client-patterns.md "Why NOT useOfflinePresetPolicy").
+ * changes — see the "Do not introduce dynamic, store-subscribed fetch policies"
+ * paragraph in docs/apollo-client-patterns.md § Fetch Policies. (That text used
+ * to sit under a "Why NOT useOfflinePresetPolicy" heading, which no longer
+ * exists; the pointer here was stale.)
+ *
+ * Apollo 4.2's `client.prioritizeCacheValues` is NOT a substitute — see the same
+ * doc section. It is a freshness knob, not a network gate: it rewrites
+ * `network-only`/`cache-and-network` to `cache-first`, and `cache-first` on a
+ * cache MISS still goes to the network, which is the case this link exists for.
  */
 export const createOfflineModeLink = () => {
   return new ApolloLink((operation, forward) => {
@@ -86,6 +95,14 @@ export const createOfflineModeLink = () => {
     if (cached !== null) {
       const data = cached;
       logger.debug(`Offline link: served ${operationName} from cache`);
+      // The offline READ path had no instrumentation at all, while every
+      // offline WRITE path has one. `logger` is console-only and stripped from
+      // release, so on a real device we could not tell a working offline
+      // session from a broken one. `operation` is bounded by the persisted-query
+      // manifest, so the cardinality is the same shape as `graphql_requests_total`.
+      Telemetry.increment('offline_reads_served_total', 1, {
+        operation: operationName,
+      });
       return new Observable<ApolloLink.Result>(observer => {
         observer.next({ data });
         observer.complete();
@@ -97,6 +114,9 @@ export const createOfflineModeLink = () => {
       logger.info(
         `🔌 Offline link: cache miss for ${operationName} while the circuit is open — forwarding as a probe`,
       );
+      Telemetry.increment('offline_reads_probed_total', 1, {
+        operation: operationName,
+      });
       return forward(operation);
     }
 
@@ -105,6 +125,13 @@ export const createOfflineModeLink = () => {
     logger.info(
       `Offline link: cache miss for ${operationName} while offline — emitting error result`,
     );
+    // The one the user actually feels: "This isn't available offline yet."
+    // A rising rate here is the evidence that an entity's cached shape is
+    // incomplete for the screen reading it — the failure mode the optimistic
+    // completeness invariant exists to prevent.
+    Telemetry.increment('offline_reads_blocked_total', 1, {
+      operation: operationName,
+    });
     return new Observable<ApolloLink.Result>(observer => {
       observer.next({
         data: null,

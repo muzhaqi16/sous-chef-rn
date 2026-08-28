@@ -14,6 +14,7 @@ import {
   calculateRetryDelay as calculateRetryDelayFn,
 } from '../queueErrorPolicy';
 import { makeCache } from '#/apollo/cache';
+import { Telemetry } from '#/services/telemetry';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -69,15 +70,10 @@ jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'gen-id'),
 }));
 
-// Mock telemetry — queueManager emits queue-health metrics during drains
-jest.mock('#/services/telemetry', () => ({
-  Telemetry: {
-    gauge: jest.fn(),
-    increment: jest.fn(),
-    trackEvent: jest.fn(),
-    warn: jest.fn(),
-  },
-}));
+// Telemetry uses the shared mock from `src/services/telemetry/__mocks__/`
+// (applied globally in jest.setup.js). A partial factory here used to list only
+// the four methods the manager reached for, so adding a fifth broke this suite
+// with "Telemetry.debug is not a function".
 
 // Mock the token refresh used on auth errors (dynamically imported by the
 // manager). Default: refresh fails (returns undefined) — individual tests
@@ -255,6 +251,72 @@ describe('QueueManager', () => {
 
       // getPendingMutationsForUser should only be called once (second call returns early)
       expect(queueStore.getPendingMutationsForUser).toHaveBeenCalledTimes(1);
+    });
+
+    // `queueLink` requests a drain after every successful response, so the idle
+    // path runs constantly. At `warn` these breadcrumbs were 96% of ALL
+    // production log volume (896 of 929 lines over two days) and buried the 18
+    // real errors. Production's floor is `warn`, so the level IS the contract:
+    // an idle drain must be silent there and a drain with work must not be.
+    describe('drain log levels', () => {
+      const authedOnline = () =>
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+        });
+
+      it('says nothing at warn when the queue is idle', async () => {
+        authedOnline();
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+
+        await manager.processQueue();
+
+        expect(Telemetry.warn).not.toHaveBeenCalled();
+        // The trace survives in development, where the floor is `debug`.
+        expect(Telemetry.debug).toHaveBeenCalledWith('Queue drain invoked');
+        expect(Telemetry.debug).toHaveBeenCalledWith('Queue drain started');
+        expect(Telemetry.debug).toHaveBeenCalledWith(
+          'Queue drain found no pending mutations',
+        );
+        // Volume is carried by counters, which no log floor can filter.
+        expect(Telemetry.increment).toHaveBeenCalledWith(
+          'offline_queue_drain_started_total',
+          1,
+        );
+        expect(Telemetry.gauge).toHaveBeenCalledWith('offline_queue_depth', 0);
+      });
+
+      it('logs at warn when a drain actually has work to replay', async () => {
+        authedOnline();
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+          makeMutation({ id: 'm1' }),
+          makeMutation({ id: 'm2' }),
+        ]);
+
+        await manager.processQueue();
+
+        expect(Telemetry.warn).toHaveBeenCalledWith(
+          'Queue drain replaying pending mutations',
+          { count: 2 },
+        );
+      });
+
+      it('keeps the skip branches at warn', async () => {
+        mockedGetState.mockReturnValue({
+          user: null,
+          accessToken: null,
+          isOnline: true,
+        });
+
+        await manager.processQueue();
+
+        expect(Telemetry.warn).toHaveBeenCalledWith(
+          'Queue drain skipped: no authenticated user',
+        );
+      });
     });
   });
 

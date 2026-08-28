@@ -1,4 +1,5 @@
 import { client } from '../client';
+import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
@@ -66,10 +67,16 @@ export class QueueManager {
    * Process the queue for the current user
    */
   async processQueue(): Promise<void> {
-    // Logged unconditionally so "never called again" is distinguishable from
-    // "called and returned at a branch" — the `isProcessing` early return had
-    // only a counter, and counters carry no session id.
-    Telemetry.warn('Queue drain invoked');
+    // Level is the contract here. `queueLink` requests a drain after every
+    // successful response, so the idle path runs constantly and production's
+    // floor is `warn`: only the branches that MEAN something log at `warn` — a
+    // skip, or a drain that found real work — so silence in Loki means a
+    // healthy idle queue. Drain volume is carried by the counters
+    // (`offline_queue_drain_started_total`, `offline_queue_drain_skipped_total`)
+    // and `offline_queue_depth`, which go to Mimir and no log floor can filter.
+    // Debug keeps the full per-drain trace in development, where the session-id
+    // breadcrumb these exist for is still readable.
+    Telemetry.debug('Queue drain invoked');
 
     // Prevent concurrent processing
     if (this.isProcessing) {
@@ -115,7 +122,7 @@ export class QueueManager {
 
     Telemetry.increment('offline_queue_drain_started_total', 1);
 
-    Telemetry.warn('Queue drain started');
+    Telemetry.debug('Queue drain started');
 
     this.isProcessing = true;
     this.processingPromise = this._processQueueInternal(userId);
@@ -164,13 +171,19 @@ export class QueueManager {
     Telemetry.gauge('offline_queue_depth', mutations.length);
     if (mutations.length === 0) {
       logger.info('✅ Queue: No pending mutations');
-      Telemetry.warn('Queue drain found no pending mutations');
+      Telemetry.debug('Queue drain found no pending mutations');
       return;
     }
     Telemetry.gauge(
       'offline_queue_oldest_age_ms',
       Date.now() - Math.min(...mutations.map(m => m.createdAt)),
     );
+
+    // The one drain outcome worth a production log line: writes are actually
+    // replaying. Everything above this point is the idle path.
+    Telemetry.warn('Queue drain replaying pending mutations', {
+      count: mutations.length,
+    });
 
     logger.info(`📊 Queue: Found ${mutations.length} pending mutations`);
 
@@ -278,8 +291,17 @@ export class QueueManager {
 
     logger.info(`🔄 Queue: Replaying ${mutation.operationName} via sync`);
 
-    const result = await client.mutate<Record<string, unknown>>({
-      mutation: syncMutation,
+    // A replay's payload field name varies per queued operation, so its shape
+    // is only knowable structurally. Apollo 4.2's modern signatures reject a
+    // manually-passed generic, so the structural type arrives on the document
+    // instead — one local cast rather than widening `SyncConversion`, whose
+    // `TypedDocumentNode` params are invariant and would reject every concrete
+    // builder's return.
+    const result = await client.mutate({
+      mutation: syncMutation as TypedDocumentNode<
+        Record<string, unknown>,
+        OperationVariables
+      >,
       variables: syncVariables,
       context: {
         ...mutation.context,
