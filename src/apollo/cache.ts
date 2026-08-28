@@ -866,6 +866,25 @@ export function makeCache(): InMemoryCache {
               return canRead(ref) ? ref : existing;
             },
           },
+          // The redirect is all-or-nothing: `canRead` only checks that the
+          // entity EXISTS, so a `PantryItem` missing one field of
+          // `PantryItemDetail_pantryItem` still reads incomplete and Apollo
+          // goes to the network. It therefore only pays off paired with a
+          // detail-complete optimistic write —
+          // `optimisticEntityCompleteness.test.ts` is what keeps that true.
+          pantryItem: {
+            read(
+              existing: unknown,
+              { args, toReference, canRead }: FieldFunctionOptions,
+            ) {
+              if (existing !== undefined) return existing;
+              const ref = toReference({
+                __typename: 'PantryItem',
+                id: args?.id as string,
+              });
+              return canRead(ref) ? ref : existing;
+            },
+          },
           // List-level queries (return collections of lists/homes)
           shoppingLists: {
             // Different homes have different shopping lists - cache separately per filter

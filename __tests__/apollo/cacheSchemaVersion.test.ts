@@ -26,7 +26,13 @@ import { createHash } from 'crypto';
  * Re-record with:
  *   sha256sum src/apollo/cache.ts | cut -c1-16
  */
-const REVIEWED_CACHE_POLICY_HASH = 'e4aab68d114ce0c2';
+// Re-recorded 2026-08-28: added the `Query.pantryItem` read redirect, so an
+// offline-created pantry item's detail screen resolves to the normalized
+// entity instead of the wire. ADDING a redirect leaves an old blob safe —
+// there is no `ROOT_QUERY.pantryItem(...)` field in it to misread, and an
+// entity that is incomplete for the detail selection is a cache miss and a
+// refetch exactly as before. No `CURRENT_CACHE_VERSION` bump.
+const REVIEWED_CACHE_POLICY_HASH = '25dd290fa1a4c501';
 
 it('cache.ts has not changed without the persisted-shape decision being made', () => {
   const actual = createHash('sha256')

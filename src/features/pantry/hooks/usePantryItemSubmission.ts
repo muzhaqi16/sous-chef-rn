@@ -11,12 +11,14 @@ import {
   AcquisitionMethod,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import {
   addToPantryItemsCache,
   adjustPantryItemCount,
 } from '#/apollo/utils/pantryCacheUpdaters';
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { safeEvict, adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -96,16 +98,25 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
   const [createPantryItem, { loading }] = useMutation(
     CreatePantryItemDocument,
     {
-      update: (cache, { data }) => {
+      update: (cache, { data }, { variables }) => {
         const payload = data?.createPantryItem;
         if (payload?.__typename !== 'CreatePantryItemPayload' || !pantryId)
           return;
         const pantryItem = payload.pantryItem;
+        // Read outside the try: `?.` is a value block, and one inside a try
+        // body bails the React Compiler out of the whole hook.
+        const clientId = variables?.input?.id;
 
         // Idempotent re-add (same cuid id) so the connection holds the
         // authoritative server entity.
         try {
           addToPantryItemsCache(cache, pantryId, pantryItem);
+          // The re-add above dedupes BY ID, so if the server resolved the
+          // create to a different row the client cuid survives as a second,
+          // permanently unresolvable edge — tapping it 404s for the rest of
+          // the session. Read the client id off this mutation's own variables
+          // so overlapping creates stay correct.
+          adoptServerEntityId(cache, 'PantryItem', pantryItem.id, clientId);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Cache update failed for createPantryItem:',
@@ -195,6 +206,11 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         : undefined;
 
     const id = generateEntityId();
+    // The cache write below publishes this id to `Pantry.itemsConnection`,
+    // which makes the row tappable — and its detail/edit screens query by this
+    // id. Hold those queries off until the server has a row to answer with;
+    // otherwise they can only get RESOURCE_NOT_FOUND. See `unconfirmedCreates`.
+    unconfirmedCreates.mark(id);
     const mutationInput = {
       id,
       pantryId,
@@ -280,8 +296,33 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
       },
       client.cache,
     );
+    // The detail screens read a wider fragment than the list does, so the
+    // optimistic entity has to be materialized for both or a freshly added row
+    // dead-ends the moment it is tapped. Built out here for the same reason as
+    // the entity above: value blocks inside a try body bail the compiler.
+    // `brand` is a free-text name (the server mints the Brand) and `store` has
+    // no name at this call site, so both stay null and the detail query fills
+    // them in on acknowledgement.
+    const detailStubFields = {
+      itemName: itemName.trim(),
+      condition,
+      acquisitionMethod,
+      quantity,
+      costPerUnit: costValue ?? null,
+      storageNotes: storageNotes.trim() || null,
+      restockQuantity: restockQuantity
+        ? parseDecimalInput(restockQuantity)
+        : null,
+      tags: tags
+        ? tags
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(Boolean)
+        : [],
+    };
     try {
       addToPantryItemsCache(client.cache, pantryId, optimisticItem);
+      writePantryItemDetailStub(client.cache, id, detailStubFields);
       // Beside the optimistic row, not in the mutation's `update:` callback:
       // that callback only runs with a server payload, so offline the row
       // appeared while the header kept the old count. This is the add path the
@@ -305,6 +346,10 @@ export function usePantryItemSubmission(params: PantryItemSubmissionParams) {
         operation: 'Create pantry item error:',
       });
     }
+    // Released on every outcome: acknowledged and rejected both leave nothing
+    // for a detail read to miss, and a create that went to the queue has
+    // already been handed off to `queueStore`'s pending set by now.
+    unconfirmedCreates.confirm(id);
     if (!result) {
       // Hard failure (threw) → revert the optimistic item.
       safeEvict(client.cache, 'PantryItem', id);

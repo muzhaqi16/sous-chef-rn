@@ -19,6 +19,7 @@ import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   safeEvict,
+  adoptServerEntityId,
 } from '#/apollo/utils/cacheUpdaters';
 import {
   addNewItemToShoppingListCache,
@@ -39,6 +40,9 @@ import {
 } from '#/utils/errors/pantryItemDuplicate';
 import { useAppStore } from '#store/useAppStore';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import type { ScannedItem } from '#features/barcode/store/barcodeScannerStore';
 import type { BarcodeSource } from '#/types/navigation';
@@ -84,7 +88,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     s => s.setPendingPantryScrollToTop,
   );
   const [addToPantry] = useMutation(BarcodeCreatePantryItemDocument, {
-    update: (cache, { data }) => {
+    update: (cache, { data }, { variables }) => {
       const payload = data?.createPantryItem;
       if (payload?.__typename === 'CreatePantryItemPayload' && pantryId) {
         const maskedPantryItem = payload.pantryItem;
@@ -101,6 +105,15 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         if (pantryItem) {
           addToPantryItemsConnection(cache, pantryId, pantryItem);
         }
+        // The connection add dedupes BY ID, so a server-resolved id divergence
+        // would leave the client cuid as a second, permanently unresolvable
+        // edge. Client id read off this mutation's own variables.
+        adoptServerEntityId(
+          cache,
+          'PantryItem',
+          maskedPantryItem.id,
+          variables?.input?.id,
+        );
       }
     },
   });
@@ -164,6 +177,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           // Generate the item's id so a create that gets queued (API blips after
           // the barcode lookup) replays idempotently, keyed by this id.
           const id = generateEntityId();
+          // The optimistic write below publishes this id to
+          // `Pantry.itemsConnection`, making the row tappable into a detail
+          // screen that queries by it. See `unconfirmedCreates`.
+          unconfirmedCreates.mark(id);
           const mutationInput: CreatePantryItemInput = {
             id,
             pantryId,
@@ -196,6 +213,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           );
           try {
             addToPantryItemsCache(client.cache, pantryId, optimisticPantryItem);
+            // Detail-shape the same row so tapping it renders from cache
+            // instead of querying an id the server does not have yet. A
+            // scanned add always carries a catalog item, so `item` resolves to
+            // the real entity rather than a locally-minted one.
+            writePantryItemDetailStub(client.cache, id, {
+              itemId: item.id,
+              itemName: item.name,
+              acquisitionMethod: AcquisitionMethod.BarcodeScan,
+              quantity,
+            });
             // The connection updater moves the LIST; the header's "N items"
             // reads `Pantry.stats.totalItems`, which only the mutation's
             // `update:` callback touched — and that never runs when the create
@@ -213,6 +240,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             variables: { input: mutationInput },
             context: { localFirst: true },
           });
+          // Released on every outcome; a queued create is tracked by the
+          // offline queue's pending set from here on.
+          unconfirmedCreates.confirm(id);
 
           // Handle duplicate pantry item — the server reports it as a typed
           // DuplicatePantryItemError member in `data` (or the legacy

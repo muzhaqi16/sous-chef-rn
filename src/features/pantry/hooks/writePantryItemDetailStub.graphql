@@ -1,0 +1,122 @@
+# Detail-only materialization for a local-first pantry create.
+#
+# `buildOptimisticPantryItem` writes the shape `CreatePantryItem` selects, which
+# is tuned for the LIST query (`GetPantry`). The detail screens read
+# `PantryItemDetail_pantryItem`, which needs eleven more PantryItem fields and
+# seven more on `item` — so a freshly created row was list-complete and
+# detail-incomplete, and tapping it sent `GetPantryItem` to a server that had no
+# such id yet. Offline that has no recovery.
+#
+# These fragments are FLAT (no nested fragment spreads) so `cache.writeFragment`
+# sees the unmasked shape — a spread here would write masked refs and the read
+# would still come back incomplete.
+
+fragment writePantryItemDetailStub_pantryItem on PantryItem {
+  id
+  brand {
+    id
+    name
+  }
+  store {
+    id
+    name
+  }
+  tags
+  storageNotes
+  restockQuantity
+  condition
+  acquisitionMethod
+  costPerUnit
+  totalCost
+  purchase {
+    id
+    purchaseDate
+    unitPrice
+    totalPrice
+    quantity
+  }
+  # Field arguments are part of the cache key, so `first: 5` must match
+  # `PantryItemDetail_pantryItem` exactly or this seeds a different field.
+  usageRecords(first: 5) {
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        adjustmentReason
+      }
+    }
+  }
+}
+
+# Re-points `PantryItem.item` at the normalized `Item:<id>`.
+#
+# `addToPantryItemsCache` writes the entity through `toReference(item, true)`,
+# a shallow store merge that leaves nested objects EMBEDDED — so
+# `PantryItem:<cuid>.item` is a four-field stub and reads of
+# `item.name / photos / nutritions / categories` can never fall through to the
+# real catalog entity. `cache.writeFragment` uses the normalizing writer, so
+# writing just `{ __typename, id }` here converts that embedded object into a
+# reference without carrying any value that could clobber the catalog row.
+fragment writePantryItemDetailStub_itemRef on PantryItem {
+  id
+  item {
+    id
+  }
+}
+
+# Per-group top-ups for the catalog `Item`, read before they are written so a
+# group already present is never overwritten with a neutral default. Grouped
+# rather than written as one object because `readFragment` is all-or-nothing:
+# one absent field would otherwise default the whole set and clobber, e.g.,
+# a real `imageUrl` on the way to supplying `photos`.
+
+fragment writePantryItemDetailStub_itemIdentity on Item {
+  id
+  name
+  canEdit
+}
+
+fragment writePantryItemDetailStub_itemMedia on Item {
+  id
+  imageUrl
+  images {
+    url
+    kind
+  }
+}
+
+fragment writePantryItemDetailStub_itemPhotos on Item {
+  id
+  photos {
+    id
+    url
+    perspective
+    isPrimary
+    status
+    variants {
+      url
+      kind
+    }
+  }
+}
+
+fragment writePantryItemDetailStub_itemCatalog on Item {
+  id
+  shelfLifeDays
+  shelfLifeOpenedDays
+  nutritions
+  categories {
+    isPrimary
+    category {
+      id
+      name
+    }
+  }
+}

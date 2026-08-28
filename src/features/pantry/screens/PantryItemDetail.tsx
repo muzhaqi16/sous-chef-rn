@@ -29,6 +29,8 @@ import {
 } from '#store/useAppStore';
 import { StyleSheet } from 'react-native-unistyles';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
+import { isResourceNotFoundError } from '#/utils/errors/notFound';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl, galleryPhotos } from '#utils/imageUtils';
 import {
@@ -96,13 +98,27 @@ export const PantryItemDetail: React.FC<
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
+  // A pantry item created here owns its id before the server does: the create
+  // mints the cuid and publishes it to `Pantry.itemsConnection` BEFORE firing,
+  // which is what makes the row tappable offline — and tapping it lands that
+  // id here. Reading the server in that window is a race the client can only
+  // lose: the row is the client's until the create (or its queued replay)
+  // lands, so the read returns RESOURCE_NOT_FOUND however honestly the server
+  // answers, and the error state never retries on its own. Skipping until the
+  // create is acknowledged turns that acknowledgement into the fetch trigger;
+  // the optimistic entity renders the screen meanwhile.
+  const isUnconfirmed = useIsCreateUnconfirmed(itemId);
+
+  // `data` is deliberately unused: the screen renders from the cache entity
+  // below, and this query exists to FETCH and reconcile, not to be read. Its
+  // result lands in the same normalized entity the render path reads.
   const {
-    data,
     refetch,
     loading: itemLoading,
     error: itemError,
   } = useQuery(GetPantryItemDocument, {
     variables: { id: itemId },
+    skip: isUnconfirmed,
   });
   const client = useApolloClient();
 
@@ -116,6 +132,9 @@ export const PantryItemDetail: React.FC<
     {
       variables: { pantryItemId: itemId },
       fetchPolicy: 'cache-and-network',
+      // Same race as the item query above — this one resolves the pantry item
+      // first, so it 404s on an unacknowledged id too.
+      skip: isUnconfirmed,
     },
   );
 
@@ -136,10 +155,17 @@ export const PantryItemDetail: React.FC<
   // `dataMasking: true` the `useQuery` result's `data.pantryItem` is a masked
   // ref whose identity is stable across those changes, so it cannot serve as
   // the reactivity signal on its own.
+  //
+  // Keyed by ENTITY, not by the query result. Chaining off `data.pantryItem`
+  // made the screen unrenderable without a server round trip: while the query
+  // is skipped (or offline, or simply not back yet) `data` is undefined and
+  // the screen fell through to its empty state even though the row was sitting
+  // in the cache. Reading by cache key is what makes a locally-created item
+  // render with no API at all — the same form `useMealPlan` uses.
   const livePantryItem = useFragment({
     fragment: PantryItemDetail_PantryItemFragmentDoc,
     fragmentName: 'PantryItemDetail_pantryItem',
-    from: data?.pantryItem ?? null,
+    from: { __typename: 'PantryItem', id: itemId },
   });
 
   // Materialize the masked PantryItem ref into a fully unmasked entity.
@@ -156,13 +182,20 @@ export const PantryItemDetail: React.FC<
   // `livePantryItem.data` (fresh on every relevant cache write) forces the
   // unmasked read to re-run immediately.
   const item =
-    data?.pantryItem && livePantryItem.complete && livePantryItem.data
+    livePantryItem.complete && livePantryItem.data
       ? client.cache.readFragment<PantryItemDetail_PantryItemFragment>({
           fragment: PantryItemDetail_PantryItemFragmentDoc,
           fragmentName: 'PantryItemDetail_pantryItem',
-          from: data.pantryItem,
-        })
+          from: { __typename: 'PantryItem', id: itemId },
+        }) ?? null
       : null;
+
+  // The server says this row is gone — deleted on another device. Unlike a
+  // meal plan (whose by-id query returns null data), the pantry resolver
+  // throws, so the miss arrives as a RESOURCE_NOT_FOUND field error. Only
+  // trust it once the create is acknowledged: while unconfirmed the identical
+  // error just means the server has not been told about the row yet.
+  const deletedOnServer = !isUnconfirmed && isResourceNotFoundError(itemError);
 
   // Connection edges arrive as masked refs — materialize each into the full
   // PantryItemBatchFragment via cache.readFragment so status/expiresAt reads and
@@ -243,13 +276,22 @@ export const PantryItemDetail: React.FC<
   // so an offline cache miss span forever with no error, no explanation and no
   // retry — the query's `loading` and `error` were never read at all.
   const itemState = useDataState({
-    loading: itemLoading,
+    // An unacknowledged create IS a load in progress — the query is skipped
+    // and fires the moment the create lands. Without this the skip reads as
+    // "empty", which is the same lie the RESOURCE_NOT_FOUND error told.
+    loading: itemLoading || isUnconfirmed,
     error: itemError,
-    hasResult: !!data,
-    isEmpty: !item,
+    // The cache, not the query, is what the screen renders from — so
+    // "we have something to show" is `item`, not `data`. `deletedOnServer`
+    // overrides a cached copy: the server has confirmed the row is gone, and
+    // rendering it anyway would show a phantom. Deliberately narrow — only an
+    // explicit RESOURCE_NOT_FOUND on an acknowledged row qualifies, so merely
+    // going offline never hides anything.
+    hasResult: !!item && !deletedOnServer,
+    isEmpty: !item || deletedOnServer,
   });
 
-  if (!item) {
+  if (!item || deletedOnServer) {
     return (
       <CollapsingHeroDetail onBack={goBack} testID="pantry-item-detail">
         <View style={styles.loadingContainer}>
