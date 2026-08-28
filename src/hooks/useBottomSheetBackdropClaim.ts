@@ -48,6 +48,8 @@ export function useBottomSheetBackdropClaim(
   animatedIndex: SharedValue<number>;
   onChange: (index: number) => void;
   onAnimate: (fromIndex: number, toIndex: number) => void;
+  /** Stable release, for a caller that already knows the sheet is going away. */
+  release: () => void;
 } {
   const { animatedIndex, backdropOpacity: opacitySV } =
     useSheetBackdropOpacity();
@@ -129,5 +131,5 @@ export function useBottomSheetBackdropClaim(
     else if (index === -1) releaseBackdrop();
   };
 
-  return { animatedIndex, onChange, onAnimate };
+  return { animatedIndex, onChange, onAnimate, release: stableRelease };
 }

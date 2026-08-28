@@ -255,6 +255,17 @@ export const ItemList: React.FC<ItemListProps> = ({
   // the row, so its contents do not need to appear here.
   const extraData = String(!!itemSwipeActions);
 
+  // The scrollable swaps when the list empties, so a drag in flight on the old
+  // one never delivers its end event and the caller's drag tracking stays on —
+  // a later programmatic scroll then reads as finger-driven. An empty list has
+  // come to rest by definition, so say so.
+  const isEmpty = items.length === 0 && !!emptyState;
+  useEffect(() => {
+    if (isEmpty) {
+      onMomentumScrollEnd?.();
+    }
+  }, [isEmpty, onMomentumScrollEnd]);
+
   if (items.length === 0 && emptyState) {
     return (
       <ScrollView

@@ -178,11 +178,56 @@ describe('useBottomSheetBackdropClaim', () => {
     expect(mockRelease).toHaveBeenCalledWith('claim-1');
   });
 
-  it('exposes animatedIndex, onChange and onAnimate', () => {
+  it('exposes animatedIndex, onChange, onAnimate and release', () => {
     const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
 
     expect(result.current.animatedIndex).toBeDefined();
     expect(typeof result.current.onChange).toBe('function');
     expect(typeof result.current.onAnimate).toBe('function');
+    expect(typeof result.current.release).toBe('function');
+  });
+
+  // `release` is for a caller that already knows the sheet is going away — a
+  // modal dismiss can unmount the portal before onChange(-1) or onDismiss reach
+  // JS, and a slot left claimed is an invisible full-screen tap blocker.
+  it('releases the held claim on demand', () => {
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+    result.current.onAnimate(-1, 0);
+
+    result.current.release();
+
+    expect(mockRelease).toHaveBeenCalledWith('claim-1');
+  });
+
+  it('ignores a release when no claim is held', () => {
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+
+    result.current.release();
+    result.current.release();
+
+    expect(mockRelease).not.toHaveBeenCalled();
+  });
+
+  it('keeps a stable release identity across renders', () => {
+    const { result, rerender } = renderHook(() =>
+      useBottomSheetBackdropClaim(makeRef()),
+    );
+    const first = result.current.release;
+
+    rerender({});
+
+    expect(result.current.release).toBe(first);
+  });
+
+  it('re-claims after a release, and releases the new slot', () => {
+    const { result } = renderHook(() => useBottomSheetBackdropClaim(makeRef()));
+    result.current.onAnimate(-1, 0);
+    result.current.release();
+
+    result.current.onAnimate(-1, 0);
+    result.current.release();
+
+    expect(mockRelease).toHaveBeenNthCalledWith(1, 'claim-1');
+    expect(mockRelease).toHaveBeenNthCalledWith(2, 'claim-2');
   });
 });

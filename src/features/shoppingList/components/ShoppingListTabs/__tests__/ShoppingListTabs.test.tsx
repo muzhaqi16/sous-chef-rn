@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { ShoppingListTabs } from '../ShoppingListTabs';
 
 type ShoppingListTabsProps = React.ComponentProps<typeof ShoppingListTabs>;
@@ -26,22 +26,48 @@ jest.mock('../FilterTabBar', () => ({
   FilterTabBar: ({
     navigationState,
     counts,
+    jumpTo,
   }: {
     navigationState: MockNavigationState;
     counts: Record<string, number>;
+    jumpTo: (key: string) => void;
   }) => {
-    const { Text, View } = require('react-native');
+    const { Text, View, Pressable } = require('react-native');
     return (
       <View testID="filter-tab-bar">
         {navigationState.routes.map((route: MockRoute) => (
-          <Text key={route.key}>
-            {route.title} ({counts[route.key] ?? 0})
-          </Text>
+          <Pressable
+            key={route.key}
+            testID={`tab-${route.key}`}
+            onPress={() => jumpTo(route.key)}
+          >
+            <Text>
+              {route.title} ({counts[route.key] ?? 0})
+            </Text>
+          </Pressable>
         ))}
       </View>
     );
   },
 }));
+
+// Capture the data handed to the provider so a test can inspect the tab that is
+// mounted but NOT visible — the TabView mock renders only the active scene.
+let capturedTabData: {
+  shopping: Record<string, unknown>;
+  purchased: Record<string, unknown>;
+} | null = null;
+jest.mock('../ShoppingListDataContext', () => {
+  const actual = jest.requireActual('../ShoppingListDataContext');
+  const ReactLib = require('react');
+  return {
+    ...actual,
+    ShoppingListDataProvider: (props: { data: never; children: never }) => {
+      capturedTabData = props.data;
+      return ReactLib.createElement(actual.ShoppingListDataProvider, props);
+    },
+  };
+});
 
 jest.mock('../ShoppingTab', () => ({
   ShoppingTab: () => {
@@ -227,5 +253,50 @@ describe('ShoppingListTabs', () => {
       />,
     );
     expect(screen.getByText('Pre-filtered Milk')).toBeTruthy();
+  });
+
+  // Both scenes stay mounted once visited (`lazy`), and `swipeEnabled` is off, so
+  // only the visible one should be able to move the tab bar. A hidden list's
+  // layout or restore scroll would otherwise feed the same direction tracking.
+  it('gives scroll handlers only to the visible tab', () => {
+    const onScroll = jest.fn();
+    const onScrollBeginDrag = jest.fn();
+    render(
+      <ShoppingListTabs
+        {...defaultProps}
+        onScroll={onScroll}
+        onScrollBeginDrag={onScrollBeginDrag}
+      />,
+    );
+
+    expect(capturedTabData?.shopping.onScroll).toBe(onScroll);
+    expect(capturedTabData?.shopping.onScrollBeginDrag).toBe(onScrollBeginDrag);
+    expect(capturedTabData?.purchased.onScroll).toBeUndefined();
+    expect(capturedTabData?.purchased.onScrollBeginDrag).toBeUndefined();
+  });
+
+  it('moves the scroll handlers with the tab the user switches to', () => {
+    const onScroll = jest.fn();
+    render(<ShoppingListTabs {...defaultProps} onScroll={onScroll} />);
+
+    fireEvent.press(screen.getByTestId('tab-purchased'));
+
+    expect(capturedTabData?.purchased.onScroll).toBe(onScroll);
+    expect(capturedTabData?.shopping.onScroll).toBeUndefined();
+  });
+
+  // The outgoing list can no longer report the end of a drag in flight.
+  it('settles the tab bar when the user switches tabs', () => {
+    const onMomentumScrollEnd = jest.fn();
+    render(
+      <ShoppingListTabs
+        {...defaultProps}
+        onMomentumScrollEnd={onMomentumScrollEnd}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId('tab-purchased'));
+
+    expect(onMomentumScrollEnd).toHaveBeenCalled();
   });
 });

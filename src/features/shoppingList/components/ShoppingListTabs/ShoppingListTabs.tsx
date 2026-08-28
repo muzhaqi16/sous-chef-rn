@@ -183,6 +183,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   // TabView navigation state
   const [index, setIndex] = useState(0);
+  /** Which scene the finger can actually reach — `swipeEnabled` is off. */
+  const shoppingTabActive = index === 0;
 
   // PERFORMANCE: Use pre-filtered items when provided (stable references from useShoppingListScreen)
   // Fall back to internal filtering for backwards compatibility
@@ -200,6 +202,9 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Handle tab change - close any open swipeable via external coordinator
   const handleIndexChange = (newIndex: number) => {
     onCloseAllSwipeables?.();
+    // The outgoing list can no longer report the end of a drag in flight, which
+    // would leave the tab bar following a list the finger has left.
+    onMomentumScrollEnd?.();
     setIndex(newIndex);
     // Notify tutorial when user switches to Purchased tab
     if (newIndex === 1) {
@@ -379,10 +384,13 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems,
     isTransitioning,
-    onScroll,
-    onScrollBeginDrag,
-    onScrollEndDrag,
-    onMomentumScrollEnd,
+    // Only the visible tab drives the tab bar. `lazy` keeps both scenes mounted
+    // once visited, so a hidden list's layout or restore scroll would otherwise
+    // feed the same direction tracking as the one under the finger.
+    onScroll: shoppingTabActive ? onScroll : undefined,
+    onScrollBeginDrag: shoppingTabActive ? onScrollBeginDrag : undefined,
+    onScrollEndDrag: shoppingTabActive ? onScrollEndDrag : undefined,
+    onMomentumScrollEnd: shoppingTabActive ? onMomentumScrollEnd : undefined,
     scrollEventThrottle,
     listHeaderComponent,
   };
@@ -402,10 +410,10 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     canMarkPurchased,
     canReorderItems: false,
     isTransitioning,
-    onScroll,
-    onScrollBeginDrag,
-    onScrollEndDrag,
-    onMomentumScrollEnd,
+    onScroll: shoppingTabActive ? undefined : onScroll,
+    onScrollBeginDrag: shoppingTabActive ? undefined : onScrollBeginDrag,
+    onScrollEndDrag: shoppingTabActive ? undefined : onScrollEndDrag,
+    onMomentumScrollEnd: shoppingTabActive ? undefined : onMomentumScrollEnd,
     scrollEventThrottle,
     listHeaderComponent,
   };

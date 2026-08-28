@@ -114,7 +114,6 @@ export function useStandardBottomSheet({
   const insets = useSafeAreaInsets();
   const ref = useRef<GorhomBottomSheetModal<unknown>>(null);
   const animationConfigs = useSharedBottomSheetConfigs();
-  useBottomSheetBackHandler(ref, visible ?? false);
 
   // Backdrop integration. The hook creates an `animatedIndex` SharedValue
   // we pass to gorhom (gorhom drives it as the sheet animates), derives an
@@ -127,6 +126,7 @@ export function useStandardBottomSheet({
     animatedIndex,
     onChange: handleBackdrop,
     onAnimate: handleBackdropAnimate,
+    release: releaseBackdrop,
   } = useBottomSheetBackdropClaim(ref);
 
   // 'interactive' fits the vast majority of input-bearing sheets; callers
@@ -187,6 +187,13 @@ export function useStandardBottomSheet({
     };
   }, [navigation]);
 
+  // Hardware back closes the sheet only while it is actually on screen. `visible`
+  // stays true across a navigation away so the sheet can restore on return, so a
+  // handler enabled by `visible` alone remains subscribed on the pushed screen
+  // and swallows the press there — back does nothing until every such handler
+  // has been exhausted.
+  useBottomSheetBackHandler(ref, (visible ?? false) && isFocused);
+
   const isPresentedRef = useRef(false);
   // Set when the upcoming dismiss is caused purely by the screen losing focus
   // (the consumer still wants the sheet open, `visible` is still true). Read and
@@ -213,8 +220,16 @@ export function useStandardBottomSheet({
         blurDismissRef.current = true;
       }
       ref.current?.dismiss();
+      if (visible) {
+        // Blur path only. A modal dismiss can unmount the portal before
+        // `onChange(-1)` or `onDismiss` reach JS, stranding the claim as an
+        // invisible full-screen tap blocker; the incoming screen covers the dim,
+        // so releasing it now is not visible. A consumer close keeps the fade —
+        // there those callbacks do arrive.
+        releaseBackdrop();
+      }
     }
-  }, [visible, isFocused]);
+  }, [visible, isFocused, releaseBackdrop]);
 
   // Compose the backdrop claim with the caller's onChange. The current
   // user-supplied onChange is held in a ref so its identity changing across
