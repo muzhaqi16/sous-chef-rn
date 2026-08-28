@@ -24,8 +24,7 @@ import { useStandardBottomSheet } from '#hooks/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
 import { FolderListItem } from './FolderPicker/FolderListItem';
 import { ManageFolderSheet } from './FolderPicker/ManageFolderSheet';
-
-/** Protected folders that cannot be renamed or deleted */
+import { resolveFolderLongPress } from './folderProtection';
 
 // Every row is the same component, so one recycling pool is correct.
 const getItemType = () => 'item';
@@ -143,12 +142,6 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   // Check if folder management is enabled
   const hasFolderActions = Boolean(onRenameFolder || onDeleteFolder);
 
-  // Check if a folder is protected. The prop is required by the type wherever
-  // `hasFolderActions` can be true, which is the only place this is reached.
-  const isProtectedFolder = (folder: string) => {
-    return protectedFolders?.includes(folder) ?? false;
-  };
-
   const filteredFolders = (() => {
     if (!searchQuery.trim()) return folders;
     const query = searchQuery.toLowerCase();
@@ -184,13 +177,18 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
     // dismiss animation completes.
   };
 
-  // Handle long-press on folder item - show manage folder bottom sheet
+  // Handle long-press on folder item - show manage folder bottom sheet.
+  // The decision itself lives in `resolveFolderLongPress` so it can be tested:
+  // this handler is reached only through the mocked-away list.
   const handleFolderLongPress = (folder: string) => {
-    // Don't show menu if no actions available
-    if (!hasFolderActions) return;
+    const outcome = resolveFolderLongPress(folder, {
+      hasFolderActions,
+      protectedFolders,
+    });
 
-    // Show toast for protected folders
-    if (isProtectedFolder(folder)) {
+    if (outcome.kind === 'ignored') return;
+
+    if (outcome.kind === 'protected') {
       toastService.info(t('toasts.folderProtected', { folder }));
       return;
     }

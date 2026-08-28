@@ -430,6 +430,41 @@ describe('createTelemetryLink', () => {
       });
     });
 
+    it('does not touch the performance buffer more as the session grows', () => {
+      mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
+      mockedEnvironment.isDevelopment.mockReturnValue(true);
+
+      const link = createTelemetryLink();
+
+      const perfCallsFor = (operationCount: number) => {
+        (performance.mark as jest.Mock).mockClear();
+        (performance.measure as jest.Mock).mockClear();
+        (performance.clearMarks as jest.Mock).mockClear();
+
+        for (let i = 0; i < operationCount; i++) {
+          runRequest(
+            link,
+            createMockOperation(`GetItems${i}`),
+            createMockForward(),
+          ).subscribe({ next: () => {} });
+        }
+
+        return (
+          (performance.mark as jest.Mock).mock.calls.length +
+          (performance.measure as jest.Mock).mock.calls.length +
+          (performance.clearMarks as jest.Mock).mock.calls.length
+        );
+      };
+
+      // The cost that grew was per-operation work against an unbounded buffer:
+      // `clearMarks` filters the whole entries array, and every `measure`
+      // appended an entry that was never removed. Ten times the operations must
+      // not cost more than ten times as much — here it costs nothing at all,
+      // because the link no longer touches that buffer.
+      expect(perfCallsFor(10)).toBe(0);
+      expect(perfCallsFor(100)).toBe(0);
+    });
+
     it('releases the timing entry when an operation is cancelled', () => {
       mockedEnvironment.shouldEnableAnalytics.mockReturnValue(false);
       mockedEnvironment.isDevelopment.mockReturnValue(true);
