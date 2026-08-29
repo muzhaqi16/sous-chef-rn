@@ -7366,9 +7366,17 @@ export type Mutation = {
   /**
    * Toggle the purchased state of a shopping list item.
    *
-   * Replay-safe without a version or an idempotencyKey: the state asked for is
-   * absolute, an item already in it is returned unchanged, and the Purchase
-   * record is written only on the transition.
+   * Marking purchased is replay-safe without a version or a key: an item already
+   * purchased is returned unchanged, and the Purchase record is written only on
+   * the transition.
+   *
+   * UNMARKING IS NOT. It resets the line's quantity to 1 and clears the
+   * normalized quantity and unit alongside isPurchased, so it is a destructive
+   * write rather than an absolute state — and this input carries neither a
+   * version nor a key to refuse a stale one. A queued unmark that drains after
+   * someone re-purchases the line with a real quantity will overwrite that
+   * quantity and report success. Send this online, or re-read the line before
+   * draining a queued unmark.
    */
   toggleShoppingListItemPurchased: ToggleShoppingListItemPurchasedResult;
   /** Transfer ownership of a home to another member. */
@@ -15584,14 +15592,15 @@ export type SyncPantryItemPayload = {
   clientId: Scalars['ID']['output'];
   conflict: Maybe<SyncConflictInfo>;
   /**
-   * True when this sync resolved to a row that already existed — the client id
-   * matched, so the call took the update branch rather than creating.
+   * Meaning depends on which mutation returned this payload, because three share
+   * it. On syncPantryItem it says the client id matched an existing row, so the
+   * call took the update branch rather than creating — which is also true of an
+   * ordinary successful update that changed the row. On syncDeletePantryItem it
+   * is unconditionally true and says nothing at all.
    *
-   * NOT the API-wide convergence flag, despite the name: it is also true of an
-   * ordinary successful update that changed the row. Only a payload whose
-   * description says the call changed nothing carries that meaning. Retired with
-   * this mutation; the canonical mutations report a replay as ConflictError with
-   * code IDEMPOTENT_REPLAY.
+   * NOT the API-wide convergence flag, despite the name: that one means the call
+   * changed nothing. Retired with these mutations; the canonical mutations report
+   * a replay as ConflictError with code IDEMPOTENT_REPLAY.
    */
   converged: Scalars['Boolean']['output'];
   item: Maybe<PantryItem>;
@@ -15676,14 +15685,15 @@ export type SyncShoppingListItemPayload = {
   /** Conflict information if version mismatch occurred */
   conflict: Maybe<SyncConflictInfo>;
   /**
-   * True when this sync resolved to a row that already existed — the client id
-   * matched, so the call took the update branch rather than creating.
+   * Meaning depends on which mutation returned this payload, because three share
+   * it. On syncShoppingListItem it says the client id matched an existing row, so the
+   * call took the update branch rather than creating — which is also true of an
+   * ordinary successful update that changed the row. On syncDeleteShoppingListItem and syncMoveShoppingListItem it
+   * is unconditionally true and says nothing at all.
    *
-   * NOT the API-wide convergence flag, despite the name: it is also true of an
-   * ordinary successful update that changed the row. Only a payload whose
-   * description says the call changed nothing carries that meaning. Retired with
-   * this mutation; the canonical mutations report a replay as ConflictError with
-   * code IDEMPOTENT_REPLAY.
+   * NOT the API-wide convergence flag, despite the name: that one means the call
+   * changed nothing. Retired with these mutations; the canonical mutations report
+   * a replay as ConflictError with code IDEMPOTENT_REPLAY.
    */
   converged: Scalars['Boolean']['output'];
   /** The synced shopping list item (null for delete operations) */
