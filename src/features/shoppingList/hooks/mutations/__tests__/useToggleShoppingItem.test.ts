@@ -141,6 +141,25 @@ const PURCHASE_INFO_FRAGMENT = gql`
   }
 `;
 
+// `useIsApiUnavailable` reads the network signals off the root store, so the
+// state is mutable per test — `apiReachable: false` is what the un-mark gate
+// keys on.
+const mockStoreState = { isOnline: true, apiReachable: true };
+
+jest.mock('#store/useAppStore', () => ({
+  useAppStore: (selector: (s: unknown) => unknown) => selector(mockStoreState),
+}));
+
+const mockToastError = jest.fn();
+jest.mock('#/services/toastService', () => ({
+  toastService: {
+    error: (...args: unknown[]) => mockToastError(...args),
+    success: jest.fn(),
+    info: jest.fn(),
+    warning: jest.fn(),
+  },
+}));
+
 // Full useToggleShoppingItem_item shape so cache.readFragment is `complete`.
 function seedShoppingItem() {
   return seedCache([
@@ -413,5 +432,93 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(toggled).toBe(false);
     expect(readPurchased(cache)).toBe(false);
     expect(mockAlert).toHaveBeenCalledWith(expect.anything(), ITEM_NAME_COPY);
+  });
+});
+
+describe('useToggleShoppingItem — the replay asymmetry', () => {
+  beforeEach(() => {
+    mockStoreState.apiReachable = true;
+    mockToastError.mockClear();
+  });
+
+  const purchasedItem = (isPurchased: boolean) =>
+    seedCache([
+      {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        itemName: 'Milk',
+        quantity: 1,
+        quantityInput: '1',
+        displayFormat: 'DECIMAL',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased,
+        },
+        version: 3,
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        category: null,
+        notes: null,
+        unitName: null,
+        unit: null,
+        sortOrder: '1',
+        item: null,
+      },
+    ]);
+
+  const renderToggle = (
+    cache: ReturnType<typeof seedCache>,
+    recorded: Array<Record<string, unknown>>,
+  ) =>
+    renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: jest.fn() }),
+      {
+        cache,
+        operationMocks: [
+          createToggleMock(recorded, {
+            __typename: 'ShoppingListItem',
+            id: 'item-1',
+          }),
+        ],
+      },
+    );
+
+  it('refuses to UN-mark while the API is unreachable', async () => {
+    // Un-marking is a destructive server-side RESET — it puts the line's
+    // quantity back to 1 and clears the normalized quantity and unit — and
+    // `ToggleShoppingListItemPurchasedInput` is `{ id, purchased }` with no
+    // version and no idempotency key. A queued un-mark draining after a
+    // co-shopper re-purchased the line would overwrite their quantity and
+    // report success, so it is never queued.
+    const cache = purchasedItem(true);
+    const recorded: Array<Record<string, unknown>> = [];
+    mockStoreState.apiReachable = false;
+    const { result } = renderToggle(cache, recorded);
+
+    let resolved: boolean | undefined;
+    await act(async () => {
+      resolved = await result.current.toggleItem('item-1');
+    });
+
+    expect(resolved).toBe(false);
+    expect(recorded).toHaveLength(0);
+    // Nothing was written, so there is nothing to undo and nothing to replay.
+    expect(readPurchased(cache)).toBe(true);
+    expect(mockToastError).toHaveBeenCalled();
+  });
+
+  it('still MARKS while the API is unreachable', async () => {
+    // The half that stays durable: ticking rows is THE in-store action, and
+    // marking purchased is an absolute state a replay re-asserts harmlessly.
+    const cache = purchasedItem(false);
+    const recorded: Array<Record<string, unknown>> = [];
+    mockStoreState.apiReachable = false;
+    const { result } = renderToggle(cache, recorded);
+
+    await act(async () => {
+      await result.current.toggleItem('item-1');
+    });
+
+    expect(readPurchased(cache)).toBe(true);
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 });

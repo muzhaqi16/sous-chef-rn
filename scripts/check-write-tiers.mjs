@@ -27,6 +27,29 @@ const { list } = parseFlags({ list: { type: 'boolean', default: false } });
 
 const DURABLE = 'durable';
 const ONLINE_ONLY = 'online-only';
+/**
+ * The call decides its own tier at runtime — it spreads the replay context in
+ * conditionally, so the tier depends on the arguments rather than the site.
+ *
+ * Reported rather than guessed. Reading such a call as online-only (no literal
+ * `context` key) or durable (a context exists somewhere) would both be a lie in
+ * half the cases, and this report is the reviewable list of what the app
+ * guarantees offline — a wrong row in it is worse than an honest "read the
+ * call site".
+ */
+const CONDITIONAL = 'conditional';
+
+/** Why an operation decides its tier per call. Keeps the reason in the report. */
+const CONDITIONAL_REASONS = new Map([
+  [
+    'ToggleShoppingListItemPurchased',
+    'Marking purchased is durable; UN-marking is online-only. The asymmetry is ' +
+      "the server's: un-marking resets the line's quantity to 1 and clears the " +
+      'normalized quantity and unit, and the input carries no version and no ' +
+      'idempotency key, so a queued un-mark draining after a co-shopper ' +
+      "re-purchased the line overwrites their quantity. See the hook's comment.",
+  ],
+]);
 
 /**
  * Operations knowingly sent at both tiers, each with the reason.
@@ -78,6 +101,31 @@ function callsOf(src, binding) {
   return calls;
 }
 
+/**
+ * Whether the options object spreads something in at its own level.
+ *
+ * Depth-aware on purpose: `variables: { ...(x && { y }) }` is input assembly and
+ * says nothing about replay, while `{ variables, ...replay }` is a call
+ * choosing its own tier.
+ */
+function hasTopLevelSpread(args) {
+  let depth = 0;
+  for (let i = 0; i < args.length; i += 1) {
+    const ch = args[i];
+    if (ch === '{' || ch === '[' || ch === '(') depth += 1;
+    else if (ch === '}' || ch === ']' || ch === ')') depth -= 1;
+    else if (
+      depth === 1 &&
+      ch === '.' &&
+      args.slice(i, i + 3) === '...' &&
+      /[A-Za-z_$]/.test(args[i + 3] ?? '')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 const files = filesUnder('src/**/*.{ts,tsx}', {
   exclude: [/__tests__/, /\.generated\.ts$/],
 });
@@ -102,7 +150,10 @@ for (const file of files) {
     // replay opt-in — set by hand as `{ localFirst: true }`, or handed over by
     // the write kit, which call sites pass through as shorthand.
     const durable = calls.some(args => /(^|[{,\s])context\s*[,}:]/.test(args));
-    const tier = durable ? DURABLE : ONLINE_ONLY;
+    // Only a spread at the OPTIONS level says anything about the tier — one
+    // inside `variables` is ordinary input assembly.
+    const conditional = calls.some(hasTopLevelSpread);
+    const tier = durable ? DURABLE : conditional ? CONDITIONAL : ONLINE_ONLY;
 
     if (!tiers.has(operation)) tiers.set(operation, new Map());
     const byTier = tiers.get(operation);
@@ -122,26 +173,41 @@ if (list || split.length === 0) {
   const rows = [...tiers].sort(([a], [b]) => a.localeCompare(b));
   const width = Math.max(...rows.map(([op]) => op.length));
   for (const [operation, byTier] of rows) {
+    const only = [...byTier.keys()][0];
     const tier =
       byTier.size > 1
         ? ACCEPTED_SPLITS.has(operation)
           ? 'split (accepted)'
           : 'SPLIT'
-        : [...byTier.keys()][0];
+        : only === CONDITIONAL
+        ? 'conditional (per call)'
+        : only;
     console.log(`${operation.padEnd(width)}  ${tier}`);
   }
-  const durableCount = rows.filter(
-    ([, b]) => b.size === 1 && b.has(DURABLE),
-  ).length;
+  const count = tier =>
+    rows.filter(([, b]) => b.size === 1 && b.has(tier)).length;
+  const durableCount = count(DURABLE);
+  const conditionalCount = count(CONDITIONAL);
   console.log(
     `\ncheck-write-tiers: ${rows.length} mutation(s) — ${durableCount} durable offline, ` +
-      `${rows.length - durableCount - allSplits.length} online-only, ` +
-      `${allSplits.length} split.`,
+      `${
+        rows.length - durableCount - conditionalCount - allSplits.length
+      } online-only, ` +
+      `${conditionalCount} conditional, ${allSplits.length} split.`,
   );
   for (const [operation, reason] of ACCEPTED_SPLITS) {
     if (tiers.get(operation)?.size > 1) {
       console.log(`\n  ${operation} — accepted split: ${reason}`);
     }
+  }
+  for (const [operation, byTier] of rows) {
+    if (!byTier.has(CONDITIONAL)) continue;
+    const reason = CONDITIONAL_REASONS.get(operation);
+    console.log(
+      `\n  ${operation} — conditional: ${
+        reason ?? 'UNDOCUMENTED. Say why at the call site and record it here.'
+      }`,
+    );
   }
 }
 

@@ -20,6 +20,8 @@ import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
 import { useWrite } from '#/apollo/write/useWrite';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { toastService } from '#/services/toastService';
 import { adjustBy, type WriteIntentDraft } from '#/apollo/write/writeIntent';
 import { handleMutationError } from '#/utils/errorHandlers';
 import { errorService } from '#/services/errorService';
@@ -100,6 +102,7 @@ export function useToggleShoppingItem({
 }: UseToggleShoppingItemOptions) {
   const client = useApolloClient();
   const { apply } = useWrite();
+  const isApiUnavailable = useIsApiUnavailable();
 
   const readState = (itemId: string) =>
     client.cache.readFragment<{
@@ -127,15 +130,40 @@ export function useToggleShoppingItem({
     // A toggle flips what is there — reading the current value is the whole
     // operation, not an optimisation.
     const purchased = !(state.purchaseInfo?.isPurchased ?? false);
+
+    // UN-marking is online-only, and the asymmetry is the API's, not a
+    // preference. Marking purchased is an absolute state: a row already
+    // purchased comes back unchanged, so a replay is harmless. Un-marking is a
+    // destructive RESET — it puts the line's quantity back to 1 and clears the
+    // normalized quantity and unit alongside `isPurchased` — and
+    // `ToggleShoppingListItemPurchasedInput` is `{ id, purchased }` with no
+    // version and no idempotency key, so the server has nothing to refuse a
+    // stale one with and the client has no way to say what the quantity should
+    // end up as. A queued un-mark draining after a co-shopper re-purchased the
+    // line overwrites their quantity and reports success.
+    if (!purchased && isApiUnavailable) {
+      toastService.error(t('errors.notAvailableOffline'));
+      return false;
+    }
+
     const { context, revert } = apply(
       purchaseIntent(itemId, listId, purchased),
     );
+
+    // Built above the try: a ternary inside a try body bails the React Compiler
+    // out of the whole function, and this project's baseline is empty.
+    //
+    // The context is what `queueLink` gates replay on, so withholding it is
+    // what keeps an un-mark out of the queue entirely — including the
+    // online-network-error fallback, which would otherwise queue the very write
+    // that must not be replayed late.
+    const replay = purchased ? { context } : {};
 
     let result;
     try {
       result = await togglePurchasedMutation({
         variables: { input: { id: itemId, purchased } },
-        context,
+        ...replay,
       });
     } catch (error) {
       errorService.reportError(error, {
