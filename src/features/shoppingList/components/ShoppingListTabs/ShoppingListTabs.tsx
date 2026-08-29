@@ -18,6 +18,8 @@ import { PurchasedTab } from './PurchasedTab';
 import { EmptyState, type EmptyStateProps } from '#components/atoms/EmptyState';
 import type { ShoppingListRowItem } from '../SortableShoppingList/types';
 import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
+import { ItemSwipeActionsProvider } from '#components/organisms/itemSwipeActionsContext';
+import type { ItemSwipeActionsFactory } from '#components/molecules/SwipeableItem/types';
 import {
   ShoppingListTabsActionsProvider,
   type ShoppingListTabsActions,
@@ -50,7 +52,7 @@ interface ShoppingListTabsProps {
   totalCountUnpurchased?: number;
   totalCountPurchased?: number;
   onItemPress: (id: string) => void;
-  itemSwipeActions?: ShoppingListTabsActions['itemSwipeActions'];
+  itemSwipeActions?: ItemSwipeActionsFactory;
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;
@@ -242,7 +244,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   // Action callbacks for context provider — consumed by ShoppingTab/PurchasedTab
   const tabActions: ShoppingListTabsActions = {
     onItemPress,
-    itemSwipeActions,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
@@ -435,42 +436,46 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
 
   return (
     <ShoppingListTabsActionsProvider actions={tabActions}>
-      <ShoppingListDataProvider data={tabData}>
-        <View
-          style={{
-            flex: 1,
-            ...(Platform.OS === 'android' && { elevation: 0 }),
-          }}
-        >
-          {showEmptyState ? (
-            <ScrollView
-              contentContainerStyle={{ flex: 1 }}
-              refreshControl={
-                onRefresh ? (
-                  <ThemedRefreshControl
-                    refreshing={refreshing || false}
-                    onRefresh={onRefresh}
-                  />
-                ) : undefined
-              }
-            >
-              {renderTabBar()}
-              <EmptyState {...emptyState} />
-            </ScrollView>
-          ) : (
-            <TabView
-              navigationState={{ index, routes }}
-              renderScene={renderSceneDataFree}
-              renderTabBar={renderTabBar}
-              onIndexChange={handleIndexChange}
-              initialLayout={{ width: layout.width }}
-              swipeEnabled={false}
-              lazy={true}
-              overScrollMode="never"
-            />
-          )}
-        </View>
-      </ShoppingListDataProvider>
+      {/* A derivation, so it travels as a value: the rows call it while
+          rendering and must get the current one. */}
+      <ItemSwipeActionsProvider value={itemSwipeActions}>
+        <ShoppingListDataProvider data={tabData}>
+          <View
+            style={{
+              flex: 1,
+              ...(Platform.OS === 'android' && { elevation: 0 }),
+            }}
+          >
+            {showEmptyState ? (
+              <ScrollView
+                contentContainerStyle={{ flex: 1 }}
+                refreshControl={
+                  onRefresh ? (
+                    <ThemedRefreshControl
+                      refreshing={refreshing || false}
+                      onRefresh={onRefresh}
+                    />
+                  ) : undefined
+                }
+              >
+                {renderTabBar()}
+                <EmptyState {...emptyState} />
+              </ScrollView>
+            ) : (
+              <TabView
+                navigationState={{ index, routes }}
+                renderScene={renderSceneDataFree}
+                renderTabBar={renderTabBar}
+                onIndexChange={handleIndexChange}
+                initialLayout={{ width: layout.width }}
+                swipeEnabled={false}
+                lazy={true}
+                overScrollMode="never"
+              />
+            )}
+          </View>
+        </ShoppingListDataProvider>
+      </ItemSwipeActionsProvider>
     </ShoppingListTabsActionsProvider>
   );
 };

@@ -1,7 +1,7 @@
 import React, {
   createContext,
-  useContext,
   useEffect,
+  useContext,
   useRef,
   useState,
   type ReactNode,
@@ -9,6 +9,27 @@ import React, {
 
 /** Any callback an actions bag can hold. */
 type AnyAction = (...args: never[]) => unknown;
+
+/**
+ * A stabilised member: same parameters, no return value.
+ *
+ * This is what makes "commands only" a rule the compiler enforces rather than a
+ * comment. A DERIVATION — something a row calls while rendering and reads a
+ * value from — cannot be served by this context: the value it would return is
+ * captured in a ref that is published after children render, so the row would
+ * build itself from the previous render's data. Voiding the return means such a
+ * member fails to compile at its consumer instead of going stale at runtime.
+ *
+ * Derivations belong in {@link createValueContext}, whose value is the value.
+ */
+type Commandify<T> = T extends (...args: infer TArgs) => unknown
+  ? (...args: TArgs) => void
+  : T;
+
+/** The bag as consumers see it: every callback reduced to a command. */
+export type Commands<TActions> = {
+  [K in keyof TActions]: Commandify<TActions[K]>;
+};
 
 /**
  * Builds a "stable actions" context: a provider, a hook that throws outside it,
@@ -60,7 +81,7 @@ export function createActionsContext<TActions extends object>(
   // force them all to become `type` aliases. The two casts below are the price,
   // and they are confined to this file.
   type ActionBag = Record<string, AnyAction | undefined>;
-  const Context = createContext<TActions | null>(null);
+  const Context = createContext<Commands<TActions> | null>(null);
   Context.displayName = displayName;
 
   const Provider: React.FC<{ actions: TActions; children: ReactNode }> = ({
@@ -84,7 +105,12 @@ export function createActionsContext<TActions extends object>(
       Object.fromEntries(
         definedKeys.map(key => [
           key,
-          (...args: never[]) => (latest.current as ActionBag)[key]?.(...args),
+          // Discards the result deliberately: the type says `void` and the
+          // runtime must agree, or a cast could still read a value that came
+          // from a ref published after the reader rendered.
+          (...args: never[]) => {
+            (latest.current as ActionBag)[key]?.(...args);
+          },
         ]),
       );
 
@@ -102,13 +128,13 @@ export function createActionsContext<TActions extends object>(
     }
 
     return (
-      <Context.Provider value={current.wrappers as TActions}>
+      <Context.Provider value={current.wrappers as Commands<TActions>}>
         {children}
       </Context.Provider>
     );
   };
 
-  const useActions = (): TActions => {
+  const useActions = (): Commands<TActions> => {
     const value = useContext(Context);
     if (!value) {
       throw new Error(`${displayName} is missing its provider`);
@@ -116,7 +142,8 @@ export function createActionsContext<TActions extends object>(
     return value;
   };
 
-  const useOptionalActions = (): TActions | null => useContext(Context);
+  const useOptionalActions = (): Commands<TActions> | null =>
+    useContext(Context);
 
   return { Provider, useActions, useOptionalActions };
 }

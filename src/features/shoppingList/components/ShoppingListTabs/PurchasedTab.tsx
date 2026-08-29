@@ -112,7 +112,6 @@ const PurchasedTabComponent: React.FC = () => {
           items={items}
           showImages={showImages}
           onItemPress={actions.onItemPress}
-          itemSwipeActions={actions.itemSwipeActions}
           onTogglePurchase={actions.onTogglePurchase}
           onMoveToPantry={actions.onMoveToPantry}
           onQuantityPress={actions.onQuantityPress}

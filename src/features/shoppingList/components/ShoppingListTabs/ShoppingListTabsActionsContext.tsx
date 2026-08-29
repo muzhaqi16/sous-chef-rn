@@ -1,7 +1,4 @@
-import type {
-  SwipeableRef,
-  SwipeAction,
-} from '#/components/molecules/SwipeableItem/types';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 
 /**
@@ -11,20 +8,6 @@ import { createActionsContext } from '#hooks/utils/createActionsContext';
  */
 export interface ShoppingListTabsActions {
   onItemPress: (id: string) => void;
-  /**
-   * Swipe actions for one row, as descriptors.
-   *
-   * This is the prop `ListTemplate` injects into a custom list component. It
-   * replaced `onItemEdit` / `onItemDelete`, which this component kept reading
-   * from props the template had stopped supplying — so both were `undefined`
-   * and the rows' Edit and Delete did nothing.
-   */
-  itemSwipeActions?: (id: string) =>
-    | {
-        left?: SwipeAction[];
-        right?: SwipeAction[];
-      }
-    | undefined;
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
   onMoveToPantry?: (id: string) => void;
   onQuantityPress?: (id: string) => void;

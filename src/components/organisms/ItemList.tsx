@@ -29,6 +29,11 @@ import { commonStyles } from '#/styles/commonStyles';
 import { useFlashListPerformance } from '#hooks/performance/useFlashListPerformance';
 import { useDataReferenceTracker } from '#hooks/performance/useDataReferenceTracker';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+import { resolveRowActions } from '#components/molecules/SwipeableItem/commonActions';
+import {
+  ItemSwipeActionsProvider,
+  useItemSwipeActions,
+} from '#components/organisms/itemSwipeActionsContext';
 import {
   ItemListActionsProvider,
   useItemListActions,
@@ -57,9 +62,16 @@ const ItemListRenderItemComponent: React.FC<ListRenderItemInfo<Item>> = ({
   index,
 }) => {
   const { actions } = useItemListActions();
-  const { onItemPress, itemSwipeActions, onSwipeableWillOpen, testIDPrefix } =
+  const { onItemPress, onSwipeableWillOpen, testIDPrefix, onBeforeRowRemoved } =
     actions;
-  const swipe = itemSwipeActions?.(item.id);
+  // A derivation, so it comes from its own context and is always the current
+  // one — the command bag stabilises behind a ref that publishes too late.
+  const itemSwipeActions = useItemSwipeActions();
+  const swipe = resolveRowActions(
+    itemSwipeActions,
+    item.id,
+    onBeforeRowRemoved,
+  );
 
   // Render CachedImage from imageUrl data — avoids creating JSX in parent transforms
   const leftElement =
@@ -227,33 +239,15 @@ export const ItemList: React.FC<ItemListProps> = ({
   // flagged `removesRow`, rather than only to a handler named `onItemDelete`.
   const actions: ItemListActions = {
     onItemPress,
-    itemSwipeActions: itemSwipeActions
-      ? (id: string) => {
-          const prepare = (list?: SwipeAction[]) =>
-            list?.map(action =>
-              action.removesRow
-                ? {
-                    ...action,
-                    onPress: () => {
-                      flashListRef.current?.prepareForLayoutAnimationRender();
-                      onBeforeItemRemoved?.();
-                      action.onPress();
-                    },
-                  }
-                : action,
-            );
-          const built = itemSwipeActions(id);
-          return { left: prepare(built.left), right: prepare(built.right) };
-        }
-      : undefined,
     onSwipeableWillOpen,
     testIDPrefix,
+    // A command, so it belongs in this bag — the row calls it before a
+    // row-removing action, and the list is what knows how to prepare itself.
+    onBeforeRowRemoved: () => {
+      flashListRef.current?.prepareForLayoutAnimationRender();
+      onBeforeItemRemoved?.();
+    },
   };
-
-  // extraData encodes whether rows have swipe actions at all — FlashList
-  // re-renders items when it changes. The per-row action list is built inside
-  // the row, so its contents do not need to appear here.
-  const extraData = String(!!itemSwipeActions);
 
   // The scrollable swaps when the list empties, so a drag in flight on the old
   // one never delivers its end event and the caller's drag tracking stays on —
@@ -305,61 +299,62 @@ export const ItemList: React.FC<ItemListProps> = ({
 
   return (
     <ItemListActionsProvider actions={actions}>
-      <FlashList
-        renderScrollComponent={SwipeAwareScrollComponent}
-        ref={flashListRef}
-        data={items}
-        keyExtractor={keyExtractor}
-        getItemType={getItemType}
-        CellRendererComponent={perfCallbacks.CellRendererComponent}
-        contentContainerStyle={contentStyle}
-        showsVerticalScrollIndicator={false}
-        onScroll={onScroll}
-        onScrollBeginDrag={onScrollBeginDrag}
-        onScrollEndDrag={onScrollEndDrag}
-        onMomentumScrollEnd={onMomentumScrollEnd}
-        scrollEventThrottle={scrollEventThrottle}
-        // Deliver taps on header/row buttons on the first touch even while the
-        // keyboard is up (default "never" swallows the first tap to dismiss the
-        // keyboard, forcing a second tap on the search button). Taps on empty
-        // space still dismiss the keyboard.
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          onRefresh ? (
-            <ThemedRefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          ) : undefined
-        }
-        renderItem={renderItem}
-        extraData={extraData}
-        drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
-        maintainVisibleContentPosition={MVCP_DISABLED}
-        onLoad={perfCallbacks.onLoad}
-        onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
-        onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
-        onEndReached={onEndReached}
-        onEndReachedThreshold={onEndReachedThreshold}
-        ListHeaderComponent={
-          ListHeaderComponent ? (
-            typeof ListHeaderComponent === 'function' ? (
-              <ListHeaderComponent />
-            ) : (
-              ListHeaderComponent
-            )
-          ) : null
-        }
-        ListFooterComponent={
-          ListFooterComponent ? (
-            typeof ListFooterComponent === 'function' ? (
-              <ListFooterComponent />
-            ) : (
-              ListFooterComponent
-            )
-          ) : null
-        }
-      />
+      <ItemSwipeActionsProvider value={itemSwipeActions}>
+        <FlashList
+          renderScrollComponent={SwipeAwareScrollComponent}
+          ref={flashListRef}
+          data={items}
+          keyExtractor={keyExtractor}
+          getItemType={getItemType}
+          CellRendererComponent={perfCallbacks.CellRendererComponent}
+          contentContainerStyle={contentStyle}
+          showsVerticalScrollIndicator={false}
+          onScroll={onScroll}
+          onScrollBeginDrag={onScrollBeginDrag}
+          onScrollEndDrag={onScrollEndDrag}
+          onMomentumScrollEnd={onMomentumScrollEnd}
+          scrollEventThrottle={scrollEventThrottle}
+          // Deliver taps on header/row buttons on the first touch even while the
+          // keyboard is up (default "never" swallows the first tap to dismiss the
+          // keyboard, forcing a second tap on the search button). Taps on empty
+          // space still dismiss the keyboard.
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            onRefresh ? (
+              <ThemedRefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+              />
+            ) : undefined
+          }
+          renderItem={renderItem}
+          drawDistance={FLASHLIST_DEFAULTS.fullScreen.drawDistance}
+          maintainVisibleContentPosition={MVCP_DISABLED}
+          onLoad={perfCallbacks.onLoad}
+          onCommitLayoutEffect={perfCallbacks.onCommitLayoutEffect}
+          onViewableItemsChanged={perfCallbacks.onViewableItemsChanged}
+          onEndReached={onEndReached}
+          onEndReachedThreshold={onEndReachedThreshold}
+          ListHeaderComponent={
+            ListHeaderComponent ? (
+              typeof ListHeaderComponent === 'function' ? (
+                <ListHeaderComponent />
+              ) : (
+                ListHeaderComponent
+              )
+            ) : null
+          }
+          ListFooterComponent={
+            ListFooterComponent ? (
+              typeof ListFooterComponent === 'function' ? (
+                <ListFooterComponent />
+              ) : (
+                ListFooterComponent
+              )
+            ) : null
+          }
+        />
+      </ItemSwipeActionsProvider>
     </ItemListActionsProvider>
   );
 };

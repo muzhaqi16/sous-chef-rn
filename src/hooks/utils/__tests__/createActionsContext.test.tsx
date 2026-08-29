@@ -176,3 +176,68 @@ describe('createActionsContext', () => {
     expect(first).not.toHaveBeenCalled();
   });
 });
+
+describe('the bag holds commands, not derivations', () => {
+  interface MaybeDerivation {
+    // Written as if it returned something. The factory voids it.
+    build?: (id: string) => { left: string[] };
+  }
+
+  it('returns nothing from a stabilised wrapper', () => {
+    const { Provider, useActions } =
+      createActionsContext<MaybeDerivation>('D1');
+
+    let result: unknown = 'unset';
+    const Consumer = () => {
+      const actions = useActions();
+      result = (actions.build as ((id: string) => unknown) | undefined)?.('x');
+      return null;
+    };
+
+    render(
+      <Provider actions={{ build: () => ({ left: ['edit'] }) }}>
+        <Consumer />
+      </Provider>,
+    );
+
+    // A derivation cannot be served from here: the value would come from a ref
+    // published after children render, so the row would build itself from the
+    // previous render's data. Voiding the return makes that a compile error at
+    // the consumer rather than a stale value at runtime — this asserts the
+    // runtime half of that contract. Derivations go through
+    // `createValueContext`; see `itemSwipeActionsContext`.
+    expect(result).toBeUndefined();
+  });
+
+  it('still delivers a command to the latest callback after commit', async () => {
+    const user = userEvent.setup();
+    const { Provider, useActions } = createActionsContext<TestActions>('D2');
+    const second = jest.fn();
+
+    const Consumer = () => {
+      const actions = useActions();
+      return (
+        <Pressable testID="go" onPress={() => actions.onEdit!('x')}>
+          <Text>Go</Text>
+        </Pressable>
+      );
+    };
+
+    const { rerender } = render(
+      <Provider actions={{ onEdit: jest.fn() }}>
+        <Consumer />
+      </Provider>,
+    );
+    rerender(
+      <Provider actions={{ onEdit: second }}>
+        <Consumer />
+      </Provider>,
+    );
+
+    // A command is invoked from a gesture, long after the commit that changed
+    // it — which is why a latest-ref is the right mechanism for commands and
+    // the wrong one for anything read while rendering.
+    await user.press(screen.getByTestId('go'));
+    expect(second).toHaveBeenCalledWith('x');
+  });
+});

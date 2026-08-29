@@ -6,10 +6,8 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
-import type {
-  SwipeableRef,
-  SwipeAction,
-} from '#/components/molecules/SwipeableItem/types';
+import { createActionsContext } from '#hooks/utils/createActionsContext';
+import type { SwipeableRef } from '#/components/molecules/SwipeableItem/types';
 
 /**
  * Actions available for list items.
@@ -17,20 +15,6 @@ import type {
  */
 export interface SortableListActions {
   onItemPress?: (id: string) => void;
-  /**
-   * Swipe actions for one row, as descriptors.
-   *
-   * Named verbs (`onItemEdit`, `onItemDelete`) used to travel this chain. They
-   * were replaced by the descriptor factory the shared list template already
-   * injects, so the screen supplies its row actions the same way whether the
-   * list is the default one or this custom one.
-   */
-  itemSwipeActions?: (id: string) =>
-    | {
-        left?: SwipeAction[];
-        right?: SwipeAction[];
-      }
-    | undefined;
   /**
    * Toggle an item's purchased state. A plain call marks it purchased with
    * default values (or un-purchases). Passing `{ withDetails: true }` (from a
@@ -42,6 +26,8 @@ export interface SortableListActions {
   onQuantityPress?: (id: string) => void;
   onSwipeableWillOpen?: (ref: SwipeableRef) => void;
   onSwipeableClose?: () => void;
+  /** Run by a row before a `removesRow` action fires. */
+  onBeforeRowRemoved?: () => void;
   /**
    * Callback for reordering items via drag-to-reorder.
    * @param itemId - ID of the item being moved
@@ -66,28 +52,32 @@ export interface SortableListPermissions {
   disabled?: boolean;
 }
 
-interface SortableListActionsContextValue {
-  actions: SortableListActions;
+/**
+ * Permissions only. The actions half is `createActionsContext`.
+ *
+ * This module used to hand-roll the same latest-ref stabilisation the factory
+ * provides, which is how it kept both defects the factory was fixed for — a
+ * truthy wrapper for an absent handler, and a key set frozen at first render —
+ * while its sibling in this feature already used the factory. One contract, one
+ * implementation.
+ *
+ * Permissions stay here because they are a different thing: a VALUE consumers
+ * read while rendering, value-compared so a parent re-render that rebuilds an
+ * identical object does not re-render every row.
+ */
+interface SortableListPermissionsValue {
   permissions: SortableListPermissions;
   permissionsRef: React.RefObject<SortableListPermissions>;
 }
 
-const SortableListActionsContext =
-  createContext<SortableListActionsContextValue | null>(null);
+const PermissionsContext = createContext<SortableListPermissionsValue | null>(
+  null,
+);
+PermissionsContext.displayName = 'SortableListPermissionsProvider';
 
-/**
- * Hook to access list actions from context.
- * Must be used within SortableListActionsProvider.
- */
-export const useSortableListActions = () => {
-  const context = useContext(SortableListActionsContext);
-  if (!context) {
-    throw new Error(
-      'useSortableListActions must be used within SortableListActionsProvider',
-    );
-  }
-  return context;
-};
+const actionsContext = createActionsContext<SortableListActions>(
+  'SortableListActionsProvider',
+);
 
 interface SortableListActionsProviderProps {
   actions: SortableListActions;
@@ -95,33 +85,19 @@ interface SortableListActionsProviderProps {
   children: ReactNode;
 }
 
-/**
- * Provider that makes action callbacks stable across renders.
- *
- * Uses refs internally to always call the latest callback version
- * without causing re-renders when parent callbacks change.
- * This eliminates action callbacks from renderItem dependency arrays.
- */
 export const SortableListActionsProvider: React.FC<
   SortableListActionsProviderProps
 > = ({ actions, permissions, children }) => {
-  // Store latest actions in ref - updated via effect but doesn't trigger re-renders
-  const actionsRef = useRef(actions);
-  useEffect(() => {
-    actionsRef.current = actions;
-  });
-
-  // Store latest permissions in ref - for use in event handlers (not during render)
+  // Latest permissions for event handlers, which read after commit.
   const permissionsRef = useRef(permissions);
   useEffect(() => {
     permissionsRef.current = permissions;
   });
 
-  // Value-compare permissions so context only updates when booleans actually change.
-  // Parent re-renders (e.g. Apollo cache updates) create new permission object references
-  // even when the boolean values are identical — this guard prevents unnecessary context updates.
+  // Value-compared: a parent re-render (an Apollo cache write, say) builds a new
+  // permissions object with identical booleans, and without this every row
+  // re-renders for it.
   const [stablePermissions, setStablePermissions] = useState(permissions);
-
   if (
     stablePermissions.canRemoveItems !== permissions.canRemoveItems ||
     stablePermissions.canEditItems !== permissions.canEditItems ||
@@ -132,36 +108,33 @@ export const SortableListActionsProvider: React.FC<
     setStablePermissions(permissions);
   }
 
-  // Create stable callbacks that delegate to ref
-  // useState initializer guarantees a single stable object across all renders
-  const [stableActions] = useState<SortableListActions>(() => ({
-    onItemPress: (id: string) => actionsRef.current.onItemPress?.(id),
-    itemSwipeActions: (id: string) => actionsRef.current.itemSwipeActions?.(id),
-    onTogglePurchase: (id: string, opts?: { withDetails?: boolean }) =>
-      actionsRef.current.onTogglePurchase?.(id, opts),
-    onMoveToPantry: (id: string) => actionsRef.current.onMoveToPantry?.(id),
-    onQuantityPress: (id: string) => actionsRef.current.onQuantityPress?.(id),
-    onSwipeableWillOpen: (ref: SwipeableRef) =>
-      actionsRef.current.onSwipeableWillOpen?.(ref),
-    onSwipeableClose: () => actionsRef.current.onSwipeableClose?.(),
-    onSortOrderUpdate: (
-      itemId: string,
-      afterItemId: string | null,
-      beforeItemId: string | null,
-    ) =>
-      actionsRef.current.onSortOrderUpdate?.(itemId, afterItemId, beforeItemId),
-  }));
-
-  // Context value - only stable refs/objects to prevent context-triggered re-renders
-  const contextValue: SortableListActionsContextValue = {
-    actions: stableActions,
+  const permissionsValue: SortableListPermissionsValue = {
     permissions: stablePermissions,
-    permissionsRef, // Ref for latest values in event handlers (not during render)
+    permissionsRef,
   };
 
   return (
-    <SortableListActionsContext.Provider value={contextValue}>
-      {children}
-    </SortableListActionsContext.Provider>
+    <actionsContext.Provider actions={actions}>
+      <PermissionsContext.Provider value={permissionsValue}>
+        {children}
+      </PermissionsContext.Provider>
+    </actionsContext.Provider>
   );
+};
+
+/**
+ * Row actions and permissions. Throws outside the provider, so a missing one is
+ * a loud failure rather than rows that silently render without actions.
+ */
+export const useSortableListActions = () => {
+  const permissionsValue = useContext(PermissionsContext);
+  if (!permissionsValue) {
+    throw new Error(
+      'useSortableListActions must be used within SortableListActionsProvider',
+    );
+  }
+  return {
+    actions: actionsContext.useActions(),
+    ...permissionsValue,
+  };
 };

@@ -141,11 +141,18 @@ jest.mock('#context/StaggeredEntryContext', () => ({
   })),
 }));
 
+// The row reads its swipe-action factory from this context now: it is a
+// derivation the row calls while rendering, not a command.
+jest.mock('#components/organisms/itemSwipeActionsContext', () => ({
+  useItemSwipeActions: jest.fn(() => undefined),
+  ItemSwipeActionsProvider: ({ children }: { children?: React.ReactNode }) =>
+    children,
+}));
+
 jest.mock('../SortableListActionsContext', () => ({
   useSortableListActions: jest.fn(() => ({
     actions: {
       onItemPress: jest.fn(),
-      itemSwipeActions: jest.fn(),
       onTogglePurchase: jest.fn(),
       onMoveToPantry: jest.fn(),
       onQuantityPress: jest.fn(),
@@ -194,6 +201,7 @@ import { SortableItem_ItemFragmentDoc } from '../SortableItem.generated';
 import type { FragmentType } from '@apollo/client/masking';
 import type { ShoppingListRowItem } from '../types';
 import { useSortableListActions } from '../SortableListActionsContext';
+import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
 import {
   useShoppingListTutorialState,
   useShoppingListTutorialActions,
@@ -359,10 +367,10 @@ describe('SwipeableListItem (SortableItem)', () => {
         canMarkPurchased: true,
       },
     ) => {
+      (useItemSwipeActions as jest.Mock).mockReturnValue(itemSwipeActions);
       (useSortableListActions as jest.Mock).mockReturnValue({
         actions: {
           onItemPress: jest.fn(),
-          itemSwipeActions,
           onTogglePurchase: jest.fn(),
           onMoveToPantry: jest.fn(),
           onQuantityPress: jest.fn(),
@@ -455,7 +463,6 @@ describe('SwipeableListItem (SortableItem)', () => {
       (useSortableListActions as jest.Mock).mockReturnValue({
         actions: {
           onItemPress: jest.fn(),
-          itemSwipeActions: jest.fn(),
           onTogglePurchase: jest.fn(),
           onMoveToPantry: jest.fn(),
           onQuantityPress: jest.fn(),

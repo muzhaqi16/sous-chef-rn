@@ -33,6 +33,8 @@ import {
 import { resolveImageUrl } from '#utils/imageUtils';
 import { SortableItem_ItemFragmentDoc } from './SortableItem.generated';
 import { useSortableListActions } from './SortableListActionsContext';
+import { useItemSwipeActions } from '#components/organisms/itemSwipeActionsContext';
+import { resolveRowActions } from '#components/molecules/SwipeableItem/commonActions';
 import {
   useShoppingListRowOptions,
   useSortableListTheme,
@@ -100,12 +102,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const { actions, permissions } = useSortableListActions();
   const {
     onItemPress,
-    itemSwipeActions,
     onTogglePurchase,
     onMoveToPantry,
     onQuantityPress,
     onSwipeableWillOpen,
     onSwipeableClose,
+    onBeforeRowRemoved,
   } = actions;
 
   const {
@@ -126,7 +128,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // before the cache propagates.
   const isPurchased = rowItem?.isPurchased ?? false;
   const itemId = rowItem?.id ?? '';
-  const swipeActions = itemSwipeActions?.(itemId);
+  // A derivation, read from its own context so it is the current one — the
+  // command bag publishes behind a ref that children see too late.
+  const itemSwipeActions = useItemSwipeActions();
+  const swipeActions = resolveRowActions(
+    itemSwipeActions,
+    itemId,
+    onBeforeRowRemoved,
+  );
 
   // This line's purchase already reached the pantry. The bulk move filters its
   // working set on the same stamp, so offering "move to pantry" here would
