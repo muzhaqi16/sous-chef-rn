@@ -2,11 +2,12 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
   movePurchasedItemsToPantry(input: $input) {
     __typename
     ... on MovePurchasedItemsToPantryPayload {
-      movedItems {
+      # Lines the batch could not move. `reason` is a server string and is
+      # NOT displayed — the count and the item names are what reach the user.
+      failedItems {
         shoppingListItemId
-        pantryItemId
         itemName
-        quantity
+        reason
       }
       summary {
         total

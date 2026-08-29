@@ -1,5 +1,4 @@
 import { useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
@@ -8,76 +7,8 @@ import { alertRejectedMutation } from '#/apollo/utils/alertRejectedMutation';
 import { t } from '#/i18n';
 import { getI18n } from '#/i18n/config';
 import { errorService } from '#/services/errorService';
-import {
-  safeEvictMany,
-  type ConnectionData,
-} from '#/apollo/utils/cacheUpdaters';
-import { isPurchasedVariant } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
-
-/**
- * Cache side of a batch move-to-pantry: drop the moved rows from the purchased
- * connection variant, decrement the list counters, and evict the entities.
- *
- * Module-level rather than inlined into the mutation's `update` because its body
- * contains `?.` / `||` / `!` value blocks, and the React Compiler bails out of
- * the entire hook when one appears inside a try/catch — leaving the caller's try
- * body a single plain call. See scripts/probe-compiler-try-forms.mjs.
- */
-function applyBatchMoveCacheUpdate(
-  cache: ApolloCache,
-  currentListId: string,
-  movedItems: { shoppingListItemId: string }[],
-): void {
-  const movedCount = movedItems.length;
-  if (movedCount === 0) return;
-
-  const movedIds = new Set(movedItems.map(item => item.shoppingListItemId));
-
-  const parentCacheId = cache.identify({
-    __typename: 'ShoppingList',
-    id: currentListId,
-  });
-  if (!parentCacheId) return;
-
-  // Single cache.modify: remove from purchased variant only + update counters
-  cache.modify({
-    id: parentCacheId,
-    fields: {
-      itemsConnection(
-        existing: ConnectionData | undefined,
-        { readField, storeFieldName },
-      ) {
-        if (!isPurchasedVariant(storeFieldName) || !existing?.edges)
-          return existing;
-
-        return {
-          ...existing,
-          edges: existing.edges.filter(
-            edge => !movedIds.has(readField<string>('id', edge?.node)!),
-          ),
-          totalCount: Math.max(0, (existing.totalCount || 0) - movedCount),
-        };
-      },
-      totalItems(existing: number = 0) {
-        return Math.max(0, existing - movedCount);
-      },
-      completedItems(existing: number = 0) {
-        return Math.max(0, existing - movedCount);
-      },
-    },
-  });
-
-  // Evict all moved items from cache
-  safeEvictMany(
-    cache,
-    movedItems.map(item => ({
-      typename: 'ShoppingListItem',
-      id: item.shoppingListItemId,
-    })),
-  );
-}
 
 interface UseBatchMoveToPantryOptions {
   currentListId: string | undefined;
@@ -107,23 +38,20 @@ export function useBatchMoveToPantry({
   const [movePurchasedMutation, { loading }] = useMutation(
     MovePurchasedItemsToPantryDocument,
     {
-      update: (cache, { data }) => {
-        const payload = data?.movePurchasedItemsToPantry;
-        if (
-          payload?.__typename !== 'MovePurchasedItemsToPantryPayload' ||
-          !currentListId
-        )
-          return;
-        const { movedItems } = payload;
-
-        try {
-          applyBatchMoveCacheUpdate(cache, currentListId, movedItems);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for batch move to pantry:',
-          });
-        }
-      },
+      // No `update` callback, and nothing written before firing either.
+      //
+      // `movePurchasedItemsToPantry` NEVER removes the lines it moves — they
+      // stay in the purchased section, and clearing them is
+      // `deleteShoppingListItems(purchased: true)`, a separate act the user
+      // confirms. So there is nothing here for the client to take out of the
+      // list: this used to filter the purchased edges, decrement `totalItems`,
+      // `completedItems` and the connection's `totalCount`, and evict the
+      // `ShoppingListItem` entities — all of which contradicted the server and
+      // came back on the next fetch.
+      //
+      // The pantry side is not written either: the mutation carries no
+      // `pantryId`, so the client cannot know which pantry the rows land in.
+      // The pantry query picks them up on its next fetch.
       onError: error => {
         handleMutationError(error, { operation: 'Batch Move to Pantry' });
       },
@@ -146,24 +74,13 @@ export function useBatchMoveToPantry({
       idempotencyKey: generateEntityId(),
     }));
 
-    // Nothing is written eagerly. Three reasons, and the first is decisive:
+    // Nothing is written eagerly, and nothing is written on the response — the
+    // server keeps every line it moves (see the `useMutation` comment above).
     //
-    // 1. The eager removal was aimed at the wrong set. `purchasedItems` is the
-    //    paginated, search-filtered slice the user can see, while the input
-    //    carries only `shoppingListId` — so the server moves EVERY purchased
-    //    row. With 30 purchased and 10 loaded, the client removed 10 and the
-    //    response removed 30, and no restore could have picked the right rows.
-    // 2. Removing edges is idempotent; subtracting their count is not. The
-    //    eager write and `applyBatchMoveCacheUpdate` decremented `totalItems`,
-    //    `completedItems` and the purchased `totalCount` twice on every
-    //    successful move.
-    // 3. There was no restore path on either a refusal or a permanent replay
-    //    failure, and the queue cannot identify this operation's entity —
-    //    `getEntityId` has no branch for a plural `pantryItemIds` array — so a
-    //    failed replay left the rows in neither list. `useMoveToPantry`
-    //    documents avoiding exactly that.
-    //
-    // The mutation's `update` callback is therefore the only writer.
+    // Even if it removed them, an eager removal here would be aimed at the wrong
+    // set: `purchasedItems` is the paginated, search-filtered slice the user can
+    // see, while the input carries only `shoppingListId`, so the server acts on
+    // EVERY purchased row.
 
     // Built outside the try: a `&&` spread is a value block, and one inside a
     // try body bails this whole hook out of the React Compiler.
@@ -205,25 +122,62 @@ export function useBatchMoveToPantry({
       return;
     }
 
+    // Three outcomes, and they mean different things to the user:
+    //   succeeded — lines THIS call moved
+    //   skipped   — lines an earlier call had already moved (already stocked)
+    //   failed    — lines that errored, itemised in `failedItems`
+    // A repeat call on an unchanged list reports `succeeded: 0`, which is the
+    // honest answer rather than the same count forever.
     const movedCount = payload.summary.succeeded;
-    const skippedCount = payload.summary.skipped;
+    const alreadyThereCount = payload.summary.skipped;
+    const failedCount = payload.summary.failed;
 
     if (movedCount > 0) {
-      const skipped =
-        skippedCount > 0
-          ? getI18n().t('moveToPantry.skippedSuffix', { skippedCount })
+      const alreadyThere =
+        alreadyThereCount > 0
+          ? getI18n().t('moveToPantry.alreadyThereSuffix', {
+              count: alreadyThereCount,
+            })
           : '';
       toastService.success(
-        getI18n().t('moveToPantry.movedItems', { count: movedCount, skipped }),
+        getI18n().t('moveToPantry.movedItems', {
+          count: movedCount,
+          skipped: alreadyThere,
+        }),
+      );
+    } else if (alreadyThereCount > 0) {
+      // Nothing moved because everything was already stocked. That is a success
+      // for the user, not the "nothing could be moved" message.
+      toastService.info(
+        getI18n().t('moveToPantry.allAlreadyThere', {
+          count: alreadyThereCount,
+        }),
       );
     } else {
       toastService.info(t('moveToPantry.noItemsMoved'));
     }
 
+    // Reported separately so a partial success still says what did not land.
+    // `reason` is a server string and is never displayed; the item names are
+    // the user's own words.
+    if (failedCount > 0) {
+      const names = payload.failedItems
+        .map(item => item.itemName)
+        .slice(0, 3)
+        .join(', ');
+      toastService.error(
+        getI18n().t('moveToPantry.failedItems', {
+          count: failedCount,
+          names,
+        }),
+      );
+    }
+
     Telemetry.trackEvent('batch_move_purchased_to_pantry', {
       shopping_list_id: currentListId,
       moved_count: movedCount,
-      skipped_count: skippedCount,
+      already_in_pantry_count: alreadyThereCount,
+      failed_count: failedCount,
     });
 
     onSuccess?.();

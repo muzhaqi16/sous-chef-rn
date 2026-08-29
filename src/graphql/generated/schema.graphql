@@ -3997,6 +3997,16 @@ type FailedIPStat {
   ipAddress: String
 }
 
+"""
+A purchased line movePurchasedItemsToPantry could not move, with the reason.
+Counted in summary.failed.
+"""
+type FailedMoveInfo {
+  itemName: String!
+  reason: String!
+  shoppingListItemId: ID!
+}
+
 """Sub-input for feature-specific notifications"""
 input FeatureNotificationsInput {
   collaborationInvites: Boolean
@@ -6621,9 +6631,16 @@ input MovePurchasedItemsToPantryInput {
 
 type MovePurchasedItemsToPantryPayload {
   """
-  Items that were successfully moved from the shopping list into the pantry.
+  Purchased lines that could not be moved, each with its reason. Counted in summary.failed.
+  """
+  failedItems: [FailedMoveInfo!]!
+  """
+  Purchased lines that are now in the pantry — both the ones this call moved and the ones an earlier call had already moved (see alreadyInPantry).
   """
   movedItems: [MovedItemInfo!]!
+  """
+  summary.succeeded = lines moved by THIS call; summary.skipped = lines already in the pantry; summary.failed = lines that errored.
+  """
   summary: BulkSummary!
 }
 
@@ -6728,10 +6745,19 @@ input MoveToPantryIdHintInput {
 }
 
 """
-Info about a successfully moved item (the per-element entity of
-movePurchasedItemsToPantry).
+Info about a line that is now in the pantry (the per-element entity of
+movePurchasedItemsToPantry). Covers both outcomes — read alreadyInPantry to
+tell them apart.
 """
 type MovedItemInfo {
+  """
+  True when an earlier move had already placed this line and the call wrote
+  nothing. The batch leaves its lines on the shopping list, so a line stays in
+  the purchased section and is re-attempted on every invocation; this is how a
+  client tells "already stocked" from "just moved" and stops counting the same
+  line as new work. Counted in summary.skipped, not summary.succeeded.
+  """
+  alreadyInPantry: Boolean!
   itemName: String!
   pantryItemId: ID!
   quantity: Float!
@@ -7149,7 +7175,19 @@ type Mutation {
   """
   Move all purchased items from a shopping list to the home's default pantry.
   Only available for shopping lists linked to a home.
-  Items without an itemId (custom items not in catalog) will be skipped.
+  
+  Bulk form of moveShoppingItemToPantry, with one difference: it never removes
+  the lines it moves. They stay in the purchased section — clearing that is
+  deleteShoppingListItems(purchased: true), a separate act the user confirms —
+  so a second call re-reads the same lines and finds them already stocked.
+  
+  Read the summary accordingly: succeeded = lines this call moved, skipped =
+  lines an earlier call had already moved (movedItems carries them too, with
+  alreadyInPantry: true), failed = lines that errored, each in failedItems
+  with its reason. A repeat call on an unchanged list reports succeeded: 0.
+  
+  A line whose catalog item was deleted is re-resolved from the name it still
+  carries rather than skipped; only a line with neither fails.
   """
   movePurchasedItemsToPantry(input: MovePurchasedItemsToPantryInput!): MovePurchasedItemsToPantryResult!
   """

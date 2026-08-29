@@ -951,10 +951,10 @@
       "body": "query MealTemplateForEvent($id: ID!) {\n  mealTemplate(id: $id) {\n    id\n    ...MealTemplateDisplay\n    __typename\n  }\n}\n\nfragment MealTemplateDisplay on MealTemplate {\n  id\n  name\n  description\n  category\n  durationDays\n  defaultServings\n  tags\n  usageCount\n  lastUsedAt\n  homeId\n  home {\n    id\n    name\n    myMembership {\n      id\n      role\n      __typename\n    }\n    __typename\n  }\n  user {\n    id\n    __typename\n  }\n  createdAt\n  updatedAt\n  __typename\n}"
     },
     {
-      "id": "c235471cda5b6f03f2f9789b01b7afebd5d349b2f82cb5759869e6112972287e",
+      "id": "bf0163a37f2b3142d04c97a6fa60c65d70e2fc6f12c6abac65e58a738eafd158",
       "name": "MovePurchasedItemsToPantry",
       "type": "mutation",
-      "body": "mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {\n  movePurchasedItemsToPantry(input: $input) {\n    __typename\n    ... on MovePurchasedItemsToPantryPayload {\n      movedItems {\n        shoppingListItemId\n        pantryItemId\n        itemName\n        quantity\n        __typename\n      }\n      summary {\n        total\n        succeeded\n        failed\n        skipped\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
+      "body": "mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {\n  movePurchasedItemsToPantry(input: $input) {\n    __typename\n    ... on MovePurchasedItemsToPantryPayload {\n      failedItems {\n        shoppingListItemId\n        itemName\n        reason\n        __typename\n      }\n      summary {\n        total\n        succeeded\n        failed\n        skipped\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n  }\n}"
     },
     {
       "id": "275a94b586da192b2f91524e6192fa97fafb7540f6eb2eec2215890a5e606cbc",

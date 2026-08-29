@@ -223,11 +223,16 @@
     "noListSelected": "Asnjë listë blerjesh e zgjedhur",
     "movedItems_one": "U zhvendos {{count}} artikull te qilari{{skipped}}",
     "movedItems_other": "U zhvendosën {{count}} artikuj te qilari{{skipped}}",
-    "skippedSuffix": " ({{skippedCount}} të anashkaluar)",
     "noItemsMoved": "Asnjë artikull nuk u zhvendos te qilari",
     "noPantryTitle": "Asnjë qilar i disponueshëm",
     "noPantryBody": "Krijo më parë një qilar në shtëpinë tënde.",
-    "queued": "Në radhë — artikujt do të zhvendosen te qilari kur të rikthehesh në linjë"
+    "queued": "Në radhë — artikujt do të zhvendosen te qilari kur të rikthehesh në linjë",
+    "alreadyThereSuffix_one": " ({{count}} ishte tashmë atje)",
+    "alreadyThereSuffix_other": " ({{count}} ishin tashmë atje)",
+    "allAlreadyThere_one": "Ai artikull është tashmë te qilari yt",
+    "allAlreadyThere_other": "Ata {{count}} artikuj janë tashmë te qilari yt",
+    "failedItems_one": "Nuk u zhvendos dot {{names}}",
+    "failedItems_other": "Nuk u zhvendosën dot {{count}} artikuj, përfshirë {{names}}"
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",

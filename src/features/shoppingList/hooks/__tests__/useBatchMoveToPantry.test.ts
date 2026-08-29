@@ -37,26 +37,33 @@ beforeEach(() => {
 
 function moveMock(payload: {
   movedCount: number;
+  /** Lines an earlier call had already moved — `summary.skipped`. */
   skippedCount: number;
   targetPantryName: string;
   movedItemIds: string[];
+  /** Lines that errored — `summary.failed`, itemised in `failedItems`. */
+  failedItems?: {
+    shoppingListItemId: string;
+    itemName: string;
+    reason: string;
+  }[];
 }) {
   return recordMock(MovePurchasedItemsToPantryDocument, {
     data: {
       movePurchasedItemsToPantry: {
         __typename: 'MovePurchasedItemsToPantryPayload',
-        movedItems: payload.movedItemIds.map(id => ({
-          __typename: 'MovedItemInfo',
-          shoppingListItemId: id,
-          pantryItemId: `pantry-${id}`,
-          itemName: id,
-          quantity: 1,
+        failedItems: (payload.failedItems ?? []).map(item => ({
+          __typename: 'FailedMoveInfo',
+          ...item,
         })),
         summary: {
           __typename: 'BulkSummary',
-          total: payload.movedCount + payload.skippedCount,
+          total:
+            payload.movedCount +
+            payload.skippedCount +
+            (payload.failedItems?.length ?? 0),
           succeeded: payload.movedCount,
-          failed: 0,
+          failed: payload.failedItems?.length ?? 0,
           skipped: payload.skippedCount,
         },
       },
@@ -149,7 +156,10 @@ describe('useBatchMoveToPantry', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
   });
 
-  it('includes skipped count in toast when items were skipped', async () => {
+  // `summary.skipped` now means "an earlier call already moved this line", not
+  // "this line could not be moved" — the opposite of a problem, so the copy says
+  // so instead of calling it skipped.
+  it('names already-stocked lines as already there, not skipped', async () => {
     const move = moveMock({
       movedCount: 2,
       skippedCount: 1,
@@ -168,11 +178,14 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Moved 2 items to pantry (1 skipped)',
+      'Moved 2 items to pantry (1 was already there)',
     );
   });
 
-  it('shows info toast when no items could be moved', async () => {
+  // A repeat call on an unchanged list reports `succeeded: 0` with everything in
+  // `skipped`. That is the list already being stocked, not a failure — saying
+  // "no items could be moved" would read as something going wrong.
+  it('says everything is already stocked when nothing was left to move', async () => {
     const move = moveMock({
       movedCount: 0,
       skippedCount: 3,
@@ -191,8 +204,66 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockToastInfo).toHaveBeenCalledWith(
+      'Those 3 items are already in your pantry',
+    );
+  });
+
+  it('still says nothing moved when there was genuinely nothing', async () => {
+    const move = moveMock({
+      movedCount: 0,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: [],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    expect(mockToastInfo).toHaveBeenCalledWith(
       'No items could be moved to pantry',
     );
+  });
+
+  it('reports lines that failed, by name, without showing the server reason', async () => {
+    const move = moveMock({
+      movedCount: 1,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+      failedItems: [
+        {
+          shoppingListItemId: 'item-9',
+          itemName: 'bread',
+          reason: 'Shopping list item needs a name before it can be moved',
+        },
+      ],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock] },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // The item name is the user's own words; `reason` is an unlocalizable
+    // server string and must not reach the screen.
+    expect(mockToastError).toHaveBeenCalledWith("Couldn't move bread");
+    expect(mockToastError).not.toHaveBeenCalledWith(
+      expect.stringContaining('needs a name'),
+    );
+    // A partial success still reports what did land.
+    expect(mockToastSuccess).toHaveBeenCalledWith('Moved 1 item to pantry');
   });
 
   it('calls onSuccess callback after successful move', async () => {
@@ -245,7 +316,8 @@ describe('useBatchMoveToPantry', () => {
       expect.objectContaining({
         shopping_list_id: 'list-1',
         moved_count: 2,
-        skipped_count: 1,
+        already_in_pantry_count: 1,
+        failed_count: 0,
       }),
     );
   });
@@ -436,7 +508,7 @@ describe('counters are adjusted exactly once', () => {
     { id: 'item-4' },
   ];
 
-  it('subtracts the moved count once from totalItems and completedItems', async () => {
+  it('leaves the list counters alone — the server keeps the lines it moves', async () => {
     const cache = seededCache();
     const move = moveMock({
       movedCount: 4,
@@ -458,10 +530,12 @@ describe('counters are adjusted exactly once', () => {
       await result.current.batchMoveToPantry();
     });
 
-    // 10 - 4 and 4 - 4. Applied twice these read 2 and 0, and the header then
-    // says "2 items" over 6 visible rows.
+    // `movePurchasedItemsToPantry` never removes the lines it moves — clearing
+    // them is `deleteShoppingListItems(purchased: true)`, a separate act. The
+    // client used to filter the edges and subtract the counts anyway, so the
+    // rows came back on the next fetch and the totals disagreed with them.
     expect(readCounts(cache)).toEqual(
-      expect.objectContaining({ totalItems: 6, completedItems: 0 }),
+      expect.objectContaining({ totalItems: 10, completedItems: 4 }),
     );
   });
 
