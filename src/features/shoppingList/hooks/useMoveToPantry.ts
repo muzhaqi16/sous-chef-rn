@@ -16,6 +16,7 @@ import {
 import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
+  writePurchaseInfo,
 } from '#/apollo/utils/shoppingListCacheUpdaters';
 import { classifyCreateResult } from '#/apollo/utils/classifyCreateResult';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -129,12 +130,12 @@ function applyMoveToPantryCacheUpdate(
       id: shoppingListItemId,
     });
     if (cacheId) {
+      // The purchase record goes through its own writer: it owns the rule that
+      // a flag flip clears the stocked stamp, which a spread here would keep.
+      writePurchaseInfo(cache, shoppingListItemId, { isPurchased: false });
       cache.modify<ShoppingListItemDisplayFragment>({
         id: cacheId,
         fields: {
-          purchaseInfo(existing) {
-            return { ...existing, isPurchased: false };
-          },
           version(existingVersion = 0) {
             return existingVersion + 1;
           },

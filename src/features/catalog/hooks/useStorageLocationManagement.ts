@@ -250,29 +250,44 @@ export function useStorageLocationManagement(
         ? undefined
         : locations.find(location => location.id === parentLocationId) ?? null;
 
+    // Identity only. `writeEntityFields` normalizes a nested `__typename`+`id`
+    // into a reference, so the child points AT the parent rather than holding a
+    // copy of its fields — renaming the parent afterwards would otherwise move
+    // that row and leave every child's sub-label on the old name, with no fetch
+    // to correct it because nothing about the child changed. Carrying no other
+    // field also means the write cannot clobber the parent's own record.
+    const locationRef = (locationId: string) => ({
+      __typename: 'StorageLocation',
+      id: locationId,
+    });
+
     const updates = {
       ...directFields,
       ...(nextParent === undefined
         ? {}
-        : {
-            parentLocation: nextParent
-              ? {
-                  __typename: 'StorageLocation',
-                  id: nextParent.id,
-                  name: nextParent.name,
-                }
-              : null,
-          }),
+        : { parentLocation: nextParent ? locationRef(nextParent.id) : null }),
     };
 
     // Snapshot the fields being changed, INCLUDING ones the cached entity does
     // not carry — a key filtered out here is a key a refusal cannot restore.
-    const previous = Object.fromEntries(
-      Object.keys(updates).map(key => [
-        key,
-        (current as Record<string, unknown> | undefined)?.[key] ?? null,
-      ]),
-    );
+    const previous = {
+      ...Object.fromEntries(
+        Object.keys(updates).map(key => [
+          key,
+          (current as Record<string, unknown> | undefined)?.[key] ?? null,
+        ]),
+      ),
+      // `current` is a query READ, so its `parentLocation` is denormalized.
+      // Snapshotting it verbatim would make a refusal restore the very copy
+      // this write exists to avoid.
+      ...(nextParent === undefined
+        ? {}
+        : {
+            parentLocation: current?.parentLocation?.id
+              ? locationRef(current.parentLocation.id)
+              : null,
+          }),
+    };
 
     // `isDefault` is exclusive. `setDefaultLocation` clears the previous holder
     // for exactly this reason; ticking Default in the EDIT sheet has to as well,

@@ -353,6 +353,59 @@ describe("a row loaded by the editor's own query", () => {
     expect(item?.servings).toBe(6);
   });
 
+  it('reverts a refused edit whose previous value the cache never held', async () => {
+    const RECIPE = {
+      __typename: 'Recipe',
+      id: 'recipe-1',
+      name: 'Carbonara',
+      imageUrl: null,
+      servings: 4,
+      totalTimeMinutes: 25,
+    };
+    const cache = seedCache([RECIPE, EDITOR_LOADED_ITEM]);
+    const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
+      cache,
+      operationMocks: [
+        {
+          request: {
+            query: UpdateTemplateItemDocument,
+            variables: () => true,
+          },
+          error: new Error('refused'),
+          maxUsageCount: Number.POSITIVE_INFINITY,
+        },
+      ],
+    });
+
+    let saved: boolean | undefined;
+    await act(async () => {
+      saved = await result.current.updateItem({
+        id: 'item-9',
+        meal: { recipeId: 'recipe-1' },
+      });
+    });
+    expect(saved).toBe(false);
+
+    // `readTemplateItem` is partial by contract, so a row the editor's own query
+    // loaded has no `recipe` key at all. Snapshotting that as `undefined` makes
+    // the revert a no-op for exactly the field the edit changed — the row keeps
+    // the recipe the server just refused.
+    const item = cache.readFragment<{
+      customMealName: string | null;
+      recipe: { id: string } | null;
+    }>({
+      id: 'MealTemplateItem:item-9',
+      fragment:
+        require('#features/mealPlan/graphql/mealPlanFragments.generated')
+          .MealTemplateItemFragmentDoc,
+      fragmentName: 'MealTemplateItemFragment',
+      returnPartialData: true,
+    });
+
+    expect(item?.customMealName).toBe('Soup');
+    expect(item?.recipe ?? null).toBeNull();
+  });
+
   it('puts a refused removal back', async () => {
     const cache = seedCache([EDITOR_LOADED_ITEM, TEMPLATE_WITH_ITEM]);
     const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {

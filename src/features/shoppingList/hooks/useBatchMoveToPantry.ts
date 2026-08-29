@@ -1,9 +1,10 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
+import { MovePurchasedItemsToPantryDocument } from './useBatchMoveToPantry.generated';
 import {
-  BatchMoveStockedFragmentDoc,
-  MovePurchasedItemsToPantryDocument,
-} from './useBatchMoveToPantry.generated';
+  readMovedToPantryAt,
+  writePurchaseInfo,
+} from '#/apollo/utils/shoppingListCacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { handleMutationError } from '#/utils/errorHandlers';
@@ -18,33 +19,33 @@ import { generateEntityId } from '#/utils/generateEntityId';
  * would now do nothing.
  *
  * The server keeps the lines and stamps them; without this the rows keep the
- * move-to-pantry button until the next fetch. Safe against the
- * `ShoppingListItemPurchaseInfo` merge, which clears omitted fields only when
- * `isPurchased` CHANGES — these lines are purchased before and after, so the
- * write takes the `mergeObjects` path and touches nothing else.
+ * move-to-pantry button until the next fetch.
+ *
+ * Goes through `writePurchaseInfo` rather than writing the record directly.
+ * That writer owns the two rules this must not break: it does not assert a flag
+ * it was not given, so a line the client has locally un-purchased cannot be
+ * flipped back and have its amounts cleared by the record's merge; and it
+ * clears the stamp on a flip, which this write never triggers.
  *
  * The timestamp is a local placeholder: the field is read as "is this stocked",
- * and the server's own value replaces it on the next fetch.
+ * and the server's own value replaces it on the next fetch. So it is only ever
+ * written onto a line that has NO stamp. The payload lists every line now in the
+ * pantry, including ones an earlier call moved, and those already carry the real
+ * time they were stocked — overwriting that with "now" on every press would move
+ * a recorded fact to keep pace with the button.
+ *
+ * Which is also why the payload's `alreadyInPantry` is not what decides this.
+ * It reports the SERVER's view, and the case that matters is the one where the
+ * two disagree: another device moved the line, so the server says it was already
+ * there while this cache has no stamp and its row still offers the action. That
+ * line does need stamping. The cached stamp answers the question directly, and
+ * the flag adds nothing to it.
  */
 function markMovedLinesStocked(cache: ApolloCache, ids: string[]): void {
   const stampedAt = new Date().toISOString();
   for (const id of ids) {
-    const cacheId = cache.identify({ __typename: 'ShoppingListItem', id });
-    if (!cacheId) continue;
-    cache.writeFragment({
-      id: cacheId,
-      fragment: BatchMoveStockedFragmentDoc,
-      fragmentName: 'BatchMoveStocked',
-      data: {
-        __typename: 'ShoppingListItem',
-        id,
-        purchaseInfo: {
-          __typename: 'ShoppingListItemPurchaseInfo',
-          isPurchased: true,
-          movedToPantryAt: stampedAt,
-        },
-      },
-    });
+    if (readMovedToPantryAt(cache, id)) continue;
+    writePurchaseInfo(cache, id, { movedToPantryAt: stampedAt });
   }
 }
 

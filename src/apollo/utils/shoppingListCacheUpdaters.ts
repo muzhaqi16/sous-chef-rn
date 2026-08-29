@@ -11,7 +11,7 @@
  * `storeFieldName` to distinguish filtered variants.
  */
 
-import { gql, type ApolloCache } from '@apollo/client';
+import { gql, isReference, type ApolloCache } from '@apollo/client';
 import {
   ShoppingListItemDisplayFragmentDoc,
   type ShoppingListItemDisplayFragment,
@@ -85,6 +85,9 @@ export function createOptimisticShoppingListItem(
       category: fields.category ?? null,
       notes: null,
       sortOrder: '',
+      // Builds the record whole rather than going through `writePurchaseInfo`,
+      // which patches an existing one. A line that was just created has no
+      // prior purchase to preserve and no flag to flip.
       purchaseInfo: {
         __typename: 'ShoppingListItemPurchaseInfo',
         isPurchased: false,
@@ -133,6 +136,120 @@ const ShoppingListStatsForOptimisticAddFragment = gql`
  * matchesFilter(storeFieldName, 'isPurchased', true)
  * matchesFilter(storeFieldName, 'isPurchased', false)
  */
+/** What a caller may change about a line's purchase record. */
+export interface PurchaseInfoPatch {
+  isPurchased?: boolean;
+  movedToPantryAt?: string | null;
+}
+
+/**
+ * The stamp a cached line already carries, or null.
+ *
+ * The counterpart to the writer above, here for the same reason: a caller
+ * deciding whether to stamp a line has to know whether it is already stamped,
+ * and reaching into the record from outside this module is how the two drift.
+ */
+export function readMovedToPantryAt(
+  cache: ApolloCache,
+  itemId: string,
+): string | null {
+  const cacheId = cache.identify({
+    __typename: 'ShoppingListItem',
+    id: itemId,
+  });
+  if (!cacheId) return null;
+  return (
+    cache.readFragment<{ purchaseInfo?: { movedToPantryAt?: string | null } }>({
+      id: cacheId,
+      fragment: gql`
+        fragment _MovedToPantryAt on ShoppingListItem {
+          purchaseInfo {
+            movedToPantryAt
+          }
+        }
+      `,
+      fragmentName: '_MovedToPantryAt',
+    })?.purchaseInfo?.movedToPantryAt ?? null
+  );
+}
+
+/**
+ * The only writer of `ShoppingListItem.purchaseInfo`.
+ *
+ * The record has two properties no call site should have to remember.
+ *
+ * Its type policy CLEARS every field a write omits whenever `isPurchased`
+ * changes — deliberately, because inheriting a previous purchase's amounts
+ * beside a new flag once showed a collaborator's name and price on someone
+ * else's purchase. A write that asserts a flag it does not own can therefore
+ * destroy the record: asserting `isPurchased: true` over a cached `false`
+ * cleared the quantity, price, date and purchaser.
+ *
+ * And `movedToPantryAt` is derived from the flag: the server clears the stamp
+ * on exactly the transition that ends a purchase cycle, so a local write that
+ * flips the flag must clear it too. Otherwise a re-purchased line keeps a stamp
+ * saying it is already stocked, and its row withholds the move-to-pantry action
+ * for a line the bulk move will act on.
+ *
+ * Both rules live here so a sixth writer cannot drift from them. Callers say
+ * what they are changing; they do not restate the rules.
+ */
+export function writePurchaseInfo(
+  cache: ApolloCache,
+  itemId: string,
+  patch: PurchaseInfoPatch,
+  options: { updatedAt?: string } = {},
+): void {
+  const cacheId = cache.identify({
+    __typename: 'ShoppingListItem',
+    id: itemId,
+  });
+  if (!cacheId) return;
+
+  cache.modify<{
+    purchaseInfo: {
+      isPurchased?: boolean;
+      movedToPantryAt?: string | null;
+    };
+    updatedAt: string;
+  }>({
+    id: cacheId,
+    fields: {
+      purchaseInfo(existing) {
+        // A value object with no key fields is never stored as a reference, but
+        // the modifier's type admits one and spreading it would write `__ref`
+        // over the record. Same guard the type policy uses.
+        if (isReference(existing)) return existing;
+
+        const wasPurchased = existing?.isPurchased ?? false;
+        // Only a caller that names the flag may change it. Everything else
+        // leaves it exactly as cached, which is what keeps the type policy on
+        // its non-clearing path.
+        const nextPurchased = patch.isPurchased ?? wasPurchased;
+        const flipped = nextPurchased !== wasPurchased;
+
+        let stamp: string | null;
+        if (flipped) {
+          stamp = null;
+        } else if (patch.movedToPantryAt !== undefined) {
+          stamp = patch.movedToPantryAt;
+        } else {
+          stamp = existing?.movedToPantryAt ?? null;
+        }
+
+        return {
+          ...existing,
+          isPurchased: nextPurchased,
+          movedToPantryAt: stamp,
+        };
+      },
+      ...(options.updatedAt === undefined
+        ? {}
+        : { updatedAt: () => options.updatedAt }),
+    },
+  });
+}
+
 export function matchesFilter(
   storeFieldName: string,
   key: string,

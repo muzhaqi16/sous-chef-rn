@@ -641,3 +641,42 @@ If the docs order stops skipping the function, the upstream bug is fixed —
 delete the crawl plugin and the probe, and restore the plain documented order.
 Ongoing regression cover is
 `node scripts/check-unistyles-variant-staleness.mjs`.
+
+### cache.modify cannot add a field
+
+**Verified 2026-08-29 vs `@apollo/client@4.2.12`.** Re-check:
+`node scripts/probe-cache-modify-field-addition.mjs`.
+
+`cache.modify` runs a modifier only for a field the store object ALREADY holds.
+Name a field the cached entity has never carried and the modifier is never
+called, nothing is written, and there is no error or warning:
+
+```
+modifier ran for the PRESENT field: true
+modifier ran for the ABSENT field:  false
+absent field in the store after:    false
+```
+
+Which fields an entity carries is decided by whichever query loaded it, not by
+the schema — so this bites per-screen, not per-type. `GetMealTemplateForEdit`
+selects `items { id dayOffset mealType customMealName servings notes }` and no
+`recipe`, so for every row the builder loaded, `recipe` is absent. Picking a
+recipe for such a row wrote `customMealName: null` (a field it does carry) and
+dropped the `recipe` (a field it does not), leaving the row with neither a name
+nor a recipe — and offline no response arrives to reconcile it.
+
+The second reason to avoid it for this job: **`cache.modify` stores exactly what
+it is handed.** A nested `{ __typename, id, name }` is written inline as a
+private copy, so renaming that entity later moves the original and leaves every
+copy stale — how a re-parented storage location kept showing its old parent's
+name.
+
+`writeEntityFields` (`src/apollo/utils/localFirstFields.ts`) therefore builds a
+fragment from the update keys and goes through `cache.writeFragment`, which adds
+absent fields and normalizes a nested `__typename` + `id` into a reference.
+Guarded by `src/apollo/utils/__tests__/localFirstFields.test.ts`.
+
+`cache.modify` remains the right tool where the field is known to exist and the
+write must NOT normalize — connection edges, counts, and the `purchaseInfo`
+record (`src/apollo/utils/shoppingListCacheUpdaters.ts`), which deliberately
+bypasses the merge policy that clears omitted fields.

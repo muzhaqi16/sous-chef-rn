@@ -20,7 +20,7 @@
  * ("takes two taps"), reached from the other direction, and the same fix.
  */
 
-import type { ApolloCache, StoreObject } from '@apollo/client';
+import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
 import { classifyCreateResult } from './classifyCreateResult';
 import { errorService } from '#/services/errorService';
 
@@ -39,10 +39,64 @@ export type FieldsEntityRef = StoreObject & {
 /** The shape of an awaited Apollo mutation result this module reads. */
 type MutationResultLike = { data?: unknown; error?: unknown };
 
+/** An object the cache should normalize rather than store inline. */
+function isEntityLike(value: unknown): value is Record<string, unknown> {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    '__typename' in value
+  );
+}
+
+/**
+ * The selection a value needs, as GraphQL source. Empty for a leaf.
+ *
+ * A `__typename` is what separates a nested ENTITY from a JSON-scalar field that
+ * merely happens to be an object, and selecting through it is what makes the
+ * cache normalize the value instead of storing a private copy of it.
+ */
+function selectionFor(value: unknown): string {
+  if (Array.isArray(value)) {
+    const entities = value.filter(isEntityLike);
+    if (entities.length === 0 || entities.length !== value.length) return '';
+    // The intersection: selecting a key some element lacks makes the write warn
+    // and store a hole.
+    const shared = entities
+      .map(entry => Object.keys(entry))
+      .reduce((acc, keys) => acc.filter(key => keys.includes(key)));
+    return selectionFor(
+      Object.fromEntries(shared.map(k => [k, entities[0][k]])),
+    );
+  }
+  if (!isEntityLike(value)) return '';
+
+  const inner = Object.keys(value)
+    .filter(key => key !== '__typename')
+    .map(key => `${key}${selectionFor(value[key])}`);
+  return ` { __typename ${inner.join(' ')} }`;
+}
+
 /**
  * Write flat fields onto a cached entity. `undefined` values are skipped so a
  * partial update never blanks a field, and an unidentifiable entity is a no-op
  * rather than a write against ROOT_QUERY.
+ *
+ * Goes through `writeFragment`, not `cache.modify`, for two reasons:
+ *
+ * - **`cache.modify` cannot INTRODUCE a field.** It runs a modifier only for a
+ *   field the store object already holds, so writing one the cached entity has
+ *   never carried is silently dropped — no error, no warning. Which fields an
+ *   entity carries is decided by whichever query loaded it, so this bites
+ *   exactly where it is hardest to see: `GetMealTemplateForEdit` selects no
+ *   `recipe`, so picking a recipe for a row that query loaded cleared the custom
+ *   name (a field it DOES carry) and dropped the recipe, leaving the row with
+ *   neither. Verified 2026-08-29 vs `@apollo/client@4.1`:
+ *   `docs/verified-library-behaviour.md#cache-modify-cannot-add-a-field`.
+ * - **`cache.modify` stores what it is handed.** A nested `{ __typename, id,
+ *   name }` becomes a private copy, so renaming that entity later moves the
+ *   original and leaves every copy stale. `writeFragment` normalizes it to a
+ *   reference and merges the nested entity's own fields into its own record.
  */
 export function writeEntityFields<TFields extends object>(
   cache: ApolloCache,
@@ -53,14 +107,25 @@ export function writeEntityFields<TFields extends object>(
   const cacheId = cache.identify(entity);
   if (!cacheId) return;
 
-  const fields: Record<string, () => unknown> = {};
-  for (const [field, value] of Object.entries(updates)) {
-    if (value === undefined) continue;
-    fields[field] = () => value;
-  }
-  if (Object.keys(fields).length === 0) return;
+  const written = Object.entries(updates).filter(
+    ([, value]) => value !== undefined,
+  );
+  if (written.length === 0) return;
 
-  cache.modify({ id: cacheId, fields });
+  const selections = written
+    .map(([field, value]) => `${field}${selectionFor(value)}`)
+    .join('\n    ');
+
+  cache.writeFragment({
+    id: cacheId,
+    fragment: gql`
+      fragment LocalFirstFields on ${entity.__typename} {
+        __typename
+        ${selections}
+      }
+    `,
+    data: { __typename: entity.__typename, ...Object.fromEntries(written) },
+  });
 }
 
 export interface LocalFirstFieldsOptions<TFields extends object> {

@@ -352,10 +352,14 @@ export function useMealTemplateEditor() {
       cache: client.cache,
       entity: previousItem ? { __typename: 'MealTemplateItem', id } : undefined,
       updates,
+      // `?? null` because `readTemplateItem` is partial BY CONTRACT: a row the
+      // editor's own query loaded carries no `recipe` key at all. Snapshotting
+      // that absence as `undefined` makes the revert skip the one field the edit
+      // changed, so a refused recipe pick keeps the recipe the server rejected.
       previous: Object.fromEntries(
         Object.keys(updates).map(key => [
           key,
-          (previousItem as Record<string, unknown> | null)?.[key],
+          (previousItem as Record<string, unknown> | null)?.[key] ?? null,
         ]),
       ),
       logLabel: 'Update Template Item',

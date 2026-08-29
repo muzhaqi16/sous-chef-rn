@@ -66,8 +66,10 @@ import { writeOptimisticRecipe } from '#features/recipes/screens/RecipeForm/reci
 import { buildOptimisticPantryItem } from '#features/pantry/hooks/buildOptimisticPantryItem';
 import { writePantryItemDetailStub } from '#features/pantry/hooks/writePantryItemDetailStub';
 import { addToPantryItemsCache } from '#/apollo/utils/pantryCacheUpdaters';
+import { AddedShoppingListItemFieldsFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import {
   addOptimisticShoppingListItem,
+  addNewItemToShoppingListCache,
   createOptimisticShoppingListItem,
   addOptimisticShoppingList,
   buildOptimisticShoppingList,
@@ -549,6 +551,58 @@ describe('optimistic entity completeness', () => {
       });
       return cache;
     };
+
+    /**
+     * The optimistic builder is not the only writer that CREATES a
+     * `ShoppingListItem`. The recipe→list mutation creates them from its own
+     * selection, and the purchase record's merge policy backfills omitted
+     * fields only when a previous value exists — so a field that selection
+     * misses is genuinely absent, the list read goes incomplete, and the whole
+     * screen blanks rather than showing a missing value.
+     *
+     * Written through that mutation's OWN fragment, so a field added to the
+     * list query has to reach it too.
+     */
+    it('keeps GetShoppingListItemsFiltered complete after a recipe-created add', async () => {
+      const cache = await seedListCache();
+
+      // Written through the fragment `createShoppingListItemsFromRecipe` now
+      // spreads, so this test tracks that selection: narrow it again and the
+      // list read goes incomplete here.
+      const created = await runAgainstSchema<
+        Unmasked<GetShoppingListItemsFilteredQuery>
+      >(GetShoppingListItemsFilteredDocument, LIST_VARS);
+      const sample =
+        created.shoppingList!.itemsConnection!.edges![0]!.node!;
+
+      cache.writeFragment({
+        id: 'ShoppingListItem:from-recipe',
+        fragment: AddedShoppingListItemFieldsFragmentDoc,
+        fragmentName: 'AddedShoppingListItemFields',
+        data: {
+          ...sample,
+          id: 'from-recipe',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            totalItems: 1,
+            completedItems: 0,
+            remainingItems: 1,
+            completionRate: 0,
+          },
+        } as never,
+      });
+      addNewItemToShoppingListCache(cache, 'list-1', { id: 'from-recipe' });
+
+      const diff = cache.diff({
+        query: GetShoppingListItemsFilteredDocument,
+        variables: LIST_VARS,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      expect(describeMissing(diff.missing)).toBe('none');
+      expect(diff.complete).toBe(true);
+    });
 
     it('keeps GetShoppingListItemsFiltered complete after an optimistic add', async () => {
       const cache = await seedListCache();

@@ -1354,3 +1354,123 @@ describe('buildAddItemsReconcileUpdate', () => {
     expect(cache.modify).toHaveBeenCalled();
   });
 });
+
+describe('writePurchaseInfo', () => {
+  const { gql } = require('@apollo/client');
+  const { makeCache } = require('#/apollo/cache');
+  const { writePurchaseInfo } = require('../shoppingListCacheUpdaters');
+
+  const RECORD = gql`
+    fragment WritePurchaseInfoProbe on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchasedQuantity
+        purchasedPrice
+      }
+      updatedAt
+    }
+  `;
+
+  function seed(overrides: Record<string, unknown> = {}) {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'ShoppingListItem:i1',
+      fragment: RECORD,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'i1',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: '2026-08-28T10:00:00.000Z',
+          purchasedQuantity: 3,
+          purchasedPrice: 2.5,
+          ...overrides,
+        },
+      },
+    });
+    return cache;
+  }
+
+  const read = (cache: { readFragment: Function }) =>
+    cache.readFragment({
+      id: 'ShoppingListItem:i1',
+      fragment: RECORD,
+      returnPartialData: true,
+    }) as {
+      updatedAt: string;
+      purchaseInfo: {
+        isPurchased: boolean;
+        movedToPantryAt: string | null;
+        purchasedQuantity: number | null;
+        purchasedPrice: number | null;
+      };
+    } | null;
+
+  it('clears the stamp when the flag flips', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+
+    // The server clears the stamp on this transition; the local write matches.
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBeNull();
+    expect(read(cache)?.purchaseInfo.isPurchased).toBe(false);
+  });
+
+  it('keeps the rest of the record when the flag flips', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+
+    // The amounts describe a purchase the server recorded. Only the stamp is
+    // derived from the flag.
+    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
+    expect(read(cache)?.purchaseInfo.purchasedPrice).toBe(2.5);
+  });
+
+  it('preserves the stamp when the flag is unchanged', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: true });
+
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(
+      '2026-08-28T10:00:00.000Z',
+    );
+  });
+
+  it('sets the stamp without touching the flag', () => {
+    const cache = seed({ isPurchased: false, movedToPantryAt: null });
+    writePurchaseInfo(cache, 'i1', {
+      movedToPantryAt: '2026-08-29T00:00:00.000Z',
+    });
+
+    // A stamp-only write must not assert a flag it does not own — asserting
+    // `true` over a cached `false` is what cleared the record.
+    expect(read(cache)?.purchaseInfo.isPurchased).toBe(false);
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(
+      '2026-08-29T00:00:00.000Z',
+    );
+    expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
+  });
+
+  it('writes updatedAt only when asked', () => {
+    const cache = seed();
+    writePurchaseInfo(cache, 'i1', { isPurchased: false });
+    expect(read(cache)?.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+
+    writePurchaseInfo(
+      cache,
+      'i1',
+      { isPurchased: true },
+      { updatedAt: '2026-08-29T12:00:00.000Z' },
+    );
+    expect(read(cache)?.updatedAt).toBe('2026-08-29T12:00:00.000Z');
+  });
+
+  it('does nothing for an entity the cache cannot identify', () => {
+    const cache = makeCache();
+    expect(() =>
+      writePurchaseInfo(cache, '', { isPurchased: true }),
+    ).not.toThrow();
+  });
+});

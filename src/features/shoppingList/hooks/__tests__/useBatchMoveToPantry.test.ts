@@ -58,12 +58,10 @@ function moveMock(payload: {
           ...payload.movedItemIds.map(id => ({
             __typename: 'MovedItemInfo',
             shoppingListItemId: id,
-            alreadyInPantry: false,
           })),
           ...Array.from({ length: payload.skippedCount }, (_, i) => ({
             __typename: 'MovedItemInfo',
             shoppingListItemId: `already-${i}`,
-            alreadyInPantry: true,
           })),
         ],
         failedItems: (payload.failedItems ?? []).map(item => ({
@@ -685,6 +683,48 @@ describe('moved lines are marked stocked in the cache', () => {
     );
   });
 
+  it('keeps the server stamp on a line an earlier call already moved', async () => {
+    const cache = seededCache();
+    const SERVER_STAMP = '2026-08-01T09:00:00.000Z';
+    cache.writeFragment({
+      id: 'ShoppingListItem:item-1',
+      fragment: STOCKED,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: true,
+          movedToPantryAt: SERVER_STAMP,
+          purchasedQuantity: 3,
+        },
+      },
+    });
+
+    // The payload lists every line now in the pantry, including ones an earlier
+    // call moved. Those carry the real time they were stocked, so the local
+    // placeholder must not replace it — the stamp would otherwise jump forward
+    // on every press of a button that did nothing.
+    const move = moveMock({
+      movedCount: 0,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    expect(read(cache)?.purchaseInfo.movedToPantryAt).toBe(SERVER_STAMP);
+  });
+
   it('leaves the rest of the purchase record alone', async () => {
     const cache = seededCache();
     const move = moveMock({
@@ -709,5 +749,86 @@ describe('moved lines are marked stocked in the cache', () => {
     // mergeObjects path and the amounts survive — the property that makes
     // writing one field of this record safe at all.
     expect(read(cache)?.purchaseInfo.purchasedQuantity).toBe(3);
+  });
+});
+
+describe('the write-back cannot clear the purchase record', () => {
+  const { gql } = require('@apollo/client');
+  const RECORD = gql`
+    fragment BatchRecordProbe on ShoppingListItem {
+      id
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+        purchasedQuantity
+        purchasedPrice
+      }
+    }
+  `;
+
+  /**
+   * The client's cached flag says un-purchased while the server still considers
+   * the line purchased and moves it: the user un-checked it offline (queued),
+   * or un-checked it while the batch was in flight.
+   */
+  function seedLocallyUnpurchased() {
+    const { makeCache } = require('#/apollo/cache');
+    const cache = makeCache();
+    cache.writeFragment({
+      id: 'ShoppingListItem:item-1',
+      fragment: RECORD,
+      data: {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: false,
+          movedToPantryAt: null,
+          purchasedQuantity: 7,
+          purchasedPrice: 4.5,
+        },
+      },
+    });
+    return cache;
+  }
+
+  const read = (cache: { readFragment: Function }) =>
+    (
+      cache.readFragment({
+        id: 'ShoppingListItem:item-1',
+        fragment: RECORD,
+        returnPartialData: true,
+      }) as {
+        purchaseInfo: {
+          purchasedQuantity: number | null;
+          purchasedPrice: number | null;
+        };
+      } | null
+    )?.purchaseInfo;
+
+  it('keeps the recorded amounts when the cached flag disagrees with the server', async () => {
+    const cache = seedLocallyUnpurchased();
+    const move = moveMock({
+      movedCount: 1,
+      skippedCount: 0,
+      targetPantryName: 'My Pantry',
+      movedItemIds: ['item-1'],
+    });
+
+    const { result } = renderHookWithApollo(
+      () =>
+        useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
+      { operationMocks: [move.mock], cache },
+    );
+
+    await act(async () => {
+      await result.current.batchMoveToPantry();
+    });
+
+    // Asserting `isPurchased: true` over a cached `false` flips it, and the
+    // record's merge clears every field the write omits. The quantity and price
+    // belong to a purchase the server recorded; losing them is data loss.
+    expect(read(cache)?.purchasedQuantity).toBe(7);
+    expect(read(cache)?.purchasedPrice).toBe(4.5);
   });
 });
