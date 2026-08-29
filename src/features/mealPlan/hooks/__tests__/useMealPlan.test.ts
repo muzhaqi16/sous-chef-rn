@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,

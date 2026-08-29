@@ -1169,41 +1169,6 @@
       "ShoppingListCollaborator",
       "ShoppingListItem"
     ],
-    "SyncDeletePantryItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SyncPantryItemPayload",
-      "ValidationError"
-    ],
-    "SyncDeleteShoppingListItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SyncShoppingListItemPayload",
-      "ValidationError"
-    ],
-    "SyncMoveShoppingListItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SyncShoppingListItemPayload",
-      "ValidationError"
-    ],
-    "SyncPantryItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SyncPantryItemPayload",
-      "ValidationError"
-    ],
-    "SyncShoppingListItemResult": [
-      "ConflictError",
-      "ForbiddenError",
-      "NotFoundError",
-      "SyncShoppingListItemPayload",
-      "ValidationError"
-    ],
     "ToggleReviewHelpfulResult": [
       "ConflictError",
       "ForbiddenError",

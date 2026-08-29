@@ -183,7 +183,14 @@ function buildClient(opts: {
     {
       request: {
         query: ToggleShoppingListItemPurchasedDocument,
-        variables: { input: { id: ITEM_ID, purchased: newPurchased } },
+        // A predicate, not an exact object: the toggle mints an
+        // `idempotencyKey` per call — the thing that makes an un-mark
+        // replay-safe — so the payload cannot be written out literally.
+        variables: vars =>
+          (vars as { input: { id: string; purchased: boolean } }).input.id ===
+            ITEM_ID &&
+          (vars as { input: { id: string; purchased: boolean } }).input
+            .purchased === newPurchased,
       },
       result: { data: opts.serverResponse },
       // `delay` makes the network response asynchronous so we can observe

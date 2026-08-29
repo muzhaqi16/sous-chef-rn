@@ -5,10 +5,7 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
-import {
-  ToggleShoppingListItemPurchasedDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { ToggleShoppingListItemPurchasedDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 const mockHandleApolloError = jest.fn(() => ({ message: 'Toggle error' }));
@@ -222,13 +219,13 @@ function toggleFieldRefusalMock(): MockedResponse {
   };
 }
 
-function updatePurchaseMock(
+function recordPurchaseMock(
   recorded: Array<Record<string, unknown>>,
   outcome: 'success' | 'reject' | 'fieldRefusal',
 ): MockedResponse {
   return {
     request: {
-      query: UpdateShoppingListItemDocument,
+      query: ToggleShoppingListItemPurchasedDocument,
       variables: vars => {
         recorded.push(vars);
         return true;
@@ -237,17 +234,18 @@ function updatePurchaseMock(
     maxUsageCount: Number.POSITIVE_INFINITY,
     result: {
       data: {
-        updateShoppingListItem:
+        toggleShoppingListItemPurchased:
           outcome === 'success'
             ? {
-                __typename: 'UpdateShoppingListItemPayload',
+                __typename: 'ToggleShoppingListItemPurchasedPayload',
+                shoppingList: null,
                 shoppingListItem: {
                   __typename: 'ShoppingListItem',
                   id: 'item-1',
-                  // Recording a purchase through `purchaseTracking` writes a
-                  // purchase row server-side, so the summary and the amounts
-                  // move with the response — the mutation selects both so the
-                  // detail screen doesn't need its own refetch to catch up.
+                  // The toggle is the ONE route for this transition: it writes
+                  // the Purchase row, the price observation and the summary
+                  // counters together, and selects both back, so the detail
+                  // screen needs no refetch to catch up.
                   purchaseHistory: {
                     __typename: 'PurchaseHistorySummary',
                     previouslyPurchased: true,
@@ -293,12 +291,12 @@ function updatePurchaseMock(
 describe('useToggleShoppingItem — recordPurchase', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
-  it('optimistically marks purchased and fires purchaseTracking with the version', async () => {
+  it('optimistically marks purchased and sends the amounts with a key', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'success')] },
+      { cache, operationMocks: [recordPurchaseMock(recorded, 'success')] },
     );
 
     let ok: boolean | undefined;
@@ -312,17 +310,15 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(ok).toBe(true);
     // Optimistic move to the purchased connection + purchaseInfo flip.
     expect(readPurchased(cache)).toBe(true);
-    // The mutation carried the cached snapshot version + entered amounts.
+    // The amounts ride the toggle now, with a key rather than a version —
+    // `ToggleShoppingListItemPurchasedInput` carries no version at all.
     expect(recorded).toContainEqual({
       input: {
         id: 'item-1',
-        version: 3,
+        purchased: true,
+        purchasedQuantity: 2,
+        purchasedPrice: 4.5,
         idempotencyKey: expect.any(String),
-        purchaseTracking: {
-          isPurchased: true,
-          purchasedQuantity: 2,
-          purchasedPrice: 4.5,
-        },
       },
     });
   });
@@ -332,7 +328,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'success')] },
+      { cache, operationMocks: [recordPurchaseMock(recorded, 'success')] },
     );
 
     await act(async () => {
@@ -367,7 +363,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'reject')] },
+      { cache, operationMocks: [recordPurchaseMock(recorded, 'reject')] },
     );
 
     let ok: boolean | undefined;
@@ -383,9 +379,9 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(recorded[0]).toEqual({
       input: {
         id: 'item-1',
-        version: 3,
+        purchased: true,
+        purchasedQuantity: 2,
         idempotencyKey: expect.any(String),
-        purchaseTracking: { isPurchased: true, purchasedQuantity: 2 },
       },
     });
     // The resolved error-union rejection reverts the optimistic purchase.
@@ -398,7 +394,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     const cache = seedShoppingItem();
     const { result } = renderHookWithApollo(
       () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { cache, operationMocks: [updatePurchaseMock(recorded, 'fieldRefusal')] },
+      { cache, operationMocks: [recordPurchaseMock(recorded, 'fieldRefusal')] },
     );
 
     await act(async () => {
@@ -435,7 +431,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
   });
 });
 
-describe('useToggleShoppingItem — the replay asymmetry', () => {
+describe('useToggleShoppingItem — replay safety', () => {
   beforeEach(() => {
     mockStoreState.apiReachable = true;
     mockToastError.mockClear();
@@ -482,28 +478,31 @@ describe('useToggleShoppingItem — the replay asymmetry', () => {
       },
     );
 
-  it('refuses to UN-mark while the API is unreachable', async () => {
-    // Un-marking is a destructive server-side RESET — it puts the line's
-    // quantity back to 1 and clears the normalized quantity and unit — and
-    // `ToggleShoppingListItemPurchasedInput` is `{ id, purchased }` with no
-    // version and no idempotency key. A queued un-mark draining after a
-    // co-shopper re-purchased the line would overwrite their quantity and
-    // report success, so it is never queued.
+  it('UN-marks offline too, carrying the key that makes it replay-safe', async () => {
+    // Un-marking is a destructive reset — it puts the line's quantity back and
+    // clears its normalized quantity and unit — and the line's own
+    // `isPurchased` cannot stand in for a replay guard, because an un-mark
+    // clears the flag: "not purchased" answers both "never applied" and
+    // "applied and then deliberately reversed". The idempotency key is what
+    // makes it queueable, claimed before the transition is performed.
     const cache = purchasedItem(true);
     const recorded: Array<Record<string, unknown>> = [];
     mockStoreState.apiReachable = false;
     const { result } = renderToggle(cache, recorded);
 
-    let resolved: boolean | undefined;
     await act(async () => {
-      resolved = await result.current.toggleItem('item-1');
+      await result.current.toggleItem('item-1');
     });
 
-    expect(resolved).toBe(false);
-    expect(recorded).toHaveLength(0);
-    // Nothing was written, so there is nothing to undo and nothing to replay.
-    expect(readPurchased(cache)).toBe(true);
-    expect(mockToastError).toHaveBeenCalled();
+    expect(readPurchased(cache)).toBe(false);
+    expect(recorded[0]).toEqual({
+      input: {
+        id: 'item-1',
+        purchased: false,
+        idempotencyKey: expect.any(String),
+      },
+    });
+    expect(mockToastError).not.toHaveBeenCalled();
   });
 
   it('still MARKS while the API is unreachable', async () => {

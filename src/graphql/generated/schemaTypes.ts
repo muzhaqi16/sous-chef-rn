@@ -320,9 +320,10 @@ export type AdjustPantryItemQuantityInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** The actual quantity from physical count */
@@ -332,12 +333,19 @@ export type AdjustPantryItemQuantityInput = {
   /** Explicit remaining net weight override for full recount scenarios (dual-tracked items only) */
   remainingNetWeight?: InputMaybe<Scalars['Float']['input']>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type AdjustPantryItemQuantityPayload = {
@@ -365,9 +373,10 @@ export type AdjustPantryItemWeightInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** The corrected net weight per unit (e.g., 12.5 for 12.5 oz per jar) */
@@ -376,8 +385,20 @@ export type AdjustPantryItemWeightInput = {
   netWeightUnitId?: InputMaybe<Scalars['ID']['input']>;
   /** Why the correction is needed (required for audit trail) */
   reason: Scalars['String']['input'];
-  /** Optimistic concurrency control */
-  version: Scalars['Int']['input'];
+  /**
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
+   */
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type AdjustPantryItemWeightPayload = {
@@ -552,16 +573,18 @@ export type BatchAddShoppingListItemInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    *
    * Guards the MERGE branch specifically: an add that resolves to an existing
    * row applies a quantity increment, which is atomic but not idempotent — the
    * row carries nothing telling a replay from a genuine second addition.
-   * Precedence: this key when sent, otherwise the id field above; neither leaves
-   * the add unguarded. Send an explicit key when one batch adds the same item
-   * more than once, where row identity cannot tell the entries apart.
+   * Precedence: this key when sent, otherwise the id field above. Sending
+   * NEITHER leaves the add non-idempotent. Send an explicit key when one batch
+   * adds the same item more than once, where row identity cannot tell the
+   * entries apart.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   item: ItemRefInput;
@@ -1431,9 +1454,10 @@ export type ConvertExpiredBatchesToWasteInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   pantryItemId: Scalars['ID']['input'];
@@ -1459,9 +1483,10 @@ export type ConvertExpiredToWasteInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   pantryItemId: Scalars['ID']['input'];
@@ -2048,9 +2073,10 @@ export type CreatePantryItemUsageInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
@@ -6007,18 +6033,26 @@ export type MarkPantryItemExpiredInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type MarkPantryItemExpiredPayload = {
@@ -6714,9 +6748,10 @@ export type MoveShoppingItemToPantryInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   /** Additional notes */
@@ -6791,9 +6826,10 @@ export type MoveToPantryIdHintInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    *
    * Scoped to this line's move.
    */
@@ -7315,68 +7351,21 @@ export type Mutation = {
   sendTestNotification: SendTestNotificationResult;
   /** Share a shopping list publicly with an optional share code. */
   shareShoppingList: ShareShoppingListResult;
-  /**
-   * Offline-sync twin of deletePantryItem — idempotent by a client-minted id.
-   *
-   * Accepts a version and never passes it to the delete.
-   * @deprecated Use deletePantryItem, which converges on an already-deleted row and reports it as converged: true.
-   */
-  syncDeletePantryItem: SyncDeletePantryItemResult;
-  /**
-   * Offline-sync twin of removeItemFromShoppingList — idempotent by a
-   * client-minted id.
-   *
-   * Accepts a version and never passes it to the delete.
-   * @deprecated Use removeItemFromShoppingList, which converges on an already-removed row and reports it as converged: true.
-   */
-  syncDeleteShoppingListItem: SyncDeleteShoppingListItemResult;
-  /**
-   * Offline-sync twin of moveShoppingListItem (reorder) — idempotent by a
-   * client-minted id.
-   *
-   * Accepts a version and never passes it to the move.
-   * @deprecated Use moveShoppingListItem. Note the field names differ (afterItemId/beforeItemId, not afterId/beforeId), and that a reorder is relative to its neighbours rather than an absolute position: a queued move whose neighbour is purchased, removed or itself reordered before the queue drains lands somewhere other than where the user put it. Neither mutation detects that.
-   */
-  syncMoveShoppingListItem: SyncMoveShoppingListItemResult;
-  /**
-   * Offline-sync twin of createPantryItem/updatePantryItem — idempotent by a
-   * client-minted id (the primary key for creates, idempotencyKey for
-   * cumulative deltas).
-   *
-   * Weaker than the mutations it stands in for: version is optional here and the
-   * server substitutes the row's current one when it is absent, which applies the
-   * write with no effective check; and a version conflict is returned as a
-   * SUCCESS payload carrying conflict rather than as a ConflictError.
-   * @deprecated Use createPantryItem (idempotent by its client-minted id) or updatePantryItem (idempotent by idempotencyKey, claimed before the version check). Both keep the optimistic-lock guarantee this twin drops.
-   */
-  syncPantryItem: SyncPantryItemResult;
-  /**
-   * Offline-sync twin of addItemsToShoppingList/updateShoppingListItem —
-   * idempotent by a client-minted id (the primary key or idempotencyKey).
-   *
-   * Weaker than the mutations it stands in for: version is optional here and the
-   * server substitutes the row's current one when it is absent, which applies the
-   * write with no effective check; and a version conflict is returned as a
-   * SUCCESS payload carrying conflict rather than as a ConflictError.
-   * @deprecated Use addItemsToShoppingList (idempotent by its client-minted id or idempotencyKey) or updateShoppingListItem (idempotent by idempotencyKey, claimed before the version check). Both keep the optimistic-lock guarantee this twin drops.
-   */
-  syncShoppingListItem: SyncShoppingListItemResult;
   /** Toggle a helpful vote on a recipe review. */
   toggleReviewHelpful: ToggleReviewHelpfulResult;
   /**
-   * Toggle the purchased state of a shopping list item.
+   * Toggle the purchased state of a shopping list item, and record what was
+   * actually bought.
    *
-   * Marking purchased is replay-safe without a version or a key: an item already
-   * purchased is returned unchanged, and the Purchase record is written only on
-   * the transition.
+   * The ONE route for that transition: it writes the Purchase row, the price
+   * observation and the summary counters together, so a count never stands
+   * without the history behind it.
    *
-   * UNMARKING IS NOT. It resets the line's quantity to 1 and clears the
-   * normalized quantity and unit alongside isPurchased, so it is a destructive
-   * write rather than an absolute state — and this input carries neither a
-   * version nor a key to refuse a stale one. A queued unmark that drains after
-   * someone re-purchases the line with a real quantity will overwrite that
-   * quantity and report success. Send this online, or re-read the line before
-   * draining a queued unmark.
+   * Replay-safe in both directions when you send an idempotencyKey. Without one,
+   * marking still converges (an item already purchased is returned unchanged),
+   * but UN-marking does not: it resets the line's quantity and clears its
+   * normalized quantity and unit, so a queued un-mark draining after someone
+   * re-purchased the line would overwrite that. Queue this mutation with a key.
    */
   toggleShoppingListItemPurchased: ToggleShoppingListItemPurchasedResult;
   /** Transfer ownership of a home to another member. */
@@ -9497,71 +9486,6 @@ export type MutationShareShoppingListArgs = {
  * win, so payload types that genuinely benefit from caching (e.g. read-
  * through reservation tokens) can opt back in.
  */
-export type MutationSyncDeletePantryItemArgs = {
-  input: SyncDeletePantryItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncDeleteShoppingListItemArgs = {
-  input: SyncDeleteShoppingListItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncMoveShoppingListItemArgs = {
-  input: SyncMoveShoppingListItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncPantryItemArgs = {
-  input: SyncPantryItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
-export type MutationSyncShoppingListItemArgs = {
-  input: SyncShoppingListItemInput;
-};
-
-
-/**
- * Mutations are inherently uncacheable. Pinning maxAge: 0 + scope: PRIVATE
- * on the root Mutation type prevents any mutation response from being
- * served from a CDN if HTTP batching is ever re-enabled (currently off,
- * see src/index.ts) or if a caller proxies responses. Per-field overrides
- * win, so payload types that genuinely benefit from caching (e.g. read-
- * through reservation tokens) can opt back in.
- */
 export type MutationToggleReviewHelpfulArgs = {
   input: ToggleReviewHelpfulInput;
 };
@@ -10893,9 +10817,10 @@ export type OpenPantryItemBatchInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
 };
@@ -10921,18 +10846,12 @@ export type OpenPantryItemInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
-  /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
-   */
-  version: Scalars['Int']['input'];
 };
 
 export type OpenPantryItemPayload = {
@@ -11963,13 +11882,6 @@ export type PurchaseStats = {
   recentPurchases: Array<Purchase>;
   totalAmountSpent: Scalars['Float']['output'];
   totalPurchases: Scalars['Int']['output'];
-};
-
-/** Sub-input for purchase tracking */
-export type PurchaseTrackingInput = {
-  isPurchased?: InputMaybe<Scalars['Boolean']['input']>;
-  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
-  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
 };
 
 export type QuantityBreakdown = {
@@ -13466,9 +13378,10 @@ export type RecordRecipeCookedInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   recipeId: Scalars['ID']['input'];
@@ -13887,9 +13800,10 @@ export type RestockPantryItemInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   notes?: InputMaybe<Scalars['String']['input']>;
@@ -15505,211 +15419,11 @@ export type SuspiciousActivity = {
   unusualTimeLogins: Array<LoginHistory>;
 };
 
-/** Information about a sync conflict */
-export type SyncConflictInfo = {
-  __typename: 'SyncConflictInfo';
-  /** The version the client had */
-  clientVersion: Scalars['Int']['output'];
-  /** Description of the conflict */
-  message: Scalars['String']['output'];
-  /** The current state of the item on the server */
-  serverItem: ShoppingListItem;
-  /** The current version on the server */
-  serverVersion: Scalars['Int']['output'];
-};
-
-export type SyncDeletePantryItemInput = {
-  clientId: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-/**
- * Result of SyncDeletePantryItem. Select on SyncPantryItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncDeletePantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError;
-
-export type SyncDeleteShoppingListItemInput = {
-  clientId: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-/**
- * Result of SyncDeleteShoppingListItem. Select on SyncShoppingListItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncDeleteShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
-
-export type SyncMoveShoppingListItemInput = {
-  afterId?: InputMaybe<Scalars['ID']['input']>;
-  beforeId?: InputMaybe<Scalars['ID']['input']>;
-  clientId: Scalars['ID']['input'];
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-/**
- * Result of SyncMoveShoppingListItem. Select on SyncShoppingListItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncMoveShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
-
-export enum SyncOperation {
-  Create = 'CREATE',
-  Delete = 'DELETE',
-  Move = 'MOVE',
-  Update = 'UPDATE'
-}
-
-export type SyncPantryItemInput = {
-  brand?: InputMaybe<BrandReferenceInput>;
-  clientId: Scalars['ID']['input'];
-  expirationAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  expiresAt?: InputMaybe<Scalars['DateTime']['input']>;
-  forceAdd?: InputMaybe<Scalars['Boolean']['input']>;
-  isComposted?: InputMaybe<Scalars['Boolean']['input']>;
-  isRecycled?: InputMaybe<Scalars['Boolean']['input']>;
-  item?: InputMaybe<InlineItemInput>;
-  itemId?: InputMaybe<Scalars['ID']['input']>;
-  lastUsedAt?: InputMaybe<Scalars['DateTime']['input']>;
-  lowStockAlert?: InputMaybe<Scalars['Boolean']['input']>;
-  netWeight?: InputMaybe<NetWeightInput>;
-  pantryId: Scalars['ID']['input'];
-  purchase?: InputMaybe<PurchaseInfoInput>;
-  quantity?: InputMaybe<Scalars['Float']['input']>;
-  storage?: InputMaybe<StorageDetailsInput>;
-  tags?: InputMaybe<Array<Scalars['String']['input']>>;
-  thresholds?: InputMaybe<InventoryThresholdsInput>;
-  unit?: InputMaybe<UnitSpecInput>;
-  version?: InputMaybe<Scalars['Int']['input']>;
-  wasteReason?: InputMaybe<WasteReason>;
-};
-
-export type SyncPantryItemPayload = {
-  __typename: 'SyncPantryItemPayload';
-  clientId: Scalars['ID']['output'];
-  conflict: Maybe<SyncConflictInfo>;
-  /**
-   * Meaning depends on which mutation returned this payload, because three share
-   * it. On syncPantryItem it says the client id matched an existing row, so the
-   * call took the update branch rather than creating — which is also true of an
-   * ordinary successful update that changed the row. On syncDeletePantryItem it
-   * is unconditionally true and says nothing at all.
-   *
-   * NOT the API-wide convergence flag, despite the name: that one means the call
-   * changed nothing. Retired with these mutations; the canonical mutations report
-   * a replay as ConflictError with code IDEMPOTENT_REPLAY.
-   */
-  converged: Scalars['Boolean']['output'];
-  item: Maybe<PantryItem>;
-  operation: SyncOperation;
-  serverId: Maybe<Scalars['ID']['output']>;
-};
-
-/**
- * Result of SyncPantryItem. Select on SyncPantryItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncPantryItemResult = ConflictError | ForbiddenError | NotFoundError | SyncPantryItemPayload | ValidationError;
-
 /** Sub-input for sync settings */
 export type SyncSettingsInput = {
   autoSync?: InputMaybe<Scalars['Boolean']['input']>;
   offlineMode?: InputMaybe<Scalars['Boolean']['input']>;
 };
-
-export type SyncShoppingListItemFieldsInput = {
-  brand?: InputMaybe<BrandReferenceInput>;
-  category?: InputMaybe<Scalars['String']['input']>;
-  /**
-   * Client-minted CUID2 that makes this operation replay-safe. The key is
-   * claimed in the same transaction as the effect, so re-sending it applies the
-   * effect at most once: a replay is answered with ConflictError carrying code
-   * IDEMPOTENT_REPLAY, which a client treats as success.
-   *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
-   *
-   * Guards a sync that MERGES into an existing row. Supply it only to key the
-   * merge on something other than the row id; the update branch claims it as
-   * sent, and claims nothing when it is absent.
-   */
-  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
-  /** Item reference: exactly one of a catalog item id or a free-text name (@oneOf). */
-  item: ItemRefInput;
-  /**
-   * Package size for this item.
-   *
-   * A netWeightUnitId with no netWeight is always rejected — a unit with nothing
-   * to measure means nothing. A netWeight with no netWeightUnitId is rejected
-   * unless the row the add lands on already carries a netWeightUnitId to
-   * inherit: a create never does, and a merge, restore or re-add does only if
-   * the existing row was given one.
-   */
-  netWeight?: InputMaybe<NetWeightInput>;
-  /** User-provided information */
-  notes?: InputMaybe<Scalars['String']['input']>;
-  pricing?: InputMaybe<PricingEstimatesInput>;
-  priority?: InputMaybe<Scalars['Int']['input']>;
-  purchaseTracking?: InputMaybe<PurchaseTrackingInput>;
-  /**
-   * Quantity of the item. Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5.
-   * Unitless by default; specify a unit via the unit field when needed (shopping
-   * items are frequently unitless, e.g. Milk x2). Same handling as the batch add.
-   */
-  quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
-  recipeContext?: InputMaybe<RecipeContextInput>;
-  /** Required: ID of the shopping list this item belongs to */
-  shoppingListId: Scalars['ID']['input'];
-  sortOrder?: InputMaybe<Scalars['String']['input']>;
-  storePrefs?: InputMaybe<StorePreferencesInput>;
-  unit?: InputMaybe<UnitSpecInput>;
-  /** Version for optimistic locking (null if new item) */
-  version?: InputMaybe<Scalars['Int']['input']>;
-};
-
-export type SyncShoppingListItemInput = {
-  clientId: Scalars['ID']['input'];
-  item: SyncShoppingListItemFieldsInput;
-};
-
-/** Result of syncing a shopping list item */
-export type SyncShoppingListItemPayload = {
-  __typename: 'SyncShoppingListItemPayload';
-  /** The client-provided permanent ID (CUID) echoed back for correlation */
-  clientId: Scalars['ID']['output'];
-  /** Conflict information if version mismatch occurred */
-  conflict: Maybe<SyncConflictInfo>;
-  /**
-   * Meaning depends on which mutation returned this payload, because three share
-   * it. On syncShoppingListItem it says the client id matched an existing row, so the
-   * call took the update branch rather than creating — which is also true of an
-   * ordinary successful update that changed the row. On syncDeleteShoppingListItem and syncMoveShoppingListItem it
-   * is unconditionally true and says nothing at all.
-   *
-   * NOT the API-wide convergence flag, despite the name: that one means the call
-   * changed nothing. Retired with these mutations; the canonical mutations report
-   * a replay as ConflictError with code IDEMPOTENT_REPLAY.
-   */
-  converged: Scalars['Boolean']['output'];
-  /** The synced shopping list item (null for delete operations) */
-  item: Maybe<ShoppingListItem>;
-  /** The operation that was performed */
-  operation: SyncOperation;
-  /** The server-assigned database ID (equals clientId; null if item was deleted before reaching server) */
-  serverId: Maybe<Scalars['ID']['output']>;
-};
-
-/**
- * Result of SyncShoppingListItem. Select on SyncShoppingListItemPayload for the
- * success case; every other member is a business error carrying a message.
- * Always include a __typename so the variant can be discriminated.
- */
-export type SyncShoppingListItemResult = ConflictError | ForbiddenError | NotFoundError | SyncShoppingListItemPayload | ValidationError;
 
 /** Sub-input for tag-based filters */
 export type TagFilterInput = {
@@ -15773,7 +15487,35 @@ export type ToggleReviewHelpfulResult = ConflictError | ForbiddenError | NotFoun
 /** Input for toggling the purchased state of a shopping list item */
 export type ToggleShoppingListItemPurchasedInput = {
   id: Scalars['ID']['input'];
+  /**
+   * Client-minted CUID2 that makes this operation replay-safe. The key is
+   * claimed in the same transaction as the effect, so re-sending it applies the
+   * effect at most once: a replay is answered with ConflictError carrying code
+   * IDEMPOTENT_REPLAY, which a client treats as success.
+   *
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
+   *
+   * Guards BOTH directions. Marking is the transition that writes the
+   * Purchase row and moves the summary counters; un-marking resets the line's
+   * quantity and clears its normalized quantity and unit. Neither is safe to
+   * re-apply from a queue, and the line's own isPurchased flag cannot say which
+   * has happened — an un-mark clears it, so "not purchased" answers both never
+   * applied and applied and then deliberately reversed. The key is claimed as
+   * the first statement of the transaction that performs the transition, so a
+   * replay is refused before any of that state is read.
+   */
+  idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   purchased: Scalars['Boolean']['input'];
+  purchasedPrice?: InputMaybe<Scalars['Float']['input']>;
+  /**
+   * What the shopper actually bought, when marking purchased: the amounts
+   * entered at the shelf, which take precedence over the estimates on the line.
+   * Ignored when un-marking.
+   */
+  purchasedQuantity?: InputMaybe<Scalars['Float']['input']>;
 };
 
 export type ToggleShoppingListItemPurchasedPayload = {
@@ -16356,9 +16098,10 @@ export type UpdateHomeInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isPublic?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16367,12 +16110,19 @@ export type UpdateHomeInput = {
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   timezone?: InputMaybe<Scalars['String']['input']>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateHomeJoinCodeInput = {
@@ -16665,9 +16415,10 @@ export type UpdatePantryItemInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16682,12 +16433,19 @@ export type UpdatePantryItemInput = {
   thresholds?: InputMaybe<InventoryThresholdsInput>;
   unit?: InputMaybe<UnitSpecInput>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
   wasteReason?: InputMaybe<WasteReason>;
 };
 
@@ -16699,19 +16457,27 @@ export type UpdatePantryItemLocationInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   storageLocationId: Scalars['String']['input'];
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdatePantryItemLocationPayload = {
@@ -16741,14 +16507,28 @@ export type UpdatePantryItemQuantityInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   pantryItemId: Scalars['ID']['input'];
   quantity: Scalars['String']['input'];
   unitId?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
+   */
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -16956,9 +16736,10 @@ export type UpdateShoppingListInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isDefault?: InputMaybe<Scalars['Boolean']['input']>;
@@ -16974,12 +16755,19 @@ export type UpdateShoppingListInput = {
   status?: InputMaybe<ListStatus>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateShoppingListItemInput = {
@@ -16997,9 +16785,10 @@ export type UpdateShoppingListItemInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   itemName?: InputMaybe<Scalars['String']['input']>;
@@ -17012,19 +16801,25 @@ export type UpdateShoppingListItemInput = {
   notes?: InputMaybe<Scalars['String']['input']>;
   pricing?: InputMaybe<PricingEstimatesInput>;
   priority?: InputMaybe<Scalars['Int']['input']>;
-  purchaseTracking?: InputMaybe<PurchaseTrackingInput>;
   /** Accepts: "1/3", "1 1/4", "0.5", "2", or numbers like 1, 1.5 */
   quantity?: InputMaybe<Scalars['FlexibleQuantity']['input']>;
   sortOrder?: InputMaybe<Scalars['String']['input']>;
   storePrefs?: InputMaybe<StorePreferencesInput>;
   unit?: InputMaybe<UnitSpecInput>;
   /**
-   * Optimistic concurrency control. REQUIRED: the caller is updating a row it
-   * already holds, so it has the version — and an update that silently skipped
-   * the check when the field was omitted is one that reports success while
-   * overwriting somebody else's concurrent edit.
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
    */
-  version: Scalars['Int']['input'];
+  version?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UpdateShoppingListItemPayload = {
@@ -17041,14 +16836,28 @@ export type UpdateShoppingListItemQuantityInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   itemId: Scalars['ID']['input'];
   quantity: Scalars['String']['input'];
   unitId?: InputMaybe<Scalars['ID']['input']>;
+  /**
+   * Optimistic concurrency control, honored when supplied.
+   *
+   * Send it when you hold a fresh read and want to be told that somebody else
+   * changed the row first: a mismatch is refused with ConflictError carrying
+   * code VERSION_CONFLICT, and nothing is written.
+   *
+   * Omit it from a queued offline write. The version such a write captured is
+   * stale by construction, so sending it converts an ordinary concurrent edit
+   * into a failure the queue cannot resolve. Omitted, the write applies against
+   * the current row and the last writer wins; fields nobody else supplied are
+   * untouched either way, because a patch carries only what it names.
+   */
   version?: InputMaybe<Scalars['Int']['input']>;
 };
 
@@ -18136,9 +17945,10 @@ export type WastePantryItemBatchInput = {
    * effect at most once: a replay is answered with ConflictError carrying code
    * IDEMPOTENT_REPLAY, which a client treats as success.
    *
-   * Omit it and the operation is not replay-safe. A spent key is remembered for
-   * the window Query.offlineWritePolicy reports, after which a very late replay
-   * would apply again.
+   * Send one for every queued write. Omitting it leaves the operation
+   * replay-unsafe unless the detail below names a fallback this input carries.
+   * A spent key is remembered for the window Query.offlineWritePolicy reports,
+   * after which a very late replay would apply again.
    */
   idempotencyKey?: InputMaybe<Scalars['ID']['input']>;
   isComposted?: InputMaybe<Scalars['Boolean']['input']>;

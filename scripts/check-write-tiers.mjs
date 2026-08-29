@@ -39,17 +39,11 @@ const ONLINE_ONLY = 'online-only';
  */
 const CONDITIONAL = 'conditional';
 
-/** Why an operation decides its tier per call. Keeps the reason in the report. */
-const CONDITIONAL_REASONS = new Map([
-  [
-    'ToggleShoppingListItemPurchased',
-    'Marking purchased is durable; UN-marking is online-only. The asymmetry is ' +
-      "the server's: un-marking resets the line's quantity to 1 and clears the " +
-      'normalized quantity and unit, and the input carries no version and no ' +
-      'idempotency key, so a queued un-mark draining after a co-shopper ' +
-      "re-purchased the line overwrites their quantity. See the hook's comment.",
-  ],
-]);
+/**
+ * Why an operation decides its tier per call. Empty is the healthy state — an
+ * entry is a call site the report cannot describe in one word.
+ */
+const CONDITIONAL_REASONS = new Map();
 
 /**
  * Operations knowingly sent at both tiers, each with the reason.
